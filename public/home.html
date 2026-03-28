@@ -345,14 +345,8 @@
         <div class="search-fields">
           <div class="search-field">
             <label>Ubicación</label>
-            <select>
-              <option value="">Toda la RD</option>
-              <option>Santo Domingo</option>
-              <option>Punta Cana</option>
-              <option>Santiago</option>
-              <option>Puerto Plata</option>
-              <option>La Romana</option>
-              <option>Samaná</option>
+            <select id="provinceSelect">
+              <option value="">Toda la República</option>
             </select>
           </div>
           <div class="search-field">
@@ -472,16 +466,8 @@
     </div>
   </div>
 
-  <!-- FEATURED PROPERTIES — static curated showcase, always visible -->
-  <div class="section">
-    <div class="section-header">
-      <div>
-        <div class="section-label">Destacadas</div>
-        <h2 class="section-title">Propiedades Destacadas</h2>
-      </div>
-      <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
-    </div>
-    <div class="properties-grid">
+  <!-- FEATURED PROPERTIES REMOVED — replaced by Lo Más Visto carousel -->
+  <div style="display:none"><div class="properties-grid">
 
       <a class="property-card" href="#">
         <div class="card-img prop-1">
@@ -597,7 +583,7 @@
       </a>
 
     </div>
-  </div>
+  </div></div>
 
   <!-- CITIES -->
   <div class="cities-bg">
@@ -999,6 +985,24 @@
       } catch {}
     }
 
+    // ── Province dropdown — populated from active listings ───────
+    async function loadProvinces() {
+      try {
+        const res = await fetch('/api/listings?limit=200');
+        if (!res.ok) return;
+        const { listings } = await res.json();
+        if (!listings || !listings.length) return;
+        const provinces = [...new Set(listings.map(l => l.province).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+        const sel = document.getElementById('provinceSelect');
+        provinces.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          sel.appendChild(opt);
+        });
+      } catch {}
+    }
+
     // ── Activity logging via IntersectionObserver (5s debounce) ─
     function initActivityLogging(token) {
       const viewTimers  = new Map();
@@ -1050,6 +1054,7 @@
       // Always load public sections after auth resolves
       loadTrending();
       loadRecent();
+      loadProvinces();
     })();
   </script>
 </body>
