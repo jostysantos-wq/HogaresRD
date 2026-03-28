@@ -399,6 +399,14 @@
               <div class="sub-field"><label>Parqueos</label><span>${s.parking || '—'}</span></div>
               <div class="sub-field"><label>Sector</label><span>${s.sector || '—'}</span></div>
             </div>
+            ${s.construction_company || s.units_available ? `
+              <div class="sub-card-body" style="border-top:1px solid #f0f4f9;background:#fafcff;">
+                ${s.construction_company ? `<div class="sub-field"><label>Constructora</label><span>${s.construction_company}</span></div>` : ''}
+                ${s.units_total ? `<div class="sub-field"><label>Unidades Totales</label><span>${s.units_total}</span></div>` : ''}
+                ${s.units_available ? `<div class="sub-field"><label>Disponibles</label><span style="font-weight:700;color:#0a7c4f;">${s.units_available}</span></div>` : ''}
+                ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${s.project_stage}</span></div>` : ''}
+                ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${s.delivery_date}</span></div>` : ''}
+              </div>` : ''}
             ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
             ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
             ${agencyHTML}

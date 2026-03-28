@@ -83,7 +83,12 @@ app.post('/submit', async (req, res) => {
     city:        isClaim ? '' : (body.city         || ''),
     sector:      isClaim ? '' : (body.sector       || ''),
     address:     isClaim ? '' : (body.address      || ''),
-    amenities:   isClaim ? [] : (body.amenities    || []),
+    amenities:          isClaim ? [] : (body.amenities         || []),
+    construction_company: isClaim ? '' : (body.construction_company || ''),
+    units_total:        isClaim ? '' : (body.units_total       || ''),
+    units_available:    isClaim ? '' : (body.units_available   || ''),
+    delivery_date:      isClaim ? '' : (body.delivery_date     || ''),
+    project_stage:      isClaim ? '' : (body.project_stage     || ''),
     lat:         isClaim ? '' : (body.lat          || ''),
     lng:         isClaim ? '' : (body.lng          || ''),
     // Agencies (present in both modes)
