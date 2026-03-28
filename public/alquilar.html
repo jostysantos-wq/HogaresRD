@@ -220,6 +220,9 @@
       </select>
       <input class="filter-input" type="number" id="fPriceMin" placeholder="Precio mín. /mes" min="0" />
       <input class="filter-input" type="number" id="fPriceMax" placeholder="Precio máx. /mes" min="0" />
+      <select class="filter-select" id="fAgency">
+        <option value="">Todas las inmobiliarias</option>
+      </select>
       <button class="btn-filter" onclick="applyFilters()">Buscar</button>
       <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
     </div>
@@ -402,6 +405,7 @@
         bedroomsMin: document.getElementById('fBedrooms').value,
         priceMin:    document.getElementById('fPriceMin').value,
         priceMax:    document.getElementById('fPriceMax').value,
+        agency:      document.getElementById('fAgency').value,
       };
     }
 
@@ -458,11 +462,22 @@
 
     function applyFilters() { loadListings(1); }
     function resetFilters() {
-      ['fProvince','fBedrooms'].forEach(id => document.getElementById(id).value = '');
+      ['fProvince','fBedrooms','fAgency'].forEach(id => document.getElementById(id).value = '');
       ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
       loadListings(1);
     }
     function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    // Populate agency dropdown
+    fetch('/api/listings/agencies').then(r => r.json()).then(({ agencies }) => {
+      const sel = document.getElementById('fAgency');
+      agencies.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.slug;
+        opt.textContent = `${a.name} (${a.count})`;
+        sel.appendChild(opt);
+      });
+    }).catch(() => {});
 
     loadListings(1);
   </script>

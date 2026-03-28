@@ -232,6 +232,12 @@
       </select>
       <input class="filter-input" type="number" id="fPriceMin" placeholder="Precio mín." min="0" />
       <input class="filter-input" type="number" id="fPriceMax" placeholder="Precio máx." min="0" />
+      <select class="filter-select" id="fConstructora">
+        <option value="">Todas las constructoras</option>
+      </select>
+      <select class="filter-select" id="fAgency">
+        <option value="">Todas las inmobiliarias</option>
+      </select>
       <button class="btn-filter" onclick="applyFilters()">Buscar</button>
       <button class="btn-reset"  onclick="resetFilters()">Limpiar</button>
     </div>
@@ -425,11 +431,13 @@
     function getFilters() {
       const stage = document.getElementById('fStage').value;
       return {
-        province:    document.getElementById('fProvince').value,
-        condition:   stage || '',   // nueva_construccion | planos | ''
-        bedroomsMin: document.getElementById('fBedrooms').value,
-        priceMin:    document.getElementById('fPriceMin').value,
-        priceMax:    document.getElementById('fPriceMax').value,
+        province:     document.getElementById('fProvince').value,
+        condition:    stage || '',
+        bedroomsMin:  document.getElementById('fBedrooms').value,
+        priceMin:     document.getElementById('fPriceMin').value,
+        priceMax:     document.getElementById('fPriceMax').value,
+        constructora: document.getElementById('fConstructora').value,
+        agency:       document.getElementById('fAgency').value,
       };
     }
 
@@ -459,10 +467,12 @@
         const conditions = filters.condition ? [filters.condition] : ['nueva_construccion', 'planos'];
         const fetches = conditions.map(cond => {
           const p = new URLSearchParams({ condition: cond, page: 1, limit: 100 });
-          if (filters.province)    p.set('province',    filters.province);
-          if (filters.bedroomsMin) p.set('bedroomsMin', filters.bedroomsMin);
-          if (filters.priceMin)    p.set('priceMin',    filters.priceMin);
-          if (filters.priceMax)    p.set('priceMax',    filters.priceMax);
+          if (filters.province)     p.set('province',     filters.province);
+          if (filters.bedroomsMin)  p.set('bedroomsMin',  filters.bedroomsMin);
+          if (filters.priceMin)     p.set('priceMin',     filters.priceMin);
+          if (filters.priceMax)     p.set('priceMax',     filters.priceMax);
+          if (filters.constructora) p.set('constructora', filters.constructora);
+          if (filters.agency)       p.set('agency',       filters.agency);
           return fetch('/api/listings?' + p.toString()).then(r => r.json());
         });
 
@@ -504,11 +514,32 @@
 
     function applyFilters() { loadListings(1); }
     function resetFilters() {
-      ['fProvince','fStage','fBedrooms'].forEach(id => document.getElementById(id).value = '');
+      ['fProvince','fStage','fBedrooms','fConstructora','fAgency'].forEach(id => document.getElementById(id).value = '');
       ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
       loadListings(1);
     }
     function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    // Populate constructora and agency dropdowns
+    Promise.all([
+      fetch('/api/listings/constructoras').then(r => r.json()),
+      fetch('/api/listings/agencies').then(r => r.json()),
+    ]).then(([cData, aData]) => {
+      const cSel = document.getElementById('fConstructora');
+      (cData.constructoras || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.slug;
+        opt.textContent = `${c.name} (${c.count})`;
+        cSel.appendChild(opt);
+      });
+      const aSel = document.getElementById('fAgency');
+      (aData.agencies || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.slug;
+        opt.textContent = `${a.name} (${a.count})`;
+        aSel.appendChild(opt);
+      });
+    }).catch(() => {});
 
     loadListings(1);
   </script>

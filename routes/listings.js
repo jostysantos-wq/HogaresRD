@@ -35,6 +35,25 @@ router.get('/', (req, res) => {
     }
   }
 
+  // Agency filter (by slug)
+  if (req.query.agency) {
+    const slug = req.query.agency;
+    listings = listings.filter(l =>
+      (l.agencies || []).some(a =>
+        a.name && a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+      )
+    );
+  }
+
+  // Constructora filter (by slug)
+  if (req.query.constructora) {
+    const slug = req.query.constructora;
+    listings = listings.filter(l =>
+      l.construction_company &&
+      l.construction_company.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+    );
+  }
+
   // Sort: newest approved first
   listings.sort((a, b) => new Date(b.approvedAt || b.submittedAt) - new Date(a.approvedAt || a.submittedAt));
 
@@ -86,6 +105,21 @@ router.get('/agencies', (req, res) => {
   });
   const agencies = Object.values(map).sort((a, b) => b.count - a.count);
   res.json({ agencies });
+});
+
+// GET /api/listings/constructoras — list all construction companies with listing counts
+router.get('/constructoras', (req, res) => {
+  const listings = store.getListings();
+  const map = {};
+  listings.forEach(l => {
+    if (!l.construction_company) return;
+    const name = l.construction_company;
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (!map[slug]) map[slug] = { name, slug, count: 0 };
+    map[slug].count++;
+  });
+  const constructoras = Object.values(map).sort((a, b) => b.count - a.count);
+  res.json({ constructoras });
 });
 
 // GET /api/agencies/:slug — agency details + their listings
