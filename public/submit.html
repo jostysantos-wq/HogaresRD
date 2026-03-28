@@ -522,6 +522,13 @@
     .price-from-note { display: none; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
     .price-from-note.visible { display: block; }
 
+    /* ── Required field indicators & errors ─────────────────── */
+    .req { color: var(--accent-red, #cf142b); margin-left: 2px; font-weight: 700; }
+    input.input-error, select.input-error, textarea.input-error { border-color: var(--accent-red, #cf142b) !important; background: rgba(207,20,43,0.03) !important; }
+    .field-err { display: none; color: var(--accent-red, #cf142b); font-size: 0.8rem; margin-top: 0.3rem; }
+    .thumb-error { display: none; color: var(--accent-red, #cf142b); font-size: 0.8rem; margin-top: 0.5rem; }
+    .thumbnail-upload.input-error { border-color: var(--accent-red, #cf142b); background: rgba(207,20,43,0.03); }
+
     /* ── Tags ────────────────────────────────────────────────── */
     .tag-group { margin-bottom: 1.25rem; }
     .tag-group-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent); margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
@@ -777,7 +784,7 @@
         <div class="grid-3">
           <div class="field">
             <label for="bedrooms">Habitaciones</label>
-            <select id="bedrooms" name="bedrooms">
+            <select id="bedrooms" name="bedrooms" required>
               <option value="" disabled selected>Seleccionar</option>
               <option>Estudio</option>
               <option>1</option>
@@ -790,7 +797,7 @@
           </div>
           <div class="field">
             <label for="bathrooms">Baños</label>
-            <select id="bathrooms" name="bathrooms">
+            <select id="bathrooms" name="bathrooms" required>
               <option value="" disabled selected>Seleccionar</option>
               <option>1</option>
               <option>1.5</option>
@@ -1058,6 +1065,8 @@
           <span class="thumb-change-hint">Haz clic para cambiar la foto de portada</span>
         </label>
 
+        <p id="err_thumbnail" class="thumb-error">⚠ La foto de portada es requerida.</p>
+
         <!-- Additional photos -->
         <div class="upload-section-label" style="margin-top:0.25rem;">
           Fotos Adicionales
@@ -1123,7 +1132,7 @@
           </div>
           <div class="field">
             <label for="role">Eres</label>
-            <select id="role" name="role">
+            <select id="role" name="role" required>
               <option value="" disabled selected>Seleccionar</option>
               <option>Propietario</option>
               <option>Agente inmobiliario</option>
@@ -1448,6 +1457,107 @@
         : '';
     });
 
+    // ── Required field setup (asterisks + error spans) ─────────
+    const REQUIRED_FIELDS = [
+      { id: 'title',       msg: 'El título es requerido.' },
+      { id: 'type',        msg: 'Selecciona el tipo de propiedad.' },
+      { id: 'condition',   msg: 'Selecciona la condición.' },
+      { id: 'description', msg: 'La descripción es requerida.' },
+      { id: 'price',       msg: 'El precio es requerido.' },
+      { id: 'province',    msg: 'Selecciona la provincia.' },
+      { id: 'city',        msg: 'La ciudad es requerida.' },
+      { id: 'bedrooms',    msg: 'Selecciona el número de habitaciones.' },
+      { id: 'bathrooms',   msg: 'Selecciona el número de baños.' },
+      { id: 'name',        msg: 'Tu nombre completo es requerido.' },
+      { id: 'email',       msg: 'El correo electrónico es requerido.' },
+      { id: 'phone',       msg: 'El teléfono es requerido.' },
+      { id: 'role',        msg: 'Indica si eres propietario, agente o constructora.' },
+    ];
+
+    const PROJECT_REQUIRED = [
+      { id: 'units_total',    msg: 'El total de unidades es requerido.' },
+      { id: 'project_stage',  msg: 'Selecciona la etapa del proyecto.' },
+    ];
+
+    // Add asterisks to labels and inject error spans
+    [...REQUIRED_FIELDS, ...PROJECT_REQUIRED].forEach(({ id, msg }) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const label = document.querySelector(`label[for="${id}"]`);
+      if (label && !label.querySelector('.req')) {
+        const star = document.createElement('span');
+        star.className = 'req';
+        star.textContent = ' *';
+        label.appendChild(star);
+      }
+      if (!document.getElementById('err_' + id)) {
+        const span = document.createElement('span');
+        span.id = 'err_' + id;
+        span.className = 'field-err';
+        span.textContent = msg;
+        el.insertAdjacentElement('afterend', span);
+      }
+    });
+
+    // ── Required field validation ──────────────────────────────
+    function clearFieldErrors() {
+      document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+      document.querySelectorAll('.field-err').forEach(el => el.style.display = 'none');
+      document.getElementById('err_thumbnail').style.display = 'none';
+    }
+
+    function validateRequiredFields() {
+      clearFieldErrors();
+      let firstError = null;
+
+      const projectVisible = document.getElementById('projectDetails').classList.contains('visible');
+      const toCheck = [...REQUIRED_FIELDS, ...(projectVisible ? PROJECT_REQUIRED : [])];
+
+      toCheck.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!el.value || !el.value.trim()) {
+          el.classList.add('input-error');
+          const errEl = document.getElementById('err_' + id);
+          if (errEl) errEl.style.display = 'block';
+          if (!firstError) firstError = el;
+        }
+      });
+
+      // Thumbnail required
+      const thumb = document.getElementById('thumbnail');
+      if (!thumb.files || thumb.files.length === 0) {
+        document.getElementById('thumbnailLabel').classList.add('input-error');
+        document.getElementById('err_thumbnail').style.display = 'block';
+        if (!firstError) firstError = document.getElementById('err_thumbnail');
+      }
+
+      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return !firstError;
+    }
+
+    // Clear error state as user fixes a field
+    document.getElementById('propertyForm').addEventListener('input', function(e) {
+      const el = e.target;
+      if (el.classList.contains('input-error')) {
+        el.classList.remove('input-error');
+        const errEl = document.getElementById('err_' + el.id);
+        if (errEl) errEl.style.display = 'none';
+      }
+    });
+    document.getElementById('propertyForm').addEventListener('change', function(e) {
+      const el = e.target;
+      if (el.classList.contains('input-error')) {
+        el.classList.remove('input-error');
+        const errEl = document.getElementById('err_' + el.id);
+        if (errEl) errEl.style.display = 'none';
+      }
+      if (el.id === 'thumbnail' && el.files && el.files.length > 0) {
+        document.getElementById('thumbnailLabel').classList.remove('input-error');
+        document.getElementById('err_thumbnail').style.display = 'none';
+      }
+    });
+
     // ── Prevent Enter from submitting the form ─────────────────
     document.getElementById('propertyForm').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
@@ -1497,6 +1607,11 @@
     document.getElementById('propertyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.querySelector('.submit-btn');
+
+      if (!validateRequiredFields()) {
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = 'Enviando...';
 
