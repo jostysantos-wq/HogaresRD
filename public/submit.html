@@ -523,15 +523,8 @@
     .price-from-note.visible { display: block; }
 
     /* ── Blueprints ──────────────────────────────────────────── */
-    .blueprint-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem; }
-    .blueprint-row input { flex: 1; }
-    .blueprint-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; transition: color 0.2s, background 0.2s; flex-shrink: 0; }
-    .blueprint-remove:hover { color: var(--accent-red, #cf142b); background: rgba(207,20,43,0.08); }
-    .blueprint-remove svg { width: 16px; height: 16px; fill: currentColor; }
-    .add-blueprint-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.55rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 0.25rem; }
-    .add-blueprint-btn:hover { border-color: var(--accent); background: var(--input-bg); }
-    .add-blueprint-btn svg { width: 16px; height: 16px; fill: currentColor; }
-    .add-blueprint-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #blueprintDropZone { border: 2px dashed var(--border); border-radius: 14px; padding: 1.75rem 1.25rem; text-align: center; transition: border-color 0.2s, background 0.2s; background: var(--input-bg); }
+    #blueprintDropZone:hover { border-color: var(--accent); background: var(--accent-light); }
 
     /* ── Required field indicators & errors ─────────────────── */
     .req { color: var(--accent-red, #cf142b); margin-left: 2px; font-weight: 700; }
@@ -1097,13 +1090,16 @@
           Planos de la Propiedad
           <span style="margin-left:auto;font-size:0.75rem;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">Opcional</span>
         </div>
-        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1.25rem;">Si tienes planos del proyecto o unidades, pega el enlace público de cada imagen (Google Drive, Dropbox, Imgur, etc.). Los compradores podrán verlos directamente en el anuncio.</p>
-        <div id="blueprintsList"></div>
-        <button type="button" class="add-blueprint-btn" id="addBlueprintBtn" onclick="addBlueprint()">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Agregar enlace de plano
-        </button>
-        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.75rem;">Máximo 5 planos · El enlace debe ser público y accesible sin contraseña.</p>
+        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1.25rem;">Sube los planos del proyecto directamente. Se mostrarán en el anuncio para que los compradores los consulten.</p>
+
+        <label class="upload-area" for="blueprintFiles" id="blueprintDropZone" style="cursor:pointer;">
+          <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+          <p><strong>Haz clic o arrastra los planos aquí</strong><br>JPG, PNG, WEBP o PDF · Máximo 5 archivos · 10 MB por archivo</p>
+          <input type="file" id="blueprintFiles" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf" multiple style="display:none;" />
+        </label>
+
+        <div id="blueprintPreviews" style="display:none; margin-top:0.75rem;"></div>
+        <p id="blueprintStatus" style="font-size:0.82rem;color:var(--text-muted);margin-top:0.5rem;"></p>
       </div>
 
       </div><!-- /newPropSections -->
@@ -1484,31 +1480,71 @@
         : '';
     });
 
-    // ── Blueprints ─────────────────────────────────────────────
-    const MAX_BLUEPRINTS = 5;
-    let blueprintCount = 0;
+    // ── Blueprints file upload ──────────────────────────────────
+    const blueprintInput = document.getElementById('blueprintFiles');
+    let selectedBlueprintFiles = [];
 
-    function addBlueprint() {
-      if (blueprintCount >= MAX_BLUEPRINTS) return;
-      blueprintCount++;
-      const idx = blueprintCount;
-      const row = document.createElement('div');
-      row.className = 'blueprint-row';
-      row.id = `bp-row-${idx}`;
-      row.innerHTML = `
-        <input type="url" name="blueprints[]" placeholder="https://drive.google.com/file/... o enlace directo a imagen" />
-        <button type="button" class="blueprint-remove" onclick="removeBlueprint(${idx})" title="Eliminar">
-          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>`;
-      document.getElementById('blueprintsList').appendChild(row);
-      document.getElementById('addBlueprintBtn').disabled = blueprintCount >= MAX_BLUEPRINTS;
+    blueprintInput.addEventListener('change', function() {
+      const newFiles = Array.from(this.files);
+      // Merge with existing, cap at 5
+      selectedBlueprintFiles = [...selectedBlueprintFiles, ...newFiles].slice(0, 5);
+      this.value = ''; // reset so same file can be re-added after removal
+      renderBlueprintPreviews();
+    });
+
+    // Drag-and-drop support
+    const dropZone = document.getElementById('blueprintDropZone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.style.borderColor = '';
+      const dropped = Array.from(e.dataTransfer.files).filter(f =>
+        /\.(jpe?g|png|webp|gif|pdf)$/i.test(f.name)
+      );
+      selectedBlueprintFiles = [...selectedBlueprintFiles, ...dropped].slice(0, 5);
+      renderBlueprintPreviews();
+    });
+
+    function renderBlueprintPreviews() {
+      const wrap = document.getElementById('blueprintPreviews');
+      const status = document.getElementById('blueprintStatus');
+      if (!selectedBlueprintFiles.length) {
+        wrap.style.display = 'none';
+        wrap.innerHTML = '';
+        status.textContent = '';
+        return;
+      }
+      wrap.style.display = 'grid';
+      wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+      wrap.style.gap = '0.6rem';
+      wrap.innerHTML = selectedBlueprintFiles.map((f, i) => {
+        const isPdf = f.name.toLowerCase().endsWith('.pdf');
+        const thumb = isPdf
+          ? `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;"><svg viewBox="0 0 24 24" style="width:32px;height:32px;fill:var(--accent);opacity:0.7"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V9H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V9H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V9h3v1.5zM9 10h1v1H9v-1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5h1v-1h-1v1z"/></svg></div>`
+          : `<img src="${URL.createObjectURL(f)}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" />`;
+        return `<div style="position:relative;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;padding-bottom:0.3rem;">
+          ${thumb}
+          <div style="font-size:0.7rem;color:var(--text-muted);padding:0.25rem 0.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+          <button type="button" onclick="removeBlueprintFile(${i})" title="Eliminar" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.55);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+        </div>`;
+      }).join('');
+      status.textContent = `${selectedBlueprintFiles.length} de 5 archivos seleccionados`;
     }
 
-    function removeBlueprint(idx) {
-      const el = document.getElementById(`bp-row-${idx}`);
-      if (el) el.remove();
-      blueprintCount--;
-      document.getElementById('addBlueprintBtn').disabled = blueprintCount >= MAX_BLUEPRINTS;
+    function removeBlueprintFile(idx) {
+      selectedBlueprintFiles.splice(idx, 1);
+      renderBlueprintPreviews();
+    }
+
+    async function uploadBlueprints() {
+      if (!selectedBlueprintFiles.length) return [];
+      const fd = new FormData();
+      selectedBlueprintFiles.forEach(f => fd.append('blueprints', f));
+      const res  = await fetch('/api/upload/blueprints', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al subir planos');
+      return data.urls;
     }
 
     // ── Required field setup (asterisks + error spans) ─────────
@@ -1711,10 +1747,15 @@
         phase:     row.querySelector('[name="unit_phase[]"]').value,
       })).filter(u => u.name || u.price || u.area);
 
-      // Collect blueprints
-      body.blueprints = Array.from(document.querySelectorAll('[name="blueprints[]"]'))
-        .map(el => el.value.trim())
-        .filter(Boolean);
+      // Upload blueprints and collect URLs
+      try {
+        body.blueprints = await uploadBlueprints();
+      } catch (uploadErr) {
+        alert('Error al subir planos: ' + uploadErr.message);
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';
+        return;
+      }
 
       // Collect dynamic agencies
       const agencyEntries = document.querySelectorAll('.agency-entry');

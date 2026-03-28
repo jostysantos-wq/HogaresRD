@@ -3,6 +3,7 @@ const express    = require('express');
 const path       = require('path');
 const fs         = require('fs');
 const nodemailer = require('nodemailer');
+const multer     = require('multer');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,28 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ── Blueprint upload (multer) ──────────────────────────────────
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads', 'blueprints');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const blueprintStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const name = `bp_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+const blueprintUpload = multer({
+  storage: blueprintStorage,
+  limits:  { fileSize: 10 * 1024 * 1024, files: 5 }, // 10 MB per file, max 5
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(jpe?g|png|webp|gif|pdf)$/i;
+    if (allowed.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Tipo de archivo no permitido'));
+  },
+});
+
 // ── Middleware ─────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -62,6 +85,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/user',     require('./routes/user'));
+
+// ── Blueprint upload endpoint ──────────────────────────────────
+app.post('/api/upload/blueprints', blueprintUpload.array('blueprints', 5), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No se recibieron archivos.' });
+  }
+  const urls = req.files.map(f => `/uploads/blueprints/${f.filename}`);
+  res.json({ urls });
+}, (err, req, res, next) => {
+  res.status(400).json({ error: err.message });
+});
 
 // ── Admin auth middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {
