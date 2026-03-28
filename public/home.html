@@ -892,6 +892,16 @@
       viewport.addEventListener('touchmove',  e => onDragMove(e.touches[0].clientX),  { passive: true });
       viewport.addEventListener('touchend',   ()  => onDragEnd());
 
+      // Mouse-wheel scroll over the carousel advances cards
+      let wheelTimer = null;
+      viewport.addEventListener('wheel', e => {
+        e.preventDefault();
+        clearTimeout(wheelTimer);
+        wheelTimer = setTimeout(() => {
+          setPos(pos + (e.deltaY > 0 || e.deltaX > 0 ? 1 : -1), true);
+        }, 50);
+      }, { passive: false });
+
       window.addEventListener('resize', () => { if (items.length) rebuild(); });
 
       return {
