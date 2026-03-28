@@ -42,6 +42,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── API routes ─────────────────────────────────────────────────
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
+app.use('/api/user',     require('./routes/user'));
 
 // ── Admin auth middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {

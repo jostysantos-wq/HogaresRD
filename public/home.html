@@ -73,6 +73,21 @@
     .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
     .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
+    /* ── User menu ──────────────────────────────────────────── */
+    .user-menu { position: relative; }
+    .user-avatar-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px solid var(--border); border-radius: 50px; padding: 0.3rem 0.75rem 0.3rem 0.3rem; cursor: pointer; color: var(--text); transition: border-color 0.2s, background 0.2s; }
+    .user-avatar-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .user-first-name { font-size: 0.88rem; font-weight: 600; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-avatar-btn svg { width: 16px; height: 16px; fill: var(--text-muted); }
+    .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); min-width: 180px; overflow: hidden; z-index: 200; display: none; }
+    .user-dropdown.open { display: block; }
+    .dropdown-item { display: block; width: 100%; padding: 0.7rem 1.1rem; font-size: 0.9rem; color: var(--text); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.15s; }
+    .dropdown-item:hover { background: var(--accent-light); color: var(--accent); }
+    .dropdown-divider { border: none; border-top: 1px solid var(--border); margin: 0.25rem 0; }
+    .dropdown-logout { color: var(--red) !important; }
+    .card-save.saved svg { fill: var(--red); }
+
     /* HERO */
     .hero { position: relative; min-height: 600px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(135deg, #001840 0%, #002D62 45%, #003d88 70%, #00509e 100%); }
     .hero-shapes { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -269,7 +284,7 @@
             <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
           </span>
         </button>
-        <a href="#" class="btn-ghost">Iniciar sesión</a>
+        <div id="navAuthArea"></div>
         <a href="/submit" class="btn-primary">
           <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           Publicar
@@ -381,7 +396,7 @@
         <div class="card-img prop-1">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-featured">Destacado</span><span class="badge-tag badge-luxury">Lujo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/18</div>
         </div>
         <div class="card-body">
@@ -400,7 +415,7 @@
         <div class="card-img prop-2">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/9</div>
         </div>
         <div class="card-body">
@@ -419,7 +434,7 @@
         <div class="card-img prop-3">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-rent">Alquiler</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/14</div>
         </div>
         <div class="card-body">
@@ -438,7 +453,7 @@
         <div class="card-img prop-4">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/6</div>
         </div>
         <div class="card-body">
@@ -456,7 +471,7 @@
         <div class="card-img prop-5">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-featured">Destacado</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/22</div>
         </div>
         <div class="card-body">
@@ -475,7 +490,7 @@
         <div class="card-img prop-6">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <div class="card-badges"><span class="badge-tag badge-rent">Alquiler</span><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
+          <button class="card-save" data-listing-id="static-placeholder"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
           <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/11</div>
         </div>
         <div class="card-body">
@@ -622,6 +637,94 @@
       document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
       el.classList.add('active');
     }
+
+    // ── Auth nav state ────────────────────────────────────────
+    let _userFavorites = new Set();
+
+    function renderLoggedOut(el) {
+      el.innerHTML = `
+        <a href="/login" class="btn-ghost">Iniciar sesión</a>
+        <a href="/register" class="btn-ghost" style="border-color:var(--accent);color:var(--accent);">Registrarse</a>`;
+    }
+
+    function renderLoggedIn(el, user) {
+      _userFavorites = new Set(user.favorites || []);
+      const initials   = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const firstName  = user.name.split(' ')[0];
+      el.innerHTML = `
+        <div class="user-menu" id="userMenu">
+          <button class="user-avatar-btn" id="userAvatarBtn">
+            <div class="user-avatar">${initials}</div>
+            <span class="user-first-name">${firstName}</span>
+            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile" class="dropdown-item">👤 Mi Perfil</a>
+            <a href="/favorites" class="dropdown-item">❤️ Mis Favoritos</a>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item dropdown-logout" onclick="logout()">Cerrar Sesión</button>
+          </div>
+        </div>`;
+      document.getElementById('userAvatarBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('userDropdown').classList.toggle('open');
+      });
+      document.addEventListener('click', () => {
+        const dd = document.getElementById('userDropdown');
+        if (dd) dd.classList.remove('open');
+      });
+      refreshHearts();
+    }
+
+    function refreshHearts() {
+      document.querySelectorAll('.card-save[data-listing-id]').forEach(btn => {
+        const id = btn.dataset.listingId;
+        btn.classList.toggle('saved', _userFavorites.has(id));
+        const path = btn.querySelector('svg path');
+        if (path) {
+          path.setAttribute('d', _userFavorites.has(id)
+            ? 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
+            : 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z'
+          );
+        }
+      });
+    }
+
+    async function toggleFavorite(btn, listingId) {
+      const token = localStorage.getItem('hogaresrd_token');
+      if (!token) { window.location.href = '/login?next=/home'; return; }
+      const isSaved = _userFavorites.has(listingId);
+      try {
+        const res = await fetch(`/api/user/favorites/${listingId}`, {
+          method:  isSaved ? 'DELETE' : 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        _userFavorites = new Set(data.favorites);
+        refreshHearts();
+      } catch {}
+    }
+
+    // Wire all heart buttons
+    document.querySelectorAll('.card-save[data-listing-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        toggleFavorite(btn, btn.dataset.listingId);
+      });
+    });
+
+    // Init nav auth state
+    (async () => {
+      const token = localStorage.getItem('hogaresrd_token');
+      const area  = document.getElementById('navAuthArea');
+      if (!token) return renderLoggedOut(area);
+      try {
+        const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) { localStorage.removeItem('hogaresrd_token'); return renderLoggedOut(area); }
+        renderLoggedIn(area, await res.json());
+      } catch { renderLoggedOut(area); }
+    })();
   </script>
 </body>
 </html>
