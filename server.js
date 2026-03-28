@@ -83,12 +83,13 @@ app.get('/submit', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'submit.html'));
 });
 
-app.get('/login',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-app.get('/register',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get('/reset-password',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
-app.get('/forgot-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
-app.get('/profile',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
-app.get('/listing/:id',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
+app.get('/login',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/register',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+app.get('/register-agency',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
+app.get('/reset-password',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/forgot-password',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
+app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;

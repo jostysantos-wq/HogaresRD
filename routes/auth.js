@@ -158,6 +158,85 @@ router.post('/register', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Register Agency ────────────────────────────────────────────────────────
+router.post('/register/agency', async (req, res, next) => {
+  try {
+    const { name, email, password, agencyName, licenseNumber, phone } = req.body;
+
+    if (!name || !email || !password || !agencyName || !licenseNumber || !phone)
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (password.length < 8)
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    if (store.getUserByEmail(email))
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const refToken     = crypto.randomBytes(8).toString('hex');
+
+    const user = {
+      id:              `usr_${Date.now()}`,
+      email:           email.toLowerCase().trim(),
+      passwordHash,
+      name:            name.trim(),
+      phone:           phone.trim(),
+      agencyName:      agencyName.trim(),
+      licenseNumber:   licenseNumber.trim(),
+      refToken,
+      createdAt:       new Date().toISOString(),
+      lastLoginAt:     null,
+      role:            'agency',
+      favorites:       [],
+      resetToken:      null,
+      resetTokenExpiry: null,
+      marketingOptIn:  true,
+    };
+
+    store.saveUser(user);
+
+    transporter.sendMail({
+      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      to:      user.email,
+      subject: '¡Bienvenido a HogaresRD! Tu cuenta de inmobiliaria está lista 🏢',
+      html: `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#004aaa 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;">🏢 HogaresRD — Inmobiliarias</div>
+          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Bienvenido, ${name.split(' ')[0]}!</div>
+          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">${agencyName} · Cuenta verificada</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Tu cuenta de agente está activa. Aquí tienes lo que puedes hacer:</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">🔗</span><span style="color:#4d6a8a;font-size:0.9rem;"><strong>Genera enlaces afiliados</strong> para cada propiedad y envíalos a tus clientes</span></td></tr>
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📩</span><span style="color:#4d6a8a;font-size:0.9rem;">Clientes que usen tu enlace te contactan <strong>directamente a ti</strong></span></td></tr>
+            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">🏠</span><span style="color:#4d6a8a;font-size:0.9rem;">Publica propiedades y proyectos en el portal</span></td></tr>
+          </table>
+          <div style="background:#f0f4f9;border-radius:10px;padding:16px 20px;margin-top:8px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#4d6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Tu código de agente</div>
+            <div style="font-size:1.05rem;font-weight:800;color:#002D62;letter-spacing:2px;font-family:monospace;">${refToken}</div>
+            <div style="font-size:0.73rem;color:#7a9bbf;margin-top:4px;">Se incluye automáticamente en tus enlaces afiliados</div>
+          </div>
+          <div style="margin-top:28px;text-align:center;">
+            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Explorar Propiedades →</a>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+    }).catch(err => console.error('Agency welcome email error:', err.message));
+
+    res.status(201).json({ success: true, user: safeUser(user) });
+  } catch (err) { next(err); }
+});
+
 // ── Login ──────────────────────────────────────────────────────────────────
 router.post('/login', async (req, res, next) => {
   try {

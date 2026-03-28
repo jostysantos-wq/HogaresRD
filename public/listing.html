@@ -200,6 +200,14 @@
     .btn-cta-ghost { display: block; width: 100%; text-align: center; padding: 0.75rem; background: none; border: 1.5px solid var(--border); color: var(--text); border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: border-color 0.2s; }
     .btn-cta-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-cta-ghost svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-affiliate { display: none; width: 100%; text-align: center; padding: 0.75rem; background: none; border: 1.5px dashed var(--accent); color: var(--accent); border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; gap: 0.45rem; transition: background 0.2s; margin-bottom: 0.6rem; }
+    .btn-affiliate:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .btn-affiliate svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+    .btn-affiliate.visible { display: flex; }
+    .affiliate-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: #002D62; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 1000; white-space: nowrap; }
+    .affiliate-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .modal-ref-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 20px; padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .modal-ref-badge svg { width: 11px; height: 11px; fill: currentColor; }
 
     /* ── AGENCY TABS ─────────────────────────────────────────── */
     .agencies-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
@@ -374,6 +382,10 @@
           <div class="sidebar-amount" id="sidebarPrice"></div>
           <div class="sidebar-meta" id="sidebarMeta"></div>
           <button class="btn-cta" id="ctaBtn" onclick="openInquiry()">Agendar Consulta</button>
+          <button class="btn-affiliate" id="affiliateBtn" onclick="copyAffiliateLink()">
+            <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+            Copiar enlace afiliado
+          </button>
           <button class="btn-cta-ghost" onclick="share()">
             <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             Compartir
@@ -391,11 +403,17 @@
   </div><!-- /page-wrap -->
 </div><!-- /listingPage -->
 
+<div class="affiliate-toast" id="affiliateToast">¡Enlace copiado al portapapeles!</div>
+
 <!-- INQUIRY MODAL -->
 <div class="modal-backdrop" id="inquiryModal" onclick="closeInquiryOnBackdrop(event)">
   <div class="modal">
     <button class="modal-close" onclick="closeInquiry()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
     <div id="inquiryFormWrap">
+      <div id="inquiryRefBadge" class="modal-ref-badge" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        <span id="inquiryRefLabel"></span>
+      </div>
       <div class="modal-title">Agendar Consulta</div>
       <div class="modal-sub" id="inquiryModalSub">Un agente de las inmobiliarias afiliadas se pondrá en contacto contigo.</div>
       <form id="inquiryForm" onsubmit="submitInquiry(event)">
@@ -492,6 +510,20 @@
     btn.textContent = descExpanded ? 'Leer menos ↑' : 'Leer más ↓';
   }
 
+  // ── Affiliate link ─────────────────────────────────────────
+  let _refToken = null; // set if page loaded via ?ref=
+
+  function copyAffiliateLink() {
+    const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    if (!me || !me.refToken) return;
+    const url = `${location.origin}/listing/${listingId}?ref=${me.refToken}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const toast = document.getElementById('affiliateToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
   // ── Inquiry modal ──────────────────────────────────────────
   function openInquiry() {
     document.getElementById('inquiryForm').reset();
@@ -515,10 +547,11 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name:    document.getElementById('iqName').value,
-          phone:   document.getElementById('iqPhone').value,
-          email:   document.getElementById('iqEmail').value,
-          message: document.getElementById('iqMessage').value,
+          name:     document.getElementById('iqName').value,
+          phone:    document.getElementById('iqPhone').value,
+          email:    document.getElementById('iqEmail').value,
+          message:  document.getElementById('iqMessage').value,
+          refToken: _refToken || undefined,
         }),
       });
       if (!res.ok) throw new Error();
@@ -669,6 +702,30 @@
     // Populate modal subtitle with listing title
     document.getElementById('inquiryModalSub').textContent =
       `Un agente de las inmobiliarias afiliadas a "${l.title}" se pondrá en contacto contigo.`;
+
+    // Resolve ?ref= affiliate token
+    const urlRef = new URLSearchParams(location.search).get('ref');
+    if (urlRef) {
+      try {
+        const agentRes = await fetch(`/api/listings/agent/${urlRef}`);
+        if (agentRes.ok) {
+          const agent = await agentRes.json();
+          _refToken = urlRef;
+          document.getElementById('inquiryModalSub').textContent =
+            `Tu consulta irá directamente a ${agent.name} de ${agent.agencyName}.`;
+          const badge = document.getElementById('inquiryRefBadge');
+          document.getElementById('inquiryRefLabel').textContent =
+            `${agent.name} · ${agent.agencyName}`;
+          badge.style.display = 'inline-flex';
+        }
+      } catch {}
+    }
+
+    // Show affiliate link button if logged-in agency user
+    const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    if (me && me.role === 'agency' && me.refToken) {
+      document.getElementById('affiliateBtn').classList.add('visible');
+    }
 
     // Agencies — randomized tab selector (no favoritism)
     if (l.agencies && l.agencies.length) {

@@ -14,9 +14,10 @@ function read(file)       { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function write(file, data){ fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
 // ── Users ──────────────────────────────────────────────────────────────────
-function getUsers()            { return read(FILES.users); }
-function getUserById(id)       { return getUsers().find(u => u.id === id) || null; }
-function getUserByEmail(email) { return getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()) || null; }
+function getUsers()               { return read(FILES.users); }
+function getUserById(id)          { return getUsers().find(u => u.id === id) || null; }
+function getUserByEmail(email)    { return getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()) || null; }
+function getUserByRefToken(token) { return getUsers().find(u => u.refToken === token) || null; }
 
 function saveUser(user) {
   const users = getUsers();
@@ -83,7 +84,7 @@ function saveListing(listing) {
 }
 
 module.exports = {
-  getUsers, getUserById, getUserByEmail, saveUser,
+  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing,
 };

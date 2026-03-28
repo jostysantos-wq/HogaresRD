@@ -64,6 +64,14 @@ router.get('/trending', (req, res) => {
   res.json({ listings });
 });
 
+// GET /api/listings/agent/:refToken — public: resolve affiliate token to agent name/agency
+router.get('/agent/:refToken', (req, res) => {
+  const agent = store.getUserByRefToken(req.params.refToken);
+  if (!agent || agent.role !== 'agency')
+    return res.status(404).json({ error: 'Agente no encontrado' });
+  res.json({ name: agent.name, agencyName: agent.agencyName });
+});
+
 // GET /api/listings/:id
 router.get('/:id', (req, res) => {
   const listing = store.getListingById(req.params.id);
@@ -78,17 +86,24 @@ router.post('/:id/inquiry', async (req, res) => {
   if (!listing || listing.status !== 'approved')
     return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-  const { name, phone, email, message } = req.body;
+  const { name, phone, email, message, refToken } = req.body;
   if (!name || !phone || !email)
     return res.status(400).json({ error: 'Nombre, teléfono y correo son requeridos' });
 
-  const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-  const agencyEmails = agencies.map(a => a.email).filter(Boolean);
+  // If refToken provided, route ONLY to that agent
+  let agencyEmails = [];
+  let agencyNames  = 'las inmobiliarias afiliadas';
+  const refAgent   = refToken ? store.getUserByRefToken(refToken) : null;
 
-  // Include developer email as fallback if no agencies
-  if (!agencyEmails.length && listing.email) agencyEmails.push(listing.email);
-
-  const agencyNames = agencies.map(a => a.name).join(', ') || 'las inmobiliarias afiliadas';
+  if (refAgent && refAgent.role === 'agency') {
+    agencyEmails = [refAgent.email];
+    agencyNames  = `${refAgent.name} de ${refAgent.agencyName}`;
+  } else {
+    const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
+    agencyEmails   = agencies.map(a => a.email).filter(Boolean);
+    agencyNames    = agencies.map(a => a.name).join(', ') || 'las inmobiliarias afiliadas';
+    if (!agencyEmails.length && listing.email) agencyEmails.push(listing.email);
+  }
   const listingUrl  = `${process.env.BASE_URL || 'http://localhost:3000'}/listing/${listing.id}`;
 
   const agentHtml = `
