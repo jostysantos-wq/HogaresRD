@@ -502,6 +502,21 @@
     /* ── Conditional field hiding ────────────────────────────── */
     .field-hidden { display: none !important; }
 
+    /* ── Unit types ───────────────────────────────────────────── */
+    .unit-types-section { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }
+    .unit-types-label { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    .unit-entry { background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .unit-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .unit-entry-num { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+    .remove-unit-btn { background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.5rem; border-radius: 6px; transition: background 0.2s; }
+    .remove-unit-btn:hover { background: rgba(207,20,43,0.08); }
+    .remove-unit-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .add-unit-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.6rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.25rem; }
+    .add-unit-btn:hover { border-color: var(--accent); background: var(--input-bg); }
+    .add-unit-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .price-from-note { display: none; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+    .price-from-note.visible { display: block; }
+
     /* ── Map ─────────────────────────────────────────────────── */
     #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
@@ -686,6 +701,20 @@
               </select>
             </div>
           </div>
+
+          <!-- Unit types -->
+          <div class="unit-types-section">
+            <div class="unit-types-label">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+              Tipos de Unidades
+            </div>
+            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">Si el proyecto tiene varios modelos (apartamentos, penthouses, estudios) con distintas dimensiones y precios, agrégalos aquí. Cada tipo puede tener su propio precio y disponibilidad.</p>
+            <div id="unitTypesList"></div>
+            <button type="button" class="add-unit-btn" onclick="addUnitType()">
+              <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Agregar Tipo de Unidad
+            </button>
+          </div>
         </div>
       </div>
 
@@ -697,11 +726,12 @@
         </div>
         <div class="grid-3">
           <div class="field">
-            <label for="price">Precio (USD)</label>
+            <label for="price" id="priceLabel">Precio (USD)</label>
             <div class="price-wrap">
               <span class="currency">$</span>
               <input type="number" id="price" name="price" placeholder="250000" min="0" required />
             </div>
+            <p class="price-from-note" id="priceFromNote">Si el proyecto tiene varios tipos de unidades, ingresa el precio más bajo (precio desde).</p>
           </div>
           <div class="field">
             <label for="area_const">Área Construida (m²)</label>
@@ -1172,6 +1202,74 @@
       notice.classList.toggle('visible', hasAgencies);
     }
 
+    // ── Unit types ─────────────────────────────────────────────
+    let unitCount = 0;
+
+    function addUnitType() {
+      unitCount++;
+      const idx = unitCount;
+      const div = document.createElement('div');
+      div.className = 'unit-entry';
+      div.id = `unit-${idx}`;
+      div.innerHTML = `
+        <div class="unit-entry-header">
+          <span class="unit-entry-num">Tipo de Unidad #${idx}</span>
+          <button type="button" class="remove-unit-btn" onclick="removeUnitType(${idx})">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            Eliminar
+          </button>
+        </div>
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Nombre del Tipo <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(ej. Penthouse, Tipo A, Estudio)</span></label>
+            <input type="text" name="unit_name[]" placeholder="Ej. Apartamento 2BR, Penthouse Vista Mar..." />
+          </div>
+          <div class="field">
+            <label>Habitaciones</label>
+            <select name="unit_bedrooms[]">
+              <option value="">—</option>
+              <option>Estudio</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Baños</label>
+            <select name="unit_bathrooms[]">
+              <option value="">—</option>
+              <option>1</option><option>1.5</option><option>2</option>
+              <option>2.5</option><option>3</option><option>4+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Área (m²)</label>
+            <input type="number" name="unit_area[]" placeholder="Ej. 95" min="1" />
+          </div>
+          <div class="field">
+            <label>Precio por Unidad (USD)</label>
+            <input type="number" name="unit_price[]" placeholder="Ej. 185000" min="0" />
+          </div>
+          <div class="field">
+            <label>Unidades Disponibles</label>
+            <input type="number" name="unit_available[]" placeholder="Ej. 8" min="0" />
+          </div>
+        </div>`;
+      document.getElementById('unitTypesList').appendChild(div);
+      updatePriceNote();
+    }
+
+    function removeUnitType(idx) {
+      const el = document.getElementById(`unit-${idx}`);
+      if (el) el.remove();
+      updatePriceNote();
+    }
+
+    function updatePriceNote() {
+      const hasUnits = document.querySelectorAll('.unit-entry').length > 0;
+      document.getElementById('priceFromNote').classList.toggle('visible', hasUnits);
+      document.getElementById('priceLabel').textContent = hasUnits ? 'Precio Desde (USD)' : 'Precio (USD)';
+    }
+
     // ── Agencies ───────────────────────────────────────────────
     let agencyCount = 0;
 
@@ -1280,6 +1378,16 @@
         return;
       }
 
+      // Collect unit types
+      body.unit_types = Array.from(document.querySelectorAll('.unit-entry')).map(entry => ({
+        name:      entry.querySelector('[name="unit_name[]"]').value.trim(),
+        bedrooms:  entry.querySelector('[name="unit_bedrooms[]"]').value,
+        bathrooms: entry.querySelector('[name="unit_bathrooms[]"]').value,
+        area:      entry.querySelector('[name="unit_area[]"]').value,
+        price:     entry.querySelector('[name="unit_price[]"]').value,
+        available: entry.querySelector('[name="unit_available[]"]').value,
+      })).filter(u => u.name || u.price || u.area);
+
       // Collect dynamic agencies
       const agencyEntries = document.querySelectorAll('.agency-entry');
       body.agencies = Array.from(agencyEntries).map(entry => ({
@@ -1305,6 +1413,10 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.reset();
           document.getElementById('fileNames').textContent = '';
+          // Reset unit types
+          document.getElementById('unitTypesList').querySelectorAll('.unit-entry').forEach(e => e.remove());
+          unitCount = 0;
+          updatePriceNote();
           // Reset agencies
           document.getElementById('agenciesList').querySelectorAll('.agency-entry').forEach(e => e.remove());
           document.getElementById('agenciesEmpty').style.display = 'block';

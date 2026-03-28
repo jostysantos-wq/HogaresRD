@@ -109,6 +109,16 @@
     .agency-card strong { display: block; color: #002D62; font-size: 0.85rem; }
     .agency-card span { color: #4d6a8a; display: block; font-size: 0.78rem; }
 
+    /* UNIT TYPES */
+    .unit-types-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 0.4rem; }
+    .unit-types-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; padding: 0.3rem 0.5rem; border-bottom: 1px solid #e8eef7; }
+    .unit-types-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #f0f4f9; color: #001840; }
+    .unit-types-table tr:last-child td { border-bottom: none; }
+    .unit-types-table .price-col { font-weight: 700; color: #002D62; }
+    .unit-types-table .avail-col { font-weight: 700; color: #0a7c4f; }
+    .sub-unit-types { padding: 0 1.5rem 1rem; }
+    .sub-unit-types-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
+
     /* CLAIM CARD */
     .claim-card-body { padding: 1.25rem 1.5rem; }
     .claim-target { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.88rem; margin-bottom: 1rem; }
@@ -409,6 +419,26 @@
               </div>` : ''}
             ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
             ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
+            ${(() => {
+              const units = Array.isArray(s.unit_types) ? s.unit_types : [];
+              if (!units.length) return '';
+              return `<div class="sub-unit-types">
+                <div class="sub-unit-types-label">Tipos de Unidades</div>
+                <table class="unit-types-table">
+                  <thead><tr>
+                    <th>Tipo</th><th>Hab.</th><th>Baños</th><th>m²</th><th>Precio</th><th>Disponibles</th>
+                  </tr></thead>
+                  <tbody>${units.map(u => `<tr>
+                    <td>${u.name || '—'}</td>
+                    <td>${u.bedrooms || '—'}</td>
+                    <td>${u.bathrooms || '—'}</td>
+                    <td>${u.area ? u.area + ' m²' : '—'}</td>
+                    <td class="price-col">${u.price ? '$' + Number(u.price).toLocaleString() : '—'}</td>
+                    <td class="avail-col">${u.available || '0'}</td>
+                  </tr>`).join('')}</tbody>
+                </table>
+              </div>`;
+            })()}
             ${agencyHTML}
             ${mapHTML}
             <div class="sub-card-footer">

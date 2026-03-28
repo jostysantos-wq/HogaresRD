@@ -89,6 +89,7 @@ app.post('/submit', async (req, res) => {
     units_available:    isClaim ? '' : (body.units_available   || ''),
     delivery_date:      isClaim ? '' : (body.delivery_date     || ''),
     project_stage:      isClaim ? '' : (body.project_stage     || ''),
+    unit_types:         isClaim ? [] : (Array.isArray(body.unit_types) ? body.unit_types : []),
     lat:         isClaim ? '' : (body.lat          || ''),
     lng:         isClaim ? '' : (body.lng          || ''),
     // Agencies (present in both modes)
