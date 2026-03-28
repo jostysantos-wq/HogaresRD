@@ -91,6 +91,7 @@ app.get('/forgot-password',   (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
 app.get('/alquilar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'alquilar.html')));
+app.get('/nuevos-proyectos',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'nuevos-proyectos.html')));
 app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 
