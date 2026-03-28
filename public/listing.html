@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Propiedad — HogaresRD</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
+      --text: #001840; --text-muted: #4d6a8a;
+      --accent: #002D62; --accent-hover: #001a45; --accent-light: #e8f0fb;
+      --red: #CF142B; --green: #0a7c4f; --border: #d0dcea;
+      --shadow-sm: 0 2px 8px rgba(0,45,98,0.08); --shadow-md: 0 4px 20px rgba(0,45,98,0.12);
+      --nav-bg: rgba(255,255,255,0.96); --toggle-bg: #c4d4e8; --toggle-knob: #ffffff;
+    }
+    [data-theme="dark"] {
+      --bg: #00101f; --bg-card: #001e3c; --bg-section: #001428;
+      --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #4a90d9; --accent-hover: #3a7bc8; --accent-light: #001e3c;
+      --red: #e8374e; --green: #1db87a; --border: #003060;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3); --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --nav-bg: rgba(0,16,31,0.97); --toggle-bg: #003060; --toggle-knob: #e8f0fb;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* ── NAV ─────────────────────────────────────────────────── */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 1.5rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .logo-text { font-size: 1.3rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-spacer { flex: 1; }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.88rem; font-weight: 600; padding: 0.42rem 1rem; border-radius: 8px; cursor: pointer; text-decoration: none; transition: border-color 0.2s, color 0.2s; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary { background: var(--accent); border: none; color: #fff; font-size: 0.88rem; font-weight: 600; padding: 0.48rem 1.1rem; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary svg { width: 15px; height: 15px; fill: #fff; }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 48px; height: 26px; cursor: pointer; position: relative; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; width: 18px; height: 18px; background: var(--toggle-knob); border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: transform 0.3s; }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(22px); }
+    .user-menu { position: relative; }
+    .user-avatar-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px solid var(--border); border-radius: 50px; padding: 0.28rem 0.7rem 0.28rem 0.28rem; cursor: pointer; color: var(--text); }
+    .user-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .user-first-name { font-size: 0.85rem; font-weight: 600; }
+    .user-avatar-btn svg { width: 14px; height: 14px; fill: var(--text-muted); }
+    .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); min-width: 175px; overflow: hidden; z-index: 200; display: none; }
+    .user-dropdown.open { display: block; }
+    .dropdown-item { display: block; width: 100%; padding: 0.65rem 1rem; font-size: 0.88rem; color: var(--text); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.15s; }
+    .dropdown-item:hover { background: var(--accent-light); color: var(--accent); }
+    .dropdown-divider { border: none; border-top: 1px solid var(--border); margin: 0.25rem 0; }
+    .dropdown-logout { color: var(--red) !important; }
+
+    /* ── GALLERY ─────────────────────────────────────────────── */
+    .gallery { background: var(--bg-card); border-bottom: 1px solid var(--border); }
+    .gallery-inner { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
+    .gallery-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 0.5rem; height: 440px; border-radius: 16px; overflow: hidden; }
+    .gallery-main { grid-row: 1 / 3; position: relative; cursor: pointer; }
+    .gallery-thumb { position: relative; cursor: pointer; overflow: hidden; }
+    .gallery-thumb:hover .gimg { filter: brightness(0.85); }
+    .gimg { width: 100%; height: 100%; transition: filter 0.2s; }
+    .photo-a { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #004aaa 100%); }
+    .photo-b { background: linear-gradient(135deg, #1a6b9a, #0d4a6e); }
+    .photo-c { background: linear-gradient(135deg, #2d7d5a, #1a5c3e); }
+    .photo-d { background: linear-gradient(135deg, #6b3fa0, #4a2870); }
+    .photo-e { background: linear-gradient(135deg, #c07c1a, #8b5a0a); }
+    .gimg-icon { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .gimg-icon svg { opacity: 0.2; fill: #fff; }
+    .gimg-icon.main svg { width: 80px; height: 80px; }
+    .gimg-icon.thumb svg { width: 36px; height: 36px; }
+    .gallery-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem 1.25rem 0.85rem; background: linear-gradient(transparent, rgba(0,0,0,0.55)); color: #fff; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; }
+    .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; }
+    .gallery-count svg { width: 14px; height: 14px; fill: #fff; }
+
+    /* ── PAGE WRAP ───────────────────────────────────────────── */
+    .page-wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+    .breadcrumb { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb svg { width: 12px; height: 12px; fill: var(--text-muted); flex-shrink: 0; }
+    .listing-layout { display: grid; grid-template-columns: 1fr 340px; gap: 2.5rem; align-items: start; }
+    .listing-sidebar { position: sticky; top: 88px; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ── HEADER ──────────────────────────────────────────────── */
+    .listing-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem; }
+    .badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 0.3rem 0.75rem; border-radius: 50px; }
+    .badge-sale   { background: var(--accent); color: #fff; }
+    .badge-new    { background: var(--green); color: #fff; }
+    .badge-stage  { background: rgba(207,20,43,0.1); color: var(--red); border: 1px solid rgba(207,20,43,0.25); }
+    .badge-tag-sm { background: var(--accent-light); color: var(--accent); }
+    .listing-title { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 0.75rem; }
+    .listing-location { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1rem; }
+    .listing-location svg { width: 16px; height: 16px; fill: var(--red); flex-shrink: 0; }
+    .listing-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.75rem; }
+    .tag-pill { font-size: 0.75rem; font-weight: 600; color: var(--accent); background: var(--accent-light); border-radius: 50px; padding: 0.25rem 0.7rem; }
+
+    /* ── SPECS BAR ───────────────────────────────────────────── */
+    .specs-bar { display: flex; flex-wrap: wrap; gap: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 2rem; }
+    .spec-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; padding: 1rem 1.25rem; flex: 1; min-width: 90px; border-right: 1px solid var(--border); text-align: center; }
+    .spec-item:last-child { border-right: none; }
+    .spec-icon { width: 28px; height: 28px; background: var(--accent-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .spec-icon svg { width: 15px; height: 15px; fill: var(--accent); }
+    .spec-value { font-size: 1rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .spec-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+
+    /* ── SECTIONS ────────────────────────────────────────────── */
+    .detail-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; margin-bottom: 1.5rem; }
+    .section-heading { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .section-heading::before { content: ''; width: 4px; height: 18px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+
+    /* ── DESCRIPTION ─────────────────────────────────────────── */
+    .description-text { color: var(--text-muted); line-height: 1.75; font-size: 0.95rem; white-space: pre-line; }
+    .description-text.clamped { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .read-more-btn { background: none; border: none; color: var(--accent); font-weight: 600; font-size: 0.88rem; cursor: pointer; padding: 0.5rem 0 0; display: block; }
+
+    /* ── UNIT TYPES ──────────────────────────────────────────── */
+    .unit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 1rem; }
+    .unit-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s, box-shadow 0.2s; }
+    .unit-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+    .unit-name { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 0.75rem; }
+    .unit-specs { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+    .unit-spec { display: flex; align-items: center; gap: 0.5rem; font-size: 0.83rem; color: var(--text-muted); }
+    .unit-spec svg { width: 14px; height: 14px; fill: var(--accent); flex-shrink: 0; }
+    .unit-price { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin-bottom: 0.6rem; }
+    .unit-avail { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .avail-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 0.75rem; }
+    .avail-fill { height: 100%; background: var(--green); border-radius: 2px; }
+    .btn-unit { display: block; width: 100%; text-align: center; padding: 0.5rem; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 8px; font-size: 0.83rem; font-weight: 700; text-decoration: none; background: none; cursor: pointer; transition: background 0.2s, color 0.2s; }
+    .btn-unit:hover { background: var(--accent); color: #fff; }
+
+    /* ── AMENITIES ───────────────────────────────────────────── */
+    .amenities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 0.6rem; }
+    .amenity-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.87rem; color: var(--text-muted); padding: 0.5rem 0.75rem; background: var(--bg); border-radius: 8px; }
+    .amenity-check { width: 18px; height: 18px; background: var(--accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .amenity-check svg { width: 10px; height: 10px; fill: var(--accent); }
+
+    /* ── CONSTRUCTION CO ─────────────────────────────────────── */
+    .builder-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .builder-logo { width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .builder-logo svg { width: 28px; height: 28px; fill: #fff; }
+    .builder-name { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+    .builder-sub { font-size: 0.82rem; color: var(--text-muted); }
+    .builder-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+    .builder-stat { text-align: center; padding: 0.85rem; background: var(--bg); border-radius: 10px; }
+    .builder-stat-value { font-size: 1.4rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .builder-stat-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .builder-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; }
+    .builder-contact { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+    .btn-contact { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: var(--text); text-decoration: none; background: none; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+    .btn-contact:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-contact svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* ── MAP ─────────────────────────────────────────────────── */
+    #listingMap { height: 300px; border-radius: 10px; overflow: hidden; }
+
+    /* ── SIDEBAR ─────────────────────────────────────────────── */
+    .sidebar-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+    .sidebar-price { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+    .sidebar-amount { font-size: 1.9rem; font-weight: 800; color: var(--text); line-height: 1.1; margin-bottom: 0.25rem; }
+    .sidebar-amount sup { font-size: 1rem; vertical-align: super; }
+    .sidebar-meta { display: flex; flex-direction: column; gap: 0.55rem; margin: 1.25rem 0; padding: 1.1rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .sidebar-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+    .sidebar-row-label { color: var(--text-muted); }
+    .sidebar-row-value { font-weight: 700; color: var(--text); }
+    .sidebar-row-value.green { color: var(--green); }
+    .sidebar-row-value.red { color: var(--red); }
+    .avail-progress { margin-top: 0.4rem; }
+    .btn-cta { display: block; width: 100%; text-align: center; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background 0.2s; margin-bottom: 0.6rem; }
+    .btn-cta:hover { background: var(--accent-hover); }
+    .btn-cta-ghost { display: block; width: 100%; text-align: center; padding: 0.75rem; background: none; border: 1.5px solid var(--border); color: var(--text); border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: border-color 0.2s; }
+    .btn-cta-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-cta-ghost svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* ── AGENCY CARDS ────────────────────────────────────────── */
+    .agency-divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem; }
+    .agencies-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.85rem; }
+    .agency-card { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.75rem; }
+    .agency-card:last-child { margin-bottom: 0; }
+    .agency-top { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; }
+    .agent-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #004aaa); color: #fff; font-size: 0.78rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .agent-name { font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .agent-title { font-size: 0.75rem; color: var(--text-muted); }
+    .agency-name { font-size: 0.78rem; font-weight: 600; color: var(--accent); margin-top: 0.1rem; }
+    .agency-actions { display: flex; gap: 0.5rem; }
+    .agent-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.3rem; padding: 0.45rem 0.5rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; text-decoration: none; border: 1.5px solid var(--border); color: var(--text); background: none; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap; }
+    .agent-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .agent-btn.whatsapp:hover { border-color: #25d366; color: #25d366; }
+    .agent-btn svg { width: 13px; height: 13px; fill: currentColor; flex-shrink: 0; }
+    .agent-license { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.6rem; }
+
+    /* ── LOADING / ERROR ─────────────────────────────────────── */
+    .state-center { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem; text-align: center; }
+    .state-icon { width: 56px; height: 56px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .state-icon svg { width: 26px; height: 26px; fill: var(--text-muted); }
+    .state-title { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+    .state-sub { font-size: 0.9rem; color: var(--text-muted); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: center; font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 960px) {
+      .listing-layout { grid-template-columns: 1fr; }
+      .listing-sidebar { position: static; }
+      .gallery-grid { grid-template-columns: 1fr; grid-template-rows: 280px; height: 280px; }
+      .gallery-thumb { display: none; }
+      .gallery-main { grid-row: 1; }
+    }
+    @media (max-width: 600px) {
+      .page-wrap { padding: 1.25rem 1rem 3rem; }
+      .gallery-inner { padding: 0; }
+      .gallery-grid { border-radius: 0; height: 240px; }
+      .spec-item { padding: 0.75rem 0.75rem; }
+      .builder-stats { grid-template-columns: repeat(3, 1fr); }
+      .unit-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="/home" class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+      <span class="logo-text">Hogares<span>RD</span></span>
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeBtn" aria-label="Tema"></button>
+      <div id="navAuthArea"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- LOADING -->
+<div id="loadingState" class="state-center">
+  <div class="spinner"></div>
+  <div class="state-sub">Cargando propiedad…</div>
+</div>
+
+<!-- ERROR -->
+<div id="errorState" class="state-center" style="display:none">
+  <div class="state-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+  <div class="state-title">Propiedad no encontrada</div>
+  <div class="state-sub">El listado que buscas no existe o ya no está disponible.</div>
+  <a href="/home" class="btn-primary" style="margin-top:0.5rem">Volver al inicio</a>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="listingPage" style="display:none">
+
+  <!-- GALLERY -->
+  <div class="gallery">
+    <div class="gallery-inner">
+      <div class="gallery-grid">
+        <div class="gallery-main gimg photo-a" id="galleryMain">
+          <div class="gimg-icon main"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <div class="gallery-label" id="galleryLabel">Vista Exterior</div>
+          <div class="gallery-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>5 fotos</div>
+        </div>
+        <div class="gallery-thumb gimg photo-b" onclick="switchPhoto('photo-b','Área Social / Lobby')">
+          <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        </div>
+        <div class="gallery-thumb gimg photo-c" onclick="switchPhoto('photo-c','Interior — Apartamento Tipo')">
+          <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg></div>
+        </div>
+        <div class="gallery-thumb gimg photo-d" onclick="switchPhoto('photo-d','Piscina Infinity')">
+          <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M22 21c-1.11 0-1.73-.37-2.18-.64-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.15.36-.46.27-1.07.64-2.18.64s-1.73-.37-2.18-.64c-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.16.36-.46.27-1.07.64-2.17.64s-1.73-.37-2.18-.64c-.38-.23-.6-.36-1.15-.36-.56 0-.78.13-1.15.36C4.73 20.63 4.11 21 3 21v-2c.56 0 .78-.13 1.15-.36.46-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.16-.36.46-.27 1.07-.64 2.17-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.15-.36.46-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36v2zm0-4.5c-1.11 0-1.73-.37-2.18-.64-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.15.36-.45.27-1.07.64-2.18.64s-1.73-.37-2.18-.64c-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.16.36-.45.27-1.07.64-2.17.64s-1.73-.37-2.18-.64c-.38-.23-.6-.36-1.15-.36-.56 0-.78.13-1.15.36C4.73 16.13 4.11 16.5 3 16.5v-2c.56 0 .78-.13 1.15-.36.45-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.16-.36.45-.27 1.07-.64 2.17-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.15-.36.45-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36v2zM8.67 12l-1.5-1.5C8.04 9.24 9.46 8.5 11 8.5c1.54 0 2.96.74 3.83 1.97L13.33 12c-.57-.76-1.45-1.25-2.33-1.25-.88 0-1.77.49-2.33 1.25z"/></svg></div>
+        </div>
+        <div class="gallery-thumb gimg photo-e" onclick="switchPhoto('photo-e','Rooftop & Vista Panorámica')">
+          <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-wrap">
+    <!-- BREADCRUMB -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/home">Inicio</a>
+      <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      <a href="/listings">Propiedades</a>
+      <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      <span id="breadcrumbTitle">Cargando…</span>
+    </nav>
+
+    <div class="listing-layout">
+      <!-- MAIN COLUMN -->
+      <div class="listing-main">
+
+        <!-- HEADER -->
+        <div id="listingHeader"></div>
+
+        <!-- SPECS BAR -->
+        <div class="specs-bar" id="specsBar"></div>
+
+        <!-- DESCRIPTION -->
+        <div class="detail-section">
+          <div class="section-heading">Descripción</div>
+          <div class="description-text clamped" id="descText"></div>
+          <button class="read-more-btn" id="readMoreBtn" onclick="toggleDesc()">Leer más ↓</button>
+        </div>
+
+        <!-- UNIT TYPES -->
+        <div class="detail-section" id="unitSection" style="display:none">
+          <div class="section-heading">Tipos de Unidades</div>
+          <div class="unit-grid" id="unitGrid"></div>
+        </div>
+
+        <!-- AMENITIES -->
+        <div class="detail-section" id="amenitiesSection" style="display:none">
+          <div class="section-heading">Amenidades</div>
+          <div class="amenities-grid" id="amenitiesGrid"></div>
+        </div>
+
+        <!-- CONSTRUCTION COMPANY -->
+        <div class="detail-section" id="builderSection" style="display:none">
+          <div class="section-heading">Empresa Constructora</div>
+          <div id="builderContent"></div>
+        </div>
+
+        <!-- MAP -->
+        <div class="detail-section">
+          <div class="section-heading">Ubicación</div>
+          <div id="listingMap"></div>
+          <div style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-muted)" id="addressLine"></div>
+        </div>
+
+      </div><!-- /listing-main -->
+
+      <!-- SIDEBAR -->
+      <div class="listing-sidebar">
+
+        <!-- PRICE BOX -->
+        <div class="sidebar-box">
+          <div class="sidebar-price" id="sidebarPriceLabel">Precio desde</div>
+          <div class="sidebar-amount" id="sidebarPrice"></div>
+          <div class="sidebar-meta" id="sidebarMeta"></div>
+          <a href="#" class="btn-cta" id="ctaBtn">Agendar Visita</a>
+          <button class="btn-cta-ghost" onclick="share()">
+            <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            Compartir
+          </button>
+        </div>
+
+        <!-- AGENCIES -->
+        <div class="sidebar-box" id="agenciesBox" style="display:none">
+          <div class="agencies-label">Inmobiliarias Afiliadas</div>
+          <div id="agencyCards"></div>
+        </div>
+
+      </div><!-- /listing-sidebar -->
+    </div><!-- /listing-layout -->
+  </div><!-- /page-wrap -->
+</div><!-- /listingPage -->
+
+<footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+
+<script src="/js/auth.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ── Theme ──────────────────────────────────────────────────
+  const html = document.documentElement;
+  html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
+
+  // ── Nav auth ───────────────────────────────────────────────
+  function renderNav(user) {
+    const area = document.getElementById('navAuthArea');
+    if (!user) {
+      area.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a><a href="/register" class="btn-primary">Registrarse</a>`;
+    } else {
+      const initials = user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '?';
+      const first    = user.name ? user.name.split(' ')[0] : '';
+      area.innerHTML = `
+        <a href="/submit" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Publicar</a>
+        <div class="user-menu" id="uMenu">
+          <button class="user-avatar-btn" id="uBtn">
+            <div class="user-avatar">${initials}</div>
+            <span class="user-first-name">${first}</span>
+            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="user-dropdown" id="uDrop">
+            <a href="/profile" class="dropdown-item">👤 Mi Perfil</a>
+            <a href="/favorites" class="dropdown-item">❤️ Mis Favoritos</a>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item dropdown-logout" onclick="logout()">Cerrar Sesión</button>
+          </div>
+        </div>`;
+      document.getElementById('uBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        document.getElementById('uDrop').classList.toggle('open');
+      });
+      document.addEventListener('click', () => {
+        const d = document.getElementById('uDrop');
+        if (d) d.classList.remove('open');
+      });
+    }
+  }
+
+  // ── Gallery ────────────────────────────────────────────────
+  const photos = [
+    { cls: 'photo-a', label: 'Vista Exterior' },
+    { cls: 'photo-b', label: 'Área Social / Lobby' },
+    { cls: 'photo-c', label: 'Interior — Apartamento Tipo' },
+    { cls: 'photo-d', label: 'Piscina Infinity' },
+    { cls: 'photo-e', label: 'Rooftop & Vista Panorámica' },
+  ];
+  function switchPhoto(cls, label) {
+    const m = document.getElementById('galleryMain');
+    photos.forEach(p => m.classList.remove(p.cls));
+    m.classList.add(cls);
+    document.getElementById('galleryLabel').textContent = label;
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  function fmt(n) { return '$' + Number(n).toLocaleString('en-US'); }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Description toggle ─────────────────────────────────────
+  let descExpanded = false;
+  function toggleDesc() {
+    descExpanded = !descExpanded;
+    const el  = document.getElementById('descText');
+    const btn = document.getElementById('readMoreBtn');
+    el.classList.toggle('clamped', !descExpanded);
+    btn.textContent = descExpanded ? 'Leer menos ↑' : 'Leer más ↓';
+  }
+
+  // ── Share ──────────────────────────────────────────────────
+  function share() {
+    if (navigator.share) {
+      navigator.share({ title: document.title, url: location.href });
+    } else {
+      navigator.clipboard.writeText(location.href).then(() => alert('Enlace copiado al portapapeles'));
+    }
+  }
+
+  // ── Render listing ─────────────────────────────────────────
+  function renderListing(l) {
+    document.title = `${l.title} — HogaresRD`;
+    document.getElementById('breadcrumbTitle').textContent = l.title;
+
+    // Header
+    const condLabel = { 'nueva_construccion':'Nueva Construcción', 'reventa':'Reventa', 'remodeladao':'Remodelado' };
+    const typeLabel = { 'venta':'En Venta', 'alquiler':'En Alquiler', 'venta_alquiler':'Venta / Alquiler' };
+    const badges = [
+      l.type       ? `<span class="badge badge-sale">${esc(typeLabel[l.type]||l.type)}</span>` : '',
+      l.condition  ? `<span class="badge badge-new">${esc(condLabel[l.condition]||l.condition)}</span>` : '',
+      l.project_stage ? `<span class="badge badge-stage">${esc(l.project_stage)}</span>` : '',
+    ].filter(Boolean).join('');
+
+    const tags = (l.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('');
+    const loc  = [l.sector, l.city, l.province].filter(Boolean).map(esc).join(', ');
+
+    document.getElementById('listingHeader').innerHTML = `
+      <div class="listing-badges">${badges}</div>
+      <h1 class="listing-title">${esc(l.title)}</h1>
+      <div class="listing-location">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        ${loc}
+      </div>
+      ${tags ? `<div class="listing-tags">${tags}</div>` : ''}`;
+
+    // Specs bar
+    const specs = [
+      l.area_const  ? { icon:'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z', val: l.area_const+' m²', lbl:'Área' } : null,
+      l.bedrooms!=null && l.bedrooms!=='' ? { icon:'M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z', val: l.bedrooms==0?'Studio':l.bedrooms+' hab.', lbl:'Habitaciones' } : null,
+      l.bathrooms   ? { icon:'M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z', val: l.bathrooms+' baños', lbl:'Baños' } : null,
+      l.parking     ? { icon:'M18.92 5.01C18.72 4.42 18.16 4 17.5 4h-11c-.66 0-1.21.42-1.42 1.01L3 11v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-5h14v5z', val: l.parking+' parq.', lbl:'Parqueo' } : null,
+      l.floors      ? { icon:'M17 11V3H7v4H3v14h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm4 12h-2v-2h2v2zm0-4h-2v-2h2v2z', val: l.floors+' pisos', lbl:'Pisos' } : null,
+      l.delivery_date ? { icon:'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z', val: l.delivery_date, lbl:'Entrega' } : null,
+    ].filter(Boolean);
+    document.getElementById('specsBar').innerHTML = specs.map(s=>`
+      <div class="spec-item">
+        <div class="spec-icon"><svg viewBox="0 0 24 24"><path d="${s.icon}"/></svg></div>
+        <div class="spec-value">${esc(s.val)}</div>
+        <div class="spec-label">${esc(s.lbl)}</div>
+      </div>`).join('');
+
+    // Description
+    document.getElementById('descText').textContent = l.description || '';
+
+    // Unit types
+    if (l.unit_types && l.unit_types.length) {
+      document.getElementById('unitSection').style.display = '';
+      document.getElementById('unitGrid').innerHTML = l.unit_types.map(u => {
+        const pct = Math.round((u.available / u.total) * 100);
+        const beds = u.bedrooms === 0 ? 'Estudio' : u.bedrooms + ' hab.';
+        return `<div class="unit-card">
+          <div class="unit-name">${esc(u.name)}</div>
+          <div class="unit-specs">
+            <div class="unit-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${u.area} m²</div>
+            <div class="unit-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${beds}</div>
+            <div class="unit-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${u.bathrooms} baños</div>
+            <div class="unit-spec"><svg viewBox="0 0 24 24"><path d="M18.92 5.01C18.72 4.42 18.16 4 17.5 4h-11c-.66 0-1.21.42-1.42 1.01L3 11v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-5h14v5z"/></svg>${u.parking} parqueo</div>
+          </div>
+          <div class="unit-price">${fmt(u.price)}</div>
+          <div class="unit-avail">${u.available} de ${u.total} disponibles</div>
+          <div class="avail-bar"><div class="avail-fill" style="width:${pct}%"></div></div>
+          <button class="btn-unit" onclick="alert('Contáctenos para más información sobre ${esc(u.name)}')">Consultar disponibilidad</button>
+        </div>`;
+      }).join('');
+    }
+
+    // Amenities
+    if (l.amenities && l.amenities.length) {
+      document.getElementById('amenitiesSection').style.display = '';
+      document.getElementById('amenitiesGrid').innerHTML = l.amenities.map(a=>`
+        <div class="amenity-item">
+          <div class="amenity-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+          <span>${esc(a)}</span>
+        </div>`).join('');
+    }
+
+    // Construction company
+    if (l.construction_company) {
+      const b = l.construction_company;
+      document.getElementById('builderSection').style.display = '';
+      document.getElementById('builderContent').innerHTML = `
+        <div class="builder-header">
+          <div class="builder-logo"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg></div>
+          <div>
+            <div class="builder-name">${esc(b.name)}</div>
+            <div class="builder-sub">Empresa Constructora Certificada</div>
+          </div>
+        </div>
+        <div class="builder-stats">
+          <div class="builder-stat"><div class="builder-stat-value">${b.years_experience}+</div><div class="builder-stat-label">Años de experiencia</div></div>
+          <div class="builder-stat"><div class="builder-stat-value">${b.projects_completed}</div><div class="builder-stat-label">Proyectos entregados</div></div>
+          <div class="builder-stat"><div class="builder-stat-value">${Number(b.units_delivered).toLocaleString()}</div><div class="builder-stat-label">Unidades entregadas</div></div>
+        </div>
+        <div class="builder-desc">${esc(b.description)}</div>
+        <div class="builder-contact">
+          <a href="tel:${esc(b.phone)}" class="btn-contact"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>${esc(b.phone)}</a>
+          <a href="mailto:${esc(b.email)}" class="btn-contact"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>${esc(b.email)}</a>
+        </div>`;
+    }
+
+    // Map
+    document.getElementById('addressLine').textContent = l.address || '';
+    if (l.lat && l.lng) {
+      const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+      const map = L.map('listingMap', { zoomControl: true }).setView([lat, lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19
+      }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup(`<strong>${esc(l.title)}</strong><br>${esc(l.address||'')}`, { maxWidth: 220 }).openPopup();
+    }
+
+    // Sidebar price
+    const isProject = !!l.unit_types;
+    document.getElementById('sidebarPriceLabel').textContent = isProject ? 'Precio desde' : 'Precio';
+    document.getElementById('sidebarPrice').innerHTML = `<sup>$</sup>${Number(l.price).toLocaleString('en-US')}`;
+
+    const metaRows = [];
+    if (l.units_available && l.units_total)
+      metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Unidades disponibles</span><span class="sidebar-row-value green">${l.units_available} / ${l.units_total}</span></div>
+        <div class="avail-progress"><div class="avail-bar"><div class="avail-fill" style="width:${Math.round(l.units_available/l.units_total*100)}%"></div></div></div>`);
+    if (l.delivery_date)
+      metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Entrega estimada</span><span class="sidebar-row-value">${esc(l.delivery_date)}</span></div>`);
+    if (l.project_stage)
+      metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Estado del proyecto</span><span class="sidebar-row-value">${esc(l.project_stage)}</span></div>`);
+    if (l.floors)
+      metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Número de pisos</span><span class="sidebar-row-value">${l.floors}</span></div>`);
+    document.getElementById('sidebarMeta').innerHTML = metaRows.join('');
+
+    // CTA button
+    document.getElementById('ctaBtn').href = `mailto:${l.email || ''}?subject=Interés en ${encodeURIComponent(l.title)}`;
+
+    // Agencies
+    if (l.agencies && l.agencies.length) {
+      document.getElementById('agenciesBox').style.display = '';
+      document.getElementById('agencyCards').innerHTML = l.agencies.map(a => {
+        const initials = a.agent.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+        return `<div class="agency-card">
+          <div class="agency-top">
+            <div class="agent-avatar">${initials}</div>
+            <div>
+              <div class="agent-name">${esc(a.agent)}</div>
+              <div class="agent-title">${esc(a.title)}</div>
+              <div class="agency-name">${esc(a.name)}</div>
+            </div>
+          </div>
+          <div class="agency-actions">
+            <a href="tel:${esc(a.phone)}" class="agent-btn">
+              <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+              Llamar
+            </a>
+            <a href="https://wa.me/${esc(a.whatsapp)}?text=${encodeURIComponent('Hola, me interesa '+l.title)}" target="_blank" class="agent-btn whatsapp">
+              <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+            <a href="mailto:${esc(a.email)}" class="agent-btn">
+              <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+              Email
+            </a>
+          </div>
+          <div class="agent-license">Lic. ${esc(a.license)}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+  const listingId = location.pathname.split('/').pop();
+
+  (async () => {
+    // Auth
+    const user = await fetchMe();
+    renderNav(user);
+
+    // Fetch listing
+    try {
+      const res = await fetch(`/api/listings/${listingId}`);
+      if (!res.ok) throw new Error('not found');
+      const listing = await res.json();
+      renderListing(listing);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('listingPage').style.display  = '';
+    } catch {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display   = '';
+    }
+  })();
+</script>
+</body>
+</html>
