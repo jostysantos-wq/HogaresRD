@@ -196,6 +196,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
     .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
 
     /* ── Form fields ────────────────────────────────────────── */
     .field { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -1219,8 +1220,8 @@
             Eliminar
           </button>
         </div>
-        <div class="grid-2">
-          <div class="field col-span-2">
+        <div class="grid-3">
+          <div class="field col-span-3">
             <label>Nombre del Tipo <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(ej. Penthouse, Tipo A, Estudio)</span></label>
             <input type="text" name="unit_name[]" placeholder="Ej. Apartamento 2BR, Penthouse Vista Mar..." />
           </div>
@@ -1245,7 +1246,7 @@
             <label>Área (m²)</label>
             <input type="number" name="unit_area[]" placeholder="Ej. 95" min="1" />
           </div>
-          <div class="field">
+          <div class="field col-span-2">
             <label>Precio por Unidad (USD)</label>
             <input type="number" name="unit_price[]" placeholder="Ej. 185000" min="0" />
           </div>
