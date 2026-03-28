@@ -318,6 +318,111 @@
     .upload-area strong { color: var(--accent); }
     .upload-area input { display: none; }
 
+    /* ── Photo instructions ─────────────────────────────────── */
+    .photo-tips-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 1.25rem;
+      transition: opacity 0.2s;
+    }
+    .photo-tips-toggle:hover { opacity: 0.75; }
+    .photo-tips-toggle svg { width: 14px; height: 14px; fill: var(--accent); transition: transform 0.2s; }
+    .photo-tips-toggle.open svg { transform: rotate(180deg); }
+
+    .photo-tips-box {
+      display: none;
+      background: #dde8f7;
+      border: 1px solid #b0c8e8;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    [data-theme="dark"] .photo-tips-box { background: #001e3c; border-color: #003060; }
+    .photo-tips-box.open { display: block; }
+    .photo-tips-box h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); margin-bottom: 0.75rem; }
+    .photo-tips-box ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .photo-tips-box li { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+    .photo-tips-box li strong { color: #001840; font-weight: 700; }
+    [data-theme="dark"] .photo-tips-box li strong { color: #e8f0fb; }
+    .photo-tips-box li strong { color: var(--text); }
+
+    /* ── Thumbnail upload ───────────────────────────────────── */
+    .upload-section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .upload-section-label .required-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent-red, #CF142B);
+      display: inline-block;
+    }
+
+    .thumbnail-upload {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 180px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .thumbnail-upload:hover { border-color: var(--accent); }
+    .thumbnail-upload input { display: none; }
+    .thumbnail-upload svg { width: 36px; height: 36px; fill: var(--text-muted); }
+    .thumbnail-upload p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+    .thumbnail-upload strong { color: var(--accent); }
+    .thumbnail-badge {
+      position: absolute;
+      top: 0.6rem; left: 0.6rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 50px;
+    }
+    #thumbnailPreview {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+      display: none;
+    }
+    #thumbnailPreview.visible { display: block; }
+    .thumb-change-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      display: none;
+    }
+    #thumbnailPreview.visible ~ .thumb-change-hint { display: block; }
+
     /* ── Submit button ──────────────────────────────────────── */
     .submit-wrap { text-align: center; margin-top: 0.5rem; }
 
@@ -655,9 +760,46 @@
           <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
           Fotos de la Propiedad
         </div>
+
+        <!-- Instructions toggle -->
+        <button type="button" class="photo-tips-toggle" id="tipsToggle" onclick="toggleTips()">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          ¿Cómo subir fotos correctamente?
+          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+
+        <div class="photo-tips-box" id="tipsBox">
+          <h4>Guía para subir fotos</h4>
+          <ol>
+            <li><strong>Foto principal primero:</strong> Elige la mejor vista de tu propiedad — fachada, sala principal o vista al mar. Esta será la imagen que verán los compradores al buscar.</li>
+            <li><strong>Usa buena iluminación:</strong> Toma las fotos de día con luz natural. Abre las cortinas y enciende las luces interiores.</li>
+            <li><strong>Formato horizontal:</strong> Las fotos en paisaje (horizontal) se ven mejor en la plataforma que las verticales.</li>
+            <li><strong>Orden lógico:</strong> Sube las fotos en el orden en que alguien recorrería la propiedad — exterior → sala → cocina → habitaciones → baños → áreas exteriores.</li>
+            <li><strong>Calidad sobre cantidad:</strong> 8–15 fotos nítidas son mejores que 30 fotos borrosas. Evita duplicados.</li>
+          </ol>
+        </div>
+
+        <!-- Thumbnail -->
+        <div class="upload-section-label">
+          <span class="required-dot"></span>
+          Foto Principal (Portada)
+        </div>
+        <label class="thumbnail-upload" for="thumbnail" id="thumbnailLabel">
+          <span class="thumbnail-badge">Portada</span>
+          <img id="thumbnailPreview" src="" alt="Vista previa" />
+          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          <p><strong>Haz clic para subir la foto de portada</strong><br>Esta será la imagen principal de tu anuncio · JPG, PNG o WEBP · Máx. 5 MB</p>
+          <input type="file" id="thumbnail" name="thumbnail" accept="image/*" />
+          <span class="thumb-change-hint">Haz clic para cambiar la foto de portada</span>
+        </label>
+
+        <!-- Additional photos -->
+        <div class="upload-section-label" style="margin-top:0.25rem;">
+          Fotos Adicionales
+        </div>
         <label class="upload-area" for="photos">
           <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-          <p><strong>Haz clic para subir fotos</strong><br>JPG, PNG o WEBP · Máximo 10 imágenes · 5 MB por foto</p>
+          <p><strong>Haz clic para subir más fotos</strong><br>JPG, PNG o WEBP · Máximo 10 imágenes · 5 MB por foto</p>
           <input type="file" id="photos" name="photos" accept="image/*" multiple />
         </label>
         <p id="fileNames" style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"></p>
@@ -745,11 +887,35 @@
       setSaved(next);
     });
 
-    // ── File upload label ─────────────────────────────────────
+    // ── Tips toggle ────────────────────────────────────────────
+    function toggleTips() {
+      const btn = document.getElementById('tipsToggle');
+      const box = document.getElementById('tipsBox');
+      btn.classList.toggle('open');
+      box.classList.toggle('open');
+    }
+
+    // ── Thumbnail preview ──────────────────────────────────────
+    document.getElementById('thumbnail').addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      const preview = document.getElementById('thumbnailPreview');
+      const label   = document.getElementById('thumbnailLabel');
+      const reader  = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+        preview.classList.add('visible');
+        // Hide the upload icon and text while preview is shown
+        label.querySelectorAll('svg, p').forEach(el => el.style.display = 'none');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ── Additional photos label ────────────────────────────────
     document.getElementById('photos').addEventListener('change', function() {
       const names = Array.from(this.files).map(f => f.name).join(', ');
       document.getElementById('fileNames').textContent = names
-        ? `Archivos seleccionados: ${names}`
+        ? `${this.files.length} archivo(s) seleccionado(s): ${names}`
         : '';
     });
 
