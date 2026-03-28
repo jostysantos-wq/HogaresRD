@@ -126,6 +126,7 @@ app.post('/submit', async (req, res) => {
     delivery_date:      isClaim ? '' : (body.delivery_date     || ''),
     project_stage:      isClaim ? '' : (body.project_stage     || ''),
     unit_types:         isClaim ? [] : (Array.isArray(body.unit_types) ? body.unit_types : []),
+    blueprints:         isClaim ? [] : (Array.isArray(body.blueprints) ? body.blueprints : (body.blueprints ? [body.blueprints] : [])),
     tags:               isClaim ? [] : (Array.isArray(body.tags) ? body.tags : (body.tags ? [body.tags] : [])),
     lat:         isClaim ? '' : (body.lat          || ''),
     lng:         isClaim ? '' : (body.lng          || ''),

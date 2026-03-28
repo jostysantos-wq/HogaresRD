@@ -77,6 +77,35 @@
     .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; }
     .gallery-count svg { width: 14px; height: 14px; fill: #fff; }
 
+    /* ── BLUEPRINTS ──────────────────────────────────────────── */
+    .btn-blueprints { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent-light); color: var(--accent); border: 1.5px solid var(--accent); font-size: 0.88rem; font-weight: 700; padding: 0.55rem 1.1rem; border-radius: 10px; cursor: pointer; transition: background 0.2s, color 0.2s; margin-top: 1rem; }
+    .btn-blueprints:hover { background: var(--accent); color: #fff; }
+    .btn-blueprints svg { width: 17px; height: 17px; fill: currentColor; }
+    .blueprint-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+    .blueprint-thumb { border-radius: 10px; border: 1.5px solid var(--border); overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; aspect-ratio: 4/3; background: var(--bg-card); display: flex; align-items: center; justify-content: center; }
+    .blueprint-thumb:hover { box-shadow: 0 4px 16px rgba(0,40,120,0.13); }
+    .blueprint-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .blueprint-thumb-icon { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.78rem; }
+    .blueprint-thumb-icon svg { width: 36px; height: 36px; fill: var(--text-muted); opacity: 0.5; }
+    /* Blueprint modal */
+    .bp-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    .bp-modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .bp-modal { background: var(--bg-card); border-radius: 20px; max-width: 860px; width: calc(100% - 2rem); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .bp-modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0; }
+    .bp-modal-title { font-weight: 700; font-size: 1rem; }
+    .bp-modal-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .bp-nav-btn { background: var(--bg); border: 1.5px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s; }
+    .bp-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .bp-nav-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .bp-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .bp-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.3rem; display: flex; }
+    .bp-modal-close svg { width: 22px; height: 22px; fill: currentColor; }
+    .bp-modal-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 1.5rem; min-height: 0; }
+    .bp-modal-body img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; }
+    .bp-modal-body .bp-link-fallback { text-align: center; }
+    .bp-modal-body .bp-link-fallback a { color: var(--accent); font-weight: 600; }
+    .bp-modal-counter { padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.82rem; color: var(--text-muted); flex-shrink: 0; }
+
     /* ── PAGE WRAP ───────────────────────────────────────────── */
     .page-wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 2rem 4rem; }
     .breadcrumb { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
@@ -358,6 +387,12 @@
           <div id="builderContent"></div>
         </div>
 
+        <!-- BLUEPRINTS -->
+        <div class="detail-section" id="blueprintsSection" style="display:none">
+          <div class="section-heading">Planos de la Propiedad</div>
+          <div class="blueprint-grid" id="blueprintGrid"></div>
+        </div>
+
         <!-- MAP -->
         <div class="detail-section">
           <div class="section-heading">Ubicación</div>
@@ -398,6 +433,22 @@
 </div><!-- /listingPage -->
 
 <div class="affiliate-toast" id="affiliateToast">¡Enlace copiado al portapapeles!</div>
+
+<!-- BLUEPRINT MODAL -->
+<div class="bp-modal-backdrop" id="bpModal" onclick="closeBpOnBackdrop(event)">
+  <div class="bp-modal">
+    <div class="bp-modal-header">
+      <span class="bp-modal-title">Planos de la Propiedad</span>
+      <div class="bp-modal-nav">
+        <button class="bp-nav-btn" id="bpPrev" onclick="bpNav(-1)" title="Anterior"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button class="bp-nav-btn" id="bpNext" onclick="bpNav(1)" title="Siguiente"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+      </div>
+      <button class="bp-modal-close" onclick="closeBpModal()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    <div class="bp-modal-body" id="bpModalBody"></div>
+    <div class="bp-modal-counter" id="bpCounter"></div>
+  </div>
+</div>
 
 <!-- INQUIRY MODAL -->
 <div class="modal-backdrop" id="inquiryModal" onclick="closeInquiryOnBackdrop(event)">
@@ -557,7 +608,42 @@
       alert('Hubo un error al enviar. Por favor intenta de nuevo.');
     }
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInquiry(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeInquiry(); closeBpModal(); }
+  });
+
+  // ── Blueprint modal ────────────────────────────────────────
+  let _bpUrls = [];
+  let _bpIdx  = 0;
+
+  function openBpModal(idx) {
+    _bpIdx = idx;
+    document.getElementById('bpModal').classList.add('open');
+    renderBpSlide();
+  }
+  function closeBpModal() {
+    document.getElementById('bpModal').classList.remove('open');
+  }
+  function closeBpOnBackdrop(e) {
+    if (e.target === document.getElementById('bpModal')) closeBpModal();
+  }
+  function bpNav(dir) {
+    _bpIdx = Math.max(0, Math.min(_bpUrls.length - 1, _bpIdx + dir));
+    renderBpSlide();
+  }
+  function renderBpSlide() {
+    const url = _bpUrls[_bpIdx];
+    const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url) || url.includes('imgur') || url.includes('i.ibb');
+    const body = document.getElementById('bpModalBody');
+    if (isImage) {
+      body.innerHTML = `<img src="${esc(url)}" alt="Plano ${_bpIdx + 1}" />`;
+    } else {
+      body.innerHTML = `<div class="bp-link-fallback"><p style="margin-bottom:1rem;color:var(--text-muted);">Este plano está en un formato externo.</p><a href="${esc(url)}" target="_blank" rel="noopener">Abrir plano en nueva pestaña →</a></div>`;
+    }
+    document.getElementById('bpCounter').textContent = `Plano ${_bpIdx + 1} de ${_bpUrls.length}`;
+    document.getElementById('bpPrev').disabled = _bpIdx === 0;
+    document.getElementById('bpNext').disabled = _bpIdx === _bpUrls.length - 1;
+  }
 
   // ── Share ──────────────────────────────────────────────────
   function share() {
@@ -663,6 +749,20 @@
           <div class="builder-stat"><div class="builder-stat-value">${Number(b.units_delivered).toLocaleString()}</div><div class="builder-stat-label">Unidades entregadas</div></div>
         </div>
         <div class="builder-desc">${esc(b.description)}</div>`;
+    }
+
+    // Blueprints
+    const bps = (l.blueprints || []).filter(Boolean);
+    _bpUrls = bps;
+    if (bps.length) {
+      document.getElementById('blueprintsSection').style.display = '';
+      document.getElementById('blueprintGrid').innerHTML = bps.map((url, i) => {
+        const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url) || url.includes('imgur') || url.includes('i.ibb');
+        if (isImage) {
+          return `<div class="blueprint-thumb" onclick="openBpModal(${i})"><img src="${esc(url)}" alt="Plano ${i+1}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'blueprint-thumb-icon\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z\\'/></svg><span>Plano ${i+1}</span></div>'"/></div>`;
+        }
+        return `<div class="blueprint-thumb" onclick="openBpModal(${i})"><div class="blueprint-thumb-icon"><svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg><span>Plano ${i+1}</span></div></div>`;
+      }).join('');
     }
 
     // Map
