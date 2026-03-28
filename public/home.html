@@ -831,7 +831,7 @@
         track.style.transform = `translateX(-${pos * cardStep()}px)`;
       }
       function rebuild() {
-        cloneN = perPage();
+        cloneN = Math.min(perPage(), items.length);
         track.innerHTML = '';
         items.slice(-cloneN).forEach(c => track.appendChild(c.cloneNode(true)));
         items.forEach(c => track.appendChild(c));
