@@ -244,6 +244,25 @@
     @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
     @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 5rem); } }
 
+    /* SKELETON CARDS */
+    @keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+    .card-skeleton {
+      flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3);
+      border-radius: 14px; overflow: hidden;
+      background: var(--bg-card); border: 1px solid var(--border);
+    }
+    .card-skeleton .sk-img  { height: 200px; }
+    .card-skeleton .sk-line { height: 14px; border-radius: 6px; margin: 0 1.25rem 0.75rem; }
+    .card-skeleton .sk-line.lg { height: 20px; margin-top: 1.25rem; }
+    .card-skeleton .sk-line.sm { width: 60%; }
+    .sk-img, .sk-line {
+      background: linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 60%, var(--bg-card)) 50%, var(--border) 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    @media (max-width: 900px) { .card-skeleton { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
+    @media (max-width: 560px)  { .card-skeleton { flex: 0 0 calc(100vw - 5rem); } }
+
     /* RESPONSIVE */
     @media (max-width: 1024px) {
       .properties-grid { grid-template-columns: repeat(2, 1fr); }
@@ -413,7 +432,7 @@
   </div>
 
   <!-- TRENDING CAROUSEL — top 8 most viewed this week -->
-  <div id="trendingSection" style="display:none;">
+  <div id="trendingSection">
     <div class="section">
       <div class="section-header">
         <div>
@@ -426,12 +445,16 @@
           <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
         </div>
       </div>
-      <div class="carousel-viewport"><div class="carousel-track" id="trendTrack"></div></div>
+      <div class="carousel-viewport"><div class="carousel-track" id="trendTrack">
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+      </div></div>
     </div>
   </div>
 
   <!-- RECENT CAROUSEL — 8 newest approved listings -->
-  <div id="recentSection" style="display:none;">
+  <div id="recentSection">
     <div class="section">
       <div class="section-header">
         <div>
@@ -444,7 +467,11 @@
           <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
         </div>
       </div>
-      <div class="carousel-viewport"><div class="carousel-track" id="recentTrack"></div></div>
+      <div class="carousel-viewport"><div class="carousel-track" id="recentTrack">
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+      </div></div>
     </div>
   </div>
 
@@ -937,13 +964,13 @@
         if (!res.ok) return;
         const { listings } = await res.json();
         if (!listings || !listings.length) return;
+        document.getElementById('trendTrack').innerHTML = '';
         const c = createCarousel('trendTrack', 'trendPrev', 'trendNext');
         listings.forEach(l => c.add(buildListingCard(l, {
           label: `🔥 ${l._views} vista${l._views !== 1 ? 's' : ''}`,
           cls: 'badge-views',
         })));
         if (_cardObserver) c.observe(_cardObserver);
-        document.getElementById('trendingSection').style.display = '';
       } catch {}
     }
 
@@ -953,10 +980,10 @@
         if (!res.ok) return;
         const { listings } = await res.json();
         if (!listings || !listings.length) return;
+        document.getElementById('recentTrack').innerHTML = '';
         const c = createCarousel('recentTrack', 'recentPrev', 'recentNext');
         listings.forEach(l => c.add(buildListingCard(l, { label: 'Nuevo', cls: 'badge-new' })));
         if (_cardObserver) c.observe(_cardObserver);
-        document.getElementById('recentSection').style.display = '';
       } catch {}
     }
 
