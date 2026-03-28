@@ -20,6 +20,23 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) {
   path.join(__dirname, 'data', 'activity.json'),
 ].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 
+// ── Seed demo listings ─────────────────────────────────────────
+(function seedListings() {
+  const seedFile = path.join(__dirname, 'seeds', 'listings.json');
+  if (!fs.existsSync(seedFile)) return;
+  const seeds = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
+  const submissions = JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
+  const existingIds = new Set(submissions.map(s => s.id));
+  let changed = false;
+  seeds.forEach(seed => {
+    if (!existingIds.has(seed.id)) {
+      submissions.push(seed);
+      changed = true;
+    }
+  });
+  if (changed) fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
+})();
+
 function readSubmissions() {
   return JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
 }

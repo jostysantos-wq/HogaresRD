@@ -1,0 +1,128 @@
+[
+  {
+    "id": "proj_torre_sole_001",
+    "title": "Torre Solé — Proyecto Residencial de Lujo en Piantini",
+    "type": "venta",
+    "condition": "nueva_construccion",
+    "description": "Torre Solé es un exclusivo desarrollo residencial ubicado en el corazón de Piantini, uno de los sectores más prestigiosos de Santo Domingo. Con 22 pisos de arquitectura contemporánea, el proyecto ofrece una experiencia de vida única que combina sofisticación, comodidad y una ubicación inmejorable a pasos de los mejores restaurantes, centros comerciales y oficinas del Distrito Nacional.\n\nDiseñado por el reconocido estudio ArquiDom International, Torre Solé establece un nuevo estándar en el mercado residencial dominicano. Cada apartamento ha sido meticulosamente planificado para maximizar la luz natural, la ventilación cruzada y las vistas panorámicas hacia la ciudad y el horizonte del Mar Caribe.\n\nLos acabados son de primera clase: cocinas abiertas con isla central en cuarzo Silestone, pisos de porcelanato italiano formato jumbo, ventanas de piso a techo con vidrio templado laminado de bajo emisivo, y sistema de domótica integrado para el control inteligente del hogar desde tu teléfono.\n\nEl proyecto está financiado en un 40% durante la construcción con cuotas accesibles, y el 60% restante a la entrega con préstamo hipotecario. Banco BHD León, Banreservas y Scotiabank ya han pre-aprobado financiamiento para adquirentes calificados.",
+    "price": "85000",
+    "area_const": "45",
+    "area_land": null,
+    "bedrooms": "1",
+    "bathrooms": "1",
+    "parking": "1",
+    "province": "Santo Domingo",
+    "city": "Santo Domingo",
+    "sector": "Piantini",
+    "address": "Calle El Recodo #45, Piantini, Distrito Nacional",
+    "amenities": [
+      "Piscina infinity con vista a la ciudad",
+      "Gimnasio completamente equipado",
+      "Lobby de doble altura con concierge",
+      "Seguridad 24/7 con circuito cerrado",
+      "Generador eléctrico general",
+      "Rooftop social con área de BBQ",
+      "Salón multiusos para eventos",
+      "Área de juegos infantiles",
+      "Parqueo de visitas cubierto",
+      "Ascensores de alta velocidad",
+      "Lavandería compartida equipada",
+      "Cuarto de utilidad por piso"
+    ],
+    "construction_company": {
+      "name": "Grupo Torres del Este S.A.",
+      "years_experience": 22,
+      "projects_completed": 14,
+      "units_delivered": 1840,
+      "phone": "+1 (809) 565-0001",
+      "email": "proyectos@torresdeleste.com.do",
+      "description": "Con más de 22 años de trayectoria en el mercado inmobiliario dominicano, Grupo Torres del Este S.A. se ha consolidado como una de las constructoras más confiables y reconocidas del país. Fundada en 2004 por el Ing. Rafael Torres Medina, la empresa ha entregado 14 proyectos exitosos con más de 1,840 familias que ya disfrutan de sus desarrollos en Santo Domingo, Santiago y Punta Cana. Reconocida con el Premio Nacional de Construcción 2022 y certificación ISO 9001:2015 en gestión de calidad."
+    },
+    "agencies": [
+      {
+        "name": "Inmobiliaria Elite RD",
+        "agent": "María Fernández",
+        "title": "Asesora Senior de Ventas",
+        "phone": "+1 (809) 765-4321",
+        "whatsapp": "18097654321",
+        "email": "mfernandez@eliterd.com.do",
+        "license": "MIREX-2019-004521"
+      },
+      {
+        "name": "Century 21 Dominicana",
+        "agent": "Roberto Alcántara",
+        "title": "Corredor de Bienes Raíces",
+        "phone": "+1 (809) 472-2100",
+        "whatsapp": "18094722100",
+        "email": "ralcantara@century21rd.com",
+        "license": "MIREX-2021-007834"
+      },
+      {
+        "name": "RE/MAX Prestige RD",
+        "agent": "Carolina Díaz",
+        "title": "Directora de Ventas",
+        "phone": "+1 (809) 683-5500",
+        "whatsapp": "18096835500",
+        "email": "cdiaz@remaxprestigerd.com",
+        "license": "MIREX-2018-001290"
+      }
+    ],
+    "unit_types": [
+      {
+        "name": "Studio",
+        "area": 45,
+        "bedrooms": 0,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 85000,
+        "available": 8,
+        "total": 20
+      },
+      {
+        "name": "2 Habitaciones",
+        "area": 95,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "parking": 1,
+        "price": 145000,
+        "available": 22,
+        "total": 56
+      },
+      {
+        "name": "3 Habitaciones",
+        "area": 145,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "parking": 2,
+        "price": 220000,
+        "available": 18,
+        "total": 38
+      },
+      {
+        "name": "Penthouse",
+        "area": 280,
+        "bedrooms": 4,
+        "bathrooms": 3,
+        "parking": 2,
+        "price": 485000,
+        "available": 4,
+        "total": 6
+      }
+    ],
+    "project_stage": "En construcción",
+    "delivery_date": "Diciembre 2027",
+    "floors": 22,
+    "units_total": 120,
+    "units_available": 52,
+    "tags": ["nueva_construccion", "piscina", "gimnasio", "penthouse", "lujo", "rooftop", "concierge", "financiamiento"],
+    "lat": "18.4714",
+    "lng": "-69.9417",
+    "name": "Grupo Torres del Este S.A.",
+    "email": "ventas@torresdeleste.com.do",
+    "phone": "+1 (809) 565-0001",
+    "role": "developer",
+    "status": "approved",
+    "submittedAt": "2026-03-28T09:00:00.000Z",
+    "approvedAt": "2026-03-28T10:30:00.000Z"
+  }
+]
