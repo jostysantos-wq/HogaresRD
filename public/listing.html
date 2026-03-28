@@ -703,30 +703,6 @@
     document.getElementById('inquiryModalSub').textContent =
       `Un agente de las inmobiliarias afiliadas a "${l.title}" se pondrá en contacto contigo.`;
 
-    // Resolve ?ref= affiliate token
-    const urlRef = new URLSearchParams(location.search).get('ref');
-    if (urlRef) {
-      try {
-        const agentRes = await fetch(`/api/listings/agent/${urlRef}`);
-        if (agentRes.ok) {
-          const agent = await agentRes.json();
-          _refToken = urlRef;
-          document.getElementById('inquiryModalSub').textContent =
-            `Tu consulta irá directamente a ${agent.name} de ${agent.agencyName}.`;
-          const badge = document.getElementById('inquiryRefBadge');
-          document.getElementById('inquiryRefLabel').textContent =
-            `${agent.name} · ${agent.agencyName}`;
-          badge.style.display = 'inline-flex';
-        }
-      } catch {}
-    }
-
-    // Show affiliate link button if logged-in agency user
-    const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-    if (me && me.role === 'agency' && me.refToken) {
-      document.getElementById('affiliateBtn').classList.add('visible');
-    }
-
     // Agencies — randomized tab selector (no favoritism)
     if (l.agencies && l.agencies.length) {
       document.getElementById('agenciesBox').style.display = '';
@@ -804,6 +780,30 @@
       renderListing(listing);
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('listingPage').style.display  = '';
+
+      // Resolve ?ref= affiliate token (must be async, so lives here not in renderListing)
+      const urlRef = new URLSearchParams(location.search).get('ref');
+      if (urlRef) {
+        try {
+          const agentRes = await fetch(`/api/listings/agent/${urlRef}`);
+          if (agentRes.ok) {
+            const agent = await agentRes.json();
+            _refToken = urlRef;
+            document.getElementById('inquiryModalSub').textContent =
+              `Tu consulta irá directamente a ${agent.name} de ${agent.agencyName}.`;
+            const badge = document.getElementById('inquiryRefBadge');
+            document.getElementById('inquiryRefLabel').textContent =
+              `${agent.name} · ${agent.agencyName}`;
+            badge.style.display = 'inline-flex';
+          }
+        } catch {}
+      }
+
+      // Show affiliate link button if logged-in agency user
+      const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+      if (me && me.role === 'agency' && me.refToken) {
+        document.getElementById('affiliateBtn').classList.add('visible');
+      }
     } catch {
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('errorState').style.display   = '';
