@@ -3,608 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HogaresRD — Bienes Raíces en República Dominicana</title>
-  <meta name="description" content="Encuentra, explora y publica propiedades en toda la República Dominicana. Apartamentos, casas, villas y terrenos." />
+  <title>HogaresRD — Próximamente</title>
+  <meta name="description" content="La forma más fácil de encontrar y publicar propiedades en República Dominicana." />
   <style>
     :root {
-      --bg:           #f0f4f9;
-      --bg-card:      #ffffff;
-      --bg-section:   #e8eef7;
-      --text:         #001840;
-      --text-muted:   #4d6a8a;
-      --accent:       #002D62;
-      --accent-hover: #001a45;
-      --accent-light: #e8f0fb;
-      --red:          #CF142B;
-      --red-hover:    #a81022;
-      --green:        #0a7c4f;
-      --border:       #d0dcea;
-      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
-      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
-      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
-      --toggle-bg:    #c4d4e8;
-      --toggle-knob:  #ffffff;
-      --nav-bg:       rgba(255,255,255,0.96);
+      --bg:          #eef3fa;
+      --bg-card:     #ffffff;
+      --text:        #001840;
+      --text-muted:  #4d6a8a;
+      --accent:      #002D62;
+      --accent-hover:#001a45;
+      --accent-red:  #CF142B;
+      --border:      #c4d4e8;
+      --toggle-bg:   #c4d4e8;
+      --toggle-knob: #ffffff;
+      --shadow:      0 4px 24px rgba(0,45,98,0.12);
     }
     [data-theme="dark"] {
-      --bg:           #00101f;
-      --bg-card:      #001e3c;
-      --bg-section:   #001428;
-      --text:         #e8f0fb;
-      --text-muted:   #7a9bbf;
-      --accent:       #4a90d9;
-      --accent-hover: #3a7bc8;
-      --accent-light: #001e3c;
-      --red:          #e8374e;
-      --red-hover:    #c42d42;
-      --green:        #1db87a;
-      --border:       #003060;
-      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg:    #003060;
-      --toggle-knob:  #e8f0fb;
-      --nav-bg:       rgba(0,16,31,0.97);
+      --bg:          #00101f;
+      --bg-card:     #001e3c;
+      --text:        #e8f0fb;
+      --text-muted:  #7a9bbf;
+      --accent:      #4a90d9;
+      --accent-hover:#3a7bc8;
+      --accent-red:  #e8374e;
+      --border:      #003060;
+      --toggle-bg:   #003060;
+      --toggle-knob: #e8f0fb;
+      --shadow:      0 4px 24px rgba(0,0,0,0.5);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
 
-    /* NAV */
-    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
-    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
-    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
-    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
-    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 2rem; border-bottom: 1px solid var(--border); background: var(--bg-card); box-shadow: var(--shadow); transition: background 0.3s, border-color 0.3s; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
     .logo-text span { color: var(--accent); }
-    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
-    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
-    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
-    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-    .btn-primary { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
-    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    .btn-primary svg { width: 16px; height: 16px; fill: #fff; }
     .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s, background 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
     [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
     .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
     .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-    /* HERO */
-    .hero { position: relative; min-height: 600px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(135deg, #001840 0%, #002D62 45%, #003d88 70%, #00509e 100%); }
-    .hero-shapes { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
-    .hero-shape-1 { width: 500px; height: 500px; top: -200px; right: -100px; }
-    .hero-shape-2 { width: 300px; height: 300px; bottom: -100px; left: 10%; }
-    .hero-shape-3 { width: 150px; height: 150px; top: 30%; right: 20%; }
-    .hero-content { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; width: 100%; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.8rem; border-radius: 50px; margin-bottom: 1.25rem; }
-    .hero-badge svg { width: 10px; height: 10px; fill: #fff; }
-    .hero h1 { font-size: clamp(2.2rem, 5vw, 3.75rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1rem; max-width: 640px; }
-    .hero h1 em { font-style: normal; color: #7ab8f5; }
-    .hero-sub { color: rgba(255,255,255,0.72); font-size: 1.1rem; max-width: 500px; margin-bottom: 2.5rem; line-height: 1.65; }
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1.5rem; }
+    .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent-red); color: #fff; font-size: 0.75rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 50px; margin-bottom: 1.75rem; }
+    .badge svg { width: 12px; height: 12px; fill: #fff; }
+    h1 { font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 1.25rem; }
+    h1 .highlight { color: var(--accent); }
+    .subtitle { font-size: clamp(1rem, 2.5vw, 1.25rem); color: var(--text-muted); max-width: 520px; line-height: 1.65; margin-bottom: 3rem; }
 
-    /* SEARCH BOX */
-    .search-box { background: var(--bg-card); border-radius: 20px; box-shadow: var(--shadow-lg); overflow: hidden; max-width: 820px; }
-    .search-tabs { display: flex; border-bottom: 1px solid var(--border); }
-    .search-tab { flex: 1; padding: 0.9rem 1.5rem; background: none; border: none; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s, background 0.2s; position: relative; }
-    .search-tab.active { color: var(--accent); background: var(--accent-light); }
-    .search-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
-    .search-fields { display: grid; grid-template-columns: 1fr 1fr 1fr auto; }
-    .search-field { padding: 1rem 1.25rem; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.3rem; }
-    .search-field:last-child { border-right: none; }
-    .search-field label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); }
-    .search-field select { background: none; border: none; outline: none; font-size: 0.95rem; font-weight: 500; color: var(--text); cursor: pointer; width: 100%; appearance: none; -webkit-appearance: none; }
-    .search-field select option { background: var(--bg-card); color: var(--text); }
-    .search-action { padding: 1rem 1.5rem; display: flex; align-items: center; }
-    .btn-search { background: var(--red); border: none; color: #fff; font-size: 1rem; font-weight: 700; padding: 0.9rem 1.75rem; border-radius: 14px; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
-    .btn-search:hover { background: var(--red-hover); transform: translateY(-1px); }
-    .btn-search svg { width: 18px; height: 18px; fill: #fff; }
+    .countdown { display: flex; gap: 1.5rem; margin-bottom: 3.5rem; flex-wrap: wrap; justify-content: center; }
+    .countdown-unit { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem 1.75rem; min-width: 90px; box-shadow: var(--shadow); transition: background 0.3s, border-color 0.3s; }
+    .countdown-unit .number { font-size: 2.5rem; font-weight: 800; color: var(--accent); line-height: 1; display: block; }
+    .countdown-unit .label { font-size: 0.7rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-top: 0.4rem; display: block; }
 
-    /* STATS BAR */
-    .stats-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); transition: background 0.3s; }
-    .stats-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; display: flex; align-items: center; justify-content: center; gap: 4rem; height: 72px; }
-    .stat-item { display: flex; align-items: center; gap: 0.75rem; }
-    .stat-icon { width: 36px; height: 36px; background: var(--accent-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .stat-icon svg { width: 18px; height: 18px; fill: var(--accent); }
-    .stat-number { font-size: 1.35rem; font-weight: 800; color: var(--text); line-height: 1; }
-    .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    .cta-btn { display: inline-flex; align-items: center; gap: 0.6rem; background: var(--accent); color: #fff; text-decoration: none; font-size: 1rem; font-weight: 600; padding: 0.9rem 2rem; border-radius: 12px; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; box-shadow: 0 4px 14px rgba(0,45,98,0.35); }
+    .cta-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,45,98,0.45); }
+    .cta-btn svg { width: 18px; height: 18px; fill: #fff; }
 
-    /* SECTIONS */
-    .section { max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; }
-    .section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 2.5rem; gap: 1rem; }
-    .section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.5rem; }
-    .section-title { font-size: clamp(1.6rem, 3vw, 2.25rem); font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
-    .section-link { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0; }
-    .section-link:hover { text-decoration: underline; }
-    .section-link svg { width: 16px; height: 16px; fill: var(--accent); }
+    footer { text-align: center; padding: 1.5rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border); transition: border-color 0.3s; }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
 
-    /* PROPERTY CARDS */
-    .properties-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-    .property-card { background: var(--bg-card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; text-decoration: none; color: inherit; display: block; }
-    .property-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-    .card-img { position: relative; height: 210px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .card-img svg { width: 48px; height: 48px; opacity: 0.3; fill: #fff; }
-    .prop-1 { background: linear-gradient(135deg, #1a6b9a, #0d4a6e); }
-    .prop-2 { background: linear-gradient(135deg, #2d7d5a, #1a5c3e); }
-    .prop-3 { background: linear-gradient(135deg, #8b4513, #5c2d0a); }
-    .prop-4 { background: linear-gradient(135deg, #6b3fa0, #4a2870); }
-    .prop-5 { background: linear-gradient(135deg, #c07c1a, #8b5a0a); }
-    .prop-6 { background: linear-gradient(135deg, #1a7a8a, #0d5a68); }
-    .card-badges { position: absolute; top: 0.75rem; left: 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; }
-    .badge-tag { font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 50px; }
-    .badge-new { background: var(--green); color: #fff; }
-    .badge-featured { background: var(--red); color: #fff; }
-    .badge-luxury { background: rgba(176,141,47,0.95); color: #fff; }
-    .badge-rent { background: rgba(74,144,217,0.95); color: #fff; }
-    .card-save { position: absolute; top: 0.75rem; right: 0.75rem; width: 34px; height: 34px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.15s; }
-    .card-save:hover { background: #fff; transform: scale(1.1); }
-    .card-save svg { width: 16px; height: 16px; fill: var(--text-muted); }
-    .card-save:hover svg { fill: var(--red); }
-    .card-photo-count { position: absolute; bottom: 0.75rem; right: 0.75rem; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 50px; display: flex; align-items: center; gap: 0.3rem; }
-    .card-photo-count svg { width: 12px; height: 12px; fill: #fff; }
-    .card-body { padding: 1.1rem 1.25rem 1.25rem; }
-    .card-price { font-size: 1.3rem; font-weight: 800; color: var(--accent); margin-bottom: 0.3rem; }
-    .card-price .per { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
-    .card-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-location { font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.9rem; }
-    .card-location svg { width: 12px; height: 12px; fill: var(--text-muted); flex-shrink: 0; }
-    .card-specs { display: flex; gap: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
-    .card-spec { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
-    .card-spec svg { width: 14px; height: 14px; fill: var(--text-muted); }
-
-    /* CITIES */
-    .cities-bg { background: var(--bg-section); transition: background 0.3s; }
-    .cities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .city-card { position: relative; border-radius: 14px; overflow: hidden; height: 180px; cursor: pointer; text-decoration: none; display: block; }
-    .city-card:hover .city-overlay { opacity: 1; }
-    .city-card:hover .city-img { transform: scale(1.05); }
-    .city-img { width: 100%; height: 100%; transition: transform 0.4s ease; display: flex; align-items: center; justify-content: center; }
-    .city-sd  { background: linear-gradient(155deg, #003580, #001840); }
-    .city-pc  { background: linear-gradient(155deg, #0077b6, #023e8a); }
-    .city-stg { background: linear-gradient(155deg, #1b4332, #081c15); }
-    .city-pp  { background: linear-gradient(155deg, #7b2d8b, #4a0a5c); }
-    .city-lr  { background: linear-gradient(155deg, #ae2012, #6a040f); }
-    .city-sam { background: linear-gradient(155deg, #0f4c75, #1b262c); }
-    .city-overlay { position: absolute; inset: 0; background: rgba(0,24,64,0.45); opacity: 0.6; transition: opacity 0.3s; }
-    .city-info { position: absolute; bottom: 1rem; left: 1rem; }
-    .city-name { font-size: 1.1rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.4); line-height: 1.2; }
-    .city-count { font-size: 0.78rem; color: rgba(255,255,255,0.8); font-weight: 500; margin-top: 0.15rem; }
-    .city-icon { position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-    .city-icon svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.85); }
-
-    /* HOW IT WORKS */
-    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-    .how-card { text-align: center; padding: 2.5rem 2rem; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); position: relative; transition: transform 0.2s, box-shadow 0.2s; }
-    .how-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-    .how-number { position: absolute; top: 1.25rem; right: 1.5rem; font-size: 4rem; font-weight: 900; color: var(--accent-light); line-height: 1; }
-    [data-theme="dark"] .how-number { color: rgba(74,144,217,0.1); }
-    .how-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
-    .how-icon svg { width: 30px; height: 30px; fill: #fff; }
-    .how-icon-blue  { background: linear-gradient(135deg, #002D62, #0050a8); }
-    .how-icon-red   { background: linear-gradient(135deg, #CF142B, #e8374e); }
-    .how-icon-green { background: linear-gradient(135deg, #0a7c4f, #15b371); }
-    .how-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; }
-    .how-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.65; }
-
-    /* CTA BANNER */
-    .cta-banner { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
-    .cta-shape { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.05); }
-    .cta-shape-1 { width: 400px; height: 400px; top: -200px; right: -100px; }
-    .cta-shape-2 { width: 200px; height: 200px; bottom: -80px; left: 5%; }
-    .cta-inner { position: relative; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; display: flex; align-items: center; justify-content: space-between; gap: 3rem; }
-    .cta-text h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 0.75rem; }
-    .cta-text p { color: rgba(255,255,255,0.7); font-size: 1rem; max-width: 480px; line-height: 1.65; }
-    .cta-actions { display: flex; gap: 1rem; flex-shrink: 0; }
-    .btn-cta-primary { background: var(--red); border: none; color: #fff; font-size: 1rem; font-weight: 700; padding: 0.9rem 2rem; border-radius: 14px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 20px rgba(207,20,43,0.4); white-space: nowrap; }
-    .btn-cta-primary:hover { background: var(--red-hover); transform: translateY(-2px); }
-    .btn-cta-primary svg { width: 18px; height: 18px; fill: #fff; }
-    .btn-cta-ghost { background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; font-weight: 600; padding: 0.9rem 2rem; border-radius: 14px; cursor: pointer; transition: background 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
-    .btn-cta-ghost:hover { background: rgba(255,255,255,0.18); }
-
-    /* FOOTER */
-    footer { background: var(--bg-card); border-top: 1px solid var(--border); transition: background 0.3s; }
-    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3.5rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; }
-    .footer-brand p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.7; margin-top: 1rem; max-width: 260px; }
-    .footer-col h4 { font-size: 0.82rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
-    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
-    .footer-col a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-    .footer-col a:hover { color: var(--accent); }
-    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-    .footer-bottom p { font-size: 0.82rem; color: var(--text-muted); }
-
-    /* RESPONSIVE */
-    @media (max-width: 1024px) {
-      .properties-grid { grid-template-columns: repeat(2, 1fr); }
-      .how-grid { grid-template-columns: repeat(2, 1fr); }
-      .footer-inner { grid-template-columns: 1fr 1fr; gap: 2rem; }
-      .stats-inner { gap: 2rem; }
-    }
-    @media (max-width: 768px) {
-      .nav-links, .btn-ghost { display: none; }
-      .search-fields { grid-template-columns: 1fr 1fr; }
-      .search-action { grid-column: 1 / -1; border-top: 1px solid var(--border); }
-      .stats-inner { flex-wrap: wrap; gap: 1.5rem; height: auto; padding: 1.5rem; }
-      .properties-grid { grid-template-columns: 1fr; }
-      .cities-grid { grid-template-columns: repeat(2, 1fr); }
-      .how-grid { grid-template-columns: 1fr; }
-      .cta-inner { flex-direction: column; gap: 2rem; }
-      .cta-actions { flex-direction: column; width: 100%; }
-      .footer-inner { grid-template-columns: 1fr; gap: 1.5rem; }
-      .footer-bottom { flex-direction: column; text-align: center; }
-    }
     @media (max-width: 480px) {
-      .nav-inner { padding: 0 1.25rem; }
-      .hero-content { padding: 3rem 1.25rem; }
-      .search-fields { grid-template-columns: 1fr; }
-      .cities-grid { grid-template-columns: 1fr; }
+      nav { padding: 1rem 1.25rem; }
+      .countdown { gap: 0.75rem; }
+      .countdown-unit { min-width: 72px; padding: 1rem 1.25rem; }
+      .countdown-unit .number { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
 
-  <!-- NAV -->
   <nav>
-    <div class="nav-inner">
-      <a class="logo" href="/">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        </div>
-        <span class="logo-text">Hogares<span>RD</span></span>
-      </a>
-      <div class="nav-links">
-        <a class="nav-link active" href="/">Inicio</a>
-        <a class="nav-link" href="#">Comprar</a>
-        <a class="nav-link" href="#">Alquilar</a>
-        <a class="nav-link" href="#">Nuevos Proyectos</a>
-        <a class="nav-link" href="#">Blog</a>
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </div>
-      <div class="nav-actions">
-        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
-          <span class="toggle-icons">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-          </span>
-        </button>
-        <a href="#" class="btn-ghost">Iniciar sesión</a>
-        <a href="/submit" class="btn-primary">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Publicar
-        </a>
-      </div>
-    </div>
+      <span class="logo-text">Hogares<span>RD</span></span>
+    </a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar modo oscuro/claro">
+      <span class="toggle-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      </span>
+    </button>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-shapes">
-      <div class="hero-shape hero-shape-1"></div>
-      <div class="hero-shape hero-shape-2"></div>
-      <div class="hero-shape hero-shape-3"></div>
+  <main>
+    <div class="badge">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      República Dominicana
     </div>
-    <div class="hero-content">
-      <div class="hero-badge">
-        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        República Dominicana
-      </div>
-      <h1>Tu <em>Hogar Ideal</em><br>te está esperando</h1>
-      <p class="hero-sub">Más de 12,000 propiedades en venta y alquiler en toda la República Dominicana. Encuentra tu próximo hogar hoy.</p>
-      <div class="search-box">
-        <div class="search-tabs">
-          <button class="search-tab active" onclick="setTab(this)">Comprar</button>
-          <button class="search-tab" onclick="setTab(this)">Alquilar</button>
-          <button class="search-tab" onclick="setTab(this)">Nueva Construcción</button>
-        </div>
-        <div class="search-fields">
-          <div class="search-field">
-            <label>Ubicación</label>
-            <select>
-              <option value="">Toda la RD</option>
-              <option>Santo Domingo</option>
-              <option>Punta Cana</option>
-              <option>Santiago</option>
-              <option>Puerto Plata</option>
-              <option>La Romana</option>
-              <option>Samaná</option>
-            </select>
-          </div>
-          <div class="search-field">
-            <label>Tipo de Propiedad</label>
-            <select>
-              <option value="">Todos los tipos</option>
-              <option>Apartamento</option>
-              <option>Casa</option>
-              <option>Villa</option>
-              <option>Terreno</option>
-              <option>Penthouse</option>
-            </select>
-          </div>
-          <div class="search-field">
-            <label>Precio Máximo</label>
-            <select>
-              <option value="">Sin límite</option>
-              <option>$50,000</option>
-              <option>$100,000</option>
-              <option>$200,000</option>
-              <option>$500,000</option>
-              <option>$1,000,000+</option>
-            </select>
-          </div>
-          <div class="search-action">
-            <button class="btn-search">
-              <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-              Buscar
-            </button>
-          </div>
-        </div>
-      </div>
+    <h1>Tu Hogar Ideal<br>en <span class="highlight">La República</span></h1>
+    <p class="subtitle">La forma más fácil de encontrar, explorar y publicar propiedades en toda la República Dominicana — próximamente.</p>
+    <div class="countdown" id="countdown">
+      <div class="countdown-unit"><span class="number" id="days">--</span><span class="label">Días</span></div>
+      <div class="countdown-unit"><span class="number" id="hours">--</span><span class="label">Horas</span></div>
+      <div class="countdown-unit"><span class="number" id="minutes">--</span><span class="label">Minutos</span></div>
+      <div class="countdown-unit"><span class="number" id="seconds">--</span><span class="label">Segundos</span></div>
     </div>
-  </section>
+    <a class="cta-btn" href="/submit">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Publica Tu Propiedad
+    </a>
+  </main>
 
-  <!-- STATS -->
-  <div class="stats-bar">
-    <div class="stats-inner">
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
-        <div><div class="stat-number">12,400+</div><div class="stat-label">Propiedades activas</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
-        <div><div class="stat-number">32</div><div class="stat-label">Ciudades y provincias</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
-        <div><div class="stat-number">8,200+</div><div class="stat-label">Usuarios registrados</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
-        <div><div class="stat-number">$2.1B+</div><div class="stat-label">En propiedades listadas</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FEATURED PROPERTIES -->
-  <div class="section">
-    <div class="section-header">
-      <div>
-        <div class="section-label">Destacadas</div>
-        <h2 class="section-title">Propiedades Recientes</h2>
-      </div>
-      <a href="#" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
-    </div>
-    <div class="properties-grid">
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-1">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-featured">Destacado</span><span class="badge-tag badge-luxury">Lujo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/18</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$485,000</div>
-          <div class="card-title">Penthouse con vista al mar — Cap Cana</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Cap Cana, La Altagracia</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>4 hab.</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>3 baños</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>320 m²</div>
-          </div>
-        </div>
-      </a>
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-2">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/9</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$128,000</div>
-          <div class="card-title">Apartamento moderno en Piantini</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Piantini, Santo Domingo</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>2 hab.</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>2 baños</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>95 m²</div>
-          </div>
-        </div>
-      </a>
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-3">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-rent">Alquiler</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/14</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$1,800 <span class="per">/mes</span></div>
-          <div class="card-title">Villa privada con piscina — Santiago</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Los Jardines, Santiago</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>3 hab.</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>2 baños</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>180 m²</div>
-          </div>
-        </div>
-      </a>
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-4">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/6</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$75,000</div>
-          <div class="card-title">Terreno residencial — Puerto Plata</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Sosúa, Puerto Plata</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>1,200 m²</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Vista al mar</div>
-          </div>
-        </div>
-      </a>
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-5">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-featured">Destacado</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/22</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$245,000</div>
-          <div class="card-title">Casa familiar en La Romana Golf</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>La Romana</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>4 hab.</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>3 baños</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>260 m²</div>
-          </div>
-        </div>
-      </a>
-
-      <a class="property-card" href="#">
-        <div class="card-img prop-6">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <div class="card-badges"><span class="badge-tag badge-rent">Alquiler</span><span class="badge-tag badge-new">Nuevo</span></div>
-          <button class="card-save" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
-          <div class="card-photo-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>1/11</div>
-        </div>
-        <div class="card-body">
-          <div class="card-price">$950 <span class="per">/mes</span></div>
-          <div class="card-title">Estudio en Torre Azul — Samaná</div>
-          <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Las Terrenas, Samaná</div>
-          <div class="card-specs">
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>1 hab.</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>1 baño</div>
-            <div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>48 m²</div>
-          </div>
-        </div>
-      </a>
-
-    </div>
-  </div>
-
-  <!-- CITIES -->
-  <div class="cities-bg">
-    <div class="section">
-      <div class="section-header">
-        <div>
-          <div class="section-label">Explorar</div>
-          <h2 class="section-title">Busca por Ciudad</h2>
-        </div>
-        <a href="#" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
-      </div>
-      <div class="cities-grid">
-        <a class="city-card" href="#"><div class="city-img city-sd"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santo Domingo</div><div class="city-count">4,820 propiedades</div></div></a>
-        <a class="city-card" href="#"><div class="city-img city-pc"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Punta Cana</div><div class="city-count">2,340 propiedades</div></div></a>
-        <a class="city-card" href="#"><div class="city-img city-stg"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santiago</div><div class="city-count">1,890 propiedades</div></div></a>
-        <a class="city-card" href="#"><div class="city-img city-pp"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v9h6v-5h2v5h6v-9h3L12 3z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Puerto Plata</div><div class="city-count">980 propiedades</div></div></a>
-        <a class="city-card" href="#"><div class="city-img city-lr"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">La Romana</div><div class="city-count">760 propiedades</div></div></a>
-        <a class="city-card" href="#"><div class="city-img city-sam"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Samaná</div><div class="city-count">540 propiedades</div></div></a>
-      </div>
-    </div>
-  </div>
-
-  <!-- HOW IT WORKS -->
-  <div class="section">
-    <div class="section-header">
-      <div>
-        <div class="section-label">Proceso</div>
-        <h2 class="section-title">¿Cómo Funciona?</h2>
-      </div>
-    </div>
-    <div class="how-grid">
-      <div class="how-card">
-        <div class="how-number">1</div>
-        <div class="how-icon how-icon-blue"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div>
-        <h3>Busca tu Propiedad</h3>
-        <p>Usa nuestros filtros avanzados para encontrar la propiedad perfecta según tu presupuesto, ubicación y necesidades.</p>
-      </div>
-      <div class="how-card">
-        <div class="how-number">2</div>
-        <div class="how-icon how-icon-red"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
-        <h3>Contacta al Vendedor</h3>
-        <p>Comunícate directamente con el propietario o agente. Sin intermediarios innecesarios, sin complicaciones.</p>
-      </div>
-      <div class="how-card">
-        <div class="how-number">3</div>
-        <div class="how-icon how-icon-green"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-        <h3>Cierra el Trato</h3>
-        <p>Visita la propiedad, negocia y haz tu sueño realidad. Estamos contigo en cada paso del proceso.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <div class="cta-banner">
-    <div class="cta-shape cta-shape-1"></div>
-    <div class="cta-shape cta-shape-2"></div>
-    <div class="cta-inner">
-      <div class="cta-text">
-        <h2>¿Tienes una propiedad para vender o alquilar?</h2>
-        <p>Publica gratis hoy y llega a miles de compradores y arrendatarios en toda la República Dominicana.</p>
-      </div>
-      <div class="cta-actions">
-        <a href="/submit" class="btn-cta-primary">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Publicar Propiedad
-        </a>
-        <a href="#" class="btn-cta-ghost">Saber más</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
   <footer>
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <a class="logo" href="/"><div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="logo-text">Hogares<span>RD</span></span></a>
-        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Propiedades</h4>
-        <ul>
-          <li><a href="#">Comprar</a></li>
-          <li><a href="#">Alquilar</a></li>
-          <li><a href="#">Nueva Construcción</a></li>
-          <li><a href="#">Terrenos</a></li>
-          <li><a href="#">Locales Comerciales</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Ciudades</h4>
-        <ul>
-          <li><a href="#">Santo Domingo</a></li>
-          <li><a href="#">Punta Cana</a></li>
-          <li><a href="#">Santiago</a></li>
-          <li><a href="#">Puerto Plata</a></li>
-          <li><a href="#">La Romana</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Empresa</h4>
-        <ul>
-          <li><a href="#">Nosotros</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="/submit">Publicar</a></li>
-          <li><a href="#">Contacto</a></li>
-          <li><a href="#">Términos de Uso</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
-      <p>Hecho con ♥ para la República Dominicana</p>
-    </div>
+    &copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana
   </footer>
 
   <script>
@@ -618,10 +126,30 @@
       html.setAttribute('data-theme', next);
       setSaved(next);
     });
-    function setTab(el) {
-      document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
-      el.classList.add('active');
+
+    const LAUNCH_KEY = 'hogaresrd_launch';
+    let launch = localStorage.getItem(LAUNCH_KEY);
+    if (!launch) {
+      const d = new Date();
+      d.setDate(d.getDate() + 60);
+      launch = d.toISOString();
+      localStorage.setItem(LAUNCH_KEY, launch);
     }
+    const launchDate = new Date(launch);
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+      const diff = launchDate - Date.now();
+      if (diff <= 0) {
+        ['days','hours','minutes','seconds'].forEach(id => document.getElementById(id).textContent = '00');
+        return;
+      }
+      document.getElementById('days').textContent    = pad(Math.floor(diff / 86400000));
+      document.getElementById('hours').textContent   = pad(Math.floor((diff % 86400000) / 3600000));
+      document.getElementById('minutes').textContent = pad(Math.floor((diff % 3600000) / 60000));
+      document.getElementById('seconds').textContent = pad(Math.floor((diff % 60000) / 1000));
+    }
+    tick();
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>
