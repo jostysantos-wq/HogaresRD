@@ -381,6 +381,17 @@
     </div>
   </div>
 
+  <!-- RECOMMENDATIONS — hidden until user has personalized data -->
+  <div class="section" id="recoSection" style="display:none;">
+    <div class="section-header">
+      <div>
+        <div class="section-label">✦ Personalizadas</div>
+        <h2 class="section-title">Recomendadas Para Ti</h2>
+      </div>
+    </div>
+    <div class="properties-grid" id="recoGrid"></div>
+  </div>
+
   <!-- FEATURED PROPERTIES -->
   <div class="section">
     <div class="section-header">
@@ -640,6 +651,7 @@
 
     // ── Auth nav state ────────────────────────────────────────
     let _userFavorites = new Set();
+    let _cardObserver  = null;
 
     function renderLoggedOut(el) {
       el.innerHTML = `
@@ -714,6 +726,108 @@
       });
     });
 
+    // ── Build a card element from a real listing object ────────
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function buildListingCard(listing) {
+      const imgIdx  = (parseInt(listing.id.slice(-3), 16) % 6) + 1;
+      const isSaved = _userFavorites.has(listing.id);
+      const heartD  = isSaved
+        ? 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
+        : 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z';
+      const price   = listing.type === 'alquiler'
+        ? `$${Number(listing.price).toLocaleString()} <span class="per">/mes</span>`
+        : `$${Number(listing.price).toLocaleString()}`;
+      const specsHTML = [
+        listing.bedrooms  ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${esc(listing.bedrooms)} hab.</div>` : '',
+        listing.bathrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${esc(listing.bathrooms)} baños</div>` : '',
+        listing.area_const? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${esc(listing.area_const)} m²</div>` : '',
+      ].join('');
+      const location = [listing.city, listing.province].filter(Boolean).map(esc).join(', ');
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <a class="property-card" href="/listing/${esc(listing.id)}" data-listing-id="${esc(listing.id)}">
+          <div class="card-img prop-${imgIdx}">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <div class="card-badges"><span class="badge-tag badge-featured">Recomendado</span></div>
+            <button class="card-save${isSaved ? ' saved' : ''}" data-listing-id="${esc(listing.id)}">
+              <svg viewBox="0 0 24 24"><path d="${heartD}"/></svg>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="card-price">${price}</div>
+            <div class="card-title">${esc(listing.title)}</div>
+            <div class="card-location">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              ${location}
+            </div>
+            <div class="card-specs">${specsHTML}</div>
+          </div>
+        </a>`.trim();
+      const card = wrap.firstElementChild;
+      card.querySelector('.card-save').addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        toggleFavorite(e.currentTarget, listing.id);
+      });
+      return card;
+    }
+
+    // ── Load personalized recommendations ──────────────────────
+    async function loadRecommendations(token) {
+      try {
+        const res = await fetch('/api/user/recommendations', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const { listings } = await res.json();
+        if (!listings || !listings.length) return;
+        const grid = document.getElementById('recoGrid');
+        listings.forEach((l, i) => {
+          const card = buildListingCard(l);
+          grid.appendChild(card);
+          if (_cardObserver) _cardObserver.observe(card);
+        });
+        document.getElementById('recoSection').style.display = '';
+      } catch {}
+    }
+
+    // ── Activity logging via IntersectionObserver (5s debounce) ─
+    function initActivityLogging(token) {
+      const viewTimers  = new Map();
+      const loggedViews = new Set();
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const id = entry.target.dataset.listingId;
+          if (!id || id === 'static-placeholder') return;
+          if (entry.isIntersecting) {
+            if (!loggedViews.has(id) && !viewTimers.has(id)) {
+              viewTimers.set(id, setTimeout(() => {
+                loggedViews.add(id);
+                viewTimers.delete(id);
+                fetch('/api/user/activity', {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body:    JSON.stringify({ type: 'view_listing', listingId: id }),
+                }).catch(() => {});
+              }, 5000));
+            }
+          } else {
+            if (viewTimers.has(id)) {
+              clearTimeout(viewTimers.get(id));
+              viewTimers.delete(id);
+            }
+          }
+        });
+      }, { threshold: 0.5 });
+
+      document.querySelectorAll('.property-card[data-listing-id]').forEach(c => observer.observe(c));
+      return observer;
+    }
+
     // Init nav auth state
     (async () => {
       const token = localStorage.getItem('hogaresrd_token');
@@ -722,7 +836,10 @@
       try {
         const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) { localStorage.removeItem('hogaresrd_token'); return renderLoggedOut(area); }
-        renderLoggedIn(area, await res.json());
+        const user = await res.json();
+        renderLoggedIn(area, user);
+        _cardObserver = initActivityLogging(token);
+        loadRecommendations(token);
       } catch { renderLoggedOut(area); }
     })();
   </script>

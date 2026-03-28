@@ -1,6 +1,7 @@
 const express  = require('express');
 const store    = require('./store');
 const { userAuth } = require('./auth');
+const { rebuildProfile, getRecommendations } = require('../utils/recommendations');
 
 const router = express.Router();
 
@@ -37,6 +38,36 @@ router.delete('/favorites/:listingId', userAuth, (req, res) => {
   user.favorites = user.favorites.filter(id => id !== req.params.listingId);
   store.saveUser(user);
   res.json({ success: true, favorites: user.favorites });
+});
+
+// POST /api/user/activity — log a user event and rebuild profile if it's a view
+router.post('/activity', userAuth, (req, res) => {
+  const { type, listingId, metadata } = req.body;
+  const validTypes = ['view_listing', 'search', 'favorite'];
+  if (!type || !validTypes.includes(type))
+    return res.status(400).json({ error: 'Tipo de evento inválido' });
+
+  store.appendActivity({
+    userId:    req.user.sub,
+    type,
+    listingId: listingId || null,
+    metadata:  metadata  || {},
+    timestamp: new Date().toISOString(),
+  });
+
+  // Rebuild profile preferences after every view event
+  if (type === 'view_listing' && listingId) {
+    const user    = store.getUserById(req.user.sub);
+    const listing = store.getListingById(listingId);
+    if (user && listing && listing.status === 'approved') rebuildProfile(user);
+  }
+
+  res.json({ success: true });
+});
+
+// GET /api/user/recommendations — personalized listings for the logged-in user
+router.get('/recommendations', userAuth, (req, res) => {
+  res.json({ listings: getRecommendations(req.user.sub, 10) });
 });
 
 module.exports = router;
