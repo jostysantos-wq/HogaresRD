@@ -155,6 +155,31 @@
     .btn-contact:hover { border-color: var(--accent); color: var(--accent); }
     .btn-contact svg { width: 14px; height: 14px; fill: currentColor; }
 
+    /* ── INQUIRY MODAL ───────────────────────────────────────── */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 440px; padding: 2rem; position: relative; transform: translateY(16px); transition: transform 0.2s; }
+    .modal-backdrop.open .modal { transform: translateY(0); }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem; }
+    .modal-close svg { width: 20px; height: 20px; fill: currentColor; display: block; }
+    .modal-title { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 0.25rem; }
+    .modal-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.4rem; line-height: 1.5; }
+    .modal-field { margin-bottom: 0.9rem; }
+    .modal-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem; }
+    .modal-field input, .modal-field textarea { width: 100%; padding: 0.6rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.18s; box-sizing: border-box; }
+    .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent); }
+    .modal-field textarea { resize: vertical; min-height: 80px; }
+    .modal-note { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1.1rem; line-height: 1.5; }
+    .modal-note strong { color: var(--text); }
+    .modal-submit { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .modal-submit:hover { background: var(--accent-hover); }
+    .modal-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .modal-success { text-align: center; padding: 1rem 0; }
+    .modal-success-icon { width: 52px; height: 52px; background: color-mix(in srgb, var(--green) 15%, transparent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .modal-success-icon svg { width: 26px; height: 26px; fill: var(--green); }
+    .modal-success h3 { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.4rem; }
+    .modal-success p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+
     /* ── MAP ─────────────────────────────────────────────────── */
     #listingMap { height: 300px; border-radius: 10px; overflow: hidden; }
 
@@ -348,7 +373,7 @@
           <div class="sidebar-price" id="sidebarPriceLabel">Precio desde</div>
           <div class="sidebar-amount" id="sidebarPrice"></div>
           <div class="sidebar-meta" id="sidebarMeta"></div>
-          <a href="#" class="btn-cta" id="ctaBtn">Agendar Visita</a>
+          <button class="btn-cta" id="ctaBtn" onclick="openInquiry()">Agendar Consulta</button>
           <button class="btn-cta-ghost" onclick="share()">
             <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             Compartir
@@ -365,6 +390,30 @@
     </div><!-- /listing-layout -->
   </div><!-- /page-wrap -->
 </div><!-- /listingPage -->
+
+<!-- INQUIRY MODAL -->
+<div class="modal-backdrop" id="inquiryModal" onclick="closeInquiryOnBackdrop(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeInquiry()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    <div id="inquiryFormWrap">
+      <div class="modal-title">Agendar Consulta</div>
+      <div class="modal-sub" id="inquiryModalSub">Un agente de las inmobiliarias afiliadas se pondrá en contacto contigo.</div>
+      <form id="inquiryForm" onsubmit="submitInquiry(event)">
+        <div class="modal-field"><label>Nombre completo *</label><input type="text" id="iqName" required placeholder="Tu nombre"></div>
+        <div class="modal-field"><label>Teléfono *</label><input type="tel" id="iqPhone" required placeholder="+1 (809) 000-0000"></div>
+        <div class="modal-field"><label>Correo electrónico *</label><input type="email" id="iqEmail" required placeholder="tu@correo.com"></div>
+        <div class="modal-field"><label>Mensaje (opcional)</label><textarea id="iqMessage" placeholder="¿Qué tipo de unidad te interesa? ¿Tienes alguna pregunta?"></textarea></div>
+        <p class="modal-note">Tu consulta será enviada a <strong>todas las inmobiliarias afiliadas</strong> a este proyecto. El agente que responda primero te contactará.</p>
+        <button type="submit" class="modal-submit" id="inquirySubmitBtn">Enviar Consulta</button>
+      </form>
+    </div>
+    <div id="inquirySuccess" class="modal-success" style="display:none">
+      <div class="modal-success-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+      <h3>¡Consulta enviada!</h3>
+      <p>Tu información fue enviada a las inmobiliarias afiliadas. Un agente se pondrá en contacto contigo pronto.</p>
+    </div>
+  </div>
+</div>
 
 <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
 
@@ -442,6 +491,46 @@
     el.classList.toggle('clamped', !descExpanded);
     btn.textContent = descExpanded ? 'Leer menos ↑' : 'Leer más ↓';
   }
+
+  // ── Inquiry modal ──────────────────────────────────────────
+  function openInquiry() {
+    document.getElementById('inquiryForm').reset();
+    document.getElementById('inquiryFormWrap').style.display = '';
+    document.getElementById('inquirySuccess').style.display = 'none';
+    document.getElementById('inquiryModal').classList.add('open');
+  }
+  function closeInquiry() {
+    document.getElementById('inquiryModal').classList.remove('open');
+  }
+  function closeInquiryOnBackdrop(e) {
+    if (e.target === document.getElementById('inquiryModal')) closeInquiry();
+  }
+  async function submitInquiry(e) {
+    e.preventDefault();
+    const btn = document.getElementById('inquirySubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    try {
+      const res = await fetch(`/api/listings/${listingId}/inquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:    document.getElementById('iqName').value,
+          phone:   document.getElementById('iqPhone').value,
+          email:   document.getElementById('iqEmail').value,
+          message: document.getElementById('iqMessage').value,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      document.getElementById('inquiryFormWrap').style.display = 'none';
+      document.getElementById('inquirySuccess').style.display = '';
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Enviar Consulta';
+      alert('Hubo un error al enviar. Por favor intenta de nuevo.');
+    }
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInquiry(); });
 
   // ── Share ──────────────────────────────────────────────────
   function share() {
@@ -577,8 +666,9 @@
       metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Número de pisos</span><span class="sidebar-row-value">${l.floors}</span></div>`);
     document.getElementById('sidebarMeta').innerHTML = metaRows.join('');
 
-    // CTA button
-    document.getElementById('ctaBtn').href = `mailto:${l.email || ''}?subject=Interés en ${encodeURIComponent(l.title)}`;
+    // Populate modal subtitle with listing title
+    document.getElementById('inquiryModalSub').textContent =
+      `Un agente de las inmobiliarias afiliadas a "${l.title}" se pondrá en contacto contigo.`;
 
     // Agencies — randomized tab selector (no favoritism)
     if (l.agencies && l.agencies.length) {
