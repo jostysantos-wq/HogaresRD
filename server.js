@@ -88,6 +88,7 @@ app.get('/register',          (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/register-agency',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
 app.get('/reset-password',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/forgot-password',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 

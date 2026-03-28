@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nosotros — HogaresRD</title>
+  <meta name="description" content="Conoce HogaresRD: nuestra misión, valores y el equipo detrás de la plataforma de bienes raíces más completa de República Dominicana." />
+  <style>
+    :root {
+      --bg:           #f0f4f9;
+      --bg-card:      #ffffff;
+      --bg-section:   #e8eef7;
+      --text:         #001840;
+      --text-muted:   #4d6a8a;
+      --accent:       #002D62;
+      --accent-hover: #001a45;
+      --accent-light: #e8f0fb;
+      --red:          #CF142B;
+      --border:       #d0dcea;
+      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
+      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
+      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
+      --toggle-bg:    #c4d4e8;
+      --toggle-knob:  #ffffff;
+      --nav-bg:       rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg:           #00101f;
+      --bg-card:      #001e3c;
+      --bg-section:   #001428;
+      --text:         #e8f0fb;
+      --text-muted:   #7a9bbf;
+      --accent:       #4a90d9;
+      --accent-hover: #3a7bc8;
+      --accent-light: #001e3c;
+      --red:          #e8374e;
+      --border:       #003060;
+      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg:    #003060;
+      --toggle-knob:  #e8f0fb;
+      --nav-bg:       rgba(0,16,31,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-primary-nav { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+    .btn-primary-nav:hover { background: var(--accent-hover); }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
+    .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
+    .hero-shape-2 { width: 280px; height: 280px; bottom: -100px; left: 5%; }
+    .hero-shape-3 { width: 160px; height: 160px; top: 40%; right: 25%; }
+    .hero-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem 4.5rem; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.9rem; border-radius: 50px; margin-bottom: 1.25rem; }
+    .hero-eyebrow svg { width: 10px; height: 10px; fill: #fff; }
+    .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1.1rem; max-width: 620px; }
+    .hero-title em { font-style: normal; color: #7ab8f5; }
+    .hero-sub { color: rgba(255,255,255,0.72); font-size: 1.05rem; max-width: 540px; line-height: 1.7; }
+
+    /* MISSION */
+    .mission-section { max-width: 860px; margin: 0 auto; padding: 5rem 2rem 3rem; text-align: center; }
+    .mission-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.75rem; }
+    .mission-title { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 1.25rem; }
+    .mission-text { font-size: 1.05rem; color: var(--text-muted); line-height: 1.8; }
+
+    /* VALUES */
+    .values-section { background: var(--bg-section); padding: 5rem 2rem; transition: background 0.3s; }
+    .values-inner { max-width: 1280px; margin: 0 auto; }
+    .section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.6rem; }
+    .section-title { font-size: clamp(1.6rem, 3vw, 2.25rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 3rem; }
+    .values-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+    .value-card { background: var(--bg-card); border-radius: 16px; padding: 2rem 1.75rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border); transition: box-shadow 0.2s, transform 0.2s; }
+    .value-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .value-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; }
+    .value-icon svg { width: 26px; height: 26px; fill: #fff; }
+    .value-icon.blue   { background: linear-gradient(135deg, #002D62, #0055b3); }
+    .value-icon.red    { background: linear-gradient(135deg, #CF142B, #a81022); }
+    .value-icon.green  { background: linear-gradient(135deg, #0a7c4f, #0d9e65); }
+    .value-icon.gold   { background: linear-gradient(135deg, #b45309, #d97706); }
+    .value-icon.purple { background: linear-gradient(135deg, #5b21b6, #7c3aed); }
+    .value-icon.teal   { background: linear-gradient(135deg, #0f766e, #14b8a6); }
+    .value-name { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .value-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* HOW WE WORK */
+    .how-section { max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; }
+    .how-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2rem; margin-top: 0; }
+    .how-card { text-align: center; padding: 2rem 1.5rem; }
+    .how-number { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
+    .how-icon { width: 58px; height: 58px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.1rem; }
+    .how-icon svg { width: 28px; height: 28px; fill: #fff; }
+    .how-icon.blue  { background: linear-gradient(135deg, #002D62, #0055b3); }
+    .how-icon.red   { background: linear-gradient(135deg, #CF142B, #a81022); }
+    .how-icon.green { background: linear-gradient(135deg, #0a7c4f, #0d9e65); }
+    .how-icon.gold  { background: linear-gradient(135deg, #b45309, #d97706); }
+    .how-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; }
+    .how-card p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* CTA BANNER */
+    .cta-banner { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; padding: 4.5rem 2rem; }
+    .cta-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .cta-shape-1 { width: 400px; height: 400px; top: -200px; right: -100px; }
+    .cta-shape-2 { width: 200px; height: 200px; bottom: -100px; left: 10%; }
+    .cta-inner { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; text-align: center; }
+    .cta-inner h2 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 800; color: #fff; margin-bottom: 0.85rem; letter-spacing: -0.5px; }
+    .cta-inner p { color: rgba(255,255,255,0.72); font-size: 1rem; margin-bottom: 2rem; line-height: 1.65; }
+    .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-cta-primary { background: var(--red); color: #fff; font-weight: 700; font-size: 0.95rem; padding: 0.85rem 2rem; border-radius: 10px; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .btn-cta-primary:hover { background: #a81022; transform: translateY(-1px); }
+    .btn-cta-ghost { background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; font-size: 0.95rem; padding: 0.85rem 2rem; border-radius: 10px; text-decoration: none; border: 1.5px solid rgba(255,255,255,0.3); transition: background 0.2s; }
+    .btn-cta-ghost:hover { background: rgba(255,255,255,0.2); }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); transition: background 0.3s; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin-top: 0.75rem; max-width: 260px; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-col a { text-decoration: none; font-size: 0.9rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
+
+    @media (max-width: 768px) {
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+      .values-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/home#listings" class="nav-link">Propiedades</a>
+        <a href="/about" class="nav-link active">Nosotros</a>
+        <a href="/submit" class="nav-link">Publicar</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-ghost">Iniciar sesión</a>
+          <a href="/register" class="btn-primary-nav">Registrarse</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-shapes">
+      <div class="hero-shape hero-shape-1"></div>
+      <div class="hero-shape hero-shape-2"></div>
+      <div class="hero-shape hero-shape-3"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+        República Dominicana
+      </div>
+      <h1 class="hero-title">Conectamos personas con su <em>próximo hogar</em></h1>
+      <p class="hero-sub">HogaresRD nació con una sola misión: hacer que encontrar, comprar o alquilar una propiedad en la República Dominicana sea simple, transparente y confiable para todos.</p>
+    </div>
+  </div>
+
+  <!-- MISSION -->
+  <div class="mission-section">
+    <div class="mission-label">Nuestra Misión</div>
+    <h2 class="mission-title">El mercado inmobiliario dominicano, al alcance de todos</h2>
+    <p class="mission-text">
+      En HogaresRD creemos que cada dominicano merece acceso claro y sin barreras al mercado de bienes raíces. Reunimos propiedades verificadas, inmobiliarias profesionales y compradores en una sola plataforma — eliminando la opacidad, los intermediarios innecesarios y la información dispersa que históricamente han complicado el proceso de compra o alquiler en el país.
+    </p>
+  </div>
+
+  <!-- CORE VALUES -->
+  <div class="values-section">
+    <div class="values-inner">
+      <div class="section-label">Valores</div>
+      <h2 class="section-title">Lo que nos guía</h2>
+      <div class="values-grid">
+
+        <div class="value-card">
+          <div class="value-icon blue">
+            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l6 2.67V11c0 3.85-2.57 7.45-6 8.6-3.43-1.15-6-4.75-6-8.6V7.67L12 5z"/></svg>
+          </div>
+          <div class="value-name">Transparencia</div>
+          <div class="value-desc">Publicamos precios reales, condiciones claras y datos verificados. Sin sorpresas, sin letra pequeña. Lo que ves es exactamente lo que encuentras.</div>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon green">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          </div>
+          <div class="value-name">Comunidad</div>
+          <div class="value-desc">Apoyamos a los profesionales del sector inmobiliario dominicano. Nuestro modelo beneficia a agentes, constructoras y clientes por igual, fortaleciendo el ecosistema local.</div>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon red">
+            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </div>
+          <div class="value-name">Confianza</div>
+          <div class="value-desc">Cada listado pasa por un proceso de revisión antes de publicarse. Los clientes pueden contactar a las inmobiliarias afiliadas con la certeza de que están tratando con profesionales verificados.</div>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon gold">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+          </div>
+          <div class="value-name">Equidad</div>
+          <div class="value-desc">Ninguna inmobiliaria tiene ventaja sobre otra. El orden de las agencias afiliadas se aleatoriza en cada visita para garantizar igualdad de oportunidades en cada propiedad.</div>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon purple">
+            <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+          </div>
+          <div class="value-name">Innovación</div>
+          <div class="value-desc">Usamos tecnología para simplificar cada paso del proceso: búsqueda con filtros avanzados, mapas interactivos, alertas de nuevas propiedades y enlaces de afiliación para agentes.</div>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon teal">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          </div>
+          <div class="value-name">Accesibilidad</div>
+          <div class="value-desc">La plataforma es gratuita para los compradores. Cualquier persona en la República Dominicana — o en la diáspora — puede explorar propiedades sin crear una cuenta ni pagar ningún costo.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW WE WORK -->
+  <div class="how-section">
+    <div class="section-label">Cómo Funcionamos</div>
+    <h2 class="section-title">Un modelo diseñado para todos</h2>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon blue">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </div>
+        <h3>Compradores exploran</h3>
+        <p>Los clientes buscan propiedades con filtros por ciudad, precio, tipo y condición, sin necesidad de registrarse.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon red">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        </div>
+        <h3>Agentes reciben consultas</h3>
+        <p>Cuando un cliente envía una consulta, todas las inmobiliarias afiliadas al proyecto reciben una notificación simultánea.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon green">
+          <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </div>
+        <h3>Propiedades aprobadas</h3>
+        <p>Cada listado es revisado manualmente por nuestro equipo antes de aparecer en la plataforma, garantizando calidad e información veraz.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon gold">
+          <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        </div>
+        <h3>Agentes generan enlaces</h3>
+        <p>Los agentes registrados obtienen un enlace de afiliación único. Las consultas recibidas a través de ese enlace van directamente a ellos.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-banner">
+    <div class="cta-shape cta-shape-1"></div>
+    <div class="cta-shape cta-shape-2"></div>
+    <div class="cta-inner">
+      <h2>¿Listo para encontrar tu próxima propiedad?</h2>
+      <p>Explora miles de apartamentos, casas, villas y proyectos en toda la República Dominicana. Sin costo, sin complicaciones.</p>
+      <div class="cta-actions">
+        <a href="/home" class="btn-cta-primary">Explorar propiedades</a>
+        <a href="/register-agency" class="btn-cta-ghost">Soy agente inmobiliario</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/home">Comprar</a></li>
+          <li><a href="/home">Alquilar</a></li>
+          <li><a href="/home">Nueva Construcción</a></li>
+          <li><a href="/home">Terrenos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/home">Santo Domingo</a></li>
+          <li><a href="/home">Punta Cana</a></li>
+          <li><a href="/home">Santiago</a></li>
+          <li><a href="/home">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about" style="color:var(--accent)">Nosotros</a></li>
+          <li><a href="/submit">Publicar</a></li>
+          <li><a href="/register-agency">Para Agentes</a></li>
+          <li><a href="/register">Registrarse</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p>Hecho con ♥ para la República Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getSaved());
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+    });
+
+    // Auth nav
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;overflow:hidden;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => {
+          const dd = document.getElementById('userDropdown');
+          if (dd) dd.style.display = 'none';
+        });
+      }
+    })();
+
+    function logout() {
+      try { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); } catch(e) {}
+      window.location.href = '/home';
+    }
+  </script>
+</body>
+</html>
