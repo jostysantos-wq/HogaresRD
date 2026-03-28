@@ -31,6 +31,13 @@ function getActivityByUser(userId, limit = 200) {
   return read(FILES.activity).filter(e => e.userId === userId).slice(-limit);
 }
 
+// Returns all view_listing events from the last N milliseconds (for trending)
+function getListingActivity(sinceMs) {
+  return read(FILES.activity).filter(e =>
+    e.type === 'view_listing' && e.listingId && new Date(e.timestamp) >= sinceMs
+  );
+}
+
 function appendActivity(event) {
   const all        = read(FILES.activity);
   all.push(event);
@@ -77,6 +84,6 @@ function saveListing(listing) {
 
 module.exports = {
   getUsers, getUserById, getUserByEmail, saveUser,
-  getActivityByUser, appendActivity,
+  getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing,
 };

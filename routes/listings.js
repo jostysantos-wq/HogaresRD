@@ -41,6 +41,23 @@ router.get('/', (req, res) => {
   res.json({ listings: items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
+// GET /api/listings/trending — top 8 listings by view count in the last 7 days
+router.get('/trending', (req, res) => {
+  const since  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const events = store.getListingActivity(since);
+
+  const counts = {};
+  events.forEach(e => { counts[e.listingId] = (counts[e.listingId] || 0) + 1; });
+
+  const listings = store.getListings()
+    .filter(l => counts[l.id])
+    .map(l => ({ ...l, _views: counts[l.id] }))
+    .sort((a, b) => b._views - a._views)
+    .slice(0, 8);
+
+  res.json({ listings });
+});
+
 // GET /api/listings/:id
 router.get('/:id', (req, res) => {
   const listing = store.getListingById(req.params.id);

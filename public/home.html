@@ -231,6 +231,18 @@
     .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .footer-bottom p { font-size: 0.82rem; color: var(--text-muted); }
 
+    /* CAROUSELS */
+    .carousel-viewport { overflow: hidden; }
+    .carousel-track { display: flex; gap: 1.5rem; transition: transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
+    .carousel-track .property-card { flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3); }
+    .section-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .carousel-arrow { width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--bg-card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; flex-shrink: 0; }
+    .carousel-arrow:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+    .carousel-arrow svg { width: 18px; height: 18px; fill: currentColor; }
+    .badge-views { background: rgba(234,120,0,0.92); color: #fff; }
+    @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
+    @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 5rem); } }
+
     /* RESPONSIVE */
     @media (max-width: 1024px) {
       .properties-grid { grid-template-columns: repeat(2, 1fr); }
@@ -381,25 +393,68 @@
     </div>
   </div>
 
-  <!-- RECOMMENDATIONS — hidden until user has personalized data -->
-  <div class="section" id="recoSection" style="display:none;">
-    <div class="section-header">
-      <div>
-        <div class="section-label">✦ Personalizadas</div>
-        <h2 class="section-title">Recomendadas Para Ti</h2>
+  <!-- RECOMMENDATIONS CAROUSEL — shown only when logged in and profile exists -->
+  <div id="recoSection" style="display:none;">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">✦ Personalizadas</div>
+          <h2 class="section-title">Recomendadas Para Ti</h2>
+        </div>
+        <div class="section-nav">
+          <button class="carousel-arrow" id="recoPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button class="carousel-arrow" id="recoNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        </div>
       </div>
+      <div class="carousel-viewport"><div class="carousel-track" id="recoTrack"></div></div>
     </div>
-    <div class="properties-grid" id="recoGrid"></div>
   </div>
 
-  <!-- FEATURED PROPERTIES -->
+  <!-- TRENDING CAROUSEL — top 8 most viewed this week -->
+  <div id="trendingSection" style="display:none;">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">🔥 Esta Semana</div>
+          <h2 class="section-title">Lo Más Visto</h2>
+        </div>
+        <div class="section-nav">
+          <button class="carousel-arrow" id="trendPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button class="carousel-arrow" id="trendNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        </div>
+      </div>
+      <div class="carousel-viewport"><div class="carousel-track" id="trendTrack"></div></div>
+    </div>
+  </div>
+
+  <!-- RECENT CAROUSEL — 8 newest approved listings -->
+  <div id="recentSection" style="display:none;">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Nuevas</div>
+          <h2 class="section-title">Más Recientes</h2>
+        </div>
+        <div class="section-nav">
+          <button class="carousel-arrow" id="recentPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button class="carousel-arrow" id="recentNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        </div>
+      </div>
+      <div class="carousel-viewport"><div class="carousel-track" id="recentTrack"></div></div>
+    </div>
+  </div>
+
+  <!-- FEATURED PROPERTIES — static curated showcase, always visible -->
   <div class="section">
     <div class="section-header">
       <div>
         <div class="section-label">Destacadas</div>
-        <h2 class="section-title">Propiedades Recientes</h2>
+        <h2 class="section-title">Propiedades Destacadas</h2>
       </div>
-      <a href="#" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+      <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
     </div>
     <div class="properties-grid">
 
@@ -726,33 +781,69 @@
       });
     });
 
-    // ── Build a card element from a real listing object ────────
+    // ── Helpers ────────────────────────────────────────────────
     function esc(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function buildListingCard(listing) {
+    // ── Carousel factory ───────────────────────────────────────
+    function createCarousel(trackId, prevId, nextId) {
+      const track = document.getElementById(trackId);
+      let idx = 0;
+
+      function perPage() {
+        return window.innerWidth >= 900 ? 3 : window.innerWidth >= 560 ? 2 : 1;
+      }
+      function step() {
+        const c = track.firstElementChild;
+        if (!c) return 0;
+        return c.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap) || 24;
+      }
+      function update() {
+        const max = Math.max(0, track.children.length - perPage());
+        if (idx > max) idx = max;
+        track.style.transform = `translateX(-${idx * step()}px)`;
+      }
+      document.getElementById(prevId).addEventListener('click', () => {
+        const max = Math.max(0, track.children.length - perPage());
+        idx = idx <= 0 ? max : idx - 1; update();
+      });
+      document.getElementById(nextId).addEventListener('click', () => {
+        const max = Math.max(0, track.children.length - perPage());
+        idx = idx >= max ? 0 : idx + 1; update();
+      });
+      window.addEventListener('resize', update);
+      return {
+        add(card) { track.appendChild(card); update(); },
+        observe(obs) { [...track.children].forEach(c => obs.observe(c)); },
+      };
+    }
+
+    // ── Build a card element from a real listing object ────────
+    // badge: { label, cls } — e.g. { label: 'Para Ti', cls: 'badge-featured' }
+    function buildListingCard(listing, badge) {
       const imgIdx  = (parseInt(listing.id.slice(-3), 16) % 6) + 1;
       const isSaved = _userFavorites.has(listing.id);
       const heartD  = isSaved
         ? 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
         : 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z';
-      const price   = listing.type === 'alquiler'
+      const price  = listing.type === 'alquiler'
         ? `$${Number(listing.price).toLocaleString()} <span class="per">/mes</span>`
         : `$${Number(listing.price).toLocaleString()}`;
-      const specsHTML = [
-        listing.bedrooms  ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${esc(listing.bedrooms)} hab.</div>` : '',
-        listing.bathrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${esc(listing.bathrooms)} baños</div>` : '',
-        listing.area_const? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${esc(listing.area_const)} m²</div>` : '',
+      const specs  = [
+        listing.bedrooms   ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${esc(listing.bedrooms)} hab.</div>` : '',
+        listing.bathrooms  ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${esc(listing.bathrooms)} baños</div>` : '',
+        listing.area_const ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${esc(listing.area_const)} m²</div>` : '',
       ].join('');
-      const location = [listing.city, listing.province].filter(Boolean).map(esc).join(', ');
+      const loc  = [listing.city, listing.province].filter(Boolean).map(esc).join(', ');
+      const bdg  = badge ? `<span class="badge-tag ${badge.cls}">${esc(badge.label)}</span>` : '';
 
       const wrap = document.createElement('div');
       wrap.innerHTML = `
         <a class="property-card" href="/listing/${esc(listing.id)}" data-listing-id="${esc(listing.id)}">
           <div class="card-img prop-${imgIdx}">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            <div class="card-badges"><span class="badge-tag badge-featured">Recomendado</span></div>
+            <div class="card-badges">${bdg}</div>
             <button class="card-save${isSaved ? ' saved' : ''}" data-listing-id="${esc(listing.id)}">
               <svg viewBox="0 0 24 24"><path d="${heartD}"/></svg>
             </button>
@@ -760,11 +851,8 @@
           <div class="card-body">
             <div class="card-price">${price}</div>
             <div class="card-title">${esc(listing.title)}</div>
-            <div class="card-location">
-              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-              ${location}
-            </div>
-            <div class="card-specs">${specsHTML}</div>
+            <div class="card-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${loc}</div>
+            <div class="card-specs">${specs}</div>
           </div>
         </a>`.trim();
       const card = wrap.firstElementChild;
@@ -775,22 +863,46 @@
       return card;
     }
 
-    // ── Load personalized recommendations ──────────────────────
+    // ── Load each carousel section ─────────────────────────────
     async function loadRecommendations(token) {
       try {
-        const res = await fetch('/api/user/recommendations', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const res = await fetch('/api/user/recommendations', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) return;
         const { listings } = await res.json();
         if (!listings || !listings.length) return;
-        const grid = document.getElementById('recoGrid');
-        listings.forEach((l, i) => {
-          const card = buildListingCard(l);
-          grid.appendChild(card);
-          if (_cardObserver) _cardObserver.observe(card);
-        });
+        const c = createCarousel('recoTrack', 'recoPrev', 'recoNext');
+        listings.forEach(l => c.add(buildListingCard(l, { label: 'Para Ti', cls: 'badge-featured' })));
+        if (_cardObserver) c.observe(_cardObserver);
         document.getElementById('recoSection').style.display = '';
+      } catch {}
+    }
+
+    async function loadTrending() {
+      try {
+        const res = await fetch('/api/listings/trending');
+        if (!res.ok) return;
+        const { listings } = await res.json();
+        if (!listings || !listings.length) return;
+        const c = createCarousel('trendTrack', 'trendPrev', 'trendNext');
+        listings.forEach(l => c.add(buildListingCard(l, {
+          label: `🔥 ${l._views} vista${l._views !== 1 ? 's' : ''}`,
+          cls: 'badge-views',
+        })));
+        if (_cardObserver) c.observe(_cardObserver);
+        document.getElementById('trendingSection').style.display = '';
+      } catch {}
+    }
+
+    async function loadRecent() {
+      try {
+        const res = await fetch('/api/listings?limit=8');
+        if (!res.ok) return;
+        const { listings } = await res.json();
+        if (!listings || !listings.length) return;
+        const c = createCarousel('recentTrack', 'recentPrev', 'recentNext');
+        listings.forEach(l => c.add(buildListingCard(l, { label: 'Nuevo', cls: 'badge-new' })));
+        if (_cardObserver) c.observe(_cardObserver);
+        document.getElementById('recentSection').style.display = '';
       } catch {}
     }
 
@@ -798,7 +910,6 @@
     function initActivityLogging(token) {
       const viewTimers  = new Map();
       const loggedViews = new Set();
-
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           const id = entry.target.dataset.listingId;
@@ -806,41 +917,46 @@
           if (entry.isIntersecting) {
             if (!loggedViews.has(id) && !viewTimers.has(id)) {
               viewTimers.set(id, setTimeout(() => {
-                loggedViews.add(id);
-                viewTimers.delete(id);
+                loggedViews.add(id); viewTimers.delete(id);
                 fetch('/api/user/activity', {
-                  method:  'POST',
+                  method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body:    JSON.stringify({ type: 'view_listing', listingId: id }),
+                  body: JSON.stringify({ type: 'view_listing', listingId: id }),
                 }).catch(() => {});
               }, 5000));
             }
           } else {
-            if (viewTimers.has(id)) {
-              clearTimeout(viewTimers.get(id));
-              viewTimers.delete(id);
-            }
+            if (viewTimers.has(id)) { clearTimeout(viewTimers.get(id)); viewTimers.delete(id); }
           }
         });
       }, { threshold: 0.5 });
-
       document.querySelectorAll('.property-card[data-listing-id]').forEach(c => observer.observe(c));
       return observer;
     }
 
-    // Init nav auth state
+    // ── Init ───────────────────────────────────────────────────
     (async () => {
       const token = localStorage.getItem('hogaresrd_token');
       const area  = document.getElementById('navAuthArea');
-      if (!token) return renderLoggedOut(area);
-      try {
-        const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!res.ok) { localStorage.removeItem('hogaresrd_token'); return renderLoggedOut(area); }
-        const user = await res.json();
-        renderLoggedIn(area, user);
-        _cardObserver = initActivityLogging(token);
-        loadRecommendations(token);
-      } catch { renderLoggedOut(area); }
+
+      if (!token) {
+        renderLoggedOut(area);
+      } else {
+        try {
+          const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+          if (!res.ok) { localStorage.removeItem('hogaresrd_token'); renderLoggedOut(area); }
+          else {
+            const user = await res.json();
+            renderLoggedIn(area, user);
+            _cardObserver = initActivityLogging(token);
+            loadRecommendations(token);
+          }
+        } catch { renderLoggedOut(area); }
+      }
+
+      // Always load public sections after auth resolves
+      loadTrending();
+      loadRecent();
     })();
   </script>
 </body>
