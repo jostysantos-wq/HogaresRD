@@ -563,6 +563,7 @@
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/auth.js"></script>
 </head>
 <body>
 
@@ -1148,6 +1149,8 @@
   </footer>
 
   <script>
+    requireAuth(); // redirect to /login if not logged in
+
     // ── Theme toggle ──────────────────────────────────────────
     const html = document.documentElement;
     const btn  = document.getElementById('themeToggle');

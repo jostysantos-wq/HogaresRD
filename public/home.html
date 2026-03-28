@@ -317,10 +317,6 @@
           </span>
         </button>
         <div id="navAuthArea"></div>
-        <a href="/submit" class="btn-primary">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Publicar
-        </a>
       </div>
     </div>
   </nav>
@@ -739,7 +735,7 @@
     function renderLoggedOut(el) {
       el.innerHTML = `
         <a href="/login" class="btn-ghost">Iniciar sesión</a>
-        <a href="/register" class="btn-ghost" style="border-color:var(--accent);color:var(--accent);">Registrarse</a>`;
+        <a href="/register" class="btn-primary">Registrarse</a>`;
     }
 
     function renderLoggedIn(el, user) {
@@ -747,6 +743,10 @@
       const initials   = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
       const firstName  = user.name.split(' ')[0];
       el.innerHTML = `
+        <a href="/submit" class="btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Publicar
+        </a>
         <div class="user-menu" id="userMenu">
           <button class="user-avatar-btn" id="userAvatarBtn">
             <div class="user-avatar">${initials}</div>
@@ -756,6 +756,7 @@
           <div class="user-dropdown" id="userDropdown">
             <a href="/profile" class="dropdown-item">👤 Mi Perfil</a>
             <a href="/favorites" class="dropdown-item">❤️ Mis Favoritos</a>
+            <a href="/submit" class="dropdown-item">➕ Publicar Propiedad</a>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item dropdown-logout" onclick="logout()">Cerrar Sesión</button>
           </div>
