@@ -373,7 +373,7 @@
             </select>
           </div>
           <div class="search-action">
-            <button class="btn-search">
+            <button class="btn-search" onclick="doSearch()">
               <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
               Buscar
             </button>
@@ -416,7 +416,7 @@
         <div class="section-nav">
           <button class="carousel-arrow" id="recoPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
           <button class="carousel-arrow" id="recoNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="recoTrack"></div></div>
@@ -434,7 +434,7 @@
         <div class="section-nav">
           <button class="carousel-arrow" id="trendPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
           <button class="carousel-arrow" id="trendNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="trendTrack">
@@ -456,7 +456,7 @@
         <div class="section-nav">
           <button class="carousel-arrow" id="recentPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
           <button class="carousel-arrow" id="recentNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-          <a href="/listings" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="recentTrack">
@@ -594,7 +594,7 @@
           <div class="section-label">Explorar</div>
           <h2 class="section-title">Busca por Ciudad</h2>
         </div>
-        <a href="#" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
       </div>
       <div class="cities-grid">
         <a class="city-card" href="#"><div class="city-img city-sd"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santo Domingo</div><div class="city-count">4,820 propiedades</div></div></a>
@@ -714,6 +714,11 @@
     function setTab(el) {
       document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
       el.classList.add('active');
+    }
+    function doSearch() {
+      const activeTab = document.querySelector('.search-tab.active')?.textContent?.trim();
+      const pages = { 'Comprar': '/comprar', 'Alquilar': '/alquilar', 'Nueva Construcción': '/nuevos-proyectos' };
+      window.location.href = pages[activeTab] || '/comprar';
     }
 
     // ── Auth nav state ────────────────────────────────────────
