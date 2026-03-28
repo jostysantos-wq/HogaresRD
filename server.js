@@ -10,13 +10,15 @@ const SUBMISSIONS_FILE = path.join(__dirname, 'data', 'submissions.json');
 const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
 const ADMIN_EMAIL = 'Jostysantos@gmail.com';
 
-// ── Ensure data dir ────────────────────────────────────────────
+// ── Ensure data dir & seed files ───────────────────────────────
 if (!fs.existsSync(path.join(__dirname, 'data'))) {
   fs.mkdirSync(path.join(__dirname, 'data'));
 }
-if (!fs.existsSync(SUBMISSIONS_FILE)) {
-  fs.writeFileSync(SUBMISSIONS_FILE, '[]');
-}
+[
+  SUBMISSIONS_FILE,
+  path.join(__dirname, 'data', 'users.json'),
+  path.join(__dirname, 'data', 'activity.json'),
+].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 
 function readSubmissions() {
   return JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
@@ -219,6 +221,13 @@ app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
 
   writeSubmissions(submissions);
   res.json({ success: true, targetId: target.id });
+});
+
+// ── Global error handler (keeps all errors as JSON, never HTML) ────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Error interno del servidor' });
 });
 
 app.listen(PORT, () => {
