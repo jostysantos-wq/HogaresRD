@@ -417,7 +417,7 @@
   <!-- FORM -->
   <main>
     <div class="success-msg" id="successMsg">
-      ¡Propiedad enviada exitosamente! Nos pondremos en contacto contigo pronto.
+      ✅ ¡Propiedad enviada exitosamente! Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.
     </div>
 
     <form id="propertyForm" novalidate>
@@ -748,13 +748,44 @@
         : '';
     });
 
-    // ── Form submit (frontend only for now) ───────────────────
-    document.getElementById('propertyForm').addEventListener('submit', function(e) {
+    // ── Form submit ────────────────────────────────────────────
+    document.getElementById('propertyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      document.getElementById('successMsg').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      this.reset();
-      document.getElementById('fileNames').textContent = '';
+      const btn = document.querySelector('.submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      const formData = new FormData(this);
+      const body = {};
+      formData.forEach((val, key) => {
+        if (key === 'amenities') {
+          body.amenities = body.amenities ? [...body.amenities, val] : [val];
+        } else {
+          body[key] = val;
+        }
+      });
+
+      try {
+        const res = await fetch('/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('successMsg').style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          this.reset();
+          document.getElementById('fileNames').textContent = '';
+        } else {
+          throw new Error('Server error');
+        }
+      } catch (err) {
+        alert('Hubo un error al enviar. Por favor intenta de nuevo.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';
+      }
     });
   </script>
 </body>

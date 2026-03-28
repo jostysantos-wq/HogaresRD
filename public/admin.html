@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HogaresRD — Panel de Administración</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f9; color: #001840; min-height: 100vh; }
+
+    /* LOGIN */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .login-card { background: #fff; border-radius: 20px; padding: 3rem 2.5rem; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(0,45,98,0.15); text-align: center; }
+    .login-logo { width: 52px; height: 52px; background: #002D62; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
+    .login-logo svg { width: 28px; height: 28px; fill: #fff; }
+    .login-card h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .login-card p { color: #4d6a8a; font-size: 0.9rem; margin-bottom: 2rem; }
+    .login-field { text-align: left; margin-bottom: 1.25rem; }
+    .login-field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.5rem; }
+    .login-field input { width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #d0dcea; border-radius: 10px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .login-field input:focus { border-color: #002D62; }
+    .login-btn { width: 100%; background: #002D62; color: #fff; border: none; padding: 0.9rem; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .login-btn:hover { background: #001a45; }
+    .login-error { color: #CF142B; font-size: 0.85rem; margin-top: 0.75rem; display: none; }
+
+    /* DASHBOARD */
+    .dashboard { display: none; }
+    nav { background: #002D62; padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
+    .nav-logo-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .nav-logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .nav-logo span { color: #fff; font-weight: 800; font-size: 1.1rem; }
+    .nav-logo em { color: #7ab8f5; font-style: normal; }
+    .nav-badge { background: rgba(207,20,43,0.9); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; letter-spacing: 1px; text-transform: uppercase; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .nav-right span { color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+    .logout-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: background 0.2s; }
+    .logout-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
+    .stat-card { background: #fff; border-radius: 14px; padding: 1.5rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(0,45,98,0.06); }
+    .stat-card .num { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 0.3rem; }
+    .stat-card .lbl { font-size: 0.82rem; color: #4d6a8a; font-weight: 500; }
+    .stat-pending  .num { color: #c07c1a; }
+    .stat-approved .num { color: #0a7c4f; }
+    .stat-rejected .num { color: #CF142B; }
+    .stat-total    .num { color: #002D62; }
+
+    /* FILTERS */
+    .filters { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-btn { background: #fff; border: 1.5px solid #d0dcea; color: #4d6a8a; padding: 0.45rem 1.1rem; border-radius: 50px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { border-color: #002D62; color: #002D62; background: #e8f0fb; }
+    .filter-btn.active { background: #002D62; color: #fff; border-color: #002D62; }
+    .refresh-btn { margin-left: auto; background: none; border: 1.5px solid #d0dcea; color: #4d6a8a; padding: 0.45rem 1rem; border-radius: 50px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+    .refresh-btn:hover { border-color: #002D62; color: #002D62; }
+    .refresh-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* CARDS */
+    .submissions-list { display: flex; flex-direction: column; gap: 1rem; }
+    .sub-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(0,45,98,0.06); overflow: hidden; }
+    .sub-card-header { padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #f0f4f9; }
+    .sub-title-row { flex: 1; }
+    .sub-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .sub-meta { font-size: 0.82rem; color: #4d6a8a; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .sub-meta svg { width: 12px; height: 12px; fill: #4d6a8a; }
+    .sub-meta span { display: flex; align-items: center; gap: 0.3rem; }
+    .status-badge { font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 50px; white-space: nowrap; flex-shrink: 0; }
+    .status-pending  { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1f5e3; color: #0a7c4f; }
+    .status-rejected { background: #ffe0e3; color: #a81022; }
+
+    .sub-card-body { padding: 1.25rem 1.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .sub-field label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; display: block; margin-bottom: 0.25rem; }
+    .sub-field span { font-size: 0.9rem; font-weight: 500; }
+    .sub-price { font-weight: 800; color: #002D62; font-size: 1rem; }
+
+    .sub-desc { padding: 0 1.5rem 1rem; font-size: 0.88rem; color: #4d6a8a; line-height: 1.6; }
+    .sub-desc strong { color: #001840; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem; }
+
+    .sub-amenities { padding: 0 1.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .amenity-tag { background: #e8f0fb; color: #002D62; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 50px; }
+
+    .sub-card-footer { padding: 1rem 1.5rem; background: #f8fafd; border-top: 1px solid #f0f4f9; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .contact-info { font-size: 0.85rem; color: #4d6a8a; }
+    .contact-info strong { color: #001840; display: block; margin-bottom: 0.1rem; }
+    .card-actions { display: flex; gap: 0.75rem; }
+    .btn-approve { background: #0a7c4f; border: none; color: #fff; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-approve:hover { background: #086040; transform: translateY(-1px); }
+    .btn-approve svg { width: 16px; height: 16px; fill: #fff; }
+    .btn-reject { background: #fff; border: 1.5px solid #CF142B; color: #CF142B; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-reject:hover { background: #CF142B; color: #fff; transform: translateY(-1px); }
+    .btn-reject svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-disabled { opacity: 0.4; pointer-events: none; }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; color: #4d6a8a; }
+    .empty-state svg { width: 48px; height: 48px; fill: #c4d4e8; margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #001840; }
+
+    .loading { text-align: center; padding: 3rem; color: #4d6a8a; }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .sub-card-body { grid-template-columns: repeat(2, 1fr); }
+      .sub-card-footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-wrap" id="loginWrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </div>
+      <h1>Panel de Administración</h1>
+      <p>HogaresRD — Acceso restringido</p>
+      <div class="login-field">
+        <label>Contraseña de Administrador</label>
+        <input type="password" id="adminKey" placeholder="Ingresa tu contraseña" />
+      </div>
+      <button class="login-btn" onclick="login()">Entrar</button>
+      <p class="login-error" id="loginError">Contraseña incorrecta. Intenta de nuevo.</p>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard" id="dashboard">
+    <nav>
+      <div class="nav-logo">
+        <div class="nav-logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+        <span>Hogares<em>RD</em></span>
+        <span class="nav-badge">Admin</span>
+      </div>
+      <div class="nav-right">
+        <span>Panel de Aprobación</span>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+      </div>
+    </nav>
+
+    <div class="main">
+      <div class="stats-row">
+        <div class="stat-card stat-pending">
+          <div class="num" id="statPending">—</div>
+          <div class="lbl">Pendientes</div>
+        </div>
+        <div class="stat-card stat-approved">
+          <div class="num" id="statApproved">—</div>
+          <div class="lbl">Aprobadas</div>
+        </div>
+        <div class="stat-card stat-rejected">
+          <div class="num" id="statRejected">—</div>
+          <div class="lbl">Rechazadas</div>
+        </div>
+        <div class="stat-card stat-total">
+          <div class="num" id="statTotal">—</div>
+          <div class="lbl">Total</div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
+        <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
+        <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
+        <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
+        <button class="refresh-btn" onclick="loadSubmissions()">
+          <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          Actualizar
+        </button>
+      </div>
+
+      <div class="submissions-list" id="submissionsList">
+        <div class="loading">Cargando propiedades...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminKey = '';
+    let allSubmissions = [];
+    let currentFilter = 'pending';
+
+    function login() {
+      const key = document.getElementById('adminKey').value.trim();
+      if (!key) return;
+      adminKey = key;
+      fetch('/admin/submissions', { headers: { 'x-admin-key': key } })
+        .then(r => {
+          if (!r.ok) throw new Error('Unauthorized');
+          return r.json();
+        })
+        .then(data => {
+          sessionStorage.setItem('adminKey', key);
+          document.getElementById('loginWrap').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          allSubmissions = data;
+          renderAll();
+        })
+        .catch(() => {
+          document.getElementById('loginError').style.display = 'block';
+          adminKey = '';
+        });
+    }
+
+    function logout() {
+      sessionStorage.removeItem('adminKey');
+      adminKey = '';
+      document.getElementById('loginWrap').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('adminKey').value = '';
+      document.getElementById('loginError').style.display = 'none';
+    }
+
+    function loadSubmissions() {
+      fetch('/admin/submissions', { headers: { 'x-admin-key': adminKey } })
+        .then(r => r.json())
+        .then(data => { allSubmissions = data; renderAll(); });
+    }
+
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderList();
+    }
+
+    function renderAll() {
+      const pending  = allSubmissions.filter(s => s.status === 'pending').length;
+      const approved = allSubmissions.filter(s => s.status === 'approved').length;
+      const rejected = allSubmissions.filter(s => s.status === 'rejected').length;
+      document.getElementById('statPending').textContent  = pending;
+      document.getElementById('statApproved').textContent = approved;
+      document.getElementById('statRejected').textContent = rejected;
+      document.getElementById('statTotal').textContent    = allSubmissions.length;
+      renderList();
+    }
+
+    function renderList() {
+      const list = document.getElementById('submissionsList');
+      const filtered = currentFilter === 'all'
+        ? allSubmissions
+        : allSubmissions.filter(s => s.status === currentFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <h3>No hay propiedades aquí</h3>
+            <p>No se encontraron propiedades con el filtro seleccionado.</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.slice().reverse().map(s => {
+        const amenities = Array.isArray(s.amenities)
+          ? s.amenities
+          : (s.amenities ? s.amenities.split(',') : []);
+        const amenityTags = amenities.map(a =>
+          `<span class="amenity-tag">${a.trim()}</span>`
+        ).join('');
+        const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+        const isPending = s.status === 'pending';
+        const statusLabel = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada' }[s.status];
+
+        return `
+          <div class="sub-card" id="card-${s.id}">
+            <div class="sub-card-header">
+              <div class="sub-title-row">
+                <div class="sub-title">${s.title}</div>
+                <div class="sub-meta">
+                  <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${s.city}, ${s.province}</span>
+                  <span>${s.type}</span>
+                  <span>${date}</span>
+                  <span style="font-family:monospace;font-size:0.75rem;color:#8aaac8;">ID: ${s.id}</span>
+                </div>
+              </div>
+              <span class="status-badge status-${s.status}">${statusLabel}</span>
+            </div>
+            <div class="sub-card-body">
+              <div class="sub-field"><label>Precio</label><span class="sub-price">$${Number(s.price).toLocaleString()}</span></div>
+              <div class="sub-field"><label>Habitaciones</label><span>${s.bedrooms || '—'} hab. · ${s.bathrooms || '—'} baños</span></div>
+              <div class="sub-field"><label>Área</label><span>${s.area_const ? s.area_const + ' m² const.' : '—'}</span></div>
+              <div class="sub-field"><label>Condición</label><span>${s.condition || '—'}</span></div>
+              <div class="sub-field"><label>Parqueos</label><span>${s.parking || '—'}</span></div>
+              <div class="sub-field"><label>Sector</label><span>${s.sector || '—'}</span></div>
+            </div>
+            ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
+            ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
+            <div class="sub-card-footer">
+              <div class="contact-info">
+                <strong>${s.name}</strong>
+                ${s.email} &nbsp;·&nbsp; ${s.phone} &nbsp;·&nbsp; ${s.role || ''}
+              </div>
+              <div class="card-actions">
+                <button class="btn-approve ${isPending ? '' : 'btn-disabled'}" onclick="approve('${s.id}')">
+                  <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  Aprobar
+                </button>
+                <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
+                  <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  Rechazar
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function approve(id) {
+      fetch(`/admin/submissions/${id}/approve`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey }
+      })
+      .then(r => r.json())
+      .then(() => {
+        const sub = allSubmissions.find(s => s.id === id);
+        if (sub) sub.status = 'approved';
+        renderAll();
+      });
+    }
+
+    function reject(id) {
+      fetch(`/admin/submissions/${id}/reject`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey }
+      })
+      .then(r => r.json())
+      .then(() => {
+        const sub = allSubmissions.find(s => s.id === id);
+        if (sub) sub.status = 'rejected';
+        renderAll();
+      });
+    }
+
+    // Auto-login if key is in sessionStorage
+    document.getElementById('adminKey').addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+    const savedKey = sessionStorage.getItem('adminKey');
+    if (savedKey) {
+      adminKey = savedKey;
+      document.getElementById('adminKey').value = savedKey;
+      login();
+    }
+  </script>
+</body>
+</html>
