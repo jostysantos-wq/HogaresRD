@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 const store      = require('./store');
 
 const router     = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'hogaresrd-jwt-fallback-change-me';
 const BASE_URL   = process.env.BASE_URL || 'http://localhost:3000';
 
 const transporter = nodemailer.createTransport({
