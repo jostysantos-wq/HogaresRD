@@ -109,13 +109,13 @@
     .search-tab { flex: 1; padding: 0.9rem 1.5rem; background: none; border: none; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: color 0.2s, background 0.2s; position: relative; }
     .search-tab.active { color: var(--accent); background: var(--accent-light); }
     .search-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
-    .search-fields { display: grid; grid-template-columns: 1fr 1fr 1fr auto; }
-    .search-field { padding: 1rem 1.25rem; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.3rem; }
+    .search-fields { display: grid; grid-template-columns: 1fr 1fr 1fr auto; align-items: stretch; }
+    .search-field { padding: 1rem 1.25rem; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; justify-content: center; }
     .search-field:last-child { border-right: none; }
-    .search-field label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); }
-    .search-field select { background: none; border: none; outline: none; font-size: 0.95rem; font-weight: 500; color: var(--text); cursor: pointer; width: 100%; appearance: none; -webkit-appearance: none; }
+    .search-field label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+    .search-field select { background: none; border: none; outline: none; font-size: 0.95rem; font-weight: 500; color: var(--text); cursor: pointer; width: 100%; appearance: none; -webkit-appearance: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .search-field select option { background: var(--bg-card); color: var(--text); }
-    .search-action { padding: 1rem 1.5rem; display: flex; align-items: center; }
+    .search-action { padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: center; }
     .btn-search { background: var(--red); border: none; color: #fff; font-size: 1rem; font-weight: 700; padding: 0.9rem 1.75rem; border-radius: 14px; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
     .btn-search:hover { background: var(--red-hover); transform: translateY(-1px); }
     .btn-search svg { width: 18px; height: 18px; fill: #fff; }

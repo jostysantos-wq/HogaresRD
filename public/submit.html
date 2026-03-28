@@ -507,11 +507,11 @@
     .unit-types-section { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }
     .unit-types-label { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
     .unit-table { width: 100%; margin-bottom: 0.5rem; }
-    .unit-table-header, .unit-table-row { display: grid; grid-template-columns: 2fr 0.7fr 0.7fr 1fr 1.5fr 1fr 0.7fr 36px; gap: 0.5rem; align-items: center; }
+    .unit-table-header, .unit-table-row { display: grid; grid-template-columns: 2fr 0.7fr 0.7fr 1fr 1.5fr 1fr 0.7fr 36px; gap: 0.5rem; align-items: center; min-width: 0; }
     .unit-table-header { padding: 0 0 0.4rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
-    .unit-table-header span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .unit-table-header span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .unit-table-row { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
-    .unit-table-row input { width: 100%; box-sizing: border-box; padding: 0.6rem 0.75rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+    .unit-table-row input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0.6rem 0.5rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
     .unit-table-row input:focus { border-color: var(--accent); }
     .remove-unit-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.3rem; border-radius: 6px; transition: color 0.2s, background 0.2s; }
     .remove-unit-btn:hover { color: var(--accent-red); background: rgba(207,20,43,0.08); }
