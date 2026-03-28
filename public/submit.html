@@ -694,6 +694,7 @@
             <div class="field">
               <label for="units_available">Unidades Disponibles</label>
               <input type="number" id="units_available" name="units_available" placeholder="Ej. 12" min="0" />
+              <span id="unitsAvailError" style="display:none;color:var(--accent-red,#cf142b);font-size:0.8rem;margin-top:0.25rem;"></span>
             </div>
             <div class="field">
               <label for="delivery_date">Fecha Estimada de Entrega</label>
@@ -731,6 +732,7 @@
                 <span></span>
               </div>
               <div id="unitTypesList"></div>
+              <span id="unitRowsAvailError" style="display:none;color:var(--accent-red,#cf142b);font-size:0.8rem;margin-top:0.4rem;"></span>
             </div>
             <button type="button" class="add-unit-btn" onclick="addUnitType()">
               <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
@@ -1446,6 +1448,51 @@
         : '';
     });
 
+    // ── Prevent Enter from submitting the form ─────────────────
+    document.getElementById('propertyForm').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    });
+
+    // ── Units availability validation ──────────────────────────
+    function validateUnitsAvailable() {
+      const total = parseInt(document.getElementById('units_total').value) || 0;
+      const avail = parseInt(document.getElementById('units_available').value) || 0;
+      const err   = document.getElementById('unitsAvailError');
+      if (total > 0 && avail > total) {
+        err.textContent = `Las unidades disponibles (${avail}) no pueden superar el total del proyecto (${total}).`;
+        err.style.display = 'block';
+        return false;
+      }
+      err.style.display = 'none';
+      return true;
+    }
+
+    function validateUnitRowsAvailable() {
+      const total   = parseInt(document.getElementById('units_total').value) || 0;
+      const rows    = document.querySelectorAll('[name="unit_available[]"]');
+      if (!total || !rows.length) return true;
+      const sum     = Array.from(rows).reduce((s, el) => s + (parseInt(el.value) || 0), 0);
+      const err     = document.getElementById('unitRowsAvailError');
+      if (sum > total) {
+        err.textContent = `La suma de unidades disponibles en los tipos (${sum}) supera el total del proyecto (${total}).`;
+        err.style.display = 'block';
+        return false;
+      }
+      err.style.display = 'none';
+      return true;
+    }
+
+    document.getElementById('units_total').addEventListener('input', function() {
+      validateUnitsAvailable();
+      validateUnitRowsAvailable();
+    });
+    document.getElementById('units_available').addEventListener('input', validateUnitsAvailable);
+    document.getElementById('unitTypesList').addEventListener('input', function(e) {
+      if (e.target.name === 'unit_available[]') validateUnitRowsAvailable();
+    });
+
     // ── Form submit ────────────────────────────────────────────
     document.getElementById('propertyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -1468,6 +1515,17 @@
       if (!isClaim && !document.getElementById('lat').value) {
         document.getElementById('mapError').style.display = 'block';
         document.getElementById('locationMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';
+        return;
+      }
+
+      // Validate unit availability
+      if (!validateUnitsAvailable() || !validateUnitRowsAvailable()) {
+        const errEl = document.getElementById('unitsAvailError').style.display !== 'none'
+          ? document.getElementById('unitsAvailError')
+          : document.getElementById('unitRowsAvailError');
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         btn.disabled = false;
         btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';
         return;
