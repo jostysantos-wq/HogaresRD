@@ -499,6 +499,9 @@
     #projectDetails { overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; max-height: 0; opacity: 0; }
     #projectDetails.visible { max-height: 600px; opacity: 1; }
 
+    /* ── Conditional field hiding ────────────────────────────── */
+    .field-hidden { display: none !important; }
+
     /* ── Map ─────────────────────────────────────────────────── */
     #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
@@ -697,7 +700,7 @@
             <label for="price">Precio (USD)</label>
             <div class="price-wrap">
               <span class="currency">$</span>
-              <input type="number" id="price" name="price" placeholder="250,000" min="0" required />
+              <input type="number" id="price" name="price" placeholder="250000" min="0" required />
             </div>
           </div>
           <div class="field">
@@ -764,8 +767,8 @@
             </select>
           </div>
           <div class="field">
-            <label for="floor_num">Piso (si aplica)</label>
-            <input type="number" id="floor_num" name="floor_num" placeholder="Ej. 3" min="0" />
+            <label for="floor_num">Piso de la Unidad</label>
+            <input type="number" id="floor_num" name="floor_num" placeholder="Ej. 3" min="1" />
           </div>
           <div class="field">
             <label for="year_built">Año de Construcción</label>
@@ -1028,13 +1031,44 @@
       setSaved(next);
     });
 
-    // ── Project details toggle ─────────────────────────────────
-    const PROJECT_CONDITIONS = ['Nueva construcción', 'En planos'];
-    function toggleProjectDetails() {
+    // ── Field visibility rules ─────────────────────────────────
+    function fieldOf(id) { return document.getElementById(id).closest('.field'); }
+    function toggleField(id, show) { fieldOf(id).classList.toggle('field-hidden', !show); }
+
+    function applyFieldVisibility() {
+      const type = document.getElementById('type').value;
       const cond = document.getElementById('condition').value;
-      document.getElementById('projectDetails').classList.toggle('visible', PROJECT_CONDITIONS.includes(cond));
+      const isTerrain      = type === 'Solar / Terreno';
+      const isApartment    = ['Apartamento', 'Penthouse'].includes(type);
+      const isNewConstruct = ['Nueva construcción', 'En planos'].includes(cond);
+
+      // Terrain has no rooms, no constructed area, no floors, no year built
+      toggleField('bedrooms',  !isTerrain);
+      toggleField('bathrooms', !isTerrain);
+      toggleField('floors',    !isTerrain);
+      toggleField('area_const', !isTerrain);
+
+      // "Piso de la unidad" only makes sense when in a multi-unit building
+      toggleField('floor_num', isApartment && !isTerrain);
+
+      // Year built is irrelevant for new construction (delivery_date covers it)
+      // and for terrain (nothing is built)
+      toggleField('year_built', !isTerrain && !isNewConstruct);
+
+      // Project details card (constructora, units, stage, delivery)
+      document.getElementById('projectDetails').classList.toggle('visible', isNewConstruct);
+
+      // Auto-select project stage to match condition (avoids redundant contradiction)
+      if (isNewConstruct) {
+        const stageEl = document.getElementById('project_stage');
+        if (!stageEl.value) {
+          stageEl.value = cond === 'En planos' ? 'En planos' : '';
+        }
+      }
     }
-    document.getElementById('condition').addEventListener('change', toggleProjectDetails);
+
+    document.getElementById('type').addEventListener('change', applyFieldVisibility);
+    document.getElementById('condition').addEventListener('change', applyFieldVisibility);
 
     // ── Leaflet map ────────────────────────────────────────────
     const DR_CENTER = [18.7357, -70.1627];
