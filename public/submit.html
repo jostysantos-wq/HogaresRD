@@ -1097,7 +1097,6 @@
       const div = document.createElement('div');
       div.className = 'agency-entry';
       div.id = `agency-${idx}`;
-      updateContactNotice();
       div.innerHTML = `
         <div class="agency-header">
           <span class="agency-num">Agencia #${idx}</span>
@@ -1125,6 +1124,7 @@
           </div>
         </div>`;
       document.getElementById('agenciesList').appendChild(div);
+      updateContactNotice();
     }
 
     function removeAgency(idx) {
