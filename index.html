@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HogaresRD</title>
+  <meta name="description" content="La forma más fácil de encontrar y publicar propiedades en República Dominicana." />
+  <style>
+    /* ── Variables ─────────────────────────────────────────── */
+    :root {
+      --bg:          #eef3fa;
+      --bg-card:     #ffffff;
+      --text:        #001840;
+      --text-muted:  #4d6a8a;
+      --accent:      #002D62;
+      --accent-hover:#001a45;
+      --accent-red:  #CF142B;
+      --border:      #c4d4e8;
+      --toggle-bg:   #c4d4e8;
+      --toggle-knob: #ffffff;
+      --shadow:      0 4px 24px rgba(0,45,98,0.12);
+    }
+
+    [data-theme="dark"] {
+      --bg:          #00101f;
+      --bg-card:     #001e3c;
+      --text:        #e8f0fb;
+      --text-muted:  #7a9bbf;
+      --accent:      #4a90d9;
+      --accent-hover:#3a7bc8;
+      --accent-red:  #e8374e;
+      --border:      #003060;
+      --toggle-bg:   #003060;
+      --toggle-knob: #e8f0fb;
+      --shadow:      0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── Nav ────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    /* ── Theme Toggle ───────────────────────────────────────── */
+    .theme-toggle {
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 50px;
+      width: 52px;
+      height: 28px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .theme-toggle::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background: var(--toggle-knob);
+      border-radius: 50%;
+      position: absolute;
+      left: 4px;
+      transition: transform 0.3s, background 0.3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    [data-theme="dark"] .theme-toggle::after {
+      transform: translateX(24px);
+    }
+
+    .toggle-icons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .toggle-icons svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    /* ── Main ───────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
+      border-radius: 50px;
+      margin-bottom: 1.75rem;
+    }
+
+    .badge svg {
+      width: 12px;
+      height: 12px;
+      fill: #fff;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 .highlight {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 520px;
+      line-height: 1.65;
+      margin-bottom: 3rem;
+    }
+
+    /* ── Countdown ──────────────────────────────────────────── */
+    .countdown {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .countdown-unit {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.25rem 1.75rem;
+      min-width: 90px;
+      box-shadow: var(--shadow);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .countdown-unit .number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      display: block;
+    }
+
+    .countdown-unit .label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      display: block;
+    }
+
+    /* ── CTA Button ─────────────────────────────────────────── */
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.9rem 2rem;
+      border-radius: 12px;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(0,45,98,0.35);
+    }
+
+    .cta-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,45,98,0.45);
+    }
+
+    .cta-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: #fff;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      transition: border-color 0.3s;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      nav { padding: 1rem 1.25rem; }
+      .countdown { gap: 0.75rem; }
+      .countdown-unit { min-width: 72px; padding: 1rem 1.25rem; }
+      .countdown-unit .number { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      </div>
+      <span class="logo-text">Hogares<span>RD</span></span>
+    </a>
+
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar modo oscuro/claro">
+      <span class="toggle-icons">
+        <!-- Sun -->
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b">
+          <path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/>
+        </svg>
+        <!-- Moon -->
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+      </span>
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+    <div class="badge">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      República Dominicana
+    </div>
+
+    <h1>Tu Hogar Ideal<br>en <span class="highlight">La República</span></h1>
+
+    <p class="subtitle">
+      La forma más fácil de encontrar, explorar y publicar propiedades en toda la República Dominicana — próximamente.
+    </p>
+
+    <div class="countdown" id="countdown">
+      <div class="countdown-unit"><span class="number" id="days">--</span><span class="label">Días</span></div>
+      <div class="countdown-unit"><span class="number" id="hours">--</span><span class="label">Horas</span></div>
+      <div class="countdown-unit"><span class="number" id="minutes">--</span><span class="label">Minutos</span></div>
+      <div class="countdown-unit"><span class="number" id="seconds">--</span><span class="label">Segundos</span></div>
+    </div>
+
+    <a class="cta-btn" href="submit.html">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Publica Tu Propiedad
+    </a>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    &copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana
+  </footer>
+
+  <script>
+    // ── Theme toggle ──────────────────────────────────────────
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+
+    function getSaved() {
+      try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; }
+    }
+    function setSaved(val) {
+      try { localStorage.setItem('theme', val); } catch(e) {}
+    }
+
+    html.setAttribute('data-theme', getSaved());
+
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      setSaved(next);
+    });
+
+    // ── Countdown (launch target: 60 days from first load) ────
+    const LAUNCH_KEY = 'hogaresrd_launch';
+    let launch = localStorage.getItem(LAUNCH_KEY);
+    if (!launch) {
+      const d = new Date();
+      d.setDate(d.getDate() + 60);
+      launch = d.toISOString();
+      localStorage.setItem(LAUNCH_KEY, launch);
+    }
+    const launchDate = new Date(launch);
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function tick() {
+      const diff = launchDate - Date.now();
+      if (diff <= 0) {
+        document.getElementById('days').textContent    = '00';
+        document.getElementById('hours').textContent   = '00';
+        document.getElementById('minutes').textContent = '00';
+        document.getElementById('seconds').textContent = '00';
+        return;
+      }
+      document.getElementById('days').textContent    = pad(Math.floor(diff / 86400000));
+      document.getElementById('hours').textContent   = pad(Math.floor((diff % 86400000) / 3600000));
+      document.getElementById('minutes').textContent = pad(Math.floor((diff % 3600000) / 60000));
+      document.getElementById('seconds').textContent = pad(Math.floor((diff % 60000) / 1000));
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
