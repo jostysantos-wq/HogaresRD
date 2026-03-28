@@ -1,7 +1,7 @@
 require('dotenv').config();
-const express = require('express');
-const path    = require('path');
-const fs      = require('fs');
+const express    = require('express');
+const path       = require('path');
+const fs         = require('fs');
 const nodemailer = require('nodemailer');
 
 const app  = express();
@@ -39,6 +39,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── API routes ─────────────────────────────────────────────────
+app.use('/api/auth', require('./routes/auth'));
+
 // ── Admin auth middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {
   const key = req.headers['x-admin-key'];
@@ -58,6 +61,11 @@ app.get('/home', (req, res) => {
 app.get('/submit', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'submit.html'));
 });
+
+app.get('/login',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/register',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/profile',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;
