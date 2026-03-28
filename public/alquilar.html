@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Propiedades en Alquiler — HogaresRD</title>
+  <meta name="description" content="Encuentra apartamentos, casas y villas en alquiler en toda la República Dominicana." />
+  <style>
+    :root {
+      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
+      --text: #001840; --text-muted: #4d6a8a;
+      --accent: #002D62; --accent-hover: #001a45; --accent-light: #e8f0fb;
+      --red: #CF142B; --green: #0a7c4f;
+      --border: #d0dcea;
+      --shadow-sm: 0 2px 8px rgba(0,45,98,0.08);
+      --shadow-md: 0 4px 20px rgba(0,45,98,0.12);
+      --shadow-lg: 0 8px 40px rgba(0,45,98,0.18);
+      --toggle-bg: #c4d4e8; --toggle-knob: #ffffff;
+      --nav-bg: rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg: #00101f; --bg-card: #001e3c; --bg-section: #001428;
+      --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #4a90d9; --accent-hover: #3a7bc8; --accent-light: #001e3c;
+      --red: #e8374e; --green: #1db87a;
+      --border: #003060;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg: #003060; --toggle-knob: #e8f0fb;
+      --nav-bg: rgba(0,16,31,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
+    .btn-nav-primary:hover { background: var(--accent-hover); }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 4px; transition: background 0.3s; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* PAGE HEADER */
+    .page-header { background: linear-gradient(135deg, #001840 0%, #1a0050 55%, #2d0080 100%); padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+    .page-header-shapes { position: absolute; inset: 0; pointer-events: none; }
+    .ph-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .ph-shape-1 { width: 380px; height: 380px; top: -180px; right: -80px; }
+    .ph-shape-2 { width: 180px; height: 180px; bottom: -80px; left: 8%; }
+    .page-header-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; }
+    .page-eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(207,20,43,0.85); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.28rem 0.8rem; border-radius: 50px; margin-bottom: 0.9rem; }
+    .page-eyebrow svg { width: 10px; height: 10px; fill: #fff; }
+    .page-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
+    .page-sub { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+
+    /* FILTERS */
+    .filters-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 68px; z-index: 90; box-shadow: var(--shadow-sm); }
+    .filters-inner { max-width: 1280px; margin: 0 auto; padding: 0.85rem 2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .filter-select { padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 18px; padding-right: 2rem; }
+    .filter-select:focus { border-color: var(--accent); }
+    .filter-input { padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.88rem; width: 130px; outline: none; transition: border-color 0.2s; }
+    .filter-input:focus { border-color: var(--accent); }
+    .filter-input::placeholder { color: var(--text-muted); }
+    .btn-filter { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.25rem; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn-filter:hover { background: var(--accent-hover); }
+    .btn-reset { background: none; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+    .btn-reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* RESULTS BAR */
+    .results-bar { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .results-count { font-size: 0.9rem; color: var(--text-muted); }
+    .results-count strong { color: var(--text); }
+    .sort-select { padding: 0.4rem 2rem 0.4rem 0.75rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text); font-size: 0.85rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.4rem center; background-size: 18px; }
+
+    /* GRID */
+    .listings-section { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+    .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+
+    /* PROPERTY CARD */
+    .prop-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; }
+    .prop-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .card-img { height: 200px; background: linear-gradient(135deg, #1a0050, #4b0082); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; overflow: hidden; }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; }
+    .card-img-placeholder svg { width: 48px; height: 48px; fill: rgba(255,255,255,0.25); }
+    .card-badges { position: absolute; top: 0.75rem; left: 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 50px; }
+    .badge-alquiler { background: var(--red); color: #fff; }
+    .card-body { padding: 1.1rem 1.25rem; display: flex; flex-direction: column; flex: 1; }
+    .card-price { font-size: 1.25rem; font-weight: 800; color: var(--accent); margin-bottom: 0.3rem; }
+    .card-price .per { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .card-title { font-size: 0.92rem; font-weight: 600; line-height: 1.35; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-location { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; }
+    .card-location svg { width: 13px; height: 13px; fill: var(--text-muted); flex-shrink: 0; }
+    .card-specs { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); padding-top: 0.75rem; border-top: 1px solid var(--border); margin-top: auto; }
+    .card-spec { display: flex; align-items: center; gap: 0.3rem; }
+    .card-spec svg { width: 13px; height: 13px; fill: var(--text-muted); }
+
+    /* EMPTY / SKELETON */
+    .empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+    .empty-state svg { width: 56px; height: 56px; fill: var(--border); margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .skeleton { background: var(--border); border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    .sk-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+    .sk-img { height: 200px; background: var(--border); animation: pulse 1.4s ease-in-out infinite; }
+    .sk-body { padding: 1.1rem 1.25rem; }
+    .sk-line { height: 14px; border-radius: 6px; margin-bottom: 0.6rem; }
+    .sk-line.lg { width: 60%; } .sk-line.md { width: 85%; } .sk-line.sm { width: 40%; }
+
+    /* PAGINATION */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 2rem 0 0; flex-wrap: wrap; }
+    .page-btn { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; flex-wrap: wrap; }
+    .footer-brand p { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.6rem; max-width: 240px; }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1rem 2rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted); text-align: center; }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .filter-input { width: 110px; }
+      .listings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/comprar" class="nav-link">Comprar</a>
+        <a href="/alquilar" class="nav-link active">Alquilar</a>
+        <a href="/home" class="nav-link">Nuevos Proyectos</a>
+        <a href="/about" class="nav-link">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-ghost">Iniciar sesión</a>
+          <a href="/register" class="btn-nav-primary">Registrarse</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-header-shapes">
+      <div class="ph-shape ph-shape-1"></div>
+      <div class="ph-shape ph-shape-2"></div>
+    </div>
+    <div class="page-header-inner">
+      <div class="page-eyebrow">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        En Alquiler
+      </div>
+      <h1 class="page-title">Propiedades en Alquiler</h1>
+      <p class="page-sub">Apartamentos, casas y villas en alquiler en toda la República Dominicana.</p>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <div class="filters-inner">
+      <select class="filter-select" id="fProvince">
+        <option value="">Todas las provincias</option>
+        <option>Distrito Nacional</option>
+        <option>Santo Domingo</option>
+        <option>Santiago</option>
+        <option>La Altagracia</option>
+        <option>Puerto Plata</option>
+        <option>La Romana</option>
+        <option>Samaná</option>
+        <option>San Pedro de Macorís</option>
+        <option>Duarte</option>
+        <option>Espaillat</option>
+      </select>
+      <select class="filter-select" id="fBedrooms">
+        <option value="">Hab. (cualquiera)</option>
+        <option value="1">1+</option>
+        <option value="2">2+</option>
+        <option value="3">3+</option>
+        <option value="4">4+</option>
+      </select>
+      <input class="filter-input" type="number" id="fPriceMin" placeholder="Precio mín. /mes" min="0" />
+      <input class="filter-input" type="number" id="fPriceMax" placeholder="Precio máx. /mes" min="0" />
+      <button class="btn-filter" onclick="applyFilters()">Buscar</button>
+      <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-bar">
+    <div class="results-count" id="resultsCount">Cargando...</div>
+    <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+      <option value="newest">Más recientes</option>
+      <option value="price_asc">Precio: menor a mayor</option>
+      <option value="price_desc">Precio: mayor a menor</option>
+    </select>
+  </div>
+
+  <!-- GRID -->
+  <div class="listings-section">
+    <div class="listings-grid" id="listingsGrid">
+      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar y publicar propiedades en la República Dominicana.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</div>
+  </footer>
+
+  <script>
+    // Theme
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getSaved());
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+    });
+
+    // Auth nav
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => {
+          const dd = document.getElementById('userDropdown');
+          if (dd) dd.style.display = 'none';
+        });
+      }
+    })();
+    function logout() {
+      try { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); } catch(e) {}
+      window.location.href = '/home';
+    }
+
+    // Listings
+    let currentPage = 1;
+    const LIMIT = 12;
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatPrice(p) {
+      const n = Number(p);
+      if (!n) return 'Precio a consultar';
+      return '$' + n.toLocaleString('en-US') + ' <span class="per">/mes</span>';
+    }
+
+    function buildCard(l) {
+      const img = Array.isArray(l.images) && l.images.length
+        ? `<img src="${esc(l.images[0])}" alt="${esc(l.title)}" loading="lazy" />`
+        : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
+      return `
+        <a class="prop-card" href="/listing/${esc(l.id)}">
+          <div class="card-img">
+            ${img}
+            <div class="card-badges">
+              <span class="badge badge-alquiler">En Alquiler</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-price">${formatPrice(l.price)}</div>
+            <div class="card-title">${esc(l.title)}</div>
+            <div class="card-location">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              ${esc(l.sector || l.city)}${l.province ? ', ' + esc(l.province) : ''}
+            </div>
+            <div class="card-specs">
+              ${l.bedrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${esc(l.bedrooms)} hab.</div>` : ''}
+              ${l.bathrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${esc(l.bathrooms)} baños</div>` : ''}
+              ${l.area_const ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${esc(l.area_const)} m²</div>` : ''}
+            </div>
+          </div>
+        </a>`;
+    }
+
+    function buildPagination(total, page, pages) {
+      const el = document.getElementById('pagination');
+      if (pages <= 1) { el.innerHTML = ''; return; }
+      let html = '';
+      html += `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>`;
+      for (let i = 1; i <= pages; i++) {
+        if (pages > 7 && i > 2 && i < pages - 1 && Math.abs(i - page) > 1) {
+          if (i === 3 || i === pages - 2) html += `<span style="padding:0 0.25rem;color:var(--text-muted)">…</span>`;
+          continue;
+        }
+        html += `<button class="page-btn${i===page?' active':''}" onclick="goPage(${i})">${i}</button>`;
+      }
+      html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===pages?'disabled':''}><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>`;
+      el.innerHTML = html;
+    }
+
+    function getFilters() {
+      return {
+        type:        'alquiler',
+        province:    document.getElementById('fProvince').value,
+        bedroomsMin: document.getElementById('fBedrooms').value,
+        priceMin:    document.getElementById('fPriceMin').value,
+        priceMax:    document.getElementById('fPriceMax').value,
+      };
+    }
+
+    function sortListings(listings) {
+      const s = document.getElementById('sortSelect').value;
+      if (s === 'price_asc')  return [...listings].sort((a,b) => Number(a.price) - Number(b.price));
+      if (s === 'price_desc') return [...listings].sort((a,b) => Number(b.price) - Number(a.price));
+      return listings;
+    }
+
+    async function loadListings(page = 1) {
+      currentPage = page;
+      const filters = getFilters();
+      const params  = new URLSearchParams({ page, limit: LIMIT });
+      Object.entries(filters).forEach(([k,v]) => { if (v) params.set(k, v); });
+
+      const grid = document.getElementById('listingsGrid');
+      grid.innerHTML = `
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>`;
+      document.getElementById('pagination').innerHTML = '';
+      document.getElementById('resultsCount').textContent = 'Cargando...';
+
+      try {
+        const res  = await fetch('/api/listings?' + params.toString());
+        const data = await res.json();
+        const sorted = sortListings(data.listings || []);
+        const total  = data.total || 0;
+        const pages  = data.pages || 1;
+
+        document.getElementById('resultsCount').innerHTML =
+          `<strong>${total}</strong> propiedad${total !== 1 ? 'es' : ''} en alquiler`;
+
+        if (!sorted.length) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <h3>No encontramos propiedades</h3>
+            <p>Intenta ajustar los filtros de búsqueda.</p>
+          </div>`;
+        } else {
+          grid.innerHTML = sorted.map(buildCard).join('');
+        }
+        buildPagination(total, page, pages);
+      } catch(e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          <h3>Error al cargar propiedades</h3>
+          <p>Por favor intenta de nuevo.</p>
+        </div>`;
+        document.getElementById('resultsCount').textContent = '';
+      }
+    }
+
+    function applyFilters() { loadListings(1); }
+    function resetFilters() {
+      ['fProvince','fBedrooms'].forEach(id => document.getElementById(id).value = '');
+      ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
+      loadListings(1);
+    }
+    function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    loadListings(1);
+  </script>
+</body>
+</html>
