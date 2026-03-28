@@ -232,8 +232,9 @@
     .footer-bottom p { font-size: 0.82rem; color: var(--text-muted); }
 
     /* CAROUSELS */
-    .carousel-viewport { overflow: hidden; }
-    .carousel-track { display: flex; gap: 1.5rem; transition: transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
+    .carousel-viewport { overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; }
+    .carousel-viewport.dragging { cursor: grabbing; }
+    .carousel-track { display: flex; gap: 1.5rem; will-change: transform; }
     .carousel-track .property-card { flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3); }
     .section-nav { display: flex; align-items: center; gap: 0.5rem; }
     .carousel-arrow { width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--bg-card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; flex-shrink: 0; }
@@ -788,34 +789,87 @@
 
     // ── Carousel factory ───────────────────────────────────────
     function createCarousel(trackId, prevId, nextId) {
-      const track = document.getElementById(trackId);
-      let idx = 0;
+      const track    = document.getElementById(trackId);
+      const viewport = track.parentElement;
+
+      let items  = [];   // real card elements
+      let pos    = 0;    // current index in cloned track
+      let cloneN = 0;    // number of clones prepended
 
       function perPage() {
         return window.innerWidth >= 900 ? 3 : window.innerWidth >= 560 ? 2 : 1;
       }
-      function step() {
+      function cardStep() {
         const c = track.firstElementChild;
         if (!c) return 0;
-        return c.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap) || 24;
+        return c.getBoundingClientRect().width +
+               parseFloat(getComputedStyle(track).gap || 0);
       }
-      function update() {
-        const max = Math.max(0, track.children.length - perPage());
-        if (idx > max) idx = max;
-        track.style.transform = `translateX(-${idx * step()}px)`;
+      function setPos(p, animate) {
+        pos = p;
+        if (!animate) {
+          track.style.transition = 'none';
+          track.getBoundingClientRect(); // force reflow so 'none' takes effect
+        } else {
+          track.style.transition = 'transform 0.4s ease';
+        }
+        track.style.transform = `translateX(-${pos * cardStep()}px)`;
       }
-      document.getElementById(prevId).addEventListener('click', () => {
-        const max = Math.max(0, track.children.length - perPage());
-        idx = idx <= 0 ? max : idx - 1; update();
+      function rebuild() {
+        cloneN = perPage();
+        track.innerHTML = '';
+        items.slice(-cloneN).forEach(c => track.appendChild(c.cloneNode(true)));
+        items.forEach(c => track.appendChild(c));
+        items.slice(0, cloneN).forEach(c => track.appendChild(c.cloneNode(true)));
+        setPos(cloneN, false);
+      }
+
+      track.addEventListener('transitionend', () => {
+        if (pos < cloneN)                    setPos(pos + items.length, false);
+        else if (pos >= cloneN + items.length) setPos(pos - items.length, false);
       });
-      document.getElementById(nextId).addEventListener('click', () => {
-        const max = Math.max(0, track.children.length - perPage());
-        idx = idx >= max ? 0 : idx + 1; update();
-      });
-      window.addEventListener('resize', update);
+
+      document.getElementById(prevId).addEventListener('click', () => setPos(pos - 1, true));
+      document.getElementById(nextId).addEventListener('click', () => setPos(pos + 1, true));
+
+      // ── Drag (mouse + touch) ─────────────────────────────────
+      let dragStart = null;
+      let dragX     = 0;
+      let baseX     = 0;
+
+      function onDragStart(x) {
+        dragStart = x; dragX = x;
+        baseX = pos * cardStep();
+        viewport.classList.add('dragging');
+        track.style.transition = 'none';
+      }
+      function onDragMove(x) {
+        if (dragStart === null) return;
+        dragX = x;
+        track.style.transform = `translateX(-${baseX - (x - dragStart)}px)`;
+      }
+      function onDragEnd() {
+        if (dragStart === null) return;
+        const delta = dragX - dragStart;
+        viewport.classList.remove('dragging');
+        dragStart = null;
+        setPos(Math.abs(delta) > cardStep() * 0.15
+          ? pos + (delta < 0 ? 1 : -1)
+          : pos, true);
+      }
+
+      viewport.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX); });
+      window .addEventListener('mousemove',   e => onDragMove(e.clientX));
+      window .addEventListener('mouseup',     ()  => onDragEnd());
+      viewport.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX), { passive: true });
+      viewport.addEventListener('touchmove',  e => onDragMove(e.touches[0].clientX),  { passive: true });
+      viewport.addEventListener('touchend',   ()  => onDragEnd());
+
+      window.addEventListener('resize', () => { if (items.length) rebuild(); });
+
       return {
-        add(card) { track.appendChild(card); update(); },
-        observe(obs) { [...track.children].forEach(c => obs.observe(c)); },
+        add(card)  { items.push(card); rebuild(); },
+        observe(obs) { items.forEach(c => obs.observe(c)); },
       };
     }
 
