@@ -509,6 +509,11 @@
     .unit-entry { background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
     .unit-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .unit-entry-num { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+    .unit-entry label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .unit-entry input { width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    .unit-entry input:focus { border-color: var(--accent); }
+    .unit-row { display: flex; gap: 0.75rem; margin-top: 0; }
+    .unit-cell { flex: 1; }
     .remove-unit-btn { background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.5rem; border-radius: 6px; transition: background 0.2s; }
     .remove-unit-btn:hover { background: rgba(207,20,43,0.08); }
     .remove-unit-btn svg { width: 15px; height: 15px; fill: currentColor; }
@@ -709,7 +714,7 @@
               <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
               Tipos de Unidades
             </div>
-            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">Si el proyecto tiene varios modelos (apartamentos, penthouses, estudios) con distintas dimensiones y precios, agrégalos aquí. Cada tipo puede tener su propio precio y disponibilidad.</p>
+            <p id="unitTypesHint" style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">Si el proyecto incluye diferentes tipos de unidades (ej. apartamentos y penthouses) con distintos precios o dimensiones, agrégalos aquí.</p>
             <div id="unitTypesList"></div>
             <button type="button" class="add-unit-btn" onclick="addUnitType()">
               <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
@@ -1096,6 +1101,20 @@
           stageEl.value = cond === 'En planos' ? 'En planos' : '';
         }
       }
+
+      // Update unit types hint based on property type
+      const hint = document.getElementById('unitTypesHint');
+      if (hint) {
+        if (type === 'Apartamento') {
+          hint.textContent = 'Este proyecto es de apartamentos. ¿Incluye penthouses u otros tipos con distintos precios o dimensiones? Agrégalos aquí.';
+        } else if (type === 'Penthouse') {
+          hint.textContent = 'Este proyecto tiene penthouses. ¿También incluye apartamentos u otros tipos? Agrégalos aquí.';
+        } else if (type === 'Villa') {
+          hint.textContent = '¿El proyecto tiene villas de distintos tamaños o precios? Agrégalos aquí.';
+        } else {
+          hint.textContent = 'Si el proyecto incluye diferentes tipos de unidades con distintos precios o dimensiones, agrégalos aquí.';
+        }
+      }
     }
 
     document.getElementById('type').addEventListener('change', applyFieldVisibility);
@@ -1214,45 +1233,28 @@
       div.id = `unit-${idx}`;
       div.innerHTML = `
         <div class="unit-entry-header">
-          <span class="unit-entry-num">Tipo de Unidad #${idx}</span>
+          <span class="unit-entry-num">Tipo #${idx}</span>
           <button type="button" class="remove-unit-btn" onclick="removeUnitType(${idx})">
             <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             Eliminar
           </button>
         </div>
-        <div class="grid-3">
-          <div class="field col-span-3">
-            <label>Nombre del Tipo <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(ej. Penthouse, Tipo A, Estudio)</span></label>
-            <input type="text" name="unit_name[]" placeholder="Ej. Apartamento 2BR, Penthouse Vista Mar..." />
-          </div>
-          <div class="field">
-            <label>Habitaciones</label>
-            <select name="unit_bedrooms[]">
-              <option value="">—</option>
-              <option>Estudio</option>
-              <option>1</option><option>2</option><option>3</option>
-              <option>4</option><option>5</option><option>6+</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Baños</label>
-            <select name="unit_bathrooms[]">
-              <option value="">—</option>
-              <option>1</option><option>1.5</option><option>2</option>
-              <option>2.5</option><option>3</option><option>4+</option>
-            </select>
-          </div>
-          <div class="field">
+        <div class="field" style="margin-bottom:0.75rem;">
+          <label>Nombre <span style="font-weight:400;text-transform:none;font-size:0.75rem;">ej. Penthouse, Apartamento 2BR, Estudio</span></label>
+          <input type="text" name="unit_name[]" placeholder="Ej. Penthouse Vista Mar, Tipo A..." />
+        </div>
+        <div class="unit-row">
+          <div class="unit-cell">
             <label>Área (m²)</label>
-            <input type="number" name="unit_area[]" placeholder="Ej. 95" min="1" />
+            <input type="number" name="unit_area[]" placeholder="95" min="1" />
           </div>
-          <div class="field col-span-2">
-            <label>Precio por Unidad (USD)</label>
-            <input type="number" name="unit_price[]" placeholder="Ej. 185000" min="0" />
+          <div class="unit-cell">
+            <label>Precio (USD)</label>
+            <input type="number" name="unit_price[]" placeholder="185000" min="0" />
           </div>
-          <div class="field">
-            <label>Unidades Disponibles</label>
-            <input type="number" name="unit_available[]" placeholder="Ej. 8" min="0" />
+          <div class="unit-cell">
+            <label>Disponibles</label>
+            <input type="number" name="unit_available[]" placeholder="8" min="0" />
           </div>
         </div>`;
       document.getElementById('unitTypesList').appendChild(div);
@@ -1382,8 +1384,6 @@
       // Collect unit types
       body.unit_types = Array.from(document.querySelectorAll('.unit-entry')).map(entry => ({
         name:      entry.querySelector('[name="unit_name[]"]').value.trim(),
-        bedrooms:  entry.querySelector('[name="unit_bedrooms[]"]').value,
-        bathrooms: entry.querySelector('[name="unit_bathrooms[]"]').value,
         area:      entry.querySelector('[name="unit_area[]"]').value,
         price:     entry.querySelector('[name="unit_price[]"]').value,
         available: entry.querySelector('[name="unit_available[]"]').value,
