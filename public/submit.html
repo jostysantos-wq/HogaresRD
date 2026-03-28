@@ -522,6 +522,10 @@
     .price-from-note { display: none; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
     .price-from-note.visible { display: block; }
 
+    /* ── Tags ────────────────────────────────────────────────── */
+    .tag-group { margin-bottom: 1.25rem; }
+    .tag-group-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent); margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+
     /* ── Map ─────────────────────────────────────────────────── */
     #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
@@ -927,7 +931,92 @@
         </div>
       </div>
 
-      <!-- 6. Fotos -->
+      <!-- 6. Etiquetas -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+          Etiquetas
+        </div>
+        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1.25rem;">Selecciona las etiquetas que mejor describen tu propiedad. Ayudan a que los compradores correctos te encuentren y mejoran las recomendaciones personalizadas.</p>
+
+        <div class="tag-group">
+          <div class="tag-group-label">Ubicación y Vistas</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Vista al mar" /><span>Vista al mar</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Primera línea de playa" /><span>Primera línea de playa</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="A pasos de la playa" /><span>A pasos de la playa</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Vista panorámica" /><span>Vista panorámica</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Frente al campo de golf" /><span>Frente al campo de golf</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Zona montañosa / fresca" /><span>Zona montañosa / fresca</span></label>
+          </div>
+        </div>
+
+        <div class="tag-group">
+          <div class="tag-group-label">Zona</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Zona turística" /><span>Zona turística</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Zona residencial cerrada" /><span>Zona residencial cerrada</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Centro de la ciudad" /><span>Centro de la ciudad</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Barrio tranquilo" /><span>Barrio tranquilo</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Cerca de autopista" /><span>Cerca de autopista</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Zona en desarrollo" /><span>Zona en desarrollo</span></label>
+          </div>
+        </div>
+
+        <div class="tag-group">
+          <div class="tag-group-label">Servicios Esenciales</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con generador" /><span>Con generador</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con inversor / batería" /><span>Con inversor / batería</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con paneles solares" /><span>Con paneles solares</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con cisterna" /><span>Con cisterna</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con bomba de agua" /><span>Con bomba de agua</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Vigilancia 24 horas" /><span>Vigilancia 24 horas</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con verja / seguridad privada" /><span>Con verja / seguridad privada</span></label>
+          </div>
+        </div>
+
+        <div class="tag-group">
+          <div class="tag-group-label">Estilo de Vida</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Apto para familias" /><span>Apto para familias</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Pet friendly" /><span>Pet friendly</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Cerca de colegios" /><span>Cerca de colegios</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Cerca de hospitales" /><span>Cerca de hospitales</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Cerca de centros comerciales" /><span>Cerca de centros comerciales</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Cerca de supermercados" /><span>Cerca de supermercados</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Vida nocturna cercana" /><span>Vida nocturna cercana</span></label>
+          </div>
+        </div>
+
+        <div class="tag-group">
+          <div class="tag-group-label">Inversión</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Alta rentabilidad" /><span>Alta rentabilidad</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Apto para Airbnb" /><span>Apto para Airbnb</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Alquiler vacacional" /><span>Alquiler vacacional</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Zona de revalorización" /><span>Zona de revalorización</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Precio de oportunidad" /><span>Precio de oportunidad</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Proyecto de lujo" /><span>Proyecto de lujo</span></label>
+          </div>
+        </div>
+
+        <div class="tag-group" style="margin-bottom:0;">
+          <div class="tag-group-label">Características</div>
+          <div class="amenities-grid">
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Amueblado" /><span>Amueblado</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Remodelado / Renovado" /><span>Remodelado / Renovado</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Listo para mudarse" /><span>Listo para mudarse</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con piscina privada" /><span>Con piscina privada</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con piscina comunitaria" /><span>Con piscina comunitaria</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con terraza / balcón amplio" /><span>Con terraza / balcón amplio</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Con área de BBQ" /><span>Con área de BBQ</span></label>
+            <label class="amenity-item"><input type="checkbox" name="tags" value="Acceso a playa privada" /><span>Acceso a playa privada</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Fotos -->
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
@@ -1364,8 +1453,8 @@
       const formData = new FormData(this);
       const body = {};
       formData.forEach((val, key) => {
-        if (key === 'amenities') {
-          body.amenities = body.amenities ? [...body.amenities, val] : [val];
+        if (key === 'amenities' || key === 'tags') {
+          body[key] = body[key] ? [...body[key], val] : [val];
         } else if (!key.endsWith('[]')) {
           body[key] = val;
         }

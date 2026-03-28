@@ -40,7 +40,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── API routes ─────────────────────────────────────────────────
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth',     require('./routes/auth'));
+app.use('/api/listings', require('./routes/listings'));
 
 // ── Admin auth middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {
@@ -62,10 +63,11 @@ app.get('/submit', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'submit.html'));
 });
 
-app.get('/login',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-app.get('/register',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
-app.get('/profile',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
+app.get('/login',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/register',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+app.get('/reset-password',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/forgot-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/profile',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;
@@ -98,6 +100,7 @@ app.post('/submit', async (req, res) => {
     delivery_date:      isClaim ? '' : (body.delivery_date     || ''),
     project_stage:      isClaim ? '' : (body.project_stage     || ''),
     unit_types:         isClaim ? [] : (Array.isArray(body.unit_types) ? body.unit_types : []),
+    tags:               isClaim ? [] : (Array.isArray(body.tags) ? body.tags : (body.tags ? [body.tags] : [])),
     lat:         isClaim ? '' : (body.lat          || ''),
     lng:         isClaim ? '' : (body.lng          || ''),
     // Agencies (present in both modes)
