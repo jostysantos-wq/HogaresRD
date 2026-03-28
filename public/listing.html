@@ -814,13 +814,14 @@ const tabsHtml = shuffled.map((a, i) =>
 
       const panelsHtml = shuffled.map((a, i) => {
         const initials = a.agent.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const agSlug   = a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         return `<div class="agency-panel${i === 0 ? ' active' : ''}" data-idx="${i}">
           <div class="agency-top">
             <div class="agent-avatar">${initials}</div>
             <div>
               <div class="agent-name">${esc(a.agent)}</div>
               <div class="agent-title">${esc(a.title)}</div>
-              <div class="agency-name-tag">${esc(a.name)}</div>
+              <div class="agency-name-tag"><a href="/inmobiliaria/${agSlug}" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${esc(a.name)}</a></div>
             </div>
           </div>
         </div>`;

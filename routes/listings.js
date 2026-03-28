@@ -72,6 +72,45 @@ router.get('/agent/:refToken', (req, res) => {
   res.json({ name: agent.name, agencyName: agent.agencyName });
 });
 
+// GET /api/agencies — list all agencies with listing counts
+router.get('/agencies', (req, res) => {
+  const listings = store.getListings();
+  const map = {};
+  listings.forEach(l => {
+    (l.agencies || []).forEach(a => {
+      if (!a.name) return;
+      const slug = a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      if (!map[slug]) map[slug] = { name: a.name, slug, count: 0 };
+      map[slug].count++;
+    });
+  });
+  const agencies = Object.values(map).sort((a, b) => b.count - a.count);
+  res.json({ agencies });
+});
+
+// GET /api/agencies/:slug — agency details + their listings
+router.get('/agencies/:slug', (req, res) => {
+  const { slug } = req.params;
+  const listings = store.getListings();
+  const matched = listings.filter(l =>
+    (l.agencies || []).some(a =>
+      a.name && a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+    )
+  );
+  if (!matched.length) return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
+  const agencyName = matched[0].agencies.find(a =>
+    a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+  ).name;
+
+  // Pagination
+  const page  = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, parseInt(req.query.limit) || 12);
+  const total = matched.length;
+  const items = matched.slice((page - 1) * limit, page * limit);
+
+  res.json({ name: agencyName, slug, listings: items, total, page, limit, pages: Math.ceil(total / limit) });
+});
+
 // GET /api/listings/:id
 router.get('/:id', (req, res) => {
   const listing = store.getListingById(req.params.id);

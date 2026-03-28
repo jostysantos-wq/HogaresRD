@@ -290,6 +290,17 @@
       .search-fields { grid-template-columns: 1fr; }
       .cities-grid { grid-template-columns: 1fr; }
     }
+
+    /* AGENCY CARDS */
+    .agency-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; transition: box-shadow 0.2s, transform 0.2s; }
+    .agency-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .agency-card-top { display: flex; align-items: center; gap: 1rem; }
+    .agency-initials { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 900; color: #fff; flex-shrink: 0; letter-spacing: -0.5px; }
+    .agency-card-info { flex: 1; min-width: 0; }
+    .agency-card-name { font-size: 1rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .agency-card-count { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .agency-card-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent); font-size: 0.88rem; font-weight: 600; text-decoration: none; border: 1.5px solid var(--accent); border-radius: 8px; padding: 0.4rem 0.9rem; transition: background 0.2s, color 0.2s; align-self: flex-start; }
+    .agency-card-link:hover { background: var(--accent); color: #fff; }
   </style>
 </head>
 <body>
@@ -653,6 +664,19 @@
         </a>
         <a href="#" class="btn-cta-ghost">Saber más</a>
       </div>
+    </div>
+  </div>
+
+  <!-- INMOBILIARIAS AFILIADAS -->
+  <div id="agenciasSection" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Directorio</div>
+          <h2 class="section-title">Inmobiliarias Afiliadas</h2>
+        </div>
+      </div>
+      <div id="agenciasGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;"></div>
     </div>
   </div>
 
@@ -1037,6 +1061,44 @@
       return observer;
     }
 
+    // ── Agencies section ───────────────────────────────────────
+    const AGENCY_COLORS = [
+      'linear-gradient(135deg,#002D62,#0050a8)',
+      'linear-gradient(135deg,#0a7c4f,#15b371)',
+      'linear-gradient(135deg,#CF142B,#e8374e)',
+      'linear-gradient(135deg,#6b3fa0,#9b6fce)',
+      'linear-gradient(135deg,#1a6b9a,#3a9fd5)',
+      'linear-gradient(135deg,#c07c1a,#f0a030)',
+      'linear-gradient(135deg,#1a7a8a,#2aafc0)',
+      'linear-gradient(135deg,#8b4513,#c0641a)',
+    ];
+
+    async function loadAgencies() {
+      try {
+        const res = await fetch('/api/listings/agencies');
+        if (!res.ok) return;
+        const { agencies } = await res.json();
+        if (!agencies || !agencies.length) return;
+        const grid = document.getElementById('agenciasGrid');
+        grid.innerHTML = agencies.map((a, idx) => {
+          const initials = a.name.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
+          const color    = AGENCY_COLORS[idx % AGENCY_COLORS.length];
+          return `
+            <div class="agency-card">
+              <div class="agency-card-top">
+                <div class="agency-initials" style="background:${color};">${initials}</div>
+                <div class="agency-card-info">
+                  <div class="agency-card-name" title="${esc(a.name)}">${esc(a.name)}</div>
+                  <div class="agency-card-count">${a.count} propiedad${a.count !== 1 ? 'es' : ''}</div>
+                </div>
+              </div>
+              <a class="agency-card-link" href="/inmobiliaria/${esc(a.slug)}">Ver portafolio &rarr;</a>
+            </div>`;
+        }).join('');
+        document.getElementById('agenciasSection').style.display = '';
+      } catch {}
+    }
+
     // ── Init ───────────────────────────────────────────────────
     (async () => {
       const token = localStorage.getItem('hogaresrd_token');
@@ -1061,6 +1123,7 @@
       loadTrending();
       loadRecent();
       loadProvinces();
+      loadAgencies();
     })();
   </script>
 </body>
