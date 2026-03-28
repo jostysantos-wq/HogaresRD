@@ -39,7 +39,7 @@ function userAuth(req, res, next) {
 // ── Register ───────────────────────────────────────────────────────────────
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, marketingOptIn } = req.body;
 
     if (!name || !email || !password)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -72,6 +72,7 @@ router.post('/register', async (req, res, next) => {
       },
       resetToken:        null,
       resetTokenExpiry:  null,
+      marketingOptIn:    marketingOptIn !== false,
     };
 
     store.saveUser(user);
@@ -80,27 +81,77 @@ router.post('/register', async (req, res, next) => {
     transporter.sendMail({
       from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
       to:      user.email,
-      subject: '¡Bienvenido a HogaresRD!',
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-          <div style="background:#002D62;padding:28px 32px;">
-            <h2 style="color:#fff;margin:0;font-size:1.4rem;">🏠 ¡Bienvenido a HogaresRD!</h2>
-            <p style="color:rgba(255,255,255,0.7);margin:6px 0 0;font-size:0.9rem;">Tu portal de bienes raíces en República Dominicana</p>
+      subject: '¡Bienvenido a HogaresRD! Tu cuenta está lista 🏠',
+      html: `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#004aaa 100%);padding:36px 40px 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <div style="font-size:1.1rem;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">🏠 HogaresRD</div>
+                <div style="margin-top:20px;">
+                  <div style="font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">¡Bienvenido, ${user.name.split(' ')[0]}!</div>
+                  <div style="margin-top:6px;font-size:0.95rem;color:rgba(255,255,255,0.75);">Tu cuenta está lista para usar</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:1rem;color:#1a2b40;line-height:1.6;">
+            Gracias por unirte a <strong>HogaresRD</strong>, el portal de bienes raíces de la República Dominicana.
+            Tu cuenta ya está activa y puedes empezar a explorar de inmediato.
+          </p>
+
+          <!-- Feature list -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td style="padding:10px 0;border-bottom:1px solid #eef3fa;">
+              <span style="color:#002D62;font-size:1rem;margin-right:10px;">🔍</span>
+              <span style="color:#4d6a8a;font-size:0.92rem;">Busca entre miles de propiedades en venta y alquiler</span>
+            </td></tr>
+            <tr><td style="padding:10px 0;border-bottom:1px solid #eef3fa;">
+              <span style="color:#002D62;font-size:1rem;margin-right:10px;">❤️</span>
+              <span style="color:#4d6a8a;font-size:0.92rem;">Guarda tus propiedades favoritas y compáralas</span>
+            </td></tr>
+            <tr><td style="padding:10px 0;">
+              <span style="color:#002D62;font-size:1rem;margin-right:10px;">✨</span>
+              <span style="color:#4d6a8a;font-size:0.92rem;">Recibe recomendaciones personalizadas según tus preferencias</span>
+            </td></tr>
+          </table>
+
+          <!-- CTA -->
+          <div style="margin-top:32px;text-align:center;">
+            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#ffffff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.97rem;letter-spacing:0.2px;">
+              Explorar Propiedades →
+            </a>
           </div>
-          <div style="padding:28px 32px;background:#fff;">
-            <p style="font-size:1rem;color:#1a2b40;">Hola <strong>${user.name}</strong>,</p>
-            <p style="color:#4d6a8a;line-height:1.6;">Tu cuenta ha sido creada exitosamente. Ya puedes explorar propiedades, guardar tus favoritas y recibir recomendaciones personalizadas basadas en tus preferencias.</p>
-            <div style="margin-top:28px;">
-              <a href="${BASE_URL}/home" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;font-size:0.95rem;">
-                Explorar Propiedades →
-              </a>
-            </div>
-            <p style="margin-top:28px;font-size:0.85rem;color:#4d6a8a;">Si no creaste esta cuenta, ignora este correo.</p>
-          </div>
-          <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;">
-            HogaresRD · República Dominicana
-          </div>
-        </div>`,
+
+          <p style="margin-top:32px;font-size:0.82rem;color:#7a9bbf;line-height:1.5;">
+            Si no creaste esta cuenta, puedes ignorar este correo con seguridad.
+            ${user.marketingOptIn ? 'Recibirás ocasionalmente ofertas y novedades de HogaresRD. Puedes cancelar en cualquier momento respondiendo a este correo.' : ''}
+          </p>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:20px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.78rem;color:#7a9bbf;text-align:center;">
+            © ${new Date().getFullYear()} HogaresRD &mdash; República Dominicana<br/>
+            <a href="${BASE_URL}/home" style="color:#7a9bbf;text-decoration:underline;">hogaresrd.com</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
     }).catch(err => console.error('Welcome email error:', err.message));
 
     res.status(201).json({ success: true, user: safeUser(user) });

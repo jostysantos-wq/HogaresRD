@@ -52,6 +52,10 @@
     .auth-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
     .auth-links a:hover { text-decoration: underline; }
 
+    .checkbox-field { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1rem 0 0.25rem; }
+    .checkbox-field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+    .checkbox-field label { font-size: 0.83rem; color: var(--text-muted); line-height: 1.4; cursor: pointer; }
+
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
   </style>
 </head>
@@ -94,6 +98,10 @@
           <label>Confirmar contraseña</label>
           <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
         </div>
+        <div class="checkbox-field">
+          <input type="checkbox" id="marketingOptIn" checked />
+          <label for="marketingOptIn">Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electrónico. Puedo cancelar en cualquier momento.</label>
+        </div>
         <button type="submit" class="btn-primary" id="submitBtn">Crear Cuenta</button>
       </form>
 
@@ -127,6 +135,7 @@
       const email           = document.getElementById('email').value.trim();
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
+      const marketingOptIn  = document.getElementById('marketingOptIn').checked;
 
       if (!name || !email || !password) {
         err.textContent = 'Todos los campos son requeridos.';
@@ -148,7 +157,7 @@
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, marketingOptIn }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
