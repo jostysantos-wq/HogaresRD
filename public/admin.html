@@ -40,7 +40,7 @@
     .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
 
     /* STATS */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
     .stat-card { background: #fff; border-radius: 14px; padding: 1.5rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(0,45,98,0.06); }
     .stat-card .num { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 0.3rem; }
     .stat-card .lbl { font-size: 0.82rem; color: #4d6a8a; font-weight: 500; }
@@ -109,13 +109,21 @@
     .agency-card strong { display: block; color: #002D62; font-size: 0.85rem; }
     .agency-card span { color: #4d6a8a; display: block; font-size: 0.78rem; }
 
+    /* CLAIM CARD */
+    .claim-card-body { padding: 1.25rem 1.5rem; }
+    .claim-target { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.88rem; margin-bottom: 1rem; }
+    .claim-target strong { color: #856404; }
+    .btn-merge { background: #4a2d9c; border: none; color: #fff; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-merge:hover { background: #3a1e82; transform: translateY(-1px); }
+    .btn-merge svg { width: 16px; height: 16px; fill: #fff; }
+
     /* MINI MAP */
     .sub-map-wrap { padding: 0 1.5rem 1rem; }
     .sub-map-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
     .admin-map { height: 180px; border-radius: 10px; border: 1px solid #d0dcea; }
 
     @media (max-width: 768px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
       .sub-card-body { grid-template-columns: repeat(2, 1fr); }
       .sub-card-footer { flex-direction: column; align-items: flex-start; }
     }
@@ -176,12 +184,17 @@
           <div class="num" id="statTotal">—</div>
           <div class="lbl">Total</div>
         </div>
+        <div class="stat-card" style="border-top: 3px solid #4a2d9c;">
+          <div class="num" id="statClaims" style="color:#4a2d9c;">—</div>
+          <div class="lbl">Solicitudes Agencia</div>
+        </div>
       </div>
 
       <div class="filters">
         <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
         <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
         <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
+        <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes de Agencia</button>
         <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
         <button class="refresh-btn" onclick="loadSubmissions()">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
@@ -246,13 +259,17 @@
     }
 
     function renderAll() {
-      const pending  = allSubmissions.filter(s => s.status === 'pending').length;
-      const approved = allSubmissions.filter(s => s.status === 'approved').length;
-      const rejected = allSubmissions.filter(s => s.status === 'rejected').length;
+      const props     = allSubmissions.filter(s => s.submission_type !== 'agency_claim');
+      const claims    = allSubmissions.filter(s => s.submission_type === 'agency_claim');
+      const pending   = props.filter(s => s.status === 'pending').length;
+      const approved  = props.filter(s => s.status === 'approved').length;
+      const rejected  = props.filter(s => s.status === 'rejected').length;
+      const claimPending = claims.filter(s => s.status === 'pending').length;
       document.getElementById('statPending').textContent  = pending;
       document.getElementById('statApproved').textContent = approved;
       document.getElementById('statRejected').textContent = rejected;
-      document.getElementById('statTotal').textContent    = allSubmissions.length;
+      document.getElementById('statTotal').textContent    = props.length;
+      document.getElementById('statClaims').textContent   = claimPending;
       renderList();
     }
 
@@ -260,7 +277,9 @@
       const list = document.getElementById('submissionsList');
       const filtered = currentFilter === 'all'
         ? allSubmissions
-        : allSubmissions.filter(s => s.status === currentFilter);
+        : currentFilter === 'agency_claim'
+          ? allSubmissions.filter(s => s.submission_type === 'agency_claim')
+          : allSubmissions.filter(s => s.status === currentFilter && s.submission_type !== 'agency_claim');
 
       if (filtered.length === 0) {
         list.innerHTML = `
@@ -274,6 +293,57 @@
 
       const rendered = filtered.slice().reverse();
       list.innerHTML = rendered.map(s => {
+        // ── Agency claim card ──────────────────────────────────
+        if (s.submission_type === 'agency_claim') {
+          const agencies = Array.isArray(s.agencies) ? s.agencies : [];
+          const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+          const isPending = s.status === 'pending';
+          const statusLabel = { pending: 'Pendiente', approved: 'Agregada', rejected: 'Rechazada' }[s.status] || s.status;
+          return `
+            <div class="sub-card" id="card-${s.id}" style="border-left: 4px solid #4a2d9c;">
+              <div class="sub-card-header">
+                <div class="sub-title-row">
+                  <div class="sub-title">Solicitud de Agencia</div>
+                  <div class="sub-meta">
+                    <span>Para anuncio ID: <strong style="font-family:monospace;">${s.claim_listing_id || '—'}</strong></span>
+                    <span>${date}</span>
+                  </div>
+                </div>
+                <span class="status-badge status-${s.status}">${statusLabel}</span>
+              </div>
+              <div class="claim-card-body">
+                ${agencies.length > 0 ? `
+                  <div class="sub-agencies-label" style="margin-bottom:0.5rem;">Agencias a Agregar</div>
+                  <div class="agency-cards" style="margin-bottom:1rem;">
+                    ${agencies.map(a => `
+                      <div class="agency-card">
+                        <strong>${a.name || '—'}</strong>
+                        ${a.agent ? `<span>${a.agent}</span>` : ''}
+                        ${a.phone ? `<span>${a.phone}</span>` : ''}
+                        ${a.email ? `<span>${a.email}</span>` : ''}
+                      </div>`).join('')}
+                  </div>` : '<p style="color:#4d6a8a;font-size:0.85rem;">Sin agencias incluidas.</p>'}
+              </div>
+              <div class="sub-card-footer">
+                <div class="contact-info">
+                  <strong>${s.name}</strong>
+                  ${s.email} &nbsp;·&nbsp; ${s.phone}
+                </div>
+                <div class="card-actions">
+                  <button class="btn-merge ${isPending ? '' : 'btn-disabled'}" onclick="mergeAgency('${s.id}')">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    Agregar al Anuncio
+                  </button>
+                  <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        // ── Regular property card ──────────────────────────────
         const amenities = Array.isArray(s.amenities)
           ? s.amenities
           : (s.amenities ? s.amenities.split(',') : []);
@@ -369,6 +439,20 @@
         }).addTo(m);
         L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
         adminMaps[s.id] = m;
+      });
+    }
+
+    function mergeAgency(id) {
+      fetch(`/admin/submissions/${id}/merge-agency`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); return; }
+        const sub = allSubmissions.find(s => s.id === id);
+        if (sub) sub.status = 'approved';
+        renderAll();
       });
     }
 

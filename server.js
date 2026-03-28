@@ -61,26 +61,34 @@ app.get('/submit', (req, res) => {
 
 app.post('/submit', async (req, res) => {
   const body = req.body;
+  const isClaim = body.submission_type === 'agency_claim';
+
   const submission = {
-    id:          Date.now().toString(),
-    title:       body.title       || '',
-    type:        body.type        || '',
-    condition:   body.condition   || '',
-    description: body.description || '',
-    price:       body.price       || '',
-    area_const:  body.area_const  || '',
-    area_land:   body.area_land   || '',
-    bedrooms:    body.bedrooms    || '',
-    bathrooms:   body.bathrooms   || '',
-    parking:     body.parking     || '',
-    province:    body.province    || '',
-    city:        body.city        || '',
-    sector:      body.sector      || '',
-    address:     body.address     || '',
-    amenities:   body.amenities   || [],
+    id:              Date.now().toString(),
+    submission_type: isClaim ? 'agency_claim' : 'new_property',
+    // Agency claim fields
+    claim_listing_id: isClaim ? (body.claim_listing_id || '') : undefined,
+    // Property fields (only for new_property)
+    title:       isClaim ? '' : (body.title       || ''),
+    type:        isClaim ? '' : (body.type         || ''),
+    condition:   isClaim ? '' : (body.condition    || ''),
+    description: isClaim ? '' : (body.description  || ''),
+    price:       isClaim ? '' : (body.price        || ''),
+    area_const:  isClaim ? '' : (body.area_const   || ''),
+    area_land:   isClaim ? '' : (body.area_land    || ''),
+    bedrooms:    isClaim ? '' : (body.bedrooms     || ''),
+    bathrooms:   isClaim ? '' : (body.bathrooms    || ''),
+    parking:     isClaim ? '' : (body.parking      || ''),
+    province:    isClaim ? '' : (body.province     || ''),
+    city:        isClaim ? '' : (body.city         || ''),
+    sector:      isClaim ? '' : (body.sector       || ''),
+    address:     isClaim ? '' : (body.address      || ''),
+    amenities:   isClaim ? [] : (body.amenities    || []),
+    lat:         isClaim ? '' : (body.lat          || ''),
+    lng:         isClaim ? '' : (body.lng          || ''),
+    // Agencies (present in both modes)
     agencies:    Array.isArray(body.agencies) ? body.agencies : [],
-    lat:         body.lat         || '',
-    lng:         body.lng         || '',
+    // Submitter contact
     name:        body.name        || '',
     email:       body.email       || '',
     phone:       body.phone       || '',
@@ -103,7 +111,9 @@ app.post('/submit', async (req, res) => {
     await transporter.sendMail({
       from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
       to:      ADMIN_EMAIL,
-      subject: `🏠 Nueva propiedad para aprobar: ${submission.title}`,
+      subject: isClaim
+        ? `🏢 Solicitud de agencia para anuncio #${submission.claim_listing_id}`
+        : `🏠 Nueva propiedad para aprobar: ${submission.title}`,
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
           <div style="background:#002D62;padding:24px 32px;">
@@ -167,6 +177,30 @@ app.post('/admin/submissions/:id/reject', adminAuth, (req, res) => {
   sub.rejectedAt = new Date().toISOString();
   writeSubmissions(submissions);
   res.json({ success: true });
+});
+
+// Merge agency claim into target listing
+app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
+  const submissions = readSubmissions();
+  const claim = submissions.find(s => s.id === req.params.id);
+  if (!claim) return res.status(404).json({ error: 'Solicitud no encontrada' });
+  if (claim.submission_type !== 'agency_claim') return res.status(400).json({ error: 'No es una solicitud de agencia' });
+
+  const target = submissions.find(s => s.id === claim.claim_listing_id);
+  if (!target) return res.status(404).json({ error: `Anuncio #${claim.claim_listing_id} no encontrado` });
+
+  // Merge agencies from claim into target listing
+  if (!Array.isArray(target.agencies)) target.agencies = [];
+  const newAgencies = Array.isArray(claim.agencies) ? claim.agencies : [];
+  target.agencies.push(...newAgencies);
+  target.updatedAt = new Date().toISOString();
+
+  // Mark claim as approved
+  claim.status     = 'approved';
+  claim.approvedAt = new Date().toISOString();
+
+  writeSubmissions(submissions);
+  res.json({ success: true, targetId: target.id });
 });
 
 app.listen(PORT, () => {

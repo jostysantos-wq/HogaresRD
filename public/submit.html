@@ -500,6 +500,23 @@
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .map-hint svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
 
+    /* ── Mode switcher ───────────────────────────────────────── */
+    .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 0.4rem; }
+    .mode-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.7rem 1rem; border-radius: 10px; border: none; background: none; color: var(--text-muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .mode-btn svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .mode-btn.active { background: var(--accent); color: #fff; }
+    .mode-btn:not(.active):hover { background: var(--input-bg); color: var(--text); }
+
+    /* ── Claim card ───────────────────────────────────────────── */
+    .claim-id-note { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    /* ── Contact notice ──────────────────────────────────────── */
+    .contact-notice { display: none; align-items: flex-start; gap: 0.6rem; background: #dde8f7; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: #001840; }
+    [data-theme="dark"] .contact-notice { background: #002952; color: #e8f0fb; }
+    .contact-notice svg { width: 18px; height: 18px; fill: #002D62; flex-shrink: 0; margin-top: 1px; }
+    [data-theme="dark"] .contact-notice svg { fill: #7ab8f5; }
+    .contact-notice.visible { display: flex; }
+
     /* ── Agencies ─────────────────────────────────────────────── */
     .agency-entry { background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem 1rem; margin-bottom: 0.75rem; position: relative; }
     .agency-entry .grid-2 { margin-top: 0; }
@@ -540,17 +557,49 @@
 
   <!-- PAGE HEADER -->
   <div class="page-header">
-    <h1>Publica Tu Propiedad</h1>
-    <p>Completa el formulario con los detalles de tu propiedad y nos pondremos en contacto contigo pronto.</p>
+    <h1 id="pageTitle">Publica Tu Propiedad</h1>
+    <p id="pageSubtitle">Completa el formulario con los detalles de tu propiedad y la revisaremos antes de publicarla.</p>
   </div>
 
   <!-- FORM -->
   <main>
     <div class="success-msg" id="successMsg">
-      ✅ ¡Propiedad enviada exitosamente! Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.
+      ✅ <span id="successText">¡Propiedad enviada exitosamente! Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.</span>
     </div>
 
     <form id="propertyForm" novalidate>
+      <input type="hidden" id="submission_type" name="submission_type" value="new_property" />
+
+      <!-- Mode switcher -->
+      <div class="mode-switcher">
+        <button type="button" class="mode-btn active" id="modeNew" onclick="setMode('new')">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Nueva Propiedad
+        </button>
+        <button type="button" class="mode-btn" id="modeClaim" onclick="setMode('claim')">
+          <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+          Agregar mi Agencia a una Propiedad Existente
+        </button>
+      </div>
+
+      <!-- Claim mode: listing ID -->
+      <div id="claimSection" style="display:none;">
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm4-4h8v2h-8z"/></svg>
+            Identificar la Propiedad
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Ingresa el ID de la publicación aprobada a la que deseas agregar tu agencia. El propietario o administrador puede proveerte este ID.</p>
+          <div class="field">
+            <label for="claim_listing_id">ID de la Publicación <span style="color:var(--accent-red);">*</span></label>
+            <input type="text" id="claim_listing_id" name="claim_listing_id" placeholder="Ej. 1748291234567" />
+            <p class="claim-id-note">El ID lo encuentras en la confirmación de tu publicación o solicitándolo al administrador de HogaresRD.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- New property sections (hidden in claim mode) -->
+      <div id="newPropSections">
 
       <!-- 1. Información general -->
       <div class="card">
@@ -836,6 +885,8 @@
         <p id="fileNames" style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"></p>
       </div>
 
+      </div><!-- /newPropSections -->
+
       <!-- 7. Agencias / Inmobiliarias -->
       <div class="card">
         <div class="card-title">
@@ -856,7 +907,11 @@
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-          Información de Contacto
+          <span id="contactTitle">Información de Contacto</span>
+        </div>
+        <div class="contact-notice" id="contactNotice">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span id="contactNoticeText">Los compradores contactarán directamente a las agencias asociadas. Tu información es solo para verificación interna del equipo de HogaresRD.</span>
         </div>
         <div class="grid-2">
           <div class="field">
@@ -1003,6 +1058,35 @@
     });
     document.getElementById('province').addEventListener('change', geocodeLocation);
 
+    // ── Mode switcher ──────────────────────────────────────────
+    function setMode(mode) {
+      const isNew = mode === 'new';
+      document.getElementById('submission_type').value = isNew ? 'new_property' : 'agency_claim';
+      document.getElementById('modeNew').classList.toggle('active', isNew);
+      document.getElementById('modeClaim').classList.toggle('active', !isNew);
+      document.getElementById('newPropSections').style.display = isNew ? '' : 'none';
+      document.getElementById('claimSection').style.display = isNew ? 'none' : '';
+      document.getElementById('pageTitle').textContent = isNew ? 'Publica Tu Propiedad' : 'Agregar mi Agencia a una Propiedad';
+      document.getElementById('pageSubtitle').textContent = isNew
+        ? 'Completa el formulario con los detalles de tu propiedad y la revisaremos antes de publicarla.'
+        : 'Ingresa el ID de la publicación existente y los datos de tu agencia. El equipo de HogaresRD verificará y añadirá tu agencia al anuncio.';
+      document.getElementById('contactTitle').textContent = isNew ? 'Información de Contacto' : 'Información del Solicitante';
+      if (!isNew) {
+        // In claim mode, always show the notice (as verification context)
+        const notice = document.getElementById('contactNotice');
+        notice.classList.add('visible');
+        document.getElementById('contactNoticeText').textContent = 'Esta información es para verificar tu identidad. Los compradores verán los datos de las agencias que agregues arriba.';
+      } else {
+        updateContactNotice();
+      }
+    }
+
+    function updateContactNotice() {
+      const hasAgencies = document.querySelectorAll('.agency-entry').length > 0;
+      const notice = document.getElementById('contactNotice');
+      notice.classList.toggle('visible', hasAgencies);
+    }
+
     // ── Agencies ───────────────────────────────────────────────
     let agencyCount = 0;
 
@@ -1013,6 +1097,7 @@
       const div = document.createElement('div');
       div.className = 'agency-entry';
       div.id = `agency-${idx}`;
+      updateContactNotice();
       div.innerHTML = `
         <div class="agency-header">
           <span class="agency-num">Agencia #${idx}</span>
@@ -1048,6 +1133,7 @@
       if (document.querySelectorAll('.agency-entry').length === 0) {
         document.getElementById('agenciesEmpty').style.display = 'block';
       }
+      updateContactNotice();
     }
 
     // ── Tips toggle ────────────────────────────────────────────
@@ -1099,8 +1185,9 @@
         }
       });
 
-      // Validate map pin
-      if (!document.getElementById('lat').value) {
+      // Validate map pin (only for new property submissions)
+      const isClaim = document.getElementById('submission_type').value === 'agency_claim';
+      if (!isClaim && !document.getElementById('lat').value) {
         document.getElementById('mapError').style.display = 'block';
         document.getElementById('locationMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
         btn.disabled = false;
@@ -1125,6 +1212,10 @@
         });
         const data = await res.json();
         if (data.success) {
+          const isClaim = document.getElementById('submission_type').value === 'agency_claim';
+          document.getElementById('successText').textContent = isClaim
+            ? '¡Solicitud enviada! El equipo de HogaresRD verificará tu agencia y la añadirá al anuncio.'
+            : '¡Propiedad enviada exitosamente! Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.';
           document.getElementById('successMsg').style.display = 'block';
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.reset();
