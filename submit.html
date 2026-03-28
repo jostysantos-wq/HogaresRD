@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Publica Tu Propiedad — HogaresRD</title>
+  <style>
+    /* ── Variables ─────────────────────────────────────────── */
+    :root {
+      --bg:          #eef3fa;
+      --bg-card:     #ffffff;
+      --text:        #001840;
+      --text-muted:  #4d6a8a;
+      --accent:      #002D62;
+      --accent-hover:#001a45;
+      --accent-red:  #CF142B;
+      --border:      #c4d4e8;
+      --input-bg:    #f5f8fd;
+      --toggle-bg:   #c4d4e8;
+      --toggle-knob: #ffffff;
+      --shadow:      0 4px 24px rgba(0,45,98,0.12);
+      --shadow-card: 0 2px 12px rgba(0,45,98,0.08);
+    }
+
+    [data-theme="dark"] {
+      --bg:          #00101f;
+      --bg-card:     #001e3c;
+      --text:        #e8f0fb;
+      --text-muted:  #7a9bbf;
+      --accent:      #4a90d9;
+      --accent-hover:#3a7bc8;
+      --accent-red:  #e8374e;
+      --border:      #003060;
+      --input-bg:    #00162e;
+      --toggle-bg:   #003060;
+      --toggle-knob: #e8f0fb;
+      --shadow:      0 4px 24px rgba(0,0,0,0.5);
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── Nav ────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .theme-toggle {
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 50px;
+      width: 52px;
+      height: 28px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .theme-toggle::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background: var(--toggle-knob);
+      border-radius: 50%;
+      position: absolute;
+      left: 4px;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+
+    .toggle-icons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* ── Page header ────────────────────────────────────────── */
+    .page-header {
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      padding: 3rem 1.5rem 2.5rem;
+    }
+
+    [data-theme="dark"] .page-header { background: var(--bg-card); border-bottom: 1px solid var(--border); }
+
+    .page-header h1 {
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      opacity: 0.85;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    [data-theme="dark"] .page-header h1,
+    [data-theme="dark"] .page-header p { color: var(--text); }
+
+    [data-theme="dark"] .page-header p { opacity: 1; color: var(--text-muted); }
+
+    /* ── Form container ─────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 2.5rem auto 3rem;
+      padding: 0 1.5rem;
+    }
+
+    /* ── Section card ───────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-card);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card-title svg { width: 18px; height: 18px; fill: var(--accent); flex-shrink: 0; }
+
+    /* ── Grid layouts ───────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
+    .col-span-2 { grid-column: span 2; }
+
+    /* ── Form fields ────────────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    input, select, textarea {
+      background: var(--input-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 0.7rem 0.9rem;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+      width: 100%;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,45,98,0.1);
+    }
+
+    [data-theme="dark"] input:focus,
+    [data-theme="dark"] select:focus,
+    [data-theme="dark"] textarea:focus {
+      box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+    }
+
+    textarea { resize: vertical; min-height: 110px; }
+
+    select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%234d6a8a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2.2rem; }
+
+    /* ── Price row ──────────────────────────────────────────── */
+    .price-wrap { position: relative; }
+    .price-wrap .currency {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+    .price-wrap input { padding-left: 2.5rem; }
+
+    /* ── Checkbox amenities ─────────────────────────────────── */
+    .amenities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .amenity-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+
+    .amenity-item:hover { border-color: var(--accent); }
+
+    .amenity-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      padding: 0;
+      border-radius: 4px;
+    }
+
+    .amenity-item input[type="checkbox"]:focus {
+      box-shadow: none;
+    }
+
+    .amenity-item span {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+
+    .amenity-item:has(input:checked) {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 8%, var(--input-bg));
+    }
+
+    /* ── Photo upload ───────────────────────────────────────── */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--input-bg);
+    }
+
+    .upload-area:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--input-bg)); }
+
+    .upload-area svg { width: 36px; height: 36px; fill: var(--text-muted); margin-bottom: 0.75rem; }
+    .upload-area p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+    .upload-area strong { color: var(--accent); }
+    .upload-area input { display: none; }
+
+    /* ── Submit button ──────────────────────────────────────── */
+    .submit-wrap { text-align: center; margin-top: 0.5rem; }
+
+    .submit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 1rem 2.5rem;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(0,45,98,0.35);
+    }
+
+    .submit-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,45,98,0.45);
+    }
+
+    .submit-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+    .submit-note {
+      margin-top: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Success message ────────────────────────────────────── */
+    .success-msg {
+      display: none;
+      background: #dcfce7;
+      border: 1.5px solid #86efac;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      color: #15803d;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    [data-theme="dark"] .success-msg {
+      background: #052e16;
+      border-color: #166534;
+      color: #4ade80;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      transition: border-color 0.3s;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      nav { padding: 1rem 1.25rem; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .col-span-2 { grid-column: span 1; }
+      .card { padding: 1.5rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="logo" href="index.html">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </div>
+      <span class="logo-text">Hogares<span>RD</span></span>
+    </a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar modo oscuro/claro">
+      <span class="toggle-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b">
+          <path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+      </span>
+    </button>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1>Publica Tu Propiedad</h1>
+    <p>Completa el formulario con los detalles de tu propiedad y nos pondremos en contacto contigo pronto.</p>
+  </div>
+
+  <!-- FORM -->
+  <main>
+    <div class="success-msg" id="successMsg">
+      ¡Propiedad enviada exitosamente! Nos pondremos en contacto contigo pronto.
+    </div>
+
+    <form id="propertyForm" novalidate>
+
+      <!-- 1. Información general -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Información General
+        </div>
+        <div class="grid-2" style="gap:1.25rem">
+          <div class="field col-span-2">
+            <label for="title">Título del Anuncio</label>
+            <input type="text" id="title" name="title" placeholder="Ej. Hermosa villa en Las Terrenas con piscina" required />
+          </div>
+          <div class="field">
+            <label for="type">Tipo de Propiedad</label>
+            <select id="type" name="type" required>
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Casa</option>
+              <option>Apartamento</option>
+              <option>Villa</option>
+              <option>Penthouse</option>
+              <option>Solar / Terreno</option>
+              <option>Local Comercial</option>
+              <option>Finca</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="condition">Condición</label>
+            <select id="condition" name="condition" required>
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Nueva construcción</option>
+              <option>En planos</option>
+              <option>Excelente estado</option>
+              <option>Buen estado</option>
+              <option>Necesita remodelación</option>
+            </select>
+          </div>
+          <div class="field col-span-2">
+            <label for="description">Descripción</label>
+            <textarea id="description" name="description" placeholder="Describe tu propiedad: características especiales, entorno, acceso, etc." required></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Precio y área -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+          Precio y Área
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label for="price">Precio (USD)</label>
+            <div class="price-wrap">
+              <span class="currency">$</span>
+              <input type="number" id="price" name="price" placeholder="250,000" min="0" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="area_const">Área Construida (m²)</label>
+            <input type="number" id="area_const" name="area_const" placeholder="180" min="0" />
+          </div>
+          <div class="field">
+            <label for="area_land">Área de Terreno (m²)</label>
+            <input type="number" id="area_land" name="area_land" placeholder="400" min="0" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Habitaciones -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>
+          Habitaciones y Espacios
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label for="bedrooms">Habitaciones</label>
+            <select id="bedrooms" name="bedrooms">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Estudio</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bathrooms">Baños</label>
+            <select id="bathrooms" name="bathrooms">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>1</option>
+              <option>1.5</option>
+              <option>2</option>
+              <option>2.5</option>
+              <option>3</option>
+              <option>4+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="parking">Parqueos</label>
+            <select id="parking" name="parking">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>0</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="floors">Niveles / Pisos</label>
+            <select id="floors" name="floors">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="floor_num">Piso (si aplica)</label>
+            <input type="number" id="floor_num" name="floor_num" placeholder="Ej. 3" min="0" />
+          </div>
+          <div class="field">
+            <label for="year_built">Año de Construcción</label>
+            <input type="number" id="year_built" name="year_built" placeholder="Ej. 2018" min="1900" max="2026" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Ubicación -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Ubicación
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="province">Provincia</label>
+            <select id="province" name="province" required>
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Azua</option>
+              <option>Bahoruco</option>
+              <option>Barahona</option>
+              <option>Dajabón</option>
+              <option>Distrito Nacional</option>
+              <option>Duarte</option>
+              <option>Elías Piña</option>
+              <option>El Seibo</option>
+              <option>Espaillat</option>
+              <option>Hato Mayor</option>
+              <option>Hermanas Mirabal</option>
+              <option>Independencia</option>
+              <option>La Altagracia</option>
+              <option>La Romana</option>
+              <option>La Vega</option>
+              <option>María Trinidad Sánchez</option>
+              <option>Monseñor Nouel</option>
+              <option>Monte Cristi</option>
+              <option>Monte Plata</option>
+              <option>Pedernales</option>
+              <option>Peravia</option>
+              <option>Puerto Plata</option>
+              <option>Samaná</option>
+              <option>Sánchez Ramírez</option>
+              <option>San Cristóbal</option>
+              <option>San José de Ocoa</option>
+              <option>San Juan</option>
+              <option>San Pedro de Macorís</option>
+              <option>Santiago</option>
+              <option>Santiago Rodríguez</option>
+              <option>Santo Domingo</option>
+              <option>Valverde</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="city">Ciudad / Municipio</label>
+            <input type="text" id="city" name="city" placeholder="Ej. Santiago de los Caballeros" required />
+          </div>
+          <div class="field">
+            <label for="sector">Sector / Residencial</label>
+            <input type="text" id="sector" name="sector" placeholder="Ej. Piantini, Naco, Los Cacicazgos" />
+          </div>
+          <div class="field">
+            <label for="address">Dirección</label>
+            <input type="text" id="address" name="address" placeholder="Calle y número" />
+          </div>
+          <div class="field col-span-2">
+            <label for="reference">Punto de Referencia</label>
+            <input type="text" id="reference" name="reference" placeholder="Ej. Frente al parque, detrás del supermercado Nacional" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Amenidades -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Amenidades y Características
+        </div>
+        <div class="amenities-grid">
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="piscina" /><span>Piscina</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="jacuzzi" /><span>Jacuzzi</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="gym" /><span>Gimnasio</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="bbq" /><span>Área BBQ</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="balcon" /><span>Balcón / Terraza</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="jardin" /><span>Jardín</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="ac" /><span>Aire Acondicionado</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="planta" /><span>Planta Eléctrica</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="cisterna" /><span>Cisterna / Bomba</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="seguridad" /><span>Vigilancia 24/7</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="camaras" /><span>Cámaras CCTV</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="elevador" /><span>Elevador</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="amueblado" /><span>Amueblado</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="semi_amueblado" /><span>Semi-amueblado</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="paneles_solares" /><span>Paneles Solares</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="vista_mar" /><span>Vista al Mar</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="frente_mar" /><span>Frente al Mar</span></label>
+          <label class="amenity-item"><input type="checkbox" name="amenities" value="cancha" /><span>Cancha Deportiva</span></label>
+        </div>
+      </div>
+
+      <!-- 6. Fotos -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          Fotos de la Propiedad
+        </div>
+        <label class="upload-area" for="photos">
+          <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+          <p><strong>Haz clic para subir fotos</strong><br>JPG, PNG o WEBP · Máximo 10 imágenes · 5 MB por foto</p>
+          <input type="file" id="photos" name="photos" accept="image/*" multiple />
+        </label>
+        <p id="fileNames" style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"></p>
+      </div>
+
+      <!-- 7. Contacto -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          Información de Contacto
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="name">Nombre Completo</label>
+            <input type="text" id="name" name="name" placeholder="Tu nombre" required />
+          </div>
+          <div class="field">
+            <label for="email">Correo Electrónico</label>
+            <input type="email" id="email" name="email" placeholder="correo@ejemplo.com" required />
+          </div>
+          <div class="field">
+            <label for="phone">Teléfono / WhatsApp</label>
+            <input type="tel" id="phone" name="phone" placeholder="(809) 000-0000" required />
+          </div>
+          <div class="field">
+            <label for="contact_pref">Preferencia de Contacto</label>
+            <select id="contact_pref" name="contact_pref">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>WhatsApp</option>
+              <option>Llamada telefónica</option>
+              <option>Correo electrónico</option>
+              <option>Cualquiera</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="role">Eres</label>
+            <select id="role" name="role">
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Propietario</option>
+              <option>Agente inmobiliario</option>
+              <option>Constructora / Desarrolladora</option>
+            </select>
+          </div>
+          <div class="field col-span-2">
+            <label for="inmobiliaria">Inmobiliaria Afiliada <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(opcional)</span></label>
+            <input type="text" id="inmobiliaria" name="inmobiliaria" placeholder="Ej. Century 21, RE/MAX, independiente..." />
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-wrap">
+        <button type="submit" class="submit-btn">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Enviar Propiedad
+        </button>
+        <p class="submit-note">Al enviar aceptas que revisemos tu propiedad antes de publicarla.</p>
+      </div>
+
+    </form>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    &copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana
+  </footer>
+
+  <script>
+    // ── Theme toggle ──────────────────────────────────────────
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+
+    function getSaved() {
+      try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; }
+    }
+    function setSaved(val) {
+      try { localStorage.setItem('theme', val); } catch(e) {}
+    }
+
+    html.setAttribute('data-theme', getSaved());
+
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      setSaved(next);
+    });
+
+    // ── File upload label ─────────────────────────────────────
+    document.getElementById('photos').addEventListener('change', function() {
+      const names = Array.from(this.files).map(f => f.name).join(', ');
+      document.getElementById('fileNames').textContent = names
+        ? `Archivos seleccionados: ${names}`
+        : '';
+    });
+
+    // ── Form submit (frontend only for now) ───────────────────
+    document.getElementById('propertyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      document.getElementById('successMsg').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.reset();
+      document.getElementById('fileNames').textContent = '';
+    });
+  </script>
+</body>
+</html>
