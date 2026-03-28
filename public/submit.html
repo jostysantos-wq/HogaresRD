@@ -957,11 +957,29 @@
       const city     = document.getElementById('city').value.trim();
       const province = document.getElementById('province').value;
       if (!city && !province && !address) return;
-      // Use the most specific info available for the query
-      const query = [address, sector, city, province, 'República Dominicana'].filter(Boolean).join(', ');
-      // Zoom in more when we have an address, less when only city/province
-      const zoomLevel = address ? 16 : (city ? 14 : 11);
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=do`)
+
+      let url;
+      if (address) {
+        // Structured query gives street-level precision
+        const street = [address, sector].filter(Boolean).join(', ');
+        const params = new URLSearchParams({
+          street,
+          city:    city || province,
+          state:   province,
+          country: 'Dominican Republic',
+          format:  'json',
+          limit:   '1',
+          addressdetails: '1',
+        });
+        url = `https://nominatim.openstreetmap.org/search?${params}`;
+      } else {
+        // Fall back to free-form when no address yet
+        const query = [sector, city, province, 'República Dominicana'].filter(Boolean).join(', ');
+        url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=do`;
+      }
+
+      const zoomLevel = address ? 17 : (city ? 14 : 11);
+      fetch(url)
         .then(r => r.json())
         .then(results => {
           if (results.length === 0) return;
