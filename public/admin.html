@@ -101,12 +101,27 @@
 
     .loading { text-align: center; padding: 3rem; color: #4d6a8a; }
 
+    /* AGENCIES */
+    .sub-agencies { padding: 0 1.5rem 1rem; }
+    .sub-agencies-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.5rem; }
+    .agency-cards { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .agency-card { background: #e8f0fb; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.82rem; }
+    .agency-card strong { display: block; color: #002D62; font-size: 0.85rem; }
+    .agency-card span { color: #4d6a8a; display: block; font-size: 0.78rem; }
+
+    /* MINI MAP */
+    .sub-map-wrap { padding: 0 1.5rem 1rem; }
+    .sub-map-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
+    .admin-map { height: 180px; border-radius: 10px; border: 1px solid #d0dcea; }
+
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
       .sub-card-body { grid-template-columns: repeat(2, 1fr); }
       .sub-card-footer { flex-direction: column; align-items: flex-start; }
     }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -184,6 +199,7 @@
     let adminKey = '';
     let allSubmissions = [];
     let currentFilter = 'pending';
+    const adminMaps = {};
 
     function login() {
       const key = document.getElementById('adminKey').value.trim();
@@ -256,7 +272,8 @@
         return;
       }
 
-      list.innerHTML = filtered.slice().reverse().map(s => {
+      const rendered = filtered.slice().reverse();
+      list.innerHTML = rendered.map(s => {
         const amenities = Array.isArray(s.amenities)
           ? s.amenities
           : (s.amenities ? s.amenities.split(',') : []);
@@ -266,6 +283,29 @@
         const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
         const isPending = s.status === 'pending';
         const statusLabel = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada' }[s.status];
+
+        const agencies = Array.isArray(s.agencies) ? s.agencies : [];
+        const agencyHTML = agencies.length > 0
+          ? `<div class="sub-agencies">
+               <div class="sub-agencies-label">Agencias Asociadas</div>
+               <div class="agency-cards">
+                 ${agencies.map(a => `
+                   <div class="agency-card">
+                     <strong>${a.name || '—'}</strong>
+                     ${a.agent ? `<span>${a.agent}</span>` : ''}
+                     ${a.phone ? `<span>${a.phone}</span>` : ''}
+                     ${a.email ? `<span>${a.email}</span>` : ''}
+                   </div>`).join('')}
+               </div>
+             </div>`
+          : '';
+
+        const mapHTML = (s.lat && s.lng)
+          ? `<div class="sub-map-wrap">
+               <div class="sub-map-label">Ubicación en el Mapa</div>
+               <div class="admin-map" id="amap-${s.id}"></div>
+             </div>`
+          : '';
 
         return `
           <div class="sub-card" id="card-${s.id}">
@@ -291,6 +331,8 @@
             </div>
             ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
             ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
+            ${agencyHTML}
+            ${mapHTML}
             <div class="sub-card-footer">
               <div class="contact-info">
                 <strong>${s.name}</strong>
@@ -309,6 +351,25 @@
             </div>
           </div>`;
       }).join('');
+
+      // Initialize mini-maps for submissions with coordinates
+      rendered.forEach(s => {
+        if (!s.lat || !s.lng) return;
+        const mapId = `amap-${s.id}`;
+        if (adminMaps[s.id]) {
+          adminMaps[s.id].remove();
+          delete adminMaps[s.id];
+        }
+        const el = document.getElementById(mapId);
+        if (!el) return;
+        const m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
+          .setView([parseFloat(s.lat), parseFloat(s.lng)], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 18
+        }).addTo(m);
+        L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
+        adminMaps[s.id] = m;
+      });
     }
 
     function approve(id) {

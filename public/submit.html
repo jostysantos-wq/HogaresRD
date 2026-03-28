@@ -494,7 +494,27 @@
       .col-span-2 { grid-column: span 1; }
       .card { padding: 1.5rem 1.25rem; }
     }
+
+    /* ── Map ─────────────────────────────────────────────────── */
+    #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
+    .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+    .map-hint svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Agencies ─────────────────────────────────────────────── */
+    .agency-entry { background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem 1rem; margin-bottom: 0.75rem; position: relative; }
+    .agency-entry .grid-2 { margin-top: 0; }
+    .agency-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .agency-num { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .remove-agency-btn { background: none; border: none; color: var(--accent-red); cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; transition: background 0.2s; }
+    .remove-agency-btn:hover { background: rgba(207,20,43,0.08); }
+    .remove-agency-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .add-agency-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.25rem; }
+    .add-agency-btn:hover { border-color: var(--accent); background: var(--input-bg); }
+    .add-agency-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .agencies-empty { font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1rem 0 0.5rem; }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -723,6 +743,16 @@
             <label for="reference">Punto de Referencia</label>
             <input type="text" id="reference" name="reference" placeholder="Ej. Frente al parque, detrás del supermercado Nacional" />
           </div>
+          <div class="field col-span-2">
+            <label>Ubicación en el Mapa <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(opcional — arrastra el marcador para ajustar)</span></label>
+            <div id="locationMap"></div>
+            <p class="map-hint">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              El mapa se centra automáticamente al escribir la ciudad. Haz clic o arrastra el marcador para ajustar la posición exacta.
+            </p>
+            <input type="hidden" id="lat" name="lat" />
+            <input type="hidden" id="lng" name="lng" />
+          </div>
         </div>
       </div>
 
@@ -805,7 +835,23 @@
         <p id="fileNames" style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"></p>
       </div>
 
-      <!-- 7. Contacto -->
+      <!-- 7. Agencias / Inmobiliarias -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+          Agencias / Inmobiliarias Asociadas
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Si esta propiedad está afiliada a una o más inmobiliarias, agrégalas aquí. Los compradores podrán escoger la agencia con la que desean comunicarse.</p>
+        <div id="agenciesList">
+          <p class="agencies-empty" id="agenciesEmpty">Ninguna agencia agregada. Haz clic en el botón para agregar una.</p>
+        </div>
+        <button type="button" class="add-agency-btn" onclick="addAgency()">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Agregar Inmobiliaria
+        </button>
+      </div>
+
+      <!-- 8. Contacto -->
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
@@ -842,10 +888,6 @@
               <option>Agente inmobiliario</option>
               <option>Constructora / Desarrolladora</option>
             </select>
-          </div>
-          <div class="field col-span-2">
-            <label for="inmobiliaria">Inmobiliaria Afiliada <span style="font-weight:400;text-transform:none;font-size:0.75rem;">(opcional)</span></label>
-            <input type="text" id="inmobiliaria" name="inmobiliaria" placeholder="Ej. Century 21, RE/MAX, independiente..." />
           </div>
         </div>
       </div>
@@ -886,6 +928,100 @@
       html.setAttribute('data-theme', next);
       setSaved(next);
     });
+
+    // ── Leaflet map ────────────────────────────────────────────
+    const DR_CENTER = [18.7357, -70.1627];
+    const map = L.map('locationMap').setView(DR_CENTER, 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    let marker = L.marker(DR_CENTER, { draggable: true }).addTo(map);
+    marker.on('dragend', () => {
+      const pos = marker.getLatLng();
+      document.getElementById('lat').value = pos.lat.toFixed(6);
+      document.getElementById('lng').value = pos.lng.toFixed(6);
+    });
+
+    map.on('click', e => {
+      marker.setLatLng(e.latlng);
+      document.getElementById('lat').value = e.latlng.lat.toFixed(6);
+      document.getElementById('lng').value = e.latlng.lng.toFixed(6);
+    });
+
+    function geocodeLocation() {
+      const city     = document.getElementById('city').value.trim();
+      const province = document.getElementById('province').value;
+      if (!city && !province) return;
+      const query = [city, province, 'República Dominicana'].filter(Boolean).join(', ');
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=do`)
+        .then(r => r.json())
+        .then(results => {
+          if (results.length === 0) return;
+          const { lat, lon } = results[0];
+          const latlng = [parseFloat(lat), parseFloat(lon)];
+          map.setView(latlng, 13);
+          marker.setLatLng(latlng);
+          document.getElementById('lat').value = parseFloat(lat).toFixed(6);
+          document.getElementById('lng').value = parseFloat(lon).toFixed(6);
+        })
+        .catch(() => {});
+    }
+
+    let geocodeTimer;
+    document.getElementById('city').addEventListener('input', () => {
+      clearTimeout(geocodeTimer);
+      geocodeTimer = setTimeout(geocodeLocation, 800);
+    });
+    document.getElementById('province').addEventListener('change', geocodeLocation);
+
+    // ── Agencies ───────────────────────────────────────────────
+    let agencyCount = 0;
+
+    function addAgency() {
+      agencyCount++;
+      document.getElementById('agenciesEmpty').style.display = 'none';
+      const idx = agencyCount;
+      const div = document.createElement('div');
+      div.className = 'agency-entry';
+      div.id = `agency-${idx}`;
+      div.innerHTML = `
+        <div class="agency-header">
+          <span class="agency-num">Agencia #${idx}</span>
+          <button type="button" class="remove-agency-btn" onclick="removeAgency(${idx})">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            Eliminar
+          </button>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Nombre de la Inmobiliaria</label>
+            <input type="text" name="agency_name[]" placeholder="Ej. Century 21, RE/MAX..." />
+          </div>
+          <div class="field">
+            <label>Nombre del Agente</label>
+            <input type="text" name="agency_agent[]" placeholder="Ej. María López" />
+          </div>
+          <div class="field">
+            <label>Teléfono / WhatsApp</label>
+            <input type="tel" name="agency_phone[]" placeholder="(809) 000-0000" />
+          </div>
+          <div class="field">
+            <label>Correo Electrónico</label>
+            <input type="email" name="agency_email[]" placeholder="agente@inmobiliaria.com" />
+          </div>
+        </div>`;
+      document.getElementById('agenciesList').appendChild(div);
+    }
+
+    function removeAgency(idx) {
+      const el = document.getElementById(`agency-${idx}`);
+      if (el) el.remove();
+      if (document.querySelectorAll('.agency-entry').length === 0) {
+        document.getElementById('agenciesEmpty').style.display = 'block';
+      }
+    }
 
     // ── Tips toggle ────────────────────────────────────────────
     function toggleTips() {
@@ -931,10 +1067,19 @@
       formData.forEach((val, key) => {
         if (key === 'amenities') {
           body.amenities = body.amenities ? [...body.amenities, val] : [val];
-        } else {
+        } else if (!key.endsWith('[]')) {
           body[key] = val;
         }
       });
+
+      // Collect dynamic agencies
+      const agencyEntries = document.querySelectorAll('.agency-entry');
+      body.agencies = Array.from(agencyEntries).map(entry => ({
+        name:  entry.querySelector('[name="agency_name[]"]').value.trim(),
+        agent: entry.querySelector('[name="agency_agent[]"]').value.trim(),
+        phone: entry.querySelector('[name="agency_phone[]"]').value.trim(),
+        email: entry.querySelector('[name="agency_email[]"]').value.trim(),
+      })).filter(a => a.name);
 
       try {
         const res = await fetch('/submit', {
@@ -948,6 +1093,13 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.reset();
           document.getElementById('fileNames').textContent = '';
+          // Reset agencies
+          document.getElementById('agenciesList').querySelectorAll('.agency-entry').forEach(e => e.remove());
+          document.getElementById('agenciesEmpty').style.display = 'block';
+          agencyCount = 0;
+          // Reset map
+          map.setView(DR_CENTER, 7);
+          marker.setLatLng(DR_CENTER);
         } else {
           throw new Error('Server error');
         }
