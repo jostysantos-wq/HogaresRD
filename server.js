@@ -4,6 +4,8 @@ const path       = require('path');
 const fs         = require('fs');
 const nodemailer = require('nodemailer');
 const multer     = require('multer');
+const cron       = require('node-cron');
+const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -110,9 +112,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── API routes ─────────────────────────────────────────────────
-app.use('/api/auth',     require('./routes/auth'));
-app.use('/api/listings', require('./routes/listings'));
-app.use('/api/user',     require('./routes/user'));
+app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/listings',   require('./routes/listings'));
+app.use('/api/user',       require('./routes/user'));
+app.use('/api/newsletter', newsletterRouter);
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
@@ -325,6 +328,28 @@ app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
   writeSubmissions(submissions);
   res.json({ success: true, targetId: target.id });
 });
+
+// ── Unsubscribe ────────────────────────────────────────────────
+app.get('/unsubscribe', (req, res) => {
+  const store = require('./routes/store');
+  const token = req.query.token || '';
+  let userId;
+  try { userId = Buffer.from(token, 'base64').toString('utf8'); } catch { userId = ''; }
+  const user = store.getUsers().find(u => u.id === userId);
+  if (!user) {
+    return res.status(400).send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD</title></head><body style="font-family:sans-serif;text-align:center;padding:80px 20px;color:#1a2b40;"><h2>Enlace inválido o expirado.</h2><p><a href="/home">Volver al inicio</a></p></body></html>`);
+  }
+  store.saveUser({ ...user, marketingOptIn: false });
+  res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD — Cancelar suscripción</title></head><body style="font-family:'Segoe UI',sans-serif;text-align:center;padding:80px 20px;background:#eef3fa;color:#1a2b40;"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,45,98,0.10);"><div style="font-size:2.5rem;margin-bottom:16px;">✉️</div><h2 style="font-size:1.4rem;font-weight:800;color:#002D62;margin-bottom:12px;">Suscripción cancelada</h2><p style="color:#4d6a8a;line-height:1.7;margin-bottom:28px;">Has sido eliminado de nuestra lista de correos. Ya no recibirás actualizaciones del mercado inmobiliario de HogaresRD.</p><a href="/home" style="display:inline-block;background:#002D62;color:#fff;font-weight:700;padding:12px 32px;border-radius:8px;text-decoration:none;">Volver al inicio</a></div></body></html>`);
+});
+
+// ── Daily newsletter cron (8 AM Dominican Time = UTC-4 → 12:00 UTC) ────────
+cron.schedule('0 12 * * *', () => {
+  console.log('[Cron] Sending daily newsletter…');
+  sendNewsletter()
+    .then(r => console.log('[Cron] Newsletter done:', r))
+    .catch(e => console.error('[Cron] Newsletter error:', e.message));
+}, { timezone: 'America/Santo_Domingo' });
 
 // ── Global error handler (keeps all errors as JSON, never HTML) ────────────
 // eslint-disable-next-line no-unused-vars
