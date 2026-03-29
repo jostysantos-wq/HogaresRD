@@ -201,6 +201,7 @@
         <a href="/home" class="nav-link">Inicio</a>
         <a href="/comprar" class="nav-link active">Comprar</a>
         <a href="/alquilar" class="nav-link">Alquilar</a>
+        <a href="/mapa" class="nav-link">Mapa</a>
         <a href="/nuevos-proyectos" class="nav-link">Nuevos Proyectos</a>
         <a href="/about" class="nav-link">Nosotros</a>
       </div>
@@ -232,6 +233,7 @@
       <a href="/home" class="mm-link">Inicio</a>
       <a href="/comprar" class="mm-link active">Comprar</a>
       <a href="/alquilar" class="mm-link">Alquilar</a>
+      <a href="/mapa" class="mm-link">Mapa</a>
       <a href="/nuevos-proyectos" class="mm-link">Nuevos Proyectos</a>
       <a href="/about" class="mm-link">Nosotros</a>
     </div>
@@ -312,11 +314,17 @@
   <!-- RESULTS -->
   <div class="results-bar">
     <div class="results-count" id="resultsCount">Cargando...</div>
-    <select class="sort-select" id="sortSelect" onchange="applyFilters()">
-      <option value="newest">Más recientes</option>
-      <option value="price_asc">Precio: menor a mayor</option>
-      <option value="price_desc">Precio: mayor a menor</option>
-    </select>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <a href="/mapa" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.4rem 0.9rem;border:1.5px solid var(--accent);border-radius:8px;background:none;color:var(--accent);font-size:0.85rem;font-weight:600;text-decoration:none;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='var(--accent)';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='var(--accent)'">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+        Ver en mapa
+      </a>
+      <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+        <option value="newest">Más recientes</option>
+        <option value="price_asc">Precio: menor a mayor</option>
+        <option value="price_desc">Precio: mayor a menor</option>
+      </select>
+    </div>
   </div>
 
   <!-- GRID -->
