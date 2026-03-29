@@ -5,87 +5,88 @@ import SwiftUI
 struct FeedView: View {
     @EnvironmentObject var api: APIService
 
-    @State private var allListings: [Listing] = []
-    @State private var feed:        [Listing] = []
-    @State private var page        = 0
-    @State private var totalPages  = 1
-    @State private var loading     = false
-    @State private var initialLoad = true
-    @State private var reshuffles  = 0
-    @State private var errorMsg:    String?
+    @State private var allListings:      [Listing] = []
+    @State private var feed:             [Listing] = []
+    @State private var currentIndex      = 0
+    @State private var page              = 0
+    @State private var totalPages        = 1
+    @State private var loading           = false
+    @State private var initialLoad       = true
+    @State private var reshuffles        = 0
+    @State private var errorMsg:         String?
+    @State private var selectedListingID: String?
 
-    // Preference tracking: JSON dict of type/province -> view count
     @AppStorage("feed_prefs") private var prefJSON: String = "{}"
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
                 if initialLoad && loading {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        ProgressView()
+                    VStack(spacing: 14) {
+                        ProgressView().tint(.white)
                         Text("Cargando propiedades…")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Spacer()
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.7))
                     }
                 } else if let err = errorMsg, feed.isEmpty {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundStyle(.secondary)
-                        Text(err).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    VStack(spacing: 20) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 44)).foregroundStyle(.white.opacity(0.5))
+                        Text(err)
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
                         Button("Reintentar") { Task { await refresh() } }
                             .buttonStyle(.borderedProminent).tint(Color.rdBlue)
-                        Spacer()
                     }
-                    .padding()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
-                                NavigationLink {
-                                    ListingDetailView(id: listing.id)
-                                        .onAppear { trackView(listing) }
-                                } label: {
-                                    FeedCard(listing: listing)
+                    .padding(32)
+                } else if !feed.isEmpty {
+                    GeometryReader { proxy in
+                        ScrollView(.vertical, showsIndicators: false) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
+                                    ReelCard(listing: listing)
+                                        .frame(width: proxy.size.width,
+                                               height: proxy.size.height)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedListingID = listing.id
+                                        }
+                                        .onAppear {
+                                            currentIndex = index
+                                            trackView(listing)
+                                            if index >= feed.count - 3 {
+                                                Task { await loadMore() }
+                                            }
+                                        }
                                 }
-                                .buttonStyle(.plain)
-                                .onAppear {
-                                    if index >= feed.count - 4 {
-                                        Task { await loadMore() }
-                                    }
-                                }
                             }
-
-                            if loading {
-                                ProgressView().padding(.vertical, 24)
-                            }
-
-                            if !feed.isEmpty && !loading && reshuffles > 0 {
-                                Text("Recomendaciones personalizadas · Vuelta \(reshuffles + 1)")
-                                    .font(.caption).foregroundStyle(.secondary).padding(.vertical, 8)
-                            }
+                            .scrollTargetLayout()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 32)
+                        .scrollTargetBehavior(.paging)
+                        .scrollIndicators(.hidden)
+                        .ignoresSafeArea()
                     }
-                    .refreshable { await refresh() }
+                    .ignoresSafeArea()
+
+                    if loading {
+                        VStack {
+                            Spacer()
+                            ProgressView().tint(.white).padding(.bottom, 100)
+                        }
+                    }
                 }
             }
-            .navigationTitle("Feed")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: Binding(
+                get: { selectedListingID != nil },
+                set: { if !$0 { selectedListingID = nil } }
+            )) {
+                if let id = selectedListingID {
+                    ListingDetailView(id: id)
+                }
+            }
         }
         .task { await loadMore() }
-    }
-
-    private func refresh() async {
-        feed = []
-        allListings = []
-        page = 0
-        totalPages = 1
-        reshuffles = 0
-        errorMsg = nil
-        await loadMore()
     }
 
     // MARK: - Load
@@ -98,16 +99,14 @@ struct FeedView: View {
             page += 1
             do {
                 let response = try await api.getListings(limit: 12, page: page)
-                let newBatch = response.listings
-                allListings.append(contentsOf: newBatch)
+                allListings.append(contentsOf: response.listings)
                 totalPages = response.pages
-                feed.append(contentsOf: ranked(newBatch))
+                feed.append(contentsOf: ranked(response.listings))
                 errorMsg = nil
             } catch {
                 errorMsg = "No se pudo cargar el feed. Verifica tu conexión."
             }
         } else {
-            // All API pages consumed — reshuffle entire pool and loop
             reshuffles += 1
             feed.append(contentsOf: ranked(allListings))
         }
@@ -116,171 +115,217 @@ struct FeedView: View {
         loading = false
     }
 
+    private func refresh() async {
+        feed = []; allListings = []; page = 0
+        totalPages = 1; reshuffles = 0; errorMsg = nil; currentIndex = 0
+        await loadMore()
+    }
+
     // MARK: - Ranking
 
-    /// Sort a batch by user preference score with a small random noise so
-    /// the feed stays fresh even after reshuffles.
     private func ranked(_ items: [Listing]) -> [Listing] {
         let prefs = loadPrefs()
         guard !prefs.isEmpty else { return items.shuffled() }
-        return items.sorted { a, b in
-            prefScore(a, prefs: prefs) > prefScore(b, prefs: prefs)
-        }
+        return items.sorted { prefScore($0, prefs: prefs) > prefScore($1, prefs: prefs) }
     }
 
-    private func prefScore(_ listing: Listing, prefs: [String: Int]) -> Double {
-        var score = 0
-        score += prefs[listing.type] ?? 0
-        if let prov = listing.province { score += prefs[prov] ?? 0 }
-        if let city = listing.city     { score += prefs[city] ?? 0 }
-        // Add noise so same-score items shuffle naturally
-        return Double(score) + Double.random(in: 0...1.5)
+    private func prefScore(_ l: Listing, prefs: [String: Int]) -> Double {
+        var s = prefs[l.type] ?? 0
+        if let p = l.province { s += prefs[p] ?? 0 }
+        if let c = l.city     { s += prefs[c] ?? 0 }
+        return Double(s) + Double.random(in: 0...1.5)
     }
-
-    // MARK: - Preference tracking
 
     private func trackView(_ listing: Listing) {
         var prefs = loadPrefs()
         prefs[listing.type, default: 0] += 2
-        if let prov = listing.province { prefs[prov, default: 0] += 1 }
-        if let city = listing.city     { prefs[city, default: 0] += 1 }
+        if let p = listing.province { prefs[p, default: 0] += 1 }
+        if let c = listing.city     { prefs[c, default: 0] += 1 }
         savePrefs(prefs)
     }
 
     private func loadPrefs() -> [String: Int] {
         guard let data = prefJSON.data(using: .utf8),
-              let dict = try? JSONDecoder().decode([String: Int].self, from: data) else { return [:] }
-        return dict
+              let d = try? JSONDecoder().decode([String: Int].self, from: data) else { return [:] }
+        return d
     }
 
-    private func savePrefs(_ prefs: [String: Int]) {
-        guard let data = try? JSONEncoder().encode(prefs),
-              let str  = String(data: data, encoding: .utf8) else { return }
-        prefJSON = str
+    private func savePrefs(_ p: [String: Int]) {
+        if let data = try? JSONEncoder().encode(p),
+           let str = String(data: data, encoding: .utf8) { prefJSON = str }
     }
 }
 
-// MARK: - Feed Card
+// MARK: - Reel Card (pure visual — no gesture interceptors)
 
-struct FeedCard: View {
+struct ReelCard: View {
     let listing: Listing
+    @State private var imageIndex = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
 
-            // ── Image ──────────────────────────────────────────
-            ZStack(alignment: .bottomLeading) {
-                AsyncImage(url: listing.firstImageURL) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable().aspectRatio(contentMode: .fill)
-                    case .failure:
-                        imagePlaceholder
-                    default:
-                        imagePlaceholder.overlay(ProgressView())
+                // ── Horizontal image carousel ──────────────────
+                let urls = listing.allImageURLs
+                if urls.isEmpty {
+                    ZStack {
+                        Color(red: 0.1, green: 0.1, blue: 0.15)
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 56))
+                            .foregroundStyle(.white.opacity(0.2))
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                } else {
+                    TabView(selection: $imageIndex) {
+                        ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let img):
+                                    img.resizable().aspectRatio(contentMode: .fill)
+                                default:
+                                    ZStack {
+                                        Color(red: 0.1, green: 0.1, blue: 0.15)
+                                        VStack(spacing: 10) {
+                                            Image(systemName: "house.fill")
+                                                .font(.system(size: 56))
+                                                .foregroundStyle(.white.opacity(0.2))
+                                            if case .empty = phase {
+                                                ProgressView().tint(.white.opacity(0.4))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                            .tag(i)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
+
+                // ── Image counter badge ────────────────────────
+                if listing.images.count > 1 {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Text("\(imageIndex + 1) / \(listing.images.count)")
+                                .font(.caption2).bold()
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(.ultraThinMaterial)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                                .padding(.top, 60)
+                                .padding(.trailing, 16)
+                        }
+                        Spacer()
                     }
                 }
-                .frame(height: 220)
-                .clipped()
 
-                // Gradient scrim for badges
+                // ── Gradient scrim ────────────────────────────
                 LinearGradient(
-                    colors: [.black.opacity(0.45), .clear],
-                    startPoint: .bottom, endPoint: .center
+                    colors: [
+                        .black.opacity(0.85),
+                        .black.opacity(0.5),
+                        .black.opacity(0.1),
+                        .clear
+                    ],
+                    startPoint: .bottom,
+                    endPoint: .init(x: 0.5, y: 0.45)
                 )
 
-                // Bottom-left: type + condition badges
-                HStack(spacing: 6) {
-                    typeBadge
-                    if let cond = listing.condition, !cond.isEmpty {
-                        Text(cond)
-                            .font(.caption2).bold()
-                            .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(.ultraThinMaterial)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
-                    }
-                }
-                .padding(12)
-            }
+                // ── Text overlay ──────────────────────────────
+                VStack(alignment: .leading, spacing: 10) {
 
-            // ── Body ───────────────────────────────────────────
-            VStack(alignment: .leading, spacing: 10) {
-
-                // Price
-                Text(listing.priceFormatted)
-                    .font(.title3).bold()
-                    .foregroundStyle(Color.rdBlue)
-
-                // Title
-                Text(listing.title)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-
-                // Location
-                HStack(spacing: 4) {
-                    Image(systemName: "mappin.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdRed)
-                    Text(locationString)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                // Stats row
-                if hasStats {
-                    HStack(spacing: 14) {
-                        if let beds = listing.bedrooms, beds != "0" {
-                            statChip(icon: "bed.double.fill", value: beds + " Hab.")
-                        }
-                        if let baths = listing.bathrooms {
-                            statChip(icon: "shower.fill", value: baths + " Baños")
-                        }
-                        if let area = listing.area_const, !area.isEmpty {
-                            statChip(icon: "ruler.fill", value: area + " m²")
+                    // Type + condition badges
+                    HStack(spacing: 8) {
+                        typeBadge
+                        if let cond = listing.condition, !cond.isEmpty {
+                            Text(cond)
+                                .font(.caption2).bold()
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(.ultraThinMaterial)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
                         }
                     }
-                }
 
-                // Agency
-                if let agency = listing.agencies?.first, let name = agency.name {
-                    Divider()
-                    HStack(spacing: 6) {
-                        Image(systemName: "building.2.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.rdBlue)
-                        Text(name)
+                    // Price
+                    Text(listing.priceFormatted)
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    // Title
+                    Text(listing.title)
+                        .font(.headline)
+                        .foregroundStyle(.white.opacity(0.95))
+                        .lineLimit(2)
+
+                    // Location
+                    HStack(spacing: 5) {
+                        Image(systemName: "mappin.fill")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.rdRed)
+                        Text(locationString)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.85))
                             .lineLimit(1)
                     }
+
+                    // Stats chips
+                    if hasStats {
+                        HStack(spacing: 12) {
+                            if let beds = listing.bedrooms, beds != "0" {
+                                reelStat(icon: "bed.double.fill", value: beds + " Hab.")
+                            }
+                            if let baths = listing.bathrooms {
+                                reelStat(icon: "shower.fill", value: baths + " Baños")
+                            }
+                            if let area = listing.area_const, !area.isEmpty {
+                                reelStat(icon: "ruler.fill", value: area + " m²")
+                            }
+                        }
+                    }
+
+                    // Agency + tap hint
+                    HStack {
+                        if let name = listing.agencies?.first?.name {
+                            HStack(spacing: 5) {
+                                Image(systemName: "building.2.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.rdBlue)
+                                Text(name)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.75))
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Text("Ver detalles")
+                                .font(.caption).bold()
+                                .foregroundStyle(.white.opacity(0.8))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 90) // clear tab bar
             }
-            .padding(14)
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: Color.rdBlue.opacity(0.09), radius: 10, y: 4)
+        .ignoresSafeArea()
     }
 
     // MARK: - Helpers
 
-    private var imagePlaceholder: some View {
-        Rectangle()
-            .fill(Color(.systemGray5))
-            .overlay(
-                Image(systemName: "house.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color(.systemGray3))
-            )
-    }
-
     private var typeBadge: some View {
         Text(listing.typeLabel)
             .font(.caption2).bold()
-            .padding(.horizontal, 8).padding(.vertical, 4)
+            .padding(.horizontal, 10).padding(.vertical, 5)
             .background(typeColor)
             .foregroundStyle(.white)
             .clipShape(Capsule())
@@ -297,26 +342,26 @@ struct FeedCard: View {
 
     private var locationString: String {
         [listing.sector, listing.city, listing.province]
-            .compactMap { val in
-                guard let v = val, !v.isEmpty else { return nil }
-                return v
-            }
+            .compactMap { v in (v?.isEmpty == false) ? v : nil }
             .joined(separator: ", ")
     }
 
     private var hasStats: Bool {
         listing.bedrooms != nil || listing.bathrooms != nil ||
-        (listing.area_const != nil && !(listing.area_const!.isEmpty))
+        (listing.area_const.map { !$0.isEmpty } ?? false)
     }
 
-    private func statChip(icon: String, value: String) -> some View {
-        HStack(spacing: 4) {
+    private func reelStat(icon: String, value: String) -> some View {
+        HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.caption2)
-                .foregroundStyle(Color.rdBlue.opacity(0.7))
+                .foregroundStyle(.white.opacity(0.7))
             Text(value)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption).bold()
+                .foregroundStyle(.white.opacity(0.9))
         }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
     }
 }

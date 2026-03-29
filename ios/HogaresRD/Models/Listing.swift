@@ -86,6 +86,14 @@ struct Listing: Codable, Identifiable {
         if first.hasPrefix("http") { return URL(string: first) }
         return URL(string: base + first)
     }
+
+    var allImageURLs: [URL] {
+        let base = APIService.baseURL
+        return images.compactMap { path in
+            if path.hasPrefix("http") { return URL(string: path) }
+            return URL(string: base + path)
+        }
+    }
 }
 
 struct Agency: Codable {
