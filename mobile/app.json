@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "HogaresRD",
+    "slug": "hogares-rd",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "hogaresrd",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#002D62"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hogaresrd.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#002D62"
+      },
+      "package": "com.hogaresrd.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
