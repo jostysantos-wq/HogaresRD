@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog — HogaresRD</title>
+  <meta name="description" content="Consejos, guías y noticias del mercado inmobiliario dominicano. Todo lo que necesitas saber antes de comprar, alquilar o invertir en propiedades en RD." />
+  <style>
+    :root {
+      --bg:           #f0f4f9;
+      --bg-card:      #ffffff;
+      --bg-section:   #e8eef7;
+      --text:         #001840;
+      --text-muted:   #4d6a8a;
+      --accent:       #002D62;
+      --accent-hover: #001a45;
+      --accent-light: #e8f0fb;
+      --red:          #CF142B;
+      --border:       #d0dcea;
+      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
+      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
+      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
+      --toggle-bg:    #c4d4e8;
+      --toggle-knob:  #ffffff;
+      --nav-bg:       rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg:           #00101f;
+      --bg-card:      #001e3c;
+      --bg-section:   #001428;
+      --text:         #e8f0fb;
+      --text-muted:   #7a9bbf;
+      --accent:       #4a90d9;
+      --accent-hover: #3a7bc8;
+      --accent-light: #001e3c;
+      --red:          #e8374e;
+      --border:       #003060;
+      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg:    #003060;
+      --toggle-knob:  #e8f0fb;
+      --nav-bg:       rgba(0,16,31,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-primary-nav { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+    .btn-primary-nav:hover { background: var(--accent-hover); }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
+    .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
+    .hero-shape-2 { width: 280px; height: 280px; bottom: -100px; left: 5%; }
+    .hero-shape-3 { width: 160px; height: 160px; top: 40%; right: 25%; }
+    .hero-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem 4.5rem; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.9rem; border-radius: 50px; margin-bottom: 1.25rem; }
+    .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1.1rem; max-width: 620px; }
+    .hero-title em { font-style: normal; color: #7ab8f5; }
+    .hero-sub { color: rgba(255,255,255,0.72); font-size: 1.05rem; max-width: 540px; line-height: 1.7; }
+
+    /* CATEGORIES */
+    .categories-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); }
+    .categories-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; display: flex; align-items: center; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; height: 56px; }
+    .categories-inner::-webkit-scrollbar { display: none; }
+    .cat-pill { background: none; border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.82rem; font-weight: 600; padding: 0.3rem 1rem; border-radius: 50px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .cat-pill:hover, .cat-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* FEATURED */
+    .featured-section { max-width: 1280px; margin: 0 auto; padding: 4rem 2rem 0; }
+    .section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.6rem; }
+    .section-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2.5rem; }
+    .featured-card { display: grid; grid-template-columns: 1.2fr 1fr; gap: 0; background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-md); margin-bottom: 2rem; transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; }
+    .featured-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+    .featured-img { aspect-ratio: 4/3; overflow: hidden; }
+    .featured-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+    .featured-card:hover .featured-img img { transform: scale(1.04); }
+    .featured-body { padding: 2.5rem; display: flex; flex-direction: column; justify-content: center; }
+    .post-category { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 50px; margin-bottom: 1rem; }
+    .featured-body h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.4px; line-height: 1.25; margin-bottom: 0.85rem; }
+    .featured-body p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+    .post-meta { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); }
+    .post-meta .author-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #002D62, #0055b3); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
+    .read-more { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--accent); font-weight: 700; font-size: 0.88rem; }
+
+    /* GRID */
+    .blog-section { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
+    .blog-card { background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+    .blog-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .blog-card-img { aspect-ratio: 16/9; overflow: hidden; }
+    .blog-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+    .blog-card:hover .blog-card-img img { transform: scale(1.05); }
+    .blog-card-body { padding: 1.4rem 1.5rem 1.6rem; flex: 1; display: flex; flex-direction: column; }
+    .blog-card-body .post-category { margin-bottom: 0.75rem; }
+    .blog-card-body h3 { font-size: 1rem; font-weight: 800; line-height: 1.35; margin-bottom: 0.6rem; }
+    .blog-card-body p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.65; flex: 1; margin-bottom: 1.1rem; }
+    .blog-card-body .post-meta { margin-top: auto; }
+
+    /* NEWSLETTER CTA */
+    .nl-banner { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; padding: 4.5rem 2rem; }
+    .nl-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .nl-shape-1 { width: 400px; height: 400px; top: -200px; right: -100px; }
+    .nl-shape-2 { width: 200px; height: 200px; bottom: -100px; left: 10%; }
+    .nl-inner { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; text-align: center; }
+    .nl-inner h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; color: #fff; margin-bottom: 0.75rem; letter-spacing: -0.5px; }
+    .nl-inner p { color: rgba(255,255,255,0.72); font-size: 1rem; margin-bottom: 2rem; line-height: 1.65; }
+    .nl-form { display: flex; gap: 0.75rem; max-width: 480px; margin: 0 auto; }
+    .nl-form input { flex: 1; border: none; border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.95rem; outline: none; background: rgba(255,255,255,0.15); color: #fff; }
+    .nl-form input::placeholder { color: rgba(255,255,255,0.5); }
+    .nl-form button { background: var(--red); color: #fff; border: none; border-radius: 10px; padding: 0.85rem 1.5rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+    .nl-form button:hover { background: #a81022; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); transition: background 0.3s; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin-top: 0.75rem; max-width: 260px; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-col a { text-decoration: none; font-size: 0.9rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
+
+    @media (max-width: 900px) {
+      .featured-card { grid-template-columns: 1fr; }
+      .blog-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+      .nl-form { flex-direction: column; }
+    }
+    @media (max-width: 580px) {
+      .blog-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/comprar" class="nav-link">Comprar</a>
+        <a href="/alquilar" class="nav-link">Alquilar</a>
+        <a href="/nuevos-proyectos" class="nav-link">Nuevos Proyectos</a>
+        <a href="/about" class="nav-link">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-ghost">Iniciar sesión</a>
+          <a href="/register" class="btn-primary-nav">Registrarse</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-shapes">
+      <div class="hero-shape hero-shape-1"></div>
+      <div class="hero-shape hero-shape-2"></div>
+      <div class="hero-shape hero-shape-3"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">✍️ Blog HogaresRD</div>
+      <h1 class="hero-title">Todo sobre bienes raíces en <em>República Dominicana</em></h1>
+      <p class="hero-sub">Guías prácticas, consejos de expertos, tendencias del mercado y todo lo que necesitas saber para tomar la mejor decisión inmobiliaria.</p>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="categories-bar">
+    <div class="categories-inner">
+      <button class="cat-pill active" onclick="filterCat(this, 'all')">Todos</button>
+      <button class="cat-pill" onclick="filterCat(this, 'guia')">Guías para compradores</button>
+      <button class="cat-pill" onclick="filterCat(this, 'mercado')">Mercado inmobiliario</button>
+      <button class="cat-pill" onclick="filterCat(this, 'inversion')">Inversión</button>
+      <button class="cat-pill" onclick="filterCat(this, 'alquiler')">Alquiler</button>
+      <button class="cat-pill" onclick="filterCat(this, 'ciudad')">Ciudades</button>
+      <button class="cat-pill" onclick="filterCat(this, 'agentes')">Para agentes</button>
+    </div>
+  </div>
+
+  <!-- FEATURED POST -->
+  <div class="featured-section">
+    <div class="section-label">Artículo destacado</div>
+    <a class="featured-card" href="#" data-cat="guia">
+      <div class="featured-img">
+        <img src="https://picsum.photos/seed/blogfeatured/800/600" alt="" loading="lazy" onerror="this.style.display='none'" />
+      </div>
+      <div class="featured-body">
+        <span class="post-category">Guías para compradores</span>
+        <h2>Cómo comprar tu primera propiedad en República Dominicana: guía paso a paso</h2>
+        <p>Desde la búsqueda inicial hasta la firma del contrato, te explicamos todo lo que debes saber para comprar tu primera casa o apartamento en RD sin complicaciones.</p>
+        <div class="post-meta">
+          <div class="author-avatar">HR</div>
+          <div>
+            <div style="font-weight:600;font-size:0.82rem;">Equipo HogaresRD</div>
+            <div>15 min de lectura &nbsp;·&nbsp; Marzo 2026</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- BLOG GRID -->
+  <div class="blog-section">
+    <div class="section-label">Últimos artículos</div>
+    <h2 class="section-title">Lo más reciente</h2>
+    <div class="blog-grid" id="blogGrid">
+
+      <a class="blog-card" href="#" data-cat="mercado">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog1/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Mercado inmobiliario</span>
+          <h3>El mercado de lujo en Punta Cana sigue creciendo: ¿qué está pasando?</h3>
+          <p>Los precios en el corredor turístico del Este no dejan de subir. Analizamos los factores detrás del boom y qué significa para compradores e inversores.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">8 min &nbsp;·&nbsp; Marzo 2026</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="blog-card" href="#" data-cat="inversion">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog2/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Inversión</span>
+          <h3>5 razones para invertir en bienes raíces en RD ahora mismo</h3>
+          <p>Tipo de cambio favorable, crecimiento turístico sostenido y alta demanda de alquileres. República Dominicana se posiciona como uno de los mercados más atractivos del Caribe.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">6 min &nbsp;·&nbsp; Febrero 2026</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="blog-card" href="#" data-cat="alquiler">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog3/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Alquiler</span>
+          <h3>¿Alquilar o comprar? Cómo decidir según tu situación financiera</h3>
+          <p>No siempre comprar es la mejor opción. Te damos las claves para evaluar qué te conviene más dependiendo de tu etapa de vida y tus metas financieras.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">7 min &nbsp;·&nbsp; Febrero 2026</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="blog-card" href="#" data-cat="ciudad">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog4/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Ciudades</span>
+          <h3>Santo Domingo vs. Santiago: ¿en qué ciudad vivir mejor en 2026?</h3>
+          <p>Calidad de vida, costo de vivienda, acceso a servicios y oportunidades laborales. Comparamos las dos ciudades más grandes de RD para ayudarte a elegir.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">10 min &nbsp;·&nbsp; Enero 2026</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="blog-card" href="#" data-cat="guia">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog5/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Guías para compradores</span>
+          <h3>Todo lo que debes revisar antes de firmar un contrato de compraventa</h3>
+          <p>El contrato es el momento más importante de la transacción. Conoce las cláusulas clave, los documentos que debes pedir y cómo protegerte legalmente.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">9 min &nbsp;·&nbsp; Enero 2026</div>
+          </div>
+        </div>
+      </a>
+
+      <a class="blog-card" href="#" data-cat="agentes">
+        <div class="blog-card-img"><img src="https://picsum.photos/seed/blog6/600/400" alt="" loading="lazy" onerror="this.style.display='none'" /></div>
+        <div class="blog-card-body">
+          <span class="post-category">Para agentes</span>
+          <h3>Cómo crear un portafolio inmobiliario que genere confianza y cierre más ventas</h3>
+          <p>Tu portafolio digital es tu carta de presentación. Aprende a mostrar tus propiedades de manera profesional y a convertir visitas en clientes reales.</p>
+          <div class="post-meta">
+            <div class="author-avatar">HR</div>
+            <div style="font-size:0.78rem;">5 min &nbsp;·&nbsp; Enero 2026</div>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- NEWSLETTER CTA -->
+  <div class="nl-banner">
+    <div class="nl-shape nl-shape-1"></div>
+    <div class="nl-shape nl-shape-2"></div>
+    <div class="nl-inner">
+      <h2>Recibe los mejores artículos cada semana</h2>
+      <p>Únete a miles de dominicanos que ya reciben nuestro boletín con consejos inmobiliarios, tendencias del mercado y las propiedades más destacadas.</p>
+      <div class="nl-form">
+        <input type="email" id="nlEmail" placeholder="tu@email.com" />
+        <button onclick="subscribeNewsletter()">Suscribirme</button>
+      </div>
+      <p id="nlMsg" style="margin-top:1rem;font-size:0.85rem;color:rgba(255,255,255,0.7);display:none;">¡Listo! Ya eres parte de la comunidad HogaresRD.</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/comprar">Comprar</a></li>
+          <li><a href="/alquilar">Alquilar</a></li>
+          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/ciudad/santo-domingo">Santo Domingo</a></li>
+          <li><a href="/ciudad/punta-cana">Punta Cana</a></li>
+          <li><a href="/ciudad/santiago">Santiago</a></li>
+          <li><a href="/ciudad/puerto-plata">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/blog" style="color:var(--accent)">Blog</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/terminos">Términos de Uso</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p>Hecho con ♥ para la República Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getSaved());
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+    });
+
+    function filterCat(btn, cat) {
+      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('#blogGrid .blog-card').forEach(card => {
+        card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
+      });
+    }
+
+    function subscribeNewsletter() {
+      const email = document.getElementById('nlEmail').value.trim();
+      if (!email || !email.includes('@')) return;
+      document.getElementById('nlEmail').value = '';
+      document.getElementById('nlMsg').style.display = 'block';
+    }
+
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;overflow:hidden;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => {
+          const dd = document.getElementById('userDropdown');
+          if (dd) dd.style.display = 'none';
+        });
+      }
+    })();
+    function logout() {
+      try { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); } catch(e) {}
+      window.location.href = '/home';
+    }
+  </script>
+</body>
+</html>

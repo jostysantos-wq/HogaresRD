@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contacto — HogaresRD</title>
+  <meta name="description" content="Contáctanos en HogaresRD. Estamos aquí para ayudarte a encontrar tu propiedad ideal en la República Dominicana." />
+  <style>
+    :root {
+      --bg:           #f0f4f9;
+      --bg-card:      #ffffff;
+      --bg-section:   #e8eef7;
+      --text:         #001840;
+      --text-muted:   #4d6a8a;
+      --accent:       #002D62;
+      --accent-hover: #001a45;
+      --accent-light: #e8f0fb;
+      --red:          #CF142B;
+      --border:       #d0dcea;
+      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
+      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
+      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
+      --toggle-bg:    #c4d4e8;
+      --toggle-knob:  #ffffff;
+      --nav-bg:       rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg:           #00101f;
+      --bg-card:      #001e3c;
+      --bg-section:   #001428;
+      --text:         #e8f0fb;
+      --text-muted:   #7a9bbf;
+      --accent:       #4a90d9;
+      --accent-hover: #3a7bc8;
+      --accent-light: #001e3c;
+      --red:          #e8374e;
+      --border:       #003060;
+      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg:    #003060;
+      --toggle-knob:  #e8f0fb;
+      --nav-bg:       rgba(0,16,31,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-primary-nav { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+    .btn-primary-nav:hover { background: var(--accent-hover); }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
+    .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
+    .hero-shape-2 { width: 280px; height: 280px; bottom: -100px; left: 5%; }
+    .hero-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem 4.5rem; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.9rem; border-radius: 50px; margin-bottom: 1.25rem; }
+    .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1.1rem; max-width: 620px; }
+    .hero-title em { font-style: normal; color: #7ab8f5; }
+    .hero-sub { color: rgba(255,255,255,0.72); font-size: 1.05rem; max-width: 540px; line-height: 1.7; }
+
+    /* CONTACT LAYOUT */
+    .contact-section { max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; display: grid; grid-template-columns: 1fr 1.4fr; gap: 4rem; align-items: start; }
+    .contact-info h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0.75rem; }
+    .contact-info p { color: var(--text-muted); line-height: 1.75; font-size: 0.97rem; margin-bottom: 2rem; }
+    .info-cards { display: flex; flex-direction: column; gap: 1rem; }
+    .info-card { display: flex; gap: 1rem; align-items: flex-start; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s; }
+    .info-card:hover { box-shadow: var(--shadow-md); }
+    .info-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .info-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .info-icon.blue   { background: linear-gradient(135deg, #002D62, #0055b3); }
+    .info-icon.red    { background: linear-gradient(135deg, #CF142B, #a81022); }
+    .info-icon.green  { background: linear-gradient(135deg, #0a7c4f, #0d9e65); }
+    .info-card-body h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .info-card-body p, .info-card-body a { font-size: 0.88rem; color: var(--text-muted); text-decoration: none; line-height: 1.55; }
+    .info-card-body a:hover { color: var(--accent); }
+
+    /* FORM */
+    .contact-form-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; box-shadow: var(--shadow-md); }
+    .contact-form-wrap h3 { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .contact-form-wrap .form-sub { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.75rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 0.7rem 1rem; font-size: 0.92rem; color: var(--text);
+      transition: border-color 0.2s; outline: none; width: 100%; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 130px; }
+    .btn-submit { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0.9rem 1.5rem; font-size: 0.97rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.5rem; }
+    .btn-submit:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .form-success { display: none; text-align: center; padding: 2rem; }
+    .form-success .check { width: 56px; height: 56px; background: linear-gradient(135deg, #0a7c4f, #0d9e65); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .form-success .check svg { width: 28px; height: 28px; fill: #fff; }
+    .form-success h4 { font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .form-success p { color: var(--text-muted); font-size: 0.92rem; }
+
+    /* FAQ STRIP */
+    .faq-section { background: var(--bg-section); padding: 4.5rem 2rem; transition: background 0.3s; }
+    .faq-inner { max-width: 800px; margin: 0 auto; }
+    .section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.6rem; }
+    .section-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2.5rem; }
+    .faq-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .faq-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .faq-q { width: 100%; background: none; border: none; cursor: pointer; padding: 1.1rem 1.5rem; text-align: left; font-size: 0.95rem; font-weight: 700; color: var(--text); display: flex; justify-content: space-between; align-items: center; gap: 1rem; transition: color 0.2s; }
+    .faq-q:hover { color: var(--accent); }
+    .faq-q svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; transition: transform 0.3s; }
+    .faq-item.open .faq-q svg { transform: rotate(180deg); }
+    .faq-a { display: none; padding: 0 1.5rem 1.1rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; }
+    .faq-item.open .faq-a { display: block; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); transition: background 0.3s; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin-top: 0.75rem; max-width: 260px; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-col a { text-decoration: none; font-size: 0.9rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
+
+    @media (max-width: 900px) {
+      .contact-section { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+    @media (max-width: 768px) {
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/comprar" class="nav-link">Comprar</a>
+        <a href="/alquilar" class="nav-link">Alquilar</a>
+        <a href="/nuevos-proyectos" class="nav-link">Nuevos Proyectos</a>
+        <a href="/about" class="nav-link">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-ghost">Iniciar sesión</a>
+          <a href="/register" class="btn-primary-nav">Registrarse</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-shapes">
+      <div class="hero-shape hero-shape-1"></div>
+      <div class="hero-shape hero-shape-2"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">✉️ Estamos aquí para ti</div>
+      <h1 class="hero-title">¿En qué podemos <em>ayudarte?</em></h1>
+      <p class="hero-sub">Nuestro equipo está listo para responder tus preguntas sobre propiedades, publicaciones o cualquier duda sobre HogaresRD.</p>
+    </div>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="contact-section">
+    <!-- Info Column -->
+    <div class="contact-info">
+      <h2>Contáctanos directamente</h2>
+      <p>Ya sea que tengas una pregunta sobre una propiedad, quieras publicar tu inmueble o simplemente quieras saber más sobre nosotros, estamos a un mensaje de distancia.</p>
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-icon blue">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          </div>
+          <div class="info-card-body">
+            <h4>Correo electrónico</h4>
+            <a href="mailto:info@hogaresrd.com">info@hogaresrd.com</a>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-icon red">
+            <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.24 1.02l-2.21 2.2z"/></svg>
+          </div>
+          <div class="info-card-body">
+            <h4>Teléfono / WhatsApp</h4>
+            <a href="https://wa.me/18091234567">+1 (809) 123-4567</a>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-icon green">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+          </div>
+          <div class="info-card-body">
+            <h4>Ubicación</h4>
+            <p>Santo Domingo, República Dominicana</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Column -->
+    <div class="contact-form-wrap">
+      <h3>Envíanos un mensaje</h3>
+      <p class="form-sub">Te responderemos en menos de 24 horas hábiles.</p>
+      <div id="contactFormBody">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cf-name">Nombre completo</label>
+            <input type="text" id="cf-name" placeholder="Tu nombre" />
+          </div>
+          <div class="form-group">
+            <label for="cf-email">Correo electrónico</label>
+            <input type="email" id="cf-email" placeholder="tu@email.com" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cf-subject">Asunto</label>
+          <select id="cf-subject">
+            <option value="">Selecciona un asunto...</option>
+            <option>Pregunta sobre una propiedad</option>
+            <option>Quiero publicar mi propiedad</option>
+            <option>Soy agente inmobiliario</option>
+            <option>Problema técnico</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cf-message">Mensaje</label>
+          <textarea id="cf-message" placeholder="Cuéntanos en qué podemos ayudarte..."></textarea>
+        </div>
+        <button class="btn-submit" id="cfSubmitBtn" onclick="submitContactForm()">Enviar mensaje →</button>
+      </div>
+      <div class="form-success" id="contactSuccess">
+        <div class="check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+        <h4>¡Mensaje enviado!</h4>
+        <p>Gracias por contactarnos. Te responderemos pronto a tu correo.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <div class="faq-inner">
+      <div class="section-label">Preguntas frecuentes</div>
+      <h2 class="section-title">Resolvemos tus dudas</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            ¿Cómo publico mi propiedad en HogaresRD?
+            <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+          <div class="faq-a">Regístrate como agente o como propietario, luego ve a "Publicar" y completa el formulario con los detalles de tu inmueble. Nuestro equipo revisará y aprobará tu anuncio en menos de 48 horas.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            ¿Cuánto cuesta publicar en HogaresRD?
+            <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+          <div class="faq-a">Publicar en HogaresRD es gratuito. Creemos que conectar propiedades con compradores y arrendatarios debe ser accesible para todos.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            ¿Cómo puedo registrar mi inmobiliaria?
+            <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+          <div class="faq-a">Ve a "Registrarse" y selecciona la opción de agente inmobiliario. Completa el proceso de verificación y tendrás acceso a tu portafolio, gestión de listados y herramientas exclusivas para agentes.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            ¿HogaresRD opera en toda la República Dominicana?
+            <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+          <div class="faq-a">Sí. Tenemos propiedades listadas en Santo Domingo, Punta Cana, Santiago, Puerto Plata, La Romana, Las Terrenas y más ciudades en todo el país.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/comprar">Comprar</a></li>
+          <li><a href="/alquilar">Alquilar</a></li>
+          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/ciudad/santo-domingo">Santo Domingo</a></li>
+          <li><a href="/ciudad/punta-cana">Punta Cana</a></li>
+          <li><a href="/ciudad/santiago">Santiago</a></li>
+          <li><a href="/ciudad/puerto-plata">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="/contacto" style="color:var(--accent)">Contacto</a></li>
+          <li><a href="/terminos">Términos de Uso</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p>Hecho con ♥ para la República Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getSaved());
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+    });
+
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    }
+
+    function submitContactForm() {
+      const name    = document.getElementById('cf-name').value.trim();
+      const email   = document.getElementById('cf-email').value.trim();
+      const subject = document.getElementById('cf-subject').value;
+      const message = document.getElementById('cf-message').value.trim();
+      if (!name || !email || !subject || !message) {
+        alert('Por favor completa todos los campos.');
+        return;
+      }
+      const submitBtn = document.getElementById('cfSubmitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+      // Simulate send (replace with real API call if needed)
+      setTimeout(() => {
+        document.getElementById('contactFormBody').style.display = 'none';
+        document.getElementById('contactSuccess').style.display  = 'block';
+      }, 900);
+    }
+
+    // Auth nav
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;overflow:hidden;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => {
+          const dd = document.getElementById('userDropdown');
+          if (dd) dd.style.display = 'none';
+        });
+      }
+    })();
+    function logout() {
+      try { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); } catch(e) {}
+      window.location.href = '/home';
+    }
+  </script>
+</body>
+</html>

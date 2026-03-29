@@ -175,6 +175,9 @@ app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/inmobiliaria/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inmobiliaria.html')));
 app.get('/ciudades',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudades.html')));
 app.get('/ciudad/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudad.html')));
+app.get('/contacto',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'contacto.html')));
+app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos.html')));
+app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;

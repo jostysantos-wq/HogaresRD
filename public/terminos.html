@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Términos de Uso — HogaresRD</title>
+  <meta name="description" content="Lee los Términos de Uso de HogaresRD, la plataforma de bienes raíces más completa de la República Dominicana." />
+  <style>
+    :root {
+      --bg:           #f0f4f9;
+      --bg-card:      #ffffff;
+      --bg-section:   #e8eef7;
+      --text:         #001840;
+      --text-muted:   #4d6a8a;
+      --accent:       #002D62;
+      --accent-hover: #001a45;
+      --accent-light: #e8f0fb;
+      --red:          #CF142B;
+      --border:       #d0dcea;
+      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
+      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
+      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
+      --toggle-bg:    #c4d4e8;
+      --toggle-knob:  #ffffff;
+      --nav-bg:       rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg:           #00101f;
+      --bg-card:      #001e3c;
+      --bg-section:   #001428;
+      --text:         #e8f0fb;
+      --text-muted:   #7a9bbf;
+      --accent:       #4a90d9;
+      --accent-hover: #3a7bc8;
+      --accent-light: #001e3c;
+      --red:          #e8374e;
+      --border:       #003060;
+      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg:    #003060;
+      --toggle-knob:  #e8f0fb;
+      --nav-bg:       rgba(0,16,31,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-primary-nav { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+    .btn-primary-nav:hover { background: var(--accent-hover); }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
+    .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
+    .hero-shape-2 { width: 280px; height: 280px; bottom: -100px; left: 5%; }
+    .hero-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 4.5rem 2rem 4rem; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.9rem; border-radius: 50px; margin-bottom: 1.25rem; }
+    .hero-title { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1rem; }
+    .hero-meta { color: rgba(255,255,255,0.55); font-size: 0.88rem; }
+
+    /* CONTENT */
+    .terms-layout { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem 5rem; display: grid; grid-template-columns: 220px 1fr; gap: 4rem; align-items: start; }
+    .terms-toc { position: sticky; top: 88px; }
+    .terms-toc h4 { font-size: 0.78rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
+    .terms-toc ul { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+    .terms-toc a { font-size: 0.88rem; color: var(--text-muted); text-decoration: none; padding: 0.3rem 0.6rem; border-radius: 6px; display: block; transition: color 0.2s, background 0.2s; }
+    .terms-toc a:hover { color: var(--accent); background: var(--accent-light); }
+    .terms-doc section { margin-bottom: 3rem; scroll-margin-top: 88px; }
+    .terms-doc section h2 { font-size: 1.25rem; font-weight: 800; margin-bottom: 1rem; padding-bottom: 0.6rem; border-bottom: 2px solid var(--border); }
+    .terms-doc section p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.8; margin-bottom: 0.85rem; }
+    .terms-doc section ul { padding-left: 1.4rem; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.85rem; }
+    .terms-doc section ul li { font-size: 0.95rem; color: var(--text-muted); line-height: 1.7; }
+    .terms-doc section strong { color: var(--text); font-weight: 700; }
+    .terms-notice { background: var(--accent-light); border: 1.5px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 3rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); transition: background 0.3s; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin-top: 0.75rem; max-width: 260px; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-col a { text-decoration: none; font-size: 0.9rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
+
+    @media (max-width: 860px) {
+      .terms-layout { grid-template-columns: 1fr; }
+      .terms-toc { display: none; }
+    }
+    @media (max-width: 768px) {
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 500px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/comprar" class="nav-link">Comprar</a>
+        <a href="/alquilar" class="nav-link">Alquilar</a>
+        <a href="/nuevos-proyectos" class="nav-link">Nuevos Proyectos</a>
+        <a href="/about" class="nav-link">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-ghost">Iniciar sesión</a>
+          <a href="/register" class="btn-primary-nav">Registrarse</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-icons">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-shapes">
+      <div class="hero-shape hero-shape-1"></div>
+      <div class="hero-shape hero-shape-2"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">📋 Legal</div>
+      <h1 class="hero-title">Términos de Uso</h1>
+      <p class="hero-meta">Última actualización: enero 2026 &nbsp;·&nbsp; República Dominicana</p>
+    </div>
+  </div>
+
+  <!-- TERMS BODY -->
+  <div class="terms-layout">
+    <!-- TOC Sidebar -->
+    <aside class="terms-toc">
+      <h4>En esta página</h4>
+      <ul>
+        <li><a href="#aceptacion">1. Aceptación</a></li>
+        <li><a href="#uso">2. Uso del servicio</a></li>
+        <li><a href="#cuentas">3. Cuentas de usuario</a></li>
+        <li><a href="#publicaciones">4. Publicaciones</a></li>
+        <li><a href="#propiedad">5. Propiedad intelectual</a></li>
+        <li><a href="#privacidad">6. Privacidad</a></li>
+        <li><a href="#limitaciones">7. Limitaciones</a></li>
+        <li><a href="#modificaciones">8. Modificaciones</a></li>
+        <li><a href="#contacto">9. Contacto</a></li>
+      </ul>
+    </aside>
+
+    <!-- Document -->
+    <div class="terms-doc">
+      <div class="terms-notice">
+        Al utilizar HogaresRD, aceptas los siguientes Términos de Uso. Si no estás de acuerdo, por favor no utilices nuestra plataforma.
+      </div>
+
+      <section id="aceptacion">
+        <h2>1. Aceptación de los Términos</h2>
+        <p>Al acceder y utilizar HogaresRD (el "Servicio"), aceptas quedar vinculado por estos Términos de Uso. Estos términos constituyen un acuerdo legal entre tú y HogaresRD, operada desde la República Dominicana.</p>
+        <p>Si utilizas el Servicio en nombre de una empresa o entidad, declaras tener la autoridad necesaria para aceptar estos términos en su nombre.</p>
+      </section>
+
+      <section id="uso">
+        <h2>2. Uso del Servicio</h2>
+        <p>HogaresRD es una plataforma de anuncios inmobiliarios. Puedes utilizarla para:</p>
+        <ul>
+          <li>Buscar y explorar propiedades en venta o alquiler en la República Dominicana.</li>
+          <li>Publicar propiedades como propietario o agente inmobiliario registrado.</li>
+          <li>Contactar a agentes o propietarios a través de los formularios habilitados.</li>
+        </ul>
+        <p>Queda prohibido utilizar el Servicio para fines ilegales, publicar información falsa, realizar spam, o intentar vulnerar la seguridad de la plataforma.</p>
+      </section>
+
+      <section id="cuentas">
+        <h2>3. Cuentas de Usuario</h2>
+        <p>Para publicar propiedades debes crear una cuenta. Eres responsable de mantener la confidencialidad de tus credenciales de acceso y de todas las actividades realizadas desde tu cuenta.</p>
+        <p>HogaresRD se reserva el derecho de suspender o eliminar cuentas que violen estos términos, sin previo aviso.</p>
+        <ul>
+          <li><strong>Usuarios regulares:</strong> Pueden explorar propiedades y guardar favoritos.</li>
+          <li><strong>Agentes inmobiliarios:</strong> Pueden publicar listados y gestionar su portafolio.</li>
+        </ul>
+      </section>
+
+      <section id="publicaciones">
+        <h2>4. Publicaciones de Propiedades</h2>
+        <p>Al publicar una propiedad en HogaresRD, garantizas que:</p>
+        <ul>
+          <li>Tienes autorización para anunciar dicha propiedad.</li>
+          <li>La información proporcionada es verídica, actualizada y no engañosa.</li>
+          <li>Las imágenes utilizadas son de tu propiedad o tienes licencia para usarlas.</li>
+          <li>El precio indicado refleja fielmente la oferta real.</li>
+        </ul>
+        <p>HogaresRD revisa cada publicación antes de aprobarla. Nos reservamos el derecho de rechazar o eliminar cualquier anuncio que no cumpla nuestros estándares de calidad o que viole estos términos.</p>
+      </section>
+
+      <section id="propiedad">
+        <h2>5. Propiedad Intelectual</h2>
+        <p>Todo el contenido propio de HogaresRD (diseño, logotipos, textos, código) es propiedad exclusiva de HogaresRD y está protegido por las leyes de propiedad intelectual de la República Dominicana.</p>
+        <p>Al subir imágenes o contenido a nuestra plataforma, nos otorgas una licencia no exclusiva para mostrar dicho contenido en el Servicio con el único propósito de operar la plataforma.</p>
+      </section>
+
+      <section id="privacidad">
+        <h2>6. Privacidad y Datos</h2>
+        <p>HogaresRD recopila información necesaria para el funcionamiento del Servicio, como nombre, correo electrónico y preferencias de búsqueda. Esta información no será vendida a terceros.</p>
+        <p>Puedes solicitar la eliminación de tus datos en cualquier momento enviando un correo a <strong>info@hogaresrd.com</strong>.</p>
+        <p>Si optaste por recibir nuestro boletín, puedes cancelar tu suscripción en cualquier momento desde el enlace incluido en cada correo.</p>
+      </section>
+
+      <section id="limitaciones">
+        <h2>7. Limitación de Responsabilidad</h2>
+        <p>HogaresRD actúa como intermediario entre propietarios/agentes y posibles compradores o arrendatarios. <strong>No somos parte en ninguna transacción inmobiliaria</strong> y no garantizamos la exactitud de los anuncios publicados por terceros.</p>
+        <p>HogaresRD no se hace responsable por:</p>
+        <ul>
+          <li>Información incorrecta o desactualizada publicada por usuarios.</li>
+          <li>Pérdidas derivadas de transacciones realizadas a través de la plataforma.</li>
+          <li>Interrupciones temporales del Servicio por mantenimiento o causas de fuerza mayor.</li>
+        </ul>
+      </section>
+
+      <section id="modificaciones">
+        <h2>8. Modificaciones a los Términos</h2>
+        <p>HogaresRD puede modificar estos Términos en cualquier momento. Te notificaremos los cambios significativos por correo electrónico o mediante un aviso destacado en la plataforma.</p>
+        <p>El uso continuado del Servicio tras la publicación de cambios constituye tu aceptación de los nuevos términos.</p>
+      </section>
+
+      <section id="contacto">
+        <h2>9. Contacto</h2>
+        <p>Si tienes preguntas sobre estos Términos de Uso, contáctanos:</p>
+        <ul>
+          <li><strong>Correo:</strong> info@hogaresrd.com</li>
+          <li><strong>Formulario:</strong> <a href="/contacto" style="color:var(--accent)">hogaresrd.com/contacto</a></li>
+          <li><strong>País:</strong> República Dominicana</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/comprar">Comprar</a></li>
+          <li><a href="/alquilar">Alquilar</a></li>
+          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/ciudad/santo-domingo">Santo Domingo</a></li>
+          <li><a href="/ciudad/punta-cana">Punta Cana</a></li>
+          <li><a href="/ciudad/santiago">Santiago</a></li>
+          <li><a href="/ciudad/puerto-plata">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/terminos" style="color:var(--accent)">Términos de Uso</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p>Hecho con ♥ para la República Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getSaved());
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+    });
+
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;overflow:hidden;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => {
+          const dd = document.getElementById('userDropdown');
+          if (dd) dd.style.display = 'none';
+        });
+      }
+    })();
+    function logout() {
+      try { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); } catch(e) {}
+      window.location.href = '/home';
+    }
+  </script>
+</body>
+</html>
