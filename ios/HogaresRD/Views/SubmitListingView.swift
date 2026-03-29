@@ -51,6 +51,9 @@ struct SubmitListingView: View {
     // Amenities
     @State private var selectedAmenities: Set<String> = []
 
+    // Tags
+    @State private var selectedTags: Set<String> = []
+
     // Contact
     @State private var contactName  = ""
     @State private var contactEmail = ""
@@ -82,6 +85,35 @@ struct SubmitListingView: View {
         ("camaras","Cámaras CCTV"),("elevador","Elevador"),("amueblado","Amueblado"),
         ("semi_amueblado","Semi-amueblado"),("paneles_solares","Paneles Solares"),
         ("vista_mar","Vista al Mar"),("frente_mar","Frente al Mar"),("cancha","Cancha Deportiva")
+    ]
+
+    private let tagGroups: [(String, [String])] = [
+        ("Ubicación y Vistas", [
+            "Vista al mar", "Primera línea de playa", "A pasos de la playa",
+            "Vista panorámica", "Frente al campo de golf", "Zona montañosa / fresca"
+        ]),
+        ("Zona", [
+            "Zona turística", "Zona residencial cerrada", "Centro de la ciudad",
+            "Barrio tranquilo", "Cerca de autopista", "Zona en desarrollo"
+        ]),
+        ("Servicios Esenciales", [
+            "Con generador", "Con inversor / batería", "Con paneles solares",
+            "Con cisterna", "Con bomba de agua", "Vigilancia 24 horas", "Con verja / seguridad privada"
+        ]),
+        ("Estilo de Vida", [
+            "Apto para familias", "Pet friendly", "Cerca de colegios",
+            "Cerca de hospitales", "Cerca de centros comerciales",
+            "Cerca de supermercados", "Vida nocturna cercana"
+        ]),
+        ("Inversión", [
+            "Alta rentabilidad", "Apto para Airbnb", "Alquiler vacacional",
+            "Zona de revalorización", "Precio de oportunidad", "Proyecto de lujo"
+        ]),
+        ("Características", [
+            "Amueblado", "Remodelado / Renovado", "Listo para mudarse",
+            "Con piscina privada", "Con piscina comunitaria", "Con terraza / balcón amplio",
+            "Con área de BBQ", "Acceso a playa privada"
+        ])
     ]
 
     private var needsBedsBaths: Bool {
@@ -248,6 +280,27 @@ struct SubmitListingView: View {
                         FlowChips(items: amenitiesList, selected: $selectedAmenities)
                     }
 
+                    // ── Etiquetas ────────────────────────────────────────
+                    FormSection(title: "Etiquetas", icon: "tag.fill", color: Color.rdRed) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Selecciona etiquetas que describan mejor tu propiedad para ayudar a los compradores a encontrarla.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            ForEach(tagGroups, id: \.0) { group, tags in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(group.uppercased())
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(Color(.tertiaryLabel))
+                                        .kerning(0.5)
+                                    FlowChips(
+                                        items: tags.map { ($0, $0) },
+                                        selected: $selectedTags
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // ── Contacto ────────────────────────────────────────
                     FormSection(title: "Datos de Contacto", icon: "person.fill", color: Color.rdBlue) {
                         VStack(spacing: 14) {
@@ -338,6 +391,7 @@ struct SubmitListingView: View {
             "sector":          sector,
             "address":         address,
             "amenities":       Array(selectedAmenities),
+            "tags":            Array(selectedTags),
             "name":            contactName,
             "email":           contactEmail,
             "phone":           contactPhone,
