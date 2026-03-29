@@ -77,74 +77,135 @@ router.post('/register', async (req, res, next) => {
 
     store.saveUser(user);
 
-    // Welcome email (fire-and-forget)
+    // Welcome email — pull top 3 trending listings by views
+    const trending = store.getListings()
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 3);
+
+    function formatPrice(p) {
+      if (!p) return 'Consultar';
+      const n = Number(p);
+      if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+      if (n >= 1000)    return '$' + (n / 1000).toFixed(0) + 'K';
+      return '$' + n.toLocaleString('es-DO');
+    }
+
+    function listingCard(l) {
+      const price    = formatPrice(l.price);
+      const location = [l.sector, l.city].filter(Boolean).join(', ');
+      const badge    = l.type === 'alquiler' ? 'EN ALQUILER' : 'EN VENTA';
+      const badgeClr = l.type === 'alquiler' ? '#0066cc' : '#1a7a4a';
+      const specs    = [
+        l.bedrooms  ? `🛏 ${l.bedrooms} hab.`  : '',
+        l.bathrooms ? `🚿 ${l.bathrooms} baños` : '',
+        l.area_const ? `📐 ${l.area_const} m²`  : '',
+      ].filter(Boolean).join('&nbsp;&nbsp;');
+      return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:18px 20px;background:#ffffff;">
+              <div style="margin-bottom:8px;">
+                <span style="display:inline-block;background:${badgeClr};color:#fff;font-size:0.65rem;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;text-transform:uppercase;">${badge}</span>
+              </div>
+              <div style="font-size:1.15rem;font-weight:800;color:#002D62;margin-bottom:4px;">${price}</div>
+              <div style="font-size:0.9rem;font-weight:600;color:#1a2b40;margin-bottom:6px;line-height:1.3;">${l.title}</div>
+              <div style="font-size:0.8rem;color:#7a9bbf;margin-bottom:10px;">📍 ${location}</div>
+              ${specs ? `<div style="font-size:0.78rem;color:#4d6a8a;margin-bottom:14px;">${specs}</div>` : ''}
+              <a href="${BASE_URL}/listing/${l.id}" style="display:inline-block;background:#eef3fa;color:#002D62;font-size:0.82rem;font-weight:700;padding:8px 18px;border-radius:8px;text-decoration:none;">Ver propiedad →</a>
+            </td>
+          </tr>
+        </table>`;
+    }
+
+    const trendingHTML = trending.length
+      ? `
+        <!-- Trending listings -->
+        <tr><td style="padding:0 40px 32px;">
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7a9bbf;margin-bottom:6px;">🔥 LO MÁS VISTO AHORA</div>
+            <div style="font-size:1.05rem;font-weight:800;color:#1a2b40;">Propiedades que están dando de qué hablar</div>
+          </div>
+          ${trending.map(listingCard).join('')}
+          <div style="text-align:center;margin-top:8px;">
+            <a href="${BASE_URL}/comprar" style="display:inline-block;border:2px solid #002D62;color:#002D62;font-size:0.85rem;font-weight:700;padding:10px 28px;border-radius:10px;text-decoration:none;">Ver todas las propiedades →</a>
+          </div>
+        </td></tr>`
+      : '';
+
     transporter.sendMail({
       from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
       to:      user.email,
-      subject: '¡Bienvenido a HogaresRD! Tu cuenta está lista 🏠',
+      subject: `¡Bienvenido a HogaresRD, ${user.name.split(' ')[0]}! Tu hogar ideal te espera 🏠`,
       html: `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
 <body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
     <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
 
         <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#004aaa 100%);padding:36px 40px 32px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td>
-                <div style="font-size:1.1rem;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">🏠 HogaresRD</div>
-                <div style="margin-top:20px;">
-                  <div style="font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">¡Bienvenido, ${user.name.split(' ')[0]}!</div>
-                  <div style="margin-top:6px;font-size:0.95rem;color:rgba(255,255,255,0.75);">Tu cuenta está lista para usar</div>
-                </div>
-              </td>
-            </tr>
-          </table>
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:40px 40px 36px;">
+          <div style="font-size:1rem;font-weight:900;color:#ffffff;letter-spacing:-0.5px;margin-bottom:24px;">🏠 HogaresRD</div>
+          <div style="font-size:1.75rem;font-weight:800;color:#ffffff;line-height:1.2;margin-bottom:8px;">
+            ¡Hola, ${user.name.split(' ')[0]}! 👋
+          </div>
+          <div style="font-size:1rem;color:rgba(255,255,255,0.8);line-height:1.5;">
+            Ya eres parte de la comunidad inmobiliaria más completa de la República Dominicana.
+          </div>
         </td></tr>
 
-        <!-- Body -->
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 16px;font-size:1rem;color:#1a2b40;line-height:1.6;">
-            Gracias por unirte a <strong>HogaresRD</strong>, el portal de bienes raíces de la República Dominicana.
-            Tu cuenta ya está activa y puedes empezar a explorar de inmediato.
+        <!-- Intro -->
+        <tr><td style="padding:36px 40px 24px;">
+          <p style="margin:0 0 16px;font-size:1rem;color:#1a2b40;line-height:1.7;">
+            Nos alegra tenerte aquí. En <strong>HogaresRD</strong> encontrarás desde acogedores apartamentos en Santo Domingo hasta villas frente al mar en Punta Cana — y todo lo que hay en el medio. 🌴
+          </p>
+          <p style="margin:0 0 24px;font-size:1rem;color:#1a2b40;line-height:1.7;">
+            Con tu cuenta puedes guardar favoritos, contactar directamente a las inmobiliarias y recibir actualizaciones de las propiedades que te interesan. Básicamente, encontrar tu próximo hogar acaba de volverse mucho más fácil.
           </p>
 
-          <!-- Feature list -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
-            <tr><td style="padding:10px 0;border-bottom:1px solid #eef3fa;">
-              <span style="color:#002D62;font-size:1rem;margin-right:10px;">🔍</span>
-              <span style="color:#4d6a8a;font-size:0.92rem;">Busca entre miles de propiedades en venta y alquiler</span>
+          <!-- Features -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fd;border-radius:12px;padding:4px 0;margin-bottom:28px;">
+            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
+              <span style="font-size:1rem;margin-right:10px;">🔍</span>
+              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Busca por ciudad, precio, tipo y más filtros</span>
             </td></tr>
-            <tr><td style="padding:10px 0;border-bottom:1px solid #eef3fa;">
-              <span style="color:#002D62;font-size:1rem;margin-right:10px;">❤️</span>
-              <span style="color:#4d6a8a;font-size:0.92rem;">Guarda tus propiedades favoritas y compáralas</span>
+            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
+              <span style="font-size:1rem;margin-right:10px;">📍</span>
+              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Explora propiedades en un mapa interactivo</span>
             </td></tr>
-            <tr><td style="padding:10px 0;">
-              <span style="color:#002D62;font-size:1rem;margin-right:10px;">✨</span>
-              <span style="color:#4d6a8a;font-size:0.92rem;">Recibe recomendaciones personalizadas según tus preferencias</span>
+            <tr><td style="padding:12px 20px;">
+              <span style="font-size:1rem;margin-right:10px;">💬</span>
+              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Contacta inmobiliarias directamente desde cada anuncio</span>
             </td></tr>
           </table>
 
-          <!-- CTA -->
-          <div style="margin-top:32px;text-align:center;">
-            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#ffffff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.97rem;letter-spacing:0.2px;">
-              Explorar Propiedades →
+          <!-- Main CTA -->
+          <div style="text-align:center;margin-bottom:8px;">
+            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#ffffff;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.3px;">
+              Explorar propiedades →
             </a>
           </div>
+        </td></tr>
 
-          <p style="margin-top:32px;font-size:0.82rem;color:#7a9bbf;line-height:1.5;">
-            Si no creaste esta cuenta, puedes ignorar este correo con seguridad.
-            ${user.marketingOptIn ? 'Recibirás ocasionalmente ofertas y novedades de HogaresRD. Puedes cancelar en cualquier momento respondiendo a este correo.' : ''}
+        ${trendingHTML}
+
+        <!-- Closing -->
+        <tr><td style="padding:0 40px 36px;">
+          <p style="margin:0;font-size:0.9rem;color:#4d6a8a;line-height:1.7;">
+            Si tienes alguna pregunta, responde directamente a este correo y con gusto te ayudamos. 😊<br/><br/>
+            Hasta pronto,<br/>
+            <strong style="color:#002D62;">El equipo de HogaresRD</strong>
           </p>
+          ${user.marketingOptIn ? `<p style="margin:16px 0 0;font-size:0.78rem;color:#a0b4cc;">Recibirás ocasionalmente novedades y propiedades destacadas. Puedes cancelar en cualquier momento respondiendo a este correo.</p>` : ''}
         </td></tr>
 
         <!-- Footer -->
         <tr><td style="padding:20px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.78rem;color:#7a9bbf;text-align:center;">
+          <p style="margin:0;font-size:0.75rem;color:#9ab0c8;text-align:center;line-height:1.6;">
             © ${new Date().getFullYear()} HogaresRD &mdash; República Dominicana<br/>
-            <a href="${BASE_URL}/home" style="color:#7a9bbf;text-decoration:underline;">hogaresrd.com</a>
+            <a href="${BASE_URL}/home" style="color:#9ab0c8;text-decoration:underline;">hogaresrd.com</a>
+            &nbsp;·&nbsp;
+            <a href="${BASE_URL}/ciudades" style="color:#9ab0c8;text-decoration:underline;">Explorar ciudades</a>
           </p>
         </td></tr>
 
