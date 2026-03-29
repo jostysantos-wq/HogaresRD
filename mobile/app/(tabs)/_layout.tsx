@@ -1,11 +1,19 @@
 import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/constants/theme';
+import { colors, glass } from '@/constants/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function icon(focused: boolean, active: IconName, inactive: IconName) {
-  return <Ionicons name={focused ? active : inactive} size={24} color={focused ? colors.primary : colors.textMuted} />;
+  return (
+    <Ionicons
+      name={focused ? active : inactive}
+      size={24}
+      color={focused ? colors.primary : colors.textMuted}
+    />
+  );
 }
 
 export default function TabLayout() {
@@ -15,14 +23,27 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+        // Glass tab bar
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          paddingBottom: 4,
-          height: 60,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 64,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={glass.tabBar}
+            tint="light"
+            style={[StyleSheet.absoluteFill, styles.tabBarBlur]}
+          />
+        ),
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          marginBottom: 4,
+        },
+        tabBarItemStyle: { paddingTop: 6 },
       }}
     >
       <Tabs.Screen
@@ -63,3 +84,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarBlur: {
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.6)',
+    // Subtle top highlight stripe for glass depth
+    overflow: 'hidden',
+  },
+});

@@ -65,6 +65,32 @@ export const CONDITION_COLORS: Record<string, string> = {
   planos:             '#B45309',
 };
 
+// ── iOS 26 Liquid Glass tokens ───────────────────────────────────
+export const glass = {
+  // Light glass (over light backgrounds)
+  lightBg:      'rgba(255, 255, 255, 0.55)',
+  lightBorder:  'rgba(255, 255, 255, 0.75)',
+  lightHighlight:'rgba(255, 255, 255, 0.9)',
+  // Dark/tinted glass (primary actions)
+  darkBg:       'rgba(0, 45, 98, 0.72)',
+  darkBorder:   'rgba(255, 255, 255, 0.22)',
+  // Neutral glass (cards, sheets)
+  neutralBg:    'rgba(248, 250, 252, 0.65)',
+  neutralBorder:'rgba(255, 255, 255, 0.60)',
+  // Blur intensities
+  tabBar:       85,
+  button:       60,
+  card:         40,
+  // Shadow for glass elements
+  shadow: {
+    shadowColor: '#1A2E44',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+};
+
 export const PROVINCES = [
   'Distrito Nacional','Santiago','La Altagracia','Puerto Plata',
   'San Pedro de Macorís','La Romana','Samaná','Santo Domingo',

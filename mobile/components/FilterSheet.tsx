@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, TextInput, Pressable,
+  Modal, TextInput,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, PROVINCES } from '@/constants/theme';
+import { colors, radius, glass, PROVINCES } from '@/constants/theme';
+import GlassButton from '@/components/GlassButton';
 import type { ListingsFilters } from '@/hooks/useListings';
 
 interface Props {
@@ -135,12 +137,20 @@ export default function FilterSheet({ visible, filters, onClose, onApply, typeFi
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-            <Text style={styles.resetText}>Limpiar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.applyBtn} onPress={handleApply}>
-            <Text style={styles.applyText}>Aplicar filtros</Text>
-          </TouchableOpacity>
+          <BlurView intensity={glass.tabBar} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={styles.footerTopEdge} pointerEvents="none" />
+          <GlassButton
+            label="Limpiar"
+            variant="secondary"
+            onPress={handleReset}
+            style={{ flex: 1 }}
+          />
+          <GlassButton
+            label="Aplicar filtros"
+            variant="primary"
+            onPress={handleApply}
+            style={{ flex: 2 }}
+          />
         </View>
       </View>
     </Modal>
@@ -177,17 +187,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row', gap: 12, padding: 20,
-    borderTopWidth: 1, borderTopColor: colors.border,
-    backgroundColor: colors.surface,
+    position: 'relative', overflow: 'hidden',
   },
-  resetBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center',
+  footerTopEdge: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+    backgroundColor: 'rgba(255,255,255,0.70)',
   },
-  resetText: { fontSize: 15, fontWeight: '600', color: colors.text },
-  applyBtn: {
-    flex: 2, paddingVertical: 14, borderRadius: radius.md,
-    backgroundColor: colors.primary, alignItems: 'center',
-  },
-  applyText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

@@ -6,11 +6,13 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, shadow } from '@/constants/theme';
+import { colors, radius, shadow, glass } from '@/constants/theme';
 import ListingCard from '@/components/ListingCard';
 import FilterSheet from '@/components/FilterSheet';
+import GlassButton from '@/components/GlassButton';
 import { useListings, ListingsFilters } from '@/hooks/useListings';
 
 interface Props {
@@ -40,7 +42,14 @@ export default function ListingsScreen({ title, subtitle, defaultFilters = {}, t
         <TouchableOpacity
           style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
           onPress={() => setShowFilters(true)}
+          activeOpacity={0.8}
         >
+          <BlurView
+            intensity={activeFilterCount > 0 ? 0 : glass.button}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.filterBtnHighlight} pointerEvents="none" />
           <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? '#fff' : colors.primary} />
           <Text style={[styles.filterBtnText, activeFilterCount > 0 && { color: '#fff' }]}>
             Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
@@ -132,11 +141,20 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   filterBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 24, borderWidth: 1, borderColor: glass.lightBorder,
+    overflow: 'hidden', position: 'relative',
+    ...glass.shadow,
   },
-  filterBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterBtnActive: {
+    backgroundColor: glass.darkBg,
+    borderColor: glass.darkBorder,
+  },
+  filterBtnHighlight: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
   filterBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   countRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

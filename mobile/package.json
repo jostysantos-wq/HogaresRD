@@ -11,6 +11,7 @@
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "^14.0.2",
     "expo": "~51.0.28",
+    "expo-blur": "^55.0.11-canary-20260328-bdc6273",
     "expo-constants": "~16.0.2",
     "expo-font": "~12.0.9",
     "expo-image": "~1.12.15",

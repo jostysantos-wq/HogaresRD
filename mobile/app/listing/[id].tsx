@@ -5,10 +5,12 @@ import {
   KeyboardAvoidingView, Platform, Alert, Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, shadow, CONDITION_COLORS, TYPE_LABELS } from '@/constants/theme';
+import GlassButton from '@/components/GlassButton';
+import { colors, radius, shadow, glass, CONDITION_COLORS, TYPE_LABELS } from '@/constants/theme';
 import { endpoints } from '@/constants/api';
 import type { Listing } from '@/hooks/useListings';
 
@@ -439,18 +441,28 @@ export default function ListingScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky CTA */}
-      <View style={[styles.cta, { paddingBottom: insets.bottom + 12 }]}>
-        <TouchableOpacity style={styles.ctaBtn} onPress={() => setShowInquiry(true)}>
-          <Ionicons name="mail-outline" size={18} color="#fff" />
-          <Text style={styles.ctaBtnText}>Solicitar información</Text>
-        </TouchableOpacity>
+      {/* Sticky glass CTA bar */}
+      <View style={[styles.cta, { paddingBottom: insets.bottom + 8 }]}>
+        <BlurView intensity={glass.tabBar} tint="light" style={StyleSheet.absoluteFill} />
+        {/* Top highlight edge */}
+        <View style={styles.ctaTopEdge} pointerEvents="none" />
+
+        <GlassButton
+          label="Solicitar información"
+          icon="mail-outline"
+          onPress={() => setShowInquiry(true)}
+          size="lg"
+          style={{ flex: 1 }}
+        />
         {agencies[0]?.phone && (
           <TouchableOpacity
             style={styles.callCta}
             onPress={() => Linking.openURL(`tel:${agencies[0].phone}`)}
+            activeOpacity={0.8}
           >
-            <Ionicons name="call" size={20} color={colors.primary} />
+            <BlurView intensity={glass.button} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={styles.callCtaHighlight} pointerEvents="none" />
+            <Ionicons name="call" size={22} color={colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -537,18 +549,24 @@ const styles = StyleSheet.create({
   },
   constructoraText: { fontSize: 13, color: colors.textMuted },
   cta: {
-    flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 12,
-    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
+    flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 14,
+    position: 'relative', overflow: 'hidden',
+    borderTopWidth: 0,
   },
-  ctaBtn: {
-    flex: 1, backgroundColor: colors.primary, borderRadius: radius.md,
-    paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  ctaTopEdge: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+    backgroundColor: 'rgba(255,255,255,0.70)',
   },
-  ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   callCta: {
-    width: 52, height: 52, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.primary,
+    width: 56, height: 56, borderRadius: radius.xl,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface,
+    overflow: 'hidden', position: 'relative',
+    borderWidth: 1, borderColor: glass.lightBorder,
+    ...glass.shadow,
+  },
+  callCtaHighlight: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
 });
