@@ -20,7 +20,7 @@ export interface Listing {
   blueprints?: string[];
   tags?: string[];
   agencies?: { name: string; email?: string; phone?: string; logo?: string }[];
-  construction_company?: string;
+  construction_company?: string | { name: string; [key: string]: any };
   units_total?: number;
   units_available?: number;
   unit_types?: UnitType[];

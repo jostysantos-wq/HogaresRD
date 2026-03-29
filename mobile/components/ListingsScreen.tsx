@@ -17,17 +17,17 @@ interface Props {
   title: string;
   subtitle?: string;
   defaultFilters?: ListingsFilters;
-  conditionFixed?: string;
+  typeFixed?: string;
 }
 
-export default function ListingsScreen({ title, subtitle, defaultFilters = {}, conditionFixed }: Props) {
+export default function ListingsScreen({ title, subtitle, defaultFilters = {}, typeFixed }: Props) {
   const insets = useSafeAreaInsets();
   const [filters, setFilters] = useState<ListingsFilters>({ ...defaultFilters });
   const [showFilters, setShowFilters] = useState(false);
 
   const { listings, total, loading, loadingMore, error, loadMore, reload } = useListings(filters);
 
-  const activeFilterCount = Object.values(filters).filter(v => v && v !== conditionFixed).length;
+  const activeFilterCount = Object.values(filters).filter(v => v && v !== typeFixed).length;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -55,7 +55,7 @@ export default function ListingsScreen({ title, subtitle, defaultFilters = {}, c
             {total === 0 ? 'Sin resultados' : `${total} propiedad${total !== 1 ? 'es' : ''}`}
           </Text>
           {activeFilterCount > 0 && (
-            <TouchableOpacity onPress={() => setFilters(conditionFixed ? { condition: conditionFixed } : {})}>
+            <TouchableOpacity onPress={() => setFilters(typeFixed ? { type: typeFixed } : {})}>
               <Text style={styles.clearText}>Limpiar filtros</Text>
             </TouchableOpacity>
           )}
@@ -113,9 +113,9 @@ export default function ListingsScreen({ title, subtitle, defaultFilters = {}, c
       <FilterSheet
         visible={showFilters}
         filters={filters}
-        conditionFixed={conditionFixed}
+        typeFixed={typeFixed}
         onClose={() => setShowFilters(false)}
-        onApply={f => setFilters(conditionFixed ? { ...f, condition: conditionFixed } : f)}
+        onApply={f => setFilters(typeFixed ? { ...f, type: typeFixed } : f)}
       />
     </View>
   );

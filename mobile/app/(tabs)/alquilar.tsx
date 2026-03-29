@@ -5,8 +5,8 @@ export default function AlquilarScreen() {
     <ListingsScreen
       title="Alquilar"
       subtitle="Propiedades en alquiler"
-      defaultFilters={{ condition: 'alquiler' }}
-      conditionFixed="alquiler"
+      defaultFilters={{ type: 'alquiler' }}
+      typeFixed="alquiler"
     />
   );
 }

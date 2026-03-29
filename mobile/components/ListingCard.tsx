@@ -26,10 +26,14 @@ interface Props {
 
 export default function ListingCard({ listing, wide }: Props) {
   const router = useRouter();
-  const condColor = CONDITION_COLORS[listing.condition] || colors.primary;
-  const condLabel = listing.condition === 'alquiler' ? 'Alquiler'
-    : listing.condition === 'nueva_construccion' ? 'Nueva Constr.'
-    : listing.condition === 'planos' ? 'En Planos'
+  // operation field: some seeds use `type`, others use `condition` for venta/alquiler
+  const operation = ['venta','alquiler','nueva_construccion','planos'].includes(listing.type)
+    ? listing.type
+    : listing.condition;
+  const condColor = CONDITION_COLORS[operation] || colors.primary;
+  const condLabel = operation === 'alquiler' ? 'Alquiler'
+    : operation === 'nueva_construccion' ? 'Nueva Constr.'
+    : operation === 'planos' ? 'En Planos'
     : 'Venta';
 
   const imageUri = listing.images?.[0];

@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void;
   onApply: (f: ListingsFilters) => void;
   showCondition?: boolean;
-  conditionFixed?: string;
+  typeFixed?: string;
   showConstructora?: boolean;
 }
 
@@ -62,7 +62,7 @@ function ChipGroup({ label, options, value, onChange }: ChipGroupProps) {
   );
 }
 
-export default function FilterSheet({ visible, filters, onClose, onApply, conditionFixed }: Props) {
+export default function FilterSheet({ visible, filters, onClose, onApply, typeFixed }: Props) {
   const [local, setLocal] = useState<ListingsFilters>({ ...filters });
 
   const set = (k: keyof ListingsFilters, v: string) =>
@@ -77,7 +77,7 @@ export default function FilterSheet({ visible, filters, onClose, onApply, condit
 
   const handleReset = () => {
     const cleared: ListingsFilters = {};
-    if (conditionFixed) cleared.condition = conditionFixed;
+    if (typeFixed) cleared.type = typeFixed;
     setLocal(cleared);
     onApply(cleared);
     onClose();

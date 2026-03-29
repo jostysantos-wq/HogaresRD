@@ -273,10 +273,12 @@ export default function ListingScreen() {
     </View>
   );
 
-  const condColor  = CONDITION_COLORS[listing.condition] || colors.primary;
-  const condLabel  = listing.condition === 'alquiler' ? 'Alquiler'
-    : listing.condition === 'nueva_construccion' ? 'Nueva Construcción'
-    : listing.condition === 'planos' ? 'En Planos' : 'Venta';
+  const operation  = ['venta','alquiler','nueva_construccion','planos'].includes(listing.type)
+    ? listing.type : listing.condition;
+  const condColor  = CONDITION_COLORS[operation] || colors.primary;
+  const condLabel  = operation === 'alquiler' ? 'Alquiler'
+    : operation === 'nueva_construccion' ? 'Nueva Construcción'
+    : operation === 'planos' ? 'En Planos' : 'Venta';
   const blueprints = (listing.blueprints || []).filter(Boolean);
   const agencies   = listing.agencies || [];
 
@@ -292,7 +294,7 @@ export default function ListingScreen() {
             <View style={[styles.badge, { backgroundColor: condColor }]}>
               <Text style={styles.badgeText}>{condLabel}</Text>
             </View>
-            {listing.type && (
+            {listing.type && !['venta','alquiler','nueva_construccion','planos'].includes(listing.type) && (
               <View style={[styles.badge, { backgroundColor: colors.tag }]}>
                 <Text style={[styles.badgeText, { color: colors.tagText }]}>
                   {TYPE_LABELS[listing.type] || listing.type}
@@ -424,7 +426,12 @@ export default function ListingScreen() {
           {listing.construction_company ? (
             <View style={styles.constructoraRow}>
               <Ionicons name="construct-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.constructoraText}>Constructora: {listing.construction_company}</Text>
+              <Text style={styles.constructoraText}>
+                Constructora:{' '}
+                {typeof listing.construction_company === 'object'
+                  ? (listing.construction_company as any).name
+                  : listing.construction_company}
+              </Text>
             </View>
           ) : null}
 

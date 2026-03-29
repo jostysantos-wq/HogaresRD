@@ -5,8 +5,8 @@ export default function ComprarScreen() {
     <ListingsScreen
       title="Comprar"
       subtitle="Propiedades en venta"
-      defaultFilters={{ condition: 'venta' }}
-      conditionFixed="venta"
+      defaultFilters={{ type: 'venta' }}
+      typeFixed="venta"
     />
   );
 }
