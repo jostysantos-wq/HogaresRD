@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '@/constants/theme';
 import { endpoints } from '@/constants/api';
 import type { Listing } from '@/hooks/useListings';
+import LogoMark from '@/components/LogoMark';
 
 const { width } = Dimensions.get('window');
 
@@ -119,8 +120,9 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Hero */}
-      <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
-        <Text style={styles.heroEyebrow}>República Dominicana</Text>
+      <View style={[styles.hero, { paddingTop: insets.top + 20 }]}>
+        <LogoMark size={38} showName light />
+        <View style={styles.heroDivider} />
         <Text style={styles.heroTitle}>Encuentra tu{'\n'}próximo hogar</Text>
         <Text style={styles.heroSub}>Miles de propiedades en todo el país</Text>
       </View>
@@ -201,7 +203,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 36,
   },
-  heroEyebrow: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  heroDivider: { height: 20 },
   heroTitle: { fontSize: 32, fontWeight: '900', color: '#fff', lineHeight: 38, marginBottom: 8 },
   heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.75)' },
   section: { marginTop: 24 },

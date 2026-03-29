@@ -3,6 +3,15 @@ const nodemailer   = require('nodemailer');
 const store        = require('./store');
 const router       = express.Router();
 
+// ── Public view-counter rate limiter ────────────────────────────────────────
+// One view increment per IP per listing per hour (no auth required).
+const _viewSeen       = new Map(); // key: `${ip}::${listingId}` → last-seen ms
+const VIEW_COOLDOWN   = 60 * 60 * 1000; // 1 hour
+function clientIp(req) {
+  return ((req.headers['x-forwarded-for'] || '') || req.socket.remoteAddress || 'unknown')
+    .split(',')[0].trim();
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
@@ -66,18 +75,23 @@ router.get('/', (req, res) => {
   res.json({ listings: items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
-// GET /api/listings/trending — top 8 listings by view count in the last 7 days
+// GET /api/listings/trending — top 8 by combined score: total public views + recent auth views (3×)
 router.get('/trending', (req, res) => {
   const since  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const events = store.getListingActivity(since);
 
-  const counts = {};
-  events.forEach(e => { counts[e.listingId] = (counts[e.listingId] || 0) + 1; });
+  // Recent authenticated-user views (last 7 days) — weighted 3× for recency signal
+  const recentCounts = {};
+  events.forEach(e => { recentCounts[e.listingId] = (recentCounts[e.listingId] || 0) + 1; });
 
   const listings = store.getListings()
-    .filter(l => counts[l.id])
-    .map(l => ({ ...l, _views: counts[l.id] }))
-    .sort((a, b) => b._views - a._views)
+    .map(l => {
+      const totalViews  = l.views || 0;
+      const recentViews = recentCounts[l.id] || 0;
+      return { ...l, _views: totalViews, _score: totalViews + recentViews * 3 };
+    })
+    .filter(l => l._score > 0)
+    .sort((a, b) => b._score - a._score)
     .slice(0, 8);
 
   res.json({ listings });
@@ -151,6 +165,25 @@ router.get('/:id', (req, res) => {
   if (!listing || listing.status !== 'approved')
     return res.status(404).json({ error: 'Propiedad no encontrada' });
   res.json(listing);
+});
+
+// POST /api/listings/:id/view — public, anonymous view counter (rate-limited per IP per hour)
+router.post('/:id/view', (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing || listing.status !== 'approved')
+    return res.status(404).json({ error: 'Not found' });
+
+  const ip  = clientIp(req);
+  const key = `${ip}::${listing.id}`;
+  const now = Date.now();
+
+  if ((now - (_viewSeen.get(key) || 0)) > VIEW_COOLDOWN) {
+    _viewSeen.set(key, now);
+    listing.views = (listing.views || 0) + 1;
+    store.saveListing(listing);
+  }
+
+  res.json({ views: listing.views || 0 });
 });
 
 // POST /api/listings/:id/inquiry — send client inquiry to all affiliated agencies

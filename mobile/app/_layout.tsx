@@ -1,12 +1,13 @@
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
+import LogoMark from '@/components/LogoMark';
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
         <Stack
@@ -21,14 +22,22 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="listing/[id]"
-            options={{ title: 'Propiedad', headerShown: true }}
+            options={{
+              headerShown: true,
+              headerTitle: () => <LogoMark size={28} showName light />,
+              headerBackTitle: 'Volver',
+            }}
           />
           <Stack.Screen
             name="inmobiliaria/[slug]"
-            options={{ title: 'Inmobiliaria', headerShown: true }}
+            options={{
+              headerShown: true,
+              headerTitle: () => <LogoMark size={28} showName light />,
+              headerBackTitle: 'Volver',
+            }}
           />
         </Stack>
       </SafeAreaProvider>
-    </GestureHandlerRootView>
+    </View>
   );
 }
