@@ -296,6 +296,27 @@
       background: color-mix(in srgb, var(--accent) 8%, var(--input-bg));
     }
 
+    /* ── Labeled photo slots ────────────────────────────────── */
+    .photo-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 1rem; margin-bottom: 0.5rem; }
+    .photo-slot { display: flex; flex-direction: column; gap: 0.5rem; }
+    .photo-slot-header { display: flex; align-items: center; gap: 0.45rem; }
+    .slot-num { width: 20px; height: 20px; background: var(--accent); color: #fff; border-radius: 50%; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .slot-label-input { flex: 1; font-size: 0.78rem; border: 1px solid var(--border); border-radius: 6px; padding: 0.28rem 0.5rem; background: var(--input-bg); color: var(--text); min-width: 0; }
+    .slot-label-input:focus { outline: none; border-color: var(--accent); }
+    .slot-required-badge { font-size: 0.65rem; color: #fff; background: var(--accent-red, #cf142b); padding: 0.12rem 0.38rem; border-radius: 4px; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
+    .slot-upload-area { border: 2px dashed var(--border); border-radius: 10px; height: 140px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; position: relative; overflow: hidden; transition: border-color 0.2s; background: var(--input-bg); }
+    .slot-upload-area:hover { border-color: var(--accent); }
+    .slot-upload-area.has-image { border-style: solid; border-color: var(--accent); }
+    .slot-upload-area.input-error { border-color: var(--accent-red, #cf142b); }
+    .slot-upload-area input[type="file"] { display: none; }
+    .slot-upload-area svg { width: 26px; height: 26px; fill: var(--text-muted); }
+    .slot-upload-label { font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+    .slot-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+    .slot-preview.visible { display: block; }
+    .slot-clear-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 22px; height: 22px; font-size: 13px; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1; z-index: 2; }
+    .slot-clear-btn.visible { display: flex; }
+    .photo-slot-err { display: none; font-size: 0.78rem; color: var(--accent-red, #cf142b); margin-top: 0.15rem; }
+
     /* ── Photo upload ───────────────────────────────────────── */
     .upload-area {
       border: 2px dashed var(--border);
@@ -1055,32 +1076,90 @@
           </ol>
         </div>
 
-        <!-- Thumbnail -->
-        <div class="upload-section-label">
-          <span class="required-dot"></span>
-          Foto Principal (Portada)
-        </div>
-        <label class="thumbnail-upload" for="thumbnail" id="thumbnailLabel">
-          <span class="thumbnail-badge">Portada</span>
-          <img id="thumbnailPreview" src="" alt="Vista previa" />
-          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-          <p><strong>Haz clic para subir la foto de portada</strong><br>Esta será la imagen principal de tu anuncio · JPG, PNG o WEBP · Máx. 5 MB</p>
-          <input type="file" id="thumbnail" name="thumbnail" accept="image/*" />
-          <span class="thumb-change-hint">Haz clic para cambiar la foto de portada</span>
-        </label>
+        <!-- 5 labeled photo slots — each maps to a gallery position on the listing page -->
+        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">
+          Cada foto aparecerá en la sección correspondiente de la galería. Puedes editar la etiqueta para describir mejor cada imagen.
+        </p>
+        <div class="photo-slots" id="photoSlots">
 
-        <p id="err_thumbnail" class="thumb-error">⚠ La foto de portada es requerida.</p>
+          <!-- Slot 0: required cover / exterior -->
+          <div class="photo-slot">
+            <div class="photo-slot-header">
+              <span class="slot-num">1</span>
+              <input type="text" class="slot-label-input" id="slotLabel0" value="Vista Exterior" placeholder="Ej. Fachada, Vista Exterior…">
+              <span class="slot-required-badge">Portada</span>
+            </div>
+            <label class="slot-upload-area" id="slotArea0" for="slotFile0">
+              <img class="slot-preview" id="slotPreview0" alt="Vista previa" />
+              <button type="button" class="slot-clear-btn" id="slotClear0">✕</button>
+              <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span class="slot-upload-label">Clic para subir</span>
+              <input type="file" id="slotFile0" accept="image/jpeg,image/png,image/webp" />
+            </label>
+            <p class="photo-slot-err" id="slotErr0">⚠ La foto de portada es requerida.</p>
+          </div>
 
-        <!-- Additional photos -->
-        <div class="upload-section-label" style="margin-top:0.25rem;">
-          Fotos Adicionales
-        </div>
-        <label class="upload-area" for="photos">
-          <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-          <p><strong>Haz clic para subir más fotos</strong><br>JPG, PNG o WEBP · Máximo 10 imágenes · 5 MB por foto</p>
-          <input type="file" id="photos" name="photos" accept="image/*" multiple />
-        </label>
-        <p id="fileNames" style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"></p>
+          <!-- Slot 1: lobby / social area -->
+          <div class="photo-slot">
+            <div class="photo-slot-header">
+              <span class="slot-num">2</span>
+              <input type="text" class="slot-label-input" id="slotLabel1" value="Área Social / Lobby" placeholder="Ej. Lobby, Sala, Área Social…">
+            </div>
+            <label class="slot-upload-area" id="slotArea1" for="slotFile1">
+              <img class="slot-preview" id="slotPreview1" alt="Vista previa" />
+              <button type="button" class="slot-clear-btn" id="slotClear1">✕</button>
+              <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span class="slot-upload-label">Clic para subir</span>
+              <input type="file" id="slotFile1" accept="image/jpeg,image/png,image/webp" />
+            </label>
+          </div>
+
+          <!-- Slot 2: interior -->
+          <div class="photo-slot">
+            <div class="photo-slot-header">
+              <span class="slot-num">3</span>
+              <input type="text" class="slot-label-input" id="slotLabel2" value="Interior — Habitaciones" placeholder="Ej. Interior, Cocina, Habitación…">
+            </div>
+            <label class="slot-upload-area" id="slotArea2" for="slotFile2">
+              <img class="slot-preview" id="slotPreview2" alt="Vista previa" />
+              <button type="button" class="slot-clear-btn" id="slotClear2">✕</button>
+              <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span class="slot-upload-label">Clic para subir</span>
+              <input type="file" id="slotFile2" accept="image/jpeg,image/png,image/webp" />
+            </label>
+          </div>
+
+          <!-- Slot 3: amenities (pool, gym, etc.) -->
+          <div class="photo-slot">
+            <div class="photo-slot-header">
+              <span class="slot-num">4</span>
+              <input type="text" class="slot-label-input" id="slotLabel3" value="Áreas Comunes" placeholder="Ej. Piscina, Gimnasio, BBQ…">
+            </div>
+            <label class="slot-upload-area" id="slotArea3" for="slotFile3">
+              <img class="slot-preview" id="slotPreview3" alt="Vista previa" />
+              <button type="button" class="slot-clear-btn" id="slotClear3">✕</button>
+              <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span class="slot-upload-label">Clic para subir</span>
+              <input type="file" id="slotFile3" accept="image/jpeg,image/png,image/webp" />
+            </label>
+          </div>
+
+          <!-- Slot 4: panoramic / rooftop -->
+          <div class="photo-slot">
+            <div class="photo-slot-header">
+              <span class="slot-num">5</span>
+              <input type="text" class="slot-label-input" id="slotLabel4" value="Vista Panorámica" placeholder="Ej. Rooftop, Vista al Mar…">
+            </div>
+            <label class="slot-upload-area" id="slotArea4" for="slotFile4">
+              <img class="slot-preview" id="slotPreview4" alt="Vista previa" />
+              <button type="button" class="slot-clear-btn" id="slotClear4">✕</button>
+              <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span class="slot-upload-label">Clic para subir</span>
+              <input type="file" id="slotFile4" accept="image/jpeg,image/png,image/webp" />
+            </label>
+          </div>
+
+        </div><!-- /photoSlots -->
       </div>
 
       <!-- 7b. Planos -->
@@ -1456,29 +1535,60 @@
       box.classList.toggle('open');
     }
 
-    // ── Thumbnail preview ──────────────────────────────────────
-    document.getElementById('thumbnail').addEventListener('change', function() {
-      const file = this.files[0];
-      if (!file) return;
-      const preview = document.getElementById('thumbnailPreview');
-      const label   = document.getElementById('thumbnailLabel');
-      const reader  = new FileReader();
-      reader.onload = e => {
-        preview.src = e.target.result;
-        preview.classList.add('visible');
-        // Hide the upload icon and text while preview is shown
-        label.querySelectorAll('svg, p').forEach(el => el.style.display = 'none');
-      };
-      reader.readAsDataURL(file);
-    });
+    // ── Labeled photo slots ────────────────────────────────────
+    const SLOT_COUNT = 5;
+    const slotFiles  = new Array(SLOT_COUNT).fill(null);
 
-    // ── Additional photos label ────────────────────────────────
-    document.getElementById('photos').addEventListener('change', function() {
-      const names = Array.from(this.files).map(f => f.name).join(', ');
-      document.getElementById('fileNames').textContent = names
-        ? `${this.files.length} archivo(s) seleccionado(s): ${names}`
-        : '';
-    });
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      const input    = document.getElementById(`slotFile${i}`);
+      const preview  = document.getElementById(`slotPreview${i}`);
+      const clearBtn = document.getElementById(`slotClear${i}`);
+      const area     = document.getElementById(`slotArea${i}`);
+
+      input.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        slotFiles[i] = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.src = e.target.result;
+          preview.classList.add('visible');
+          clearBtn.classList.add('visible');
+          area.classList.add('has-image');
+          area.classList.remove('input-error');
+          const errEl = document.getElementById(`slotErr${i}`);
+          if (errEl) errEl.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      clearBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        slotFiles[i] = null;
+        preview.src = '';
+        preview.classList.remove('visible');
+        clearBtn.classList.remove('visible');
+        area.classList.remove('has-image');
+        input.value = '';
+      });
+    }
+
+    async function uploadPhotos() {
+      const results = [];
+      for (let i = 0; i < SLOT_COUNT; i++) {
+        const file  = slotFiles[i];
+        const label = (document.getElementById(`slotLabel${i}`)?.value || '').trim();
+        if (!file) continue;
+        const fd = new FormData();
+        fd.append('photos', file);
+        const res  = await fetch('/api/upload/photos', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al subir foto ' + (i + 1));
+        results.push({ url: data.urls[0], label });
+      }
+      return results;
+    }
 
     // ── Blueprints file upload ──────────────────────────────────
     const blueprintInput = document.getElementById('blueprintFiles');
@@ -1614,12 +1724,13 @@
         }
       });
 
-      // Thumbnail required
-      const thumb = document.getElementById('thumbnail');
-      if (!thumb.files || thumb.files.length === 0) {
-        document.getElementById('thumbnailLabel').classList.add('input-error');
-        document.getElementById('err_thumbnail').style.display = 'block';
-        if (!firstError) firstError = document.getElementById('err_thumbnail');
+      // Photo slot 0 (cover / portada) required
+      if (!slotFiles[0]) {
+        const area0 = document.getElementById('slotArea0');
+        const err0  = document.getElementById('slotErr0');
+        area0.classList.add('input-error');
+        if (err0) err0.style.display = 'block';
+        if (!firstError) firstError = area0;
       }
 
       if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1641,10 +1752,6 @@
         el.classList.remove('input-error');
         const errEl = document.getElementById('err_' + el.id);
         if (errEl) errEl.style.display = 'none';
-      }
-      if (el.id === 'thumbnail' && el.files && el.files.length > 0) {
-        document.getElementById('thumbnailLabel').classList.remove('input-error');
-        document.getElementById('err_thumbnail').style.display = 'none';
       }
     });
 
@@ -1747,6 +1854,16 @@
         phase:     row.querySelector('[name="unit_phase[]"]').value,
       })).filter(u => u.name || u.price || u.area);
 
+      // Upload labeled photos and collect {url, label} pairs
+      try {
+        body.images = await uploadPhotos();
+      } catch (uploadErr) {
+        alert('Error al subir fotos: ' + uploadErr.message);
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';
+        return;
+      }
+
       // Upload blueprints and collect URLs
       try {
         body.blueprints = await uploadBlueprints();
@@ -1781,7 +1898,18 @@
           document.getElementById('successMsg').style.display = 'block';
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.reset();
-          document.getElementById('fileNames').textContent = '';
+          // Reset photo slots
+          for (let i = 0; i < SLOT_COUNT; i++) {
+            slotFiles[i] = null;
+            const preview = document.getElementById(`slotPreview${i}`);
+            const clearBtn = document.getElementById(`slotClear${i}`);
+            const area = document.getElementById(`slotArea${i}`);
+            if (preview)  { preview.src = ''; preview.classList.remove('visible'); }
+            if (clearBtn) clearBtn.classList.remove('visible');
+            if (area)     area.classList.remove('has-image', 'input-error');
+            const fileInput = document.getElementById(`slotFile${i}`);
+            if (fileInput) fileInput.value = '';
+          }
           // Reset unit types
           document.getElementById('unitTypesList').querySelectorAll('.unit-table-row').forEach(e => e.remove());
           document.getElementById('unitTableHeader').style.display = 'none';

@@ -529,18 +529,67 @@
   }
 
   // ── Gallery ────────────────────────────────────────────────
-  const photos = [
-    { cls: 'photo-a', label: 'Vista Exterior' },
-    { cls: 'photo-b', label: 'Área Social / Lobby' },
-    { cls: 'photo-c', label: 'Interior — Apartamento Tipo' },
-    { cls: 'photo-d', label: 'Piscina Infinity' },
-    { cls: 'photo-e', label: 'Rooftop & Vista Panorámica' },
+  const DEFAULT_LABELS = [
+    'Vista Exterior', 'Área Social / Lobby',
+    'Interior', 'Áreas Comunes', 'Vista Panorámica',
   ];
-  function switchPhoto(cls, label) {
+
+  // _galleryImages holds the normalised [{url, label}] array after renderListing runs.
+  let _galleryImages = [];
+
+  function applyGalleryImages(rawImages) {
+    // Normalise: seed data uses plain strings, submissions use {url, label}
+    _galleryImages = (rawImages || []).slice(0, 5).map((img, i) =>
+      typeof img === 'string'
+        ? { url: img, label: DEFAULT_LABELS[i] || '' }
+        : { url: img.url || '', label: img.label || DEFAULT_LABELS[i] || '' }
+    );
+
+    const mainEl   = document.getElementById('galleryMain');
+    const thumbEls = Array.from(document.querySelectorAll('.gallery-thumb'));
+    const allEls   = [mainEl, ...thumbEls];
+
+    _galleryImages.forEach((img, i) => {
+      const el = allEls[i];
+      if (!el || !img.url) return;
+      el.style.backgroundImage    = `url('${img.url}')`;
+      el.style.backgroundSize     = 'cover';
+      el.style.backgroundPosition = 'center';
+      // Hide the placeholder icon
+      const icon = el.querySelector('.gimg-icon');
+      if (icon) icon.style.display = 'none';
+
+      if (i === 0) {
+        document.getElementById('galleryLabel').textContent = img.label;
+      } else {
+        // Rebind click to switch main to this image
+        const label = img.label;
+        const url   = img.url;
+        el.onclick  = () => switchPhotoUrl(url, label);
+      }
+    });
+
+    // Update photo count badge
+    if (_galleryImages.length > 0) {
+      document.querySelector('.gallery-count').innerHTML =
+        `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>${_galleryImages.length} foto${_galleryImages.length !== 1 ? 's' : ''}`;
+    }
+  }
+
+  function switchPhotoUrl(url, label) {
     const m = document.getElementById('galleryMain');
-    photos.forEach(p => m.classList.remove(p.cls));
-    m.classList.add(cls);
+    m.style.backgroundImage    = `url('${url}')`;
+    m.style.backgroundSize     = 'cover';
+    m.style.backgroundPosition = 'center';
     document.getElementById('galleryLabel').textContent = label;
+  }
+
+  // Legacy: keep switchPhoto in case any inline onclick still references it
+  function switchPhoto(cls, label) {
+    const img = _galleryImages.find((_, i) =>
+      ['photo-a','photo-b','photo-c','photo-d','photo-e'][i] === cls
+    );
+    if (img) switchPhotoUrl(img.url, label || img.label);
   }
 
   // ── Helpers ────────────────────────────────────────────────
@@ -659,6 +708,7 @@
   // ── Render listing ─────────────────────────────────────────
   function renderListing(l) {
     document.title = `${l.title} — HogaresRD`;
+    applyGalleryImages(l.images);
     document.getElementById('breadcrumbTitle').textContent = l.title;
 
     // Header

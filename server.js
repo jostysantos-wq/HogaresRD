@@ -54,6 +54,27 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ── Photo upload (multer) ──────────────────────────────────────
+const PHOTOS_DIR = path.join(__dirname, 'public', 'uploads', 'photos');
+if (!fs.existsSync(PHOTOS_DIR)) fs.mkdirSync(PHOTOS_DIR, { recursive: true });
+
+const photoStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, PHOTOS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const name = `ph_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+const photoUpload = multer({
+  storage: photoStorage,
+  limits:  { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter: (req, file, cb) => {
+    if (/\.(jpe?g|png|webp)$/i.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
+  },
+});
+
 // ── Blueprint upload (multer) ──────────────────────────────────
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads', 'blueprints');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -92,6 +113,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/user',     require('./routes/user'));
+
+// ── Photo upload endpoint ──────────────────────────────────────
+app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
+  if (!req.files || !req.files.length)
+    return res.status(400).json({ error: 'No se recibieron imágenes.' });
+  const urls = req.files.map(f => `/uploads/photos/${f.filename}`);
+  res.json({ urls });
+}, (err, req, res, next) => {
+  res.status(400).json({ error: err.message });
+});
 
 // ── Blueprint upload endpoint ──────────────────────────────────
 app.post('/api/upload/blueprints', blueprintUpload.array('blueprints', 5), (req, res) => {
@@ -169,6 +200,7 @@ app.post('/submit', async (req, res) => {
     project_stage:      isClaim ? '' : (body.project_stage     || ''),
     unit_types:         isClaim ? [] : (Array.isArray(body.unit_types) ? body.unit_types : []),
     blueprints:         isClaim ? [] : (Array.isArray(body.blueprints) ? body.blueprints : (body.blueprints ? [body.blueprints] : [])),
+    images:             isClaim ? [] : (Array.isArray(body.images) ? body.images : []),
     tags:               isClaim ? [] : (Array.isArray(body.tags) ? body.tags : (body.tags ? [body.tags] : [])),
     lat:         isClaim ? '' : (body.lat          || ''),
     lng:         isClaim ? '' : (body.lng          || ''),
