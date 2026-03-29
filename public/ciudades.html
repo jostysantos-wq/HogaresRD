@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ciudades — HogaresRD</title>
+  <style>
+    :root {
+      --bg: #eef3fa; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
+      --accent: #002D62; --accent-hover: #001a45; --border: #c4d4e8;
+      --shadow: 0 4px 20px rgba(0,45,98,0.10);
+    }
+    [data-theme="dark"] {
+      --bg: #00101f; --bg-card: #001e3c; --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #4a90d9; --accent-hover: #3a7bc8; --border: #003060;
+      --shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* NAV */
+    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    .nav-logo span { color: #7ab8f5; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .nav-links { display: flex; gap: 0.25rem; }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 0.4rem 0.85rem; border-radius: 6px; transition: background 0.2s, color 0.2s; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+    .theme-toggle { background: rgba(255,255,255,0.25); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, var(--accent) 0%, #1a5fa8 100%); color: #fff; padding: 3.5rem 2rem 3rem; text-align: center; }
+    .hero-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 0.75rem; }
+    .hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; margin-bottom: 0.6rem; }
+    .hero p { font-size: 1rem; color: rgba(255,255,255,0.75); max-width: 520px; margin: 0 auto; line-height: 1.6; }
+
+    /* MAIN */
+    main { flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; padding: 2.5rem 1.5rem; }
+    .grid-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 1.25rem; }
+    .cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+
+    /* CITY CARD */
+    .city-card { position: relative; border-radius: 16px; overflow: hidden; height: 200px; text-decoration: none; display: block; box-shadow: var(--shadow); transition: transform 0.25s, box-shadow 0.25s; }
+    .city-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,45,98,0.18); }
+    .city-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.4s; }
+    .city-card:hover .city-bg { transform: scale(1.05); }
+    .city-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,20,50,0.85) 0%, rgba(0,20,50,0.25) 60%, transparent 100%); }
+    .city-body { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.1rem 1.25rem; }
+    .city-province { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.65); margin-bottom: 0.2rem; }
+    .city-name { font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem; }
+    .city-tagline { font-size: 0.8rem; color: rgba(255,255,255,0.7); line-height: 1.4; }
+    .city-pill { position: absolute; top: 0.85rem; right: 0.85rem; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.72rem; font-weight: 600; border-radius: 20px; padding: 0.25rem 0.65rem; }
+
+    footer { text-align: center; padding: 1.5rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: auto; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/home" class="nav-logo">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Hogares<span>RD</span>
+    </a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/home" class="nav-link">Inicio</a>
+        <a href="/comprar" class="nav-link">Comprar</a>
+        <a href="/alquilar" class="nav-link">Alquilar</a>
+        <a href="/ciudades" class="nav-link active">Ciudades</a>
+      </nav>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema">
+        <span class="toggle-icons">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+        </span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-label">República Dominicana</div>
+    <h1>Explora por Ciudad</h1>
+    <p>Encuentra propiedades en las principales ciudades y destinos de la República Dominicana.</p>
+  </div>
+
+  <main>
+    <div class="grid-label">8 ciudades disponibles</div>
+    <div class="cities-grid">
+
+      <a class="city-card" href="/ciudad/santo-domingo">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/santo-domingo/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Capital</div>
+        <div class="city-body">
+          <div class="city-province">Distrito Nacional</div>
+          <div class="city-name">Santo Domingo</div>
+          <div class="city-tagline">Capital y motor económico del Caribe</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/punta-cana">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/punta-cana/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Turístico</div>
+        <div class="city-body">
+          <div class="city-province">La Altagracia</div>
+          <div class="city-name">Punta Cana</div>
+          <div class="city-tagline">El Caribe en su máxima expresión</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/santiago">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/santiago/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Segunda ciudad</div>
+        <div class="city-body">
+          <div class="city-province">Santiago</div>
+          <div class="city-name">Santiago</div>
+          <div class="city-tagline">La ciudad corazón del Cibao</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/puerto-plata">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/puerto-plata/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Costa norte</div>
+        <div class="city-body">
+          <div class="city-province">Puerto Plata</div>
+          <div class="city-name">Puerto Plata</div>
+          <div class="city-tagline">La Costa Dorada del Atlántico</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/las-terrenas">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/las-terrenas/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Samaná</div>
+        <div class="city-body">
+          <div class="city-province">Samaná</div>
+          <div class="city-name">Las Terrenas</div>
+          <div class="city-tagline">Paraíso bohemio frente al mar</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/las-galeras">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/las-galeras/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Ecoturismo</div>
+        <div class="city-body">
+          <div class="city-province">Samaná</div>
+          <div class="city-name">Las Galeras</div>
+          <div class="city-tagline">Naturaleza virgen y playas remotas</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/la-romana">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/la-romana/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Golf & Marina</div>
+        <div class="city-body">
+          <div class="city-province">La Romana</div>
+          <div class="city-name">La Romana</div>
+          <div class="city-tagline">Lujo, golf y marina de clase mundial</div>
+        </div>
+      </a>
+
+      <a class="city-card" href="/ciudad/bavaro">
+        <div class="city-bg" style="background-image:url('https://picsum.photos/seed/bavaro/600/400')"></div>
+        <div class="city-overlay"></div>
+        <div class="city-pill">Resort</div>
+        <div class="city-body">
+          <div class="city-province">La Altagracia</div>
+          <div class="city-name">Bávaro</div>
+          <div class="city-tagline">Playas de arena blanca todo incluido</div>
+        </div>
+      </a>
+
+    </div>
+  </main>
+
+  <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+
+  <script>
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+  </script>
+</body>
+</html>

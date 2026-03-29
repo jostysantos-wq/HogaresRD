@@ -170,6 +170,7 @@ app.get('/nuevos-proyectos',  (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 app.get('/inmobiliaria/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inmobiliaria.html')));
+app.get('/ciudades',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudades.html')));
 app.get('/ciudad/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudad.html')));
 
 app.post('/submit', async (req, res) => {
