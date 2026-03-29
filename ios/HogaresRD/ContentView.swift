@@ -13,12 +13,13 @@ struct ContentView: View {
     @EnvironmentObject var api:   APIService
     @EnvironmentObject var saved: SavedStore
 
-    @State private var selectedTab  = 0
-    @State private var previousTab  = 0
-    @State private var showPost     = false
+    @State private var selectedTab = 0
+    @State private var showPost    = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
+
+            // ── 4 real tabs — no dummy placeholder ─────────────────
             TabView(selection: $selectedTab) {
                 FeedView()
                     .tabItem { Label("Feed",    systemImage: "newspaper.fill") }
@@ -26,48 +27,30 @@ struct ContentView: View {
                 HomeView()
                     .tabItem { Label("Inicio",  systemImage: "house.fill") }
                     .tag(1)
-                // Centre placeholder — intercepted before it ever displays
-                Color.clear
-                    .tabItem { Label("Publicar", systemImage: "plus") }
-                    .tag(2)
                 BrowseView()
                     .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
-                    .tag(3)
+                    .tag(2)
                 ProfileView()
                     .tabItem { Label("Perfil",  systemImage: "person.circle.fill") }
-                    .tag(4)
+                    .tag(3)
             }
             .tint(Color.rdBlue)
-            .onChange(of: selectedTab) { _, new in
-                if new == 2 {
-                    selectedTab = previousTab   // snap back immediately
-                    showPost    = true
-                } else {
-                    previousTab = new
-                }
-            }
 
-            // ── Instagram-style centre button ──────────────────────
-            Button {
-                showPost = true
-            } label: {
+            // ── Floating publish button centred above the tab bar ──
+            // Sits in the visual gap between "Inicio" and "Explorar"
+            Button { showPost = true } label: {
                 ZStack {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.rdBlue, Color.rdBlue.opacity(0.75)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 52, height: 52)
-                        .shadow(color: Color.rdBlue.opacity(0.45), radius: 8, y: 3)
+                        .fill(Color.rdBlue)
+                        .frame(width: 56, height: 56)
+                        .shadow(color: Color.rdBlue.opacity(0.4), radius: 10, x: 0, y: 4)
                     Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
-            .offset(y: -14)   // lift above tab bar
+            // Raise it so the bottom of the circle sits flush with the tab bar top
+            .padding(.bottom, 30)
         }
         .sheet(isPresented: $showPost) {
             SubmitListingView()
