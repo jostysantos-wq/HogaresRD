@@ -312,6 +312,11 @@
       .spec-item { padding: 0.75rem 0.75rem; }
       .builder-stats { grid-template-columns: repeat(3, 1fr); }
       .unit-grid { grid-template-columns: 1fr 1fr; }
+      #mortgageSection > div:first-of-type { grid-template-columns: 1fr !important; }
+      #similarGrid { grid-template-columns: 1fr 1fr !important; }
+    }
+    @media (max-width: 400px) {
+      #similarGrid { grid-template-columns: 1fr !important; }
     }
   </style>
 </head>
@@ -430,6 +435,50 @@
           <div class="section-heading">Ubicación</div>
           <div id="listingMap"></div>
           <div style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-muted)" id="addressLine"></div>
+        </div>
+
+        <!-- MORTGAGE CALCULATOR -->
+        <div class="detail-section" id="mortgageSection">
+          <div class="section-heading">Calculadora Hipotecaria</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div>
+              <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Precio de compra (USD)</label>
+              <input type="text" id="mcPrice" style="width:100%;padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);outline:none;" />
+            </div>
+            <div>
+              <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Inicial (%)</label>
+              <input type="number" id="mcDown" value="30" min="0" max="100" style="width:100%;padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);outline:none;" />
+            </div>
+            <div>
+              <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Tasa de interés (%)</label>
+              <input type="number" id="mcRate" value="12" min="0" max="30" step="0.1" style="width:100%;padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);outline:none;" />
+            </div>
+            <div>
+              <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Plazo (años)</label>
+              <select id="mcTerm" style="width:100%;padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);outline:none;cursor:pointer;">
+                <option value="10">10 años</option>
+                <option value="15">15 años</option>
+                <option value="20" selected>20 años</option>
+                <option value="25">25 años</option>
+                <option value="30">30 años</option>
+              </select>
+            </div>
+          </div>
+          <div id="mcResult" style="margin-top:1.25rem;padding:1rem;background:var(--accent-light, var(--bg-section));border-radius:12px;text-align:center;">
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.25rem;">Pago mensual estimado</div>
+            <div id="mcMonthly" style="font-size:1.75rem;font-weight:800;color:var(--accent);">—</div>
+            <div style="display:flex;justify-content:center;gap:2rem;margin-top:0.75rem;font-size:0.78rem;color:var(--text-muted);">
+              <div>Inicial: <strong id="mcDownAmt" style="color:var(--text);">—</strong></div>
+              <div>Financiado: <strong id="mcLoan" style="color:var(--text);">—</strong></div>
+            </div>
+          </div>
+          <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.75rem;">* Cálculo estimado. Tasas típicas en RD: 10-14% (RD$) o 7-9% (USD). Consulte su banco para tasas actuales.</p>
+        </div>
+
+        <!-- SIMILAR PROPERTIES -->
+        <div class="detail-section" id="similarSection" style="display:none">
+          <div class="section-heading">Propiedades Similares</div>
+          <div id="similarGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;"></div>
         </div>
 
       </div><!-- /listing-main -->
@@ -1190,6 +1239,58 @@ const tabsHtml = shuffled.map((a, i) =>
       document.getElementById('listingPage').style.display  = '';
       // Map was initialized while hidden — force it to recalculate tile layout
       if (window._listingMap) window._listingMap.invalidateSize();
+
+      // ── Mortgage Calculator ───────────────────────────────
+      const mcPrice = document.getElementById('mcPrice');
+      mcPrice.value = Number(listing.price).toLocaleString('en-US');
+      function calcMortgage() {
+        const priceVal = Number(mcPrice.value.replace(/[^0-9.]/g, ''));
+        const downPct  = Number(document.getElementById('mcDown').value) / 100;
+        const rate     = Number(document.getElementById('mcRate').value) / 100 / 12;
+        const term     = Number(document.getElementById('mcTerm').value) * 12;
+        if (!priceVal || !rate || !term) return;
+        const downAmt  = priceVal * downPct;
+        const loan     = priceVal - downAmt;
+        const monthly  = loan * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
+        document.getElementById('mcMonthly').textContent  = '$' + Math.round(monthly).toLocaleString('en-US') + '/mes';
+        document.getElementById('mcDownAmt').textContent   = '$' + Math.round(downAmt).toLocaleString('en-US');
+        document.getElementById('mcLoan').textContent      = '$' + Math.round(loan).toLocaleString('en-US');
+      }
+      ['mcPrice','mcDown','mcRate','mcTerm'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calcMortgage);
+        document.getElementById(id).addEventListener('change', calcMortgage);
+      });
+      calcMortgage();
+
+      // ── Similar Properties ────────────────────────────────
+      try {
+        const simParams = new URLSearchParams({ type: listing.type || 'venta', limit: 4 });
+        if (listing.province) simParams.set('province', listing.province);
+        const simRes = await fetch('/api/listings?' + simParams.toString());
+        const simData = await simRes.json();
+        const similar = (simData.listings || []).filter(s => s.id !== listing.id).slice(0, 4);
+        if (similar.length) {
+          document.getElementById('similarSection').style.display = '';
+          document.getElementById('similarGrid').innerHTML = similar.map(s => {
+            const sImg = Array.isArray(s.images) && s.images.length
+              ? `<img src="${s.images[0]}" alt="" loading="lazy" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'" />`
+              : `<div style="width:100%;height:160px;background:linear-gradient(135deg,#002D62,#004aaa);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:rgba(255,255,255,0.25)"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
+            return `<a href="/listing/${s.id}" style="background:var(--bg-card);border-radius:12px;border:1px solid var(--border);overflow:hidden;text-decoration:none;color:var(--text);transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+              ${sImg}
+              <div style="padding:0.85rem;">
+                <div style="font-size:1.05rem;font-weight:800;color:var(--accent);">$${Number(s.price).toLocaleString('en-US')}</div>
+                <div style="font-size:0.85rem;font-weight:600;margin:0.25rem 0;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${s.title}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">${[s.sector || s.city, s.province].filter(Boolean).join(', ')}</div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.5rem;font-size:0.72rem;color:var(--text-muted);">
+                  ${s.bedrooms ? `<span>${s.bedrooms} hab.</span>` : ''}
+                  ${s.bathrooms ? `<span>${s.bathrooms} baños</span>` : ''}
+                  ${s.area_const ? `<span>${s.area_const} m²</span>` : ''}
+                </div>
+              </div>
+            </a>`;
+          }).join('');
+        }
+      } catch(e) { console.log('Similar listings error:', e); }
 
       // Record this page view (anonymous, IP rate-limited to 1/hour)
       fetch(`/api/listings/${listingId}/view`, { method: 'POST' })

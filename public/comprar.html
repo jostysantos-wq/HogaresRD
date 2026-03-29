@@ -146,11 +146,46 @@
     .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
     @media (max-width: 768px) { .footer-inner { grid-template-columns: 1fr 1fr; } .footer-brand { grid-column: 1 / -1; } }
 
+    /* HAMBURGER */
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 0.4rem; color: var(--text); }
+    .hamburger svg { width: 26px; height: 26px; fill: currentColor; }
+    .mobile-menu { display: none; position: fixed; inset: 0; z-index: 999; }
+    .mobile-menu.open { display: flex; }
+    .mm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .mm-panel { position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: var(--bg-card); box-shadow: var(--shadow-lg); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem; animation: slideIn 0.25s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .mm-close { align-self: flex-end; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem; }
+    .mm-close svg { width: 24px; height: 24px; fill: currentColor; }
+    .mm-link { text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem; padding: 0.85rem 0.75rem; border-radius: 10px; transition: background 0.2s; }
+    .mm-link:hover, .mm-link.active { background: var(--accent-light); color: var(--accent); }
+
+    /* FILTER CHIPS */
+    .filter-chips { max-width: 1280px; margin: 0 auto; padding: 0.5rem 2rem 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .filter-chips:empty { display: none; }
+    .filter-chip { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--accent-light); color: var(--accent); font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 50px; cursor: pointer; border: none; transition: background 0.2s; }
+    .filter-chip:hover { background: var(--accent); color: #fff; }
+    .filter-chip svg { width: 12px; height: 12px; fill: currentColor; }
+
+    /* SAVE HEART ON CARDS */
+    .card-save { position: absolute; top: 0.75rem; right: 0.75rem; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; transition: background 0.2s; }
+    .card-save:hover { background: rgba(0,0,0,0.6); }
+    .card-save svg { width: 18px; height: 18px; fill: #fff; transition: fill 0.2s; }
+    .card-save.saved svg { fill: #CF142B; }
+
+    /* MOBILE FILTER DRAWER */
+    .filter-toggle-mobile { display: none; }
+
     @media (max-width: 768px) {
       .nav-links { display: none; }
-      .filters-inner { gap: 0.5rem; }
-      .filter-input { width: 110px; }
+      .hamburger { display: block; }
+      .filters-inner { display: none; }
+      .filter-toggle-mobile { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 2rem; cursor: pointer; background: none; border: none; width: 100%; color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+      .filter-toggle-mobile svg { width: 18px; height: 18px; fill: currentColor; }
+      .filters-bar.expanded .filters-inner { display: flex; flex-direction: column; padding: 0.75rem 1.5rem 1rem; }
+      .filters-bar.expanded .filters-inner > * { width: 100%; }
+      .filters-bar.expanded .filter-input { width: 100%; }
       .listings-grid { grid-template-columns: 1fr; }
+      .filter-chips { padding: 0.5rem 1rem 0; }
     }
   </style>
 </head>
@@ -180,9 +215,27 @@
             <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
           </span>
         </button>
+        <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menú">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
       </div>
     </div>
   </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mm-backdrop" onclick="document.getElementById('mobileMenu').classList.remove('open')"></div>
+    <div class="mm-panel">
+      <button class="mm-close" onclick="document.getElementById('mobileMenu').classList.remove('open')">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <a href="/home" class="mm-link">Inicio</a>
+      <a href="/comprar" class="mm-link active">Comprar</a>
+      <a href="/alquilar" class="mm-link">Alquilar</a>
+      <a href="/nuevos-proyectos" class="mm-link">Nuevos Proyectos</a>
+      <a href="/about" class="mm-link">Nosotros</a>
+    </div>
+  </div>
 
   <!-- HEADER -->
   <div class="page-header">
@@ -201,7 +254,12 @@
   </div>
 
   <!-- FILTERS -->
-  <div class="filters-bar">
+  <div class="filters-bar" id="filtersBar">
+    <button class="filter-toggle-mobile" onclick="document.getElementById('filtersBar').classList.toggle('expanded')">
+      <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+      Filtros
+      <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M7 10l5 5 5-5z"/></svg>
+    </button>
     <div class="filters-inner">
       <select class="filter-select" id="fProvince">
         <option value="">Todas las provincias</option>
@@ -215,6 +273,15 @@
         <option>San Pedro de Macorís</option>
         <option>Duarte</option>
         <option>Espaillat</option>
+      </select>
+      <select class="filter-select" id="fPropertyType">
+        <option value="">Tipo de propiedad</option>
+        <option value="apartamento">Apartamento</option>
+        <option value="casa">Casa</option>
+        <option value="villa">Villa</option>
+        <option value="terreno">Terreno</option>
+        <option value="penthouse">Penthouse</option>
+        <option value="local_comercial">Local Comercial</option>
       </select>
       <select class="filter-select" id="fCondition">
         <option value="">Cualquier condición</option>
@@ -238,6 +305,9 @@
       <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
     </div>
   </div>
+
+  <!-- ACTIVE FILTER CHIPS -->
+  <div class="filter-chips" id="filterChips"></div>
 
   <!-- RESULTS -->
   <div class="results-bar">
@@ -373,10 +443,25 @@
       return '$' + n.toLocaleString('en-US');
     }
 
+    // Saved/favorites
+    function getSaved() {
+      try { return JSON.parse(localStorage.getItem('hogaresrd_saved') || '[]'); } catch(e) { return []; }
+    }
+    function toggleSave(id, e) {
+      e.preventDefault(); e.stopPropagation();
+      let saved = getSaved();
+      const idx = saved.indexOf(id);
+      if (idx >= 0) saved.splice(idx, 1); else saved.push(id);
+      try { localStorage.setItem('hogaresrd_saved', JSON.stringify(saved)); } catch(e) {}
+      const btn = e.currentTarget;
+      btn.classList.toggle('saved', saved.includes(id));
+    }
+
     function buildCard(l) {
       const img = Array.isArray(l.images) && l.images.length
         ? `<img src="${esc(l.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
+      const isSaved = getSaved().includes(l.id);
       return `
         <a class="prop-card" href="/listing/${esc(l.id)}">
           <div class="card-img">
@@ -385,6 +470,9 @@
               <span class="badge badge-venta">En Venta</span>
               ${conditionLabel(l.condition)}
             </div>
+            <button class="card-save${isSaved ? ' saved' : ''}" onclick="toggleSave('${esc(l.id)}', event)" aria-label="Guardar">
+              <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </button>
           </div>
           <div class="card-body">
             <div class="card-price">${formatPrice(l.price)}</div>
@@ -420,14 +508,39 @@
 
     function getFilters() {
       return {
-        type:        'venta',
-        province:    document.getElementById('fProvince').value,
-        condition:   document.getElementById('fCondition').value,
-        bedroomsMin: document.getElementById('fBedrooms').value,
-        priceMin:    document.getElementById('fPriceMin').value,
-        priceMax:    document.getElementById('fPriceMax').value,
-        agency:      document.getElementById('fAgency').value,
+        type:         'venta',
+        province:     document.getElementById('fProvince').value,
+        propertyType: document.getElementById('fPropertyType').value,
+        condition:    document.getElementById('fCondition').value,
+        bedroomsMin:  document.getElementById('fBedrooms').value,
+        priceMin:     document.getElementById('fPriceMin').value,
+        priceMax:     document.getElementById('fPriceMax').value,
+        agency:       document.getElementById('fAgency').value,
       };
+    }
+
+    function renderFilterChips() {
+      const chips = [];
+      const f = getFilters();
+      const labels = {
+        province:     f.province,
+        propertyType: { apartamento:'Apartamento', casa:'Casa', villa:'Villa', terreno:'Terreno', penthouse:'Penthouse', local_comercial:'Local Comercial' }[f.propertyType],
+        condition:    { nueva_construccion:'Nueva Construcción', usada:'Usada', planos:'En Planos' }[f.condition],
+        bedroomsMin:  f.bedroomsMin ? f.bedroomsMin + '+ habitaciones' : '',
+        priceMin:     f.priceMin ? 'Desde $' + Number(f.priceMin).toLocaleString() : '',
+        priceMax:     f.priceMax ? 'Hasta $' + Number(f.priceMax).toLocaleString() : '',
+        agency:       f.agency ? document.getElementById('fAgency').selectedOptions[0]?.text : '',
+      };
+      const clearMap = {
+        province: 'fProvince', propertyType: 'fPropertyType', condition: 'fCondition',
+        bedroomsMin: 'fBedrooms', priceMin: 'fPriceMin', priceMax: 'fPriceMax', agency: 'fAgency'
+      };
+      for (const [key, label] of Object.entries(labels)) {
+        if (label) {
+          chips.push(`<button class="filter-chip" onclick="document.getElementById('${clearMap[key]}').value='';applyFilters();">${esc(label)} <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`);
+        }
+      }
+      document.getElementById('filterChips').innerHTML = chips.join('');
     }
 
     function sortListings(listings) {
@@ -483,11 +596,12 @@
       }
     }
 
-    function applyFilters() { loadListings(1); }
+    function applyFilters() { loadListings(1); renderFilterChips(); }
     function resetFilters() {
-      ['fProvince','fCondition','fBedrooms','fAgency'].forEach(id => document.getElementById(id).value = '');
+      ['fProvince','fPropertyType','fCondition','fBedrooms','fAgency'].forEach(id => document.getElementById(id).value = '');
       ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
       loadListings(1);
+      renderFilterChips();
     }
     function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
