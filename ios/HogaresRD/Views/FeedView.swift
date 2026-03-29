@@ -5,18 +5,22 @@ import SwiftUI
 struct FeedView: View {
     @EnvironmentObject var api: APIService
 
-    @State private var allListings:      [Listing] = []
-    @State private var feed:             [Listing] = []
-    @State private var currentIndex      = 0
-    @State private var page              = 0
-    @State private var totalPages        = 1
-    @State private var loading           = false
-    @State private var initialLoad       = true
-    @State private var reshuffles        = 0
-    @State private var errorMsg:         String?
+    @State private var allListings:        [Listing] = []
+    @State private var feed:               [Listing] = []
+    @State private var currentIndex        = 0
+    @State private var page                = 0
+    @State private var totalPages          = 1
+    @State private var loading             = false
+    @State private var initialLoad         = true
+    @State private var reshuffles          = 0
+    @State private var errorMsg:           String?
     @State private var selectedListingID:  String?
     @State private var selectedAgencySlug: String?
 
+    /// Timestamp recorded when each card index appears on screen
+    @State private var appearedAt: [Int: Date] = [:]
+
+    /// Weighted interest scores keyed by listing attribute (type, province, city)
     @AppStorage("feed_prefs") private var prefJSON: String = "{}"
 
     var body: some View {
@@ -46,21 +50,27 @@ struct FeedView: View {
                         ScrollView(.vertical, showsIndicators: false) {
                             LazyVStack(spacing: 0) {
                                 ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
-                                    ReelCard(listing: listing,
-                                             onAgencyTap: { slug in selectedAgencySlug = slug })
-                                        .frame(width: proxy.size.width,
-                                               height: proxy.size.height)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedListingID = listing.id
+                                    ReelCard(
+                                        listing:     listing,
+                                        onAgencyTap: { slug in selectedAgencySlug = slug },
+                                        onSaveTap:   { applyWeight(listing, weight: 10.0) }
+                                    )
+                                    .frame(width: proxy.size.width, height: proxy.size.height)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { selectedListingID = listing.id }
+                                    .onAppear {
+                                        currentIndex = index
+                                        appearedAt[index] = Date()
+                                        if index >= feed.count - 3 {
+                                            Task { await loadMore() }
                                         }
-                                        .onAppear {
-                                            currentIndex = index
-                                            trackView(listing)
-                                            if index >= feed.count - 3 {
-                                                Task { await loadMore() }
-                                            }
+                                    }
+                                    .onDisappear {
+                                        if let start = appearedAt.removeValue(forKey: index) {
+                                            let dwell = Date().timeIntervalSince(start)
+                                            trackDwell(listing, seconds: dwell)
                                         }
+                                    }
                                 }
                             }
                             .scrollTargetLayout()
@@ -79,6 +89,12 @@ struct FeedView: View {
                     }
                 }
             }
+            // Tap-through bonus: opening the detail view is a strong interest signal
+            .onChange(of: selectedListingID) { _, newID in
+                if let id = newID, let listing = feed.first(where: { $0.id == id }) {
+                    applyWeight(listing, weight: 8.0)
+                }
+            }
             .navigationDestination(isPresented: Binding(
                 get: { selectedListingID != nil },
                 set: { if !$0 { selectedListingID = nil } }
@@ -92,7 +108,10 @@ struct FeedView: View {
                 if let slug = selectedAgencySlug { AgencyPortfolioView(slug: slug) }
             }
         }
-        .task { await loadMore() }
+        .task {
+            applySessionDecay() // fade stale history before each session
+            await loadMore()
+        }
     }
 
     // MARK: - Load
@@ -124,49 +143,97 @@ struct FeedView: View {
     private func refresh() async {
         feed = []; allListings = []; page = 0
         totalPages = 1; reshuffles = 0; errorMsg = nil; currentIndex = 0
+        appearedAt = [:]
         await loadMore()
+    }
+
+    // MARK: - Dwell Time Tracking
+    //
+    // Signal weights mirror real recommendation systems:
+    //   < 1.5s  → quick skip      (-0.5)  mild negative
+    //   1.5–4s  → glance          (+1.0)  weak positive
+    //   4–10s   → interest        (+3.0)  moderate signal
+    //   10–30s  → strong interest (+5.0)  strong signal
+    //   > 30s   → very engaged    (+8.0)  highest passive signal
+    //   tap     → opened detail   (+8.0)  strong explicit signal
+    //   save    → hearted         (+10.0) strongest signal
+
+    private func trackDwell(_ listing: Listing, seconds: TimeInterval) {
+        let weight: Double
+        switch seconds {
+        case ..<1.5:  weight = -0.5
+        case 1.5..<4: weight =  1.0
+        case 4..<10:  weight =  3.0
+        case 10..<30: weight =  5.0
+        default:      weight =  8.0
+        }
+        applyWeight(listing, weight: weight)
+    }
+
+    /// Adds `weight` to each interest dimension of a listing in the prefs store
+    private func applyWeight(_ listing: Listing, weight: Double) {
+        var prefs = loadPrefs()
+        prefs[listing.type, default: 0] += weight
+        // Province and city carry half the weight — they're secondary signals
+        if let p = listing.province { prefs[p, default: 0] += weight * 0.5 }
+        if let c = listing.city     { prefs[c, default: 0] += weight * 0.5 }
+        savePrefs(prefs)
+    }
+
+    // MARK: - Session Decay
+    //
+    // Multiplies all scores by 0.9 at the start of every session.
+    // This prevents old behaviour from locking in forever:
+    //   • after ~7 sessions with no reinforcement, a signal drops below 50% strength
+    //   • keeps the feed fresh as the user's real-life needs evolve
+
+    private func applySessionDecay() {
+        var prefs = loadPrefs()
+        guard !prefs.isEmpty else { return }
+        prefs = prefs.mapValues { $0 * 0.9 }
+        savePrefs(prefs)
     }
 
     // MARK: - Ranking
 
     private func ranked(_ items: [Listing]) -> [Listing] {
         let prefs = loadPrefs()
+        // No prefs yet (new user) → random shuffle so everyone gets a fair start
         guard !prefs.isEmpty else { return items.shuffled() }
         return items.sorted { prefScore($0, prefs: prefs) > prefScore($1, prefs: prefs) }
     }
 
-    private func prefScore(_ l: Listing, prefs: [String: Int]) -> Double {
-        var s = prefs[l.type] ?? 0
+    /// Score = sum of learned weights for this listing's attributes + small random noise.
+    /// The noise (0–1.5) prevents identical-score items from always appearing in the
+    /// same order while still letting strongly-preferred items float to the top.
+    private func prefScore(_ l: Listing, prefs: [String: Double]) -> Double {
+        var s  = prefs[l.type] ?? 0
         if let p = l.province { s += prefs[p] ?? 0 }
         if let c = l.city     { s += prefs[c] ?? 0 }
-        return Double(s) + Double.random(in: 0...1.5)
+        return s + Double.random(in: 0...1.5)
     }
 
-    private func trackView(_ listing: Listing) {
-        var prefs = loadPrefs()
-        prefs[listing.type, default: 0] += 2
-        if let p = listing.province { prefs[p, default: 0] += 1 }
-        if let c = listing.city     { prefs[c, default: 0] += 1 }
-        savePrefs(prefs)
-    }
+    // MARK: - Prefs Persistence ([String: Double] stored as JSON in AppStorage)
 
-    private func loadPrefs() -> [String: Int] {
+    private func loadPrefs() -> [String: Double] {
         guard let data = prefJSON.data(using: .utf8),
-              let d = try? JSONDecoder().decode([String: Int].self, from: data) else { return [:] }
+              let d = try? JSONDecoder().decode([String: Double].self, from: data)
+        else { return [:] }
         return d
     }
 
-    private func savePrefs(_ p: [String: Int]) {
+    private func savePrefs(_ p: [String: Double]) {
         if let data = try? JSONEncoder().encode(p),
-           let str = String(data: data, encoding: .utf8) { prefJSON = str }
+           let str  = String(data: data, encoding: .utf8) { prefJSON = str }
     }
 }
 
 // MARK: - Reel Card (pure visual — no gesture interceptors)
 
 struct ReelCard: View {
-    let listing: Listing
+    let listing:     Listing
     var onAgencyTap: ((String) -> Void) = { _ in }
+    var onSaveTap:   (() -> Void)       = { }      // called alongside heart toggle
 
     @EnvironmentObject var saved: SavedStore
     @State private var imageIndex = 0
@@ -228,8 +295,10 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
+                            // Heart — triggers both save AND the save-bonus signal
                             Button {
                                 saved.toggle(listing.id)
+                                onSaveTap()
                             } label: {
                                 Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
                                     .font(.system(size: 22, weight: .semibold))
@@ -258,7 +327,6 @@ struct ReelCard: View {
                 // ── Text overlay ──────────────────────────────
                 VStack(alignment: .leading, spacing: 10) {
 
-                    // Type + condition badges
                     HStack(spacing: 8) {
                         typeBadge
                         if let cond = listing.condition, !cond.isEmpty {
@@ -271,18 +339,15 @@ struct ReelCard: View {
                         }
                     }
 
-                    // Price
                     Text(listing.priceFormatted)
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(.white)
 
-                    // Title
                     Text(listing.title)
                         .font(.headline)
                         .foregroundStyle(.white.opacity(0.95))
                         .lineLimit(2)
 
-                    // Location
                     HStack(spacing: 5) {
                         Image(systemName: "mappin.fill")
                             .font(.caption)
@@ -293,7 +358,6 @@ struct ReelCard: View {
                             .lineLimit(1)
                     }
 
-                    // Stats chips
                     if hasStats {
                         HStack(spacing: 12) {
                             if let beds = listing.bedrooms, beds != "0" {
@@ -308,7 +372,6 @@ struct ReelCard: View {
                         }
                     }
 
-                    // Agency + tap hint
                     HStack {
                         if let agency = listing.agencies?.first, let name = agency.name {
                             Button {
@@ -341,7 +404,7 @@ struct ReelCard: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 90) // clear tab bar
+                .padding(.bottom, 90)
             }
         }
         .ignoresSafeArea()
