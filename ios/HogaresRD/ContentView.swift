@@ -10,27 +10,68 @@ extension Color {
 
 // MARK: - Root Tab View
 struct ContentView: View {
-    @EnvironmentObject var api: APIService
+    @EnvironmentObject var api:   APIService
+    @EnvironmentObject var saved: SavedStore
+
+    @State private var selectedTab  = 0
+    @State private var previousTab  = 0
+    @State private var showPost     = false
 
     var body: some View {
-        TabView {
-            FeedView()
-                .tabItem {
-                    Label("Feed", systemImage: "newspaper.fill")
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                FeedView()
+                    .tabItem { Label("Feed",    systemImage: "newspaper.fill") }
+                    .tag(0)
+                HomeView()
+                    .tabItem { Label("Inicio",  systemImage: "house.fill") }
+                    .tag(1)
+                // Centre placeholder — intercepted before it ever displays
+                Color.clear
+                    .tabItem { Label("Publicar", systemImage: "plus") }
+                    .tag(2)
+                BrowseView()
+                    .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
+                    .tag(3)
+                ProfileView()
+                    .tabItem { Label("Perfil",  systemImage: "person.circle.fill") }
+                    .tag(4)
+            }
+            .tint(Color.rdBlue)
+            .onChange(of: selectedTab) { _, new in
+                if new == 2 {
+                    selectedTab = previousTab   // snap back immediately
+                    showPost    = true
+                } else {
+                    previousTab = new
                 }
-            HomeView()
-                .tabItem {
-                    Label("Inicio", systemImage: "house.fill")
+            }
+
+            // ── Instagram-style centre button ──────────────────────
+            Button {
+                showPost = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.rdBlue, Color.rdBlue.opacity(0.75)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 52, height: 52)
+                        .shadow(color: Color.rdBlue.opacity(0.45), radius: 8, y: 3)
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-            BrowseView()
-                .tabItem {
-                    Label("Explorar", systemImage: "magnifyingglass")
-                }
-            ProfileView()
-                .tabItem {
-                    Label("Perfil", systemImage: "person.circle.fill")
-                }
+            }
+            .offset(y: -14)   // lift above tab bar
         }
-        .tint(Color.rdBlue)
+        .sheet(isPresented: $showPost) {
+            SubmitListingView()
+                .environmentObject(api)
+        }
     }
 }

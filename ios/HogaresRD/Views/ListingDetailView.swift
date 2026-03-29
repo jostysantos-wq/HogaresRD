@@ -130,11 +130,11 @@ struct ListingDetailView: View {
 
                     // ── Contact CTA ────────────────────────────────
                     Button { showContact = true } label: {
-                        Label("Contactar al Agente", systemImage: "message.fill")
+                        Label("Agendar Consulta", systemImage: "calendar.badge.plus")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.rdRed)
+                            .background(Color.rdBlue)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
@@ -580,8 +580,8 @@ struct ContactSheet: View {
     @EnvironmentObject var api: APIService
 
     @State private var name    = ""
-    @State private var email   = ""
     @State private var phone   = ""
+    @State private var email   = ""
     @State private var message = ""
     @State private var sending = false
     @State private var sent    = false
@@ -589,43 +589,89 @@ struct ContactSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Tu información") {
-                    TextField("Nombre completo", text: $name)
-                    TextField("Correo electrónico", text: $email).keyboardType(.emailAddress)
-                    TextField("Teléfono", text: $phone).keyboardType(.phonePad)
+            if sent {
+                // ── Success state ────────────────────────────────
+                VStack(spacing: 24) {
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(Color.rdGreen.opacity(0.1))
+                            .frame(width: 88, height: 88)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color.rdGreen)
+                    }
+                    VStack(spacing: 8) {
+                        Text("¡Consulta enviada!")
+                            .font(.title2).bold()
+                        Text("Tu información fue enviada a las inmobiliarias afiliadas. Un agente se pondrá en contacto contigo pronto.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    Spacer()
+                    Button("Cerrar") { dismiss() }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.rdBlue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 32)
                 }
-                Section("Mensaje") {
-                    TextField("¿En qué puedo ayudarte?", text: $message, axis: .vertical)
-                        .lineLimit(4...)
-                }
-                if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(Color.rdRed).font(.caption) }
-                }
-                Section {
-                    if sent {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rdGreen)
-                            Text("Mensaje enviado correctamente").foregroundStyle(Color.rdGreen)
-                        }
-                    } else {
+                .navigationTitle("Agendar Consulta")
+                .navigationBarTitleDisplayMode(.inline)
+            } else {
+                Form {
+                    Section("Tu información") {
+                        TextField("Nombre completo", text: $name)
+                        TextField("Teléfono", text: $phone).keyboardType(.phonePad)
+                        TextField("Correo electrónico", text: $email).keyboardType(.emailAddress).textInputAutocapitalization(.never)
+                    }
+                    Section {
+                        TextField("¿Qué tipo de unidad te interesa? ¿Tienes alguna pregunta?", text: $message, axis: .vertical)
+                            .lineLimit(4...)
+                    } header: {
+                        Text("Mensaje (opcional)")
+                    }
+
+                    Section {
+                        Text("Tu consulta será enviada a todas las inmobiliarias afiliadas a este proyecto. El agente que responda primero te contactará.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let err = errorMsg {
+                        Section { Text(err).foregroundStyle(Color.rdRed).font(.caption) }
+                    }
+
+                    Section {
                         Button {
                             Task { await send() }
                         } label: {
-                            if sending { ProgressView() }
-                            else { Text("Enviar mensaje").bold().frame(maxWidth: .infinity) }
+                            if sending { ProgressView().frame(maxWidth: .infinity) }
+                            else {
+                                Text("Enviar Consulta")
+                                    .bold()
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
-                        .disabled(sending || name.isEmpty || email.isEmpty)
+                        .disabled(sending || name.isEmpty || phone.isEmpty)
                     }
                 }
-            }
-            .navigationTitle("Contactar Agente")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cerrar") { dismiss() } }
-            }
-            .onAppear {
-                if let user = api.currentUser { name = user.name; email = user.email }
+                .navigationTitle("Agendar Consulta")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cerrar") { dismiss() } }
+                }
+                .onAppear {
+                    if let user = api.currentUser {
+                        name  = user.name
+                        email = user.email
+                    }
+                }
             }
         }
     }
