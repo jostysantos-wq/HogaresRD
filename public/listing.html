@@ -9,18 +9,18 @@
     :root {
       --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
       --text: #001840; --text-muted: #4d6a8a;
-      --accent: #002D62; --accent-hover: #001a45; --accent-light: #e8f0fb;
+      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
       --red: #CF142B; --green: #0a7c4f; --border: #d0dcea;
-      --shadow-sm: 0 2px 8px rgba(0,45,98,0.08); --shadow-md: 0 4px 20px rgba(0,45,98,0.12);
-      --nav-bg: rgba(255,255,255,0.96); --toggle-bg: #c4d4e8; --toggle-knob: #ffffff;
+      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09); --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
+      --nav-bg: rgba(255,255,255,0.96); --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
     }
     [data-theme="dark"] {
-      --bg: #00101f; --bg-card: #001e3c; --bg-section: #001428;
+      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
       --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #4a90d9; --accent-hover: #3a7bc8; --accent-light: #001e3c;
-      --red: #e8374e; --green: #1db87a; --border: #003060;
+      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
+      --red: #e8374e; --green: #1db87a; --border: #002268;
       --shadow-sm: 0 2px 8px rgba(0,0,0,0.3); --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-      --nav-bg: rgba(0,16,31,0.97); --toggle-bg: #003060; --toggle-knob: #e8f0fb;
+      --nav-bg: rgba(0,12,36,0.97); --toggle-bg: #002268; --toggle-knob: #e8f0fb;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
@@ -265,7 +265,7 @@
     .btn-affiliate:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
     .btn-affiliate svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
     .btn-affiliate.visible { display: flex; }
-    .affiliate-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: #002D62; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 1000; white-space: nowrap; }
+    .affiliate-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: #0038A8; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 1000; white-space: nowrap; }
     .affiliate-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .modal-ref-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 20px; padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
     .modal-ref-badge svg { width: 11px; height: 11px; fill: currentColor; }

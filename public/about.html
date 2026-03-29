@@ -7,40 +7,42 @@
   <meta name="description" content="Conoce HogaresRD: nuestra misión, valores y el equipo detrás de la plataforma de bienes raíces más completa de República Dominicana." />
   <style>
     :root {
-      --bg:           #f0f4f9;
+      --bg:           #f2f6ff;
       --bg-card:      #ffffff;
-      --bg-section:   #e8eef7;
-      --text:         #001840;
-      --text-muted:   #4d6a8a;
-      --accent:       #002D62;
-      --accent-hover: #001a45;
-      --accent-light: #e8f0fb;
+      --bg-section:   #e4ecff;
+      --text:         #001230;
+      --text-muted:   #3d5c85;
+      --accent:       #0038A8;
+      --accent-hover: #002c8a;
+      --accent-light: #dce8ff;
       --red:          #CF142B;
-      --border:       #d0dcea;
-      --shadow-sm:    0 2px 8px rgba(0,45,98,0.08);
-      --shadow-md:    0 4px 20px rgba(0,45,98,0.12);
-      --shadow-lg:    0 8px 40px rgba(0,45,98,0.18);
-      --toggle-bg:    #c4d4e8;
+      --green:        #1B7A3E;
+      --border:       #c5d4f5;
+      --shadow-sm:    0 2px 8px rgba(0,56,168,0.09);
+      --shadow-md:    0 4px 20px rgba(0,56,168,0.13);
+      --shadow-lg:    0 8px 40px rgba(0,56,168,0.20);
+      --toggle-bg:    #b5ccf8;
       --toggle-knob:  #ffffff;
       --nav-bg:       rgba(255,255,255,0.96);
     }
     [data-theme="dark"] {
-      --bg:           #00101f;
-      --bg-card:      #001e3c;
-      --bg-section:   #001428;
+      --bg:           #000c24;
+      --bg-card:      #001238;
+      --bg-section:   #000a1e;
       --text:         #e8f0fb;
-      --text-muted:   #7a9bbf;
-      --accent:       #4a90d9;
-      --accent-hover: #3a7bc8;
-      --accent-light: #001e3c;
+      --text-muted:   #6a90cc;
+      --accent:       #5599ff;
+      --accent-hover: #4080f0;
+      --accent-light: #001238;
       --red:          #e8374e;
-      --border:       #003060;
+      --green:        #25a858;
+      --border:       #002268;
       --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
       --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
       --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg:    #003060;
+      --toggle-bg:    #002268;
       --toggle-knob:  #e8f0fb;
-      --nav-bg:       rgba(0,16,31,0.97);
+      --nav-bg:       rgba(0,12,36,0.97);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -70,7 +72,7 @@
     .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     /* HERO */
-    .hero { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; }
+    .hero { background: linear-gradient(135deg, #001230 0%, #0038A8 55%, #0055d0 100%); position: relative; overflow: hidden; }
     .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
     .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
     .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
@@ -101,8 +103,8 @@
     .value-icon svg { width: 26px; height: 26px; fill: #fff; }
     .value-icon.blue   { background: linear-gradient(135deg, #002D62, #0055b3); }
     .value-icon.red    { background: linear-gradient(135deg, #CF142B, #a81022); }
-    .value-icon.green  { background: linear-gradient(135deg, #0a7c4f, #0d9e65); }
-    .value-icon.gold   { background: linear-gradient(135deg, #b45309, #d97706); }
+    .value-icon.green  { background: linear-gradient(135deg, #1B7A3E, #22a855); }
+    .value-icon.gold   { background: linear-gradient(135deg, #b04e00, #e07c00); }
     .value-icon.purple { background: linear-gradient(135deg, #5b21b6, #7c3aed); }
     .value-icon.teal   { background: linear-gradient(135deg, #0f766e, #14b8a6); }
     .value-name { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.5rem; }
@@ -117,13 +119,13 @@
     .how-icon svg { width: 28px; height: 28px; fill: #fff; }
     .how-icon.blue  { background: linear-gradient(135deg, #002D62, #0055b3); }
     .how-icon.red   { background: linear-gradient(135deg, #CF142B, #a81022); }
-    .how-icon.green { background: linear-gradient(135deg, #0a7c4f, #0d9e65); }
-    .how-icon.gold  { background: linear-gradient(135deg, #b45309, #d97706); }
+    .how-icon.green { background: linear-gradient(135deg, #1B7A3E, #22a855); }
+    .how-icon.gold  { background: linear-gradient(135deg, #b04e00, #e07c00); }
     .how-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; }
     .how-card p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.65; }
 
     /* CTA BANNER */
-    .cta-banner { background: linear-gradient(135deg, #001840 0%, #002D62 50%, #003d88 100%); position: relative; overflow: hidden; padding: 4.5rem 2rem; }
+    .cta-banner { background: linear-gradient(135deg, #001230 0%, #0038A8 55%, #0055d0 100%); position: relative; overflow: hidden; padding: 4.5rem 2rem; }
     .cta-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
     .cta-shape-1 { width: 400px; height: 400px; top: -200px; right: -100px; }
     .cta-shape-2 { width: 200px; height: 200px; bottom: -100px; left: 10%; }

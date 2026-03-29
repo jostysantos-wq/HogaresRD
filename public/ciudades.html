@@ -6,13 +6,13 @@
   <title>Ciudades — HogaresRD</title>
   <style>
     :root {
-      --bg: #eef3fa; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #002D62; --accent-hover: #001a45; --border: #c4d4e8;
+      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
+      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
       --shadow: 0 4px 20px rgba(0,45,98,0.10);
     }
     [data-theme="dark"] {
-      --bg: #00101f; --bg-card: #001e3c; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #4a90d9; --accent-hover: #3a7bc8; --border: #003060;
+      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
       --shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,7 +46,7 @@
 
     /* CITY CARD */
     .city-card { position: relative; border-radius: 16px; overflow: hidden; height: 200px; text-decoration: none; display: block; box-shadow: var(--shadow); transition: transform 0.25s, box-shadow 0.25s; }
-    .city-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,45,98,0.18); }
+    .city-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,56,168,0.20); }
     .city-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.4s; }
     .city-card:hover .city-bg { transform: scale(1.05); }
     .city-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,20,50,0.85) 0%, rgba(0,20,50,0.25) 60%, transparent 100%); }
