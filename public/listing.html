@@ -217,6 +217,9 @@
     .modal-backdrop.open .modal { transform: translateY(0); }
     .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem; }
     .modal-close svg { width: 20px; height: 20px; fill: currentColor; display: block; }
+    .modal-back { position: absolute; top: 1rem; left: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem; display: none; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 600; font-family: inherit; transition: color 0.15s; }
+    .modal-back:hover { color: var(--accent); }
+    .modal-back svg { width: 16px; height: 16px; fill: currentColor; }
     .modal-title { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 0.25rem; }
     .modal-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.4rem; line-height: 1.5; }
     .modal-field { margin-bottom: 0.9rem; }
@@ -510,6 +513,10 @@
 <!-- INQUIRY MODAL -->
 <div class="modal-backdrop" id="inquiryModal" onclick="closeInquiryOnBackdrop(event)">
   <div class="modal">
+    <button class="modal-back" id="inquiryBackBtn" onclick="goBackToAuthWall()">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      Volver
+    </button>
     <button class="modal-close" onclick="closeInquiry()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
     <div id="inquiryFormWrap">
       <div id="inquiryRefBadge" class="modal-ref-badge" style="display:none">
@@ -693,14 +700,21 @@
   }
   function continueAsGuest() {
     closeAuthWall();
-    _openInquiryModal(null);
+    _openInquiryModal(null, true);
+  }
+  function goBackToAuthWall() {
+    closeInquiry();
+    document.getElementById('authWall').classList.add('open');
   }
 
   // ── Inquiry modal ──────────────────────────────────────────
-  function _openInquiryModal(user) {
+  function _openInquiryModal(user, fromGuestChoice = false) {
     document.getElementById('inquiryForm').reset();
     document.getElementById('inquiryFormWrap').style.display = '';
     document.getElementById('inquirySuccess').style.display = 'none';
+    // Show back button only when arriving via "Continuar como invitado"
+    const backBtn = document.getElementById('inquiryBackBtn');
+    backBtn.style.display = fromGuestChoice ? 'flex' : 'none';
     // Pre-fill if user is logged in
     if (user) {
       if (user.name)  document.getElementById('iqName').value  = user.name;
