@@ -238,12 +238,19 @@ struct ReelCard: View {
     @EnvironmentObject var saved: SavedStore
     @State private var imageIndex = 0
 
+    /// Binding shim so ScrollView can track the current page as Int?
+    private var imageIndexBinding: Binding<Int?> {
+        Binding(get: { imageIndex }, set: { imageIndex = $0 ?? 0 })
+    }
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
 
                 // ── Horizontal image carousel ─────────────────────────
-                // Tap gesture lives HERE so buttons above it always win
+                // Uses ScrollView instead of TabView(.page) so that taps
+                // are NOT consumed by UIPageViewController and can pass
+                // through to the Button overlay above.
                 let urls = listing.allImageURLs
                 if urls.isEmpty {
                     ZStack {
@@ -253,43 +260,50 @@ struct ReelCard: View {
                             .foregroundStyle(.white.opacity(0.2))
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onTap() }
                 } else {
-                    TabView(selection: $imageIndex) {
-                        ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let img):
-                                    img.resizable().aspectRatio(contentMode: .fill)
-                                default:
-                                    ZStack {
-                                        Color(red: 0.1, green: 0.1, blue: 0.15)
-                                        VStack(spacing: 10) {
-                                            Image(systemName: "house.fill")
-                                                .font(.system(size: 56))
-                                                .foregroundStyle(.white.opacity(0.2))
-                                            if case .empty = phase {
-                                                ProgressView().tint(.white.opacity(0.4))
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 0) {
+                            ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let img):
+                                        img.resizable().aspectRatio(contentMode: .fill)
+                                    default:
+                                        ZStack {
+                                            Color(red: 0.1, green: 0.1, blue: 0.15)
+                                            VStack(spacing: 10) {
+                                                Image(systemName: "house.fill")
+                                                    .font(.system(size: 56))
+                                                    .foregroundStyle(.white.opacity(0.2))
+                                                if case .empty = phase {
+                                                    ProgressView().tint(.white.opacity(0.4))
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                                .id(i)
                             }
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()
-                            .tag(i)
                         }
+                        .scrollTargetLayout()
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .scrollTargetBehavior(.paging)
+                    .scrollPosition(id: imageIndexBinding)
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onTap() }
+                    .clipped()
                 }
 
+                // ── Transparent nav button (above carousel, below overlays) ──
+                Button { onTap() } label: {
+                    Color.clear
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
                 // ── Top-right controls (counter + heart) ──────────────
-                // These sit ABOVE the image layer in the ZStack so their
-                // button gestures naturally win — no contentShape conflict.
                 VStack {
                     HStack {
                         Spacer()
@@ -302,19 +316,23 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Heart — save only, never navigates
-                            Button {
-                                saved.toggle(listing.id)
-                                onSaveTap()
-                            } label: {
-                                Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
-                                    .font(.system(size: 22, weight: .semibold))
-                                    .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
-                                    .shadow(color: .black.opacity(0.4), radius: 4)
-                            }
+                            // Heart — highPriorityGesture guarantees this
+                            // intercepts the tap BEFORE the card's onTapGesture
+                            Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
+                                .shadow(color: .black.opacity(0.4), radius: 4)
+                                .padding(12)            // larger hit area
+                                .contentShape(Rectangle())
+                                .highPriorityGesture(
+                                    TapGesture().onEnded {
+                                        saved.toggle(listing.id)
+                                        onSaveTap()
+                                    }
+                                )
                         }
-                        .padding(.top, 60)
-                        .padding(.trailing, 16)
+                        .padding(.top, 48)
+                        .padding(.trailing, 4)
                     }
                     Spacer()
                 }
