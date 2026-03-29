@@ -50,6 +50,12 @@
 
     .affiliate-info { background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 10px; padding: 0.9rem 1rem; margin: 1.1rem 0; font-size: 0.83rem; color: var(--text-muted); line-height: 1.55; }
     .affiliate-info strong { color: var(--accent); }
+    .checkbox-field { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1rem 0 0.25rem; }
+    .checkbox-field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+    .checkbox-field input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    .checkbox-field input[type="checkbox"]:disabled + label { opacity: 0.55; cursor: not-allowed; }
+    .checkbox-field label { font-size: 0.83rem; color: var(--text-muted); line-height: 1.4; }
+    .tc-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.2rem 0 0 1.45rem; opacity: 0.8; }
 
     .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.5rem; }
     .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
@@ -131,6 +137,12 @@
           Al registrarte, recibirás un <strong>código de agente único</strong> que te permitirá generar enlaces afiliados. Cuando un cliente use tu enlace y envíe una consulta, el mensaje llegará <strong>únicamente a ti</strong>.
         </div>
 
+        <div class="checkbox-field">
+          <input type="checkbox" id="tcAccept" disabled />
+          <label for="tcAccept">He leído y acepto los <a id="tcLink" href="/terminos-agente" target="_blank" rel="noopener" onclick="unlockTc()">Términos y Condiciones de Agente</a> de HogaresRD, incluyendo las responsabilidades sobre la veracidad de los anuncios y el uso del sistema de afiliados.</label>
+        </div>
+        <p class="tc-hint" id="tcHint">Debes abrir el enlace y leer los términos antes de poder aceptarlos.</p>
+
         <button type="submit" class="btn-primary" id="submitBtn">Crear Cuenta de Agente</button>
       </form>
 
@@ -154,6 +166,15 @@
     }
 
     redirectIfAuth();
+
+    function unlockTc() {
+      const cb   = document.getElementById('tcAccept');
+      const hint = document.getElementById('tcHint');
+      setTimeout(() => {
+        cb.disabled = false;
+        hint.textContent = 'Puedes aceptar los términos ahora.';
+      }, 800);
+    }
 
     document.getElementById('agencyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -179,6 +200,10 @@
       }
       if (password !== confirmPassword) {
         err.textContent = 'Las contraseñas no coinciden.';
+        return err.classList.add('visible');
+      }
+      if (!document.getElementById('tcAccept').checked) {
+        err.textContent = 'Debes leer y aceptar los Términos y Condiciones de Agente para continuar.';
         return err.classList.add('visible');
       }
 

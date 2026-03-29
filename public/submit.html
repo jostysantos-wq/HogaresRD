@@ -445,6 +445,16 @@
     }
     #thumbnailPreview.visible ~ .thumb-change-hint { display: block; }
 
+    /* ── T&C checkbox ───────────────────────────────────────── */
+    .tc-check-wrap { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1.75rem 0 0.3rem; padding: 1rem 1.1rem; background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 10px; }
+    .tc-check-wrap input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+    .tc-check-wrap input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    .tc-check-wrap input[type="checkbox"]:disabled ~ .tc-label { opacity: 0.55; cursor: not-allowed; }
+    .tc-label { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .tc-label a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .tc-label a:hover { text-decoration: underline; }
+    .tc-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0 1.6rem; opacity: 0.8; }
+
     /* ── Submit button ──────────────────────────────────────── */
     .submit-wrap { text-align: center; margin-top: 0.5rem; }
 
@@ -1244,13 +1254,22 @@
         </div>
       </div>
 
+      <!-- T&C -->
+      <div class="tc-check-wrap">
+        <input type="checkbox" id="tcAccept" disabled />
+        <label class="tc-label" for="tcAccept">
+          He leído y acepto los <a id="tcLink" href="/terminos-publicacion" target="_blank" rel="noopener" onclick="unlockSubmitTc()">Términos de Publicación</a> de HogaresRD. Certifico que la información proporcionada es veraz y que tengo autorización para publicar esta propiedad.
+        </label>
+      </div>
+      <p class="tc-hint" id="tcHint">Debes abrir el enlace y leer los términos antes de poder aceptarlos.</p>
+
       <!-- Submit -->
       <div class="submit-wrap">
         <button type="submit" class="submit-btn">
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           Enviar Propiedad
         </button>
-        <p class="submit-note">Al enviar aceptas que revisemos tu propiedad antes de publicarla.</p>
+        <p class="submit-note">Tu anuncio será revisado por el equipo de HogaresRD antes de ser publicado.</p>
       </div>
 
     </form>
@@ -1800,12 +1819,34 @@
       if (e.target.name === 'unit_available[]') validateUnitRowsAvailable();
     });
 
+    // ── T&C unlock ─────────────────────────────────────────────
+    function unlockSubmitTc() {
+      const cb   = document.getElementById('tcAccept');
+      const hint = document.getElementById('tcHint');
+      setTimeout(() => {
+        cb.disabled = false;
+        hint.textContent = 'Puedes aceptar los términos ahora.';
+      }, 800);
+    }
+
     // ── Form submit ────────────────────────────────────────────
     document.getElementById('propertyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.querySelector('.submit-btn');
 
       if (!validateRequiredFields()) {
+        return;
+      }
+
+      if (!document.getElementById('tcAccept').checked) {
+        const wrap = document.getElementById('tcAccept').closest('.tc-check-wrap');
+        wrap.style.borderColor = 'var(--error)';
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('tcHint').style.color = 'var(--error)';
+        document.getElementById('tcHint').textContent =
+          document.getElementById('tcAccept').disabled
+            ? 'Debes abrir los Términos de Publicación antes de poder aceptarlos.'
+            : 'Debes aceptar los Términos de Publicación para continuar.';
         return;
       }
 

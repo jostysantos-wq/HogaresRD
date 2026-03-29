@@ -155,11 +155,14 @@ app.get('/submit', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'submit.html'));
 });
 
-app.get('/login',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-app.get('/register',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get('/register-agency',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
-app.get('/reset-password',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
-app.get('/forgot-password',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/login',                (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/register',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+app.get('/register-agency',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
+app.get('/reset-password',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/forgot-password',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/terminos-usuario',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-usuario.html')));
+app.get('/terminos-agente',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-agente.html')));
+app.get('/terminos-publicacion', (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-publicacion.html')));
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
 app.get('/alquilar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'alquilar.html')));

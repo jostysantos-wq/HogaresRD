@@ -55,6 +55,9 @@
     .checkbox-field { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1rem 0 0.25rem; }
     .checkbox-field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
     .checkbox-field label { font-size: 0.83rem; color: var(--text-muted); line-height: 1.4; cursor: pointer; }
+    .checkbox-field input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    .checkbox-field input[type="checkbox"]:disabled + label { opacity: 0.55; cursor: not-allowed; }
+    .tc-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.2rem 0 0 1.45rem; opacity: 0.8; }
 
     .agency-callout { display: flex; align-items: center; gap: 0.9rem; background: color-mix(in srgb, var(--accent) 7%, transparent); border: 1.5px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 1.75rem; text-decoration: none; transition: border-color 0.18s, background 0.18s; }
     .agency-callout:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
@@ -119,6 +122,11 @@
           <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
         </div>
         <div class="checkbox-field">
+          <input type="checkbox" id="tcAccept" disabled />
+          <label for="tcAccept">He leído y acepto los <a id="tcLink" href="/terminos-usuario" target="_blank" rel="noopener" onclick="unlockTc()">Términos y Condiciones de Uso</a> de HogaresRD.</label>
+        </div>
+        <p class="tc-hint" id="tcHint">Debes abrir el enlace y leer los términos antes de poder aceptarlos.</p>
+        <div class="checkbox-field" style="margin-top:0.6rem;">
           <input type="checkbox" id="marketingOptIn" checked />
           <label for="marketingOptIn">Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electrónico. Puedo cancelar en cualquier momento.</label>
         </div>
@@ -145,6 +153,16 @@
 
     redirectIfAuth();
 
+    function unlockTc() {
+      const cb   = document.getElementById('tcAccept');
+      const hint = document.getElementById('tcHint');
+      // small delay so the tab actually opens before we give feedback
+      setTimeout(() => {
+        cb.disabled = false;
+        hint.textContent = 'Puedes aceptar los términos ahora.';
+      }, 800);
+    }
+
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -167,6 +185,10 @@
       }
       if (password !== confirmPassword) {
         err.textContent = 'Las contraseñas no coinciden.';
+        return err.classList.add('visible');
+      }
+      if (!document.getElementById('tcAccept').checked) {
+        err.textContent = 'Debes leer y aceptar los Términos y Condiciones para continuar.';
         return err.classList.add('visible');
       }
 
