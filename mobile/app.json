@@ -1,5 +1,6 @@
 {
   "expo": {
+    "sdkVersion": "54.0.0",
     "name": "HogaresRD",
     "slug": "hogares-rd",
     "version": "1.0.0",
