@@ -52,12 +52,11 @@ struct FeedView: View {
                                 ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
                                     ReelCard(
                                         listing:     listing,
+                                        onTap:       { selectedListingID = listing.id },
                                         onAgencyTap: { slug in selectedAgencySlug = slug },
                                         onSaveTap:   { applyWeight(listing, weight: 10.0) }
                                     )
                                     .frame(width: proxy.size.width, height: proxy.size.height)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { selectedListingID = listing.id }
                                     .onAppear {
                                         currentIndex = index
                                         appearedAt[index] = Date()
@@ -232,6 +231,7 @@ struct FeedView: View {
 
 struct ReelCard: View {
     let listing:     Listing
+    var onTap:       (() -> Void)       = { }      // navigate to detail
     var onAgencyTap: ((String) -> Void) = { _ in }
     var onSaveTap:   (() -> Void)       = { }      // called alongside heart toggle
 
@@ -242,7 +242,8 @@ struct ReelCard: View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
 
-                // ── Horizontal image carousel ──────────────────
+                // ── Horizontal image carousel ─────────────────────────
+                // Tap gesture lives HERE so buttons above it always win
                 let urls = listing.allImageURLs
                 if urls.isEmpty {
                     ZStack {
@@ -252,6 +253,8 @@ struct ReelCard: View {
                             .foregroundStyle(.white.opacity(0.2))
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onTap() }
                 } else {
                     TabView(selection: $imageIndex) {
                         ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
@@ -280,9 +283,13 @@ struct ReelCard: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onTap() }
                 }
 
-                // ── Top-right controls (counter + heart) ──────
+                // ── Top-right controls (counter + heart) ──────────────
+                // These sit ABOVE the image layer in the ZStack so their
+                // button gestures naturally win — no contentShape conflict.
                 VStack {
                     HStack {
                         Spacer()
@@ -295,7 +302,7 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Heart — triggers both save AND the save-bonus signal
+                            // Heart — save only, never navigates
                             Button {
                                 saved.toggle(listing.id)
                                 onSaveTap()
