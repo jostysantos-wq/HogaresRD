@@ -1500,6 +1500,45 @@
     // ── Agencies ───────────────────────────────────────────────
     let agencyCount = 0;
 
+    // Auto-populate agency entry for logged-in agency accounts
+    (function autoFillAgency() {
+      const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+      if (!me || me.role !== 'agency') return;
+      agencyCount++;
+      document.getElementById('agenciesEmpty').style.display = 'none';
+      const div = document.createElement('div');
+      div.className = 'agency-entry';
+      div.id = `agency-${agencyCount}`;
+      const idx = agencyCount;
+      div.innerHTML = `
+        <div class="agency-header">
+          <span class="agency-num">Tu agencia (prellenado)</span>
+          <button type="button" class="remove-agency-btn" onclick="removeAgency(${idx})">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            Eliminar
+          </button>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Nombre de la Inmobiliaria</label>
+            <input type="text" name="agency_name[]" value="${me.agencyName || ''}" placeholder="Ej. Century 21, RE/MAX..." />
+          </div>
+          <div class="field">
+            <label>Nombre del Agente</label>
+            <input type="text" name="agency_agent[]" value="${me.name || ''}" placeholder="Ej. María López" />
+          </div>
+          <div class="field">
+            <label>Teléfono / WhatsApp</label>
+            <input type="tel" name="agency_phone[]" value="${me.phone || ''}" placeholder="(809) 000-0000" />
+          </div>
+          <div class="field">
+            <label>Correo Electrónico</label>
+            <input type="email" name="agency_email[]" value="${me.email || ''}" placeholder="agente@inmobiliaria.com" />
+          </div>
+        </div>`;
+      document.getElementById('agenciesList').appendChild(div);
+    })();
+
     function addAgency() {
       agencyCount++;
       document.getElementById('agenciesEmpty').style.display = 'none';

@@ -146,9 +146,14 @@ router.get('/agencies/:slug', (req, res) => {
     )
   );
   if (!matched.length) return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
-  const agencyName = matched[0].agencies.find(a =>
-    a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
-  ).name;
+  const agencyObj = matched[0].agencies.find(a =>
+    a.name && a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
+  );
+  const agencyName = agencyObj.name;
+
+  // Look up the registered user for this agency to get their refToken
+  const agencyUser = agencyObj.email ? store.getUserByEmail(agencyObj.email) : null;
+  const refToken   = agencyUser?.refToken || null;
 
   // Pagination
   const page  = Math.max(1, parseInt(req.query.page) || 1);
@@ -156,7 +161,7 @@ router.get('/agencies/:slug', (req, res) => {
   const total = matched.length;
   const items = matched.slice((page - 1) * limit, page * limit);
 
-  res.json({ name: agencyName, slug, listings: items, total, page, limit, pages: Math.ceil(total / limit) });
+  res.json({ name: agencyName, slug, refToken, listings: items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
 // GET /api/listings/:id
