@@ -67,6 +67,11 @@
     .auth-links a:hover { text-decoration: underline; }
 
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+    @media (max-width: 520px) {
+      .field-row { grid-template-columns: 1fr; }
+      .auth-card { padding: 2rem 1.25rem; }
+    }
   </style>
 </head>
 <body>
