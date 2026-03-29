@@ -6,21 +6,36 @@ struct LeadApplicationView: View {
     @Environment(\.dismiss) private var dismiss
 
     // Form fields
-    @State private var name     = ""
-    @State private var phone    = ""
-    @State private var email    = ""
-    @State private var intent   = "comprar"
-    @State private var timeline = "1-3 meses"
-    @State private var budget   = ""
-    @State private var notes    = ""
+    @State private var name          = ""
+    @State private var phone         = ""
+    @State private var email         = ""
+    @State private var intent        = "comprar"
+    @State private var timeline      = "1-3 meses"
+    @State private var financing     = ""
+    @State private var contactMethod = "whatsapp"
+    @State private var preApproved   = false
+    @State private var budget        = ""
+    @State private var notes         = ""
 
     // State
     @State private var submitting = false
     @State private var submitted  = false
     @State private var errorMsg   = ""
 
-    private let intents   = [("comprar","Comprar"),("alquilar","Alquilar"),("invertir","Invertir")]
-    private let timelines = ["Inmediato","1-3 meses","3-6 meses","6-12 meses","+1 año"]
+    private let intents    = [("comprar","Comprar"),("alquilar","Alquilar"),("invertir","Invertir")]
+    private let timelines  = ["Inmediato","1-3 meses","3-6 meses","6-12 meses","+1 año"]
+    private let financings = [
+        ("",             "Seleccionar..."),
+        ("efectivo",     "Efectivo"),
+        ("banco",        "Financiamiento bancario"),
+        ("desarrollador","Financiamiento del desarrollador"),
+        ("vendedor",     "Financiamiento del vendedor")
+    ]
+    private let contactMethods = [
+        ("whatsapp", "WhatsApp"),
+        ("llamada",  "Llamada"),
+        ("email",    "Email")
+    ]
 
     var body: some View {
         NavigationStack {
@@ -86,13 +101,46 @@ struct LeadApplicationView: View {
                     .pickerStyle(.segmented)
                 }
 
-                // Timeline
+                // Timeline & Contact Method
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Plazo estimado", systemImage: "calendar")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Picker("Plazo", selection: $timeline) {
+                            ForEach(timelines, id: \.self) { Text($0).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Contacto preferido", systemImage: "bubble.left.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Picker("Contacto", selection: $contactMethod) {
+                            ForEach(contactMethods, id: \.0) { Text($0.1).tag($0.0) }
+                        }
+                        .pickerStyle(.menu)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+
+                // Financing
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Plazo estimado", systemImage: "calendar")
+                    Label("Método de financiamiento", systemImage: "banknote")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Picker("Plazo", selection: $timeline) {
-                        ForEach(timelines, id: \.self) { Text($0).tag($0) }
+                    Picker("Financiamiento", selection: $financing) {
+                        ForEach(financings, id: \.0) { Text($0.1).tag($0.0) }
                     }
                     .pickerStyle(.menu)
                     .padding(.horizontal, 12)
@@ -102,9 +150,25 @@ struct LeadApplicationView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
 
-                field("Presupuesto máximo (USD)", systemImage: "dollarsign.circle") {
-                    TextField("ej. 150,000", text: $budget)
-                        .keyboardType(.numbersAndPunctuation)
+                // Budget & Pre-approval
+                HStack(spacing: 12) {
+                    field("Presupuesto máximo (USD)", systemImage: "dollarsign.circle") {
+                        TextField("ej. 150,000", text: $budget)
+                            .keyboardType(.numbersAndPunctuation)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Pre-aprobación", systemImage: "checkmark.shield")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Toggle("Pre-aprobado", isOn: $preApproved)
+                            .toggleStyle(.switch)
+                            .tint(Color.rdGreen)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                 }
 
                 // Notes
@@ -207,6 +271,8 @@ struct LeadApplicationView: View {
             listing:  listing,
             name:     name,  phone: phone, email: email,
             intent:   intent, timeline: timeline,
+            financing: financing, preApproved: preApproved,
+            contactMethod: contactMethod,
             budget:   budget, notes: notes
         )
         submitting = false

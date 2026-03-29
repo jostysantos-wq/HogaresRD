@@ -447,6 +447,10 @@
             <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#fff;vertical-align:middle;margin-right:6px"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
             Aplicar para esta Propiedad
           </button>
+          <a class="btn-cta" id="whatsappBtn" style="background:#25D366;margin-bottom:0.6rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#fff;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Contactar por WhatsApp
+          </a>
           <button class="btn-affiliate" id="affiliateBtn" onclick="copyAffiliateLink()">
             <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
             Copiar enlace afiliado
@@ -596,9 +600,35 @@
             </select>
           </div>
         </div>
-        <div class="modal-field">
-          <label class="modal-label">Presupuesto máximo (USD)</label>
-          <input class="modal-input" id="applyBudget" placeholder="ej. 150,000" type="text"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="modal-field">
+            <label class="modal-label">Método de financiamiento</label>
+            <select class="modal-input" id="applyFinancing" style="cursor:pointer;">
+              <option value="">Seleccionar...</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="banco">Financiamiento bancario</option>
+              <option value="desarrollador">Financiamiento del desarrollador</option>
+              <option value="vendedor">Financiamiento del vendedor</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">Contacto preferido</label>
+            <select class="modal-input" id="applyContactMethod" style="cursor:pointer;">
+              <option value="whatsapp">WhatsApp</option>
+              <option value="llamada">Llamada</option>
+              <option value="email">Email</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="modal-field">
+            <label class="modal-label">Presupuesto máximo (USD)</label>
+            <input class="modal-input" id="applyBudget" placeholder="ej. 150,000" type="text"/>
+          </div>
+          <div class="modal-field" style="display:flex;align-items:center;gap:0.6rem;padding-top:1.4rem;">
+            <input type="checkbox" id="applyPreApproved" style="width:18px;height:18px;cursor:pointer;accent-color:var(--green);" />
+            <label for="applyPreApproved" style="font-size:0.84rem;cursor:pointer;">Pre-aprobado por el banco</label>
+          </div>
         </div>
         <div class="modal-field">
           <label class="modal-label">Notas adicionales</label>
@@ -889,14 +919,17 @@
   }
 
   function submitApply() {
-    const name     = document.getElementById('applyName').value.trim();
-    const phone    = document.getElementById('applyPhone').value.trim();
-    const email    = document.getElementById('applyEmail').value.trim();
-    const intent   = document.getElementById('applyIntent').value;
-    const timeline = document.getElementById('applyTimeline').value;
-    const budget   = document.getElementById('applyBudget').value.trim();
-    const notes    = document.getElementById('applyNotes').value.trim();
-    const errEl    = document.getElementById('applyError');
+    const name           = document.getElementById('applyName').value.trim();
+    const phone          = document.getElementById('applyPhone').value.trim();
+    const email          = document.getElementById('applyEmail').value.trim();
+    const intent         = document.getElementById('applyIntent').value;
+    const timeline       = document.getElementById('applyTimeline').value;
+    const financing      = document.getElementById('applyFinancing').value;
+    const contact_method = document.getElementById('applyContactMethod').value;
+    const budget         = document.getElementById('applyBudget').value.trim();
+    const pre_approved   = document.getElementById('applyPreApproved').checked;
+    const notes          = document.getElementById('applyNotes').value.trim();
+    const errEl          = document.getElementById('applyError');
 
     if (!name || !phone) { errEl.textContent = 'Nombre y teléfono son requeridos.'; return; }
     errEl.textContent = '';
@@ -916,7 +949,8 @@
         listing_price: listing.price || '',
         listing_type:  listing.type  || '',
         agencies,
-        name, phone, email, budget, timeline, intent, notes
+        name, phone, email, budget, timeline, intent,
+        financing, pre_approved, contact_method, notes
       })
     })
     .then(r => r.json())
@@ -1083,6 +1117,10 @@
     if (l.floors)
       metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Número de pisos</span><span class="sidebar-row-value">${l.floors}</span></div>`);
     document.getElementById('sidebarMeta').innerHTML = metaRows.join('');
+
+    // WhatsApp pre-filled message
+    const waMsg = encodeURIComponent(`Hola, estoy interesado/a en la propiedad "${l.title}" — $${Number(l.price).toLocaleString('en-US')} en ${[l.sector, l.city].filter(Boolean).join(', ')}. ${window.location.href}`);
+    document.getElementById('whatsappBtn').href = `https://wa.me/?text=${waMsg}`;
 
     // Populate modal subtitle with listing title
     document.getElementById('inquiryModalSub').textContent =

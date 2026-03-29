@@ -25,7 +25,8 @@ router.post('/', (req, res) => {
     listing_id, listing_title, listing_price, listing_type,
     agencies,
     name, phone, email,
-    budget, timeline, intent, notes
+    budget, timeline, intent, notes,
+    financing, pre_approved, contact_method
   } = req.body;
 
   if (!name || !phone || !listing_id) {
@@ -45,6 +46,9 @@ router.post('/', (req, res) => {
     budget:        (budget || '').trim(),
     timeline:      (timeline || '').trim(),
     intent:        intent        || 'comprar',
+    financing:     financing     || '',
+    pre_approved:  pre_approved === true || pre_approved === 'true' ? true : false,
+    contact_method: contact_method || 'whatsapp',
     notes:         (notes || '').trim(),
     status:        'pendiente',
     created_at:    new Date().toISOString(),
@@ -77,10 +81,11 @@ router.get('/export', (req, res) => {
     leads = leads.filter(l => l.status === status);
   }
 
-  const headers = ['ID','Propiedad','Precio','Tipo','Nombre','Teléfono','Email','Presupuesto','Plazo','Intención','Estado','Notas','Fecha'];
+  const headers = ['ID','Propiedad','Precio','Tipo','Nombre','Teléfono','Email','Presupuesto','Plazo','Intención','Financiamiento','Pre-aprobado','Contacto Preferido','Estado','Notas','Fecha'];
   const rows = leads.map(l => [
     l.id, l.listing_title, l.listing_price, l.listing_type,
     l.name, l.phone, l.email, l.budget, l.timeline, l.intent,
+    l.financing || '', l.pre_approved ? 'Sí' : 'No', l.contact_method || '',
     l.status, l.notes,
     new Date(l.created_at).toLocaleDateString('es-DO')
   ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','));

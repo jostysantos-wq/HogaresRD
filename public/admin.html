@@ -342,6 +342,7 @@
                 <th>Contacto</th>
                 <th>Propiedad</th>
                 <th>Intención</th>
+                <th>Financiamiento</th>
                 <th>Presupuesto</th>
                 <th>Plazo</th>
                 <th>Estado</th>
@@ -350,7 +351,7 @@
               </tr>
             </thead>
             <tbody id="leadsTableBody">
-              <tr><td colspan="8" class="leads-empty">Cargando leads...</td></tr>
+              <tr><td colspan="9" class="leads-empty">Cargando leads...</td></tr>
             </tbody>
           </table>
         </div>
@@ -778,9 +779,11 @@
     function renderLeads(leads) {
       const tbody = document.getElementById('leadsTableBody');
       if (!leads.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay leads en esta categoría.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="leads-empty">No hay leads en esta categoría.</td></tr>';
         return;
       }
+      const financingMap = { efectivo: 'Efectivo', banco: 'Bancario', desarrollador: 'Desarrollador', vendedor: 'Vendedor' };
+      const contactMap   = { whatsapp: '📱 WhatsApp', llamada: '📞 Llamada', email: '✉️ Email' };
       tbody.innerHTML = leads.map(l => {
         const date    = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
         const agStr   = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
@@ -791,6 +794,7 @@
               <div class="lead-name">${l.name}</div>
               <div class="lead-contact">📞 ${l.phone}</div>
               ${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}
+              <div class="lead-contact" style="font-size:0.72rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div>
             </td>
             <td>
               <div class="lead-listing">${l.listing_title || '—'}
@@ -799,6 +803,10 @@
               </div>
             </td>
             <td>${intentMap[l.intent] || l.intent || '—'}</td>
+            <td>
+              <div>${financingMap[l.financing] || l.financing || '—'}</div>
+              ${l.pre_approved ? '<div style="font-size:0.72rem;color:#0a7c4f;font-weight:600;">✓ Pre-aprobado</div>' : ''}
+            </td>
             <td>${l.budget ? '$' + l.budget : '—'}</td>
             <td>${l.timeline || '—'}</td>
             <td><span class="lead-badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>

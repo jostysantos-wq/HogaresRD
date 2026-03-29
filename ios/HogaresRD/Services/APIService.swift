@@ -76,6 +76,8 @@ class APIService: ObservableObject {
         listing:  Listing,
         name:     String, phone: String, email:    String,
         intent:   String, timeline: String,
+        financing: String, preApproved: Bool,
+        contactMethod: String,
         budget:   String, notes:  String
     ) async -> Bool {
         guard let url = URL(string: "\(apiBase)/api/leads") else { return false }
@@ -92,6 +94,8 @@ class APIService: ObservableObject {
             "agencies":      agencies,
             "name":     name,  "phone": phone, "email":    email,
             "intent":   intent, "timeline": timeline,
+            "financing": financing, "pre_approved": preApproved,
+            "contact_method": contactMethod,
             "budget":   budget, "notes":   notes
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
