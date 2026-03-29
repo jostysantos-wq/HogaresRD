@@ -1,5 +1,10 @@
 import SwiftUI
 
+private struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 struct HomeView: View {
     @EnvironmentObject var api: APIService
     @State private var featured: [Listing] = []
@@ -9,6 +14,7 @@ struct HomeView: View {
     @State private var selectedType = "venta"
     @State private var searchText = ""
     @State private var showSubmit = false
+    @State private var scrollOffset: CGFloat = 0
 
     private let types = [("venta", "Comprar"), ("alquiler", "Alquilar"), ("proyecto", "Proyectos")]
     private let agencyColors: [Color] = [Color.rdBlue, Color.rdRed, Color.rdGreen,
@@ -19,6 +25,14 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
+                    // Scroll offset tracker
+                    GeometryReader { geo in
+                        Color.clear
+                            .preference(key: ScrollOffsetKey.self,
+                                        value: geo.frame(in: .global).minY)
+                    }
+                    .frame(height: 0)
+
                     // ── Hero ──────────────────────────────────────────
                     heroSection
 
@@ -64,6 +78,7 @@ struct HomeView: View {
             }
             .ignoresSafeArea(edges: .top)
             .navigationBarHidden(true)
+            .onPreferenceChange(ScrollOffsetKey.self) { scrollOffset = $0 }
             .overlay(alignment: .topTrailing) {
                 Button {
                     showSubmit = true
@@ -83,6 +98,9 @@ struct HomeView: View {
                 }
                 .padding(.top, 56)
                 .padding(.trailing, 16)
+                .opacity(scrollOffset > -60 ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: scrollOffset > -60)
+                .allowsHitTesting(scrollOffset > -60)
             }
             .sheet(isPresented: $showSubmit) {
                 SubmitListingView().environmentObject(api)

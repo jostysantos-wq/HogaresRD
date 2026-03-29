@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var api: APIService
     @State private var authSheet: AuthView.Mode? = nil
+    @AppStorage("appColorScheme") private var schemePref: String = "system"
 
     var body: some View {
         NavigationStack {
@@ -69,6 +70,18 @@ struct ProfileView: View {
                 Link(destination: URL(string: "https://hogaresrd.com/blog")!) {
                     Label("Blog HogaresRD", systemImage: "newspaper.fill")
                 }
+            }
+
+            // Appearance
+            Section("Apariencia") {
+                Picker(selection: $schemePref) {
+                    Label("Sistema", systemImage: "circle.lefthalf.filled").tag("system")
+                    Label("Claro",   systemImage: "sun.max.fill").tag("light")
+                    Label("Oscuro",  systemImage: "moon.fill").tag("dark")
+                } label: {
+                    Label("Tema", systemImage: "paintbrush.fill")
+                }
+                .pickerStyle(.menu)
             }
 
             // Logout
