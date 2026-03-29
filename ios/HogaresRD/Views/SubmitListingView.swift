@@ -87,35 +87,6 @@ struct SubmitListingView: View {
         ("vista_mar","Vista al Mar"),("frente_mar","Frente al Mar"),("cancha","Cancha Deportiva")
     ]
 
-    private let tagGroups: [(String, [String])] = [
-        ("Ubicación y Vistas", [
-            "Vista al mar", "Primera línea de playa", "A pasos de la playa",
-            "Vista panorámica", "Frente al campo de golf", "Zona montañosa / fresca"
-        ]),
-        ("Zona", [
-            "Zona turística", "Zona residencial cerrada", "Centro de la ciudad",
-            "Barrio tranquilo", "Cerca de autopista", "Zona en desarrollo"
-        ]),
-        ("Servicios Esenciales", [
-            "Con generador", "Con inversor / batería", "Con paneles solares",
-            "Con cisterna", "Con bomba de agua", "Vigilancia 24 horas", "Con verja / seguridad privada"
-        ]),
-        ("Estilo de Vida", [
-            "Apto para familias", "Pet friendly", "Cerca de colegios",
-            "Cerca de hospitales", "Cerca de centros comerciales",
-            "Cerca de supermercados", "Vida nocturna cercana"
-        ]),
-        ("Inversión", [
-            "Alta rentabilidad", "Apto para Airbnb", "Alquiler vacacional",
-            "Zona de revalorización", "Precio de oportunidad", "Proyecto de lujo"
-        ]),
-        ("Características", [
-            "Amueblado", "Remodelado / Renovado", "Listo para mudarse",
-            "Con piscina privada", "Con piscina comunitaria", "Con terraza / balcón amplio",
-            "Con área de BBQ", "Acceso a playa privada"
-        ])
-    ]
-
     private var needsBedsBaths: Bool {
         !["Solar / Terreno","Local Comercial","Finca"].contains(propertyType)
     }
@@ -282,23 +253,7 @@ struct SubmitListingView: View {
 
                     // ── Etiquetas ────────────────────────────────────────
                     FormSection(title: "Etiquetas", icon: "tag.fill", color: Color.rdRed) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Selecciona etiquetas que describan mejor tu propiedad para ayudar a los compradores a encontrarla.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            ForEach(tagGroups, id: \.0) { group, tags in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(group.uppercased())
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(Color(.tertiaryLabel))
-                                        .kerning(0.5)
-                                    FlowChips(
-                                        items: tags.map { ($0, $0) },
-                                        selected: $selectedTags
-                                    )
-                                }
-                            }
-                        }
+                        TagPickerView(selected: $selectedTags)
                     }
 
                     // ── Contacto ────────────────────────────────────────
@@ -642,6 +597,123 @@ struct FormPicker: View {
                 .padding(.horizontal, 14).padding(.vertical, 12)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+}
+
+// MARK: - Tag Picker
+
+struct TagPickerView: View {
+    @Binding var selected: Set<String>
+    @State private var searchText = ""
+
+    private typealias TagEntry = (tag: String, group: String)
+    private let allTags: [TagEntry] = [
+        ("Vista al mar","Ubicación y Vistas"),("Primera línea de playa","Ubicación y Vistas"),
+        ("A pasos de la playa","Ubicación y Vistas"),("Vista panorámica","Ubicación y Vistas"),
+        ("Frente al campo de golf","Ubicación y Vistas"),("Zona montañosa / fresca","Ubicación y Vistas"),
+        ("Zona turística","Zona"),("Zona residencial cerrada","Zona"),("Centro de la ciudad","Zona"),
+        ("Barrio tranquilo","Zona"),("Cerca de autopista","Zona"),("Zona en desarrollo","Zona"),
+        ("Con generador","Servicios Esenciales"),("Con inversor / batería","Servicios Esenciales"),
+        ("Con paneles solares","Servicios Esenciales"),("Con cisterna","Servicios Esenciales"),
+        ("Con bomba de agua","Servicios Esenciales"),("Vigilancia 24 horas","Servicios Esenciales"),
+        ("Con verja / seguridad privada","Servicios Esenciales"),
+        ("Apto para familias","Estilo de Vida"),("Pet friendly","Estilo de Vida"),
+        ("Cerca de colegios","Estilo de Vida"),("Cerca de hospitales","Estilo de Vida"),
+        ("Cerca de centros comerciales","Estilo de Vida"),("Cerca de supermercados","Estilo de Vida"),
+        ("Vida nocturna cercana","Estilo de Vida"),
+        ("Alta rentabilidad","Inversión"),("Apto para Airbnb","Inversión"),
+        ("Alquiler vacacional","Inversión"),("Zona de revalorización","Inversión"),
+        ("Precio de oportunidad","Inversión"),("Proyecto de lujo","Inversión"),
+        ("Amueblado","Características"),("Remodelado / Renovado","Características"),
+        ("Listo para mudarse","Características"),("Con piscina privada","Características"),
+        ("Con piscina comunitaria","Características"),("Con terraza / balcón amplio","Características"),
+        ("Con área de BBQ","Características"),("Acceso a playa privada","Características")
+    ]
+
+    private var results: [TagEntry] {
+        guard !searchText.isEmpty else { return [] }
+        return allTags.filter {
+            $0.tag.localizedCaseInsensitiveContains(searchText) ||
+            $0.group.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            // Selected chips
+            if !selected.isEmpty {
+                FlowLayout(spacing: 8) {
+                    ForEach(Array(selected).sorted(), id: \.self) { tag in
+                        Button { selected.remove(tag) } label: {
+                            HStack(spacing: 4) {
+                                Text(tag).font(.caption).fontWeight(.semibold)
+                                Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Divider()
+            }
+
+            // Search bar
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.subheadline)
+                TextField("Buscar etiqueta (ej. mar, piscina, airbnb)…", text: $searchText)
+                    .font(.subheadline)
+                    .autocorrectionDisabled()
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            // Results
+            if searchText.isEmpty {
+                if selected.isEmpty {
+                    Text("Escribe para buscar entre las \(allTags.count) etiquetas disponibles.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            } else if results.isEmpty {
+                Text("No se encontraron etiquetas para \"\(searchText)\"")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                FlowLayout(spacing: 8) {
+                    ForEach(results, id: \.tag) { item in
+                        let on = selected.contains(item.tag)
+                        Button {
+                            if on { selected.remove(item.tag) } else { selected.insert(item.tag) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if on {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 9, weight: .bold))
+                                }
+                                Text(item.tag)
+                                    .font(.caption)
+                                    .fontWeight(on ? .semibold : .regular)
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(on ? Color.rdBlue : Color(.secondarySystemBackground))
+                            .foregroundStyle(on ? .white : Color(.label))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(on ? Color.rdBlue : Color(.separator), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
     }
