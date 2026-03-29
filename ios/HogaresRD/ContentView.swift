@@ -14,6 +14,10 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
+            FeedView()
+                .tabItem {
+                    Label("Feed", systemImage: "newspaper.fill")
+                }
             HomeView()
                 .tabItem {
                     Label("Inicio", systemImage: "house.fill")
@@ -21,10 +25,6 @@ struct ContentView: View {
             BrowseView()
                 .tabItem {
                     Label("Explorar", systemImage: "magnifyingglass")
-                }
-            FeedView()
-                .tabItem {
-                    Label("Feed", systemImage: "newspaper.fill")
                 }
             ProfileView()
                 .tabItem {

@@ -2,9 +2,10 @@ import SwiftUI
 
 struct ListingDetailView: View {
     let id: String
-    @State private var listing: Listing?
-    @State private var loading = true
-    @State private var imageIndex = 0
+    @EnvironmentObject var saved: SavedStore
+    @State private var listing:    Listing?
+    @State private var loading     = true
+    @State private var imageIndex  = 0
     @State private var showContact = false
 
     var body: some View {
@@ -19,6 +20,16 @@ struct ListingDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    if let l = listing { saved.toggle(l.id) }
+                } label: {
+                    Image(systemName: listing.map { saved.isSaved($0.id) ? "heart.fill" : "heart" } ?? "heart")
+                        .foregroundStyle(listing.map { saved.isSaved($0.id) ? Color.rdRed : Color.primary } ?? Color.primary)
+                }
+            }
+        }
         .sheet(isPresented: $showContact) {
             if let l = listing { ContactSheet(listing: l) }
         }
@@ -149,6 +160,39 @@ struct ListingDetailView: View {
                             .background(Color.rdRed)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // ── Agency portfolio link ───────────────────────
+                    if let agency = l.agencies?.first, let name = agency.name, let slug = agency.slug {
+                        NavigationLink {
+                            AgencyPortfolioView(slug: slug)
+                        } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.rdBlue.opacity(0.1))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: "building.2.fill")
+                                        .foregroundStyle(Color.rdBlue)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(name)
+                                        .font(.subheadline).bold()
+                                        .foregroundStyle(.primary)
+                                    Text("Ver portafolio completo")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.rdBlue)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(12)
+                            .background(Color.rdBlue.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding()

@@ -2,7 +2,8 @@ import SwiftUI
 
 @main
 struct HogaresRDApp: App {
-    @StateObject private var api = APIService.shared
+    @StateObject private var api   = APIService.shared
+    @StateObject private var saved = SavedStore.shared
     @AppStorage("appColorScheme") private var schemePref: String = "system"
 
     private var preferredScheme: ColorScheme? {
@@ -17,6 +18,7 @@ struct HogaresRDApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(api)
+                .environmentObject(saved)
                 .preferredColorScheme(preferredScheme)
         }
     }

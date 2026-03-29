@@ -14,7 +14,8 @@ struct FeedView: View {
     @State private var initialLoad       = true
     @State private var reshuffles        = 0
     @State private var errorMsg:         String?
-    @State private var selectedListingID: String?
+    @State private var selectedListingID:  String?
+    @State private var selectedAgencySlug: String?
 
     @AppStorage("feed_prefs") private var prefJSON: String = "{}"
 
@@ -45,7 +46,8 @@ struct FeedView: View {
                         ScrollView(.vertical, showsIndicators: false) {
                             LazyVStack(spacing: 0) {
                                 ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
-                                    ReelCard(listing: listing)
+                                    ReelCard(listing: listing,
+                                             onAgencyTap: { slug in selectedAgencySlug = slug })
                                         .frame(width: proxy.size.width,
                                                height: proxy.size.height)
                                         .contentShape(Rectangle())
@@ -81,9 +83,13 @@ struct FeedView: View {
                 get: { selectedListingID != nil },
                 set: { if !$0 { selectedListingID = nil } }
             )) {
-                if let id = selectedListingID {
-                    ListingDetailView(id: id)
-                }
+                if let id = selectedListingID { ListingDetailView(id: id) }
+            }
+            .navigationDestination(isPresented: Binding(
+                get: { selectedAgencySlug != nil },
+                set: { if !$0 { selectedAgencySlug = nil } }
+            )) {
+                if let slug = selectedAgencySlug { AgencyPortfolioView(slug: slug) }
             }
         }
         .task { await loadMore() }
@@ -160,6 +166,9 @@ struct FeedView: View {
 
 struct ReelCard: View {
     let listing: Listing
+    var onAgencyTap: ((String) -> Void) = { _ in }
+
+    @EnvironmentObject var saved: SavedStore
     @State private var imageIndex = 0
 
     var body: some View {
@@ -206,22 +215,32 @@ struct ReelCard: View {
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
 
-                // ── Image counter badge ────────────────────────
-                if listing.images.count > 1 {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Text("\(imageIndex + 1) / \(listing.images.count)")
-                                .font(.caption2).bold()
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(.ultraThinMaterial)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                                .padding(.top, 60)
-                                .padding(.trailing, 16)
-                        }
+                // ── Top-right controls (counter + heart) ──────
+                VStack {
+                    HStack {
                         Spacer()
+                        VStack(spacing: 10) {
+                            if listing.images.count > 1 {
+                                Text("\(imageIndex + 1) / \(listing.images.count)")
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(.ultraThinMaterial)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                            }
+                            Button {
+                                saved.toggle(listing.id)
+                            } label: {
+                                Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
+                                    .shadow(color: .black.opacity(0.4), radius: 4)
+                            }
+                        }
+                        .padding(.top, 60)
+                        .padding(.trailing, 16)
                     }
+                    Spacer()
                 }
 
                 // ── Gradient scrim ────────────────────────────
@@ -291,23 +310,31 @@ struct ReelCard: View {
 
                     // Agency + tap hint
                     HStack {
-                        if let name = listing.agencies?.first?.name {
-                            HStack(spacing: 5) {
-                                Image(systemName: "building.2.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.rdBlue)
-                                Text(name)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.75))
-                                    .lineLimit(1)
+                        if let agency = listing.agencies?.first, let name = agency.name {
+                            Button {
+                                if let slug = agency.slug { onAgencyTap(slug) }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "building.2.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.rdBlue)
+                                    Text(name)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.75))
+                                        .lineLimit(1)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 8))
+                                        .foregroundStyle(.white.opacity(0.4))
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
                         Spacer()
                         HStack(spacing: 4) {
                             Text("Ver detalles")
                                 .font(.caption).bold()
                                 .foregroundStyle(.white.opacity(0.8))
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.up")
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.6))
                         }

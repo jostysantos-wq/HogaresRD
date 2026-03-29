@@ -10,6 +10,9 @@
 		AA11000000000000000000C1 /* HogaresRDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B1 /* HogaresRDApp.swift */; };
 		AA11000000000000000000C2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B2 /* ContentView.swift */; };
 		AA11000000000000000000C3 /* Listing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B3 /* Listing.swift */; };
+		AA22000000000000000000D1 /* SavedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C1 /* SavedStore.swift */; };
+		AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C2 /* AgencyPortfolioView.swift */; };
+		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
 		AA11000000000000000000C4 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B4 /* User.swift */; };
 		AA11000000000000000000C5 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B5 /* APIService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
@@ -27,6 +30,9 @@
 		AA11000000000000000000B1 /* HogaresRDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HogaresRDApp.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B3 /* Listing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listing.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C1 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C2 /* AgencyPortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPortfolioView.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B4 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B5 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -85,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				AA11000000000000000000B3 /* Listing.swift */,
+					AA22000000000000000000C1 /* SavedStore.swift */,
 				AA11000000000000000000B4 /* User.swift */,
 			);
 			path = Models;
@@ -109,6 +116,8 @@
 				AA11000000000000000000BB /* ProfileView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
+					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
+					AA22000000000000000000C3 /* SavedListingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -195,6 +204,9 @@
 				AA11000000000000000000CB /* ProfileView.swift in Sources */,
 				AA11000000000000000000CD /* SubmitListingView.swift in Sources */,
 				AA11000000000000000000CE /* FeedView.swift in Sources */,
+					AA22000000000000000000D1 /* SavedStore.swift in Sources */,
+					AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
+					AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

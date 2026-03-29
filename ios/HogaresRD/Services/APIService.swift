@@ -124,6 +124,16 @@ class APIService: ObservableObject {
 
     // MARK: - Agencies
 
+    func getAgency(slug: String, page: Int = 1) async throws -> AgencyDetail {
+        var comps = URLComponents(string: "\(apiBase)/api/agencies/\(slug)")!
+        comps.queryItems = [
+            URLQueryItem(name: "page",  value: "\(page)"),
+            URLQueryItem(name: "limit", value: "12")
+        ]
+        let (data, _) = try await URLSession.shared.data(from: comps.url!)
+        return try decoder.decode(AgencyDetail.self, from: data)
+    }
+
     func getAgencies() async throws -> [Inmobiliaria] {
         let url = URL(string: "\(apiBase)/api/listings/agencies")!
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -169,6 +179,25 @@ class APIService: ObservableObject {
         self.token = token
         UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
         UserDefaults.standard.set(token, forKey: "rd_token")
+    }
+}
+
+struct AgencyDetail: Decodable {
+    let name: String
+    let slug: String
+    let listings: [Listing]
+    let total: Int
+    let pages: Int
+
+    private enum CodingKeys: String, CodingKey { case name, slug, listings, total, pages }
+
+    init(from decoder: Decoder) throws {
+        let c  = try decoder.container(keyedBy: CodingKeys.self)
+        name   = try c.decode(String.self, forKey: .name)
+        slug   = try c.decode(String.self, forKey: .slug)
+        total  = try c.decode(Int.self,    forKey: .total)
+        pages  = try c.decode(Int.self,    forKey: .pages)
+        listings = (try? c.decode([Safe<Listing>].self, forKey: .listings))?.compactMap { $0.value } ?? []
     }
 }
 

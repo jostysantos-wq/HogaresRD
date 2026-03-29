@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @EnvironmentObject var api: APIService
+    @EnvironmentObject var api:   APIService
+    @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @AppStorage("appColorScheme") private var schemePref: String = "system"
 
@@ -48,8 +49,22 @@ struct ProfileView: View {
 
             // Account
             Section("Cuenta") {
-                Label("Mis favoritos", systemImage: "heart.fill")
-                Label("Mis búsquedas", systemImage: "clock.arrow.circlepath")
+                NavigationLink {
+                    SavedListingsView().environmentObject(saved)
+                } label: {
+                    HStack {
+                        Label("Mis favoritos", systemImage: "heart.fill")
+                        Spacer()
+                        if !saved.savedIDs.isEmpty {
+                            Text("\(saved.savedIDs.count)")
+                                .font(.caption).bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(Color.rdRed)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
                 if user.isAgency {
                     NavigationLink {
                         AgencyDashboardView()
@@ -156,21 +171,40 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Agency Dashboard Placeholder
+// MARK: - Agency Dashboard
 struct AgencyDashboardView: View {
+    @EnvironmentObject var api: APIService
+
     var body: some View {
         List {
-            Section("Mis listados") {
-                Label("Ver propiedades publicadas", systemImage: "house.fill")
-                Label("Publicar nueva propiedad", systemImage: "plus.circle.fill")
+            if let user = api.currentUser, let agencyName = user.agencyName {
+                Section {
+                    let slug = agencyName.lowercased()
+                        .replacingOccurrences(of: " ", with: "-")
+                        .filter { ($0 >= "a" && $0 <= "z") || ($0 >= "0" && $0 <= "9") || $0 == "-" }
+                    NavigationLink {
+                        AgencyPortfolioView(slug: String(slug))
+                    } label: {
+                        Label("Ver mis propiedades publicadas", systemImage: "house.fill")
+                    }
+                }
             }
-            Section("Estadísticas") {
-                Label("Consultas recibidas", systemImage: "envelope.fill")
-                Label("Vistas totales", systemImage: "eye.fill")
-            }
-            Section {
+
+            Section("Publicar") {
+                NavigationLink {
+                    // Reuse SubmitListingView from HomeView
+                    Text("Submit") // placeholder — SubmitListingView is modal-only
+                } label: {
+                    Label("Publicar nueva propiedad", systemImage: "plus.circle.fill")
+                }
                 Link(destination: URL(string: "https://hogaresrd.com/submit")!) {
                     Label("Publicar en el sitio web", systemImage: "safari.fill")
+                }
+            }
+
+            Section("Ayuda") {
+                Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
+                    Label("Contactar soporte", systemImage: "message.fill")
                 }
             }
         }

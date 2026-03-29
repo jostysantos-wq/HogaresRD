@@ -100,10 +100,16 @@ struct Agency: Codable {
     let name: String?
     let email: String?
     let phone: String?
+
+    var slug: String? {
+        guard let n = name else { return nil }
+        let lower = n.lowercased().replacingOccurrences(of: " ", with: "-")
+        return String(lower.filter { ($0 >= "a" && $0 <= "z") || ($0 >= "0" && $0 <= "9") || $0 == "-" })
+    }
 }
 
 // Wraps any Decodable so a single bad array element doesn't kill the whole decode
-private struct Safe<T: Decodable>: Decodable {
+struct Safe<T: Decodable>: Decodable {
     let value: T?
     init(from decoder: Decoder) throws {
         value = try? decoder.singleValueContainer().decode(T.self)
