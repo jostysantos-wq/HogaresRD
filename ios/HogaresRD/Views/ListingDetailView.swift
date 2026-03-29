@@ -9,6 +9,7 @@ struct ListingDetailView: View {
     @State private var imageIndex      = 0
     @State private var blueprintIndex  = 0
     @State private var showContact     = false
+    @State private var showApply       = false
 
     var body: some View {
         Group {
@@ -34,6 +35,9 @@ struct ListingDetailView: View {
         }
         .sheet(isPresented: $showContact) {
             if let l = listing { ContactSheet(listing: l) }
+        }
+        .sheet(isPresented: $showApply) {
+            if let l = listing { LeadApplicationView(listing: l) }
         }
         .task { await load() }
     }
@@ -135,6 +139,17 @@ struct ListingDetailView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // ── Apply CTA ──────────────────────────────────
+                    Button { showApply = true } label: {
+                        Label("Aplicar para esta Propiedad", systemImage: "checkmark.seal.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.rdGreen)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }

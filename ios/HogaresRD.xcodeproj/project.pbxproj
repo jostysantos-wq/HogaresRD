@@ -26,6 +26,7 @@
 		AA11000000000000000000CE /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BF /* FeedView.swift */; };
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
 		AA33000000000000000000D2 /* AdCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C2 /* AdCard.swift */; };
+		AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA44000000000000000000C1 /* LeadApplicationView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		AA11000000000000000000BF /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C2 /* AdCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCard.swift; sourceTree = "<group>"; };
+		AA44000000000000000000C1 /* LeadApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadApplicationView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +126,7 @@
 					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
 					AA22000000000000000000C3 /* SavedListingsView.swift */,
 				AA33000000000000000000C2 /* AdCard.swift */,
+			AA44000000000000000000C1 /* LeadApplicationView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -214,6 +217,7 @@
 					AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
+			AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */,
 					AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

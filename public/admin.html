@@ -135,6 +135,43 @@
     /* SUB-FILTERS row (below main tabs) */
     .sub-filters { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
 
+    /* LEADS PANEL */
+    .leads-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .lead-stat { background: #fff; border-radius: 12px; padding: 1.25rem; border: 1px solid #d0dcea; text-align: center; }
+    .lead-stat .num { font-size: 1.8rem; font-weight: 900; line-height: 1; margin-bottom: 0.2rem; }
+    .lead-stat .lbl { font-size: 0.78rem; color: #4d6a8a; font-weight: 500; }
+    .leads-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .leads-toolbar .filter-btn { font-size: 0.82rem; }
+    .leads-toolbar .filter-btn.status-pendiente  { border-color: #c07c1a; color: #c07c1a; }
+    .leads-toolbar .filter-btn.status-pendiente.active  { background: #c07c1a; color: #fff; }
+    .leads-toolbar .filter-btn.status-en_proceso { border-color: #0038A8; color: #0038A8; }
+    .leads-toolbar .filter-btn.status-en_proceso.active { background: #0038A8; color: #fff; }
+    .leads-toolbar .filter-btn.status-comprado   { border-color: #0a7c4f; color: #0a7c4f; }
+    .leads-toolbar .filter-btn.status-comprado.active   { background: #0a7c4f; color: #fff; }
+    .leads-toolbar .filter-btn.status-no_comprado{ border-color: #CF142B; color: #CF142B; }
+    .leads-toolbar .filter-btn.status-no_comprado.active{ background: #CF142B; color: #fff; }
+    .export-btn { margin-left: auto; background: none; border: 1.5px solid #0a7c4f; color: #0a7c4f; padding: 0.45rem 1rem; border-radius: 50px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+    .export-btn:hover { background: #0a7c4f; color: #fff; }
+
+    .leads-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
+    .leads-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .leads-table th { background: #f0f4f9; padding: 0.7rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
+    .leads-table td { padding: 0.85rem 1rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; }
+    .leads-table tr:last-child td { border-bottom: none; }
+    .leads-table tr:hover td { background: #f8fafd; }
+    .lead-name { font-weight: 700; color: #001840; }
+    .lead-contact { font-size: 0.78rem; color: #4d6a8a; margin-top: 0.2rem; }
+    .lead-listing { font-weight: 600; color: #001840; max-width: 200px; }
+    .lead-listing small { display: block; font-weight: 400; color: #7a93b0; font-size: 0.75rem; }
+    .lead-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    .badge-pendiente   { background: #fef3e2; color: #c07c1a; }
+    .badge-en_proceso  { background: #e8f0fb; color: #0038A8; }
+    .badge-comprado    { background: #dcf5e9; color: #0a7c4f; }
+    .badge-no_comprado { background: #fde8eb; color: #CF142B; }
+    .lead-actions { display: flex; flex-direction: column; gap: 0.4rem; min-width: 140px; }
+    .lead-status-select { width: 100%; padding: 0.35rem 0.6rem; border: 1.5px solid #d0dcea; border-radius: 7px; font-size: 0.78rem; font-weight: 600; background: #f8fafd; color: #001840; cursor: pointer; }
+    .leads-empty { padding: 3rem; text-align: center; color: #7a93b0; font-size: 0.9rem; }
+
     /* ADS PANEL */
     .ads-form-card { background: #fff; border-radius: 14px; padding: 1.75rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(0,45,98,0.06); margin-bottom: 2rem; }
     .ads-form-title { font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem; color: #001840; }
@@ -243,6 +280,7 @@
 
       <div class="filters">
         <button class="filter-btn active" id="tabSubmissions" onclick="showTab('submissions', this)">Propiedades</button>
+        <button class="filter-btn" id="tabLeads" onclick="showTab('leads', this)">🎯 Leads</button>
         <button class="filter-btn" id="tabAds" onclick="showTab('ads', this)">📢 Anuncios</button>
         <button class="refresh-btn" onclick="refreshCurrent()">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
@@ -261,6 +299,62 @@
 
       <div class="submissions-list" id="submissionsList">
         <div class="loading">Cargando propiedades...</div>
+      </div>
+
+      <!-- ── Leads Panel ─────────────────────────────────────── -->
+      <div id="leadsPanel" style="display:none;">
+
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid #c07c1a;">
+            <div class="num" id="lsTotal" style="color:#c07c1a;">—</div>
+            <div class="lbl">Pendientes</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #0038A8;">
+            <div class="num" id="lsEnProceso" style="color:#0038A8;">—</div>
+            <div class="lbl">En Proceso</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #0a7c4f;">
+            <div class="num" id="lsComprado" style="color:#0a7c4f;">—</div>
+            <div class="lbl">Comprados 💰</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #CF142B;">
+            <div class="num" id="lsNoProceso" style="color:#CF142B;">—</div>
+            <div class="lbl">No Comprado</div>
+          </div>
+        </div>
+
+        <div class="leads-toolbar">
+          <button class="filter-btn active" onclick="filterLeads('all', this)">Todos</button>
+          <button class="filter-btn status-pendiente"  onclick="filterLeads('pendiente', this)">Pendientes</button>
+          <button class="filter-btn status-en_proceso" onclick="filterLeads('en_proceso', this)">En Proceso</button>
+          <button class="filter-btn status-comprado"   onclick="filterLeads('comprado', this)">Comprados</button>
+          <button class="filter-btn status-no_comprado" onclick="filterLeads('no_comprado', this)">No Comprado</button>
+          <button class="export-btn" onclick="exportLeads()">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+
+        <div class="leads-table-wrap">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Contacto</th>
+                <th>Propiedad</th>
+                <th>Intención</th>
+                <th>Presupuesto</th>
+                <th>Plazo</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody">
+              <tr><td colspan="8" class="leads-empty">Cargando leads...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
 
       <!-- ── Anuncios Panel ───────────────────────────────────── -->
@@ -615,25 +709,136 @@
 
     function showTab(tab, btn) {
       currentTab = tab;
-      // update tab button styles
-      document.querySelectorAll('#tabSubmissions, #tabAds').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#tabSubmissions, #tabLeads, #tabAds').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
+      document.getElementById('subFilters').style.display      = 'none';
+      document.getElementById('submissionsList').style.display = 'none';
+      document.getElementById('leadsPanel').style.display      = 'none';
+      document.getElementById('adsPanel').style.display        = 'none';
+
       if (tab === 'submissions') {
-        document.getElementById('subFilters').style.display   = 'flex';
+        document.getElementById('subFilters').style.display      = 'flex';
         document.getElementById('submissionsList').style.display = 'block';
-        document.getElementById('adsPanel').style.display     = 'none';
+      } else if (tab === 'leads') {
+        document.getElementById('leadsPanel').style.display      = 'block';
+        loadLeads();
       } else {
-        document.getElementById('subFilters').style.display   = 'none';
-        document.getElementById('submissionsList').style.display = 'none';
-        document.getElementById('adsPanel').style.display     = 'block';
+        document.getElementById('adsPanel').style.display        = 'block';
         loadAds();
       }
     }
 
     function refreshCurrent() {
-      if (currentTab === 'submissions') loadSubmissions();
-      else loadAds();
+      if      (currentTab === 'submissions') loadSubmissions();
+      else if (currentTab === 'leads')       loadLeads();
+      else                                   loadAds();
+    }
+
+    // ── Leads ─────────────────────────────────────────────────
+    let allLeads = [];
+    let currentLeadFilter = 'all';
+
+    const STATUS_LABELS = {
+      pendiente:   'Pendiente',
+      en_proceso:  'En Proceso',
+      comprado:    'Comprado',
+      no_comprado: 'No Comprado'
+    };
+
+    function loadLeads() {
+      fetch('/api/leads', { headers: { 'x-admin-key': adminKey } })
+        .then(r => r.json())
+        .then(data => {
+          allLeads = data;
+          updateLeadStats(data);
+          renderLeads(currentLeadFilter === 'all' ? data : data.filter(l => l.status === currentLeadFilter));
+        })
+        .catch(() => {
+          document.getElementById('leadsTableBody').innerHTML =
+            '<tr><td colspan="8" class="leads-empty">Error al cargar leads.</td></tr>';
+        });
+    }
+
+    function updateLeadStats(leads) {
+      document.getElementById('lsTotal').textContent     = leads.filter(l => l.status === 'pendiente').length;
+      document.getElementById('lsEnProceso').textContent = leads.filter(l => l.status === 'en_proceso').length;
+      document.getElementById('lsComprado').textContent  = leads.filter(l => l.status === 'comprado').length;
+      document.getElementById('lsNoProceso').textContent = leads.filter(l => l.status === 'no_comprado').length;
+    }
+
+    function filterLeads(status, btn) {
+      currentLeadFilter = status;
+      document.querySelectorAll('.leads-toolbar .filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filtered = status === 'all' ? allLeads : allLeads.filter(l => l.status === status);
+      renderLeads(filtered);
+    }
+
+    function renderLeads(leads) {
+      const tbody = document.getElementById('leadsTableBody');
+      if (!leads.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay leads en esta categoría.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = leads.map(l => {
+        const date    = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
+        const agStr   = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
+        const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
+        return `
+          <tr id="lead-row-${l.id}">
+            <td>
+              <div class="lead-name">${l.name}</div>
+              <div class="lead-contact">📞 ${l.phone}</div>
+              ${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}
+            </td>
+            <td>
+              <div class="lead-listing">${l.listing_title || '—'}
+                <small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${l.listing_type || ''}</small>
+                <small>${agStr}</small>
+              </div>
+            </td>
+            <td>${intentMap[l.intent] || l.intent || '—'}</td>
+            <td>${l.budget ? '$' + l.budget : '—'}</td>
+            <td>${l.timeline || '—'}</td>
+            <td><span class="lead-badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
+            <td style="white-space:nowrap;font-size:0.78rem;color:#7a93b0;">${date}</td>
+            <td>
+              <div class="lead-actions">
+                <select class="lead-status-select" onchange="updateLeadStatus('${l.id}', this.value)">
+                  ${['pendiente','en_proceso','comprado','no_comprado'].map(s =>
+                    `<option value="${s}" ${l.status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`
+                  ).join('')}
+                </select>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function updateLeadStatus(id, status) {
+      fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify({ status })
+      })
+      .then(r => r.json())
+      .then(updated => {
+        const idx = allLeads.findIndex(l => l.id === id);
+        if (idx !== -1) allLeads[idx] = updated;
+        updateLeadStats(allLeads);
+        // Refresh the badge in the row without full re-render
+        const row = document.getElementById(`lead-row-${id}`);
+        if (row) {
+          const badge = row.querySelector('.lead-badge');
+          if (badge) { badge.className = `lead-badge badge-${status}`; badge.textContent = STATUS_LABELS[status]; }
+        }
+      });
+    }
+
+    function exportLeads() {
+      const qs = currentLeadFilter !== 'all' ? `?status=${currentLeadFilter}` : '';
+      window.location.href = `/api/leads/export${qs}&_key=${encodeURIComponent(adminKey)}`;
     }
 
     // ── Ads CRUD ───────────────────────────────────────────────

@@ -117,6 +117,7 @@ app.use('/api/listings',   require('./routes/listings'));
 app.use('/api/user',       require('./routes/user'));
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/ads',        require('./routes/ads'));
+app.use('/api/leads',      require('./routes/leads'));
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {

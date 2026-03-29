@@ -70,6 +70,37 @@ class APIService: ObservableObject {
         URLSession.shared.dataTask(with: req).resume()
     }
 
+    // MARK: - Leads
+
+    func submitLead(
+        listing:  Listing,
+        name:     String, phone: String, email:    String,
+        intent:   String, timeline: String,
+        budget:   String, notes:  String
+    ) async -> Bool {
+        guard let url = URL(string: "\(apiBase)/api/leads") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let agencies = (listing.agencies ?? []).map { ["name": $0.name ?? "", "email": $0.email ?? ""] }
+        let body: [String: Any] = [
+            "listing_id":    listing.id,
+            "listing_title": listing.title,
+            "listing_price": listing.price,
+            "listing_type":  listing.type,
+            "agencies":      agencies,
+            "name":     name,  "phone": phone, "email":    email,
+            "intent":   intent, "timeline": timeline,
+            "budget":   budget, "notes":   notes
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        guard let (data, _) = try? await URLSession.shared.data(for: req),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              json["ok"] as? Bool == true else { return false }
+        return true
+    }
+
     func trackAdClick(_ adID: String) {
         guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/click") else { return }
         var req = URLRequest(url: url)
