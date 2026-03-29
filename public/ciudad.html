@@ -512,7 +512,7 @@
     function buildCard(l) {
       const src = imgUrl(l.images);
       const img = src
-        ? `<img src="${esc(src)}" alt="${esc(l.title)}" loading="lazy" />`
+        ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       const typeBadge = l.type === 'alquiler'
         ? '<span class="badge badge-alquiler">En Alquiler</span>'

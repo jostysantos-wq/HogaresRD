@@ -375,7 +375,7 @@
 
     function buildCard(l) {
       const img = Array.isArray(l.images) && l.images.length
-        ? `<img src="${esc(l.images[0])}" alt="${esc(l.title)}" loading="lazy" />`
+        ? `<img src="${esc(l.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       return `
         <a class="prop-card" href="/listing/${esc(l.id)}">
