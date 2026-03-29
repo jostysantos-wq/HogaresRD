@@ -22,9 +22,9 @@ struct ContentView: View {
                 .tabItem {
                     Label("Explorar", systemImage: "magnifyingglass")
                 }
-            CitiesView()
+            FeedView()
                 .tabItem {
-                    Label("Ciudades", systemImage: "map.fill")
+                    Label("Feed", systemImage: "newspaper.fill")
                 }
             ProfileView()
                 .tabItem {
