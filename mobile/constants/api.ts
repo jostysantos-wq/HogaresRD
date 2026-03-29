@@ -1,7 +1,7 @@
 // Change this to your deployed server URL for production.
 // For local testing: use your Mac's local IP (e.g. http://192.168.1.X:3000)
 // so your iPhone on the same Wi-Fi can reach the backend.
-export const API_BASE = 'http://localhost:3000/api';
+export const API_BASE = 'http://192.168.1.175:3000/api';
 
 export const endpoints = {
   listings: `${API_BASE}/listings`,
