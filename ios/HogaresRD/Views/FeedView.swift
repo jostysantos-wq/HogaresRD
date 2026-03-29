@@ -1,12 +1,28 @@
 import SwiftUI
 
+// MARK: - FeedItem
+
+/// A feed item is either a real listing or a sponsored ad.
+enum FeedItem: Identifiable {
+    case listing(Listing)
+    case ad(Ad)
+
+    var id: String {
+        switch self {
+        case .listing(let l): return "l-\(l.id)"
+        case .ad(let a):      return "a-\(a.id)"
+        }
+    }
+}
+
 // MARK: - Feed View
 
 struct FeedView: View {
     @EnvironmentObject var api: APIService
 
     @State private var allListings:        [Listing] = []
-    @State private var feed:               [Listing] = []
+    @State private var feed:               [FeedItem] = []
+    @State private var activeAds:          [Ad]       = []
     @State private var currentIndex        = 0
     @State private var page                = 0
     @State private var totalPages          = 1
@@ -16,6 +32,9 @@ struct FeedView: View {
     @State private var errorMsg:           String?
     @State private var selectedListingID:  String?
     @State private var selectedAgencySlug: String?
+
+    /// How many listings between each ad slot
+    private let adFrequency = 5
 
     /// Timestamp recorded when each card index appears on screen
     @State private var appearedAt: [Int: Date] = [:]
@@ -49,25 +68,40 @@ struct FeedView: View {
                     GeometryReader { proxy in
                         ScrollView(.vertical, showsIndicators: false) {
                             LazyVStack(spacing: 0) {
-                                ForEach(Array(feed.enumerated()), id: \.offset) { index, listing in
-                                    ReelCard(
-                                        listing:     listing,
-                                        onTap:       { selectedListingID = listing.id },
-                                        onAgencyTap: { slug in selectedAgencySlug = slug },
-                                        onSaveTap:   { applyWeight(listing, weight: 10.0) }
-                                    )
+                                ForEach(Array(feed.enumerated()), id: \.element.id) { index, item in
+                                    Group {
+                                        switch item {
+                                        case .listing(let listing):
+                                            ReelCard(
+                                                listing:     listing,
+                                                onTap:       { selectedListingID = listing.id },
+                                                onAgencyTap: { slug in selectedAgencySlug = slug },
+                                                onSaveTap:   { applyWeight(listing, weight: 10.0) }
+                                            )
+                                            .onDisappear {
+                                                if let start = appearedAt.removeValue(forKey: index) {
+                                                    trackDwell(listing, seconds: Date().timeIntervalSince(start))
+                                                }
+                                            }
+                                        case .ad(let ad):
+                                            AdCard(
+                                                ad: ad,
+                                                onImpression: { api.trackAdImpression(ad.id) },
+                                                onTap: {
+                                                    api.trackAdClick(ad.id)
+                                                    if let url = ad.targetURL {
+                                                        UIApplication.shared.open(url)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
                                     .frame(width: proxy.size.width, height: proxy.size.height)
                                     .onAppear {
                                         currentIndex = index
                                         appearedAt[index] = Date()
                                         if index >= feed.count - 3 {
                                             Task { await loadMore() }
-                                        }
-                                    }
-                                    .onDisappear {
-                                        if let start = appearedAt.removeValue(forKey: index) {
-                                            let dwell = Date().timeIntervalSince(start)
-                                            trackDwell(listing, seconds: dwell)
                                         }
                                     }
                                 }
@@ -90,8 +124,13 @@ struct FeedView: View {
             }
             // Tap-through bonus: opening the detail view is a strong interest signal
             .onChange(of: selectedListingID) { _, newID in
-                if let id = newID, let listing = feed.first(where: { $0.id == id }) {
-                    applyWeight(listing, weight: 8.0)
+                if let id = newID {
+                    for item in feed {
+                        if case .listing(let l) = item, l.id == id {
+                            applyWeight(l, weight: 8.0)
+                            break
+                        }
+                    }
                 }
             }
             .navigationDestination(isPresented: Binding(
@@ -119,20 +158,25 @@ struct FeedView: View {
         guard !loading else { return }
         loading = true
 
+        // Fetch ads on the very first load
+        if activeAds.isEmpty {
+            activeAds = await api.fetchActiveAds()
+        }
+
         if page < totalPages {
             page += 1
             do {
                 let response = try await api.getListings(limit: 12, page: page)
                 allListings.append(contentsOf: response.listings)
                 totalPages = response.pages
-                feed.append(contentsOf: ranked(response.listings))
+                feed.append(contentsOf: interleaved(ranked(response.listings)))
                 errorMsg = nil
             } catch {
                 errorMsg = "No se pudo cargar el feed. Verifica tu conexión."
             }
         } else {
             reshuffles += 1
-            feed.append(contentsOf: ranked(allListings))
+            feed.append(contentsOf: interleaved(ranked(allListings)))
         }
 
         initialLoad = false
@@ -140,10 +184,26 @@ struct FeedView: View {
     }
 
     private func refresh() async {
-        feed = []; allListings = []; page = 0
+        feed = []; allListings = []; activeAds = []; page = 0
         totalPages = 1; reshuffles = 0; errorMsg = nil; currentIndex = 0
         appearedAt = [:]
         await loadMore()
+    }
+
+    /// Inserts an ad slot every `adFrequency` listings, cycling through activeAds.
+    private func interleaved(_ listings: [Listing]) -> [FeedItem] {
+        guard !activeAds.isEmpty else { return listings.map { .listing($0) } }
+        var result: [FeedItem] = []
+        var adIndex = (feed.filter { if case .ad = $0 { return true }; return false }.count) % activeAds.count
+        for (i, listing) in listings.enumerated() {
+            result.append(.listing(listing))
+            // Insert an ad after every `adFrequency` listings
+            if (i + 1) % adFrequency == 0 {
+                result.append(.ad(activeAds[adIndex % activeAds.count]))
+                adIndex += 1
+            }
+        }
+        return result
     }
 
     // MARK: - Dwell Time Tracking

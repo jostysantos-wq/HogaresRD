@@ -1,0 +1,106 @@
+const express  = require('express');
+const fs       = require('fs');
+const path     = require('path');
+const crypto = require('crypto');
+function uuidv4() { return crypto.randomUUID(); }
+
+const router   = express.Router();
+const ADS_FILE = path.join(__dirname, '../data/ads.json');
+const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
+
+// ── helpers ────────────────────────────────────────────────────
+if (!fs.existsSync(ADS_FILE)) fs.writeFileSync(ADS_FILE, '[]');
+
+function readAds()       { return JSON.parse(fs.readFileSync(ADS_FILE, 'utf8')); }
+function writeAds(data)  { fs.writeFileSync(ADS_FILE, JSON.stringify(data, null, 2)); }
+function isAdmin(req)    { return req.headers['x-admin-key'] === ADMIN_KEY; }
+
+// ── GET /api/ads/active  (public — used by the mobile app) ─────
+router.get('/active', (req, res) => {
+  const now = new Date();
+  const active = readAds().filter(ad => {
+    if (!ad.is_active) return false;
+    if (ad.start_date && new Date(ad.start_date) > now) return false;
+    if (ad.end_date   && new Date(ad.end_date)   < now) return false;
+    return true;
+  });
+  res.json(active);
+});
+
+// ── GET /api/ads  (admin) ──────────────────────────────────────
+router.get('/', (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+  res.json(readAds());
+});
+
+// ── POST /api/ads  (admin — create) ───────────────────────────
+router.post('/', (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { title, advertiser, image_url, target_url, start_date, end_date } = req.body;
+  if (!title || !image_url) {
+    return res.status(400).json({ error: 'title and image_url are required' });
+  }
+  const ad = {
+    id:          uuidv4(),
+    title,
+    advertiser:  advertiser || '',
+    image_url,
+    target_url:  target_url || '',
+    is_active:   false,
+    start_date:  start_date || null,
+    end_date:    end_date   || null,
+    impressions: 0,
+    clicks:      0,
+    created_at:  new Date().toISOString()
+  };
+  const ads = readAds();
+  ads.push(ad);
+  writeAds(ads);
+  res.status(201).json(ad);
+});
+
+// ── PUT /api/ads/:id  (admin — update / toggle) ────────────────
+router.put('/:id', (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const ads = readAds();
+  const idx = ads.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  ads[idx] = { ...ads[idx], ...req.body, id: ads[idx].id };
+  writeAds(ads);
+  res.json(ads[idx]);
+});
+
+// ── DELETE /api/ads/:id  (admin) ───────────────────────────────
+router.delete('/:id', (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const ads = readAds();
+  const idx = ads.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  ads.splice(idx, 1);
+  writeAds(ads);
+  res.json({ ok: true });
+});
+
+// ── POST /api/ads/:id/impression  (public — mobile tracking) ──
+router.post('/:id/impression', (req, res) => {
+  const ads = readAds();
+  const idx = ads.findIndex(a => a.id === req.params.id);
+  if (idx !== -1) {
+    ads[idx].impressions = (ads[idx].impressions || 0) + 1;
+    writeAds(ads);
+  }
+  res.json({ ok: true });
+});
+
+// ── POST /api/ads/:id/click  (public — mobile tracking) ───────
+router.post('/:id/click', (req, res) => {
+  const ads = readAds();
+  const idx = ads.findIndex(a => a.id === req.params.id);
+  if (idx !== -1) {
+    ads[idx].clicks = (ads[idx].clicks || 0) + 1;
+    writeAds(ads);
+  }
+  res.json({ ok: true });
+});
+
+module.exports = router;

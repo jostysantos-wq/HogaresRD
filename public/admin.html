@@ -132,10 +132,51 @@
     .sub-map-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
     .admin-map { height: 180px; border-radius: 10px; border: 1px solid #d0dcea; }
 
+    /* SUB-FILTERS row (below main tabs) */
+    .sub-filters { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+
+    /* ADS PANEL */
+    .ads-form-card { background: #fff; border-radius: 14px; padding: 1.75rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(0,45,98,0.06); margin-bottom: 2rem; }
+    .ads-form-title { font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem; color: #001840; }
+    .ads-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .ads-field { display: flex; flex-direction: column; gap: 0.4rem; }
+    .ads-field-full { grid-column: 1 / -1; }
+    .ads-field label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; }
+    .ads-field input { padding: 0.7rem 0.9rem; border: 1.5px solid #d0dcea; border-radius: 9px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    .ads-field input:focus { border-color: #0038A8; }
+    .ads-create-btn { background: #0038A8; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 9px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .ads-create-btn:hover { background: #001a45; }
+    .ads-msg { margin-top: 0.75rem; font-size: 0.875rem; font-weight: 600; min-height: 1.2rem; }
+    .ads-msg.ok  { color: #0a7c4f; }
+    .ads-msg.err { color: #CF142B; }
+
+    .ads-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+    .ad-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; box-shadow: 0 2px 8px rgba(0,45,98,0.06); display: flex; flex-direction: column; }
+    .ad-card-img { width: 100%; height: 160px; object-fit: cover; background: #e8eef7; display: block; }
+    .ad-card-img-placeholder { width: 100%; height: 160px; background: #e8eef7; display: flex; align-items: center; justify-content: center; color: #a0b4cc; font-size: 0.8rem; }
+    .ad-card-body { padding: 1rem 1.1rem; flex: 1; }
+    .ad-card-title { font-size: 0.95rem; font-weight: 800; color: #001840; margin-bottom: 0.25rem; }
+    .ad-card-advertiser { font-size: 0.8rem; color: #4d6a8a; margin-bottom: 0.6rem; }
+    .ad-card-stats { display: flex; gap: 1rem; font-size: 0.78rem; color: #4d6a8a; margin-bottom: 0.5rem; }
+    .ad-card-stats span { display: flex; align-items: center; gap: 0.3rem; }
+    .ad-card-dates { font-size: 0.75rem; color: #7a93b0; }
+    .ad-card-footer { padding: 0.75rem 1.1rem; border-top: 1px solid #f0f4f9; display: flex; align-items: center; gap: 0.6rem; }
+    .ad-toggle { flex: 1; padding: 0.5rem 0.8rem; border-radius: 7px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+    .ad-toggle.active  { background: #dcf5e9; color: #0a7c4f; }
+    .ad-toggle.inactive { background: #f0f4f9; color: #4d6a8a; }
+    .ad-toggle.active:hover  { background: #0a7c4f; color: #fff; }
+    .ad-toggle.inactive:hover { background: #0038A8; color: #fff; }
+    .ad-delete { padding: 0.5rem 0.8rem; border-radius: 7px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: #fde8eb; color: #CF142B; transition: all 0.2s; }
+    .ad-delete:hover { background: #CF142B; color: #fff; }
+    .ad-badge-active   { display: inline-block; background: #dcf5e9; color: #0a7c4f; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ad-badge-inactive { display: inline-block; background: #f0f4f9; color: #7a93b0; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ads-empty { grid-column: 1/-1; text-align: center; padding: 3rem; color: #7a93b0; font-size: 0.9rem; }
+
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(3, 1fr); }
       .sub-card-body { grid-template-columns: repeat(2, 1fr); }
       .sub-card-footer { flex-direction: column; align-items: flex-start; }
+      .ads-form-grid { grid-template-columns: 1fr; }
     }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -201,19 +242,68 @@
       </div>
 
       <div class="filters">
-        <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
-        <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
-        <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
-        <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes de Agencia</button>
-        <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
-        <button class="refresh-btn" onclick="loadSubmissions()">
+        <button class="filter-btn active" id="tabSubmissions" onclick="showTab('submissions', this)">Propiedades</button>
+        <button class="filter-btn" id="tabAds" onclick="showTab('ads', this)">📢 Anuncios</button>
+        <button class="refresh-btn" onclick="refreshCurrent()">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
           Actualizar
         </button>
       </div>
 
+      <!-- Submissions sub-filters (visible on Propiedades tab) -->
+      <div class="sub-filters" id="subFilters">
+        <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
+        <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
+        <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
+        <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes de Agencia</button>
+        <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
+      </div>
+
       <div class="submissions-list" id="submissionsList">
         <div class="loading">Cargando propiedades...</div>
+      </div>
+
+      <!-- ── Anuncios Panel ───────────────────────────────────── -->
+      <div id="adsPanel" style="display:none;">
+
+        <!-- Create Ad Form -->
+        <div class="ads-form-card">
+          <h3 class="ads-form-title">Crear Nuevo Anuncio</h3>
+          <div class="ads-form-grid">
+            <div class="ads-field">
+              <label>Título *</label>
+              <input type="text" id="adTitle" placeholder="ej. Banco Popular — Hipotecas desde 8%">
+            </div>
+            <div class="ads-field">
+              <label>Anunciante</label>
+              <input type="text" id="adAdvertiser" placeholder="ej. Banco Popular">
+            </div>
+            <div class="ads-field ads-field-full">
+              <label>URL de Imagen * <span style="font-weight:400;color:#7a93b0;">(debe ser accesible públicamente)</span></label>
+              <input type="url" id="adImageUrl" placeholder="https://...">
+            </div>
+            <div class="ads-field ads-field-full">
+              <label>URL de Destino <span style="font-weight:400;color:#7a93b0;">(al tocar el anuncio)</span></label>
+              <input type="url" id="adTargetUrl" placeholder="https://...">
+            </div>
+            <div class="ads-field">
+              <label>Fecha de inicio</label>
+              <input type="date" id="adStartDate">
+            </div>
+            <div class="ads-field">
+              <label>Fecha de fin</label>
+              <input type="date" id="adEndDate">
+            </div>
+          </div>
+          <button class="ads-create-btn" onclick="createAd()">+ Crear Anuncio</button>
+          <div class="ads-msg" id="adMsg"></div>
+        </div>
+
+        <!-- Ads List -->
+        <div class="ads-list" id="adsList">
+          <div class="loading">Cargando anuncios...</div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -517,6 +607,143 @@
         const sub = allSubmissions.find(s => s.id === id);
         if (sub) sub.status = 'rejected';
         renderAll();
+      });
+    }
+
+    // ── Tab switching ──────────────────────────────────────────
+    let currentTab = 'submissions';
+
+    function showTab(tab, btn) {
+      currentTab = tab;
+      // update tab button styles
+      document.querySelectorAll('#tabSubmissions, #tabAds').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (tab === 'submissions') {
+        document.getElementById('subFilters').style.display   = 'flex';
+        document.getElementById('submissionsList').style.display = 'block';
+        document.getElementById('adsPanel').style.display     = 'none';
+      } else {
+        document.getElementById('subFilters').style.display   = 'none';
+        document.getElementById('submissionsList').style.display = 'none';
+        document.getElementById('adsPanel').style.display     = 'block';
+        loadAds();
+      }
+    }
+
+    function refreshCurrent() {
+      if (currentTab === 'submissions') loadSubmissions();
+      else loadAds();
+    }
+
+    // ── Ads CRUD ───────────────────────────────────────────────
+    let allAds = [];
+
+    function loadAds() {
+      document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
+      fetch('/api/ads', { headers: { 'x-admin-key': adminKey } })
+        .then(r => r.json())
+        .then(data => { allAds = data; renderAds(data); })
+        .catch(() => { document.getElementById('adsList').innerHTML = '<div class="loading">Error al cargar anuncios.</div>'; });
+    }
+
+    function renderAds(ads) {
+      const el = document.getElementById('adsList');
+      if (!ads.length) {
+        el.innerHTML = '<div class="ads-empty">No hay anuncios aún. Crea el primero arriba.</div>';
+        return;
+      }
+      el.innerHTML = ads.map(ad => {
+        const imgHtml = ad.image_url
+          ? `<img class="ad-card-img" src="${ad.image_url}" alt="${ad.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            + `<div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
+          : `<div class="ad-card-img-placeholder">Sin imagen</div>`;
+        const badge = ad.is_active
+          ? `<span class="ad-badge-active">Activo</span>`
+          : `<span class="ad-badge-inactive">Inactivo</span>`;
+        const dateStr = [ad.start_date, ad.end_date].filter(Boolean).join(' → ') || 'Sin fechas límite';
+        return `
+          <div class="ad-card" id="adcard-${ad.id}">
+            ${imgHtml}
+            <div class="ad-card-body">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                <div class="ad-card-title">${ad.title}</div>
+                ${badge}
+              </div>
+              ${ad.advertiser ? `<div class="ad-card-advertiser">${ad.advertiser}</div>` : ''}
+              <div class="ad-card-stats">
+                <span>👁 ${ad.impressions || 0} impresiones</span>
+                <span>👆 ${ad.clicks || 0} clics</span>
+              </div>
+              <div class="ad-card-dates">${dateStr}</div>
+            </div>
+            <div class="ad-card-footer">
+              <button class="ad-toggle ${ad.is_active ? 'active' : 'inactive'}"
+                      onclick="toggleAd('${ad.id}', ${ad.is_active})">
+                ${ad.is_active ? '✓ Activo — Desactivar' : '○ Inactivo — Activar'}
+              </button>
+              <button class="ad-delete" onclick="deleteAd('${ad.id}')">Eliminar</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function createAd() {
+      const title      = document.getElementById('adTitle').value.trim();
+      const advertiser = document.getElementById('adAdvertiser').value.trim();
+      const image_url  = document.getElementById('adImageUrl').value.trim();
+      const target_url = document.getElementById('adTargetUrl').value.trim();
+      const start_date = document.getElementById('adStartDate').value;
+      const end_date   = document.getElementById('adEndDate').value;
+      const msg        = document.getElementById('adMsg');
+
+      if (!title || !image_url) {
+        msg.textContent = 'Título e imagen son obligatorios.';
+        msg.className = 'ads-msg err';
+        return;
+      }
+      fetch('/api/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify({ title, advertiser, image_url, target_url, start_date: start_date || null, end_date: end_date || null })
+      })
+      .then(r => r.json())
+      .then(ad => {
+        if (ad.error) throw new Error(ad.error);
+        msg.textContent = '¡Anuncio creado! Actívalo cuando estés listo.';
+        msg.className = 'ads-msg ok';
+        ['adTitle','adAdvertiser','adImageUrl','adTargetUrl','adStartDate','adEndDate']
+          .forEach(id => document.getElementById(id).value = '');
+        allAds.unshift(ad);
+        renderAds(allAds);
+        setTimeout(() => { msg.textContent = ''; }, 4000);
+      })
+      .catch(e => { msg.textContent = 'Error: ' + e.message; msg.className = 'ads-msg err'; });
+    }
+
+    function toggleAd(id, currentlyActive) {
+      fetch(`/api/ads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify({ is_active: !currentlyActive })
+      })
+      .then(r => r.json())
+      .then(updated => {
+        const idx = allAds.findIndex(a => a.id === id);
+        if (idx !== -1) allAds[idx] = updated;
+        renderAds(allAds);
+      });
+    }
+
+    function deleteAd(id) {
+      if (!confirm('¿Seguro que quieres eliminar este anuncio?')) return;
+      fetch(`/api/ads/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminKey }
+      })
+      .then(() => {
+        allAds = allAds.filter(a => a.id !== id);
+        renderAds(allAds);
       });
     }
 

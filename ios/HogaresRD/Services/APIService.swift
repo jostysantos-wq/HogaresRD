@@ -55,6 +55,28 @@ class APIService: ObservableObject {
         return try decoder.decode(Listing.self, from: data)
     }
 
+    // MARK: - Ads
+
+    func fetchActiveAds() async -> [Ad] {
+        guard let url = URL(string: "\(apiBase)/api/ads/active") else { return [] }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return [] }
+        return (try? decoder.decode([Ad].self, from: data)) ?? []
+    }
+
+    func trackAdImpression(_ adID: String) {
+        guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/impression") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        URLSession.shared.dataTask(with: req).resume()
+    }
+
+    func trackAdClick(_ adID: String) {
+        guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/click") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        URLSession.shared.dataTask(with: req).resume()
+    }
+
     // MARK: - Auth
 
     func login(email: String, password: String) async throws -> User {
