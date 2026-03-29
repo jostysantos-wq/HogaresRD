@@ -186,6 +186,30 @@
     .btn-contact:hover { border-color: var(--accent); color: var(--accent); }
     .btn-contact svg { width: 14px; height: 14px; fill: currentColor; }
 
+    /* ── AUTH WALL ───────────────────────────────────────────── */
+    .aw-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 998; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.22s; }
+    .aw-backdrop.open { opacity: 1; pointer-events: auto; }
+    .aw-modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 420px; padding: 2rem 2rem 1.5rem; position: relative; transform: translateY(18px); transition: transform 0.22s; }
+    .aw-backdrop.open .aw-modal { transform: translateY(0); }
+    .aw-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem; }
+    .aw-close svg { width: 20px; height: 20px; fill: currentColor; display: block; }
+    .aw-icon { width: 48px; height: 48px; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    .aw-icon svg { width: 24px; height: 24px; fill: var(--accent); }
+    .aw-title { font-size: 1.15rem; font-weight: 900; color: var(--text); margin-bottom: 0.3rem; }
+    .aw-sub { font-size: 0.85rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 1.4rem; }
+    .aw-benefits { list-style: none; padding: 0; margin: 0 0 1.6rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .aw-benefits li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; }
+    .aw-benefit-icon { width: 28px; height: 28px; background: color-mix(in srgb, var(--accent) 9%, transparent); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .aw-benefit-icon svg { width: 14px; height: 14px; fill: var(--accent); }
+    .aw-benefit-text strong { display: block; font-weight: 700; color: var(--text); font-size: 0.88rem; }
+    .aw-btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-bottom: 0.65rem; }
+    .aw-btn-primary:hover { background: var(--accent-hover); }
+    .aw-btn-ghost { width: 100%; padding: 0.75rem; background: none; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: border-color 0.18s, color 0.18s; }
+    .aw-btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .aw-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.75rem 0; }
+    .aw-divider::before, .aw-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .aw-divider span { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+
     /* ── INQUIRY MODAL ───────────────────────────────────────── */
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
     .modal-backdrop.open { opacity: 1; pointer-events: auto; }
@@ -452,6 +476,37 @@
   </div>
 </div>
 
+<!-- AUTH WALL -->
+<div class="aw-backdrop" id="authWall" onclick="closeAuthWallOnBackdrop(event)">
+  <div class="aw-modal">
+    <button class="aw-close" onclick="closeAuthWall()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    <div class="aw-icon"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>
+    <div class="aw-title">¿Tienes una cuenta?</div>
+    <div class="aw-sub">Inicia sesión o crea una cuenta para una mejor experiencia. O continúa como invitado si prefieres.</div>
+    <ul class="aw-benefits">
+      <li>
+        <div class="aw-benefit-icon"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+        <div class="aw-benefit-text"><strong>Guarda tus favoritas</strong>Marca propiedades y accéde a ellas cuando quieras.</div>
+      </li>
+      <li>
+        <div class="aw-benefit-icon"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+        <div class="aw-benefit-text"><strong>Datos precargados en consultas</strong>Tu nombre, teléfono y correo se rellenan solos.</div>
+      </li>
+      <li>
+        <div class="aw-benefit-icon"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+        <div class="aw-benefit-text"><strong>Alertas de nuevas propiedades</strong>Recibe notificaciones cuando lleguen propiedades que te interesan.</div>
+      </li>
+      <li>
+        <div class="aw-benefit-icon"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></div>
+        <div class="aw-benefit-text"><strong>Historial de búsqueda</strong>Retoma justo donde lo dejaste, sin perder tus búsquedas.</div>
+      </li>
+    </ul>
+    <a href="/register" class="aw-btn-primary" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;">Crear cuenta gratis</a>
+    <div class="aw-divider"><span>o</span></div>
+    <button class="aw-btn-ghost" onclick="continueAsGuest()">Continuar como invitado</button>
+  </div>
+</div>
+
 <!-- INQUIRY MODAL -->
 <div class="modal-backdrop" id="inquiryModal" onclick="closeInquiryOnBackdrop(event)">
   <div class="modal">
@@ -620,11 +675,38 @@
     });
   }
 
-  // ── Inquiry modal ──────────────────────────────────────────
+  // ── Auth wall ───────────────────────────────────────────────
   function openInquiry() {
+    const user = getUser();
+    if (user) {
+      // Logged in — skip wall, open inquiry and pre-fill known fields
+      _openInquiryModal(user);
+    } else {
+      document.getElementById('authWall').classList.add('open');
+    }
+  }
+  function closeAuthWall() {
+    document.getElementById('authWall').classList.remove('open');
+  }
+  function closeAuthWallOnBackdrop(e) {
+    if (e.target === document.getElementById('authWall')) closeAuthWall();
+  }
+  function continueAsGuest() {
+    closeAuthWall();
+    _openInquiryModal(null);
+  }
+
+  // ── Inquiry modal ──────────────────────────────────────────
+  function _openInquiryModal(user) {
     document.getElementById('inquiryForm').reset();
     document.getElementById('inquiryFormWrap').style.display = '';
     document.getElementById('inquirySuccess').style.display = 'none';
+    // Pre-fill if user is logged in
+    if (user) {
+      if (user.name)  document.getElementById('iqName').value  = user.name;
+      if (user.email) document.getElementById('iqEmail').value = user.email;
+      if (user.phone) document.getElementById('iqPhone').value = user.phone;
+    }
     document.getElementById('inquiryModal').classList.add('open');
   }
   function closeInquiry() {
@@ -660,7 +742,7 @@
     }
   }
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeInquiry(); closeBpModal(); }
+    if (e.key === 'Escape') { closeAuthWall(); closeInquiry(); closeBpModal(); }
   });
 
   // ── Blueprint modal ────────────────────────────────────────
