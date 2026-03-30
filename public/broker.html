@@ -124,6 +124,67 @@
     .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49; }
     .sidebar-overlay.visible { display: block; }
 
+    /* ── PAGE SECTIONS ────────────────────────────────────────── */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* ── SECTION NAV (internal dashboard tabs) ───────────────── */
+    .section-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.75rem; }
+    .section-nav-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--bg-card); border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 50px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .section-nav-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .section-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .section-nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .section-nav-btn.active svg { fill: #fff; }
+
+    /* ── CHAT IA ─────────────────────────────────────────────── */
+    .chat-shell { display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h) - 3rem); max-height: 720px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+    .chat-msg { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .chat-msg-bot { align-self: flex-start; }
+    .chat-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+    .chat-msg-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .chat-msg-user .chat-msg-avatar { background: var(--text-muted); }
+    .chat-msg-bubble { max-width: 70%; padding: 0.75rem 1rem; border-radius: 16px; font-size: 0.9rem; line-height: 1.5; }
+    .chat-msg-bot .chat-msg-bubble { background: var(--bg-section); border-bottom-left-radius: 4px; }
+    .chat-msg-user .chat-msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .chat-input-row { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid var(--border); background: var(--bg-card); }
+    .chat-input { flex: 1; padding: 0.65rem 1rem; border: 1.5px solid var(--border); border-radius: 50px; font-size: 0.9rem; background: var(--bg); color: var(--text); font-family: inherit; }
+    .chat-input:focus { outline: none; border-color: var(--accent); }
+    .chat-typing { font-size: 0.8rem; color: var(--text-muted); font-style: italic; padding: 0 0.5rem; }
+
+    /* ── NOTIFICACIONES ──────────────────────────────────────── */
+    .notif-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .notif-count { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); }
+    .notif-item { display: flex; gap: 0.85rem; padding: 0.9rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.6rem; transition: border-color 0.2s; cursor: default; }
+    .notif-item.unread { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--bg-card)); }
+    .notif-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-size: 0.88rem; font-weight: 600; }
+    .notif-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 0.4rem; }
+
+    /* ── SETTINGS CARD ───────────────────────────────────────── */
+    .settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; box-shadow: var(--shadow-sm); }
+    .settings-card-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.35rem; }
+    .settings-card-desc { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+    #pwMsg { font-size: 0.85rem; padding: 0.65rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+    #pwMsg.success { display: block; background: color-mix(in srgb, var(--green) 10%, transparent); color: var(--green); border: 1px solid color-mix(in srgb, var(--green) 30%, transparent); }
+    #pwMsg.error { display: block; background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); }
+
+    /* ── APPS GRID ───────────────────────────────────────────── */
+    .apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+    .app-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s; }
+    .app-tile:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+    .app-tile-soon { opacity: 0.7; }
+    .app-tile-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.25rem; }
+    .app-tile-icon svg { width: 24px; height: 24px; }
+    .app-tile-name { font-size: 0.92rem; font-weight: 700; }
+    .app-tile-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; flex: 1; }
+
+    /* ── TERMS ───────────────────────────────────────────────── */
+    .terms-body h3 { font-size: 0.95rem; font-weight: 700; margin: 1.25rem 0 0.4rem; color: var(--text); }
+    .terms-body p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
+
     /* ── STATS ────────────────────────────────────────────────── */
     .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; box-shadow: var(--shadow-sm); }
@@ -372,32 +433,32 @@
   </div>
 
   <nav class="sidebar-nav">
-    <div class="sidebar-section-label">Portal</div>
-    <button class="sidebar-nav-item active" data-section="aplicaciones">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-      <span class="sidebar-nav-label">Aplicaciones</span>
+    <div class="sidebar-section-label">Menu</div>
+    <button class="sidebar-nav-item active" data-page="dashboard">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span class="sidebar-nav-label">Dashboard</span>
     </button>
-    <button class="sidebar-nav-item" data-section="analiticas">
-      <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
-      <span class="sidebar-nav-label">Analiticas</span>
+    <button class="sidebar-nav-item" data-page="chat-ia">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+      <span class="sidebar-nav-label">Chat IA</span>
     </button>
-    <div class="sidebar-section-label">Financiero</div>
-    <button class="sidebar-nav-item" data-section="ventas">
-      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-      <span class="sidebar-nav-label">Ventas</span>
+    <button class="sidebar-nav-item" data-page="notificaciones">
+      <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      <span class="sidebar-nav-label">Notificaciones</span>
     </button>
-    <button class="sidebar-nav-item" data-section="contabilidad">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm-4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2z"/></svg>
-      <span class="sidebar-nav-label">Contabilidad</span>
+    <div class="sidebar-section-label">Cuenta</div>
+    <button class="sidebar-nav-item" data-page="contrasena">
+      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      <span class="sidebar-nav-label">Contrasena</span>
     </button>
-    <div class="sidebar-section-label">Gestion</div>
-    <button class="sidebar-nav-item" data-section="archivo">
-      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-      <span class="sidebar-nav-label">Archivo</span>
+    <div class="sidebar-section-label">Plataforma</div>
+    <button class="sidebar-nav-item" data-page="apps">
+      <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+      <span class="sidebar-nav-label">Apps</span>
     </button>
-    <button class="sidebar-nav-item" data-section="auditoria">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
-      <span class="sidebar-nav-label">Auditoria</span>
+    <button class="sidebar-nav-item" data-page="terminos">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      <span class="sidebar-nav-label">Terminos</span>
     </button>
   </nav>
 
@@ -434,13 +495,44 @@
     <button class="topbar-hamburger" id="mobileSidebarBtn">
       <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
     </button>
-    <h1 class="topbar-title" id="topbarTitle">Aplicaciones</h1>
+    <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
     <div class="topbar-spacer"></div>
     <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
   </div>
 
   <!-- CONTENT AREA -->
   <div class="content-area">
+
+  <!-- ═══ PAGE: DASHBOARD ═══════════════════════════════════ -->
+  <div class="page-section active" id="page-dashboard">
+
+  <!-- Internal Section Nav (tabs) -->
+  <div class="section-nav" id="sectionNav">
+    <button class="section-nav-btn active" data-section="aplicaciones">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      Aplicaciones
+    </button>
+    <button class="section-nav-btn" data-section="analiticas">
+      <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+      Analiticas
+    </button>
+    <button class="section-nav-btn" data-section="ventas">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      Ventas
+    </button>
+    <button class="section-nav-btn" data-section="contabilidad">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm-4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2z"/></svg>
+      Contabilidad
+    </button>
+    <button class="section-nav-btn" data-section="archivo">
+      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      Archivo
+    </button>
+    <button class="section-nav-btn" data-section="auditoria">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
+      Auditoria
+    </button>
+  </div>
 
   <!-- Section: Aplicaciones -->
   <div class="section-pane active" id="section-aplicaciones">
@@ -581,6 +673,138 @@
       <thead><tr><th>Cliente</th><th>Propiedad</th><th>Precio</th><th>Comision</th><th>Estado Pago</th><th>Fecha</th></tr></thead>
       <tbody id="accountingTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
     </table>
+  </div>
+
+  </div><!-- /page-dashboard -->
+
+  <!-- ═══ PAGE: CHAT IA ══════════════════════════════════════ -->
+  <div class="page-section" id="page-chat-ia">
+    <div class="chat-shell">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg chat-msg-bot">
+          <div class="chat-msg-avatar">IA</div>
+          <div class="chat-msg-bubble">Hola, soy tu asistente de IA para HogaresRD. Puedo ayudarte con preguntas sobre aplicaciones, estrategias de venta y el mercado inmobiliario dominicano. ¿En que te puedo ayudar hoy?</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" type="text" placeholder="Escribe tu pregunta..." autocomplete="off" />
+        <button class="btn btn-primary" id="chatSendBtn">
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: NOTIFICACIONES ══════════════════════════════ -->
+  <div class="page-section" id="page-notificaciones">
+    <div class="notif-toolbar">
+      <span class="notif-count" id="notifCount">0 notificaciones</span>
+      <button class="btn btn-outline btn-sm" id="markAllReadBtn">Marcar todo como leido</button>
+    </div>
+    <div id="notifList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ═══ PAGE: CONTRASENA ══════════════════════════════════ -->
+  <div class="page-section" id="page-contrasena">
+    <div class="settings-card">
+      <h2 class="settings-card-title">Cambiar Contrasena</h2>
+      <p class="settings-card-desc">Actualiza tu contrasena de acceso al portal de broker.</p>
+      <div id="pwMsg"></div>
+      <div class="form-group">
+        <label>Contrasena Actual</label>
+        <input type="password" id="pwCurrent" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="form-group">
+        <label>Nueva Contrasena</label>
+        <input type="password" id="pwNew" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label>Confirmar Nueva Contrasena</label>
+        <input type="password" id="pwConfirm" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary" id="pwSaveBtn" style="margin-top:0.5rem;">Guardar Contrasena</button>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: APPS ════════════════════════════════════════ -->
+  <div class="page-section" id="page-apps">
+    <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.92rem;">Herramientas y aplicaciones para tu portal de broker.</p>
+    <div class="apps-grid">
+      <div class="app-tile">
+        <div class="app-tile-icon" style="background:rgba(0,56,168,0.1);color:var(--accent)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+        </div>
+        <div class="app-tile-name">Calculadora Hipotecaria</div>
+        <div class="app-tile-desc">Calcula cuotas mensuales y tasas de interes para tus clientes.</div>
+        <span class="badge badge-green" style="font-size:0.65rem;margin-top:auto;">Disponible</span>
+      </div>
+      <div class="app-tile">
+        <div class="app-tile-icon" style="background:rgba(74,45,156,0.1);color:var(--purple)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+        <div class="app-tile-name">Mapa de Propiedades</div>
+        <div class="app-tile-desc">Explora listados en el mapa interactivo de HogaresRD.</div>
+        <a href="/mapa.html" class="badge badge-blue" style="font-size:0.65rem;margin-top:auto;text-decoration:none;">Abrir</a>
+      </div>
+      <div class="app-tile app-tile-soon">
+        <div class="app-tile-icon" style="background:rgba(192,124,26,0.1);color:var(--orange)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+        </div>
+        <div class="app-tile-name">Comparador de Mercado</div>
+        <div class="app-tile-desc">Compara precios de propiedades similares en la zona.</div>
+        <span class="badge badge-orange" style="font-size:0.65rem;margin-top:auto;">Proximamente</span>
+      </div>
+      <div class="app-tile app-tile-soon">
+        <div class="app-tile-icon" style="background:rgba(10,124,79,0.1);color:var(--green)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        </div>
+        <div class="app-tile-name">Campanas de Email</div>
+        <div class="app-tile-desc">Envia campanas de email a clientes potenciales.</div>
+        <span class="badge badge-orange" style="font-size:0.65rem;margin-top:auto;">Proximamente</span>
+      </div>
+      <div class="app-tile app-tile-soon">
+        <div class="app-tile-icon" style="background:rgba(207,20,43,0.1);color:var(--red)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        <div class="app-tile-name">Generador de Contratos</div>
+        <div class="app-tile-desc">Crea contratos de compraventa y arrendamiento.</div>
+        <span class="badge badge-orange" style="font-size:0.65rem;margin-top:auto;">Proximamente</span>
+      </div>
+      <div class="app-tile app-tile-soon">
+        <div class="app-tile-icon" style="background:rgba(0,56,168,0.1);color:var(--accent)">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div class="app-tile-name">CRM de Clientes</div>
+        <div class="app-tile-desc">Gestiona tu cartera de clientes y seguimientos.</div>
+        <span class="badge badge-orange" style="font-size:0.65rem;margin-top:auto;">Proximamente</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TERMINOS ════════════════════════════════════ -->
+  <div class="page-section" id="page-terminos">
+    <div class="settings-card" style="max-width:800px;">
+      <h2 class="settings-card-title">Terminos y Condiciones</h2>
+      <p class="settings-card-desc">Ultima actualizacion: enero 2026</p>
+      <div class="terms-body">
+        <h3>1. Uso del Portal de Broker</h3>
+        <p>El Portal de Broker de HogaresRD es una herramienta exclusiva para agentes y agencias inmobiliarias registradas en la plataforma. El acceso esta condicionado al cumplimiento de estos terminos.</p>
+        <h3>2. Responsabilidades del Broker</h3>
+        <p>El broker es responsable de la veracidad de la informacion publicada, la atencion oportuna a los clientes que aplican a sus propiedades, y el manejo etico y profesional de todas las transacciones.</p>
+        <h3>3. Manejo de Datos de Clientes</h3>
+        <p>Los datos personales de los clientes (nombre, correo, telefono, documentos) son confidenciales y solo pueden usarse para los fines especificos de la transaccion inmobiliaria. Queda prohibida su distribucion a terceros.</p>
+        <h3>4. Comisiones y Pagos</h3>
+        <p>Las comisiones acordadas se registran en la seccion de Contabilidad del portal. HogaresRD no es parte de los acuerdos economicos entre broker y cliente; actua unicamente como plataforma intermediaria.</p>
+        <h3>5. Documentacion</h3>
+        <p>El broker debe verificar la autenticidad de todos los documentos recibidos. HogaresRD no garantiza la validez legal de los documentos subidos por los usuarios.</p>
+        <h3>6. Suspension de Cuenta</h3>
+        <p>HogaresRD se reserva el derecho de suspender o cancelar cuentas de broker que incumplan estos terminos, presenten informacion falsa o reciban multiples quejas de clientes.</p>
+        <h3>7. Modificaciones</h3>
+        <p>HogaresRD puede actualizar estos terminos en cualquier momento. Los cambios seran notificados por correo electronico con al menos 15 dias de anticipacion.</p>
+        <h3>8. Contacto</h3>
+        <p>Para dudas sobre estos terminos, contacta a <strong>legal@hogaresrd.com</strong>.</p>
+      </div>
+    </div>
   </div>
 
   </div><!-- /content-area -->
@@ -1281,29 +1505,46 @@
   let salesData = [], accountingData = [];
   let chartInstances = {};
 
-  const SECTION_TITLES = {
-    aplicaciones: 'Aplicaciones', analiticas: 'Analiticas',
-    ventas: 'Ventas', contabilidad: 'Contabilidad',
-    archivo: 'Archivo', auditoria: 'Auditoria'
+  // ── Page Navigation (Sidebar) ───────────────────────────────
+  const PAGE_TITLES = {
+    dashboard: 'Dashboard', 'chat-ia': 'Chat IA',
+    notificaciones: 'Notificaciones', contrasena: 'Gestion de Contrasena',
+    apps: 'Apps', terminos: 'Terminos y Condiciones'
   };
+  let currentPage = 'dashboard';
 
   document.querySelector('.sidebar-nav').addEventListener('click', e => {
     const btn = e.target.closest('.sidebar-nav-item');
-    if (!btn) return;
-    showSection(btn.dataset.section);
-    // Close mobile sidebar
+    if (!btn || !btn.dataset.page) return;
+    showPage(btn.dataset.page);
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('sidebarOverlay').classList.remove('visible');
   });
 
+  function showPage(page) {
+    currentPage = page;
+    document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`.sidebar-nav-item[data-page="${page}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
+    if (page === 'notificaciones') loadNotifications();
+  }
+
+  // ── Dashboard Section Nav (internal tabs) ──────────────────
+  document.getElementById('sectionNav').addEventListener('click', e => {
+    const btn = e.target.closest('.section-nav-btn');
+    if (!btn) return;
+    showSection(btn.dataset.section);
+  });
+
   function showSection(section) {
     currentSection = section;
-    document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
-    const activeBtn = document.querySelector(`.sidebar-nav-item[data-section="${section}"]`);
-    if (activeBtn) activeBtn.classList.add('active');
+    document.querySelectorAll('.section-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.section-nav-btn[data-section="${section}"]`).classList.add('active');
     document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
     document.getElementById('section-' + section).classList.add('active');
-    document.getElementById('topbarTitle').textContent = SECTION_TITLES[section] || section;
     if (section === 'analiticas' && !analyticsLoaded) loadAnalytics();
     if (section === 'ventas' && !salesLoaded) loadSales();
     if (section === 'archivo') loadArchive();
@@ -1311,12 +1552,10 @@
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
   }
 
-  // Sidebar collapse toggle
+  // ── Sidebar collapse & mobile ───────────────────────────────
   document.getElementById('sidebarCollapseBtn').onclick = () => {
     document.getElementById('sidebar').classList.toggle('collapsed');
   };
-
-  // Mobile sidebar toggle
   document.getElementById('mobileSidebarBtn').onclick = () => {
     document.getElementById('sidebar').classList.add('mobile-open');
     document.getElementById('sidebarOverlay').classList.add('visible');
@@ -1325,6 +1564,106 @@
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('sidebarOverlay').classList.remove('visible');
   };
+
+  // ── Notifications ───────────────────────────────────────────
+  let notifLoaded = false;
+  async function loadNotifications() {
+    if (notifLoaded) return;
+    const list = document.getElementById('notifList');
+    try {
+      const data = await API('/api/applications');
+      const apps = data.applications || data || [];
+      notifLoaded = true;
+      // Build notifications from timeline events across all applications
+      const events = [];
+      apps.forEach(app => {
+        const client = app.client || app.user || {};
+        const listing = app.listing || {};
+        (app.timeline_events || []).forEach(ev => {
+          events.push({ ...ev, clientName: client.name || client.full_name || 'Cliente', listing: listing.title || 'Propiedad', appId: app._id || app.id });
+        });
+      });
+      events.sort((a, b) => new Date(b.timestamp || b.created_at) - new Date(a.timestamp || a.created_at));
+      const recent = events.slice(0, 30);
+      document.getElementById('notifCount').textContent = `${recent.length} notificaciones`;
+      if (!recent.length) {
+        list.innerHTML = '<div class="empty-state"><p>No hay notificaciones recientes.</p></div>';
+        return;
+      }
+      const icons = { status_change:'🔄', document:'📄', tour:'🏠', payment:'💰', message:'💬' };
+      const colors = { status_change:'rgba(0,56,168,0.1)', document:'rgba(74,45,156,0.1)', tour:'rgba(10,124,79,0.1)', payment:'rgba(192,124,26,0.1)', message:'rgba(0,56,168,0.08)' };
+      list.innerHTML = recent.map((ev, i) => `
+        <div class="notif-item${i < 5 ? ' unread' : ''}">
+          <div class="notif-icon" style="background:${colors[ev.type]||'rgba(0,56,168,0.1)'};">${icons[ev.type]||'📋'}</div>
+          <div class="notif-body">
+            <div class="notif-title">${esc(ev.description || ev.message || 'Evento')}</div>
+            <div class="notif-meta">${esc(ev.clientName)} · ${esc(ev.listing)} · ${fmtDateTime(ev.timestamp || ev.created_at)}</div>
+          </div>
+          ${i < 5 ? '<div class="notif-dot"></div>' : ''}
+        </div>`).join('');
+      document.getElementById('markAllReadBtn').onclick = () => {
+        document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+        document.querySelectorAll('.notif-dot').forEach(el => el.remove());
+        document.getElementById('notifCount').textContent = `${recent.length} notificaciones`;
+      };
+    } catch(e) {
+      list.innerHTML = `<div class="empty-state"><p>Error cargando notificaciones: ${esc(e.message)}</p></div>`;
+    }
+  }
+
+  // ── Password Change ─────────────────────────────────────────
+  document.getElementById('pwSaveBtn').onclick = async () => {
+    const current = document.getElementById('pwCurrent').value;
+    const newPw = document.getElementById('pwNew').value;
+    const confirm = document.getElementById('pwConfirm').value;
+    const msg = document.getElementById('pwMsg');
+    msg.className = '';
+    msg.style.display = 'none';
+    if (!current || !newPw || !confirm) { msg.className = 'error'; msg.textContent = 'Completa todos los campos.'; return; }
+    if (newPw !== confirm) { msg.className = 'error'; msg.textContent = 'Las contrasenas no coinciden.'; return; }
+    if (newPw.length < 6) { msg.className = 'error'; msg.textContent = 'La contrasena debe tener al menos 6 caracteres.'; return; }
+    try {
+      await API('/api/auth/change-password', { method: 'POST', body: { currentPassword: current, newPassword: newPw } });
+      msg.className = 'success'; msg.textContent = 'Contrasena actualizada correctamente.';
+      document.getElementById('pwCurrent').value = '';
+      document.getElementById('pwNew').value = '';
+      document.getElementById('pwConfirm').value = '';
+    } catch(e) {
+      msg.className = 'error'; msg.textContent = e.message;
+    }
+  };
+
+  // ── Chat IA ─────────────────────────────────────────────────
+  const chatResponses = [
+    'Para mejorar la tasa de conversion, te recomiendo hacer seguimiento dentro de las primeras 24 horas de recibir una aplicacion.',
+    'El mercado inmobiliario en Santo Domingo ha mostrado un incremento del 8% en precios este ano. Los sectores de Piantini y Naco lideran la demanda.',
+    'Para un cliente en etapa de documentos, lo ideal es ofrecerle una lista clara de los requisitos y un plazo razonable de 5-7 dias.',
+    'Las propiedades con precio entre RD$ 8M y RD$ 15M tienen el mayor volumen de aplicaciones en nuestra plataforma actualmente.',
+    'Para acelerar el proceso de aprobacion, asegurate de que todos los documentos del cliente esten completos antes de pasar a la etapa de revision bancaria.',
+    'Recuerda agendar el tour de la propiedad dentro de los primeros 3 dias de recibir una aplicacion aprobada. Esto aumenta el cierre en un 40%.',
+  ];
+  let chatIdx = 0;
+  function appendChatMsg(text, isUser) {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + (isUser ? 'chat-msg-user' : 'chat-msg-bot');
+    div.innerHTML = `<div class="chat-msg-avatar">${isUser ? 'Tu' : 'IA'}</div><div class="chat-msg-bubble">${esc(text)}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    appendChatMsg(text, true);
+    input.value = '';
+    setTimeout(() => {
+      appendChatMsg(chatResponses[chatIdx % chatResponses.length], false);
+      chatIdx++;
+    }, 800);
+  }
+  document.getElementById('chatSendBtn').onclick = sendChat;
+  document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
 
   // ── Chart Colors ──────────────────────────────────────────
   const CHART_COLORS = ['#0038A8','#CF142B','#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
