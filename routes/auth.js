@@ -3,11 +3,32 @@ const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 const crypto     = require('crypto');
 const nodemailer = require('nodemailer');
+const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 
 const router     = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'hogaresrd-jwt-fallback-change-me';
+const JWT_SECRET = process.env.JWT_SECRET; // required — enforced at startup by server.js
 const BASE_URL   = process.env.BASE_URL || 'http://localhost:3000';
+
+// ── Rate limiters ─────────────────────────────────────────────────────────
+// Tight limit on login / registration — these are the brute-force targets.
+const authLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000, // 15 minutes
+  max:              10,              // 10 attempts per window per IP
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: 'Demasiados intentos. Intenta nuevamente en 15 minutos.' },
+  skipSuccessfulRequests: true,      // only count failures toward the limit
+});
+
+// Slightly looser limit for password-reset to avoid blocking legitimate users
+const resetLimiter = rateLimit({
+  windowMs:  60 * 60 * 1000, // 1 hour
+  max:       5,               // 5 reset requests per hour per IP
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:   { error: 'Demasiadas solicitudes de restablecimiento. Intenta en una hora.' },
+});
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -37,7 +58,7 @@ function userAuth(req, res, next) {
 }
 
 // ── Register ───────────────────────────────────────────────────────────────
-router.post('/register', async (req, res, next) => {
+router.post('/register', authLimiter, async (req, res, next) => {
   try {
     const { name, email, password, marketingOptIn } = req.body;
 
@@ -220,7 +241,7 @@ router.post('/register', async (req, res, next) => {
 });
 
 // ── Register Agency ────────────────────────────────────────────────────────
-router.post('/register/agency', async (req, res, next) => {
+router.post('/register/agency', authLimiter, async (req, res, next) => {
   try {
     const { name, email, password, agencyName, licenseNumber, phone } = req.body;
 
@@ -299,7 +320,7 @@ router.post('/register/agency', async (req, res, next) => {
 });
 
 // ── Register Broker ────────────────────────────────────────────────────────
-router.post('/register/broker', async (req, res, next) => {
+router.post('/register/broker', authLimiter, async (req, res, next) => {
   try {
     const { name, email, password, phone, licenseNumber } = req.body;
 
@@ -377,7 +398,7 @@ router.post('/register/broker', async (req, res, next) => {
 });
 
 // ── Register Inmobiliaria ──────────────────────────────────────────────────
-router.post('/register/inmobiliaria', async (req, res, next) => {
+router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
   try {
     const { name, email, password, companyName, licenseNumber, phone } = req.body;
 
@@ -451,7 +472,7 @@ router.post('/register/inmobiliaria', async (req, res, next) => {
 });
 
 // ── Login ──────────────────────────────────────────────────────────────────
-router.post('/login', async (req, res, next) => {
+router.post('/login', authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
@@ -478,7 +499,7 @@ router.get('/me', userAuth, (req, res) => {
 });
 
 // ── Forgot password ────────────────────────────────────────────────────────
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', resetLimiter, async (req, res) => {
   const { email } = req.body;
 
   // Always 200 — never reveal whether the email exists

@@ -2,6 +2,17 @@ require('dotenv').config();
 const path       = require('path');
 const fs         = require('fs');
 
+// ── Startup: fail fast if required secrets are missing ────────────
+(function checkEnv() {
+  const required = ['JWT_SECRET', 'ADMIN_KEY'];
+  const missing  = required.filter(k => !process.env[k]);
+  if (missing.length) {
+    console.error(`\n❌  Missing required environment variables: ${missing.join(', ')}`);
+    console.error('    Create a .env file with these values before starting the server.\n');
+    process.exit(1);
+  }
+})();
+
 // ── Ensure data dir & seed files (must run before any route requires) ─────
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -23,7 +34,7 @@ const { router: newsletterRouter, sendNewsletter } = require('./routes/newslette
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const SUBMISSIONS_FILE = path.join(__dirname, 'data', 'submissions.json');
-const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
+const ADMIN_KEY = process.env.ADMIN_KEY; // enforced present by checkEnv() above
 const ADMIN_EMAIL = 'Jostysantos@gmail.com';
 
 // ── Seed demo listings ─────────────────────────────────────────
@@ -102,9 +113,30 @@ const blueprintUpload = multer({
   },
 });
 
-// ── Middleware ─────────────────────────────────────────────────
+// ── CORS ───────────────────────────────────────────────────────
+// Allowed origins: explicit list only — no wildcard in production.
+// Add ALLOWED_ORIGINS to .env as a comma-separated list.
+// In development (NODE_ENV !== 'production') localhost is always allowed.
+const ALLOWED_ORIGINS = (() => {
+  const fromEnv = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+  const defaults = process.env.NODE_ENV !== 'production'
+    ? ['http://localhost:3000', 'http://127.0.0.1:3000']
+    : [];
+  return new Set([...fromEnv, ...defaults]);
+})();
+
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  // Same-origin requests (e.g. pages served by this Express app) have no Origin header
+  // at all, so CORS headers are not needed and not set.
+  if (origin) {
+    if (ALLOWED_ORIGINS.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    // If the origin is not in the list we simply don't set the CORS header,
+    // so the browser blocks the request — no explicit rejection needed.
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-key');
   if (req.method === 'OPTIONS') return res.sendStatus(204);

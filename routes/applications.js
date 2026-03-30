@@ -8,7 +8,7 @@ const store      = require('./store');
 const { userAuth } = require('./auth');
 
 const router    = express.Router();
-const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
+const ADMIN_KEY = process.env.ADMIN_KEY; // required — enforced at startup by server.js
 const BASE_URL  = process.env.BASE_URL || 'http://localhost:3000';
 
 const transporter = nodemailer.createTransport({
@@ -82,7 +82,8 @@ const docUpload = multer({
 
 // ── Helpers ───────────────────────────────────────────────────────
 function isAdmin(req) {
-  return req.headers['x-admin-key'] === ADMIN_KEY || req.query._key === ADMIN_KEY;
+  // Only allow header-based admin auth — never query string (leaks in logs/history)
+  return req.headers['x-admin-key'] === ADMIN_KEY;
 }
 
 function addEvent(app, type, description, actor, actorName, data = {}) {
