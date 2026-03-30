@@ -1045,7 +1045,7 @@
 
     function loadApps() {
       fetch('/api/applications?_key=' + encodeURIComponent(adminKey), {
-        headers: { 'x-admin-key': adminKey, 'Authorization': 'Bearer ' + adminKey }
+        headers: { 'x-admin-key': adminKey }
       })
       .then(r => {
         if (!r.ok) throw new Error('Not authorized');

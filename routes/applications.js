@@ -222,7 +222,16 @@ router.post('/', (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── GET /  — List applications (broker/admin) ────────────────────
 // ══════════════════════════════════════════════════════════════════
-router.get('/', userAuth, (req, res) => {
+router.get('/', (req, res, next) => {
+  // Allow admin-key access (for admin panel) without JWT
+  if (isAdmin(req)) {
+    let apps = store.getApplications();
+    const { status } = req.query;
+    if (status) apps = apps.filter(a => a.status === status);
+    return res.json(apps);
+  }
+  next();
+}, userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
 
