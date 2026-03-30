@@ -1,0 +1,19 @@
+[
+  {
+    "id": "usr_broker_demo_001",
+    "email": "broker@hogaresrd.com",
+    "passwordHash": "$2b$10$GoJ9Ldb0Y8IpkrPZ.kh3fe1REPev7Az8RwkHLuDjVaMG7/SlOMTHm",
+    "name": "Demo Broker",
+    "phone": "809-555-0001",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "lastLoginAt": "2026-03-30T09:42:00.514Z",
+    "role": "agency",
+    "emailVerified": true,
+    "marketingOptIn": false,
+    "agency": {
+      "name": "HogaresRD Demo Agency",
+      "license": "DEMO-001",
+      "phone": "809-555-0001"
+    }
+  }
+]

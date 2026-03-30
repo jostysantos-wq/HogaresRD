@@ -1,0 +1,1036 @@
+[
+  {
+    "id": "1774698636285",
+    "title": "",
+    "type": "",
+    "condition": "",
+    "description": "",
+    "price": "",
+    "area_const": "",
+    "area_land": "",
+    "bedrooms": "",
+    "bathrooms": "",
+    "parking": "",
+    "province": "",
+    "city": "Santo Domingo",
+    "sector": "",
+    "address": "",
+    "amenities": [],
+    "agencies": [],
+    "lat": "18.473406",
+    "lng": "-69.892187",
+    "name": "",
+    "email": "",
+    "phone": "",
+    "role": "",
+    "status": "pending",
+    "submittedAt": "2026-03-28T11:50:36.285Z"
+  },
+  {
+    "id": "proj_torre_sole_001",
+    "title": "Torre Solé — Proyecto Residencial de Lujo en Piantini",
+    "type": "venta",
+    "condition": "nueva_construccion",
+    "description": "Torre Solé es un exclusivo desarrollo residencial ubicado en el corazón de Piantini, uno de los sectores más prestigiosos de Santo Domingo. Con 22 pisos de arquitectura contemporánea, el proyecto ofrece una experiencia de vida única que combina sofisticación, comodidad y una ubicación inmejorable a pasos de los mejores restaurantes, centros comerciales y oficinas del Distrito Nacional.\n\nDiseñado por el reconocido estudio ArquiDom International, Torre Solé establece un nuevo estándar en el mercado residencial dominicano. Cada apartamento ha sido meticulosamente planificado para maximizar la luz natural, la ventilación cruzada y las vistas panorámicas hacia la ciudad y el horizonte del Mar Caribe.\n\nLos acabados son de primera clase: cocinas abiertas con isla central en cuarzo Silestone, pisos de porcelanato italiano formato jumbo, ventanas de piso a techo con vidrio templado laminado de bajo emisivo, y sistema de domótica integrado para el control inteligente del hogar desde tu teléfono.\n\nEl proyecto está financiado en un 40% durante la construcción con cuotas accesibles, y el 60% restante a la entrega con préstamo hipotecario. Banco BHD León, Banreservas y Scotiabank ya han pre-aprobado financiamiento para adquirentes calificados.",
+    "price": "85000",
+    "area_const": "45",
+    "area_land": null,
+    "bedrooms": "1",
+    "bathrooms": "1",
+    "parking": "1",
+    "province": "Santo Domingo",
+    "city": "Santo Domingo",
+    "sector": "Piantini",
+    "address": "Calle El Recodo #45, Piantini, Distrito Nacional",
+    "amenities": [
+      "Piscina infinity con vista a la ciudad",
+      "Gimnasio completamente equipado",
+      "Lobby de doble altura con concierge",
+      "Seguridad 24/7 con circuito cerrado",
+      "Generador eléctrico general",
+      "Rooftop social con área de BBQ",
+      "Salón multiusos para eventos",
+      "Área de juegos infantiles",
+      "Parqueo de visitas cubierto",
+      "Ascensores de alta velocidad",
+      "Lavandería compartida equipada",
+      "Cuarto de utilidad por piso"
+    ],
+    "construction_company": {
+      "name": "Grupo Torres del Este S.A.",
+      "years_experience": 22,
+      "projects_completed": 14,
+      "units_delivered": 1840,
+      "phone": "+1 (809) 565-0001",
+      "email": "proyectos@torresdeleste.com.do",
+      "description": "Con más de 22 años de trayectoria en el mercado inmobiliario dominicano, Grupo Torres del Este S.A. se ha consolidado como una de las constructoras más confiables y reconocidas del país. Fundada en 2004 por el Ing. Rafael Torres Medina, la empresa ha entregado 14 proyectos exitosos con más de 1,840 familias que ya disfrutan de sus desarrollos en Santo Domingo, Santiago y Punta Cana. Reconocida con el Premio Nacional de Construcción 2022 y certificación ISO 9001:2015 en gestión de calidad."
+    },
+    "agencies": [
+      {
+        "name": "Inmobiliaria Elite RD",
+        "agent": "María Fernández",
+        "title": "Asesora Senior de Ventas",
+        "phone": "+1 (809) 765-4321",
+        "whatsapp": "18097654321",
+        "email": "mfernandez@eliterd.com.do",
+        "license": "MIREX-2019-004521"
+      },
+      {
+        "name": "Century 21 Dominicana",
+        "agent": "Roberto Alcántara",
+        "title": "Corredor de Bienes Raíces",
+        "phone": "+1 (809) 472-2100",
+        "whatsapp": "18094722100",
+        "email": "ralcantara@century21rd.com",
+        "license": "MIREX-2021-007834"
+      },
+      {
+        "name": "RE/MAX Prestige RD",
+        "agent": "Carolina Díaz",
+        "title": "Directora de Ventas",
+        "phone": "+1 (809) 683-5500",
+        "whatsapp": "18096835500",
+        "email": "cdiaz@remaxprestigerd.com",
+        "license": "MIREX-2018-001290"
+      }
+    ],
+    "unit_types": [
+      {
+        "name": "Studio",
+        "area": 45,
+        "bedrooms": 0,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 85000,
+        "available": 8,
+        "total": 20
+      },
+      {
+        "name": "2 Habitaciones",
+        "area": 95,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "parking": 1,
+        "price": 145000,
+        "available": 22,
+        "total": 56
+      },
+      {
+        "name": "3 Habitaciones",
+        "area": 145,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "parking": 2,
+        "price": 220000,
+        "available": 18,
+        "total": 38
+      },
+      {
+        "name": "Penthouse",
+        "area": 280,
+        "bedrooms": 4,
+        "bathrooms": 3,
+        "parking": 2,
+        "price": 485000,
+        "available": 4,
+        "total": 6
+      }
+    ],
+    "project_stage": "En construcción",
+    "delivery_date": "Diciembre 2027",
+    "floors": 22,
+    "units_total": 120,
+    "units_available": 52,
+    "tags": [
+      "nueva_construccion",
+      "piscina",
+      "gimnasio",
+      "penthouse",
+      "lujo",
+      "rooftop",
+      "concierge",
+      "financiamiento"
+    ],
+    "lat": "18.4714",
+    "lng": "-69.9417",
+    "name": "Grupo Torres del Este S.A.",
+    "email": "ventas@torresdeleste.com.do",
+    "phone": "+1 (809) 565-0001",
+    "role": "developer",
+    "status": "approved",
+    "submittedAt": "2026-03-28T09:00:00.000Z",
+    "approvedAt": "2026-03-28T10:30:00.000Z",
+    "views": 4,
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/torre-ext/1200/800",
+        "label": "Vista Exterior"
+      },
+      {
+        "url": "https://picsum.photos/seed/torre-lobby/1200/800",
+        "label": "Área Social / Lobby"
+      },
+      {
+        "url": "https://picsum.photos/seed/torre-int/1200/800",
+        "label": "Interior — Apartamento Tipo"
+      },
+      {
+        "url": "https://picsum.photos/seed/torre-pool/1200/800",
+        "label": "Piscina Infinity"
+      },
+      {
+        "url": "https://picsum.photos/seed/torre-roof/1200/800",
+        "label": "Rooftop & Vista Panorámica"
+      }
+    ]
+  },
+  {
+    "id": "seed_villa_capcana_002",
+    "title": "Villa Privada con Piscina en Cap Cana — Frente al Campo de Golf",
+    "type": "venta",
+    "condition": "nueva_construccion",
+    "description": "Espectacular villa de nueva construcción ubicada en el exclusivo enclave de Cap Cana, con vistas directas al campo de golf diseñado por Jack Nicklaus. La propiedad cuenta con 4 suites maestras, cada una con baño privado de mármol travertino, walk-in closet y acceso a terrazas privadas. La sala principal de doble altura se abre completamente hacia la piscina infinity de 18 metros y el jardín tropical.\n\nLa cocina gourmet está equipada con electrodomésticos Sub-Zero y Wolf, gabinetes en madera de teka y mesones en cuarzo Calacatta. El área exterior incluye terraza cubierta, área de BBQ con cocina al aire libre, jacuzzi y jardines paisajísticos. El sistema de domótica Control4 permite gestionar iluminación, clima, seguridad y entretenimiento desde el teléfono.\n\nCap Cana ofrece marina privada, playas exclusivas, hotel Juanillo, restaurantes gourmet y acceso controlado las 24 horas. Ideal como residencia principal o inversión de alto rendimiento.",
+    "price": "1850000",
+    "area_const": "620",
+    "area_land": "1200",
+    "bedrooms": "4",
+    "bathrooms": "4",
+    "parking": "3",
+    "floors": "2",
+    "province": "La Altagracia",
+    "city": "Punta Cana",
+    "sector": "Cap Cana",
+    "address": "Calle Farallón #12, Cap Cana",
+    "amenities": [
+      "piscina",
+      "jacuzzi",
+      "bbq",
+      "jardin",
+      "ac",
+      "planta",
+      "cisterna",
+      "seguridad",
+      "camaras",
+      "vista_mar"
+    ],
+    "tags": [
+      "Primera línea de playa",
+      "Frente al campo de golf",
+      "Proyecto de lujo",
+      "Alta rentabilidad",
+      "Apto para Airbnb",
+      "Vista panorámica"
+    ],
+    "construction_company": {
+      "name": "Cap Cana Development Corp.",
+      "years_experience": 18,
+      "projects_completed": 32,
+      "units_delivered": 2400,
+      "description": "Desarrolladora líder en el este del país, responsable de los proyectos más icónicos de Cap Cana y Punta Cana. Con 18 años de experiencia y más de 2,400 unidades entregadas, garantiza los más altos estándares de construcción y diseño de la región."
+    },
+    "agencies": [
+      {
+        "name": "Inmobiliaria Elite RD",
+        "agent": "Patricia Morel",
+        "title": "Directora de Propiedades Premium",
+        "phone": "+1 (809) 765-4321",
+        "email": "pmorel@eliterd.com.do"
+      },
+      {
+        "name": "Sotheby's International Realty RD",
+        "agent": "James Harrington",
+        "title": "Luxury Property Specialist",
+        "phone": "+1 (809) 333-7700",
+        "email": "jharrington@sothebysrd.com"
+      }
+    ],
+    "blueprints": [
+      "https://picsum.photos/seed/capcana-p1/1200/800",
+      "https://picsum.photos/seed/capcana-p2/1200/800",
+      "https://picsum.photos/seed/capcana-p3/1200/800"
+    ],
+    "lat": "18.4750",
+    "lng": "-68.4028",
+    "name": "Cap Cana Development Corp.",
+    "email": "ventas@capcana.com.do",
+    "phone": "+1 (809) 468-8000",
+    "role": "Constructora / Desarrolladora",
+    "status": "approved",
+    "submittedAt": "2026-03-15T08:00:00.000Z",
+    "approvedAt": "2026-03-15T09:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/villa-ext/1200/800",
+        "label": "Vista Exterior — Fachada"
+      },
+      {
+        "url": "https://picsum.photos/seed/villa-sala/1200/800",
+        "label": "Sala Principal"
+      },
+      {
+        "url": "https://picsum.photos/seed/villa-hab/1200/800",
+        "label": "Habitación Master"
+      },
+      {
+        "url": "https://picsum.photos/seed/villa-pool/1200/800",
+        "label": "Piscina Privada"
+      },
+      {
+        "url": "https://picsum.photos/seed/villa-golf/1200/800",
+        "label": "Vista al Campo de Golf"
+      }
+    ]
+  },
+  {
+    "id": "seed_apto_alquiler_naco_003",
+    "title": "Apartamento Amueblado 2BR en Naco — Listo para Mudarse",
+    "type": "alquiler",
+    "condition": "Excelente estado",
+    "description": "Moderno apartamento completamente amueblado en el piso 8 de un edificio residencial de Naco, uno de los sectores más cómodos y mejor ubicados del Distrito Nacional. A pasos del Centro Comercial Acropolis, restaurantes, supermercados y la Av. 27 de Febrero.\n\nEl apartamento fue remodelado en 2024 con acabados de alta calidad: pisos de porcelanato 60×60, cocina abierta con isla y electrodomésticos de acero inoxidable, baños modernos con ducha de lluvia y muebles de diseño. Incluye aire acondicionado central, internet de alta velocidad incluido en la renta, y un parqueo techado.\n\nIdeal para profesionales, ejecutivos o parejas que buscan comodidad y ubicación privilegiada sin sacrificar estilo. Disponible para contrato mínimo de 12 meses. Primer mes, último mes y un mes de depósito.",
+    "price": "1200",
+    "area_const": "110",
+    "bedrooms": "2",
+    "bathrooms": "2",
+    "parking": "1",
+    "floor_num": "8",
+    "year_built": "2018",
+    "province": "Distrito Nacional",
+    "city": "Santo Domingo",
+    "sector": "Naco",
+    "address": "Calle Rafael Augusto Sánchez #38, Naco",
+    "amenities": [
+      "ac",
+      "elevador",
+      "seguridad",
+      "camaras",
+      "planta",
+      "cisterna",
+      "amueblado"
+    ],
+    "tags": [
+      "Listo para mudarse",
+      "Amueblado",
+      "Centro de la ciudad",
+      "Cerca de centros comerciales",
+      "Apto para familias"
+    ],
+    "agencies": [
+      {
+        "name": "Century 21 Dominicana",
+        "agent": "Luisa Comprés",
+        "title": "Agente de Alquileres",
+        "phone": "+1 (809) 472-2100",
+        "email": "lcompres@century21rd.com"
+      }
+    ],
+    "blueprints": [],
+    "lat": "18.4772",
+    "lng": "-69.9497",
+    "name": "Luisa Comprés",
+    "email": "lcompres@century21rd.com",
+    "phone": "+1 (809) 472-2150",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-20T10:00:00.000Z",
+    "approvedAt": "2026-03-20T11:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/naco-ext/1200/800",
+        "label": "Fachada del Edificio"
+      },
+      {
+        "url": "https://picsum.photos/seed/naco-sala/1200/800",
+        "label": "Sala — Comedor"
+      },
+      {
+        "url": "https://picsum.photos/seed/naco-coc/1200/800",
+        "label": "Cocina Equipada"
+      },
+      {
+        "url": "https://picsum.photos/seed/naco-hab/1200/800",
+        "label": "Habitación Principal"
+      }
+    ]
+  },
+  {
+    "id": "seed_casa_terrenas_004",
+    "title": "Casa Dominicana con Jardín Tropical en Las Terrenas — Samaná",
+    "type": "venta",
+    "condition": "Buen estado",
+    "description": "Encantadora casa de estilo colonial caribeño en el corazón de Las Terrenas, a solo 800 metros de la playa Bonita. La propiedad está sobre un terreno de 650 m² completamente cercado, con jardín tropical maduro con palmeras, flamboyanes y una mini-piscina de 6×4 metros.\n\nLa casa cuenta con sala-comedor de planta abierta, cocina equipada, dos habitaciones en la planta baja y un master suite en la segunda planta con terraza privada con vista al jardín. Los pisos son en gres cerámico artesanal y las ventanas de madera son originales, perfectamente mantenidas.\n\nLas Terrenas es uno de los destinos más deseados por extranjeros que buscan calidad de vida y tranquilidad. Con una comunidad internacional activa, restaurantes de nivel europeo y acceso a las mejores playas del Atlántico, esta propiedad representa una oportunidad única para vivienda o inversión turística.",
+    "price": "320000",
+    "area_const": "180",
+    "area_land": "650",
+    "bedrooms": "3",
+    "bathrooms": "2",
+    "parking": "2",
+    "floors": "2",
+    "year_built": "2008",
+    "province": "Samaná",
+    "city": "Las Terrenas",
+    "sector": "El Portillo",
+    "address": "Calle Principal #77, El Portillo, Las Terrenas",
+    "amenities": [
+      "piscina",
+      "jardin",
+      "ac",
+      "cisterna",
+      "balcon"
+    ],
+    "tags": [
+      "A pasos de la playa",
+      "Barrio tranquilo",
+      "Apto para familias",
+      "Alta rentabilidad",
+      "Alquiler vacacional",
+      "Zona en desarrollo"
+    ],
+    "agencies": [
+      {
+        "name": "RE/MAX Prestige RD",
+        "agent": "Sandrine Leblanc",
+        "title": "Especialista en Samaná",
+        "phone": "+1 (809) 240-6500",
+        "email": "sleblanc@remaxprestigerd.com"
+      }
+    ],
+    "blueprints": [],
+    "lat": "19.3080",
+    "lng": "-69.5410",
+    "name": "Sandrine Leblanc",
+    "email": "sleblanc@remaxprestigerd.com",
+    "phone": "+1 (809) 240-6501",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-10T14:00:00.000Z",
+    "approvedAt": "2026-03-10T15:30:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/terr-ext/1200/800",
+        "label": "Vista Exterior"
+      },
+      {
+        "url": "https://picsum.photos/seed/terr-patio/1200/800",
+        "label": "Patio y Jardín"
+      },
+      {
+        "url": "https://picsum.photos/seed/terr-hab/1200/800",
+        "label": "Habitación con Vista"
+      },
+      {
+        "url": "https://picsum.photos/seed/terr-playa/1200/800",
+        "label": "Playa a 5 Minutos"
+      }
+    ]
+  },
+  {
+    "id": "seed_proyecto_playadorada_005",
+    "title": "Residencial Playa Dorada Suites — Proyecto en Planos, Puerto Plata",
+    "type": "venta",
+    "condition": "planos",
+    "description": "Presentamos Playa Dorada Suites, un exclusivo proyecto residencial en planos dentro del complejo turístico Playa Dorada, Puerto Plata. El proyecto consta de 64 unidades distribuidas en 4 bloques de 4 pisos, con acceso directo a la playa y vista al campo de golf Robert Trent Jones.\n\nLas unidades van desde estudios de 42 m² hasta apartamentos de 2 habitaciones de 98 m², todas con acabados premium, balcón propio y sistema de renta vacacional integrado administrado por la desarrolladora. Los compradores tienen la opción de poner su unidad en el pool de alquiler y generar ingresos pasivos desde la entrega.\n\nEl proyecto cuenta con piscina comunitaria, área de sol, lobby con recepción, restaurante/bar pool side y cancha de tenis. Financiamiento durante la construcción: 30% de entrada, cuotas mensuales accesibles durante 24 meses, y 70% a la entrega. Precio de preventa disponible hasta agotar cupos.",
+    "price": "95000",
+    "area_const": "42",
+    "bedrooms": "1",
+    "bathrooms": "1",
+    "parking": "1",
+    "province": "Puerto Plata",
+    "city": "Puerto Plata",
+    "sector": "Playa Dorada",
+    "address": "Complejo Playa Dorada, Bloque A, Puerto Plata",
+    "amenities": [
+      "piscina",
+      "seguridad",
+      "elevador",
+      "ac",
+      "cisterna",
+      "planta",
+      "balcon"
+    ],
+    "tags": [
+      "Primera línea de playa",
+      "Alta rentabilidad",
+      "Apto para Airbnb",
+      "Alquiler vacacional",
+      "Zona turística",
+      "Proyecto de lujo"
+    ],
+    "construction_company": {
+      "name": "Constructora Atlántica del Norte S.A.",
+      "years_experience": 12,
+      "projects_completed": 8,
+      "units_delivered": 560,
+      "description": "Firma especializada en desarrollos turísticos y residenciales en la costa norte de la República Dominicana. Con 12 años entregando proyectos de calidad internacional en Puerto Plata, Cabarete y Sosúa, es referente en la zona del Atlántico."
+    },
+    "unit_types": [
+      {
+        "name": "Estudio",
+        "area": 42,
+        "bedrooms": 0,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 95000,
+        "available": 12,
+        "total": 16
+      },
+      {
+        "name": "1 Habitación",
+        "area": 68,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 135000,
+        "available": 18,
+        "total": 28
+      },
+      {
+        "name": "2 Habitaciones",
+        "area": 98,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "parking": 1,
+        "price": 185000,
+        "available": 14,
+        "total": 20
+      }
+    ],
+    "project_stage": "En planos",
+    "delivery_date": "2028-06",
+    "units_total": 64,
+    "units_available": 44,
+    "agencies": [
+      {
+        "name": "Inmobiliaria Elite RD",
+        "agent": "Carlos Bautista",
+        "title": "Asesor de Proyectos Turísticos",
+        "phone": "+1 (809) 765-4399",
+        "email": "cbautista@eliterd.com.do"
+      }
+    ],
+    "blueprints": [
+      "https://picsum.photos/seed/playadorada-floor1/1200/800",
+      "https://picsum.photos/seed/playadorada-floor2/1200/800"
+    ],
+    "lat": "19.7930",
+    "lng": "-70.6935",
+    "name": "Constructora Atlántica del Norte S.A.",
+    "email": "ventas@atlanticanorte.com.do",
+    "phone": "+1 (809) 586-3200",
+    "role": "Constructora / Desarrolladora",
+    "status": "approved",
+    "submittedAt": "2026-03-05T09:00:00.000Z",
+    "approvedAt": "2026-03-05T10:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/pd-render/1200/800",
+        "label": "Render Exterior"
+      },
+      {
+        "url": "https://picsum.photos/seed/pd-lobby/1200/800",
+        "label": "Lobby / Recepción"
+      },
+      {
+        "url": "https://picsum.photos/seed/pd-apt/1200/800",
+        "label": "Apartamento Tipo"
+      },
+      {
+        "url": "https://picsum.photos/seed/pd-pool/1200/800",
+        "label": "Área de Piscina"
+      },
+      {
+        "url": "https://picsum.photos/seed/pd-playa/1200/800",
+        "label": "Acceso a la Playa"
+      }
+    ]
+  },
+  {
+    "id": "seed_penthouse_evaristo_006",
+    "title": "Penthouse 4BR con Rooftop Privado — Torre Evaristo Morales",
+    "type": "venta",
+    "condition": "nueva_construccion",
+    "description": "Único penthouse disponible en Torre Evaristo Morales, el edificio boutique más exclusivo de la zona residencial de Evaristo Morales en el Distrito Nacional. El penthouse ocupa los pisos 16 y 17 completos, con 380 m² distribuidos en 4 habitaciones, sala de estar y sala de televisión separadas, cocina gourmet y rooftop privado de 120 m² con jacuzzi, área de BBQ y vista panorámica a 360° de Santo Domingo.\n\nAcabados de primera: pisos en mármol Carrara importado, cielos rasos de 3.20 metros de altura, carpintería en madera de caoba, baños con sanitarios Kohler y grifería Grohe. La cocina cuenta con electrodomésticos Gaggenau y mesones en granito negro absoluto.\n\nTorre Evaristo Morales tiene solo 6 unidades por piso, lobby con obra de arte original, sala de cine privado para residentes, spa y zona de meditación. Seguridad biométrica en todos los accesos.",
+    "price": "1200000",
+    "area_const": "380",
+    "bedrooms": "4",
+    "bathrooms": "4",
+    "parking": "3",
+    "floors": "2",
+    "floor_num": "16",
+    "province": "Distrito Nacional",
+    "city": "Santo Domingo",
+    "sector": "Evaristo Morales",
+    "address": "Av. Gustavo Mejía Ricart #93, Evaristo Morales",
+    "amenities": [
+      "jacuzzi",
+      "bbq",
+      "gym",
+      "seguridad",
+      "camaras",
+      "elevador",
+      "ac",
+      "planta",
+      "cisterna",
+      "balcon",
+      "amueblado"
+    ],
+    "tags": [
+      "Proyecto de lujo",
+      "Vista panorámica",
+      "Centro de la ciudad",
+      "Listo para mudarse",
+      "Con piscina privada",
+      "Con terraza / balcón amplio"
+    ],
+    "agencies": [
+      {
+        "name": "Sotheby's International Realty RD",
+        "agent": "Alejandro Henríquez",
+        "title": "Senior Luxury Advisor",
+        "phone": "+1 (809) 333-7700",
+        "email": "ahenriquez@sothebysrd.com"
+      }
+    ],
+    "blueprints": [
+      "https://picsum.photos/seed/penthouse-plan1/1200/800",
+      "https://picsum.photos/seed/penthouse-plan2/1200/800",
+      "https://picsum.photos/seed/penthouse-plan3/1200/800"
+    ],
+    "lat": "18.4761",
+    "lng": "-69.9320",
+    "name": "Alejandro Henríquez",
+    "email": "ahenriquez@sothebysrd.com",
+    "phone": "+1 (809) 333-7701",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-18T11:00:00.000Z",
+    "approvedAt": "2026-03-18T12:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/ph-ext/1200/800",
+        "label": "Vista Exterior del Edificio"
+      },
+      {
+        "url": "https://picsum.photos/seed/ph-sala/1200/800",
+        "label": "Sala con Vista Panorámica"
+      },
+      {
+        "url": "https://picsum.photos/seed/ph-terr/1200/800",
+        "label": "Terraza Privada"
+      },
+      {
+        "url": "https://picsum.photos/seed/ph-hab/1200/800",
+        "label": "Suite Master"
+      }
+    ]
+  },
+  {
+    "id": "seed_solar_samana_007",
+    "title": "Solar con Vista al Mar en Las Galeras — Samaná, 2,400 m²",
+    "type": "venta",
+    "condition": "Buen estado",
+    "description": "Oportunidad excepcional de adquirir un solar de 2,400 m² en las colinas de Las Galeras, Samaná, con vistas directas a la bahía y al Océano Atlántico. El terreno está totalmente nivelado, con acceso por carretera pavimentada, luz eléctrica y agua disponible en el punto.\n\nIdeal para construir una villa privada de descanso, un pequeño hotel boutique o un proyecto ecoturístico. Las Galeras es uno de los destinos más auténticos y menos desarrollados de República Dominicana, famosa por sus playas vírgenes como Playa Rincón, Playa Madama y Playa Fronton, accesibles solo por bote o senderismo.\n\nEl municipio está en pleno proceso de valorización gracias a inversiones en infraestructura turística y la creciente demanda de propiedades por extranjeros y dominicanos de la diáspora. Precio negociable para compra al contado.",
+    "price": "180000",
+    "area_land": "2400",
+    "province": "Samaná",
+    "city": "Las Galeras",
+    "sector": "Las Galeras",
+    "address": "Loma El Vigía, Las Galeras, Samaná",
+    "amenities": [
+      "vista_mar"
+    ],
+    "tags": [
+      "Vista al mar",
+      "Zona montañosa / fresca",
+      "Zona en desarrollo",
+      "Zona turística",
+      "Alta rentabilidad",
+      "A pasos de la playa"
+    ],
+    "agencies": [
+      {
+        "name": "RE/MAX Prestige RD",
+        "agent": "Michel Depestre",
+        "title": "Especialista en Terrenos y Solares",
+        "phone": "+1 (809) 240-6510",
+        "email": "mdepestre@remaxprestigerd.com"
+      }
+    ],
+    "blueprints": [],
+    "lat": "19.1200",
+    "lng": "-69.2200",
+    "name": "Michel Depestre",
+    "email": "mdepestre@remaxprestigerd.com",
+    "phone": "+1 (809) 240-6511",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-12T08:30:00.000Z",
+    "approvedAt": "2026-03-12T09:30:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/solar-ext/1200/800",
+        "label": "Vista del Solar"
+      },
+      {
+        "url": "https://picsum.photos/seed/solar-mar/1200/800",
+        "label": "Vista al Mar desde el Terreno"
+      }
+    ]
+  },
+  {
+    "id": "seed_apto_alquiler_stgo_008",
+    "title": "Apartamento Moderno en Alquiler — Jardines Metropolitanos, Santiago",
+    "type": "alquiler",
+    "condition": "Excelente estado",
+    "description": "Amplio y moderno apartamento de 3 habitaciones en el exclusivo residencial Jardines Metropolitanos de Santiago, con acceso controlado, áreas verdes y amenidades completas. El piso 5 ofrece vistas despejadas hacia la Loma del Toro y la ciudad de Santiago.\n\nRecién remodelado con cocina abierta tipo gourmet, sala-comedor integrado, balcón corrido y dos parqueos techados. Incluye closets empotrados en todas las habitaciones, lavadero privado, aire acondicionado central y calentador solar. Edificio con generador eléctrico y cisterna.\n\nJardines Metropolitanos es una de las urbanizaciones más cotizadas de Santiago por su seguridad, mantenimiento impecable y ubicación estratégica a 5 minutos del Centro Comercial La Sirena y a 10 minutos de la Pontificia Universidad Católica Madre y Maestra (PUCMM).",
+    "price": "950",
+    "area_const": "145",
+    "bedrooms": "3",
+    "bathrooms": "2",
+    "parking": "2",
+    "floor_num": "5",
+    "year_built": "2019",
+    "province": "Santiago",
+    "city": "Santiago de los Caballeros",
+    "sector": "Jardines Metropolitanos",
+    "address": "Calle Los Jardines #20, Jardines Metropolitanos, Santiago",
+    "amenities": [
+      "ac",
+      "elevador",
+      "seguridad",
+      "camaras",
+      "planta",
+      "cisterna",
+      "balcon",
+      "paneles_solares"
+    ],
+    "tags": [
+      "Zona residencial cerrada",
+      "Barrio tranquilo",
+      "Cerca de colegios",
+      "Listo para mudarse",
+      "Apto para familias",
+      "Con verja / seguridad privada"
+    ],
+    "agencies": [
+      {
+        "name": "Century 21 Dominicana",
+        "agent": "Yolanda Fermín",
+        "title": "Coordinadora de Alquileres — Santiago",
+        "phone": "+1 (809) 583-2100",
+        "email": "yfernin@century21rd.com"
+      }
+    ],
+    "blueprints": [],
+    "lat": "19.4517",
+    "lng": "-70.6970",
+    "name": "Yolanda Fermín",
+    "email": "yfernin@century21rd.com",
+    "phone": "+1 (809) 583-2101",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-22T10:00:00.000Z",
+    "approvedAt": "2026-03-22T11:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/stgo-ext/1200/800",
+        "label": "Fachada"
+      },
+      {
+        "url": "https://picsum.photos/seed/stgo-sala/1200/800",
+        "label": "Sala — Comedor"
+      },
+      {
+        "url": "https://picsum.photos/seed/stgo-hab/1200/800",
+        "label": "Habitación Principal"
+      }
+    ]
+  },
+  {
+    "id": "seed_casa_romana_009",
+    "title": "Casa Remodelada con Piscina — La Romana, Sector Residencial",
+    "type": "venta",
+    "condition": "Excelente estado",
+    "description": "Hermosa casa de dos niveles completamente remodelada en el sector residencial más tranquilo de La Romana, a 10 minutos del famoso Campo de Golf Casa de Campo y 15 minutos del puerto de cruceros. La remodelación integral fue realizada en 2023 con materiales de primer nivel.\n\nPlanta baja: sala-comedor amplio, cocina abierta con isla de granito, habitación de servicio con baño, área de lavandería y terraza cubierta con piscina de 8×4 metros rodeada de deck de madera teka y jardín tropical. Planta alta: master suite con walk-in closet y baño con tina de inmersión, dos habitaciones secundarias, y un estudio/oficina.\n\nIncluye sistema de paneles solares de 8 kW que cubre el 80% del consumo eléctrico, cisterna con bomba automática y generador de 22 kW. La propiedad está cercada completamente con verja de hierro forjado y portón eléctrico.",
+    "price": "450000",
+    "area_const": "310",
+    "area_land": "480",
+    "bedrooms": "4",
+    "bathrooms": "3",
+    "parking": "2",
+    "floors": "2",
+    "year_built": "2010",
+    "province": "La Romana",
+    "city": "La Romana",
+    "sector": "Las Palmas",
+    "address": "Calle Las Palmeras #8, Las Palmas, La Romana",
+    "amenities": [
+      "piscina",
+      "jardin",
+      "ac",
+      "planta",
+      "cisterna",
+      "seguridad",
+      "paneles_solares",
+      "balcon"
+    ],
+    "tags": [
+      "Remodelado / Renovado",
+      "Listo para mudarse",
+      "Zona residencial cerrada",
+      "Con piscina privada",
+      "Cerca de supermercados",
+      "Apto para familias"
+    ],
+    "agencies": [
+      {
+        "name": "Inmobiliaria Elite RD",
+        "agent": "Fernando Castillo",
+        "title": "Asesor de Propiedades — Este",
+        "phone": "+1 (809) 813-5500",
+        "email": "fcastillo@eliterd.com.do"
+      }
+    ],
+    "blueprints": [
+      "https://picsum.photos/seed/laromana-plan1/1200/800"
+    ],
+    "lat": "18.4273",
+    "lng": "-68.9727",
+    "name": "Fernando Castillo",
+    "email": "fcastillo@eliterd.com.do",
+    "phone": "+1 (809) 813-5501",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-08T13:00:00.000Z",
+    "approvedAt": "2026-03-08T14:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/rom-ext/1200/800",
+        "label": "Vista Exterior"
+      },
+      {
+        "url": "https://picsum.photos/seed/rom-sala/1200/800",
+        "label": "Sala Principal"
+      },
+      {
+        "url": "https://picsum.photos/seed/rom-patio/1200/800",
+        "label": "Patio Trasero"
+      }
+    ]
+  },
+  {
+    "id": "seed_proyecto_coralheights_010",
+    "title": "Coral Heights Residences — Nueva Construcción en Los Cacicazgos",
+    "type": "venta",
+    "condition": "nueva_construccion",
+    "description": "Coral Heights Residences es un proyecto de nueva generación en Los Cacicazgos, uno de los sectores más consolidados y exclusivos del Gran Santo Domingo. Con 18 pisos de arquitectura contemporánea y fachada de cristal, el edificio redefine el skyline del sector con sus líneas limpias y sus interiores de lujo accesible.\n\nEl proyecto ofrece 4 tipologías de apartamentos diseñados para distintos estilos de vida: desde studios ejecutivos de 52 m² ideales para profesionales jóvenes, hasta apartamentos familiares de 3 habitaciones de 175 m² con sala de estar separada y suite en suite. Todos tienen balcón propio, cocina abierta con cubierta de cuarzo y pisos de porcelanato 80×80.\n\nÁreas comunes de lujo: piscina climatizada, pool bar, gimnasio con equipos Life Fitness, sala de coworking, salón de fiestas con cocina ejecutiva, área infantil temática y pet zone. El edificio tiene certificación EDGE de construcción sostenible con eficiencia energética del 30%.",
+    "price": "110000",
+    "area_const": "52",
+    "bedrooms": "1",
+    "bathrooms": "1",
+    "parking": "1",
+    "province": "Santo Domingo",
+    "city": "Santo Domingo",
+    "sector": "Los Cacicazgos",
+    "address": "Av. Anacaona #201, Los Cacicazgos",
+    "amenities": [
+      "piscina",
+      "gym",
+      "bbq",
+      "ac",
+      "elevador",
+      "seguridad",
+      "camaras",
+      "planta",
+      "cisterna",
+      "balcon"
+    ],
+    "tags": [
+      "Zona residencial cerrada",
+      "Centro de la ciudad",
+      "Cerca de centros comerciales",
+      "Alta rentabilidad",
+      "Proyecto de lujo",
+      "Apto para familias"
+    ],
+    "construction_company": {
+      "name": "Inmobiliaria y Constructora Coral S.A.",
+      "years_experience": 15,
+      "projects_completed": 9,
+      "units_delivered": 820,
+      "description": "Desarrolladora dominicana fundada en 2011, especializada en proyectos residenciales de gama media-alta en el Gran Santo Domingo. Reconocida por sus entregas puntuales, transparencia financiera y atención al comprador durante y después de la entrega."
+    },
+    "unit_types": [
+      {
+        "name": "Studio Ejecutivo",
+        "area": 52,
+        "bedrooms": 0,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 110000,
+        "available": 10,
+        "total": 18
+      },
+      {
+        "name": "1 Habitación",
+        "area": 85,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "parking": 1,
+        "price": 158000,
+        "available": 14,
+        "total": 22
+      },
+      {
+        "name": "2 Habitaciones",
+        "area": 125,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "parking": 2,
+        "price": 220000,
+        "available": 20,
+        "total": 32
+      },
+      {
+        "name": "3 Habitaciones",
+        "area": 175,
+        "bedrooms": 3,
+        "bathrooms": 3,
+        "parking": 2,
+        "price": 310000,
+        "available": 8,
+        "total": 14
+      }
+    ],
+    "project_stage": "Estructura",
+    "delivery_date": "2027-09",
+    "units_total": 86,
+    "units_available": 52,
+    "agencies": [
+      {
+        "name": "Century 21 Dominicana",
+        "agent": "Ana María Santos",
+        "title": "Coordinadora de Proyectos Nuevos",
+        "phone": "+1 (809) 472-2200",
+        "email": "amsantos@century21rd.com"
+      },
+      {
+        "name": "RE/MAX Prestige RD",
+        "agent": "Rodrigo Espinal",
+        "title": "Asesor de Nuevos Proyectos",
+        "phone": "+1 (809) 683-5510",
+        "email": "respinal@remaxprestigerd.com"
+      }
+    ],
+    "blueprints": [
+      "https://picsum.photos/seed/coral-floor1/1200/800",
+      "https://picsum.photos/seed/coral-floor2/1200/800",
+      "https://picsum.photos/seed/coral-floor3/1200/800"
+    ],
+    "lat": "18.4620",
+    "lng": "-69.9550",
+    "name": "Inmobiliaria y Constructora Coral S.A.",
+    "email": "ventas@coralrd.com.do",
+    "phone": "+1 (809) 535-8800",
+    "role": "Constructora / Desarrolladora",
+    "status": "approved",
+    "submittedAt": "2026-03-01T09:00:00.000Z",
+    "approvedAt": "2026-03-01T10:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/coral-render/1200/800",
+        "label": "Render del Proyecto"
+      },
+      {
+        "url": "https://picsum.photos/seed/coral-lobby/1200/800",
+        "label": "Lobby"
+      },
+      {
+        "url": "https://picsum.photos/seed/coral-pool/1200/800",
+        "label": "Área de Piscina"
+      },
+      {
+        "url": "https://picsum.photos/seed/coral-ocean/1200/800",
+        "label": "Vista al Mar"
+      }
+    ]
+  },
+  {
+    "id": "seed_villa_alquiler_bavaro_011",
+    "title": "Villa Vacacional de Lujo en Bávaro — Acceso a Playa Privada",
+    "type": "alquiler",
+    "condition": "Excelente estado",
+    "description": "Impresionante villa de 5 habitaciones disponible para alquiler vacacional y de largo plazo en Bávaro, Punta Cana. La propiedad está ubicada dentro de un complejo privado con acceso directo a una de las playas más blancas del Caribe, a solo 200 metros del Mar Caribe.\n\nLa villa cuenta con piscina privada de 12 metros con zona de spa integrado, jardines tropicales con hamacas, terraza cubierta con área de comedor exterior para 12 personas y cocina de exterior equipada. El interior ofrece sala de estar de doble altura, cocina gourmet, sala de televisión independiente y 5 suites con baño privado, todas completamente amuebladas con piezas de diseño caribeño contemporáneo.\n\nDisponible para alquiler mínimo de 1 semana en temporada alta (diciembre-abril) y mínimo 3 meses en temporada baja. Precio indicado es mensual. Para alquiler por semana consultar disponibilidad. Incluye personal de limpieza 3 veces por semana.",
+    "price": "8500",
+    "area_const": "520",
+    "area_land": "950",
+    "bedrooms": "5",
+    "bathrooms": "5",
+    "parking": "3",
+    "floors": "2",
+    "year_built": "2016",
+    "province": "La Altagracia",
+    "city": "Bávaro",
+    "sector": "Punta Cana Village",
+    "address": "Punta Cana Village, Calle del Mar #33, Bávaro",
+    "amenities": [
+      "piscina",
+      "jacuzzi",
+      "bbq",
+      "jardin",
+      "ac",
+      "planta",
+      "cisterna",
+      "seguridad",
+      "camaras",
+      "amueblado",
+      "vista_mar",
+      "frente_mar"
+    ],
+    "tags": [
+      "Acceso a playa privada",
+      "Primera línea de playa",
+      "Alquiler vacacional",
+      "Proyecto de lujo",
+      "Alta rentabilidad",
+      "Apto para Airbnb",
+      "Pet friendly"
+    ],
+    "agencies": [
+      {
+        "name": "Sotheby's International Realty RD",
+        "agent": "Nicole Martínez",
+        "title": "Vacation Rental Specialist",
+        "phone": "+1 (809) 333-7750",
+        "email": "nmartinez@sothebysrd.com"
+      }
+    ],
+    "blueprints": [],
+    "lat": "18.7236",
+    "lng": "-68.4561",
+    "name": "Nicole Martínez",
+    "email": "nmartinez@sothebysrd.com",
+    "phone": "+1 (809) 333-7751",
+    "role": "Agente inmobiliario",
+    "status": "approved",
+    "submittedAt": "2026-03-25T09:00:00.000Z",
+    "approvedAt": "2026-03-25T10:00:00.000Z",
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/bav-ext/1200/800",
+        "label": "Villa — Vista Exterior"
+      },
+      {
+        "url": "https://picsum.photos/seed/bav-sala/1200/800",
+        "label": "Sala de Estar"
+      },
+      {
+        "url": "https://picsum.photos/seed/bav-pool/1200/800",
+        "label": "Piscina Privada"
+      },
+      {
+        "url": "https://picsum.photos/seed/bav-playa/1200/800",
+        "label": "Acceso Privado a la Playa"
+      }
+    ]
+  }
+]

@@ -1,7 +1,20 @@
 require('dotenv').config();
-const express    = require('express');
 const path       = require('path');
 const fs         = require('fs');
+
+// ── Ensure data dir & seed files (must run before any route requires) ─────
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+[
+  path.join(DATA_DIR, 'submissions.json'),
+  path.join(DATA_DIR, 'users.json'),
+  path.join(DATA_DIR, 'activity.json'),
+  path.join(DATA_DIR, 'applications.json'),
+].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
+const DOCS_DIR = path.join(DATA_DIR, 'documents');
+if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
+
+const express    = require('express');
 const nodemailer = require('nodemailer');
 const multer     = require('multer');
 const cron       = require('node-cron');
@@ -12,17 +25,6 @@ const PORT = process.env.PORT || 3000;
 const SUBMISSIONS_FILE = path.join(__dirname, 'data', 'submissions.json');
 const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
 const ADMIN_EMAIL = 'Jostysantos@gmail.com';
-
-// ── Ensure data dir & seed files ───────────────────────────────
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-  fs.mkdirSync(path.join(__dirname, 'data'));
-}
-[
-  SUBMISSIONS_FILE,
-  path.join(__dirname, 'data', 'users.json'),
-  path.join(__dirname, 'data', 'activity.json'),
-  path.join(__dirname, 'data', 'applications.json'),
-].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 
 // ── Seed demo listings ─────────────────────────────────────────
 (function seedListings() {
