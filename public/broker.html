@@ -547,7 +547,7 @@
   'use strict';
 
   // ── Auth ───────────────────────────────────────────────────
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
   if (!token) { location.href = '/login'; return; }
 
   let currentUser = null;
@@ -660,7 +660,7 @@
   const userDropdown = document.getElementById('userDropdown');
   userAvatarBtn.onclick = () => userDropdown.classList.toggle('open');
   document.addEventListener('click', e => { if (!e.target.closest('.user-menu')) userDropdown.classList.remove('open'); });
-  document.getElementById('logoutBtn').onclick = () => { localStorage.removeItem('token'); location.href = '/login'; };
+  document.getElementById('logoutBtn').onclick = () => { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); localStorage.removeItem('token'); location.href = '/login'; };
 
   // ── State ──────────────────────────────────────────────────
   let applications = [];
