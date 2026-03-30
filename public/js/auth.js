@@ -42,7 +42,12 @@ function requireAuth() {
 
 // Redirect to /home if already authenticated (use on login/register pages)
 function redirectIfAuth() {
-  if (isLoggedIn()) window.location.href = '/home';
+  if (!isLoggedIn()) return;
+  try {
+    const user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    const role = user?.role || JSON.parse(atob(getToken().split('.')[1]))?.role;
+    window.location.href = role === 'agency' ? '/broker' : '/home';
+  } catch { window.location.href = '/home'; }
 }
 
 // Fetch current user from server (returns null on error)

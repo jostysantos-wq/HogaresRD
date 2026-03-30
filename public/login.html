@@ -146,7 +146,13 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
         localStorage.setItem('hogaresrd_token', data.token);
-        const next = params.get('next') || '/home';
+        if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
+        const role = data.user?.role;
+        let next = params.get('next');
+        if (!next) {
+          if (role === 'agency') next = '/broker';
+          else next = '/home';
+        }
         window.location.href = next;
       } catch (ex) {
         err.textContent = ex.message;
