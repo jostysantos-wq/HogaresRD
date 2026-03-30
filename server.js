@@ -21,6 +21,7 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) {
   SUBMISSIONS_FILE,
   path.join(__dirname, 'data', 'users.json'),
   path.join(__dirname, 'data', 'activity.json'),
+  path.join(__dirname, 'data', 'applications.json'),
 ].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 
 // ── Seed demo listings ─────────────────────────────────────────
@@ -117,7 +118,8 @@ app.use('/api/listings',   require('./routes/listings'));
 app.use('/api/user',       require('./routes/user'));
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/ads',        require('./routes/ads'));
-app.use('/api/leads',      require('./routes/leads'));
+app.use('/api/leads',         require('./routes/leads'));
+app.use('/api/applications',  require('./routes/applications'));
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
@@ -181,6 +183,8 @@ app.get('/ciudad/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/contacto',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'contacto.html')));
 app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos.html')));
 app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
+app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
+app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;

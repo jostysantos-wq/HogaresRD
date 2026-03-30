@@ -209,6 +209,9 @@
     .ad-badge-inactive { display: inline-block; background: #f0f4f9; color: #7a93b0; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
     .ads-empty { grid-column: 1/-1; text-align: center; padding: 3rem; color: #7a93b0; font-size: 0.9rem; }
 
+    /* APPS TABLE overrides */
+    .leads-table td a:hover { text-decoration: underline; }
+
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(3, 1fr); }
       .sub-card-body { grid-template-columns: repeat(2, 1fr); }
@@ -282,6 +285,7 @@
         <button class="filter-btn active" id="tabSubmissions" onclick="showTab('submissions', this)">Propiedades</button>
         <button class="filter-btn" id="tabLeads" onclick="showTab('leads', this)">🎯 Leads</button>
         <button class="filter-btn" id="tabAds" onclick="showTab('ads', this)">📢 Anuncios</button>
+        <button class="filter-btn" id="tabApps" onclick="showTab('apps', this)">📋 Aplicaciones</button>
         <button class="refresh-btn" onclick="refreshCurrent()">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
           Actualizar
@@ -356,6 +360,59 @@
           </table>
         </div>
 
+      </div>
+
+      <!-- ── Aplicaciones Panel ─────────────────────────────── -->
+      <div id="appsPanel" style="display:none;">
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid #0038A8;">
+            <div class="num" id="appTotal" style="color:#0038A8;">—</div>
+            <div class="lbl">Total</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #c07c1a;">
+            <div class="num" id="appPending" style="color:#c07c1a;">—</div>
+            <div class="lbl">En Proceso</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #0a7c4f;">
+            <div class="num" id="appApproved" style="color:#0a7c4f;">—</div>
+            <div class="lbl">Aprobadas</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #CF142B;">
+            <div class="num" id="appRejected" style="color:#CF142B;">—</div>
+            <div class="lbl">Rechazadas</div>
+          </div>
+        </div>
+
+        <div class="leads-toolbar" id="appsToolbar">
+          <button class="filter-btn active" onclick="filterApps('all', this)">Todas</button>
+          <button class="filter-btn" onclick="filterApps('aplicado', this)">Aplicadas</button>
+          <button class="filter-btn" onclick="filterApps('en_revision', this)">En Revisión</button>
+          <button class="filter-btn" onclick="filterApps('documentos', this)">Documentos</button>
+          <button class="filter-btn" onclick="filterApps('en_aprobacion', this)">En Aprobación</button>
+          <button class="filter-btn" onclick="filterApps('aprobado', this)">Aprobadas</button>
+          <button class="filter-btn" onclick="filterApps('completado', this)">Completadas</button>
+          <button class="filter-btn" onclick="filterApps('rechazado', this)">Rechazadas</button>
+        </div>
+
+        <div class="leads-table-wrap">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Propiedad</th>
+                <th>Broker</th>
+                <th>Estado</th>
+                <th>Documentos</th>
+                <th>Pago</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="appsTableBody">
+              <tr><td colspan="8" class="leads-empty">Cargando aplicaciones...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- ── Anuncios Panel ───────────────────────────────────── -->
@@ -710,13 +767,14 @@
 
     function showTab(tab, btn) {
       currentTab = tab;
-      document.querySelectorAll('#tabSubmissions, #tabLeads, #tabAds').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#tabSubmissions, #tabLeads, #tabAds, #tabApps').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
       document.getElementById('subFilters').style.display      = 'none';
       document.getElementById('submissionsList').style.display = 'none';
       document.getElementById('leadsPanel').style.display      = 'none';
       document.getElementById('adsPanel').style.display        = 'none';
+      document.getElementById('appsPanel').style.display       = 'none';
 
       if (tab === 'submissions') {
         document.getElementById('subFilters').style.display      = 'flex';
@@ -724,6 +782,9 @@
       } else if (tab === 'leads') {
         document.getElementById('leadsPanel').style.display      = 'block';
         loadLeads();
+      } else if (tab === 'apps') {
+        document.getElementById('appsPanel').style.display       = 'block';
+        loadApps();
       } else {
         document.getElementById('adsPanel').style.display        = 'block';
         loadAds();
@@ -733,6 +794,7 @@
     function refreshCurrent() {
       if      (currentTab === 'submissions') loadSubmissions();
       else if (currentTab === 'leads')       loadLeads();
+      else if (currentTab === 'apps')        loadApps();
       else                                   loadAds();
     }
 
@@ -958,6 +1020,118 @@
         allAds = allAds.filter(a => a.id !== id);
         renderAds(allAds);
       });
+    }
+
+    // ── Applications ─────────────────────────────────────────
+    let allApps = [];
+    let currentAppFilter = 'all';
+
+    const APP_STATUS_LABELS = {
+      aplicado: 'Aplicado', en_revision: 'En Revisión', documentos_requeridos: 'Docs Requeridos',
+      documentos_enviados: 'Docs Enviados', documentos_insuficientes: 'Docs Insuficientes',
+      en_aprobacion: 'En Aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
+      pendiente_pago: 'Pendiente Pago', pago_enviado: 'Pago Enviado', pago_aprobado: 'Pago Aprobado',
+      completado: 'Completado', rechazado: 'Rechazado',
+    };
+
+    const APP_STATUS_COLORS = {
+      aplicado: '#0038A8', en_revision: '#0038A8',
+      documentos_requeridos: '#c07c1a', documentos_enviados: '#c07c1a', documentos_insuficientes: '#c07c1a',
+      en_aprobacion: '#4a2d9c', reservado: '#4a2d9c',
+      aprobado: '#0a7c4f', pago_aprobado: '#0a7c4f', completado: '#0a7c4f',
+      pendiente_pago: '#0038A8', pago_enviado: '#0038A8',
+      rechazado: '#CF142B',
+    };
+
+    function loadApps() {
+      fetch('/api/applications?_key=' + encodeURIComponent(adminKey), {
+        headers: { 'x-admin-key': adminKey, 'Authorization': 'Bearer ' + adminKey }
+      })
+      .then(r => {
+        if (!r.ok) throw new Error('Not authorized');
+        return r.json();
+      })
+      .then(data => {
+        allApps = data;
+        updateAppStats(data);
+        renderApps(currentAppFilter === 'all' ? data : filterAppList(data, currentAppFilter));
+      })
+      .catch(() => {
+        document.getElementById('appsTableBody').innerHTML =
+          '<tr><td colspan="8" class="leads-empty">Error al cargar aplicaciones. Asegúrate de tener permisos de admin.</td></tr>';
+      });
+    }
+
+    function updateAppStats(apps) {
+      document.getElementById('appTotal').textContent    = apps.length;
+      const inProcess = apps.filter(a => !['completado','rechazado','aprobado','pago_aprobado'].includes(a.status));
+      document.getElementById('appPending').textContent  = inProcess.length;
+      document.getElementById('appApproved').textContent = apps.filter(a => ['aprobado','pago_aprobado','completado'].includes(a.status)).length;
+      document.getElementById('appRejected').textContent = apps.filter(a => a.status === 'rechazado').length;
+    }
+
+    function filterAppList(apps, filter) {
+      if (filter === 'all') return apps;
+      if (filter === 'documentos') return apps.filter(a => a.status.startsWith('documento'));
+      return apps.filter(a => a.status === filter);
+    }
+
+    function filterApps(filter, btn) {
+      currentAppFilter = filter;
+      document.querySelectorAll('#appsToolbar .filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderApps(filterAppList(allApps, filter));
+    }
+
+    function renderApps(apps) {
+      const tbody = document.getElementById('appsTableBody');
+      if (!apps.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay aplicaciones en esta categoría.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = apps.map(a => {
+        const date = new Date(a.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
+        const color = APP_STATUS_COLORS[a.status] || '#4d6a8a';
+        const docsReq = (a.documents_requested || []).length;
+        const docsUp  = (a.documents_uploaded || []).length;
+        const payStatus = a.payment?.verification_status || 'none';
+        const payLabel  = { none:'—', pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[payStatus] || '—';
+        const payColor  = { pending:'#c07c1a', approved:'#0a7c4f', rejected:'#CF142B' }[payStatus] || '#4d6a8a';
+        return `
+          <tr>
+            <td>
+              <div class="lead-name">${a.client?.name || '—'}</div>
+              <div class="lead-contact">📞 ${a.client?.phone || '—'}</div>
+              ${a.client?.email ? `<div class="lead-contact">✉️ ${a.client.email}</div>` : ''}
+            </td>
+            <td>
+              <div class="lead-listing">${a.listing_title || '—'}
+                <small>${a.listing_price ? '$' + Number(a.listing_price).toLocaleString() : ''}</small>
+              </div>
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:0.85rem;">${a.broker?.name || 'Sin asignar'}</div>
+              <div style="font-size:0.75rem;color:#7a93b0;">${a.broker?.agency_name || ''}</div>
+            </td>
+            <td>
+              <span class="lead-badge" style="background:${color}15;color:${color};">
+                ${APP_STATUS_LABELS[a.status] || a.status}
+              </span>
+              ${a.status === 'rechazado' && a.status_reason ? `<div style="font-size:0.72rem;color:#CF142B;margin-top:0.3rem;">${a.status_reason}</div>` : ''}
+            </td>
+            <td style="font-size:0.82rem;">
+              <div>${docsReq} solicitados</div>
+              <div style="color:#0a7c4f;font-weight:600;">${docsUp} subidos</div>
+            </td>
+            <td>
+              <span style="font-size:0.82rem;font-weight:600;color:${payColor};">${payLabel}</span>
+            </td>
+            <td style="white-space:nowrap;font-size:0.78rem;color:#7a93b0;">${date}</td>
+            <td>
+              <a href="/broker" style="font-size:0.82rem;color:#0038A8;font-weight:600;text-decoration:none;">Ver detalle →</a>
+            </td>
+          </tr>`;
+      }).join('');
     }
 
     // Auto-login if key is in sessionStorage

@@ -3,9 +3,10 @@ const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const FILES = {
-  users:       path.join(DATA_DIR, 'users.json'),
-  activity:    path.join(DATA_DIR, 'activity.json'),
-  submissions: path.join(DATA_DIR, 'submissions.json'),
+  users:        path.join(DATA_DIR, 'users.json'),
+  activity:     path.join(DATA_DIR, 'activity.json'),
+  submissions:  path.join(DATA_DIR, 'submissions.json'),
+  applications: path.join(DATA_DIR, 'applications.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -83,8 +84,31 @@ function saveListing(listing) {
   write(FILES.submissions, all);
 }
 
+// ── Applications ──────────────────────────────────────────────────────────
+function ensureFile(file) {
+  if (!fs.existsSync(file)) fs.writeFileSync(file, '[]');
+}
+ensureFile(FILES.applications);
+
+function getApplications()           { return read(FILES.applications); }
+function getApplicationById(id)      { return getApplications().find(a => a.id === id) || null; }
+function getApplicationsByBroker(uid) { return getApplications().filter(a => a.broker && a.broker.user_id === uid); }
+function getApplicationsByClient(uidOrEmail) {
+  return getApplications().filter(a =>
+    a.client.user_id === uidOrEmail || (a.client.email && a.client.email.toLowerCase() === uidOrEmail.toLowerCase())
+  );
+}
+function saveApplication(app) {
+  const all = getApplications();
+  const idx = all.findIndex(a => a.id === app.id);
+  if (idx === -1) all.unshift(app);
+  else all[idx] = app;
+  write(FILES.applications, all);
+}
+
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing,
+  getApplications, getApplicationById, getApplicationsByBroker, getApplicationsByClient, saveApplication,
 };
