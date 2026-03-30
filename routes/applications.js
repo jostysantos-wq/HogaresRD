@@ -127,6 +127,64 @@ function statusEmail(app, oldStatus, newStatus, reason) {
   };
 }
 
+function fmtAmt(n, cur) {
+  return `${cur || 'DOP'} ${Number(n || 0).toLocaleString('es-DO')}`;
+}
+
+function buildPaymentPlanEmail(app) {
+  const plan = app.payment_plan;
+  const rows = plan.installments.map(i =>
+    `<tr>
+       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;">#${i.number} — ${i.label}</td>
+       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;font-weight:600;">${fmtAmt(i.amount, plan.currency)}</td>
+       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;color:#555;">${i.due_date || '—'}</td>
+     </tr>`
+  ).join('');
+  return `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;">
+    <div style="background:#1C2B3A;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
+      <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Plan de Pagos</h2>
+    </div>
+    <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
+      <p>Hola <strong>${app.client.name}</strong>,</p>
+      <p>Tu broker ha creado un plan de pagos para tu solicitud de <strong>${app.listing_title}</strong>.</p>
+      <p><strong>Método de pago:</strong> ${plan.payment_method || '—'}</p>
+      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;margin:.5rem 0;">${plan.method_details}</div>` : ''}
+      <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
+        <thead><tr style="background:#f5f7fa;"><th style="padding:.5rem .75rem;text-align:left;">Cuota</th><th style="padding:.5rem .75rem;text-align:left;">Monto</th><th style="padding:.5rem .75rem;text-align:left;">Vence</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${plan.notes ? `<p style="font-size:.9rem;color:#555;"><strong>Notas:</strong> ${plan.notes}</p>` : ''}
+      <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563EB;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;margin-top:.5rem;">Ver mi Plan de Pagos</a>
+    </div>
+  </div>`;
+}
+
+function buildPaymentReminderEmail(app, inst) {
+  const plan = app.payment_plan;
+  const dueLabel = inst.due_date
+    ? new Date(inst.due_date + 'T12:00:00').toLocaleDateString('es-DO', { year:'numeric', month:'long', day:'numeric' })
+    : 'próximamente';
+  return `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;">
+    <div style="background:#1C2B3A;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
+      <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Recordatorio de Pago</h2>
+    </div>
+    <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
+      <p>Hola <strong>${app.client.name}</strong>,</p>
+      <p>Tienes un pago pendiente para tu solicitud de <strong>${app.listing_title}</strong>:</p>
+      <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:1rem;margin:1rem 0;">
+        <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.05em;">Cuota #${inst.number}</div>
+        <div style="font-size:1.15rem;font-weight:700;margin:.3rem 0;">${inst.label}</div>
+        <div style="font-size:1.05rem;color:#1C2B3A;font-weight:600;">${fmtAmt(inst.amount, plan.currency)}</div>
+        <div style="font-size:.85rem;color:#B45309;margin-top:.3rem;">📅 Vence: ${dueLabel}</div>
+      </div>
+      <p><strong>Método de pago:</strong> ${plan.payment_method || '—'}</p>
+      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;">${plan.method_details}</div>` : ''}
+      <p style="margin-top:1rem;">Una vez realizado el pago, sube tu comprobante en el portal:</p>
+      <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563EB;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Subir Comprobante</a>
+    </div>
+  </div>`;
+}
+
 // ══════════════════════════════════════════════════════════════════
 // ── POST /  — Create application ─────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
@@ -187,6 +245,7 @@ router.post('/', (req, res) => {
       receipt_uploaded_at: null, verification_status: 'none',
       verified_at: null, verified_by: null, notes: '',
     },
+    payment_plan: null,
     timeline_events: [],
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
@@ -789,6 +848,190 @@ router.post('/:id/checklist-event', userAuth, (req, res) => {
 
   store.saveApplication(app);
   res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── PAYMENT PLAN ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+// ── POST /:id/payment-plan  — Broker creates / replaces plan ─────
+router.post('/:id/payment-plan', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+  const user = store.getUserById(req.user.sub);
+  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
+  const { payment_method, method_details, currency, total_amount, notes, installments } = req.body;
+  if (!Array.isArray(installments) || !installments.length)
+    return res.status(400).json({ error: 'Se requiere al menos una cuota' });
+  const existing = app.payment_plan?.installments || [];
+  const isEdit   = existing.length > 0;
+  app.payment_plan = {
+    id:             app.payment_plan?.id || uuid(),
+    payment_method: payment_method || '',
+    method_details: method_details || '',
+    currency:       currency || 'DOP',
+    total_amount:   total_amount || null,
+    notes:          notes || '',
+    created_at:     app.payment_plan?.created_at || new Date().toISOString(),
+    updated_at:     new Date().toISOString(),
+    created_by:     app.payment_plan?.created_by || req.user.sub,
+    installments:   installments.map((inst, i) => {
+      const prev = existing.find(e => e.id === inst.id);
+      return {
+        id:                   prev?.id || uuid(),
+        number:               i + 1,
+        label:                inst.label || `Pago ${i + 1}`,
+        amount:               Number(inst.amount) || 0,
+        due_date:             inst.due_date || null,
+        status:               prev?.status || 'pending',
+        proof_path:           prev?.proof_path           || null,
+        proof_filename:       prev?.proof_filename       || null,
+        proof_original:       prev?.proof_original       || null,
+        proof_uploaded_at:    prev?.proof_uploaded_at    || null,
+        proof_notes:          prev?.proof_notes          || '',
+        reviewed_at:          prev?.reviewed_at          || null,
+        reviewed_by:          prev?.reviewed_by          || null,
+        review_notes:         prev?.review_notes         || '',
+        notification_sent:    prev?.notification_sent    || false,
+        notification_sent_at: prev?.notification_sent_at || null,
+      };
+    }),
+  };
+  addEvent(app, 'payment',
+    isEdit
+      ? `Plan de pagos actualizado: ${installments.length} cuota(s)`
+      : `Plan de pagos creado: ${installments.length} cuota(s) · ${fmtAmt(total_amount, currency||'DOP')}`,
+    req.user.sub, user?.name || 'Broker',
+    { type: 'plan_created', installments: installments.length });
+  store.saveApplication(app);
+  if (!isEdit && app.client.email)
+    sendNotification(app.client.email, 'HogaresRD — Plan de Pagos Creado', buildPaymentPlanEmail(app));
+  res.json(app);
+});
+
+// ── POST /:id/payment-plan/:iid/upload  — Client uploads proof ───
+router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof'), (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
+  const user     = store.getUserById(req.user.sub);
+  const isClient = app.client.user_id === req.user.sub ||
+    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+  if (!isClient && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
+  const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
+  if (!inst)       return res.status(404).json({ error: 'Cuota no encontrada' });
+  if (!req.file)   return res.status(400).json({ error: 'Archivo requerido' });
+  if (inst.status === 'approved') return res.status(400).json({ error: 'Este pago ya fue aprobado' });
+  inst.proof_path        = req.file.path;
+  inst.proof_filename    = req.file.filename;
+  inst.proof_original    = req.file.originalname;
+  inst.proof_uploaded_at = new Date().toISOString();
+  inst.proof_notes       = (req.body.notes || '').trim();
+  inst.status            = 'proof_uploaded';
+  addEvent(app, 'payment',
+    `Comprobante subido — Cuota #${inst.number}: ${inst.label}`,
+    req.user.sub, user?.name || app.client.name || 'Cliente',
+    { type: 'proof_uploaded', installment_id: inst.id, installment_number: inst.number });
+  store.saveApplication(app);
+  if (app.broker.email)
+    sendNotification(app.broker.email, `HogaresRD — Comprobante subido: Cuota #${inst.number}`,
+      `<div style="font-family:sans-serif;max-width:520px;">
+        <p>Hola,</p><p><strong>${app.client.name}</strong> subió el comprobante de la <strong>Cuota #${inst.number} (${inst.label})</strong> de ${app.listing_title}.</p>
+        ${inst.proof_notes ? `<p><em>Nota:</em> ${inst.proof_notes}</p>` : ''}
+        <a href="${BASE_URL}/broker" style="background:#2563EB;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Revisar en el panel</a>
+       </div>`);
+  res.json({ ok: true, installment: inst });
+});
+
+// ── PUT /:id/payment-plan/:iid/review  — Broker reviews proof ────
+router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
+  const user = store.getUserById(req.user.sub);
+  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
+  const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
+  if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });
+  if (inst.status !== 'proof_uploaded')
+    return res.status(400).json({ error: 'Sin comprobante pendiente de revision' });
+  const { approved, review_notes } = req.body;
+  inst.status       = approved ? 'approved' : 'rejected';
+  inst.reviewed_at  = new Date().toISOString();
+  inst.reviewed_by  = req.user.sub;
+  inst.review_notes = (review_notes || '').trim();
+  addEvent(app, 'payment',
+    approved
+      ? `Pago aprobado — Cuota #${inst.number}: ${inst.label} (${fmtAmt(inst.amount, app.payment_plan.currency)})`
+      : `Pago rechazado — Cuota #${inst.number}: ${inst.label}${review_notes ? ' · ' + review_notes : ''}`,
+    req.user.sub, user?.name || 'Broker',
+    { type: approved ? 'proof_approved' : 'proof_rejected', installment_id: inst.id, approved });
+  // Auto-advance application when ALL installments approved
+  const allApproved = app.payment_plan.installments.every(i => i.status === 'approved');
+  if (allApproved && (STATUS_FLOW[app.status] || []).includes('pago_aprobado')) {
+    const from = app.status;
+    app.status = 'pago_aprobado';
+    addEvent(app, 'status_change',
+      `Estado actualizado a ${STATUS_LABELS['pago_aprobado']} (todos los pagos verificados)`,
+      req.user.sub, user?.name || 'Broker', { from, to: 'pago_aprobado' });
+  }
+  store.saveApplication(app);
+  if (app.client.email)
+    sendNotification(app.client.email,
+      approved ? `HogaresRD — Pago #${inst.number} Aprobado ✓`
+               : `HogaresRD — Pago #${inst.number} Rechazado — Acción Requerida`,
+      approved
+        ? `<div style="font-family:sans-serif;max-width:520px;">
+            <p>Hola <strong>${app.client.name}</strong>,</p>
+            <p>Tu pago <strong>#${inst.number} (${inst.label})</strong> fue aprobado.</p>
+            ${allApproved ? '<p>🎉 ¡Todos los pagos han sido verificados!</p>' : ''}
+            <a href="${BASE_URL}/my-applications" style="background:#16A34A;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver mi solicitud</a>
+           </div>`
+        : `<div style="font-family:sans-serif;max-width:520px;">
+            <p>Hola <strong>${app.client.name}</strong>,</p>
+            <p>El comprobante de la <strong>Cuota #${inst.number} (${inst.label})</strong> fue rechazado.</p>
+            ${review_notes ? `<p><strong>Motivo:</strong> ${review_notes}</p>` : ''}
+            <p>Por favor sube un nuevo comprobante.</p>
+            <a href="${BASE_URL}/my-applications" style="background:#DC2626;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Subir nuevo comprobante</a>
+           </div>`);
+  res.json(app);
+});
+
+// ── POST /:id/payment-plan/:iid/notify  — Send payment reminder ──
+router.post('/:id/payment-plan/:iid/notify', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
+  const user = store.getUserById(req.user.sub);
+  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
+  const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
+  if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });
+  inst.notification_sent    = true;
+  inst.notification_sent_at = new Date().toISOString();
+  addEvent(app, 'payment',
+    `Recordatorio enviado — Cuota #${inst.number}: ${inst.label} (vence ${inst.due_date || '—'})`,
+    req.user.sub, user?.name || 'Broker',
+    { type: 'reminder_sent', installment_id: inst.id, installment_number: inst.number });
+  store.saveApplication(app);
+  if (app.client.email)
+    sendNotification(app.client.email,
+      `HogaresRD — Recordatorio: Cuota #${inst.number} — ${inst.label}`,
+      buildPaymentReminderEmail(app, inst));
+  res.json({ ok: true });
+});
+
+// ── GET /:id/payment-plan/:iid/proof  — Serve proof file ─────────
+router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
+  const user     = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isClient = app.client.user_id === req.user.sub ||
+    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+  if (!isBroker && !isClient && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
+  const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
+  if (!inst?.proof_path)               return res.status(404).json({ error: 'Comprobante no encontrado' });
+  if (!fs.existsSync(inst.proof_path)) return res.status(404).json({ error: 'Archivo no encontrado' });
+  res.sendFile(path.resolve(inst.proof_path));
 });
 
 // ── PUT /:id/assign  — Admin reassigns broker ────────────────────

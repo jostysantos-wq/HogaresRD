@@ -832,34 +832,17 @@
           </div>
         </div>`;
 
-      /* Payment section */
+      /* Payment section — plan-based */
+      const plan = app.payment_plan;
       if (showPayment) {
         html += `
           <div class="detail-section">
             <div class="detail-section-header">
               <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-              Pago
+              Plan de Pagos
             </div>
             <div class="detail-section-body">
-              <div id="paymentSection-${appId}">
-                ${payment && payment.status ? `
-                  <div class="payment-receipt-status">
-                    <div style="flex:1;">
-                      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.25rem;">Recibo de pago</div>
-                      ${payment.amount ? `<div style="font-size:0.85rem;color:var(--text-muted);">Monto: ${formatPrice(payment.amount)}</div>` : ''}
-                      ${payment.notes ? `<div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;">${esc(payment.notes)}</div>` : ''}
-                    </div>
-                    <span class="doc-status ${payment.status === 'approved' ? 'approved' : payment.status === 'rejected' ? 'rejected' : 'uploaded'}">${payment.status === 'approved' ? 'Aprobado' : payment.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
-                    <a href="/api/applications/${appId}/payment/receipt" target="_blank" class="btn-link">Ver recibo</a>
-                  </div>
-                  ${payment.status === 'rejected' ? `
-                    <div style="margin-top:1rem;">
-                      <p style="font-size:0.85rem;color:var(--red);margin-bottom:0.75rem;">Tu recibo fue rechazado. Por favor, sube uno nuevo.</p>
-                      ${renderPaymentForm(appId)}
-                    </div>
-                  ` : ''}
-                ` : renderPaymentForm(appId)}
-              </div>
+              ${plan ? renderPaymentPlanClient(plan, appId) : renderLegacyPayment(payment, appId)}
             </div>
           </div>`;
       }
@@ -899,7 +882,102 @@
       detail.innerHTML = html;
     }
 
-    function renderPaymentForm(appId) {
+    /* ── Payment plan (installment-based) ─────────────────── */
+    function renderPaymentPlanClient(plan, appId) {
+      const cur = plan.currency || 'DOP';
+      const approved = plan.installments.filter(i => i.status === 'approved').length;
+      const total    = plan.installments.length;
+
+      const instStatusBadge = (status) => ({
+        pending:        '<span style="font-size:0.68rem;font-weight:700;background:#F4F4F5;color:#71717A;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">Pendiente</span>',
+        proof_uploaded: '<span style="font-size:0.68rem;font-weight:700;background:#FFF7ED;color:#B45309;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">En Revisión</span>',
+        approved:       '<span style="font-size:0.68rem;font-weight:700;background:#F0FDF4;color:#15803D;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">✓ Aprobado</span>',
+        rejected:       '<span style="font-size:0.68rem;font-weight:700;background:#FEF2F2;color:#B91C1C;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">Rechazado</span>',
+      }[status] || status);
+
+      const dueLabelClient = (due_date) => {
+        if (!due_date) return '';
+        const today = new Date(); today.setHours(0,0,0,0);
+        const due   = new Date(due_date + 'T12:00:00');
+        const diff  = Math.ceil((due - today) / 86400000);
+        const fmt   = due.toLocaleDateString('es-DO', { day:'numeric', month:'short', year:'numeric' });
+        if (diff < 0)  return `<span style="color:#DC2626;font-weight:600;font-size:0.75rem;">Venció hace ${Math.abs(diff)} día(s)</span>`;
+        if (diff <= 5) return `<span style="color:#D97706;font-weight:600;font-size:0.75rem;">Vence en ${diff} día(s)</span>`;
+        return `<span style="font-size:0.75rem;color:#71717A;">Vence: ${fmt}</span>`;
+      };
+
+      return `
+        <div style="margin-bottom:0.75rem;padding:.75rem;background:#F4F4F5;border-radius:8px;font-size:0.82rem;">
+          <strong>${esc(plan.payment_method||'—')}</strong>
+          <span style="color:#71717A;margin-left:.5rem;">${approved}/${total} pagos aprobados</span>
+          ${plan.method_details ? `<div style="margin-top:.35rem;color:#52525B;white-space:pre-wrap;">${esc(plan.method_details)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;" id="pp-client-${appId}">
+          ${plan.installments.map(inst => `
+            <div style="border:1px solid #E4E4E7;border-radius:10px;overflow:hidden;" id="pp-inst-client-${inst.id}">
+              <div style="display:flex;align-items:center;gap:.65rem;padding:.75rem .9rem;">
+                <div style="width:28px;height:28px;border-radius:50%;background:#F4F4F5;color:#71717A;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${inst.number}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:.88rem;">${esc(inst.label)}</div>
+                  <div style="margin-top:.1rem;">${dueLabelClient(inst.due_date)}</div>
+                  ${inst.review_notes && inst.status === 'rejected' ? `<div style="font-size:.75rem;color:#DC2626;margin-top:.2rem;">Motivo: ${esc(inst.review_notes)}</div>` : ''}
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                  <div style="font-weight:700;font-size:.9rem;font-variant-numeric:tabular-nums;">${cur} ${Number(inst.amount).toLocaleString('es-DO')}</div>
+                  <div style="margin-top:.2rem;">${instStatusBadge(inst.status)}</div>
+                </div>
+              </div>
+              ${(inst.status === 'pending' || inst.status === 'rejected') ? `
+                <div style="border-top:1px solid #E4E4E7;padding:.65rem .9rem;background:#FAFAFA;">
+                  <div style="font-size:.78rem;font-weight:600;color:#18181B;margin-bottom:.5rem;">
+                    ${inst.status === 'rejected' ? '⚠ Sube un nuevo comprobante' : 'Subir comprobante de pago'}
+                  </div>
+                  <div id="pp-upload-alert-${inst.id}" style="margin-bottom:.4rem;"></div>
+                  <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
+                    <div>
+                      <label style="font-size:.7rem;font-weight:600;color:#71717A;display:block;margin-bottom:.25rem;">Archivo (imagen o PDF)</label>
+                      <input type="file" id="pp-file-${inst.id}" accept="image/*,.pdf" style="font-size:.82rem;" />
+                    </div>
+                    <div style="flex:1;min-width:140px;">
+                      <label style="font-size:.7rem;font-weight:600;color:#71717A;display:block;margin-bottom:.25rem;">Nota (opcional)</label>
+                      <input type="text" id="pp-notes-${inst.id}" placeholder="Ej: Transferencia del día..." style="width:100%;padding:.45rem .65rem;border:1px solid #E4E4E7;border-radius:6px;font-size:.82rem;font-family:inherit;" />
+                    </div>
+                    <button onclick="uploadInstallmentProof('${appId}','${inst.id}')" style="padding:.45rem 1rem;background:#2563EB;color:#fff;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                      <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff;vertical-align:-1px;margin-right:.25rem;"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                      Enviar
+                    </button>
+                  </div>
+                </div>` : ''}
+              ${inst.status === 'proof_uploaded' ? `
+                <div style="border-top:1px solid #E4E4E7;padding:.55rem .9rem;background:#FFF7ED;font-size:.78rem;color:#B45309;">
+                  <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#B45309;vertical-align:-1px;margin-right:.3rem;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                  Comprobante en revisión — tu broker lo verificará pronto
+                </div>` : ''}
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    function renderLegacyPayment(payment, appId) {
+      if (payment && payment.verification_status && payment.verification_status !== 'none') {
+        const st = payment.verification_status;
+        return `
+          <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;background:#F4F4F5;border-radius:8px;">
+            <div style="flex:1;font-size:.85rem;">
+              <strong>Recibo de pago</strong>
+              ${payment.notes ? `<div style="color:#71717A;font-size:.78rem;margin-top:.2rem;">${esc(payment.notes)}</div>` : ''}
+            </div>
+            <span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;${
+              st==='approved' ? 'background:#F0FDF4;color:#15803D;' :
+              st==='rejected' ? 'background:#FEF2F2;color:#B91C1C;' : 'background:#FFF7ED;color:#B45309;'
+            }">${st==='approved'?'Aprobado':st==='rejected'?'Rechazado':'En Revisión'}</span>
+          </div>
+          ${st==='rejected' ? `<p style="font-size:.85rem;color:#DC2626;margin:.75rem 0 .5rem;">Tu recibo fue rechazado. Sube uno nuevo:</p>${renderLegacyUploadForm(appId)}` : ''}`;
+      }
+      return renderLegacyUploadForm(appId);
+    }
+
+    function renderLegacyUploadForm(appId) {
       return `
         <div class="payment-form" id="paymentForm-${appId}">
           <div id="paymentAlert-${appId}"></div>
@@ -909,15 +987,15 @@
               <input type="file" id="paymentFile-${appId}" accept="image/*,.pdf" />
             </div>
             <div class="form-group">
-              <label>Monto (RD$ o US$)</label>
-              <input type="number" id="paymentAmount-${appId}" placeholder="Ej: 150000" min="0" step="0.01" />
+              <label>Monto</label>
+              <input type="number" id="paymentAmount-${appId}" placeholder="Ej: 150000" min="0" />
             </div>
           </div>
           <div class="form-group">
             <label>Notas (opcional)</label>
-            <textarea id="paymentNotes-${appId}" placeholder="Detalles adicionales sobre el pago..."></textarea>
+            <textarea id="paymentNotes-${appId}" placeholder="Detalles adicionales..."></textarea>
           </div>
-          <button class="btn-upload" onclick="uploadPayment('${appId}')" style="align-self:flex-start;padding:0.55rem 1.2rem;font-size:0.88rem;">
+          <button class="btn-upload" onclick="uploadPayment('${appId}')" style="align-self:flex-start;padding:.55rem 1.2rem;font-size:.88rem;">
             <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
             Subir Recibo
           </button>
@@ -956,6 +1034,35 @@
         alert('Error al subir el documento. Por favor, intenta de nuevo.');
       }
     }
+
+    /* ── Upload installment proof (payment plan) ── */
+    window.uploadInstallmentProof = async function(appId, iid) {
+      const fileInput  = document.getElementById(`pp-file-${iid}`);
+      const notesInput = document.getElementById(`pp-notes-${iid}`);
+      const alertDiv   = document.getElementById(`pp-upload-alert-${iid}`);
+
+      if (!fileInput?.files?.length) {
+        if (alertDiv) alertDiv.innerHTML = '<div style="font-size:.78rem;color:#DC2626;padding:.3rem 0;">Selecciona un archivo primero.</div>';
+        return;
+      }
+      const btn = fileInput.closest('div[style]')?.querySelector('button');
+      if (btn) { btn.disabled = true; btn.textContent = 'Subiendo…'; }
+
+      const fd = new FormData();
+      fd.append('proof', fileInput.files[0]);
+      if (notesInput?.value) fd.append('notes', notesInput.value);
+
+      try {
+        await apiUpload(`/api/applications/${appId}/payment-plan/${iid}/upload`, fd);
+        if (alertDiv) alertDiv.innerHTML = '<div style="font-size:.78rem;color:#16A34A;padding:.3rem 0;">✓ Comprobante enviado. Tu broker lo revisará pronto.</div>';
+        // Refresh detail after short delay
+        delete appDetails[appId];
+        setTimeout(async () => { await toggleDetail(appId); await toggleDetail(appId); }, 1200);
+      } catch(e) {
+        if (alertDiv) alertDiv.innerHTML = `<div style="font-size:.78rem;color:#DC2626;padding:.3rem 0;">Error: ${e.message || 'Intenta de nuevo.'}</div>`;
+        if (btn) { btn.disabled = false; btn.textContent = 'Enviar'; }
+      }
+    };
 
     /* ── Upload payment ── */
     async function uploadPayment(appId) {

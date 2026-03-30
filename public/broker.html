@@ -476,6 +476,69 @@
     .commission-input-row input { width: 80px; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; background: var(--bg-card); color: var(--text); text-align: center; font-family: inherit; }
     .commission-input-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
+    /* ── PAYMENT PLAN ────────────────────────────────────────── */
+    .pp-header { background: var(--bg-section); border-radius: 10px; padding: 1rem 1.1rem; border: 1px solid var(--border); margin-bottom: 1rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .pp-header-info { flex: 1; min-width: 0; }
+    .pp-method { font-size: 0.92rem; font-weight: 700; letter-spacing: -0.01em; }
+    .pp-total  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .pp-details-box { font-size: 0.78rem; color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.75rem; margin-top: 0.5rem; white-space: pre-wrap; }
+    .pp-header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .pp-installments { display: flex; flex-direction: column; gap: 0.5rem; }
+    .pp-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: box-shadow 0.15s; }
+    .pp-card-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; }
+    .pp-num { width: 26px; height: 26px; border-radius: 50%; background: var(--bg-section); color: var(--text-muted); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pp-card.status-approved .pp-num { background: #F0FDF4; color: var(--green); }
+    .pp-card.status-proof_uploaded .pp-num { background: #FFF7ED; color: var(--orange); }
+    .pp-card.status-rejected .pp-num { background: #FEF2F2; color: var(--red); }
+    .pp-info { flex: 1; min-width: 0; }
+    .pp-label { font-size: 0.88rem; font-weight: 600; }
+    .pp-meta  { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pp-due-soon { color: var(--orange); font-weight: 600; }
+    .pp-overdue  { color: var(--red); font-weight: 600; }
+    .pp-amount { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pp-actions { display: flex; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+    .pp-status-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.2rem 0.55rem; border-radius: 20px; white-space: nowrap; }
+    .pp-status-badge.pending        { background: var(--bg-section); color: var(--text-muted); }
+    .pp-status-badge.proof_uploaded { background: #FFF7ED; color: #B45309; }
+    .pp-status-badge.approved       { background: #F0FDF4; color: #15803D; }
+    .pp-status-badge.rejected       { background: #FEF2F2; color: #B91C1C; }
+    .pp-status-badge svg { width: 9px; height: 9px; fill: currentColor; }
+
+    .pp-review-panel { border-top: 1px solid var(--border); padding: 0.85rem 1rem; background: var(--bg-section); }
+    .pp-proof-img { max-width: 100%; max-height: 220px; border-radius: 6px; object-fit: contain; border: 1px solid var(--border); display: block; margin: 0.5rem 0; }
+    .pp-proof-iframe { width: 100%; height: 200px; border: 1px solid var(--border); border-radius: 6px; margin: 0.5rem 0; }
+    .pp-review-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; align-items: flex-start; flex-wrap: wrap; }
+    .pp-reject-note { display: none; flex-direction: column; gap: 0.4rem; width: 100%; margin-top: 0.5rem; }
+    .pp-reject-note.show { display: flex; }
+    .pp-reject-note textarea { width: 100%; min-height: 65px; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: inherit; font-size: 0.82rem; background: var(--bg-card); color: var(--text); resize: vertical; }
+    .pp-reject-note textarea:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+
+    .pp-form { background: var(--bg-section); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .pp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .pp-form-grid .full { grid-column: 1 / -1; }
+    .pp-form label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); display: block; margin-bottom: 0.3rem; }
+    .pp-form select, .pp-form input[type="text"], .pp-form input[type="number"],
+    .pp-form input[type="date"], .pp-form textarea {
+      width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: inherit;
+    }
+    .pp-form select:focus, .pp-form input:focus, .pp-form textarea:focus
+      { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .pp-form textarea { min-height: 60px; resize: vertical; }
+
+    .pp-builder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+    .pp-builder-label  { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+    .pp-inst-row { display: grid; grid-template-columns: 1fr 130px 130px 28px; gap: 0.5rem; margin-bottom: 0.4rem; align-items: center; }
+    .pp-inst-row input { margin: 0; }
+    .pp-remove-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.25rem; border-radius: 4px; display: flex; }
+    .pp-remove-btn:hover { color: var(--red); background: #FEF2F2; }
+    .pp-remove-btn svg { width: 14px; height: 14px; fill: currentColor; }
+    .pp-total-row { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-muted); }
+    .pp-total-row strong { font-size: 0.9rem; color: var(--text); font-variant-numeric: tabular-nums; }
+    .pp-form-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.85rem; }
+
     /* ── EXPORT ──────────────────────────────────────────────── */
     .export-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
     .export-trigger-btn {
@@ -1849,72 +1912,362 @@
     } catch(e) { toast(e.message, 'error'); }
   };
 
-  // ── Pago Tab ───────────────────────────────────────────────
-  function renderPago(a) {
-    const payment = a.payment || {};
-    const hasReceipt = payment.receipt_url || payment.receipt;
-    const appId = a._id || a.id;
-    const pane = document.getElementById('pane-pago');
+  // ── Pago Tab — Payment Plan ─────────────────────────────────
+  const PP_STATUS_LABELS = {
+    pending:        'Pendiente',
+    proof_uploaded: 'Comprobante Subido',
+    approved:       'Aprobado',
+    rejected:       'Rechazado',
+  };
+  const PP_METHODS = [
+    'Transferencia Bancaria', 'Depósito Bancario', 'Cheque',
+    'Efectivo', 'Transferencia Internacional (Wire)', 'Otro',
+  ];
 
-    pane.innerHTML = `
-      ${hasReceipt ? `
-        <div class="info-section">
-          <div class="info-section-title">Recibo de Pago</div>
-          <div class="receipt-preview" id="receiptPreview">
-            <div class="loading"><div class="spinner"></div></div>
-          </div>
-          ${payment.status !== 'approved' && payment.status !== 'rejected' ? `
-            <div style="display:flex;gap:0.5rem;">
-              <button class="btn btn-success" id="verifyPaymentBtn">Verificar Pago</button>
-              <button class="btn btn-danger" id="rejectPaymentBtn">Rechazar Pago</button>
-            </div>
-          ` : `
-            <p style="font-size:0.9rem;font-weight:600;">
-              Estado del pago: ${payment.status === 'approved' ? '<span style="color:var(--green)">Verificado</span>' : '<span style="color:var(--red)">Rechazado</span>'}
-            </p>
-            ${payment.notes ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.3rem;">Nota: ${esc(payment.notes)}</p>` : ''}
-          `}
-        </div>
-      ` : `
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM4 0h16v2H4zm0 22h16v2H4z"/></svg>
-          <p>No se ha subido recibo de pago.</p>
-        </div>
-      `}
-    `;
-
-    if (hasReceipt) {
-      const preview = document.getElementById('receiptPreview');
-      const receiptUrl = `/api/applications/${appId}/payment/receipt`;
-      // Try to determine type — default to image
-      const url = payment.receipt_url || receiptUrl;
-      if (url.endsWith('.pdf') || payment.file_type === 'pdf') {
-        preview.innerHTML = `<iframe src="${receiptUrl}"></iframe>`;
-      } else {
-        preview.innerHTML = `<img src="${receiptUrl}" alt="Recibo" onerror="this.parentElement.innerHTML='<p>No se pudo cargar el recibo. <a href=\\'${receiptUrl}\\' target=\\'_blank\\'>Descargar</a></p>'">`;
-      }
-
-      const verifyBtn = document.getElementById('verifyPaymentBtn');
-      const rejectBtn = document.getElementById('rejectPaymentBtn');
-      if (verifyBtn) {
-        verifyBtn.onclick = () => verifyPayment(true);
-      }
-      if (rejectBtn) {
-        rejectBtn.onclick = () => verifyPayment(false);
-      }
-    }
+  function ppStatusBadge(status) {
+    const icons = {
+      pending:        '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>',
+      proof_uploaded: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14l-4-4 1.41-1.41L11 13.17l6.59-6.59L19 8l-8 8z"/></svg>',
+      approved:       '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+      rejected:       '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+    };
+    return `<span class="pp-status-badge ${status}">${icons[status]||''} ${PP_STATUS_LABELS[status]||status}</span>`;
   }
 
-  async function verifyPayment(approved) {
-    const notes = approved ? '' : (prompt('Razon del rechazo:') || '');
-    if (!approved && notes === '') return;
-    try {
-      await API(`/api/applications/${currentApp._id||currentApp.id}/payment/verify`, { method:'PUT', body: { approved, notes } });
-      toast(approved ? 'Pago verificado' : 'Pago rechazado');
+  function dueDateLabel(dueDate) {
+    if (!dueDate) return '';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due   = new Date(dueDate + 'T12:00:00');
+    const diff  = Math.ceil((due - today) / 86400000);
+    const fmt   = due.toLocaleDateString('es-DO', { day:'numeric', month:'short', year:'numeric' });
+    if (diff < 0)  return `<span class="pp-overdue">Venció hace ${Math.abs(diff)} día(s)</span>`;
+    if (diff <= 5) return `<span class="pp-due-soon">Vence en ${diff} día(s) — ${fmt}</span>`;
+    return `<span>Vence: ${fmt}</span>`;
+  }
+
+  function renderPago(a) {
+    const appId = a._id || a.id;
+    const plan  = a.payment_plan;
+    const pane  = document.getElementById('pane-pago');
+
+    if (!plan) {
+      pane.innerHTML = `
+        <div class="empty-state" style="padding:2rem 0">
+          <svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--text-muted);display:block;margin:0 auto 1rem">
+            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+          </svg>
+          <p style="margin-bottom:1rem;">No hay plan de pagos creado para esta aplicacion.</p>
+          <button class="btn btn-primary" id="createPlanBtn">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            Crear Plan de Pagos
+          </button>
+        </div>`;
+      pane.querySelector('#createPlanBtn').onclick = () => renderPaymentPlanForm(a, false);
+      return;
+    }
+
+    const cur = plan.currency || 'DOP';
+    const totalPaid = plan.installments.filter(i => i.status === 'approved').reduce((s, i) => s + i.amount, 0);
+    const totalAmt  = plan.total_amount || plan.installments.reduce((s, i) => s + i.amount, 0);
+    const pendingReview = plan.installments.filter(i => i.status === 'proof_uploaded').length;
+
+    pane.innerHTML = `
+      <div class="pp-header">
+        <div class="pp-header-info">
+          <div class="pp-method">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:var(--accent);vertical-align:-2px"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+            ${esc(plan.payment_method || 'Sin método')}
+          </div>
+          <div class="pp-total">
+            ${fmtPrice(totalPaid)} de ${fmtPrice(totalAmt)} verificado
+            · ${plan.installments.length} cuota(s)
+            ${pendingReview ? `· <span style="color:var(--orange);font-weight:600;">${pendingReview} pendiente(s) de revisión</span>` : ''}
+          </div>
+          ${plan.method_details ? `<div class="pp-details-box">${esc(plan.method_details)}</div>` : ''}
+        </div>
+        <div class="pp-header-actions">
+          <button class="btn btn-outline btn-sm" id="editPlanBtn">Editar Plan</button>
+        </div>
+      </div>
+
+      <div class="pp-installments" id="ppInstallments">
+        ${plan.installments.map(inst => renderInstallmentCard(inst, appId, cur)).join('')}
+      </div>`;
+
+    pane.querySelector('#editPlanBtn').onclick = () => renderPaymentPlanForm(a, true);
+    bindInstallmentActions(pane, a, appId);
+  }
+
+  function renderInstallmentCard(inst, appId, cur) {
+    const proofUrl = `/api/applications/${appId}/payment-plan/${inst.id}/proof`;
+    const isPdf    = inst.proof_original && /\.pdf$/i.test(inst.proof_original);
+    return `
+      <div class="pp-card status-${inst.status}" data-iid="${inst.id}">
+        <div class="pp-card-row">
+          <div class="pp-num">${inst.number}</div>
+          <div class="pp-info">
+            <div class="pp-label">${esc(inst.label)}</div>
+            <div class="pp-meta">
+              ${dueDateLabel(inst.due_date)}
+              ${inst.notification_sent_at ? `· Recordatorio enviado ${fmtDate(inst.notification_sent_at)}` : ''}
+              ${inst.review_notes ? `· <span style="color:var(--red)">${esc(inst.review_notes)}</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+            <div class="pp-amount">${fmtPrice(inst.amount)}</div>
+            ${ppStatusBadge(inst.status)}
+          </div>
+          <div class="pp-actions">
+            ${inst.status === 'pending' || inst.status === 'rejected' ? `
+              <button class="btn btn-outline btn-sm pp-notify-btn" data-iid="${inst.id}" title="Enviar recordatorio">
+                <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                Recordatorio
+              </button>` : ''}
+            ${inst.status === 'proof_uploaded' ? `
+              <button class="btn btn-primary btn-sm pp-review-toggle" data-iid="${inst.id}">
+                <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                Revisar
+              </button>` : ''}
+          </div>
+        </div>
+        ${inst.status === 'proof_uploaded' ? `
+          <div class="pp-review-panel" id="review-${inst.id}" style="display:none">
+            <div class="info-section-title" style="margin-bottom:0.5rem;">Comprobante del Cliente</div>
+            ${inst.proof_notes ? `<p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.4rem;">Nota: <em>${esc(inst.proof_notes)}</em></p>` : ''}
+            ${isPdf
+              ? `<iframe class="pp-proof-iframe" src="${proofUrl}"></iframe>`
+              : `<img class="pp-proof-img" src="${proofUrl}" alt="Comprobante" onerror="this.style.display='none'">`}
+            <a href="${proofUrl}" target="_blank" class="btn btn-outline btn-sm" style="margin-bottom:0.6rem;">
+              <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Descargar
+            </a>
+            <div class="pp-review-actions">
+              <button class="btn btn-success btn-sm pp-approve-btn" data-iid="${inst.id}">
+                <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                Aprobar Pago
+              </button>
+              <button class="btn btn-outline btn-sm pp-reject-toggle" data-iid="${inst.id}" style="border-color:var(--red);color:var(--red)">
+                <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                Rechazar
+              </button>
+            </div>
+            <div class="pp-reject-note" id="reject-note-${inst.id}">
+              <textarea placeholder="Motivo del rechazo (requerido)..." id="reject-text-${inst.id}"></textarea>
+              <button class="btn btn-danger btn-sm pp-confirm-reject" data-iid="${inst.id}">Confirmar Rechazo</button>
+            </div>
+          </div>` : ''}
+        ${inst.status === 'approved' ? `
+          <div style="padding:0.5rem 1rem 0.6rem;display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--green);">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:var(--green)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Aprobado el ${fmtDate(inst.reviewed_at)}
+          </div>` : ''}
+        ${inst.status === 'rejected' ? `
+          <div style="padding:0.5rem 1rem 0.6rem;font-size:0.75rem;color:var(--red);">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:var(--red);vertical-align:-1px"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            Rechazado — cliente debe subir nuevo comprobante
+            ${inst.review_notes ? ` · <em>${esc(inst.review_notes)}</em>` : ''}
+          </div>` : ''}
+      </div>`;
+  }
+
+  function bindInstallmentActions(pane, a, appId) {
+    const refreshPago = async () => {
       const data = await API(`/api/applications/${currentApp._id||currentApp.id}`);
       currentApp = data.application || data;
       renderPago(currentApp);
-    } catch(e) { toast(e.message, 'error'); }
+      renderWorkflowStrip(currentApp.status);
+    };
+
+    // Review toggle
+    pane.querySelectorAll('.pp-review-toggle').forEach(btn => {
+      btn.onclick = () => {
+        const panel = document.getElementById('review-' + btn.dataset.iid);
+        if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      };
+    });
+
+    // Reject section toggle
+    pane.querySelectorAll('.pp-reject-toggle').forEach(btn => {
+      btn.onclick = () => {
+        const note = document.getElementById('reject-note-' + btn.dataset.iid);
+        if (note) note.classList.toggle('show');
+      };
+    });
+
+    // Approve
+    pane.querySelectorAll('.pp-approve-btn').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          await API(`/api/applications/${appId}/payment-plan/${btn.dataset.iid}/review`,
+            { method:'PUT', body: { approved: true } });
+          toast('Pago aprobado');
+          await refreshPago();
+        } catch(e) { toast(e.message, 'error'); }
+      };
+    });
+
+    // Confirm reject
+    pane.querySelectorAll('.pp-confirm-reject').forEach(btn => {
+      btn.onclick = async () => {
+        const notes = document.getElementById('reject-text-' + btn.dataset.iid)?.value.trim();
+        if (!notes) { toast('El motivo del rechazo es requerido', 'error'); return; }
+        try {
+          await API(`/api/applications/${appId}/payment-plan/${btn.dataset.iid}/review`,
+            { method:'PUT', body: { approved: false, review_notes: notes } });
+          toast('Pago rechazado — cliente será notificado');
+          await refreshPago();
+        } catch(e) { toast(e.message, 'error'); }
+      };
+    });
+
+    // Send reminder
+    pane.querySelectorAll('.pp-notify-btn').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          await API(`/api/applications/${appId}/payment-plan/${btn.dataset.iid}/notify`,
+            { method:'POST', body: {} });
+          toast('Recordatorio enviado al cliente');
+          await refreshPago();
+        } catch(e) { toast(e.message, 'error'); }
+      };
+    });
+  }
+
+  function renderPaymentPlanForm(a, editMode) {
+    const appId = a._id || a.id;
+    const plan  = editMode ? (a.payment_plan || {}) : {};
+    const insts = plan.installments || [];
+    const pane  = document.getElementById('pane-pago');
+
+    pane.innerHTML = `
+      <div class="pp-form">
+        <div class="info-section-title" style="margin-bottom:1rem;">
+          ${editMode ? 'Editar Plan de Pagos' : 'Crear Plan de Pagos'}
+        </div>
+
+        <div class="pp-form-grid">
+          <div>
+            <label>Método de Pago</label>
+            <select id="ppMethod">
+              ${PP_METHODS.map(m => `<option${plan.payment_method===m?' selected':''}>${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>Moneda</label>
+            <select id="ppCurrency">
+              <option${(plan.currency||'DOP')==='DOP'?' selected':''}>DOP</option>
+              <option${plan.currency==='USD'?' selected':''}>USD</option>
+            </select>
+          </div>
+          <div class="full">
+            <label>Detalles de Pago <span style="font-weight:400;text-transform:none;letter-spacing:0;">(banco, número de cuenta, instrucciones)</span></label>
+            <textarea id="ppDetails" rows="3" placeholder="Ej: Banco Popular — Cta. Corriente #123-456789 — A nombre de: HogaresRD S.R.L.">${esc(plan.method_details||'')}</textarea>
+          </div>
+          <div class="full">
+            <label>Notas generales</label>
+            <input type="text" id="ppNotes" value="${esc(plan.notes||'')}" placeholder="Opcional...">
+          </div>
+        </div>
+
+        <div class="pp-builder-header">
+          <span class="pp-builder-label">Cuotas</span>
+          <button class="btn btn-outline btn-sm" id="addInstBtn">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            Agregar cuota
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 130px 130px 28px;gap:0.4rem;margin-bottom:0.35rem;">
+          <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Descripción</span>
+          <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Monto</span>
+          <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Vencimiento</span>
+          <span></span>
+        </div>
+        <div id="ppInstBuilder">
+          ${insts.length ? insts.map(i => ppInstRow(i.label, i.amount, i.due_date, i.id)).join('')
+            : ppInstRow('Pago Inicial', '', '') + ppInstRow('Pago Final', '', '')}
+        </div>
+        <div class="pp-total-row">
+          Total: <strong id="ppTotalDisplay">—</strong>
+        </div>
+
+        <div class="pp-form-footer">
+          <button class="btn btn-outline" id="cancelPlanBtn">Cancelar</button>
+          <button class="btn btn-primary" id="savePlanBtn">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:#fff"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+            ${editMode ? 'Guardar Cambios' : 'Crear Plan'}
+          </button>
+        </div>
+      </div>`;
+
+    // Cancel
+    pane.querySelector('#cancelPlanBtn').onclick = () => renderPago(a);
+
+    // Add row
+    pane.querySelector('#addInstBtn').onclick = () => {
+      document.getElementById('ppInstBuilder').insertAdjacentHTML('beforeend', ppInstRow('', '', ''));
+      updatePPTotal();
+    };
+
+    // Remove row + total calculation (delegate)
+    pane.querySelector('#ppInstBuilder').addEventListener('click', e => {
+      if (e.target.closest('.pp-remove-btn')) {
+        const rows = document.querySelectorAll('#ppInstBuilder .pp-inst-row');
+        if (rows.length <= 1) { toast('Debe haber al menos una cuota', 'error'); return; }
+        e.target.closest('.pp-inst-row').remove();
+        updatePPTotal();
+      }
+    });
+    pane.querySelector('#ppInstBuilder').addEventListener('input', updatePPTotal);
+    updatePPTotal();
+
+    // Save
+    pane.querySelector('#savePlanBtn').onclick = async () => {
+      const method  = document.getElementById('ppMethod').value;
+      const cur     = document.getElementById('ppCurrency').value;
+      const details = document.getElementById('ppDetails').value.trim();
+      const notes   = document.getElementById('ppNotes').value.trim();
+      const rows    = [...document.querySelectorAll('#ppInstBuilder .pp-inst-row')];
+      const installments = rows.map(row => ({
+        id:       row.dataset.iid || undefined,
+        label:    row.querySelector('.pp-inst-label').value.trim() || 'Pago',
+        amount:   parseFloat(row.querySelector('.pp-inst-amount').value) || 0,
+        due_date: row.querySelector('.pp-inst-due').value || null,
+      }));
+      if (installments.some(i => !i.amount)) {
+        toast('Todos los montos son requeridos', 'error'); return;
+      }
+      const total = installments.reduce((s, i) => s + i.amount, 0);
+      try {
+        const data = await API(`/api/applications/${appId}/payment-plan`, {
+          method: 'POST',
+          body: { payment_method: method, method_details: details, currency: cur,
+                  total_amount: total, notes, installments },
+        });
+        currentApp = data.application || data;
+        toast(editMode ? 'Plan actualizado' : 'Plan de pagos creado y cliente notificado');
+        renderPago(currentApp);
+      } catch(e) { toast(e.message, 'error'); }
+    };
+  }
+
+  function ppInstRow(label, amount, dueDate, id) {
+    return `<div class="pp-inst-row" data-iid="${id||''}">
+      <input class="pp-inst-label" type="text" placeholder="Ej: Pago Inicial" value="${esc(label||'')}">
+      <input class="pp-inst-amount" type="number" min="0" placeholder="Monto" value="${amount||''}">
+      <input class="pp-inst-due" type="date" value="${dueDate||''}">
+      <button class="pp-remove-btn" title="Eliminar">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>`;
+  }
+
+  function updatePPTotal() {
+    const cur = document.getElementById('ppCurrency')?.value || 'DOP';
+    const total = [...document.querySelectorAll('.pp-inst-amount')]
+      .reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    const el = document.getElementById('ppTotalDisplay');
+    if (el) el.textContent = cur + ' ' + total.toLocaleString('es-DO');
   }
 
   // ── Timeline / Audit Log Tab ───────────────────────────────
