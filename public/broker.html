@@ -231,8 +231,8 @@
     /* ── DETAIL PANEL ─────────────────────────────────────────── */
     .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; display: none; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px); }
     .detail-overlay.open { display: block; opacity: 1; }
-    .detail-panel { position: fixed; top: 0; right: 0; width: 680px; max-width: 100vw; height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border); z-index: 301; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.25s ease; overflow: hidden; }
-    .detail-panel.open { display: flex; transform: translateX(0); }
+    .detail-panel { position: fixed; top: 0; right: 0; width: 680px; max-width: 100vw; height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border); z-index: 301; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), visibility 0s 0.28s; overflow: hidden; visibility: hidden; pointer-events: none; }
+    .detail-panel.open { transform: translateX(0); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), visibility 0s 0s; visibility: visible; pointer-events: auto; }
     .detail-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
     .detail-header-info { flex: 1; min-width: 0; }
     .detail-header-info h2 { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
@@ -268,6 +268,59 @@
     .reason-box textarea { width: 100%; min-height: 80px; border: 1.5px solid var(--border); border-radius: 10px; padding: 0.75rem; font-family: inherit; font-size: 0.88rem; background: var(--bg-card); color: var(--text); resize: vertical; }
     .reason-box textarea:focus { outline: none; border-color: var(--accent); }
     .reason-box .btn-send { margin-top: 0.5rem; }
+
+    /* ── WORKFLOW STEPPER ─────────────────────────────────────── */
+    .workflow-strip { padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg-section); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+    .workflow-strip::-webkit-scrollbar { display: none; }
+    .workflow-steps { display: flex; align-items: flex-start; min-width: max-content; }
+    .workflow-step { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 68px; flex: 1; }
+    .workflow-step::before { content: ''; position: absolute; top: 8px; left: 0; right: 50%; height: 2px; background: var(--border); }
+    .workflow-step::after  { content: ''; position: absolute; top: 8px; left: 50%; right: 0; height: 2px; background: var(--border); }
+    .workflow-step:first-child::before, .workflow-step:last-child::after { display: none; }
+    .step-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 0.52rem; font-weight: 700; color: var(--text-muted); z-index: 1; position: relative; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
+    .step-dot svg { width: 9px; height: 9px; fill: #fff; }
+    .workflow-step.done .step-dot { background: var(--green); border-color: var(--green); }
+    .workflow-step.done::before, .workflow-step.done::after { background: var(--green); }
+    .workflow-step.current .step-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
+    .workflow-step.current::before { background: var(--green); }
+    .step-label { font-size: 0.58rem; color: var(--text-muted); margin-top: 0.3rem; text-align: center; white-space: nowrap; line-height: 1.2; }
+    .workflow-step.current .step-label { color: var(--accent); font-weight: 600; }
+    .workflow-step.done .step-label { color: var(--green); }
+
+    /* ── CHECKLIST ────────────────────────────────────────────── */
+    .checklist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+    .checklist-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+    .checklist-count { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+    .checklist-progress-bar { height: 5px; background: var(--border); border-radius: 3px; margin-bottom: 0.85rem; overflow: hidden; }
+    .checklist-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
+    .checklist-progress-fill.complete { background: var(--green); }
+    .checklist-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.35rem; background: var(--bg-card); cursor: pointer; transition: border-color 0.12s, background 0.12s; user-select: none; }
+    .checklist-item:hover { border-color: var(--accent); background: var(--accent-light); }
+    .checklist-item.checked { background: #F0FDF4; border-color: #86EFAC; }
+    [data-theme="dark"] .checklist-item.checked { background: rgba(22,163,74,0.1); border-color: rgba(22,163,74,0.3); }
+    .checklist-box { width: 17px; height: 17px; border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: background 0.12s, border-color 0.12s; }
+    .checklist-item.checked .checklist-box { background: var(--green); border-color: var(--green); }
+    .checklist-box svg { width: 10px; height: 10px; fill: #fff; opacity: 0; transition: opacity 0.1s; }
+    .checklist-item.checked .checklist-box svg { opacity: 1; }
+    .checklist-item-label { font-size: 0.84rem; line-height: 1.4; color: var(--text); }
+    .checklist-item.checked .checklist-item-label { color: var(--text-muted); text-decoration: line-through; }
+
+    /* ── ADVANCE SECTION ─────────────────────────────────────── */
+    .advance-section { margin-top: 1.1rem; padding: 1rem; background: var(--bg-section); border-radius: 10px; border: 1px solid var(--border); }
+    .advance-section.ready { background: #F0FDF4; border-color: #86EFAC; }
+    [data-theme="dark"] .advance-section.ready { background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.25); }
+    .advance-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 0.45rem; }
+    .advance-hint { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+    .advance-hint.ready { color: var(--green); font-weight: 500; }
+    .advance-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .advance-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .advance-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .advance-btn svg { width: 13px; height: 13px; fill: currentColor; }
+    .reject-zone { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .reject-zone-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--red); margin-bottom: 0.5rem; opacity: 0.7; }
+    .completed-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); }
+    .completed-state svg { display: block; margin: 0 auto 0.75rem; fill: var(--green); width: 36px; height: 36px; }
+    .completed-state strong { font-size: 0.92rem; color: var(--text); display: block; margin-bottom: 0.3rem; }
 
     /* ── FORMS & BUTTONS ─────────────────────────────────────── */
     .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s, box-shadow 0.15s; font-family: inherit; letter-spacing: 0.01em; }
@@ -1035,9 +1088,12 @@
     </button>
   </div>
 
+  <!-- Workflow progress strip -->
+  <div class="workflow-strip" id="workflowStrip"></div>
+
   <div class="tabs" id="detailTabs">
     <button class="tab-btn active" data-tab="resumen">Resumen</button>
-    <button class="tab-btn" data-tab="estado">Estado</button>
+    <button class="tab-btn" data-tab="estado">Flujo</button>
     <button class="tab-btn" data-tab="documentos">Documentos</button>
     <button class="tab-btn" data-tab="tours">Tours</button>
     <button class="tab-btn" data-tab="pago">Pago</button>
@@ -1106,6 +1162,79 @@
     pago_enviado: ['pago_aprobado','pendiente_pago','rechazado'],
     pago_aprobado: ['completado']
   };
+
+  // Stage-by-stage checklists — gates progression
+  const STAGE_CHECKLISTS = {
+    aplicado: [
+      { id: 'contact_made',     label: 'Contacto inicial realizado con el cliente' },
+      { id: 'property_avail',   label: 'Propiedad verificada y disponible' },
+      { id: 'financing_type',   label: 'Tipo de financiamiento confirmado' },
+      { id: 'tour_offered',     label: 'Tour ofrecido o agendado' },
+    ],
+    en_revision: [
+      { id: 'docs_requested',   label: 'Lista de documentos solicitada al cliente' },
+      { id: 'financial_eval',   label: 'Capacidad financiera evaluada' },
+      { id: 'preapproval',      label: 'Estado de pre-aprobacion bancaria confirmado' },
+      { id: 'tour_done',        label: 'Tour de la propiedad completado' },
+    ],
+    documentos_requeridos: [
+      { id: 'cedula',           label: 'Cédula / Pasaporte solicitado' },
+      { id: 'income_proof',     label: 'Comprobante de ingresos solicitado' },
+      { id: 'bank_stmt',        label: 'Estado de cuenta bancario solicitado' },
+      { id: 'employment',       label: 'Carta de trabajo o declaracion de impuestos solicitada' },
+    ],
+    documentos_enviados: [
+      { id: 'identity_ok',      label: 'Identidad del cliente verificada' },
+      { id: 'docs_reviewed',    label: 'Todos los documentos revisados' },
+      { id: 'docs_complete',    label: 'Documentacion completa y vigente' },
+    ],
+    documentos_insuficientes: [
+      { id: 'missing_id',       label: 'Documentos faltantes identificados' },
+      { id: 'client_notified',  label: 'Cliente notificado de documentos pendientes' },
+    ],
+    en_aprobacion: [
+      { id: 'credit_analysis',  label: 'Analisis de credito completado' },
+      { id: 'appraisal',        label: 'Tasacion de la propiedad completada' },
+      { id: 'internal_review',  label: 'Revision interna del expediente aprobada' },
+      { id: 'bank_approval',    label: 'Confirmacion formal del banco recibida' },
+    ],
+    reservado: [
+      { id: 'reservation_pmt',  label: 'Pago de reserva recibido' },
+      { id: 'contract_draft',   label: 'Contrato de compra-venta redactado' },
+      { id: 'contract_signed',  label: 'Contrato firmado por todas las partes' },
+    ],
+    aprobado: [
+      { id: 'approval_written', label: 'Aprobacion bancaria confirmada por escrito' },
+      { id: 'payment_terms',    label: 'Terminos y montos de pago acordados' },
+      { id: 'closing_date',     label: 'Fecha de cierre establecida' },
+    ],
+    pendiente_pago: [
+      { id: 'invoice_sent',     label: 'Factura / instrucciones de pago enviadas' },
+      { id: 'payment_method',   label: 'Metodo de pago confirmado por el cliente' },
+      { id: 'payment_received', label: 'Confirmacion de transferencia recibida' },
+    ],
+    pago_enviado: [
+      { id: 'payment_verified', label: 'Pago verificado en cuenta bancaria' },
+      { id: 'receipt_issued',   label: 'Recibo oficial emitido al cliente' },
+    ],
+    pago_aprobado: [
+      { id: 'closing_docs',     label: 'Documentos de cierre preparados y firmados' },
+      { id: 'title_transfer',   label: 'Transferencia de titulo iniciada' },
+      { id: 'keys_delivered',   label: 'Llaves y acceso entregados al cliente' },
+    ],
+  };
+
+  // Visual pipeline (condensed for display)
+  const WORKFLOW_DISPLAY = [
+    { keys: ['aplicado'],                          label: 'Aplicado' },
+    { keys: ['en_revision'],                       label: 'Revision' },
+    { keys: ['documentos_requeridos','documentos_enviados','documentos_insuficientes'], label: 'Documentos' },
+    { keys: ['en_aprobacion'],                     label: 'Aprobacion' },
+    { keys: ['reservado'],                         label: 'Reserva' },
+    { keys: ['aprobado'],                          label: 'Aprobado' },
+    { keys: ['pendiente_pago','pago_enviado','pago_aprobado'], label: 'Pago' },
+    { keys: ['completado'],                        label: 'Completado' },
+  ];
 
   const DOC_TYPES = [
     { type:'cedula', label:'Cedula de Identidad' },
@@ -1305,12 +1434,31 @@
     document.getElementById('detailSubtitle').textContent = listing.title || 'Propiedad';
     document.getElementById('detailBadge').innerHTML = badgeHTML(a.status, true);
 
+    renderWorkflowStrip(a.status);
     renderResumen(a, client, listing);
     renderEstado(a);
     renderDocumentos(a);
     renderTours(a);
     renderPago(a);
     renderTimeline(a);
+  }
+
+  function renderWorkflowStrip(status) {
+    const strip = document.getElementById('workflowStrip');
+    const currentStep = WORKFLOW_DISPLAY.findIndex(s => s.keys.includes(status));
+    strip.innerHTML = `<div class="workflow-steps">
+      ${WORKFLOW_DISPLAY.map((s, i) => {
+        const cls = i < currentStep ? 'done' : i === currentStep ? 'current' : '';
+        return `<div class="workflow-step ${cls}">
+          <div class="step-dot">
+            ${i < currentStep
+              ? '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'
+              : (i + 1)}
+          </div>
+          <div class="step-label">${s.label}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
 
   // ── Resumen Tab ────────────────────────────────────────────
@@ -1349,48 +1497,119 @@
     `;
   }
 
-  // ── Estado Tab ─────────────────────────────────────────────
+  // ── Flujo Tab (workflow + checklist) ─────────────────────────
   function renderEstado(a) {
+    const pane       = document.getElementById('pane-estado');
+    const checklist  = STAGE_CHECKLISTS[a.status] || [];
     const transitions = STATUS_FLOW[a.status] || [];
-    const pane = document.getElementById('pane-estado');
+    const advances   = transitions.filter(t => t !== 'rechazado');
+    const canReject  = transitions.includes('rechazado');
+    const appId      = a._id || a.id;
+    const storeKey   = `hrd_cl_${appId}_${a.status}`;
+
+    let checked = [];
+    try { checked = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+
+    const total    = checklist.length;
+    const done     = checklist.filter(item => checked.includes(item.id)).length;
+    const complete = total > 0 && done === total;
+    const pct      = total ? Math.round(done / total * 100) : 100;
+
     pane.innerHTML = `
+      <!-- Checklist -->
+      ${checklist.length ? `
       <div class="info-section">
-        <div class="info-section-title">Estado Actual</div>
-        <div style="margin:0.75rem 0">${badgeHTML(a.status, true)}</div>
-      </div>
-      ${transitions.length ? `
-      <div class="info-section">
-        <div class="info-section-title">Cambiar Estado</div>
-        <div class="status-actions" id="statusActions">
-          ${transitions.map(t =>
-            `<button class="status-btn${t==='rechazado'?' reject':''}" data-to="${t}">${STATUS_LABELS[t]}</button>`
-          ).join('')}
+        <div class="checklist-header">
+          <div class="checklist-title">Checklist de Etapa</div>
+          <div class="checklist-count">${done} / ${total}</div>
         </div>
+        <div class="checklist-progress-bar">
+          <div class="checklist-progress-fill${complete ? ' complete' : ''}" style="width:${pct}%"></div>
+        </div>
+        ${checklist.map(item => `
+          <div class="checklist-item${checked.includes(item.id) ? ' checked' : ''}" data-item="${item.id}">
+            <div class="checklist-box">
+              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="checklist-item-label">${esc(item.label)}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
+      <!-- Advance -->
+      ${advances.length ? `
+      <div class="advance-section${complete ? ' ready' : ''}">
+        <div class="advance-label">Siguiente Etapa</div>
+        <div class="advance-hint${complete ? ' ready' : ''}">
+          ${complete
+            ? `<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:var(--green);flex-shrink:0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/></svg>
+               Checklist completo — listo para avanzar`
+            : `<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:var(--text-muted);flex-shrink:0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+               Completa todos los items del checklist para avanzar`}
+        </div>
+        <div class="advance-buttons">
+          ${advances.map(t => `
+            <button class="btn btn-primary advance-btn" data-to="${t}" ${!complete ? 'disabled' : ''}>
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              ${STATUS_LABELS[t]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      ` : `
+      <div class="completed-state">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/></svg>
+        <strong>Proceso Finalizado</strong>
+        <span>Esta aplicacion ha completado el flujo.</span>
+      </div>
+      `}
+
+      <!-- Reject zone -->
+      ${canReject ? `
+      <div class="reject-zone">
+        <div class="reject-zone-label">Zona de Rechazo</div>
+        <button class="btn btn-danger" id="rejectBtn">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:#fff"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          Rechazar Aplicacion
+        </button>
         <div class="reason-box" id="reasonBox">
           <textarea id="reasonText" placeholder="Razon del rechazo (requerido)..."></textarea>
           <button class="btn btn-danger btn-send" id="confirmReject">Confirmar Rechazo</button>
         </div>
-      </div>` : `<p style="color:var(--text-muted);font-size:0.88rem;">No hay transiciones disponibles para este estado.</p>`}
+      </div>
+      ` : ''}
     `;
 
-    if (transitions.length) {
-      pane.querySelectorAll('.status-btn').forEach(btn => {
-        btn.onclick = () => {
-          if (btn.dataset.to === 'rechazado') {
-            document.getElementById('reasonBox').classList.add('show');
-          } else {
-            changeStatus(btn.dataset.to);
-          }
-        };
-      });
-      const confirmBtn = document.getElementById('confirmReject');
-      if (confirmBtn) {
-        confirmBtn.onclick = () => {
-          const reason = document.getElementById('reasonText').value.trim();
-          if (!reason) { toast('La razon es requerida para rechazar', 'error'); return; }
-          changeStatus('rechazado', reason);
-        };
-      }
+    // Checklist toggle
+    pane.querySelectorAll('.checklist-item').forEach(item => {
+      item.onclick = () => {
+        let cur = [];
+        try { cur = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+        const id = item.dataset.item;
+        cur = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+        localStorage.setItem(storeKey, JSON.stringify(cur));
+        const allDone = checklist.every(cl => cur.includes(cl.id));
+        if (allDone && checklist.length > 0) toast('¡Checklist completo! Puedes avanzar la aplicacion');
+        renderEstado(a);
+      };
+    });
+
+    // Advance buttons
+    pane.querySelectorAll('.advance-btn').forEach(btn => {
+      btn.onclick = () => changeStatus(btn.dataset.to);
+    });
+
+    // Reject
+    const rejectBtn = document.getElementById('rejectBtn');
+    if (rejectBtn) rejectBtn.onclick = () => document.getElementById('reasonBox').classList.add('show');
+    const confirmBtn = document.getElementById('confirmReject');
+    if (confirmBtn) {
+      confirmBtn.onclick = () => {
+        const reason = document.getElementById('reasonText').value.trim();
+        if (!reason) { toast('La razon es requerida para rechazar', 'error'); return; }
+        changeStatus('rechazado', reason);
+      };
     }
   }
 
