@@ -693,8 +693,11 @@
     <div id="applySuccessWrap" style="display:none;text-align:center;padding:1rem 0;">
       <div style="font-size:3rem;margin-bottom:0.75rem;">✅</div>
       <h3 style="margin-bottom:0.5rem;">¡Aplicación enviada!</h3>
-      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">Nos pondremos en contacto contigo para coordinar los próximos pasos.</p>
-      <button class="modal-submit" onclick="closeApplyModal()">Cerrar</button>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">El broker se pondrá en contacto contigo. Puedes rastrear el progreso de tu aplicación en cualquier momento.</p>
+      <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+        <a id="applyTrackLink" href="/my-applications" style="display:none;background:var(--accent);color:#fff;font-weight:700;padding:0.65rem 1.4rem;border-radius:10px;text-decoration:none;font-size:0.92rem;">Rastrear mi aplicación →</a>
+        <button class="modal-submit" style="background:var(--bg-section);color:var(--text);" onclick="closeApplyModal()">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -987,28 +990,35 @@
     btn.disabled = true; btn.textContent = 'Enviando…';
 
     const listing = window._currentListing || {};
-    const agencies = (listing.agencies || []).map(a => ({ name: a.name, email: a.email }));
+    const token   = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+    const me      = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
 
-    fetch('/api/leads', {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch('/api/applications', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body:    JSON.stringify({
         listing_id:    listing.id    || '',
         listing_title: listing.title || document.title,
         listing_price: listing.price || '',
         listing_type:  listing.type  || '',
-        agencies,
+        user_id:       me?.id || null,
         name, phone, email, budget, timeline, intent,
-        financing, pre_approved, contact_method, notes
+        financing, pre_approved, contact_method, notes,
       })
     })
     .then(r => r.json())
     .then(data => {
       if (data.error) throw new Error(data.error);
+      window._lastAppId = data.id;
       document.getElementById('applyFormWrap').style.display    = 'none';
       document.getElementById('applySuccessWrap').style.display = 'block';
+      const trackLink = document.getElementById('applyTrackLink');
+      if (trackLink) trackLink.style.display = token ? 'inline-block' : 'none';
     })
-    .catch(err => { errEl.textContent = 'Error al enviar. Inténtalo de nuevo.'; })
+    .catch(err => { errEl.textContent = err.message || 'Error al enviar. Inténtalo de nuevo.'; })
     .finally(() => { btn.disabled = false; btn.textContent = 'Enviar Aplicación'; });
   }
 

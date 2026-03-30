@@ -40,13 +40,15 @@
     },
     "agencies": [
       {
-        "name": "Inmobiliaria Elite RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "María Fernández",
         "title": "Asesora Senior de Ventas",
-        "phone": "+1 (809) 765-4321",
+        "phone": "809-555-0001",
         "whatsapp": "18097654321",
-        "email": "mfernandez@eliterd.com.do",
-        "license": "MIREX-2019-004521"
+        "email": "broker@hogaresrd.com",
+        "license": "MIREX-2019-004521",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       },
       {
         "name": "Century 21 Dominicana",
@@ -202,11 +204,13 @@
     },
     "agencies": [
       {
-        "name": "Inmobiliaria Elite RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Patricia Morel",
         "title": "Directora de Propiedades Premium",
-        "phone": "+1 (809) 765-4321",
-        "email": "pmorel@eliterd.com.do"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       },
       {
         "name": "Sotheby's International Realty RD",
@@ -288,11 +292,13 @@
     ],
     "agencies": [
       {
-        "name": "Century 21 Dominicana",
+        "name": "HogaresRD Demo Agency",
         "agent": "Luisa Comprés",
         "title": "Agente de Alquileres",
-        "phone": "+1 (809) 472-2100",
-        "email": "lcompres@century21rd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [],
@@ -359,11 +365,13 @@
     ],
     "agencies": [
       {
-        "name": "RE/MAX Prestige RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Sandrine Leblanc",
         "title": "Especialista en Samaná",
-        "phone": "+1 (809) 240-6500",
-        "email": "sleblanc@remaxprestigerd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [],
@@ -472,11 +480,13 @@
     "units_available": 44,
     "agencies": [
       {
-        "name": "Inmobiliaria Elite RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Carlos Bautista",
         "title": "Asesor de Proyectos Turísticos",
-        "phone": "+1 (809) 765-4399",
-        "email": "cbautista@eliterd.com.do"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [
@@ -555,11 +565,13 @@
     ],
     "agencies": [
       {
-        "name": "Sotheby's International Realty RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Alejandro Henríquez",
         "title": "Senior Luxury Advisor",
-        "phone": "+1 (809) 333-7700",
-        "email": "ahenriquez@sothebysrd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [
@@ -620,11 +632,13 @@
     ],
     "agencies": [
       {
-        "name": "RE/MAX Prestige RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Michel Depestre",
         "title": "Especialista en Terrenos y Solares",
-        "phone": "+1 (809) 240-6510",
-        "email": "mdepestre@remaxprestigerd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [],
@@ -685,11 +699,13 @@
     ],
     "agencies": [
       {
-        "name": "Century 21 Dominicana",
+        "name": "HogaresRD Demo Agency",
         "agent": "Yolanda Fermín",
         "title": "Coordinadora de Alquileres — Santiago",
-        "phone": "+1 (809) 583-2100",
-        "email": "yfernin@century21rd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [],
@@ -755,11 +771,13 @@
     ],
     "agencies": [
       {
-        "name": "Inmobiliaria Elite RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Fernando Castillo",
         "title": "Asesor de Propiedades — Este",
-        "phone": "+1 (809) 813-5500",
-        "email": "fcastillo@eliterd.com.do"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [
@@ -879,11 +897,13 @@
     "units_available": 52,
     "agencies": [
       {
-        "name": "Century 21 Dominicana",
+        "name": "HogaresRD Demo Agency",
         "agent": "Ana María Santos",
         "title": "Coordinadora de Proyectos Nuevos",
-        "phone": "+1 (809) 472-2200",
-        "email": "amsantos@century21rd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       },
       {
         "name": "RE/MAX Prestige RD",
@@ -969,11 +989,13 @@
     ],
     "agencies": [
       {
-        "name": "Sotheby's International Realty RD",
+        "name": "HogaresRD Demo Agency",
         "agent": "Nicole Martínez",
         "title": "Vacation Rental Specialist",
-        "phone": "+1 (809) 333-7750",
-        "email": "nmartinez@sothebysrd.com"
+        "phone": "809-555-0001",
+        "email": "broker@hogaresrd.com",
+        "user_id": "usr_broker_demo_001",
+        "contact": "Demo Broker"
       }
     ],
     "blueprints": [],
