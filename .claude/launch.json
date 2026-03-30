@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "HogaresRD Mobile Web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
+      "port": 8081,
+      "cwd": "/Users/neverknowsbest/Documents/HogaresRD WebPage/mobile"
     }
   ]
 }
