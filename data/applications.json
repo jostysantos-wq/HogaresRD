@@ -1,1 +1,1279 @@
-[]
+[
+  {
+    "id": "app_demo_001",
+    "listing_id": "proj_torre_sole_001",
+    "listing_title": "Torre Solé — Proyecto Residencial de Lujo en Piantini",
+    "listing_price": "85000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "aplicado",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": false,
+    "budget": "90000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Me interesa el piso 8 o superior con vista a la ciudad. Tengo pre-cualificación bancaria pendiente.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "380a2bbc-717a-4fca-9475-72dae004be49",
+        "app_id": "app_demo_001",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-28T10:13:24.236Z"
+      }
+    ],
+    "created_at": "2026-03-28T10:13:24.235Z",
+    "updated_at": "2026-03-28T10:13:24.236Z"
+  },
+  {
+    "id": "app_demo_002",
+    "listing_id": "seed_villa_capcana_002",
+    "listing_title": "Villa Privada con Piscina en Cap Cana — Frente al Mar",
+    "listing_price": "1850000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "en_revision",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": true,
+    "budget": "2000000",
+    "timeline": "1-3 meses",
+    "intent": "comprar",
+    "contact_method": "llamada",
+    "notes": "Pago de contado. Busco cerrar antes de junio.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "fb7d48a2-7304-40c1-bb78-50011de73241",
+        "app_id": "app_demo_002",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-25T10:13:24.236Z"
+      },
+      {
+        "id": "317f235d-597e-4b29-96a7-96b3f41897b0",
+        "app_id": "app_demo_002",
+        "type": "status_change",
+        "description": "Aplicación en revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-26T10:13:24.236Z"
+      },
+      {
+        "id": "38d5891b-d7ef-4004-bc29-a6901e43700c",
+        "app_id": "app_demo_002",
+        "type": "message",
+        "description": "Excelente propiedad. Estamos revisando su solicitud y nos pondremos en contacto pronto.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-26T10:13:24.236Z"
+      }
+    ],
+    "created_at": "2026-03-25T10:13:24.236Z",
+    "updated_at": "2026-03-26T10:13:24.236Z"
+  },
+  {
+    "id": "app_demo_003",
+    "listing_id": "seed_casa_terrenas_004",
+    "listing_title": "Casa Dominicana con Jardín Tropical en Las Terrenas",
+    "listing_price": "320000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "documentos_requeridos",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "340000",
+    "timeline": "6-12 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Segunda vivienda. Tengo pre-aprobación del Banco Popular.",
+    "documents_requested": [
+      {
+        "id": "6a676ae8-a4d9-4a9d-abc9-8d07512df98f",
+        "type": "cedula",
+        "label": "Cédula de Identidad",
+        "required": true,
+        "requested_at": "2026-03-27T10:13:24.237Z"
+      },
+      {
+        "id": "cacefba2-742e-4114-bf00-2ffb382d9ee2",
+        "type": "income_proof",
+        "label": "Comprobante de Ingresos",
+        "required": true,
+        "requested_at": "2026-03-27T10:13:24.237Z"
+      },
+      {
+        "id": "ea35b5a9-dcb2-4bf1-8b71-f1dae027d3da",
+        "type": "bank_statement",
+        "label": "Estado de Cuenta Bancario (últimos 3 meses)",
+        "required": true,
+        "requested_at": "2026-03-27T10:13:24.237Z"
+      }
+    ],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "2ef0867d-ea48-4dd5-b5b2-7eb4e7412cdc",
+        "app_id": "app_demo_003",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-22T10:13:24.237Z"
+      },
+      {
+        "id": "3566dfba-e1c4-4830-8a3f-a2c7313d25aa",
+        "app_id": "app_demo_003",
+        "type": "status_change",
+        "description": "Aplicación en revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-23T10:13:24.237Z"
+      },
+      {
+        "id": "2bf51107-c643-42e7-ae3c-3ea0fdb5b519",
+        "app_id": "app_demo_003",
+        "type": "document_request",
+        "description": "Se solicitaron 3 documentos al cliente",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "count": 3
+        },
+        "created_at": "2026-03-27T10:13:24.237Z"
+      },
+      {
+        "id": "ca329a89-444a-45c1-a337-ba79ac655bbf",
+        "app_id": "app_demo_003",
+        "type": "status_change",
+        "description": "Se requieren documentos del cliente",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "documentos_requeridos"
+        },
+        "created_at": "2026-03-27T10:13:24.237Z"
+      },
+      {
+        "id": "2400d321-97be-49ce-ad04-3ac44b20579a",
+        "app_id": "app_demo_003",
+        "type": "message",
+        "description": "Hola Carlos, para continuar con su aplicación necesitamos que nos envíe los documentos solicitados a la brevedad posible.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-27T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-03-22T10:13:24.237Z",
+    "updated_at": "2026-03-27T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_004",
+    "listing_id": "seed_penthouse_evaristo_006",
+    "listing_title": "Penthouse 4BR con Rooftop Privado — Torre Evaristo",
+    "listing_price": "1200000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "documentos_enviados",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "1250000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "email",
+    "notes": "Penthouse ideal para familia. Tengo carta de pre-aprobación del ScotiaBank.",
+    "documents_requested": [
+      {
+        "id": "c7bc7355-1976-4f8e-a523-ee37d35a95cb",
+        "type": "cedula",
+        "label": "Cédula de Identidad",
+        "required": true,
+        "requested_at": "2026-03-24T10:13:24.237Z"
+      },
+      {
+        "id": "cdec7315-1352-40dd-8ec9-6d9baf133b35",
+        "type": "pre_approval",
+        "label": "Carta de Pre-Aprobación Bancaria",
+        "required": true,
+        "requested_at": "2026-03-24T10:13:24.237Z"
+      }
+    ],
+    "documents_uploaded": [
+      {
+        "id": "1104c72e-23e9-4922-84f9-86e4bc2a5097",
+        "request_id": "c7bc7355-1976-4f8e-a523-ee37d35a95cb",
+        "type": "cedula",
+        "original_name": "cedula-carlos-mendez.pdf",
+        "filename": "doc_demo_cedula.pdf",
+        "path": "data/documents/doc_demo_cedula.pdf",
+        "size": 245000,
+        "uploaded_at": "2026-03-28T10:13:24.237Z",
+        "review_status": "approved",
+        "review_note": "Documento válido."
+      }
+    ],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "73b45674-8f10-4d27-892e-2b0eb6b0627d",
+        "app_id": "app_demo_004",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-18T10:13:24.237Z"
+      },
+      {
+        "id": "c8420c61-fc0c-482f-bc49-6ae96c5ff42f",
+        "app_id": "app_demo_004",
+        "type": "status_change",
+        "description": "Aplicación en revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-19T10:13:24.237Z"
+      },
+      {
+        "id": "41588bb1-77df-4e2b-a174-b018bbb6d428",
+        "app_id": "app_demo_004",
+        "type": "document_request",
+        "description": "Se solicitaron 2 documentos",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "count": 2
+        },
+        "created_at": "2026-03-24T10:13:24.237Z"
+      },
+      {
+        "id": "2f0e22ad-0dff-4d14-88fc-a849703a4d19",
+        "app_id": "app_demo_004",
+        "type": "status_change",
+        "description": "Se requieren documentos",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "documentos_requeridos"
+        },
+        "created_at": "2026-03-24T10:13:24.237Z"
+      },
+      {
+        "id": "bda2aa71-1c91-4625-a224-01ec3319706e",
+        "app_id": "app_demo_004",
+        "type": "document_upload",
+        "description": "Cliente subió: cedula-carlos-mendez.pdf",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {
+          "doc_type": "cedula"
+        },
+        "created_at": "2026-03-28T10:13:24.237Z"
+      },
+      {
+        "id": "5c0de16e-e662-4965-b7a5-f4ab33fdc684",
+        "app_id": "app_demo_004",
+        "type": "status_change",
+        "description": "Documentos enviados por el cliente",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": "documentos_requeridos",
+          "to": "documentos_enviados"
+        },
+        "created_at": "2026-03-28T10:13:24.237Z"
+      },
+      {
+        "id": "960ebcd3-8110-4883-9b11-82477d4507bb",
+        "app_id": "app_demo_004",
+        "type": "document_review",
+        "description": "Cédula aprobada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "doc_type": "cedula",
+          "status": "approved"
+        },
+        "created_at": "2026-03-29T10:13:24.237Z"
+      },
+      {
+        "id": "2250dd17-2ab1-4906-9c51-08f737473a35",
+        "app_id": "app_demo_004",
+        "type": "message",
+        "description": "Gracias por su cédula. Aún falta la carta de pre-aprobación bancaria para continuar.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-29T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-03-18T10:13:24.237Z",
+    "updated_at": "2026-03-28T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_005",
+    "listing_id": "seed_proyecto_coralheights_010",
+    "listing_title": "Coral Heights Residences — Nueva Construcción en Las Terrenas",
+    "listing_price": "110000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "en_aprobacion",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "120000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Inversión para alquiler vacacional.",
+    "documents_requested": [
+      {
+        "id": "6561dd8f-c20b-42fb-81a6-3a39abef4045",
+        "type": "cedula",
+        "label": "Cédula de Identidad",
+        "required": true,
+        "requested_at": "2026-03-15T10:13:24.237Z"
+      }
+    ],
+    "documents_uploaded": [
+      {
+        "id": "5557faae-61c6-4de4-bc77-78314c8c0266",
+        "request_id": "6561dd8f-c20b-42fb-81a6-3a39abef4045",
+        "type": "cedula",
+        "original_name": "cedula.pdf",
+        "filename": "doc_demo_cedula2.pdf",
+        "path": "data/documents/doc_demo_cedula2.pdf",
+        "size": 312000,
+        "uploaded_at": "2026-03-17T10:13:24.237Z",
+        "review_status": "approved",
+        "review_note": ""
+      },
+      {
+        "id": "6facfb08-f37b-4e06-96fd-ad856aaf93f3",
+        "request_id": null,
+        "type": "income_proof",
+        "original_name": "ingresos-2025.pdf",
+        "filename": "doc_demo_ingresos.pdf",
+        "path": "data/documents/doc_demo_ingresos.pdf",
+        "size": 890000,
+        "uploaded_at": "2026-03-17T10:13:24.237Z",
+        "review_status": "approved",
+        "review_note": "Ingresos suficientes para calificar."
+      }
+    ],
+    "tours": [
+      {
+        "id": "a7f100f3-796d-4397-8651-34157f381512",
+        "scheduled_date": "2026-04-02",
+        "scheduled_time": "10:00",
+        "location": "Torre Coral Heights — Lobby Principal, Las Terrenas",
+        "notes": "Solicite al guardia por Demo Broker",
+        "status": "scheduled",
+        "created_at": "2026-03-28T10:13:24.237Z"
+      }
+    ],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "c373122b-0b0c-483f-a024-b2763547f769",
+        "app_id": "app_demo_005",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-12T10:13:24.237Z"
+      },
+      {
+        "id": "57a15de5-445a-4528-bdd7-1dc395f241cf",
+        "app_id": "app_demo_005",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-13T10:13:24.237Z"
+      },
+      {
+        "id": "9e16c1a9-325a-45c9-aa20-0b209ea535b9",
+        "app_id": "app_demo_005",
+        "type": "document_request",
+        "description": "Se solicitó la cédula",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "count": 1
+        },
+        "created_at": "2026-03-15T10:13:24.237Z"
+      },
+      {
+        "id": "e7a26cb1-952f-42e0-9255-4155c7b581b7",
+        "app_id": "app_demo_005",
+        "type": "document_upload",
+        "description": "Cliente subió: cedula.pdf",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {
+          "doc_type": "cedula"
+        },
+        "created_at": "2026-03-17T10:13:24.237Z"
+      },
+      {
+        "id": "0353ab90-0986-435d-af42-b832ca40599b",
+        "app_id": "app_demo_005",
+        "type": "document_upload",
+        "description": "Cliente subió: ingresos-2025.pdf",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {
+          "doc_type": "income_proof"
+        },
+        "created_at": "2026-03-17T10:13:24.237Z"
+      },
+      {
+        "id": "3d8f2eb3-2c9b-4813-bb5e-40895b9333dd",
+        "app_id": "app_demo_005",
+        "type": "status_change",
+        "description": "Documentos enviados",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": "documentos_requeridos",
+          "to": "documentos_enviados"
+        },
+        "created_at": "2026-03-17T10:13:24.237Z"
+      },
+      {
+        "id": "245993dd-9b8e-4009-8898-89845f044528",
+        "app_id": "app_demo_005",
+        "type": "document_review",
+        "description": "Cédula aprobada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "status": "approved"
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "cdc8f434-d322-4527-aba0-7a4b9cd9157b",
+        "app_id": "app_demo_005",
+        "type": "document_review",
+        "description": "Comprobante de ingresos aprobado",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "status": "approved",
+          "note": "Ingresos suficientes para calificar."
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "cf27c9ee-7535-4898-9654-6a287964e365",
+        "app_id": "app_demo_005",
+        "type": "status_change",
+        "description": "En proceso de aprobación final",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "documentos_enviados",
+          "to": "en_aprobacion"
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "fb1ad4b5-6416-448e-a456-ed494685a010",
+        "app_id": "app_demo_005",
+        "type": "tour_scheduled",
+        "description": "Tour programado para 2026-04-02 a las 10:00",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "date": "2026-04-02",
+          "time": "10:00"
+        },
+        "created_at": "2026-03-28T10:13:24.237Z"
+      },
+      {
+        "id": "4db38074-d013-4db8-8adf-ae6775db3df4",
+        "app_id": "app_demo_005",
+        "type": "message",
+        "description": "Hola Carlos, hemos programado un tour para el 2026-04-02 a las 10:00am en Coral Heights. Por favor confirme asistencia.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-28T10:13:24.237Z"
+      },
+      {
+        "id": "1a64d3d5-6704-491a-9306-bf5d0c712032",
+        "app_id": "app_demo_005",
+        "type": "message",
+        "description": "Confirmado, allí estaré. Muchas gracias.",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {},
+        "created_at": "2026-03-29T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-03-12T10:13:24.237Z",
+    "updated_at": "2026-03-28T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_006",
+    "listing_id": "seed_proyecto_playadorada_005",
+    "listing_title": "Residencial Playa Dorada Suites — Proyecto en Plano",
+    "listing_price": "95000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "pendiente_pago",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "100000",
+    "timeline": "1-3 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Pago de contado. Listo para proceder.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [
+      {
+        "id": "64f24c0e-2acb-42a3-b321-df0f1bac37b7",
+        "scheduled_date": "2026-03-23",
+        "scheduled_time": "11:00",
+        "location": "Playa Dorada, Puerto Plata",
+        "notes": "",
+        "status": "completed",
+        "created_at": "2026-03-20T10:13:24.237Z"
+      }
+    ],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "c53c34ae-5aa6-43d7-a663-4459a601c578",
+        "app_id": "app_demo_006",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-05T10:13:24.237Z"
+      },
+      {
+        "id": "7d9e3280-580b-41b7-9d42-c68509862c82",
+        "app_id": "app_demo_006",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-06T10:13:24.237Z"
+      },
+      {
+        "id": "6139885c-1564-4d01-ab66-4ed68fb76558",
+        "app_id": "app_demo_006",
+        "type": "status_change",
+        "description": "En proceso de aprobación",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "en_aprobacion"
+        },
+        "created_at": "2026-03-15T10:13:24.237Z"
+      },
+      {
+        "id": "6b338dd1-d624-4618-ae6e-6c9885443812",
+        "app_id": "app_demo_006",
+        "type": "tour_scheduled",
+        "description": "Tour programado en Playa Dorada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "b7c8ab86-c888-4370-a65a-fbe50acc859d",
+        "app_id": "app_demo_006",
+        "type": "tour_update",
+        "description": "Tour completado exitosamente",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "status": "completed"
+        },
+        "created_at": "2026-03-23T10:13:24.237Z"
+      },
+      {
+        "id": "97f55e66-3d64-467e-9789-3b6189dbf63e",
+        "app_id": "app_demo_006",
+        "type": "status_change",
+        "description": "Aplicación aprobada — propiedad reservada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_aprobacion",
+          "to": "aprobado"
+        },
+        "created_at": "2026-03-23T10:13:24.237Z"
+      },
+      {
+        "id": "fd038f45-9c09-4b7b-b935-57de0448906d",
+        "app_id": "app_demo_006",
+        "type": "status_change",
+        "description": "Pendiente de pago — proceda con la transferencia",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aprobado",
+          "to": "pendiente_pago"
+        },
+        "created_at": "2026-03-25T10:13:24.237Z"
+      },
+      {
+        "id": "e358c01e-5901-4f87-aad2-42bc012364dc",
+        "app_id": "app_demo_006",
+        "type": "message",
+        "description": "¡Felicidades Carlos! Su aplicación fue aprobada. Por favor realice una transferencia por $95,000 USD a la cuenta indicada y suba el comprobante.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-25T10:13:24.237Z"
+      },
+      {
+        "id": "4a263368-32d6-4600-904f-8f62e7a9fa0e",
+        "app_id": "app_demo_006",
+        "type": "message",
+        "description": "Excelente noticia! Procederé con el pago esta semana.",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {},
+        "created_at": "2026-03-26T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-03-05T10:13:24.237Z",
+    "updated_at": "2026-03-25T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_007",
+    "listing_id": "seed_casa_romana_009",
+    "listing_title": "Casa Remodelada con Piscina — La Romana, Sector Residencial",
+    "listing_price": "450000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "pago_enviado",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "480000",
+    "timeline": "1-3 meses",
+    "intent": "comprar",
+    "contact_method": "llamada",
+    "notes": "",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": 450000,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": "2026-03-29T10:13:24.237Z",
+      "verification_status": "pending",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": "Transferencia desde BHD León cuenta #4521-XXXX-XXXX"
+    },
+    "timeline_events": [
+      {
+        "id": "18de5734-4dec-4284-9214-17a2c0e6b3f3",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-02-28T10:13:24.237Z"
+      },
+      {
+        "id": "4406e94a-a069-4366-b5f6-38e807aca580",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-01T10:13:24.237Z"
+      },
+      {
+        "id": "c2b3552a-dea1-4177-8f57-30aeaa3a4219",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "En aprobación",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "en_aprobacion"
+        },
+        "created_at": "2026-03-10T10:13:24.237Z"
+      },
+      {
+        "id": "e4863d95-c242-4590-8d1e-09af5350c585",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "Aprobado",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_aprobacion",
+          "to": "aprobado"
+        },
+        "created_at": "2026-03-15T10:13:24.237Z"
+      },
+      {
+        "id": "47febee8-ecd0-46c1-9444-58dcc6286101",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "Pendiente de pago",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aprobado",
+          "to": "pendiente_pago"
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "1390d8f2-f454-4808-ab6e-1aa91a73d687",
+        "app_id": "app_demo_007",
+        "type": "payment_uploaded",
+        "description": "Cliente subió comprobante de pago por $450,000 USD",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {
+          "amount": 450000
+        },
+        "created_at": "2026-03-29T10:13:24.237Z"
+      },
+      {
+        "id": "43af0443-9b02-41ac-bb2c-0d3f914c3e86",
+        "app_id": "app_demo_007",
+        "type": "status_change",
+        "description": "Pago enviado — en verificación",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": "pendiente_pago",
+          "to": "pago_enviado"
+        },
+        "created_at": "2026-03-29T10:13:24.237Z"
+      },
+      {
+        "id": "d249ac03-d333-4362-89da-233905b64905",
+        "app_id": "app_demo_007",
+        "type": "message",
+        "description": "Adjunto comprobante de transferencia desde BHD León. Referencia: TRF-2026-03-29-001.",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {},
+        "created_at": "2026-03-29T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-02-28T10:13:24.237Z",
+    "updated_at": "2026-03-29T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_008",
+    "listing_id": "seed_solar_samana_007",
+    "listing_title": "Solar con Vista al Mar en Las Galeras — Samaná",
+    "listing_price": "180000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "completado",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "200000",
+    "timeline": "1-3 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": 180000,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": "2026-03-20T10:13:24.237Z",
+      "verification_status": "approved",
+      "verified_at": "2026-03-21T10:13:24.237Z",
+      "verified_by": "Demo Broker",
+      "notes": "Pago verificado. Transferencia confirmada por banco."
+    },
+    "timeline_events": [
+      {
+        "id": "6940ec23-1f26-44e9-8a75-822f4f6760ae",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-02-13T10:13:24.237Z"
+      },
+      {
+        "id": "f3e1c7b2-1afb-4e56-9bb7-3a6b04827cef",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-02-14T10:13:24.237Z"
+      },
+      {
+        "id": "d9992ede-4cc0-473a-8d44-158526bc6a5d",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "En aprobación",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "en_aprobacion"
+        },
+        "created_at": "2026-02-23T10:13:24.237Z"
+      },
+      {
+        "id": "31d3bd7f-7b87-43af-bfe7-9f5f663342dd",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "Aprobado",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_aprobacion",
+          "to": "aprobado"
+        },
+        "created_at": "2026-03-05T10:13:24.237Z"
+      },
+      {
+        "id": "edc7669e-6548-4571-bde1-a97cd768c87a",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "Pendiente de pago",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aprobado",
+          "to": "pendiente_pago"
+        },
+        "created_at": "2026-03-15T10:13:24.237Z"
+      },
+      {
+        "id": "0bc2e0a9-bbfe-4e36-bb97-82be89edeb65",
+        "app_id": "app_demo_008",
+        "type": "payment_uploaded",
+        "description": "Cliente subió comprobante de pago por $180,000 USD",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {
+          "amount": 180000
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "6c207970-a448-4d7f-97ff-0507a817fd47",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "Pago enviado — en verificación",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": "pendiente_pago",
+          "to": "pago_enviado"
+        },
+        "created_at": "2026-03-20T10:13:24.237Z"
+      },
+      {
+        "id": "e2bd42e1-207e-4608-af45-f0c57fbb6ac6",
+        "app_id": "app_demo_008",
+        "type": "payment_verified",
+        "description": "Pago verificado y aprobado",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "approved": true
+        },
+        "created_at": "2026-03-21T10:13:24.237Z"
+      },
+      {
+        "id": "8246f7c2-34fd-4da1-8682-d16c953d25f1",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "Pago aprobado — transacción completada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "pago_enviado",
+          "to": "pago_aprobado"
+        },
+        "created_at": "2026-03-21T10:13:24.237Z"
+      },
+      {
+        "id": "52628155-aca1-42e4-b9fe-ac29a3ab6a01",
+        "app_id": "app_demo_008",
+        "type": "status_change",
+        "description": "¡Venta completada exitosamente!",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "pago_aprobado",
+          "to": "completado"
+        },
+        "created_at": "2026-03-21T10:13:24.237Z"
+      },
+      {
+        "id": "bf245685-f665-4d40-9e38-8276f63b34f0",
+        "app_id": "app_demo_008",
+        "type": "message",
+        "description": "¡Felicidades Carlos! La venta se ha completado exitosamente. En breve recibirá los documentos de cierre. ¡Bienvenido a su nueva propiedad!",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-21T10:13:24.237Z"
+      },
+      {
+        "id": "a8421066-86e6-4a2a-9cfb-6449d3e3bbe1",
+        "app_id": "app_demo_008",
+        "type": "message",
+        "description": "¡Muchas gracias! Fue un placer trabajar con ustedes.",
+        "actor": "client",
+        "actor_name": "Carlos Méndez",
+        "data": {},
+        "created_at": "2026-03-22T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-02-13T10:13:24.237Z",
+    "updated_at": "2026-03-21T10:13:24.237Z"
+  },
+  {
+    "id": "app_demo_009",
+    "listing_id": "seed_apto_alquiler_naco_003",
+    "listing_title": "Apartamento Amueblado 2BR en Naco — Listo para Mudarse",
+    "listing_price": "1200",
+    "listing_type": "alquiler",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_demo_001",
+      "name": "Demo Broker",
+      "agency_name": "HogaresRD Demo Agency",
+      "email": "broker@hogaresrd.com",
+      "phone": "809-555-0001"
+    },
+    "status": "rechazado",
+    "status_reason": "El solicitante no cumplió con los requisitos de ingresos mínimos para el alquiler. Se requiere demostrar ingresos 3x el valor del alquiler.",
+    "financing": "ninguno",
+    "pre_approved": false,
+    "budget": "1200",
+    "timeline": "inmediato",
+    "intent": "alquilar",
+    "contact_method": "whatsapp",
+    "notes": "",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "ad4f7be0-392a-4ea1-a8d8-1ec2071ca6e8",
+        "app_id": "app_demo_009",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-10T10:13:24.237Z"
+      },
+      {
+        "id": "b234f296-4fbc-47e8-bd9b-fe8a4d01542d",
+        "app_id": "app_demo_009",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "aplicado",
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-11T10:13:24.237Z"
+      },
+      {
+        "id": "783d8d62-0860-48c8-adf9-124d1171a7c4",
+        "app_id": "app_demo_009",
+        "type": "status_change",
+        "description": "Aplicación rechazada",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {
+          "from": "en_revision",
+          "to": "rechazado",
+          "reason": "El solicitante no cumplió con los requisitos de ingresos mínimos para el alquiler. Se requiere demostrar ingresos 3x el valor del alquiler."
+        },
+        "created_at": "2026-03-15T10:13:24.237Z"
+      },
+      {
+        "id": "00586245-b4ab-4033-b8f1-6a63bbc2c522",
+        "app_id": "app_demo_009",
+        "type": "message",
+        "description": "Lamentablemente su aplicación no fue aprobada. El requisito mínimo es demostrar ingresos 3x el valor mensual del alquiler ($3,600/mes). Si sus ingresos aumentan en el futuro, puede volver a aplicar.",
+        "actor": "broker",
+        "actor_name": "Demo Broker",
+        "data": {},
+        "created_at": "2026-03-15T10:13:24.237Z"
+      }
+    ],
+    "created_at": "2026-03-10T10:13:24.237Z",
+    "updated_at": "2026-03-15T10:13:24.237Z"
+  }
+]
