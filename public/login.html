@@ -112,11 +112,16 @@
       localStorage.setItem('theme', next);
     }
 
-    // Redirect if already logged in
-    redirectIfAuth();
-
     // Check for registered=1 param
     const params = new URLSearchParams(window.location.search);
+
+    // Force-clear session if ?logout=1 is present
+    if (params.get('logout') === '1') {
+      ['hogaresrd_token', 'hogaresrd_user', 'token'].forEach(k => localStorage.removeItem(k));
+    } else {
+      // Redirect if already logged in
+      redirectIfAuth();
+    }
     if (params.get('registered') === '1') {
       const msg = document.getElementById('errorMsg');
       msg.style.color = 'var(--accent)';

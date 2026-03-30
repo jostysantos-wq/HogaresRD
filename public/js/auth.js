@@ -26,11 +26,15 @@ function authHeaders() {
     : { 'Content-Type': 'application/json' };
 }
 
-function _clearToken() { localStorage.removeItem(AUTH_KEY); }
+function _clearToken() {
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem('hogaresrd_user');
+  localStorage.removeItem('token');
+}
 
 function logout() {
   _clearToken();
-  window.location.href = '/home';
+  window.location.href = '/login?logout=1';
 }
 
 // Redirect to /login if not authenticated
