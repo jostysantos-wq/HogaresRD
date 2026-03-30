@@ -375,6 +375,39 @@
     .timeline-input { display: flex; gap: 0.5rem; margin-top: 1rem; }
     .timeline-input input { flex: 1; }
 
+    /* ── AUDIT LOG (enhanced timeline) ───────────────────────── */
+    .tl-section { margin-bottom: 1.25rem; }
+    .tl-section-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.65rem; }
+    .tl-section-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+    .tl-readonly-badge { display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-section); border: 1px solid var(--border); border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.58rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; }
+    .tl-readonly-badge svg { width: 8px; height: 8px; fill: currentColor; }
+    .tl-entry { display: flex; gap: 0.65rem; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); }
+    .tl-entry:last-child { border-bottom: none; }
+    .tl-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .tl-dot svg { width: 12px; height: 12px; fill: currentColor; }
+    .tl-dot.ev-status   { background: #EFF6FF; color: var(--accent); }
+    .tl-dot.ev-checklist_complete { background: #F0FDF4; color: var(--green); }
+    .tl-dot.ev-checklist_check   { background: var(--bg-section); color: #6B7280; }
+    .tl-dot.ev-document { background: #FFFBEB; color: var(--orange); }
+    .tl-dot.ev-payment  { background: #F5F3FF; color: var(--purple); }
+    .tl-dot.ev-tour     { background: #ECFDF5; color: #059669; }
+    .tl-dot.ev-message  { background: var(--bg-section); color: var(--text-muted); }
+    .tl-dot.ev-default  { background: var(--bg-section); color: var(--text-muted); }
+    .tl-body { flex: 1; min-width: 0; }
+    .tl-desc { font-size: 0.84rem; font-weight: 500; line-height: 1.4; }
+    .tl-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .tl-actor { font-weight: 600; color: var(--text); }
+    .tl-type { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.1rem 0.4rem; border-radius: 4px; }
+    .tl-type.ev-status   { background: #EFF6FF; color: var(--accent); }
+    .tl-type.ev-checklist_complete { background: #F0FDF4; color: var(--green); }
+    .tl-type.ev-checklist_check   { background: var(--bg-section); color: #6B7280; }
+    .tl-type.ev-document { background: #FFFBEB; color: var(--orange); }
+    .tl-type.ev-payment  { background: #F5F3FF; color: var(--purple); }
+    .tl-type.ev-tour     { background: #ECFDF5; color: #059669; }
+    .tl-note-input { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .tl-note-input input { flex: 1; padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
+    .tl-note-input input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
     /* ── EMPTY STATE ──────────────────────────────────────────── */
     .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
     .empty-state svg { width: 48px; height: 48px; fill: var(--text-muted); opacity: 0.3; margin-bottom: 0.75rem; }
@@ -795,10 +828,12 @@
       <select id="auditTypeFilter">
         <option value="">Todos los eventos</option>
         <option value="status_change">Cambio de Estado</option>
+        <option value="checklist_complete">Checklist Completado</option>
+        <option value="checklist_check">Item de Checklist</option>
         <option value="document">Documento</option>
         <option value="tour">Tour</option>
         <option value="payment">Pago</option>
-        <option value="message">Mensaje</option>
+        <option value="message">Nota</option>
       </select>
       <input type="date" id="auditDateFrom" title="Desde">
       <input type="date" id="auditDateTo" title="Hasta">
@@ -1587,10 +1622,30 @@
         let cur = [];
         try { cur = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
         const id = item.dataset.item;
-        cur = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+        const wasChecked = cur.includes(id);
+        cur = wasChecked ? cur.filter(x => x !== id) : [...cur, id];
         localStorage.setItem(storeKey, JSON.stringify(cur));
+
+        // Persist to audit log (fire-and-forget — only on check, not uncheck)
+        if (!wasChecked) {
+          const clItem = checklist.find(cl => cl.id === id);
+          if (clItem) {
+            API(`/api/applications/${appId}/checklist-event`, {
+              method: 'POST',
+              body: { item_id: id, item_label: clItem.label, stage: a.status }
+            }).catch(() => {});
+          }
+        }
+
         const allDone = checklist.every(cl => cur.includes(cl.id));
-        if (allDone && checklist.length > 0) toast('¡Checklist completo! Puedes avanzar la aplicacion');
+        if (allDone && checklist.length > 0) {
+          toast('¡Checklist completo! Puedes avanzar la aplicacion');
+          // Log stage-complete audit event
+          API(`/api/applications/${appId}/checklist-event`, {
+            method: 'POST',
+            body: { stage: a.status, stage_complete: true }
+          }).catch(() => {});
+        }
         renderEstado(a);
       };
     });
@@ -1862,35 +1917,70 @@
     } catch(e) { toast(e.message, 'error'); }
   }
 
-  // ── Timeline Tab ───────────────────────────────────────────
-  function renderTimeline(a) {
-    const events = a.timeline_events || a.timeline || [];
-    const pane = document.getElementById('pane-timeline');
+  // ── Timeline / Audit Log Tab ───────────────────────────────
+  const TL_ICONS = {
+    status_change:      '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+    checklist_complete: '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+    checklist_check:    '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+    document:           '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
+    tour:               '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+    payment:            '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>',
+    message:            '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>',
+  };
+  const TL_TYPE_LABELS = {
+    status_change:'Estado', checklist_complete:'Checklist OK', checklist_check:'Paso',
+    document:'Documento', tour:'Tour', payment:'Pago', message:'Nota',
+  };
 
-    const iconMap = {
-      status_change: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
-      document: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
-      tour: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
-      payment: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>',
-      message: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>',
-      default: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
-    };
+  function tlDotClass(type) {
+    const known = ['status_change','checklist_complete','checklist_check','document','payment','tour','message'];
+    return 'tl-dot ev-' + (known.includes(type) ? type : 'default');
+  }
+
+  function renderTimeline(a) {
+    const all    = [...(a.timeline_events || a.timeline || [])].reverse(); // newest first
+    const audit  = all.filter(e => e.type !== 'message');
+    const notes  = all.filter(e => e.type === 'message');
+    const pane   = document.getElementById('pane-timeline');
+
+    const tlRow = (ev) => `
+      <div class="tl-entry">
+        <div class="${tlDotClass(ev.type)}" title="${TL_TYPE_LABELS[ev.type]||ev.type}">
+          ${TL_ICONS[ev.type] || TL_ICONS.message}
+        </div>
+        <div class="tl-body">
+          <div class="tl-desc">${esc(ev.description || ev.message || ev.text || '--')}</div>
+          <div class="tl-meta">
+            <span class="tl-actor">${esc(ev.actor_name || 'Sistema')}</span>
+            <span>·</span> ${fmtDateTime(ev.created_at || ev.date)}
+            <span class="tl-type ev-${ev.type}">${TL_TYPE_LABELS[ev.type]||ev.type}</span>
+          </div>
+        </div>
+      </div>`;
 
     pane.innerHTML = `
-      <div class="timeline">
-        ${events.length ? events.map(ev => `
-          <div class="timeline-item">
-            <div class="timeline-icon">${iconMap[ev.type] || iconMap.default}</div>
-            <div class="timeline-body">
-              <div class="timeline-desc">${esc(ev.description || ev.message || ev.text || '--')}</div>
-              <div class="timeline-meta">${esc(ev.actor_name || ev.actor || '')} &middot; ${fmtDateTime(ev.date || ev.created_at || ev.createdAt)}</div>
-            </div>
-          </div>
-        `).join('') : '<div class="empty-state"><p>No hay eventos en el timeline.</p></div>'}
+      <!-- Audit trail -->
+      <div class="tl-section">
+        <div class="tl-section-head">
+          <span class="tl-section-label">Registro de Auditoria</span>
+          <span class="tl-readonly-badge">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Solo lectura
+          </span>
+        </div>
+        ${audit.length
+          ? audit.map(tlRow).join('')
+          : '<div class="empty-state" style="padding:0.75rem 0"><p>Sin actividad registrada aun.</p></div>'}
       </div>
-      <div class="timeline-input">
-        <input type="text" id="timelineMsg" placeholder="Agregar una nota..." class="form-group" style="margin:0;padding:0.55rem 0.75rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.88rem;background:var(--bg-card);color:var(--text);">
-        <button class="btn btn-primary" id="sendMsgBtn">Enviar</button>
+
+      <!-- Notes -->
+      <div class="tl-section">
+        <div class="tl-section-head"><span class="tl-section-label">Notas del Broker</span></div>
+        ${notes.map(tlRow).join('')}
+        <div class="tl-note-input">
+          <input type="text" id="timelineMsg" placeholder="Escribir una nota interna..." />
+          <button class="btn btn-primary" id="sendMsgBtn">Enviar</button>
+        </div>
       </div>
     `;
 
@@ -1907,8 +1997,6 @@
         renderTimeline(currentApp);
       } catch(e) { toast(e.message, 'error'); }
     };
-
-    // Enter key
     document.getElementById('timelineMsg').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('sendMsgBtn').click();
     });
@@ -2389,28 +2477,72 @@
       const total = data.total || events.length;
       const totalPages = data.totalPages || Math.ceil(total / 25) || 1;
 
-      const iconMap = {
-        status_change: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
-        document: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
-        tour: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>',
-        payment: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>',
-        message: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>'
+      const AUDIT_ICONS = {
+        status_change:       '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+        checklist_complete:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+        checklist_check:     '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+        document:            '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
+        tour:                '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+        payment:             '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>',
+        message:             '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>',
       };
-      const defaultIcon = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+      const AUDIT_TYPE_LABELS = {
+        status_change: 'Estado', checklist_complete: 'Checklist', checklist_check: 'Paso',
+        document: 'Documento', tour: 'Tour', payment: 'Pago', message: 'Nota',
+      };
+      const defaultIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
 
-      if (events.length) {
-        listEl.innerHTML = events.map(ev => `
-          <div class="audit-item">
-            <div class="audit-icon">${iconMap[ev.type] || defaultIcon}</div>
-            <div class="audit-body">
-              <div class="audit-desc">${esc(ev.description || ev.message || ev.text || '--')}</div>
-              <div class="audit-meta">
-                ${esc(ev.actor_name || ev.actor || 'Sistema')} &middot; ${fmtDateTime(ev.date || ev.created_at || ev.createdAt)}
-                ${ev.application_id ? ` &middot; <span class="audit-link" onclick="openDetail('${ev.application_id}')">${esc(ev.application_name || 'Ver Aplicacion')}</span>` : ''}
+      // Group: audit events vs notes
+      const auditEvents = events.filter(ev => ev.type !== 'message');
+      const noteEvents  = events.filter(ev => ev.type === 'message');
+
+      const renderAuditRow = (ev) => {
+        const dotClass = `tl-dot ev-${ev.type}`;
+        const typeClass = `tl-type ev-${ev.type}`;
+        const appLink = ev.app_id
+          ? `<span class="audit-link" onclick="openDetail('${ev.app_id}')">
+              ${esc(ev.client_name || 'Ver aplicacion')}
+             </span>`
+          : '';
+        return `
+          <div class="tl-entry">
+            <div class="${dotClass}" title="${AUDIT_TYPE_LABELS[ev.type]||ev.type}">
+              ${AUDIT_ICONS[ev.type] || defaultIcon}
+            </div>
+            <div class="tl-body">
+              <div class="tl-desc">${esc(ev.description || '--')}</div>
+              <div class="tl-meta">
+                <span class="tl-actor">${esc(ev.actor_name || 'Sistema')}</span>
+                <span>·</span>
+                ${fmtDateTime(ev.created_at)}
+                ${appLink ? `<span>·</span> ${appLink}` : ''}
+                <span class="${typeClass}">${AUDIT_TYPE_LABELS[ev.type]||ev.type}</span>
               </div>
             </div>
-          </div>
-        `).join('');
+          </div>`;
+      };
+
+      if (events.length) {
+        let html = '';
+        if (auditEvents.length) {
+          html += `<div class="tl-section">
+            <div class="tl-section-head">
+              <span class="tl-section-label">Registro de Actividad</span>
+              <span class="tl-readonly-badge">
+                <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                Solo lectura
+              </span>
+            </div>
+            ${auditEvents.map(renderAuditRow).join('')}
+          </div>`;
+        }
+        if (noteEvents.length) {
+          html += `<div class="tl-section">
+            <div class="tl-section-head"><span class="tl-section-label">Notas</span></div>
+            ${noteEvents.map(renderAuditRow).join('')}
+          </div>`;
+        }
+        listEl.innerHTML = html;
       } else {
         listEl.innerHTML = '<div class="empty-state"><p>No se encontraron eventos de auditoria.</p></div>';
       }

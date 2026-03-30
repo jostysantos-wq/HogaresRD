@@ -759,6 +759,38 @@ router.post('/:id/message', userAuth, (req, res) => {
   res.json(app);
 });
 
+// ── POST /:id/checklist-event  — Log checklist audit entry ──────
+router.post('/:id/checklist-event', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
+
+  const { item_id, item_label, stage, stage_complete } = req.body;
+  if (!stage) return res.status(400).json({ error: 'stage es requerido' });
+
+  const stageName  = STATUS_LABELS[stage] || stage;
+  const actorName  = user?.name || 'Broker';
+
+  if (stage_complete) {
+    addEvent(app, 'checklist_complete',
+      `Checklist de etapa "${stageName}" completado — listo para avanzar`,
+      req.user.sub, actorName,
+      { stage });
+  } else {
+    if (!item_id || !item_label) return res.status(400).json({ error: 'item_id e item_label requeridos' });
+    addEvent(app, 'checklist_check',
+      `✓ ${item_label}`,
+      req.user.sub, actorName,
+      { item_id, item_label, stage });
+  }
+
+  store.saveApplication(app);
+  res.json({ ok: true });
+});
+
 // ── PUT /:id/assign  — Admin reassigns broker ────────────────────
 router.put('/:id/assign', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Solo admin' });
