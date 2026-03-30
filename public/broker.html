@@ -208,6 +208,60 @@
     .modal { background: var(--bg-card); border-radius: 16px; padding: 1.5rem; max-width: 500px; width: calc(100% - 2rem); max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-md); }
     .modal h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
 
+    /* ── SECTION NAV ─────────────────────────────────────────── */
+    .section-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.75rem; }
+    .section-nav-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--bg-card); border: 1.5px solid var(--border); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1.1rem; border-radius: 50px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .section-nav-btn svg { width: 16px; height: 16px; fill: currentColor; }
+    .section-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .section-nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .section-nav-btn.active svg { fill: #fff; }
+    .section-pane { display: none; }
+    .section-pane.active { display: block; }
+    .chart-container { position: relative; max-height: 320px; margin-bottom: 1.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; box-shadow: var(--shadow-sm); }
+    .chart-container canvas { width: 100% !important; }
+    .data-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 1.5rem; }
+    .data-table th, .data-table td { padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .data-table th { background: var(--bg-section); font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--accent-light); }
+    .search-bar { width: 100%; padding: 0.65rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.9rem; background: var(--bg-card); color: var(--text); font-family: inherit; margin-bottom: 1rem; }
+    .search-bar:focus { outline: none; border-color: var(--accent); }
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 1.25rem; }
+    .pagination .btn { min-width: 80px; justify-content: center; }
+    .pagination span { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .export-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--bg-card); border: 1.5px solid var(--border); color: var(--text); transition: all 0.2s; }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .export-btn svg { width: 14px; height: 14px; fill: currentColor; }
+    .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; box-shadow: var(--shadow-sm); }
+    .metric-card .metric-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
+    .metric-card .metric-value { font-size: 1.7rem; font-weight: 800; }
+    .metric-card .metric-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .metric-card .trend-up { color: var(--green); font-size: 0.78rem; font-weight: 700; }
+    .metric-card .trend-down { color: var(--red); font-size: 0.78rem; font-weight: 700; }
+    .archive-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; box-shadow: var(--shadow-sm); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1rem; }
+    .archive-card .archive-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .archive-card .archive-icon svg { width: 20px; height: 20px; fill: currentColor; }
+    .archive-card .archive-info { flex: 1; min-width: 0; }
+    .archive-card .archive-name { font-weight: 600; font-size: 0.9rem; }
+    .archive-card .archive-meta { font-size: 0.78rem; color: var(--text-muted); }
+    .archive-card .archive-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .audit-item { display: flex; gap: 0.85rem; padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+    .audit-item .audit-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.85rem; }
+    .audit-item .audit-body { flex: 1; min-width: 0; }
+    .audit-item .audit-desc { font-size: 0.88rem; }
+    .audit-item .audit-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .audit-item .audit-link { color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 600; }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+    .filter-row select { padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.85rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
+    .filter-row select:focus { outline: none; border-color: var(--accent); }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .commission-input-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+    .commission-input-row label { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+    .commission-input-row input { width: 80px; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.9rem; background: var(--bg-card); color: var(--text); text-align: center; font-family: inherit; }
+    .commission-input-row input:focus { outline: none; border-color: var(--accent); }
+
     /* ── RESPONSIVE ───────────────────────────────────────────── */
     @media (max-width: 768px) {
       .nav-inner { padding: 0 1rem; }
@@ -217,12 +271,17 @@
       .app-card-right { flex-direction: row; align-items: center; gap: 0.75rem; }
       .detail-panel { width: 100vw; }
       .info-grid { grid-template-columns: 1fr; }
+      .chart-row { grid-template-columns: 1fr; }
+      .section-nav { gap: 0.35rem; }
+      .section-nav-btn { font-size: 0.78rem; padding: 0.45rem 0.8rem; }
     }
     @media (max-width: 480px) {
       .stats-bar { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: 1fr; }
       .page-title { font-size: 1.25rem; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
 
@@ -262,6 +321,37 @@
     Panel de Aplicaciones
   </h1>
 
+  <!-- Section Navigation -->
+  <div class="section-nav" id="sectionNav">
+    <button class="section-nav-btn active" data-section="aplicaciones">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      Aplicaciones
+    </button>
+    <button class="section-nav-btn" data-section="analiticas">
+      <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+      Analiticas
+    </button>
+    <button class="section-nav-btn" data-section="ventas">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      Ventas
+    </button>
+    <button class="section-nav-btn" data-section="archivo">
+      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      Archivo
+    </button>
+    <button class="section-nav-btn" data-section="auditoria">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
+      Auditoria
+    </button>
+    <button class="section-nav-btn" data-section="contabilidad">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm-4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2z"/></svg>
+      Contabilidad
+    </button>
+  </div>
+
+  <!-- Section: Aplicaciones -->
+  <div class="section-pane active" id="section-aplicaciones">
+
   <!-- Stats -->
   <div class="stats-bar" id="statsBar">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value blue" id="statTotal">--</div></div>
@@ -278,6 +368,128 @@
   <div id="appListContainer">
     <div class="loading"><div class="spinner"></div></div>
   </div>
+
+  </div><!-- /section-aplicaciones -->
+
+  <!-- Section: Analiticas -->
+  <div class="section-pane" id="section-analiticas">
+    <div class="summary-grid" id="analyticsMetrics">
+      <div class="metric-card"><div class="metric-label">Total Aplicaciones</div><div class="metric-value" id="metricTotalApps">--</div><div class="metric-subtitle">Todas las aplicaciones</div></div>
+      <div class="metric-card"><div class="metric-label">Tasa de Conversion</div><div class="metric-value" id="metricConversion" style="color:var(--green)">--</div><div class="metric-subtitle">Completadas / Total</div></div>
+      <div class="metric-card"><div class="metric-label">Dias Prom. al Cierre</div><div class="metric-value" id="metricAvgDays" style="color:var(--accent)">--</div><div class="metric-subtitle">Tiempo promedio</div></div>
+      <div class="metric-card"><div class="metric-label">Nuevas Este Mes</div><div class="metric-value" id="metricNewMonth" style="color:var(--purple)">--</div><div class="metric-subtitle">Ultimos 30 dias</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-container"><canvas id="chartAppsPerDay"></canvas></div>
+      <div class="chart-container"><canvas id="chartPipeline"></canvas></div>
+    </div>
+    <div class="chart-container" style="max-height:360px;"><canvas id="chartAppsPerMonth"></canvas></div>
+    <h3 class="section-title" style="margin-top:1.5rem;">Top Propiedades por Aplicaciones</h3>
+    <table class="data-table" id="topListingsTable">
+      <thead><tr><th>Propiedad</th><th>Ubicacion</th><th>Precio</th><th>Aplicaciones</th></tr></thead>
+      <tbody id="topListingsBody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Section: Ventas -->
+  <div class="section-pane" id="section-ventas">
+    <div class="summary-grid" id="salesMetrics">
+      <div class="metric-card"><div class="metric-label">Ingresos Totales</div><div class="metric-value" id="metricRevenue" style="color:var(--green)">--</div><div class="metric-subtitle">Ventas completadas</div></div>
+      <div class="metric-card"><div class="metric-label">Total Ventas</div><div class="metric-value" id="metricSalesCount" style="color:var(--accent)">--</div><div class="metric-subtitle">Cantidad de ventas</div></div>
+      <div class="metric-card"><div class="metric-label">Precio Promedio</div><div class="metric-value" id="metricAvgPrice" style="color:var(--purple)">--</div><div class="metric-subtitle">Precio medio de venta</div></div>
+      <div class="metric-card"><div class="metric-label">Valor Pipeline</div><div class="metric-value" id="metricPipelineValue" style="color:var(--orange)">--</div><div class="metric-subtitle">En proceso</div></div>
+    </div>
+    <div style="margin-bottom:1rem;text-align:right;">
+      <button class="export-btn" onclick="exportSalesCSV()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Exportar CSV
+      </button>
+    </div>
+    <div class="chart-row">
+      <div class="chart-container"><canvas id="chartMonthlyRevenue"></canvas></div>
+      <div class="chart-container"><canvas id="chartSalesByType"></canvas></div>
+    </div>
+    <h3 class="section-title">Ventas Completadas</h3>
+    <table class="data-table" id="salesTable">
+      <thead><tr><th>Cliente</th><th>Propiedad</th><th>Precio</th><th>Fecha</th><th>Estado Pago</th></tr></thead>
+      <tbody id="salesTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Section: Archivo -->
+  <div class="section-pane" id="section-archivo">
+    <input type="text" class="search-bar" id="archiveSearch" placeholder="Buscar documentos por nombre, cliente o propiedad...">
+    <div class="filter-row">
+      <select id="archiveTypeFilter">
+        <option value="">Todos los tipos</option>
+        <option value="cedula">Cedula</option>
+        <option value="passport">Pasaporte</option>
+        <option value="income_proof">Comprobante de Ingresos</option>
+        <option value="bank_statement">Estado de Cuenta</option>
+        <option value="employment_letter">Carta de Trabajo</option>
+        <option value="tax_return">Declaracion de Impuestos</option>
+        <option value="pre_approval">Pre-Aprobacion</option>
+        <option value="proof_of_funds">Prueba de Fondos</option>
+        <option value="other">Otro</option>
+      </select>
+      <select id="archiveStatusFilter">
+        <option value="">Todos los estados</option>
+        <option value="uploaded">Subido</option>
+        <option value="approved">Aprobado</option>
+        <option value="rejected">Rechazado</option>
+        <option value="requested">Solicitado</option>
+      </select>
+    </div>
+    <div id="archiveList"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="pagination" id="archivePagination"></div>
+  </div>
+
+  <!-- Section: Auditoria -->
+  <div class="section-pane" id="section-auditoria">
+    <input type="text" class="search-bar" id="auditSearch" placeholder="Buscar en auditoria...">
+    <div class="filter-row">
+      <select id="auditTypeFilter">
+        <option value="">Todos los eventos</option>
+        <option value="status_change">Cambio de Estado</option>
+        <option value="document">Documento</option>
+        <option value="tour">Tour</option>
+        <option value="payment">Pago</option>
+        <option value="message">Mensaje</option>
+      </select>
+      <input type="date" id="auditDateFrom" title="Desde">
+      <input type="date" id="auditDateTo" title="Hasta">
+    </div>
+    <div id="auditList"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="pagination" id="auditPagination"></div>
+  </div>
+
+  <!-- Section: Contabilidad -->
+  <div class="section-pane" id="section-contabilidad">
+    <div class="commission-input-row">
+      <label>Tasa de Comision (%):</label>
+      <input type="number" id="commissionRate" value="3" min="0" max="100" step="0.5">
+      <button class="btn btn-primary btn-sm" id="applyCommissionRate">Aplicar</button>
+    </div>
+    <div class="summary-grid" id="accountingMetrics">
+      <div class="metric-card"><div class="metric-label">Total Ganado</div><div class="metric-value" id="metricTotalEarned" style="color:var(--green)">--</div><div class="metric-subtitle">Comisiones cobradas</div></div>
+      <div class="metric-card"><div class="metric-label">Comision Pendiente</div><div class="metric-value" id="metricPendingComm" style="color:var(--orange)">--</div><div class="metric-subtitle">Por cobrar</div></div>
+      <div class="metric-card"><div class="metric-label">Tasa de Comision</div><div class="metric-value" id="metricCommRate" style="color:var(--accent)">3%</div><div class="metric-subtitle">Porcentaje actual</div></div>
+      <div class="metric-card"><div class="metric-label">Pagos Verificados</div><div class="metric-value" id="metricVerifiedPay" style="color:var(--green)">--</div><div class="metric-subtitle">Pagos aprobados</div></div>
+    </div>
+    <div class="chart-container" style="max-height:360px;"><canvas id="chartMonthlyCommissions"></canvas></div>
+    <div style="margin:1rem 0;text-align:right;">
+      <button class="export-btn" onclick="exportAccountingCSV()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Exportar CSV
+      </button>
+    </div>
+    <h3 class="section-title">Registros Financieros</h3>
+    <table class="data-table" id="accountingTable">
+      <thead><tr><th>Cliente</th><th>Propiedad</th><th>Precio</th><th>Comision</th><th>Estado Pago</th><th>Fecha</th></tr></thead>
+      <tbody id="accountingTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+
 </div>
 
 <!-- Detail Overlay -->
@@ -972,6 +1184,456 @@
       appListContainer.innerHTML = `<div class="empty-state"><p>Error al cargar aplicaciones: ${esc(e.message)}</p></div>`;
     }
   }
+
+  // ── Section Navigation ─────────────────────────────────────
+  let currentSection = 'aplicaciones';
+  let analyticsLoaded = false, salesLoaded = false, accountingLoaded = false;
+  let salesData = [], accountingData = [];
+  let chartInstances = {};
+
+  document.getElementById('sectionNav').addEventListener('click', e => {
+    const btn = e.target.closest('.section-nav-btn');
+    if (!btn) return;
+    showSection(btn.dataset.section);
+  });
+
+  function showSection(section) {
+    currentSection = section;
+    document.querySelectorAll('.section-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+    document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('section-' + section).classList.add('active');
+    if (section === 'analiticas' && !analyticsLoaded) loadAnalytics();
+    if (section === 'ventas' && !salesLoaded) loadSales();
+    if (section === 'archivo') loadArchive();
+    if (section === 'auditoria') loadAudit();
+    if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
+  }
+
+  // ── Chart Colors ──────────────────────────────────────────
+  const CHART_COLORS = ['#0038A8','#CF142B','#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
+  function getChartDefaults() {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    return {
+      color: isDark ? '#7a9bbf' : '#4d6a8a',
+      borderColor: isDark ? '#002268' : '#d0dcea',
+      gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
+    };
+  }
+
+  function destroyChart(id) {
+    if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+  }
+
+  // ── Analytics ─────────────────────────────────────────────
+  async function loadAnalytics() {
+    try {
+      const data = await API('/api/broker/analytics');
+      analyticsLoaded = true;
+      const stats = data.stats || data;
+
+      document.getElementById('metricTotalApps').textContent = stats.total || 0;
+      document.getElementById('metricConversion').textContent = (stats.conversionRate || 0).toFixed(1) + '%';
+      document.getElementById('metricAvgDays').textContent = (stats.avgDaysToClose || 0).toFixed(0);
+      document.getElementById('metricNewMonth').textContent = stats.newThisMonth || 0;
+
+      // Apps per day chart
+      const defs = getChartDefaults();
+      const daily = stats.appsPerDay || [];
+      destroyChart('chartAppsPerDay');
+      chartInstances['chartAppsPerDay'] = new Chart(document.getElementById('chartAppsPerDay'), {
+        type: 'bar',
+        data: {
+          labels: daily.map(d => d.date || d._id),
+          datasets: [{ label: 'Aplicaciones', data: daily.map(d => d.count), backgroundColor: '#0038A8', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: 'Aplicaciones por Dia (30 dias)', color: defs.color } },
+          scales: { x: { ticks: { color: defs.color, maxTicksLimit: 10 }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color }, grid: { color: defs.gridColor } } }
+        }
+      });
+
+      // Apps per month chart
+      const monthly = stats.appsPerMonth || [];
+      destroyChart('chartAppsPerMonth');
+      chartInstances['chartAppsPerMonth'] = new Chart(document.getElementById('chartAppsPerMonth'), {
+        type: 'bar',
+        data: {
+          labels: monthly.map(d => d.month || d._id),
+          datasets: [{ label: 'Aplicaciones', data: monthly.map(d => d.count), backgroundColor: '#4a2d9c', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: 'Aplicaciones por Mes (12 meses)', color: defs.color } },
+          scales: { x: { ticks: { color: defs.color }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color }, grid: { color: defs.gridColor } } }
+        }
+      });
+
+      // Pipeline doughnut
+      const pipeline = stats.pipeline || [];
+      const statusColors = { aplicado:'#0038A8', en_revision:'#5599ff', documentos_requeridos:'#c07c1a', documentos_enviados:'#e6a030',
+        documentos_insuficientes:'#c07c1a', en_aprobacion:'#4a2d9c', reservado:'#8a6de0', aprobado:'#0a7c4f', pendiente_pago:'#5599ff',
+        pago_enviado:'#5599ff', pago_aprobado:'#1db87a', completado:'#0a7c4f', rechazado:'#CF142B' };
+      destroyChart('chartPipeline');
+      chartInstances['chartPipeline'] = new Chart(document.getElementById('chartPipeline'), {
+        type: 'doughnut',
+        data: {
+          labels: pipeline.map(p => STATUS_LABELS[p.status || p._id] || p.status || p._id),
+          datasets: [{ data: pipeline.map(p => p.count), backgroundColor: pipeline.map(p => statusColors[p.status || p._id] || '#999') }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { title: { display: true, text: 'Pipeline por Estado', color: defs.color }, legend: { position: 'right', labels: { color: defs.color, font: { size: 11 } } } }
+        }
+      });
+
+      // Top listings table
+      const topListings = stats.topListings || [];
+      const tbody = document.getElementById('topListingsBody');
+      if (topListings.length) {
+        tbody.innerHTML = topListings.map(l => `<tr>
+          <td>${esc(l.title || '--')}</td>
+          <td>${esc(l.location || l.city || '--')}</td>
+          <td>${fmtPrice(l.price)}</td>
+          <td><strong>${l.count || 0}</strong></td>
+        </tr>`).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Sin datos</td></tr>';
+      }
+    } catch(e) {
+      toast('Error cargando analiticas: ' + e.message, 'error');
+    }
+  }
+
+  // ── Sales ─────────────────────────────────────────────────
+  async function loadSales() {
+    try {
+      const data = await API('/api/broker/sales');
+      salesLoaded = true;
+      const stats = data.stats || data;
+      salesData = data.sales || stats.sales || [];
+
+      document.getElementById('metricRevenue').textContent = fmtPrice(stats.totalRevenue || 0);
+      document.getElementById('metricSalesCount').textContent = stats.salesCount || salesData.length || 0;
+      document.getElementById('metricAvgPrice').textContent = fmtPrice(stats.avgSalePrice || 0);
+      document.getElementById('metricPipelineValue').textContent = fmtPrice(stats.pipelineValue || 0);
+
+      const defs = getChartDefaults();
+
+      // Monthly revenue chart
+      const monthlyRev = stats.monthlyRevenue || [];
+      destroyChart('chartMonthlyRevenue');
+      chartInstances['chartMonthlyRevenue'] = new Chart(document.getElementById('chartMonthlyRevenue'), {
+        type: 'bar',
+        data: {
+          labels: monthlyRev.map(d => d.month || d._id),
+          datasets: [{ label: 'Ingresos', data: monthlyRev.map(d => d.total), backgroundColor: '#0a7c4f', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: 'Ingresos Mensuales', color: defs.color } },
+          scales: { x: { ticks: { color: defs.color }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: defs.gridColor } } }
+        }
+      });
+
+      // Sales by type pie chart
+      const byType = stats.salesByType || [];
+      destroyChart('chartSalesByType');
+      chartInstances['chartSalesByType'] = new Chart(document.getElementById('chartSalesByType'), {
+        type: 'pie',
+        data: {
+          labels: byType.map(d => d.type || d._id || 'Otro'),
+          datasets: [{ data: byType.map(d => d.count), backgroundColor: CHART_COLORS.slice(0, byType.length) }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { title: { display: true, text: 'Ventas por Tipo de Propiedad', color: defs.color }, legend: { position: 'right', labels: { color: defs.color, font: { size: 11 } } } }
+        }
+      });
+
+      // Sales table
+      const tbody = document.getElementById('salesTableBody');
+      if (salesData.length) {
+        tbody.innerHTML = salesData.map(s => {
+          const client = s.client || s.user || {};
+          const listing = s.listing || {};
+          return `<tr>
+            <td>${esc(client.name || client.full_name || '--')}</td>
+            <td>${esc(listing.title || '--')}</td>
+            <td>${fmtPrice(listing.price || s.price)}</td>
+            <td>${fmtDate(s.completed_at || s.created_at || s.createdAt)}</td>
+            <td>${s.payment_status ? badgeHTML(s.payment_status === 'approved' ? 'pago_aprobado' : s.payment_status === 'pending' ? 'pendiente_pago' : 'pago_enviado') : '<span class="badge badge-blue">N/A</span>'}</td>
+          </tr>`;
+        }).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Sin ventas completadas</td></tr>';
+      }
+    } catch(e) {
+      toast('Error cargando ventas: ' + e.message, 'error');
+    }
+  }
+
+  window.exportSalesCSV = function() {
+    if (!salesData.length) { toast('No hay datos para exportar', 'error'); return; }
+    const rows = [['Cliente','Propiedad','Precio','Fecha','Estado Pago']];
+    salesData.forEach(s => {
+      const client = s.client || s.user || {};
+      const listing = s.listing || {};
+      rows.push([
+        client.name || client.full_name || '',
+        listing.title || '',
+        listing.price || s.price || '',
+        s.completed_at || s.created_at || s.createdAt || '',
+        s.payment_status || ''
+      ]);
+    });
+    downloadCSV(rows, 'ventas_hogaresrd.csv');
+  };
+
+  function downloadCSV(rows, filename) {
+    const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Archive ───────────────────────────────────────────────
+  let archivePage = 1;
+  let archiveDebounce = null;
+
+  document.getElementById('archiveSearch').addEventListener('input', () => {
+    clearTimeout(archiveDebounce);
+    archiveDebounce = setTimeout(() => { archivePage = 1; loadArchive(); }, 400);
+  });
+  document.getElementById('archiveTypeFilter').addEventListener('change', () => { archivePage = 1; loadArchive(); });
+  document.getElementById('archiveStatusFilter').addEventListener('change', () => { archivePage = 1; loadArchive(); });
+
+  async function loadArchive(page) {
+    if (page) archivePage = page;
+    const search = document.getElementById('archiveSearch').value.trim();
+    const type = document.getElementById('archiveTypeFilter').value;
+    const status = document.getElementById('archiveStatusFilter').value;
+    const params = new URLSearchParams({ page: archivePage, limit: 20 });
+    if (search) params.set('search', search);
+    if (type) params.set('type', type);
+    if (status) params.set('status', status);
+
+    const listEl = document.getElementById('archiveList');
+    listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+      const data = await API(`/api/broker/documents/archive?${params}`);
+      const docs = data.documents || data.docs || [];
+      const total = data.total || docs.length;
+      const totalPages = data.totalPages || Math.ceil(total / 20) || 1;
+
+      if (docs.length) {
+        listEl.innerHTML = docs.map(d => {
+          const docLabel = d.label || DOC_TYPES.find(t => t.type === d.type)?.label || d.type || 'Documento';
+          const statusBadge = d.status === 'approved' ? badgeHTML('aprobado') : d.status === 'rejected' ? badgeHTML('rechazado') : d.status === 'uploaded' ? badgeHTML('documentos_enviados') : badgeHTML('documentos_requeridos');
+          return `<div class="archive-card">
+            <div class="archive-icon">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            </div>
+            <div class="archive-info">
+              <div class="archive-name">${esc(docLabel)}</div>
+              <div class="archive-meta">${esc(d.client_name || '')} ${d.property_title ? '&middot; ' + esc(d.property_title) : ''} &middot; ${fmtDate(d.uploaded_at || d.created_at)} &middot; ${statusBadge}</div>
+            </div>
+            <div class="archive-actions">
+              ${d.application_id && d.doc_id ? `<a href="/api/applications/${d.application_id}/documents/${d.doc_id}/file" target="_blank" class="btn btn-outline btn-sm">Ver</a>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        listEl.innerHTML = '<div class="empty-state"><p>No se encontraron documentos.</p></div>';
+      }
+
+      // Pagination
+      const pagEl = document.getElementById('archivePagination');
+      if (totalPages > 1) {
+        pagEl.innerHTML = `
+          <button class="btn btn-outline btn-sm" ${archivePage <= 1 ? 'disabled' : ''} onclick="window._archivePrev()">Anterior</button>
+          <span>Pagina ${archivePage} de ${totalPages}</span>
+          <button class="btn btn-outline btn-sm" ${archivePage >= totalPages ? 'disabled' : ''} onclick="window._archiveNext()">Siguiente</button>
+        `;
+      } else {
+        pagEl.innerHTML = '';
+      }
+    } catch(e) {
+      listEl.innerHTML = `<div class="empty-state"><p>Error: ${esc(e.message)}</p></div>`;
+    }
+  }
+
+  window._archivePrev = () => { if (archivePage > 1) loadArchive(archivePage - 1); };
+  window._archiveNext = () => loadArchive(archivePage + 1);
+
+  window.viewDocument = function(appId, docId) {
+    window.open(`/api/applications/${appId}/documents/${docId}/file`, '_blank');
+  };
+
+  // ── Audit ─────────────────────────────────────────────────
+  let auditPage = 1;
+  let auditDebounce = null;
+
+  document.getElementById('auditSearch').addEventListener('input', () => {
+    clearTimeout(auditDebounce);
+    auditDebounce = setTimeout(() => { auditPage = 1; loadAudit(); }, 400);
+  });
+  document.getElementById('auditTypeFilter').addEventListener('change', () => { auditPage = 1; loadAudit(); });
+  document.getElementById('auditDateFrom').addEventListener('change', () => { auditPage = 1; loadAudit(); });
+  document.getElementById('auditDateTo').addEventListener('change', () => { auditPage = 1; loadAudit(); });
+
+  async function loadAudit(page) {
+    if (page) auditPage = page;
+    const search = document.getElementById('auditSearch').value.trim();
+    const type = document.getElementById('auditTypeFilter').value;
+    const dateFrom = document.getElementById('auditDateFrom').value;
+    const dateTo = document.getElementById('auditDateTo').value;
+    const params = new URLSearchParams({ page: auditPage, limit: 25 });
+    if (search) params.set('search', search);
+    if (type) params.set('type', type);
+    if (dateFrom) params.set('from', dateFrom);
+    if (dateTo) params.set('to', dateTo);
+
+    const listEl = document.getElementById('auditList');
+    listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+      const data = await API(`/api/broker/audit?${params}`);
+      const events = data.events || data.audit || [];
+      const total = data.total || events.length;
+      const totalPages = data.totalPages || Math.ceil(total / 25) || 1;
+
+      const iconMap = {
+        status_change: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+        document: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
+        tour: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>',
+        payment: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>',
+        message: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>'
+      };
+      const defaultIcon = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+
+      if (events.length) {
+        listEl.innerHTML = events.map(ev => `
+          <div class="audit-item">
+            <div class="audit-icon">${iconMap[ev.type] || defaultIcon}</div>
+            <div class="audit-body">
+              <div class="audit-desc">${esc(ev.description || ev.message || ev.text || '--')}</div>
+              <div class="audit-meta">
+                ${esc(ev.actor_name || ev.actor || 'Sistema')} &middot; ${fmtDateTime(ev.date || ev.created_at || ev.createdAt)}
+                ${ev.application_id ? ` &middot; <span class="audit-link" onclick="openDetail('${ev.application_id}')">${esc(ev.application_name || 'Ver Aplicacion')}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        listEl.innerHTML = '<div class="empty-state"><p>No se encontraron eventos de auditoria.</p></div>';
+      }
+
+      const pagEl = document.getElementById('auditPagination');
+      if (totalPages > 1) {
+        pagEl.innerHTML = `
+          <button class="btn btn-outline btn-sm" ${auditPage <= 1 ? 'disabled' : ''} onclick="window._auditPrev()">Anterior</button>
+          <span>Pagina ${auditPage} de ${totalPages}</span>
+          <button class="btn btn-outline btn-sm" ${auditPage >= totalPages ? 'disabled' : ''} onclick="window._auditNext()">Siguiente</button>
+        `;
+      } else {
+        pagEl.innerHTML = '';
+      }
+    } catch(e) {
+      listEl.innerHTML = `<div class="empty-state"><p>Error: ${esc(e.message)}</p></div>`;
+    }
+  }
+
+  window._auditPrev = () => { if (auditPage > 1) loadAudit(auditPage - 1); };
+  window._auditNext = () => loadAudit(auditPage + 1);
+
+  // ── Accounting ────────────────────────────────────────────
+  document.getElementById('applyCommissionRate').onclick = () => {
+    accountingLoaded = false;
+    loadAccounting();
+  };
+
+  async function loadAccounting() {
+    const rate = parseFloat(document.getElementById('commissionRate').value) || 3;
+    try {
+      const data = await API(`/api/broker/accounting?commissionRate=${rate}`);
+      accountingLoaded = true;
+      const stats = data.stats || data;
+      accountingData = data.records || stats.records || [];
+
+      document.getElementById('metricCommRate').textContent = rate + '%';
+      document.getElementById('metricTotalEarned').textContent = fmtPrice(stats.totalEarned || 0);
+      document.getElementById('metricPendingComm').textContent = fmtPrice(stats.pendingCommission || 0);
+      document.getElementById('metricVerifiedPay').textContent = stats.verifiedPayments || 0;
+
+      const defs = getChartDefaults();
+
+      // Monthly commissions chart
+      const monthlyCom = stats.monthlyCommissions || [];
+      destroyChart('chartMonthlyCommissions');
+      chartInstances['chartMonthlyCommissions'] = new Chart(document.getElementById('chartMonthlyCommissions'), {
+        type: 'bar',
+        data: {
+          labels: monthlyCom.map(d => d.month || d._id),
+          datasets: [{ label: 'Comision', data: monthlyCom.map(d => d.total), backgroundColor: '#0038A8', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: 'Comisiones Mensuales', color: defs.color } },
+          scales: { x: { ticks: { color: defs.color }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: defs.gridColor } } }
+        }
+      });
+
+      // Accounting table
+      const tbody = document.getElementById('accountingTableBody');
+      if (accountingData.length) {
+        tbody.innerHTML = accountingData.map(r => {
+          const client = r.client || r.user || {};
+          const listing = r.listing || {};
+          const price = listing.price || r.price || 0;
+          const commission = r.commission || (price * rate / 100);
+          const payStatus = r.payment_status === 'approved' ? 'pago_aprobado' : r.payment_status === 'pending' ? 'pendiente_pago' : r.payment_status === 'sent' ? 'pago_enviado' : 'aplicado';
+          return `<tr>
+            <td>${esc(client.name || client.full_name || '--')}</td>
+            <td>${esc(listing.title || '--')}</td>
+            <td>${fmtPrice(price)}</td>
+            <td>${fmtPrice(commission)}</td>
+            <td>${badgeHTML(payStatus)}</td>
+            <td>${fmtDate(r.completed_at || r.created_at || r.createdAt)}</td>
+          </tr>`;
+        }).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin registros financieros</td></tr>';
+      }
+    } catch(e) {
+      toast('Error cargando contabilidad: ' + e.message, 'error');
+    }
+  }
+
+  window.exportAccountingCSV = function() {
+    if (!accountingData.length) { toast('No hay datos para exportar', 'error'); return; }
+    const rate = parseFloat(document.getElementById('commissionRate').value) || 3;
+    const rows = [['Cliente','Propiedad','Precio','Comision','Estado Pago','Fecha']];
+    accountingData.forEach(r => {
+      const client = r.client || r.user || {};
+      const listing = r.listing || {};
+      const price = listing.price || r.price || 0;
+      const commission = r.commission || (price * rate / 100);
+      rows.push([
+        client.name || client.full_name || '',
+        listing.title || '',
+        price,
+        commission,
+        r.payment_status || '',
+        r.completed_at || r.created_at || r.createdAt || ''
+      ]);
+    });
+    downloadCSV(rows, 'contabilidad_hogaresrd.csv');
+  };
 
   // ── Init ───────────────────────────────────────────────────
   renderFilters();
