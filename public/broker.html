@@ -26,35 +26,103 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
 
-    /* ── NAV ─────────────────────────────────────────────────── */
-    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-    .nav-inner { max-width: 1400px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 1.5rem; }
-    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
-    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
-    .logo-text { font-size: 1.3rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
-    .logo-text span { color: var(--accent); }
-    .nav-spacer { flex: 1; }
-    .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 48px; height: 26px; cursor: pointer; position: relative; flex-shrink: 0; }
-    .theme-toggle::after { content: ''; width: 18px; height: 18px; background: var(--toggle-knob); border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: transform 0.3s; }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(22px); }
-    .user-menu { position: relative; }
-    .user-avatar-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px solid var(--border); border-radius: 50px; padding: 0.28rem 0.7rem 0.28rem 0.28rem; cursor: pointer; color: var(--text); }
-    .user-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-    .user-first-name { font-size: 0.85rem; font-weight: 600; }
-    .user-avatar-btn svg { width: 14px; height: 14px; fill: var(--text-muted); }
-    .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); min-width: 175px; overflow: hidden; z-index: 200; display: none; }
-    .user-dropdown.open { display: block; }
-    .dropdown-item { display: block; width: 100%; padding: 0.65rem 1rem; font-size: 0.88rem; color: var(--text); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.15s; }
-    .dropdown-item:hover { background: var(--accent-light); color: var(--accent); }
-    .dropdown-divider { border: none; border-top: 1px solid var(--border); margin: 0.25rem 0; }
-    .dropdown-logout { color: var(--red) !important; }
+    /* ── APP SHELL ───────────────────────────────────────────── */
+    :root { --sidebar-w: 240px; --topbar-h: 60px; }
+    html, body { height: 100%; }
+    body { display: flex; overflow: hidden; }
+    .app-shell { display: flex; width: 100%; height: 100vh; overflow: hidden; }
 
-    /* ── PAGE ─────────────────────────────────────────────────── */
-    .page-wrap { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
-    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
-    .page-title svg { width: 28px; height: 28px; fill: var(--accent); }
+    /* ── SIDEBAR ─────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w); height: 100vh;
+      background: var(--bg-card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+      transition: width 0.25s ease; overflow: hidden;
+      position: relative; z-index: 50;
+    }
+    .sidebar.collapsed { width: 64px; }
+    .sidebar-header {
+      height: var(--topbar-h); padding: 0 0.75rem 0 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 0.5rem;
+    }
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 0.5rem;
+      text-decoration: none; color: var(--text); overflow: hidden; white-space: nowrap; flex: 1; min-width: 0;
+    }
+    .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .sidebar-logo-text { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; overflow: hidden; transition: opacity 0.2s, width 0.25s; }
+    .sidebar-logo-text span { color: var(--accent); }
+    .sidebar.collapsed .sidebar-logo-text { opacity: 0; width: 0; }
+    .sidebar-collapse-btn {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; padding: 0.3rem; display: flex; border-radius: 6px; flex-shrink: 0;
+    }
+    .sidebar-collapse-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .sidebar-collapse-btn svg { width: 20px; height: 20px; fill: currentColor; transition: transform 0.25s; }
+    .sidebar.collapsed .sidebar-collapse-btn svg { transform: rotate(180deg); }
+
+    .sidebar-nav { flex: 1; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.1rem; overflow-y: auto; }
+    .sidebar-section-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); padding: 0.6rem 0.75rem 0.3rem; white-space: nowrap; overflow: hidden; transition: opacity 0.2s; }
+    .sidebar.collapsed .sidebar-section-label { opacity: 0; }
+    .sidebar-nav-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      width: 100%; padding: 0.65rem 0.75rem; border: none;
+      border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      color: var(--text-muted); background: none; cursor: pointer;
+      text-align: left; white-space: nowrap; overflow: hidden; transition: all 0.15s;
+    }
+    .sidebar-nav-item svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .sidebar-nav-label { overflow: hidden; transition: opacity 0.2s, width 0.25s; }
+    .sidebar.collapsed .sidebar-nav-label { opacity: 0; width: 0; }
+    .sidebar-nav-item:hover { background: var(--accent-light); color: var(--accent); }
+    .sidebar-nav-item.active { background: var(--accent); color: #fff; }
+    .sidebar-nav-item.active svg { fill: #fff; }
+
+    .sidebar-footer { padding: 0.5rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 0.75rem; border-radius: 10px; margin-bottom: 0.25rem;
+      overflow: hidden; white-space: nowrap;
+    }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sidebar-user-info { min-width: 0; overflow: hidden; transition: opacity 0.2s, width 0.25s; }
+    .sidebar.collapsed .sidebar-user-info { opacity: 0; width: 0; }
+    .sidebar-user-name { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+    .sidebar-user-role { font-size: 0.7rem; color: var(--text-muted); }
+    .sidebar-footer-link {
+      display: flex; align-items: center; gap: 0.75rem;
+      width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 10px;
+      font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: none;
+      cursor: pointer; text-decoration: none; text-align: left;
+      white-space: nowrap; overflow: hidden; transition: all 0.15s;
+    }
+    .sidebar-footer-link svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .sidebar-footer-link:hover { background: var(--accent-light); color: var(--accent); }
+    .sidebar-logout { color: var(--red) !important; }
+    .sidebar-logout:hover { background: rgba(207,20,43,0.08) !important; color: var(--red) !important; }
+    .sidebar.collapsed .sidebar-footer-link .sidebar-nav-label { opacity: 0; width: 0; }
+
+    /* ── MAIN AREA ───────────────────────────────────────────── */
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .topbar {
+      height: var(--topbar-h); background: var(--bg-card);
+      border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; flex-shrink: 0;
+    }
+    .topbar-hamburger { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 0.3rem; }
+    .topbar-hamburger svg { width: 22px; height: 22px; fill: currentColor; }
+    .topbar-title { font-size: 1.05rem; font-weight: 700; }
+    .topbar-spacer { flex: 1; }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 44px; height: 24px; cursor: pointer; position: relative; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; width: 16px; height: 16px; background: var(--toggle-knob); border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: transform 0.3s; }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(20px); }
+    .content-area { flex: 1; overflow-y: auto; padding: 1.5rem 2rem 4rem; }
+
+    /* ── SIDEBAR OVERLAY (mobile) ────────────────────────────── */
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49; }
+    .sidebar-overlay.visible { display: block; }
 
     /* ── STATS ────────────────────────────────────────────────── */
     .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -263,91 +331,116 @@
     .commission-input-row input:focus { outline: none; border-color: var(--accent); }
 
     /* ── RESPONSIVE ───────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .sidebar { position: fixed; top: 0; left: 0; transform: translateX(-100%); transition: transform 0.25s, width 0.25s; z-index: 50; width: var(--sidebar-w) !important; height: 100vh; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .topbar-hamburger { display: flex; }
+      .content-area { padding: 1rem 1rem 4rem; }
+    }
     @media (max-width: 768px) {
-      .nav-inner { padding: 0 1rem; }
-      .page-wrap { padding: 1rem; }
       .stats-bar { grid-template-columns: repeat(2, 1fr); }
       .app-card { grid-template-columns: 1fr; }
       .app-card-right { flex-direction: row; align-items: center; gap: 0.75rem; }
       .detail-panel { width: 100vw; }
       .info-grid { grid-template-columns: 1fr; }
       .chart-row { grid-template-columns: 1fr; }
-      .section-nav { gap: 0.35rem; }
-      .section-nav-btn { font-size: 0.78rem; padding: 0.45rem 0.8rem; }
     }
     @media (max-width: 480px) {
       .stats-bar { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: 1fr; }
-      .page-title { font-size: 1.25rem; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="logo">
+<!-- APP SHELL -->
+<div class="app-shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo">
       <div class="logo-icon">
         <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </div>
-      <div class="logo-text">Hogares<span>RD</span></div>
+      <span class="sidebar-logo-text">Hogares<span>RD</span></span>
     </a>
-    <div class="nav-spacer"></div>
-    <div class="nav-actions">
-      <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
-      <div class="user-menu" id="userMenu">
-        <button class="user-avatar-btn" id="userAvatarBtn">
-          <div class="user-avatar" id="userInitials">?</div>
-          <span class="user-first-name" id="userFirstName"></span>
-          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-        </button>
-        <div class="user-dropdown" id="userDropdown">
-          <a href="/" class="dropdown-item">Inicio</a>
-          <a href="/mapa.html" class="dropdown-item">Mapa</a>
-          <hr class="dropdown-divider"/>
-          <button class="dropdown-item dropdown-logout" id="logoutBtn">Cerrar Sesion</button>
-        </div>
+    <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Colapsar menu">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Portal</div>
+    <button class="sidebar-nav-item active" data-section="aplicaciones">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span class="sidebar-nav-label">Aplicaciones</span>
+    </button>
+    <button class="sidebar-nav-item" data-section="analiticas">
+      <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+      <span class="sidebar-nav-label">Analiticas</span>
+    </button>
+    <div class="sidebar-section-label">Financiero</div>
+    <button class="sidebar-nav-item" data-section="ventas">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      <span class="sidebar-nav-label">Ventas</span>
+    </button>
+    <button class="sidebar-nav-item" data-section="contabilidad">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm-4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2z"/></svg>
+      <span class="sidebar-nav-label">Contabilidad</span>
+    </button>
+    <div class="sidebar-section-label">Gestion</div>
+    <button class="sidebar-nav-item" data-section="archivo">
+      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      <span class="sidebar-nav-label">Archivo</span>
+    </button>
+    <button class="sidebar-nav-item" data-section="auditoria">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
+      <span class="sidebar-nav-label">Auditoria</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="userInitials">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="userFirstName"></div>
+        <div class="sidebar-user-role">Broker</div>
       </div>
     </div>
-  </div>
-</nav>
-
-<!-- MAIN -->
-<div class="page-wrap">
-  <h1 class="page-title">
-    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-    Panel de Aplicaciones
-  </h1>
-
-  <!-- Section Navigation -->
-  <div class="section-nav" id="sectionNav">
-    <button class="section-nav-btn active" data-section="aplicaciones">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-      Aplicaciones
-    </button>
-    <button class="section-nav-btn" data-section="analiticas">
-      <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
-      Analiticas
-    </button>
-    <button class="section-nav-btn" data-section="ventas">
-      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-      Ventas
-    </button>
-    <button class="section-nav-btn" data-section="archivo">
-      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-      Archivo
-    </button>
-    <button class="section-nav-btn" data-section="auditoria">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
-      Auditoria
-    </button>
-    <button class="section-nav-btn" data-section="contabilidad">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm-4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2z"/></svg>
-      Contabilidad
+    <a href="/" class="sidebar-footer-link">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="sidebar-nav-label">Inicio</span>
+    </a>
+    <a href="/mapa.html" class="sidebar-footer-link">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <span class="sidebar-nav-label">Mapa</span>
+    </a>
+    <button class="sidebar-footer-link sidebar-logout" id="logoutBtn">
+      <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      <span class="sidebar-nav-label">Cerrar Sesion</span>
     </button>
   </div>
+</aside>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- MAIN AREA -->
+<div class="main-area">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" id="mobileSidebarBtn">
+      <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </button>
+    <h1 class="topbar-title" id="topbarTitle">Aplicaciones</h1>
+    <div class="topbar-spacer"></div>
+    <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area">
 
   <!-- Section: Aplicaciones -->
   <div class="section-pane active" id="section-aplicaciones">
@@ -490,7 +583,9 @@
     </table>
   </div>
 
-</div>
+  </div><!-- /content-area -->
+</div><!-- /main-area -->
+</div><!-- /app-shell -->
 
 <!-- Detail Overlay -->
 <div class="detail-overlay" id="detailOverlay"></div>
@@ -651,15 +746,10 @@
     localStorage.setItem('theme', next);
   };
 
-  // ── User Menu ──────────────────────────────────────────────
+  // ── User Info ──────────────────────────────────────────────
   const initials = (currentUser.name || currentUser.email || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('userInitials').textContent = initials;
   document.getElementById('userFirstName').textContent = (currentUser.name || currentUser.email || '').split(' ')[0];
-
-  const userAvatarBtn = document.getElementById('userAvatarBtn');
-  const userDropdown = document.getElementById('userDropdown');
-  userAvatarBtn.onclick = () => userDropdown.classList.toggle('open');
-  document.addEventListener('click', e => { if (!e.target.closest('.user-menu')) userDropdown.classList.remove('open'); });
   document.getElementById('logoutBtn').onclick = () => { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); localStorage.removeItem('token'); location.href = '/login'; };
 
   // ── State ──────────────────────────────────────────────────
@@ -1191,24 +1281,50 @@
   let salesData = [], accountingData = [];
   let chartInstances = {};
 
-  document.getElementById('sectionNav').addEventListener('click', e => {
-    const btn = e.target.closest('.section-nav-btn');
+  const SECTION_TITLES = {
+    aplicaciones: 'Aplicaciones', analiticas: 'Analiticas',
+    ventas: 'Ventas', contabilidad: 'Contabilidad',
+    archivo: 'Archivo', auditoria: 'Auditoria'
+  };
+
+  document.querySelector('.sidebar-nav').addEventListener('click', e => {
+    const btn = e.target.closest('.sidebar-nav-item');
     if (!btn) return;
     showSection(btn.dataset.section);
+    // Close mobile sidebar
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('visible');
   });
 
   function showSection(section) {
     currentSection = section;
-    document.querySelectorAll('.section-nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+    document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`.sidebar-nav-item[data-section="${section}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
     document.getElementById('section-' + section).classList.add('active');
+    document.getElementById('topbarTitle').textContent = SECTION_TITLES[section] || section;
     if (section === 'analiticas' && !analyticsLoaded) loadAnalytics();
     if (section === 'ventas' && !salesLoaded) loadSales();
     if (section === 'archivo') loadArchive();
     if (section === 'auditoria') loadAudit();
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
   }
+
+  // Sidebar collapse toggle
+  document.getElementById('sidebarCollapseBtn').onclick = () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  };
+
+  // Mobile sidebar toggle
+  document.getElementById('mobileSidebarBtn').onclick = () => {
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.getElementById('sidebarOverlay').classList.add('visible');
+  };
+  document.getElementById('sidebarOverlay').onclick = () => {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('visible');
+  };
 
   // ── Chart Colors ──────────────────────────────────────────
   const CHART_COLORS = ['#0038A8','#CF142B','#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
