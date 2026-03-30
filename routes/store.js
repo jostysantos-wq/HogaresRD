@@ -106,9 +106,27 @@ function saveApplication(app) {
   write(FILES.applications, all);
 }
 
+// ── Multi-role helpers ─────────────────────────────────────────────────────
+function getUsersByRole(role) {
+  return getUsers().filter(u => u.role === role);
+}
+
+function getUsersByInmobiliaria(inmobiliariaId) {
+  return getUsers().filter(u =>
+    (u.role === 'broker' || u.role === 'agency') &&
+    u.inmobiliaria_id === inmobiliariaId
+  );
+}
+
+function getApplicationsByInmobiliaria(inmobiliariaId) {
+  return getApplications().filter(a => a.inmobiliaria_id === inmobiliariaId);
+}
+
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing,
-  getApplications, getApplicationById, getApplicationsByBroker, getApplicationsByClient, saveApplication,
+  getApplications, getApplicationById, getApplicationsByBroker,
+  getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
+  getUsersByRole, getUsersByInmobiliaria,
 };

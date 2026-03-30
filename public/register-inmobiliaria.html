@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Inmobiliaria — HogaresRD</title>
+  <style>
+    :root {
+      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
+      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
+      --input-bg: #f5f8fd; --shadow: 0 4px 24px rgba(0,56,168,0.13); --error: #CF142B;
+    }
+    [data-theme="dark"] {
+      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
+      --input-bg: #00162e; --shadow: 0 4px 24px rgba(0,0,0,0.5); --error: #e8374e;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    .theme-toggle { background: rgba(255,255,255,0.25); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+    main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 2.5rem 1rem; }
+    .auth-card { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 2.5rem 2.25rem; width: 100%; max-width: 480px; }
+    .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(124,58,237,0.1); color: #7C3AED; border: 1px solid rgba(124,58,237,0.25); border-radius: 20px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 1rem; }
+    .auth-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.35rem; }
+    .auth-subtitle { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.75rem; line-height: 1.5; }
+    .section-divider { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 1.4rem 0 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .field input:focus { border-color: var(--accent); }
+    .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .error-msg { font-size: 0.85rem; color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
+    .error-msg.visible { display: block; }
+    .info-box { background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); border-radius: 10px; padding: 0.9rem 1rem; margin: 1.1rem 0; font-size: 0.83rem; color: var(--text-muted); line-height: 1.55; }
+    .info-box strong { color: #7C3AED; }
+    .feature-list { margin: 0.5rem 0 0; padding-left: 0; list-style: none; }
+    .feature-list li { padding: 0.3rem 0; }
+    .feature-list li::before { content: '✓ '; color: #7C3AED; font-weight: 700; }
+    .checkbox-field { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1rem 0 0.25rem; }
+    .checkbox-field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+    .checkbox-field input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    .checkbox-field input[type="checkbox"]:disabled + label { opacity: 0.55; cursor: not-allowed; }
+    .checkbox-field label { font-size: 0.83rem; color: var(--text-muted); line-height: 1.4; }
+    .checkbox-field label a { color: var(--accent); font-weight: 600; text-decoration: underline; }
+    .tc-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.2rem 0 0 1.45rem; opacity: 0.8; }
+    .btn-primary { width: 100%; padding: 0.85rem; background: #7C3AED; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.5rem; }
+    .btn-primary:hover { background: #6D28D9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .auth-links { margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--text-muted); }
+    .auth-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .auth-links a:hover { text-decoration: underline; }
+    footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+    @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } .auth-card { padding: 2rem 1.25rem; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/home" class="nav-logo">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      HogaresRD
+    </a>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema">
+      <span class="toggle-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      </span>
+    </button>
+  </nav>
+
+  <main>
+    <div class="auth-card">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 7V3L8 7h4zm4.5 3.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5S18 12.83 18 12s-.67-1.5-1.5-1.5zm-9 0C6.67 10.5 6 11.17 6 12s.67 1.5 1.5 1.5S9 12.83 9 12s-.67-1.5-1.5-1.5zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        Inmobiliaria
+      </div>
+      <h1 class="auth-title">Registro de Inmobiliaria</h1>
+      <p class="auth-subtitle">Registra tu empresa inmobiliaria para supervisar a tu equipo de agentes brokers y gestionar todas las aplicaciones desde un solo lugar.</p>
+
+      <div class="info-box">
+        <strong>Con una cuenta de Inmobiliaria puedes:</strong>
+        <ul class="feature-list">
+          <li>Aprobar o rechazar solicitudes de afiliación de agentes</li>
+          <li>Ver todas las aplicaciones de tu equipo en tiempo real</li>
+          <li>Gestionar planes de pagos y revisar comprobantes</li>
+          <li>Acceder a analíticas consolidadas de todo tu equipo</li>
+        </ul>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <form id="inmobiliariaForm" novalidate>
+        <div class="section-divider">Contacto Responsable</div>
+        <div class="field">
+          <label>Nombre completo del responsable *</label>
+          <input type="text" id="name" placeholder="Juan Pérez" required autocomplete="name" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Correo electrónico *</label>
+            <input type="email" id="email" placeholder="info@inmobiliaria.com" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <label>Teléfono *</label>
+            <input type="tel" id="phone" placeholder="+1 (809) 000-0000" required />
+          </div>
+        </div>
+
+        <div class="section-divider">Datos de la Empresa</div>
+        <div class="field">
+          <label>Nombre de la empresa *</label>
+          <input type="text" id="companyName" placeholder="Ej. Inmobiliaria Elite RD" required />
+        </div>
+        <div class="field">
+          <label>Número de licencia MIREX *</label>
+          <input type="text" id="licenseNumber" placeholder="MIREX-2024-000000" required />
+          <p class="hint">Licencia emitida por el Ministerio de Relaciones Exteriores</p>
+        </div>
+
+        <div class="section-divider">Contraseña</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Contraseña *</label>
+            <input type="password" id="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label>Confirmar contraseña *</label>
+            <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="checkbox-field">
+          <input type="checkbox" id="tcAccept" disabled />
+          <label for="tcAccept">He leído y acepto los <a href="/terminos-agente" target="_blank" rel="noopener" onclick="unlockTc()">Términos y Condiciones</a> de HogaresRD para empresas inmobiliarias.</label>
+        </div>
+        <p class="tc-hint" id="tcHint">Debes abrir el enlace y leer los términos antes de poder aceptarlos.</p>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Registrar Inmobiliaria</button>
+      </form>
+
+      <div class="auth-links">
+        ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a><br/>
+        <span style="margin-top:0.5rem;display:block;">¿Eres agente individual? <a href="/register-broker">Regístrate como broker</a></span>
+      </div>
+    </div>
+  </main>
+
+  <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+    redirectIfAuth();
+
+    function unlockTc() {
+      const cb = document.getElementById('tcAccept');
+      const hint = document.getElementById('tcHint');
+      setTimeout(() => {
+        cb.disabled = false;
+        hint.textContent = 'Puedes aceptar los términos ahora.';
+      }, 800);
+    }
+
+    document.getElementById('inmobiliariaForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const err = document.getElementById('errorMsg');
+      err.classList.remove('visible');
+
+      const name            = document.getElementById('name').value.trim();
+      const email           = document.getElementById('email').value.trim();
+      const phone           = document.getElementById('phone').value.trim();
+      const companyName     = document.getElementById('companyName').value.trim();
+      const licenseNumber   = document.getElementById('licenseNumber').value.trim();
+      const password        = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!name || !email || !phone || !companyName || !licenseNumber || !password) {
+        err.textContent = 'Todos los campos son requeridos.';
+        return err.classList.add('visible');
+      }
+      if (password.length < 8) {
+        err.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+        return err.classList.add('visible');
+      }
+      if (password !== confirmPassword) {
+        err.textContent = 'Las contraseñas no coinciden.';
+        return err.classList.add('visible');
+      }
+      if (!document.getElementById('tcAccept').checked) {
+        err.textContent = 'Debes leer y aceptar los Términos y Condiciones para continuar.';
+        return err.classList.add('visible');
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Registrando...';
+
+      try {
+        const res = await fetch('/api/auth/register/inmobiliaria', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, companyName, licenseNumber, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
+        window.location.href = '/login?registered=inmobiliaria';
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Registrar Inmobiliaria';
+      }
+    });
+  </script>
+</body>
+</html>

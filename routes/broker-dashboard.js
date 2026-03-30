@@ -4,18 +4,24 @@ const { userAuth } = require('./auth');
 
 const router = express.Router();
 
-// All endpoints require logged-in agency user
+// All endpoints require logged-in broker / agency (compat) / inmobiliaria
 router.use(userAuth, (req, res, next) => {
   const user = store.getUserById(req.user.sub);
-  if (!user || user.role !== 'agency')
-    return res.status(403).json({ error: 'Solo brokers pueden acceder' });
+  const allowed = ['agency', 'broker', 'inmobiliaria'];
+  if (!user || !allowed.includes(user.role))
+    return res.status(403).json({ error: 'Solo agentes o inmobiliarias pueden acceder' });
   req.brokerUser = user;
   next();
 });
 
 // ── Helpers ──────────────────────────────────────────────────────
-function brokerApps(userId) {
-  return store.getApplicationsByBroker(userId);
+// Returns applications scoped to the caller's role:
+//   inmobiliaria → all apps whose broker was affiliated at the time
+//   broker / agency → only their own apps
+function brokerApps(user) {
+  if (user.role === 'inmobiliaria')
+    return store.getApplicationsByInmobiliaria(user.id);
+  return store.getApplicationsByBroker(user.id);
 }
 
 function parseRange(range) {
@@ -40,7 +46,7 @@ function findEvent(app, type, status) {
 // ── GET /analytics ──────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/analytics', (req, res) => {
-  const apps = brokerApps(req.user.sub);
+  const apps = brokerApps(req.brokerUser);
   const since = parseRange(req.query.range || '12m');
 
   // Applications by day (last 30 days)
@@ -116,7 +122,7 @@ router.get('/analytics', (req, res) => {
 // ── GET /sales ──────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/sales', (req, res) => {
-  const apps = brokerApps(req.user.sub);
+  const apps = brokerApps(req.brokerUser);
 
   const completedApps = apps.filter(a =>
     ['completado', 'pago_aprobado'].includes(a.status)
@@ -189,7 +195,7 @@ router.get('/sales', (req, res) => {
 // ── GET /documents/archive ──────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/documents/archive', (req, res) => {
-  const apps = brokerApps(req.user.sub);
+  const apps = brokerApps(req.brokerUser);
   const { status, type, search, page = 1, limit = 20 } = req.query;
 
   let docs = [];
@@ -248,7 +254,7 @@ router.get('/documents/archive', (req, res) => {
 // ── GET /audit ──────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/audit', (req, res) => {
-  const apps = brokerApps(req.user.sub);
+  const apps = brokerApps(req.brokerUser);
   const { search, type, from, to, app_id, page = 1, limit = 50 } = req.query;
 
   let events = [];
@@ -305,7 +311,7 @@ router.get('/audit', (req, res) => {
 // ── GET /accounting ─────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/accounting', (req, res) => {
-  const apps = brokerApps(req.user.sub);
+  const apps = brokerApps(req.brokerUser);
   const commissionRate = parseFloat(req.query.commission_rate) || 0.03; // 3% default
 
   const completedApps = apps.filter(a =>

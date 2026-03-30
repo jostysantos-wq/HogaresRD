@@ -215,6 +215,11 @@ router.post('/', (req, res) => {
     };
   }
 
+  // Snapshot inmobiliaria affiliation at application creation time
+  const brokerUser = broker.user_id ? store.getUserById(broker.user_id) : null;
+  const inmobiliaria_id   = brokerUser?.inmobiliaria_id   || null;
+  const inmobiliaria_name = brokerUser?.inmobiliaria_name || null;
+
   const app = {
     id:             uuid(),
     listing_id:     listing_id || '',
@@ -246,6 +251,8 @@ router.post('/', (req, res) => {
       verified_at: null, verified_by: null, notes: '',
     },
     payment_plan: null,
+    inmobiliaria_id,
+    inmobiliaria_name,
     timeline_events: [],
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
@@ -256,23 +263,38 @@ router.post('/', (req, res) => {
 
   store.saveApplication(app);
 
+  // Build application notification HTML
+  function newAppHtml(recipientLabel) {
+    return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+      <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
+        <h2 style="margin:0;">Nueva Aplicación</h2>
+        ${recipientLabel ? `<p style="margin:.3rem 0 0;opacity:.75;font-size:.85rem;">${recipientLabel}</p>` : ''}
+      </div>
+      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
+        <p><strong>${app.client.name}</strong> ha aplicado para:</p>
+        <p style="font-size:1.1rem;font-weight:700;">${app.listing_title} — $${Number(app.listing_price).toLocaleString()}</p>
+        <p>📞 ${app.client.phone} · ✉️ ${app.client.email || 'N/A'}</p>
+        <p>Agente: ${broker.name || 'Sin asignar'} · Intención: ${app.intent}</p>
+        <a href="${BASE_URL}/broker" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver en Dashboard</a>
+      </div>
+    </div>`;
+  }
+
   // Notify broker
   if (broker.email) {
-    sendNotification(broker.email,
-      `Nueva aplicación — ${app.listing_title}`,
-      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-        <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-          <h2 style="margin:0;">Nueva Aplicación</h2>
-        </div>
-        <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
-          <p><strong>${app.client.name}</strong> ha aplicado para:</p>
-          <p style="font-size:1.1rem;font-weight:700;">${app.listing_title} — $${Number(app.listing_price).toLocaleString()}</p>
-          <p>📞 ${app.client.phone} · ✉️ ${app.client.email || 'N/A'}</p>
-          <p>Intención: ${app.intent} · Presupuesto: $${app.budget} · Plazo: ${app.timeline}</p>
-          <a href="${BASE_URL}/broker" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver en Dashboard</a>
-        </div>
-      </div>`
-    );
+    sendNotification(broker.email, `Nueva aplicación — ${app.listing_title}`, newAppHtml(''));
+  }
+
+  // Notify inmobiliaria (if broker is affiliated)
+  if (inmobiliaria_id) {
+    const inmUser = store.getUserById(inmobiliaria_id);
+    if (inmUser?.email) {
+      sendNotification(
+        inmUser.email,
+        `Nueva aplicación (${broker.name || 'agente'}) — ${app.listing_title}`,
+        newAppHtml(`Agente: ${broker.name}`)
+      );
+    }
   }
 
   res.status(201).json({ ok: true, id: app.id });
@@ -297,7 +319,9 @@ router.get('/', (req, res, next) => {
   let apps;
   if (isAdmin(req) || user.role === 'admin') {
     apps = store.getApplications();
-  } else if (user.role === 'agency') {
+  } else if (user.role === 'inmobiliaria') {
+    apps = store.getApplicationsByInmobiliaria(user.id);
+  } else if (['agency', 'broker'].includes(user.role)) {
     apps = store.getApplicationsByBroker(user.id);
   } else {
     return res.status(403).json({ error: 'No autorizado' });
@@ -331,11 +355,12 @@ router.get('/:id', userAuth, (req, res) => {
 
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
 
-  if (!isBroker && !isClient && !admin)
+  if (!isBroker && !isInmobiliaria && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
   res.json(app);
@@ -350,8 +375,10 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
   const admin = isAdmin(req) || user?.role === 'admin';
-  if (!isBroker && !admin) return res.status(403).json({ error: 'No autorizado' });
+  if (!isBroker && !isInmobiliaria && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
 
   const { status, reason } = req.body;
   if (!status) return res.status(400).json({ error: 'status es requerido' });
@@ -859,8 +886,20 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
   const user = store.getUserById(req.user.sub);
-  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isBrokerOwner  = app.broker.user_id === req.user.sub;
+  const admin          = isAdmin(req) || user?.role === 'admin';
+
+  if (!isBrokerOwner && !isInmobiliaria && !admin)
     return res.status(403).json({ error: 'No autorizado' });
+
+  // Broker can only create the plan (first time). Once it exists, only inmobiliaria can edit.
+  const planExists = !!(app.payment_plan?.installments?.length);
+  if (planExists && isBrokerOwner && !isInmobiliaria && !admin)
+    return res.status(403).json({
+      error: 'El plan de pagos ya fue creado. Solo la inmobiliaria puede modificarlo.',
+    });
+
   const { payment_method, method_details, currency, total_amount, notes, installments } = req.body;
   if (!Array.isArray(installments) || !installments.length)
     return res.status(400).json({ error: 'Se requiere al menos una cuota' });
@@ -933,22 +972,33 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
     req.user.sub, user?.name || app.client.name || 'Cliente',
     { type: 'proof_uploaded', installment_id: inst.id, installment_number: inst.number });
   store.saveApplication(app);
+  const proofNotifHtml = `<div style="font-family:sans-serif;max-width:520px;">
+    <p>Hola,</p>
+    <p><strong>${app.client.name}</strong> subió el comprobante de la <strong>Cuota #${inst.number} (${inst.label})</strong> para <em>${app.listing_title}</em>.</p>
+    ${inst.proof_notes ? `<p><em>Nota del cliente:</em> ${inst.proof_notes}</p>` : ''}
+    <a href="${BASE_URL}/broker" style="background:#2563EB;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Revisar en el panel</a>
+  </div>`;
+  // Notify broker
   if (app.broker.email)
-    sendNotification(app.broker.email, `HogaresRD — Comprobante subido: Cuota #${inst.number}`,
-      `<div style="font-family:sans-serif;max-width:520px;">
-        <p>Hola,</p><p><strong>${app.client.name}</strong> subió el comprobante de la <strong>Cuota #${inst.number} (${inst.label})</strong> de ${app.listing_title}.</p>
-        ${inst.proof_notes ? `<p><em>Nota:</em> ${inst.proof_notes}</p>` : ''}
-        <a href="${BASE_URL}/broker" style="background:#2563EB;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Revisar en el panel</a>
-       </div>`);
+    sendNotification(app.broker.email, `HogaresRD — Comprobante subido: Cuota #${inst.number}`, proofNotifHtml);
+  // Notify inmobiliaria
+  if (app.inmobiliaria_id) {
+    const inmUser = store.getUserById(app.inmobiliaria_id);
+    if (inmUser?.email)
+      sendNotification(inmUser.email, `HogaresRD — Comprobante subido: Cuota #${inst.number}`, proofNotifHtml);
+  }
   res.json({ ok: true, installment: inst });
 });
 
-// ── PUT /:id/payment-plan/:iid/review  — Broker reviews proof ────
+// ── PUT /:id/payment-plan/:iid/review  — Inmobiliaria reviews proof ─
 router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
   const user = store.getUserById(req.user.sub);
-  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isBrokerOwner  = app.broker.user_id === req.user.sub;
+  const admin          = isAdmin(req) || user?.role === 'admin';
+  if (!isInmobiliaria && !isBrokerOwner && !admin)
     return res.status(403).json({ error: 'No autorizado' });
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });

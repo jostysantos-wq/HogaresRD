@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 function signToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ sub: user.id, role: user.role, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
 }
 
 function safeUser(user) {
@@ -293,6 +293,158 @@ router.post('/register/agency', async (req, res, next) => {
   </table>
 </body></html>`,
     }).catch(err => console.error('Agency welcome email error:', err.message));
+
+    res.status(201).json({ success: true, user: safeUser(user) });
+  } catch (err) { next(err); }
+});
+
+// ── Register Broker ────────────────────────────────────────────────────────
+router.post('/register/broker', async (req, res, next) => {
+  try {
+    const { name, email, password, phone, licenseNumber } = req.body;
+
+    if (!name || !email || !password || !phone || !licenseNumber)
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (password.length < 8)
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    if (store.getUserByEmail(email))
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const refToken     = crypto.randomBytes(8).toString('hex');
+
+    const user = {
+      id:              `usr_${Date.now()}`,
+      email:           email.toLowerCase().trim(),
+      passwordHash,
+      name:            name.trim(),
+      phone:           phone.trim(),
+      licenseNumber:   licenseNumber.trim(),
+      refToken,
+      createdAt:       new Date().toISOString(),
+      lastLoginAt:     null,
+      role:            'broker',
+      favorites:       [],
+      resetToken:      null,
+      resetTokenExpiry: null,
+      marketingOptIn:  true,
+      inmobiliaria_id:           null,
+      inmobiliaria_name:         null,
+      inmobiliaria_join_status:  null,
+      inmobiliaria_pending_id:   null,
+      inmobiliaria_pending_name: null,
+      inmobiliaria_joined_at:    null,
+    };
+
+    store.saveUser(user);
+
+    transporter.sendMail({
+      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      to:      user.email,
+      subject: '¡Bienvenido a HogaresRD! Tu cuenta de agente está lista 🏡',
+      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;">🏠 HogaresRD — Agentes</div>
+          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Bienvenido, ${name.split(' ')[0]}!</div>
+          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">Agente Broker · Lic. ${licenseNumber}</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Tu cuenta de agente broker está activa. Desde tu dashboard puedes:</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📋</span><span style="color:#4d6a8a;font-size:0.9rem;">Gestionar aplicaciones de clientes</span></td></tr>
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">🏢</span><span style="color:#4d6a8a;font-size:0.9rem;">Afiliarte a una inmobiliaria</span></td></tr>
+            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">📊</span><span style="color:#4d6a8a;font-size:0.9rem;">Ver analíticas de tus ventas</span></td></tr>
+          </table>
+          <div style="margin-top:24px;text-align:center;">
+            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+    }).catch(err => console.error('Broker welcome email error:', err.message));
+
+    res.status(201).json({ success: true, user: safeUser(user) });
+  } catch (err) { next(err); }
+});
+
+// ── Register Inmobiliaria ──────────────────────────────────────────────────
+router.post('/register/inmobiliaria', async (req, res, next) => {
+  try {
+    const { name, email, password, companyName, licenseNumber, phone } = req.body;
+
+    if (!name || !email || !password || !companyName || !licenseNumber || !phone)
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (password.length < 8)
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    if (store.getUserByEmail(email))
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const refToken     = crypto.randomBytes(8).toString('hex');
+
+    const user = {
+      id:              `usr_${Date.now()}`,
+      email:           email.toLowerCase().trim(),
+      passwordHash,
+      name:            name.trim(),
+      phone:           phone.trim(),
+      companyName:     companyName.trim(),
+      licenseNumber:   licenseNumber.trim(),
+      refToken,
+      createdAt:       new Date().toISOString(),
+      lastLoginAt:     null,
+      role:            'inmobiliaria',
+      favorites:       [],
+      resetToken:      null,
+      resetTokenExpiry: null,
+      marketingOptIn:  true,
+      join_requests:   [],
+    };
+
+    store.saveUser(user);
+
+    transporter.sendMail({
+      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      to:      user.email,
+      subject: `¡Bienvenido a HogaresRD! ${companyName} está registrada 🏢`,
+      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#0a4d8f 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;">🏢 HogaresRD — Inmobiliarias</div>
+          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">${companyName}</div>
+          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">Cuenta registrada · Lic. ${licenseNumber}</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Hola <strong>${name.split(' ')[0]}</strong>, tu inmobiliaria ya está registrada en HogaresRD.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">👥</span><span style="color:#4d6a8a;font-size:0.9rem;">Aprueba solicitudes de afiliación de agentes brokers</span></td></tr>
+            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📊</span><span style="color:#4d6a8a;font-size:0.9rem;">Supervisión total de todas las aplicaciones de tu equipo</span></td></tr>
+            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">💰</span><span style="color:#4d6a8a;font-size:0.9rem;">Gestión de planes de pagos y contabilidad consolidada</span></td></tr>
+          </table>
+          <div style="margin-top:24px;text-align:center;">
+            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+    }).catch(err => console.error('Inmobiliaria welcome email error:', err.message));
 
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }

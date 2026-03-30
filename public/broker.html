@@ -528,6 +528,79 @@
       { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
     .pp-form textarea { min-height: 60px; resize: vertical; }
 
+    .pp-calc { background: var(--accent-light); border: 1.5px solid var(--accent); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.1rem; }
+    .pp-calc-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.4rem; }
+    .pp-calc-title svg { width: 12px; height: 12px; fill: var(--accent); }
+    .pp-calc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .pp-calc-preview { font-size: 0.82rem; color: var(--accent); font-weight: 600; padding: 0.5rem 0.75rem; background: rgba(37,99,235,0.07); border-radius: 6px; margin-bottom: 0.6rem; min-height: 2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .pp-calc-preview svg { width: 13px; height: 13px; fill: var(--accent); flex-shrink: 0; }
+    .pp-calc-preview.empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
+    .pp-divider { display: flex; align-items: center; gap: 0.65rem; margin: 0.85rem 0 0.7rem; }
+    .pp-divider span { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); white-space: nowrap; }
+    .pp-divider::before, .pp-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    /* ── Multi-role UI ──────────────────────────────────────── */
+    .role-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.18rem 0.55rem; border-radius: 20px; }
+    .role-badge.broker      { background: rgba(37,99,235,0.18); color: #93c5fd; }
+    .role-badge.inmobiliaria { background: rgba(124,58,237,0.18); color: #c4b5fd; }
+    .role-badge.agency      { background: rgba(37,99,235,0.18); color: #93c5fd; }
+
+    /* Affiliation banner (broker) */
+    .aff-banner { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 1rem; border-radius: 8px; margin-bottom: 0.85rem; font-size: 0.78rem; }
+    .aff-banner.approved { background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; }
+    .aff-banner.pending  { background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; }
+    .aff-banner.none     { background: #F0F9FF; border: 1px solid #BAE6FD; color: #0C4A6E; }
+    .aff-banner.rejected { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+    .aff-banner-icon { flex-shrink: 0; width: 16px; height: 16px; }
+    .aff-banner-text { flex: 1; }
+    .aff-banner-name { font-weight: 700; }
+    .aff-banner-btn  { font-size: 0.7rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; }
+    .aff-banner.approved .aff-banner-btn { background: #DCFCE7; color: #166534; }
+    .aff-banner.pending  .aff-banner-btn { background: #FEF3C7; color: #92400E; }
+    .aff-banner.none     .aff-banner-btn,
+    .aff-banner.rejected .aff-banner-btn { background: #002D62; color: #fff; }
+
+    /* Inmobiliaria join-request search */
+    .inm-search-wrap { position: relative; margin-bottom: 0.5rem; }
+    .inm-search-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 200; max-height: 220px; overflow-y: auto; }
+    .inm-result-item { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; cursor: pointer; border-bottom: 1px solid var(--border); gap: 0.5rem; }
+    .inm-result-item:last-child { border-bottom: none; }
+    .inm-result-item:hover { background: var(--accent-light); }
+    .inm-result-name { font-size: 0.82rem; font-weight: 600; }
+    .inm-result-meta { font-size: 0.68rem; color: var(--text-muted); }
+    .inm-result-count { font-size: 0.68rem; background: var(--accent-light); color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 20px; white-space: nowrap; }
+
+    /* Equipo section */
+    .equipo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 700px) { .equipo-grid { grid-template-columns: 1fr; } }
+    .equipo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; display: flex; align-items: flex-start; gap: 0.85rem; }
+    .equipo-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; }
+    .equipo-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .equipo-meta { font-size: 0.72rem; color: var(--text-muted); }
+    .equipo-apps { font-size: 0.7rem; background: var(--accent-light); color: var(--accent); padding: 0.15rem 0.55rem; border-radius: 20px; margin-top: 0.3rem; display: inline-block; }
+    .equipo-remove-btn { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.25rem; border-radius: 4px; }
+    .equipo-remove-btn:hover { color: var(--red); background: #FEF2F2; }
+    .jr-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #F59E0B; border-radius: 8px; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.55rem; }
+    .jr-name { font-size: 0.85rem; font-weight: 700; flex: 1; }
+    .jr-meta { font-size: 0.7rem; color: var(--text-muted); }
+    .jr-actions { display: flex; gap: 0.4rem; }
+    .jr-approve-btn { background: #16A34A; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+    .jr-reject-btn  { background: #DC2626; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+    .equipo-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 1rem 0 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+    .equipo-badge { background: #EF4444; color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 20px; }
+
+    /* Broker filter (inmobiliaria view) */
+    .broker-filter-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.78rem; }
+    .broker-filter-row svg { width: 14px; height: 14px; fill: var(--accent); flex-shrink: 0; }
+    .broker-filter-row label { color: var(--accent); font-weight: 600; white-space: nowrap; }
+    .broker-filter-row select { background: transparent; border: none; color: var(--accent); font-weight: 700; font-size: 0.78rem; cursor: pointer; flex: 1; outline: none; }
+
+    /* Payment plan read-only lock (broker) */
+    .pp-locked { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 2rem 1.5rem; text-align: center; background: var(--surface); border: 1.5px dashed var(--border); border-radius: 12px; }
+    .pp-locked-icon { width: 40px; height: 40px; background: var(--accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .pp-locked-icon svg { width: 20px; height: 20px; fill: var(--accent); }
+    .pp-locked-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .pp-locked-sub   { font-size: 0.78rem; color: var(--text-muted); max-width: 300px; }
+
     .pp-builder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
     .pp-builder-label  { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
     .pp-inst-row { display: grid; grid-template-columns: 1fr 130px 130px 28px; gap: 0.5rem; margin-bottom: 0.4rem; align-items: center; }
@@ -716,7 +789,7 @@
       <div class="user-avatar" id="userInitials">?</div>
       <div class="sidebar-user-info">
         <div class="sidebar-user-name" id="userFirstName"></div>
-        <div class="sidebar-user-role">Broker</div>
+        <div class="sidebar-user-role" id="sidebarRoleLabel">Agente</div>
       </div>
     </div>
     <a href="/" class="sidebar-footer-link">
@@ -781,7 +854,15 @@
       <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
       Auditoria
     </button>
+    <button class="section-nav-btn" data-section="equipo" id="equipoNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      Equipo
+      <span class="equipo-badge" id="jrBadge" style="display:none">0</span>
+    </button>
   </div>
+
+  <!-- Affiliation Banner (broker role only, shown/hidden by JS) -->
+  <div id="affiliationBanner" style="display:none;padding:0 0 0.25rem;"></div>
 
   <!-- Section: Aplicaciones -->
   <div class="section-pane active" id="section-aplicaciones">
@@ -930,6 +1011,15 @@
       <thead><tr><th>Cliente</th><th>Propiedad</th><th>Precio</th><th>Comision</th><th>Estado Pago</th><th>Fecha</th></tr></thead>
       <tbody id="accountingTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
     </table>
+  </div>
+
+  <!-- Section: Equipo (inmobiliaria only) -->
+  <div class="section-pane" id="section-equipo">
+    <h3 class="section-title">Solicitudes Pendientes</h3>
+    <div id="jrList"><p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p></div>
+
+    <h3 class="section-title" style="margin-top:1.5rem;">Agentes Afiliados</h3>
+    <div class="equipo-grid" id="brokerTeamGrid"><p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p></div>
   </div>
 
   </div><!-- /page-dashboard -->
@@ -1234,9 +1324,20 @@
   let currentUser = null;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.role !== 'agency') { location.href = '/login'; return; }
+    if (!['agency', 'broker', 'inmobiliaria'].includes(payload.role)) {
+      location.href = '/login'; return;
+    }
     currentUser = payload;
   } catch(e) { location.href = '/login'; return; }
+
+  const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
+  const isInmobiliariaRole = currentUser.role === 'inmobiliaria';
+
+  // ── Full user data (affiliation fields, etc.) ───────────────
+  let currentUserFull = null;
+  (async () => {
+    try { currentUserFull = await API('/api/auth/me'); } catch {}
+  })();
 
   // ── Constants ──────────────────────────────────────────────
   const STATUS_LABELS = {
@@ -1410,6 +1511,18 @@
   document.getElementById('userInitials').textContent = initials;
   document.getElementById('userFirstName').textContent = (currentUser.name || currentUser.email || '').split(' ')[0];
   document.getElementById('logoutBtn').onclick = () => { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); localStorage.removeItem('token'); location.href = '/login'; };
+
+  // ── Role-aware UI setup ────────────────────────────────────
+  const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria' };
+  document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
+
+  if (isInmobiliariaRole) {
+    document.getElementById('equipoNavBtn').style.display = '';
+    loadEquipo();
+  }
+  if (isBrokerRole) {
+    initAffiliationBanner();
+  }
 
   // ── State ──────────────────────────────────────────────────
   let applications = [];
@@ -1945,10 +2058,66 @@
     return `<span>Vence: ${fmt}</span>`;
   }
 
+  // Read-only plan view (used by locked broker view)
+  function renderPlanReadOnly(plan) {
+    if (!plan) return '';
+    const approved = plan.installments.filter(i => i.status === 'approved').length;
+    const total    = plan.installments.length;
+    const pct      = total ? Math.round((approved / total) * 100) : 0;
+    return `
+      <div class="pp-header" style="margin-top:1rem;">
+        <div class="pp-header-row">
+          <span class="pp-header-label">Método</span>
+          <span class="pp-header-value">${esc(plan.payment_method || '—')}</span>
+        </div>
+        <div class="pp-header-row">
+          <span class="pp-header-label">Progreso</span>
+          <span class="pp-header-value">${approved}/${total} cuotas aprobadas (${pct}%)</span>
+        </div>
+      </div>
+      <div style="margin:0.75rem 0 1rem;">
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:var(--green);border-radius:3px;transition:width .4s;"></div>
+        </div>
+      </div>
+      ${plan.installments.map(i => `
+        <div class="pp-card status-${i.status}" style="margin-bottom:.5rem;">
+          <div class="pp-card-row">
+            <div class="pp-num">#${i.number}</div>
+            <div class="pp-info">
+              <div class="pp-label">${esc(i.label)}</div>
+              <div class="pp-meta">${i.due_date ? dueDateLabel(i.due_date) : '—'}</div>
+            </div>
+            <div class="pp-amount">${fmtCur(i.amount, plan.currency)}</div>
+            ${ppStatusBadge(i.status)}
+          </div>
+        </div>`).join('')}`;
+  }
+
+  function fmtCur(n, cur) {
+    return `${cur || 'DOP'} ${Number(n || 0).toLocaleString('es-DO')}`;
+  }
+
   function renderPago(a) {
     const appId = a._id || a.id;
     const plan  = a.payment_plan;
     const pane  = document.getElementById('pane-pago');
+
+    // ── Payment plan gate: broker loses write access once plan exists ──
+    if (isBrokerRole && plan) {
+      // Show read-only lock view, then the plan details (no edit/create buttons)
+      const inmName = a.inmobiliaria_name || 'la inmobiliaria';
+      pane.innerHTML = `
+        <div class="pp-locked">
+          <div class="pp-locked-icon">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          </div>
+          <div class="pp-locked-title">Plan gestionado por ${esc(inmName)}</div>
+          <div class="pp-locked-sub">El plan de pagos fue creado y está siendo administrado por la inmobiliaria. Solo puedes ver el estado.</div>
+        </div>
+        ${renderPlanReadOnly(plan)}`;
+      return;
+    }
 
     if (!plan) {
       pane.innerHTML = `
@@ -2169,6 +2338,56 @@
           </div>
         </div>
 
+        <div class="pp-calc">
+          <div class="pp-calc-title">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            Calculadora de Cuotas
+          </div>
+          <div class="pp-calc-grid">
+            <div class="form-group" style="margin:0">
+              <label style="font-size:0.65rem">Monto Total</label>
+              <input type="number" id="ppCalcTotal" min="0" placeholder="Ej: 500000">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:0.65rem">Plazo</label>
+              <select id="ppCalcMonths">
+                <option value="">-- meses --</option>
+                <option value="1">1 mes</option>
+                <option value="2">2 meses</option>
+                <option value="3">3 meses</option>
+                <option value="4">4 meses</option>
+                <option value="6">6 meses</option>
+                <option value="8">8 meses</option>
+                <option value="10">10 meses</option>
+                <option value="12">12 meses</option>
+                <option value="18">18 meses</option>
+                <option value="24">24 meses</option>
+                <option value="36">36 meses</option>
+                <option value="48">48 meses</option>
+                <option value="60">60 meses</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:0.65rem">Primera Cuota</label>
+              <input type="date" id="ppCalcStart">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:0.65rem">Enganche (opcional)</label>
+              <input type="number" id="ppCalcDown" min="0" placeholder="0">
+            </div>
+          </div>
+          <div class="pp-calc-preview empty" id="ppCalcPreview">
+            <svg viewBox="0 0 24 24"><path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6z"/></svg>
+            Ingresa el monto y el plazo para ver el cálculo
+          </div>
+          <button class="btn btn-primary btn-sm" id="ppCalcGenerate" style="width:100%">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+            Generar Cuotas
+          </button>
+        </div>
+
+        <div class="pp-divider"><span>— o ingresa manualmente —</span></div>
+
         <div class="pp-builder-header">
           <span class="pp-builder-label">Cuotas</span>
           <button class="btn btn-outline btn-sm" id="addInstBtn">
@@ -2221,6 +2440,45 @@
     pane.querySelector('#ppInstBuilder').addEventListener('input', updatePPTotal);
     updatePPTotal();
 
+    // Calculator live preview
+    ['ppCalcTotal', 'ppCalcMonths', 'ppCalcDown', 'ppCalcStart'].forEach(id => {
+      const el = pane.querySelector('#' + id);
+      if (el) el.addEventListener('input', updateCalcPreview);
+    });
+
+    // Generate installments from calculator
+    pane.querySelector('#ppCalcGenerate').onclick = () => {
+      const total  = parseFloat(document.getElementById('ppCalcTotal')?.value) || 0;
+      const months = parseInt(document.getElementById('ppCalcMonths')?.value)  || 0;
+      const down   = parseFloat(document.getElementById('ppCalcDown')?.value)  || 0;
+      const startVal = document.getElementById('ppCalcStart')?.value || '';
+      if (!total || !months) { toast('Ingresa el monto total y el plazo', 'error'); return; }
+      const remaining = Math.max(0, total - down);
+      const baseAmt   = Math.floor(remaining / months);
+      const lastExtra = remaining - baseAmt * months;
+      const builder   = document.getElementById('ppInstBuilder');
+      builder.innerHTML = '';
+      const start = startVal ? new Date(startVal + 'T12:00:00') : new Date();
+      // Down payment row
+      if (down > 0) {
+        const dueStr = startVal || start.toISOString().slice(0, 10);
+        builder.insertAdjacentHTML('beforeend', ppInstRow('Enganche Inicial', down, dueStr));
+      }
+      // Monthly installments
+      const monthOffset = down > 0 ? 1 : 0;
+      for (let i = 0; i < months; i++) {
+        const d = new Date(start.getFullYear(), start.getMonth() + i + monthOffset, start.getDate());
+        const dueStr  = d.toISOString().slice(0, 10);
+        const rawLabel = d.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+        const label   = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+        const amount  = (i === months - 1) ? baseAmt + lastExtra : baseAmt;
+        builder.insertAdjacentHTML('beforeend', ppInstRow(label, amount, dueStr));
+      }
+      updatePPTotal();
+      const totalRows = months + (down > 0 ? 1 : 0);
+      toast(`${totalRows} cuota(s) generada(s) ✓`);
+    };
+
     // Save
     pane.querySelector('#savePlanBtn').onclick = async () => {
       const method  = document.getElementById('ppMethod').value;
@@ -2268,6 +2526,248 @@
       .reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
     const el = document.getElementById('ppTotalDisplay');
     if (el) el.textContent = cur + ' ' + total.toLocaleString('es-DO');
+  }
+
+  function updateCalcPreview() {
+    const total  = parseFloat(document.getElementById('ppCalcTotal')?.value) || 0;
+    const months = parseInt(document.getElementById('ppCalcMonths')?.value)  || 0;
+    const down   = parseFloat(document.getElementById('ppCalcDown')?.value)  || 0;
+    const cur    = document.getElementById('ppCurrency')?.value || 'DOP';
+    const preview = document.getElementById('ppCalcPreview');
+    if (!preview) return;
+    if (!total || !months) {
+      preview.className = 'pp-calc-preview empty';
+      preview.innerHTML = `<svg viewBox="0 0 24 24"><path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6z"/></svg> Ingresa el monto y el plazo para ver el cálculo`;
+      return;
+    }
+    const remaining  = Math.max(0, total - down);
+    const baseAmt    = Math.floor(remaining / months);
+    const remainder  = remaining - baseAmt * months;
+    const icon = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>`;
+    let txt = '';
+    if (down > 0) txt += `Enganche: <strong>${cur} ${down.toLocaleString('es-DO')}</strong> + `;
+    txt += `${months} cuota(s) de <strong>${cur} ${baseAmt.toLocaleString('es-DO')}</strong>`;
+    if (remainder > 0) txt += ` <span style="font-size:0.72rem;opacity:0.75">(última: ${cur} ${(baseAmt + remainder).toLocaleString('es-DO')})</span>`;
+    preview.className = 'pp-calc-preview';
+    preview.innerHTML = icon + txt;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Affiliation Banner (broker role) ─────────────────────
+  // ══════════════════════════════════════════════════════════
+  let affModalOpen = false;
+
+  async function initAffiliationBanner() {
+    const banner = document.getElementById('affiliationBanner');
+    if (!banner) return;
+    banner.style.display = '';
+    await refreshAffBanner();
+  }
+
+  async function refreshAffBanner() {
+    const banner = document.getElementById('affiliationBanner');
+    if (!banner) return;
+    try {
+      const aff = await API('/api/inmobiliaria/my-affiliation');
+      renderAffBanner(banner, aff);
+    } catch {
+      banner.style.display = 'none';
+    }
+  }
+
+  function renderAffBanner(banner, aff) {
+    if (aff.inmobiliaria_id && aff.inmobiliaria_join_status === 'approved') {
+      banner.innerHTML = `<div class="aff-banner approved">
+        <svg class="aff-banner-icon" viewBox="0 0 24 24" fill="#16A34A"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <div class="aff-banner-text">Afiliado a <span class="aff-banner-name">${esc(aff.inmobiliaria_name)}</span></div>
+        <button class="aff-banner-btn" onclick="openAffModal()">Cambiar</button>
+      </div>`;
+    } else if (aff.inmobiliaria_join_status === 'pending') {
+      banner.innerHTML = `<div class="aff-banner pending">
+        <svg class="aff-banner-icon" viewBox="0 0 24 24" fill="#D97706"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <div class="aff-banner-text">Solicitud pendiente a <span class="aff-banner-name">${esc(aff.inmobiliaria_pending_name || '...')}</span></div>
+        <button class="aff-banner-btn" onclick="cancelJoinRequest()">Cancelar solicitud</button>
+      </div>`;
+    } else if (aff.inmobiliaria_join_status === 'rejected') {
+      banner.innerHTML = `<div class="aff-banner rejected">
+        <svg class="aff-banner-icon" viewBox="0 0 24 24" fill="#DC2626"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <div class="aff-banner-text">Tu solicitud fue rechazada. Puedes aplicar a otra inmobiliaria.</div>
+        <button class="aff-banner-btn" onclick="openAffModal()">Buscar inmobiliaria</button>
+      </div>`;
+    } else {
+      banner.innerHTML = `<div class="aff-banner none">
+        <svg class="aff-banner-icon" viewBox="0 0 24 24" fill="#0369A1"><path d="M12 7V3L8 7h4zm4.5 3.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5S18 12.83 18 12s-.67-1.5-1.5-1.5zm-9 0C6.67 10.5 6 11.17 6 12s.67 1.5 1.5 1.5S9 12.83 9 12s-.67-1.5-1.5-1.5zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <div class="aff-banner-text">No estás afiliado a ninguna inmobiliaria.</div>
+        <button class="aff-banner-btn" onclick="openAffModal()">Buscar y solicitar</button>
+      </div>`;
+    }
+  }
+
+  function openAffModal() {
+    // Inline modal for inmobiliaria search
+    const existing = document.getElementById('affModal');
+    if (existing) { existing.remove(); }
+    const m = document.createElement('div');
+    m.id = 'affModal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    m.innerHTML = `
+      <div style="background:var(--surface);border-radius:14px;width:100%;max-width:460px;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <h3 style="margin:0;font-size:1rem;font-weight:700;">Afiliarse a una Inmobiliaria</h3>
+          <button onclick="document.getElementById('affModal').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">✕</button>
+        </div>
+        <div class="inm-search-wrap">
+          <input type="text" id="inmSearch" class="search-bar" style="margin:0;" placeholder="Buscar por nombre...">
+          <div class="inm-search-results" id="inmSearchResults" style="display:none;"></div>
+        </div>
+        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.5rem;">La inmobiliaria recibirá tu solicitud y deberá aprobarla para completar la afiliación.</p>
+      </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+
+    const inmSearch = document.getElementById('inmSearch');
+    let debounce;
+    inmSearch.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => searchInmobiliarias(inmSearch.value.trim()), 300);
+    });
+    inmSearch.focus();
+    searchInmobiliarias('');
+  }
+
+  async function searchInmobiliarias(q) {
+    const results = document.getElementById('inmSearchResults');
+    if (!results) return;
+    try {
+      const list = await API(`/api/inmobiliaria/list${q ? '?search=' + encodeURIComponent(q) : ''}`);
+      if (!list.length) {
+        results.style.display = '';
+        results.innerHTML = `<div style="padding:0.75rem;color:var(--text-muted);font-size:0.8rem;">No se encontraron inmobiliarias</div>`;
+        return;
+      }
+      results.style.display = '';
+      results.innerHTML = list.map(i => `
+        <div class="inm-result-item" data-id="${esc(i.id)}" data-name="${esc(i.companyName || i.name)}">
+          <div>
+            <div class="inm-result-name">${esc(i.companyName || i.name)}</div>
+            <div class="inm-result-meta">Lic. ${esc(i.licenseNumber || '—')}</div>
+          </div>
+          <span class="inm-result-count">${i.broker_count} agente(s)</span>
+        </div>`).join('');
+      results.querySelectorAll('.inm-result-item').forEach(el => {
+        el.onclick = () => sendJoinRequest(el.dataset.id, el.dataset.name);
+      });
+    } catch { }
+  }
+
+  async function sendJoinRequest(inmId, inmName) {
+    try {
+      await API('/api/inmobiliaria/join-request', { method: 'POST', body: { inmobiliaria_id: inmId } });
+      toast(`Solicitud enviada a ${inmName} ✓`);
+      document.getElementById('affModal')?.remove();
+      refreshAffBanner();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function cancelJoinRequest() {
+    if (!confirm('¿Cancelar solicitud de afiliación?')) return;
+    try {
+      await API('/api/inmobiliaria/join-request', { method: 'DELETE' });
+      toast('Solicitud cancelada');
+      refreshAffBanner();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Equipo Section (inmobiliaria role) ───────────────────
+  // ══════════════════════════════════════════════════════════
+  let equipoLoaded = false;
+
+  async function loadEquipo() {
+    if (!isInmobiliariaRole) return;
+    try {
+      const data = await API('/api/inmobiliaria/brokers');
+      renderEquipo(data);
+    } catch(e) {
+      document.getElementById('jrList').innerHTML = `<p style="color:var(--red);">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderEquipo(data) {
+    const { brokers = [], pending_requests = [] } = data;
+
+    // Badge
+    const badge = document.getElementById('jrBadge');
+    if (badge) {
+      badge.textContent = pending_requests.length;
+      badge.style.display = pending_requests.length ? '' : 'none';
+    }
+
+    // Join requests
+    const jrList = document.getElementById('jrList');
+    if (!pending_requests.length) {
+      jrList.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;">No hay solicitudes pendientes.</p>`;
+    } else {
+      jrList.innerHTML = pending_requests.map(jr => `
+        <div class="jr-card" data-id="${esc(jr.broker_id)}">
+          <div>
+            <div class="jr-name">${esc(jr.broker_name)}</div>
+            <div class="jr-meta">${esc(jr.broker_email)}${jr.broker_license ? ' · Lic. ' + esc(jr.broker_license) : ''}</div>
+            <div class="jr-meta" style="margin-top:.2rem;">Solicitado: ${new Date(jr.requested_at).toLocaleDateString('es-DO')}</div>
+          </div>
+          <div class="jr-actions">
+            <button class="jr-approve-btn">✓ Aprobar</button>
+            <button class="jr-reject-btn">✕ Rechazar</button>
+          </div>
+        </div>`).join('');
+      jrList.querySelectorAll('.jr-card').forEach(card => {
+        const brokerId = card.dataset.id;
+        card.querySelector('.jr-approve-btn').onclick = () => respondJoinRequest(brokerId, 'approve');
+        card.querySelector('.jr-reject-btn').onclick  = () => respondJoinRequest(brokerId, 'reject');
+      });
+    }
+
+    // Broker team grid
+    const grid = document.getElementById('brokerTeamGrid');
+    if (!brokers.length) {
+      grid.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;grid-column:1/-1;">No hay agentes afiliados.</p>`;
+    } else {
+      grid.innerHTML = brokers.map(b => {
+        const av = b.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        return `<div class="equipo-card" data-id="${esc(b.id)}">
+          <div class="equipo-avatar">${esc(av)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="equipo-name">${esc(b.name)}</div>
+            <div class="equipo-meta">${esc(b.email)}</div>
+            ${b.licenseNumber ? `<div class="equipo-meta">Lic. ${esc(b.licenseNumber)}</div>` : ''}
+            <span class="equipo-apps">${b.app_count} aplicacion(es)</span>
+          </div>
+          <button class="equipo-remove-btn" title="Desvincular agente" data-id="${esc(b.id)}" data-name="${esc(b.name)}">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+        </div>`;
+      }).join('');
+      grid.querySelectorAll('.equipo-remove-btn').forEach(btn => {
+        btn.onclick = () => removeBroker(btn.dataset.id, btn.dataset.name);
+      });
+    }
+  }
+
+  async function respondJoinRequest(brokerId, action) {
+    try {
+      await API(`/api/inmobiliaria/brokers/${brokerId}/${action}`, { method: 'POST' });
+      toast(action === 'approve' ? 'Agente aprobado ✓' : 'Solicitud rechazada');
+      loadEquipo();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function removeBroker(brokerId, brokerName) {
+    if (!confirm(`¿Desvincular a ${brokerName} de tu inmobiliaria?`)) return;
+    try {
+      await API(`/api/inmobiliaria/brokers/${brokerId}/remove`, { method: 'POST' });
+      toast('Agente desvinculado');
+      loadEquipo();
+    } catch(e) { toast(e.message, 'error'); }
   }
 
   // ── Timeline / Audit Log Tab ───────────────────────────────
@@ -2418,6 +2918,7 @@
     if (section === 'archivo') loadArchive();
     if (section === 'auditoria') loadAudit();
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
+    if (section === 'equipo') loadEquipo();
   }
 
   // ── Sidebar collapse & mobile ───────────────────────────────

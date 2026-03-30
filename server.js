@@ -123,6 +123,7 @@ app.use('/api/ads',        require('./routes/ads'));
 app.use('/api/leads',         require('./routes/leads'));
 app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
+app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
@@ -167,7 +168,9 @@ app.get('/submit', (req, res) => {
 
 app.get('/login',                (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get('/register-agency',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
+app.get('/register-agency',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
+app.get('/register-broker',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-broker.html')));
+app.get('/register-inmobiliaria',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-inmobiliaria.html')));
 app.get('/reset-password',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/forgot-password',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/terminos-usuario',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-usuario.html')));
