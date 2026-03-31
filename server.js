@@ -176,6 +176,7 @@ app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
+app.use('/api/conversations', require('./routes/conversations'));
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
@@ -247,6 +248,7 @@ app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/verify-email',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));
 app.get('/subscription',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscription.html')));
+app.get('/mensajes',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'mensajes.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;

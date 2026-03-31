@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Mensajes – HogaresRD</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f8fa; --bg-card: #fff; --text: #1a1a2e; --text-muted: #6b7280;
+      --border: #e5e7eb; --accent: #2563eb; --accent-hover: #1d4ed8;
+      --accent-light: #eff6ff; --green: #16a34a; --red: #dc2626;
+      --nav-h: 64px;
+    }
+    [data-theme="dark"] {
+      --bg: #0f1117; --bg-card: #1a1d27; --text: #f0f0f5; --text-muted: #9ca3af;
+      --border: #2d3148; --accent-light: #1e2a4a;
+    }
+
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--bg-card); border-bottom: 1px solid var(--border); height: var(--nav-h); display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; }
+    .nav-logo { font-weight: 800; font-size: 1.1rem; text-decoration: none; color: var(--text); }
+    .nav-logo span { color: var(--accent); }
+    .nav-spacer { flex: 1; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; }
+    .nav-link:hover { color: var(--accent); }
+    .theme-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; color: var(--text-muted); font-size: 1rem; }
+
+    /* LAYOUT */
+    .chat-shell { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - var(--nav-h)); }
+    @media (max-width: 700px) { .chat-shell { grid-template-columns: 1fr; } .conv-pane { display: none; } .conv-pane.mobile-show { display: flex; } .msg-pane { display: none; } .msg-pane.mobile-show { display: flex; } }
+
+    /* CONVERSATION LIST */
+    .conv-pane { display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg-card); }
+    .conv-pane-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    .conv-pane-header h2 { font-size: 1rem; font-weight: 700; }
+    .conv-pane-header p  { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .conv-list { flex: 1; overflow-y: auto; }
+    .conv-item { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .conv-item:hover, .conv-item.active { background: var(--accent-light); }
+    .conv-thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--border); flex-shrink: 0; }
+    .conv-thumb-placeholder { width: 44px; height: 44px; border-radius: 10px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-title { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-sub   { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .conv-badge { background: var(--accent); color: #fff; border-radius: 99px; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; flex-shrink: 0; }
+    .conv-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.88rem; }
+
+    /* MESSAGE PANE */
+    .msg-pane { display: flex; flex-direction: column; }
+    .msg-pane-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; color: var(--text-muted); }
+    .msg-pane-empty svg { width: 48px; height: 48px; opacity: 0.3; }
+    .msg-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+    .msg-header-back { display: none; background: none; border: none; cursor: pointer; color: var(--text-muted); }
+    @media (max-width: 700px) { .msg-header-back { display: block; } }
+    .msg-header-title { font-size: 0.95rem; font-weight: 700; }
+    .msg-header-sub   { font-size: 0.78rem; color: var(--text-muted); }
+    .msg-header-broker { margin-left: auto; font-size: 0.78rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+    .messages-area { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .msg-bubble-wrap { display: flex; flex-direction: column; }
+    .msg-bubble-wrap.mine { align-items: flex-end; }
+    .msg-bubble { max-width: 72%; padding: 0.6rem 0.9rem; border-radius: 14px; font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
+    .msg-bubble-wrap.theirs .msg-bubble { background: var(--bg-card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg-bubble-wrap.mine .msg-bubble   { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .msg-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; padding: 0 4px; }
+    .msg-input-bar { display: flex; gap: 0.6rem; padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); background: var(--bg-card); }
+    .msg-input { flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.9rem; background: var(--bg); color: var(--text); resize: none; outline: none; max-height: 120px; }
+    .msg-input:focus { border-color: var(--accent); }
+    .msg-send-btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0 1.1rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: background 0.2s; flex-shrink: 0; }
+    .msg-send-btn:hover { background: var(--accent-hover); }
+    .msg-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Loading / spinner */
+    .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 2rem auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/home">Hogares<span>RD</span></a>
+  <div class="nav-spacer"></div>
+  <a class="nav-link" href="/home">Inicio</a>
+  <button class="theme-btn" onclick="toggleTheme()">🌙</button>
+</nav>
+
+<div class="chat-shell">
+
+  <!-- LEFT: conversation list -->
+  <div class="conv-pane" id="convPane">
+    <div class="conv-pane-header">
+      <h2>Mensajes</h2>
+      <p>Tus conversaciones con agentes</p>
+    </div>
+    <div class="conv-list" id="convList">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: message thread -->
+  <div class="msg-pane" id="msgPane">
+    <div class="msg-pane-empty" id="msgEmpty">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      <p>Selecciona una conversación para ver los mensajes</p>
+    </div>
+    <div id="msgThread" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+      <div class="msg-header">
+        <button class="msg-header-back" onclick="backToList()">←</button>
+        <div>
+          <div class="msg-header-title" id="threadTitle">—</div>
+          <div class="msg-header-sub" id="threadSub">—</div>
+        </div>
+        <div class="msg-header-broker" id="threadBroker" style="display:none"></div>
+      </div>
+      <div class="messages-area" id="messagesArea"></div>
+      <div class="msg-input-bar">
+        <textarea class="msg-input" id="msgInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
+        <button class="msg-send-btn" id="msgSendBtn" onclick="sendMessage()">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/auth.js"></script>
+<script>
+  // Theme
+  const html  = document.documentElement;
+  const saved = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', saved);
+  function toggleTheme() {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  }
+
+  requireAuth();
+
+  const ME = getUser();
+
+  let activeConvId  = null;
+  let lastTimestamp = null;
+  let pollTimer     = null;
+
+  // ── Load conversation list ────────────────────────────────────────────────
+  async function loadConvList() {
+    const res  = await fetch('/api/conversations', { credentials: 'include' });
+    const list = await res.json();
+    const el   = document.getElementById('convList');
+
+    if (!list.length) {
+      el.innerHTML = '<div class="conv-empty">Aún no tienes conversaciones.<br>Muestra interés en una propiedad para comenzar.</div>';
+      return;
+    }
+
+    el.innerHTML = list.map(c => {
+      const unread = c.unreadClient || 0;
+      const img    = c.propertyImage
+        ? `<img class="conv-thumb" src="/uploads/photos/${c.propertyImage}" onerror="this.style.display='none'">`
+        : `<div class="conv-thumb-placeholder">🏠</div>`;
+      const badge  = unread > 0 ? `<span class="conv-badge">${unread}</span>` : '';
+      const broker = c.brokerName ? `Agente: ${c.brokerName}` : 'Sin agente asignado aún';
+      return `
+        <div class="conv-item ${c.id === activeConvId ? 'active' : ''}" onclick="openConv('${c.id}')">
+          ${img}
+          <div class="conv-info">
+            <div class="conv-title">${c.propertyTitle}</div>
+            <div class="conv-sub">${c.lastMessage || broker}</div>
+          </div>
+          ${badge}
+        </div>`;
+    }).join('');
+  }
+
+  // ── Open a conversation ───────────────────────────────────────────────────
+  async function openConv(id) {
+    activeConvId  = id;
+    lastTimestamp = null;
+
+    // Mobile: show message pane
+    document.getElementById('convPane').classList.remove('mobile-show');
+    document.getElementById('msgPane').classList.add('mobile-show');
+
+    document.getElementById('msgEmpty').style.display  = 'none';
+    const thread = document.getElementById('msgThread');
+    thread.style.display = 'flex';
+
+    document.getElementById('messagesArea').innerHTML = '<div class="spinner"></div>';
+    markActiveConv(id);
+
+    const res  = await fetch(`/api/conversations/${id}`, { credentials: 'include' });
+    const conv = await res.json();
+
+    document.getElementById('threadTitle').textContent = conv.propertyTitle;
+    document.getElementById('threadSub').textContent   = `Iniciado el ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
+
+    const brokerEl = document.getElementById('threadBroker');
+    if (conv.brokerName) {
+      brokerEl.textContent    = `Agente: ${conv.brokerName}`;
+      brokerEl.style.display  = 'block';
+    } else {
+      brokerEl.style.display  = 'none';
+    }
+
+    renderMessages(conv.messages);
+    if (conv.messages.length) lastTimestamp = conv.messages.at(-1).timestamp;
+
+    // Mark as read
+    fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
+
+    // Start polling
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => pollMessages(id), 3000);
+  }
+
+  // ── Polling for new messages ──────────────────────────────────────────────
+  async function pollMessages(id) {
+    if (activeConvId !== id) return;
+    const url = lastTimestamp
+      ? `/api/conversations/${id}?since=${encodeURIComponent(lastTimestamp)}`
+      : `/api/conversations/${id}`;
+    const res  = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return;
+    const conv = await res.json();
+    if (conv.messages?.length) {
+      appendMessages(conv.messages);
+      lastTimestamp = conv.messages.at(-1).timestamp;
+      // Mark as read
+      fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
+      loadConvList(); // refresh unread counts
+    }
+  }
+
+  // ── Render messages ───────────────────────────────────────────────────────
+  function renderMessages(msgs) {
+    const area = document.getElementById('messagesArea');
+    area.innerHTML = msgs.map(msgHTML).join('');
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendMessages(msgs) {
+    const area = document.getElementById('messagesArea');
+    msgs.forEach(m => {
+      area.insertAdjacentHTML('beforeend', msgHTML(m));
+    });
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function msgHTML(m) {
+    const mine = m.senderId === ME?.id;
+    const time  = new Date(m.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="msg-bubble-wrap ${mine ? 'mine' : 'theirs'}">
+        <div class="msg-bubble">${escHtml(m.text)}</div>
+        <div class="msg-meta">${mine ? 'Tú' : m.senderName} · ${time}</div>
+      </div>`;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  // ── Send message ──────────────────────────────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const btn   = document.getElementById('msgSendBtn');
+    const text  = input.value.trim();
+    if (!text || !activeConvId) return;
+
+    btn.disabled  = true;
+    input.value   = '';
+
+    const res  = await fetch(`/api/conversations/${activeConvId}/messages`, {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (data.message) {
+      appendMessages([data.message]);
+      lastTimestamp = data.message.timestamp;
+    }
+    btn.disabled = false;
+    input.focus();
+    loadConvList();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function markActiveConv(id) {
+    document.querySelectorAll('.conv-item').forEach(el => {
+      el.classList.toggle('active', el.getAttribute('onclick') === `openConv('${id}')`);
+    });
+  }
+
+  function backToList() {
+    clearInterval(pollTimer);
+    activeConvId = null;
+    document.getElementById('convPane').classList.add('mobile-show');
+    document.getElementById('msgPane').classList.remove('mobile-show');
+  }
+
+  // Enter sends, Shift+Enter = newline
+  document.getElementById('msgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadConvList();
+
+  // Open conversation from URL param ?conv=id
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('conv')) openConv(params.get('conv'));
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ const FILES = {
   submissions:    path.join(DATA_DIR, 'submissions.json'),
   applications:   path.join(DATA_DIR, 'applications.json'),
   revokedTokens:  path.join(DATA_DIR, 'revoked_tokens.json'),
+  conversations:  path.join(DATA_DIR, 'conversations.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -138,6 +139,29 @@ function isTokenRevoked(jti) {
   return _readRevoked().some(t => t.jti === jti && t.exp > now);
 }
 
+// ── Conversations ─────────────────────────────────────────────────────────
+ensureFile(FILES.conversations);
+
+function getConversations()       { return read(FILES.conversations); }
+function getConversationById(id)  { return getConversations().find(c => c.id === id) || null; }
+
+function getConversationsByClient(clientId) {
+  return getConversations().filter(c => c.clientId === clientId);
+}
+
+function getConversationsForBroker(brokerId) {
+  // Broker sees convs assigned to them OR unassigned
+  return getConversations().filter(c => !c.brokerId || c.brokerId === brokerId);
+}
+
+function saveConversation(conv) {
+  const all = getConversations();
+  const idx = all.findIndex(c => c.id === conv.id);
+  if (idx === -1) all.unshift(conv);
+  else all[idx] = conv;
+  write(FILES.conversations, all);
+}
+
 // ── Multi-role helpers ─────────────────────────────────────────────────────
 function getUsersByRole(role) {
   return getUsers().filter(u => u.role === role);
@@ -160,6 +184,8 @@ module.exports = {
   getListings, getListingById, saveListing,
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
+  getConversations, getConversationById, getConversationsByClient,
+  getConversationsForBroker, saveConversation,
   getUsersByRole, getUsersByInmobiliaria,
   revokeToken, isTokenRevoked,
 };

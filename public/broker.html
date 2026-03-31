@@ -893,6 +893,10 @@
       <svg viewBox="0 0 24 24"><path d="M12 2l2.09 6.43H21l-5.47 3.97 2.09 6.43L12 14.87l-5.62 3.96 2.09-6.43L3 8.43h6.91z"/></svg>
       <span class="sidebar-nav-label">Chat IA</span>
     </button>
+    <button class="sidebar-nav-item" data-page="mensajes">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      <span class="sidebar-nav-label">Mensajes <span id="msgNavBadge" style="display:none;background:#ef4444;color:#fff;border-radius:99px;font-size:0.68rem;font-weight:700;padding:1px 5px;margin-left:4px;vertical-align:middle;">0</span></span>
+    </button>
     <button class="sidebar-nav-item" data-page="notificaciones">
       <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
       <span class="sidebar-nav-label">Notificaciones</span>
@@ -1426,6 +1430,43 @@
       <button class="btn btn-outline btn-sm" id="markAllReadBtn">Marcar todo como leido</button>
     </div>
     <div id="notifList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ═══ PAGE: MENSAJES ═══════════════════════════════════ -->
+  <div class="page-section" id="page-mensajes" style="padding:0;display:none;flex-direction:row;height:calc(100vh - 60px);overflow:hidden;">
+
+    <!-- Conversation list -->
+    <div id="brkConvPane" style="width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+        <div style="font-size:1rem;font-weight:700;">Mensajes de Clientes</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Conversaciones entrantes</div>
+      </div>
+      <div id="brkConvList" style="flex:1;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Message thread -->
+    <div id="brkMsgPane" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div id="brkMsgEmpty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.75rem;color:var(--text-muted);">
+        <svg viewBox="0 0 24 24" style="width:48px;height:48px;opacity:.25;fill:currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <p style="font-size:.9rem;">Selecciona una conversación</p>
+      </div>
+      <div id="brkThread" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg-card);">
+          <div>
+            <div id="brkThreadTitle" style="font-size:.95rem;font-weight:700;"></div>
+            <div id="brkThreadSub" style="font-size:.78rem;color:var(--text-muted);"></div>
+          </div>
+          <div id="brkClientChip" style="margin-left:auto;font-size:.78rem;color:var(--text-muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:3px 10px;"></div>
+        </div>
+        <div id="brkMsgArea" style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:.75rem;"></div>
+        <div style="display:flex;gap:.6rem;padding:.85rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-card);">
+          <textarea id="brkInput" rows="1" placeholder="Escribe tu respuesta…"
+            style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:.6rem .9rem;font-size:.9rem;background:var(--bg);color:var(--text);resize:none;outline:none;font-family:inherit;max-height:100px;"></textarea>
+          <button id="brkSendBtn" onclick="brkSend()"
+            style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0 1.1rem;font-size:.9rem;font-weight:700;cursor:pointer;flex-shrink:0;">Enviar</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ PAGE: CONTRASENA ══════════════════════════════════ -->
@@ -4347,6 +4388,172 @@
       toast('Reporte Excel descargado');
     }
   })();
+
+})();
+</script>
+
+<!-- ── Mensajes (broker chat) ──────────────────────────────── -->
+<script>
+(function() {
+  let brkActiveConv  = null;
+  let brkLastTs      = null;
+  let brkPollTimer   = null;
+
+  // Fix mensajes page display when activated
+  const origNav = window._navToPage;
+  function ensureMsgPageFlex() {
+    const pg = document.getElementById('page-mensajes');
+    if (pg && pg.classList.contains('active')) {
+      pg.style.display = 'flex';
+      brkLoadList();
+    }
+  }
+  // Hook into page navigation
+  document.querySelectorAll('.sidebar-nav-item[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.page === 'mensajes') {
+        setTimeout(ensureMsgPageFlex, 50);
+      } else {
+        clearInterval(brkPollTimer);
+      }
+    });
+  });
+
+  async function brkLoadList() {
+    const res  = await fetch('/api/conversations', { credentials: 'include' });
+    const list = await res.json();
+    const el   = document.getElementById('brkConvList');
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:1.5rem 1.25rem;font-size:.85rem;color:var(--text-muted);text-align:center;">Sin conversaciones aún.<br>Los clientes te contactarán desde los listados.</div>';
+      return;
+    }
+    el.innerHTML = list.map(c => {
+      const unread = c.unreadBroker || 0;
+      const badge  = unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:99px;font-size:.7rem;font-weight:700;padding:1px 6px;flex-shrink:0;">${unread}</span>` : '';
+      const status = c.brokerId ? '' : '<span style="font-size:.68rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;margin-left:4px;">Sin asignar</span>';
+      return `<div onclick="brkOpenConv('${c.id}')" style="display:flex;gap:.6rem;align-items:flex-start;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;" class="brk-conv-item ${c.id === brkActiveConv ? 'brk-active' : ''}" data-id="${c.id}"
+        onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''"
+      >
+        <div style="width:38px;height:38px;border-radius:9px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">👤</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.clientName}${status}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">🏠 ${c.propertyTitle}</div>
+          <div style="font-size:.73rem;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.lastMessage || '—'}</div>
+        </div>
+        ${badge}
+      </div>`;
+    }).join('');
+
+    // Update nav badge
+    const totalUnread = list.reduce((n, c) => n + (c.unreadBroker || 0), 0);
+    const navBadge = document.getElementById('msgNavBadge');
+    if (navBadge) {
+      navBadge.textContent  = totalUnread;
+      navBadge.style.display = totalUnread > 0 ? 'inline' : 'none';
+    }
+  }
+
+  window.brkOpenConv = async function(id) {
+    brkActiveConv = id;
+    brkLastTs     = null;
+    clearInterval(brkPollTimer);
+
+    document.getElementById('brkMsgEmpty').style.display = 'none';
+    const thread = document.getElementById('brkThread');
+    thread.style.display = 'flex';
+    document.getElementById('brkMsgArea').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:.85rem;">Cargando…</div>';
+
+    const res  = await fetch(`/api/conversations/${id}`, { credentials: 'include' });
+    const conv = await res.json();
+
+    document.getElementById('brkThreadTitle').textContent = conv.propertyTitle;
+    document.getElementById('brkThreadSub').textContent   = `Cliente: ${conv.clientName} · ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
+    document.getElementById('brkClientChip').textContent  = conv.clientName;
+
+    brkRenderMsgs(conv.messages);
+    if (conv.messages.length) brkLastTs = conv.messages.at(-1).timestamp;
+
+    fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
+    brkLoadList();
+
+    brkPollTimer = setInterval(() => brkPoll(id), 3000);
+  };
+
+  async function brkPoll(id) {
+    if (brkActiveConv !== id) return;
+    const url = brkLastTs
+      ? `/api/conversations/${id}?since=${encodeURIComponent(brkLastTs)}`
+      : `/api/conversations/${id}`;
+    const res  = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return;
+    const conv = await res.json();
+    if (conv.messages?.length) {
+      brkAppendMsgs(conv.messages);
+      brkLastTs = conv.messages.at(-1).timestamp;
+      fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
+      brkLoadList();
+    }
+  }
+
+  function brkRenderMsgs(msgs) {
+    const area = document.getElementById('brkMsgArea');
+    area.innerHTML = msgs.map(brkMsgHTML).join('');
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function brkAppendMsgs(msgs) {
+    const area = document.getElementById('brkMsgArea');
+    msgs.forEach(m => area.insertAdjacentHTML('beforeend', brkMsgHTML(m)));
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function brkMsgHTML(m) {
+    const mine = m.senderRole === 'broker';
+    const time  = new Date(m.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    const text  = m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    return `<div style="display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};">
+      <div style="max-width:72%;padding:.55rem .85rem;border-radius:${mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};font-size:.87rem;line-height:1.5;word-break:break-word;
+        background:${mine ? 'var(--accent)' : 'var(--bg-card)'};color:${mine ? '#fff' : 'var(--text)'};
+        ${mine ? '' : 'border:1px solid var(--border);'}">
+        ${text}
+      </div>
+      <div style="font-size:.7rem;color:var(--text-muted);margin-top:3px;padding:0 4px;">${mine ? 'Tú' : m.senderName} · ${time}</div>
+    </div>`;
+  }
+
+  window.brkSend = async function() {
+    const input = document.getElementById('brkInput');
+    const btn   = document.getElementById('brkSendBtn');
+    const text  = input.value.trim();
+    if (!text || !brkActiveConv) return;
+    btn.disabled = true; input.value = '';
+    const res  = await fetch(`/api/conversations/${brkActiveConv}/messages`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (data.message) { brkAppendMsgs([data.message]); brkLastTs = data.message.timestamp; }
+    btn.disabled = false; input.focus();
+    brkLoadList();
+  };
+
+  document.getElementById('brkInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); brkSend(); }
+  });
+
+  // Poll unread badge every 30s even when not on mensajes page
+  setInterval(async () => {
+    try {
+      const res  = await fetch('/api/conversations/unread', { credentials: 'include' });
+      const data = await res.json();
+      const navBadge = document.getElementById('msgNavBadge');
+      if (navBadge) {
+        navBadge.textContent   = data.count;
+        navBadge.style.display = data.count > 0 ? 'inline' : 'none';
+      }
+    } catch {}
+  }, 30000);
 
 })();
 </script>
