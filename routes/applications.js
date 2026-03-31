@@ -12,7 +12,8 @@ const { logSec } = require('./security-log');
 const { fileTypeFromFile } = require('file-type');
 
 const router    = express.Router();
-const ADMIN_KEY = process.env.ADMIN_KEY; // required — enforced at startup by server.js
+// ADMIN_KEY removed from applications.js — Sprint 4 scopes it to /admin/* in server.js only.
+// Admin access to the applications API uses JWT role='admin' instead.
 const BASE_URL  = process.env.BASE_URL || 'http://localhost:3000';
 
 // ── Rate limiter for anonymous application creation (Item 11) ────────────
@@ -131,9 +132,10 @@ const docUpload = multer({
 });
 
 // ── Helpers ───────────────────────────────────────────────────────
+// Sprint 4: admin access requires a JWT with role='admin', not a shared API key.
+// The x-admin-key is now scoped exclusively to the /admin/* panel routes in server.js.
 function isAdmin(req) {
-  // Only allow header-based admin auth — never query string (leaks in logs/history)
-  return req.headers['x-admin-key'] === ADMIN_KEY;
+  return req.user?.role === 'admin';
 }
 
 function addEvent(app, type, description, actor, actorName, data = {}) {
@@ -376,21 +378,12 @@ router.post('/', appCreateLimiter, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── GET /  — List applications (broker/admin) ────────────────────
 // ══════════════════════════════════════════════════════════════════
-router.get('/', (req, res, next) => {
-  // Allow admin-key access (for admin panel) without JWT
-  if (isAdmin(req)) {
-    let apps = store.getApplications();
-    const { status } = req.query;
-    if (status) apps = apps.filter(a => a.status === status);
-    return res.json(apps);
-  }
-  next();
-}, userAuth, (req, res) => {
+router.get('/', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
 
   let apps;
-  if (isAdmin(req) || user.role === 'admin') {
+  if (user.role === 'admin') {
     apps = store.getApplications();
   } else if (user.role === 'inmobiliaria') {
     apps = store.getApplicationsByInmobiliaria(user.id);
@@ -1182,7 +1175,7 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
 });
 
 // ── PUT /:id/assign  — Admin reassigns broker ────────────────────
-router.put('/:id/assign', (req, res) => {
+router.put('/:id/assign', userAuth, (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Solo admin' });
 
   const app = store.getApplicationById(req.params.id);

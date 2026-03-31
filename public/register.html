@@ -116,6 +116,21 @@
         <div class="field">
           <label>Contraseña</label>
           <input type="password" id="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
+          <div class="pw-strength-wrap" id="pwStrengthWrap" style="margin-top:6px;display:none;">
+            <div style="display:flex;gap:3px;margin-bottom:5px;">
+              <div class="pw-bar" id="pwBar1" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
+              <div class="pw-bar" id="pwBar2" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
+              <div class="pw-bar" id="pwBar3" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
+              <div class="pw-bar" id="pwBar4" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
+            </div>
+            <ul class="pw-rules" style="list-style:none;padding:0;margin:0;font-size:0.75rem;display:flex;flex-wrap:wrap;gap:4px 12px;">
+              <li id="rule-len"  style="color:#94a3b8;">✗ 8+ caracteres</li>
+              <li id="rule-up"   style="color:#94a3b8;">✗ Mayúscula</li>
+              <li id="rule-low"  style="color:#94a3b8;">✗ Minúscula</li>
+              <li id="rule-num"  style="color:#94a3b8;">✗ Número</li>
+              <li id="rule-spec" style="color:#94a3b8;">✗ Especial (!@#...)</li>
+            </ul>
+          </div>
           <p class="hint">Al menos 8 caracteres</p>
         </div>
         <div class="field">
@@ -154,6 +169,50 @@
 
     redirectIfAuth();
 
+    // ── Password strength meter ────────────────────────────────────
+    (function initPwStrength() {
+      const input = document.getElementById('password') || document.getElementById('newPassword');
+      if (!input) return;
+      const wrap  = document.getElementById('pwStrengthWrap');
+      const bars  = [1,2,3,4].map(i => document.getElementById('pwBar' + i));
+      const rules = {
+        len:  document.getElementById('rule-len'),
+        up:   document.getElementById('rule-up'),
+        low:  document.getElementById('rule-low'),
+        num:  document.getElementById('rule-num'),
+        spec: document.getElementById('rule-spec'),
+      };
+      const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
+
+      function update() {
+        const v = input.value;
+        if (!v) { if (wrap) wrap.style.display = 'none'; return; }
+        if (wrap) wrap.style.display = 'block';
+
+        const checks = {
+          len:  v.length >= 8,
+          up:   /[A-Z]/.test(v),
+          low:  /[a-z]/.test(v),
+          num:  /[0-9]/.test(v),
+          spec: /[^A-Za-z0-9]/.test(v),
+        };
+        const score = Object.values(checks).filter(Boolean).length; // 0-5
+
+        Object.entries(checks).forEach(([k, ok]) => {
+          if (!rules[k]) return;
+          rules[k].textContent = (ok ? '✓ ' : '✗ ') + rules[k].textContent.slice(2);
+          rules[k].style.color = ok ? '#22c55e' : '#94a3b8';
+        });
+
+        // 4 bars: light up progressively
+        const level = Math.max(0, score - 1); // 0-4
+        bars.forEach((b, i) => {
+          b.style.background = i < level ? colors[Math.min(level - 1, 3)] : '#e0e8f5';
+        });
+      }
+      input.addEventListener('input', update);
+    })();
+
     function unlockTc() {
       const cb   = document.getElementById('tcAccept');
       const hint = document.getElementById('tcHint');
@@ -180,8 +239,17 @@
         err.textContent = 'Todos los campos son requeridos.';
         return err.classList.add('visible');
       }
-      if (password.length < 8) {
-        err.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+      function validatePw(p) {
+        if (!p || p.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
+        if (!/[A-Z]/.test(p)) return 'Incluye al menos una letra mayúscula';
+        if (!/[a-z]/.test(p)) return 'Incluye al menos una letra minúscula';
+        if (!/[0-9]/.test(p)) return 'Incluye al menos un número';
+        if (!/[^A-Za-z0-9]/.test(p)) return 'Incluye al menos un carácter especial (!@#$%...)';
+        return null;
+      }
+      const pwErr = validatePw(password);
+      if (pwErr) {
+        err.textContent = pwErr;
         return err.classList.add('visible');
       }
       if (password !== confirmPassword) {

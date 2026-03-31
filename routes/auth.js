@@ -55,6 +55,22 @@ function safeUser(user) {
   return safe;
 }
 
+// Password must be 8+ chars with upper, lower, digit, and special character.
+// Returns an error string, or null if valid.
+function validatePassword(password) {
+  if (!password || password.length < 8)
+    return 'La contraseña debe tener al menos 8 caracteres';
+  if (!/[A-Z]/.test(password))
+    return 'La contraseña debe incluir al menos una letra mayúscula (A-Z)';
+  if (!/[a-z]/.test(password))
+    return 'La contraseña debe incluir al menos una letra minúscula (a-z)';
+  if (!/[0-9]/.test(password))
+    return 'La contraseña debe incluir al menos un número (0-9)';
+  if (!/[^A-Za-z0-9]/.test(password))
+    return 'La contraseña debe incluir al menos un carácter especial (!@#$%^&*)';
+  return null;
+}
+
 // Generates a SHA-256-hashed verification token, attaches fields to user in place,
 // and returns the raw (unhashed) token to embed in the email link.
 function attachVerifyToken(user) {
@@ -145,8 +161,8 @@ router.post('/register', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    if (password.length < 8)
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
 
@@ -330,8 +346,8 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !agencyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    if (password.length < 8)
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
 
@@ -411,8 +427,8 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !phone || !licenseNumber)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    if (password.length < 8)
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
 
@@ -491,8 +507,8 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !companyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    if (password.length < 8)
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
 
@@ -573,13 +589,70 @@ router.post('/login', authLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
     }
 
+    // Account lockout check (Sprint 4)
+    if (user.loginLockedUntil && new Date(user.loginLockedUntil) > new Date()) {
+      const remainingMs  = new Date(user.loginLockedUntil) - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      logSec('login_blocked', req, { userId: user.id, reason: 'account_locked' });
+      return res.status(429).json({
+        error: `Cuenta bloqueada por demasiados intentos fallidos. Intenta nuevamente en ${remainingMin} minuto${remainingMin !== 1 ? 's' : ''}.`
+      });
+    }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      logSec('login_failed', req, { email, reason: 'wrong_password', userId: user.id });
+      user.loginAttempts    = (user.loginAttempts || 0) + 1;
+      const attempts        = user.loginAttempts;
+      const LOCKOUT_AFTER   = 5;
+      const LOCKOUT_MS      = 15 * 60 * 1000; // 15 minutes
+
+      if (attempts >= LOCKOUT_AFTER) {
+        user.loginLockedUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
+        logSec('account_locked', req, { userId: user.id, attempts });
+
+        // Notify user by email (fire-and-forget)
+        transporter.sendMail({
+          from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+          to:      user.email,
+          subject: '⚠️ Tu cuenta ha sido bloqueada temporalmente — HogaresRD',
+          html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:#b91c1c;padding:32px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:8px;">🏠 HogaresRD</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#fff;">Cuenta bloqueada temporalmente</div>
+        </td></tr>
+        <tr><td style="padding:28px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+            Hola <strong>${user.name}</strong>, detectamos <strong>${attempts} intentos fallidos de inicio de sesión</strong> en tu cuenta y la hemos bloqueado por 15 minutos como medida de seguridad.
+          </p>
+          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
+            Si no fuiste tú quien intentó iniciar sesión, te recomendamos cambiar tu contraseña inmediatamente.
+          </p>
+          <div style="text-align:center;">
+            <a href="${BASE_URL}/reset-password" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Cambiar contraseña →</a>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Si no reconoces esta actividad, contacta soporte.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+        }).catch(err => console.error('Lockout email error:', err.message));
+      }
+
+      store.saveUser(user);
+      logSec('login_failed', req, { email, reason: 'wrong_password', userId: user.id, attempts });
       return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
     }
 
-    user.lastLoginAt = new Date().toISOString();
+    user.lastLoginAt      = new Date().toISOString();
+    user.loginAttempts    = 0;
+    user.loginLockedUntil = null;
     store.saveUser(user);
 
     logSec('login_success', req, { userId: user.id, role: user.role });
@@ -681,8 +754,8 @@ router.post('/reset-password', async (req, res, next) => {
     const { token, password } = req.body;
     if (!token || !password)
       return res.status(400).json({ error: 'Token y contraseña son requeridos' });
-    if (password.length < 8)
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
 
     // Sprint 3: compare the SHA-256 hash of the submitted token against the stored hash.
     // The raw token is never stored — even a DB breach can't reveal usable reset tokens.
@@ -740,6 +813,47 @@ router.post('/resend-verification', resendLimiter, userAuth, async (req, res, ne
     sendVerificationEmail(user, rawToken);
     logSec('verification_resent', req, { userId: user.id });
     res.json({ success: true, message: 'Correo de verificación enviado. Revisa tu bandeja de entrada.' });
+  } catch (err) { next(err); }
+});
+
+// ── Register Admin ─────────────────────────────────────────────────────────
+// Requires the x-admin-key header — only callable by the server operator.
+// Creates a user with role 'admin' that can log in normally to get a JWT.
+router.post('/register/admin', authLimiter, async (req, res, next) => {
+  try {
+    const adminKey = req.headers['x-admin-key'];
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY)
+      return res.status(401).json({ error: 'No autorizado' });
+
+    const { name, email, password } = req.body;
+    if (!name || !email || !password)
+      return res.status(400).json({ error: 'name, email y password son requeridos' });
+
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
+
+    if (store.getUserByEmail(email))
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = {
+      id:               `usr_${Date.now()}`,
+      email:            email.toLowerCase().trim(),
+      passwordHash,
+      name:             name.trim(),
+      phone:            '',
+      createdAt:        new Date().toISOString(),
+      lastLoginAt:      null,
+      role:             'admin',
+      favorites:        [],
+      resetToken:        null,
+      resetTokenExpiry:  null,
+      emailVerified:     true, // admin accounts are pre-verified
+    };
+
+    store.saveUser(user);
+    logSec('admin_registered', req, { userId: user.id, email: user.email });
+    res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
 
