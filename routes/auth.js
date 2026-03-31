@@ -371,6 +371,10 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
+      subscriptionStatus: 'trial',
+      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      stripeCustomerId:    null,
+      stripeSubscriptionId: null,
     };
 
     const verifyRawToken = attachVerifyToken(user);
@@ -452,6 +456,10 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
+      subscriptionStatus: 'trial',
+      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      stripeCustomerId:    null,
+      stripeSubscriptionId: null,
       inmobiliaria_id:           null,
       inmobiliaria_name:         null,
       inmobiliaria_join_status:  null,
@@ -533,6 +541,10 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
+      subscriptionStatus: 'trial',
+      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      stripeCustomerId:    null,
+      stripeSubscriptionId: null,
       join_requests:   [],
     };
 

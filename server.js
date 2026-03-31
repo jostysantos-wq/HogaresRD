@@ -156,11 +156,16 @@ app.use(helmet({
 }));
 
 app.use(cookieParser());
+
+// ── Stripe webhook needs raw body — must come BEFORE express.json() ───────
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── API routes ─────────────────────────────────────────────────
+app.use('/api/stripe',     require('./routes/stripe'));
 app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/listings',   require('./routes/listings'));
 app.use('/api/user',       require('./routes/user'));
@@ -240,6 +245,8 @@ app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/verify-email',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
+app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));
+app.get('/subscription',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscription.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activar Plan — HogaresRD</title>
+  <style>
+    :root {
+      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
+      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
+      --green: #0a7c4f; --green-bg: #e6f7ef;
+      --shadow: 0 4px 24px rgba(0,56,168,0.13);
+      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
+    }
+    [data-theme="dark"] {
+      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
+      --green: #1db87a; --green-bg: #00261a;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    .theme-toggle { background: rgba(255,255,255,0.25); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
+    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
+    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
+    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem; }
+
+    .wrap { width: 100%; max-width: 520px; }
+
+    /* Trial badge */
+    .trial-banner {
+      background: var(--green-bg); border: 1.5px solid var(--green);
+      border-radius: 12px; padding: 0.85rem 1.1rem;
+      display: flex; align-items: center; gap: 0.65rem;
+      margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--green); font-weight: 600;
+    }
+    .trial-banner span { font-size: 1.2rem; }
+
+    /* Expired banner */
+    .expired-banner {
+      background: #fff5f5; border: 1.5px solid #f87171;
+      border-radius: 12px; padding: 0.85rem 1.1rem;
+      display: flex; align-items: center; gap: 0.65rem;
+      margin-bottom: 1.5rem; font-size: 0.88rem; color: #b91c1c; font-weight: 600;
+      display: none;
+    }
+    [data-theme="dark"] .expired-banner { background: #2d0a0a; border-color: #ef4444; color: #f87171; }
+    .expired-banner span { font-size: 1.2rem; }
+
+    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .page-sub { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.5; }
+
+    /* Plan card */
+    .plan-card {
+      background: var(--bg-card); border: 2px solid var(--accent);
+      border-radius: 16px; padding: 1.75rem;
+      box-shadow: var(--shadow); margin-bottom: 1.5rem;
+    }
+    .plan-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
+    .plan-name { font-size: 1.1rem; font-weight: 800; }
+    .plan-price { text-align: right; }
+    .plan-amount { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; }
+    .plan-period { font-size: 0.78rem; color: var(--text-muted); }
+
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; }
+    .plan-features li { display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; color: var(--text-muted); }
+    .plan-features li::before { content: '✓'; font-weight: 800; color: var(--green); flex-shrink: 0; }
+
+    .plan-trial-note {
+      font-size: 0.78rem; color: var(--text-muted);
+      background: var(--bg); border-radius: 8px; padding: 0.6rem 0.85rem;
+      border: 1px solid var(--border); margin-bottom: 1.25rem;
+    }
+
+    .btn-checkout {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      width: 100%; padding: 0.9rem 1.5rem;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: background 0.2s, transform 0.15s;
+      text-decoration: none;
+    }
+    .btn-checkout:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-checkout svg { width: 18px; height: 18px; fill: currentColor; }
+
+    .skip-link {
+      display: block; text-align: center; margin-top: 1rem;
+      font-size: 0.83rem; color: var(--text-muted); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .skip-link:hover { color: var(--accent); }
+
+    /* Cancelled notice */
+    .cancelled-notice {
+      background: #fffbeb; border: 1.5px solid #f59e0b;
+      border-radius: 10px; padding: 0.75rem 1rem;
+      font-size: 0.84rem; color: #92400e; margin-bottom: 1.25rem;
+      display: none;
+    }
+    [data-theme="dark"] .cancelled-notice { background: #2d1f00; border-color: #d97706; color: #fcd34d; }
+
+    .secure-note { display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.76rem; color: var(--text-muted); margin-top: 1.25rem; }
+    .secure-note svg { width: 13px; height: 13px; fill: var(--text-muted); }
+
+    footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/home" class="nav-logo">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      HogaresRD
+    </a>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema">
+      <span class="toggle-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      </span>
+    </button>
+  </nav>
+
+  <main>
+    <div class="wrap">
+
+      <!-- Trial active banner -->
+      <div class="trial-banner" id="trialBanner" style="display:none">
+        <span>🎉</span>
+        <div>Tu prueba gratuita de <strong id="trialDaysLeft">14</strong> días está activa. Agrega un método de pago para continuar sin interrupciones.</div>
+      </div>
+
+      <!-- Trial expired banner -->
+      <div class="expired-banner" id="expiredBanner">
+        <span>⚠️</span>
+        <div>Tu período de prueba ha expirado. Activa tu plan para recuperar el acceso.</div>
+      </div>
+
+      <!-- Checkout cancelled notice -->
+      <div class="cancelled-notice" id="cancelledNotice">
+        Cancelaste el proceso de pago. No se realizó ningún cargo. Puedes intentarlo de nuevo cuando quieras.
+      </div>
+
+      <h1 class="page-title" id="pageTitle">Activa tu plan</h1>
+      <p class="page-sub" id="pageSub">Elige un método de pago para continuar usando HogaresRD. Tu prueba gratuita incluye 14 días antes de cualquier cargo.</p>
+
+      <!-- Plan card (filled by JS) -->
+      <div class="plan-card" id="planCard">
+        <div class="plan-header">
+          <div>
+            <div class="plan-name" id="planName">Cargando…</div>
+          </div>
+          <div class="plan-price">
+            <div class="plan-amount" id="planAmount">—</div>
+            <div class="plan-period">por mes</div>
+          </div>
+        </div>
+
+        <ul class="plan-features" id="planFeatures"></ul>
+
+        <div class="plan-trial-note" id="trialNote">
+          🔒 Tu tarjeta <strong>no será cobrada</strong> hasta que termine la prueba gratuita de 14 días. Cancela en cualquier momento.
+        </div>
+
+        <button class="btn-checkout" id="checkoutBtn">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+          Agregar método de pago
+        </button>
+      </div>
+
+      <a href="/broker" class="skip-link" id="skipLink">Explorar primero, agregar pago más tarde →</a>
+
+      <div class="secure-note">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>
+        Pagos seguros procesados por Stripe. HogaresRD nunca almacena tus datos de tarjeta.
+      </div>
+    </div>
+  </main>
+
+  <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Theme
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    const PLANS = {
+      agency:       { name: 'Plan Agente', amount: '$10', features: ['Publicar propiedades ilimitadas','Panel de gestión de clientes','Estadísticas de desempeño','Chat con clientes','Enlace de referido personalizado','Soporte por correo'] },
+      broker:       { name: 'Plan Agente', amount: '$10', features: ['Publicar propiedades ilimitadas','Panel de gestión de clientes','Estadísticas de desempeño','Chat con clientes','Enlace de referido personalizado','Soporte por correo'] },
+      inmobiliaria: { name: 'Plan Inmobiliaria', amount: '$25', features: ['Todo lo del Plan Agente','Gestión de equipo (agentes ilimitados)','Dashboard centralizado de operaciones','Estadísticas por agente','Panel de aplicaciones de toda la empresa','Soporte prioritario'] },
+    };
+
+    const params = new URLSearchParams(window.location.search);
+
+    // Show cancelled notice
+    if (params.get('cancelled') === '1') {
+      document.getElementById('cancelledNotice').style.display = 'block';
+    }
+
+    (async () => {
+      // Get subscription status from API
+      let status = null;
+      try {
+        const token = localStorage.getItem('hogaresrd_token');
+        const res   = await fetch('/api/stripe/status', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          credentials: 'include',
+        });
+        if (res.ok) status = await res.json();
+      } catch(e) {}
+
+      const user = (() => { try { return JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch { return null; } })();
+      if (!user) { window.location.href = '/login?next=/subscribe'; return; }
+
+      const role = user.role;
+      const plan = PLANS[role];
+
+      if (!plan) {
+        // Not a paid role — redirect home
+        window.location.href = '/home';
+        return;
+      }
+
+      // Fill plan card
+      document.getElementById('planName').textContent   = plan.name;
+      document.getElementById('planAmount').textContent = plan.amount;
+      document.getElementById('planFeatures').innerHTML = plan.features.map(f => `<li>${f}</li>`).join('');
+
+      // Show trial banner if applicable
+      if (status?.trialEndsAt) {
+        const trialEnd  = new Date(status.trialEndsAt);
+        const daysLeft  = Math.max(0, Math.ceil((trialEnd - Date.now()) / 86400000));
+        if (daysLeft > 0) {
+          document.getElementById('trialDaysLeft').textContent = daysLeft;
+          document.getElementById('trialBanner').style.display = 'flex';
+          document.getElementById('expiredBanner').style.display = 'none';
+          document.getElementById('skipLink').style.display = 'block';
+        } else {
+          // Trial expired
+          document.getElementById('expiredBanner').style.display = 'flex';
+          document.getElementById('trialBanner').style.display = 'none';
+          document.getElementById('skipLink').style.display = 'none';
+          document.getElementById('trialNote').textContent = '⚠️ Tu prueba gratuita ha vencido. Activa tu plan para recuperar el acceso completo.';
+          document.getElementById('pageTitle').textContent = 'Tu prueba ha expirado';
+          document.getElementById('pageSub').textContent   = 'Activa tu plan para continuar usando todas las funciones de HogaresRD.';
+        }
+      } else {
+        // Fresh registration — show trial note
+        document.getElementById('trialBanner').style.display = 'flex';
+        document.getElementById('trialDaysLeft').textContent = '14';
+        document.getElementById('expiredBanner').style.display = 'none';
+      }
+
+      // If already active, redirect to broker dashboard
+      if (status?.isActive && params.get('cancelled') !== '1') {
+        window.location.href = '/broker';
+        return;
+      }
+
+      // Checkout button
+      document.getElementById('checkoutBtn').addEventListener('click', async function() {
+        this.disabled = true;
+        this.textContent = 'Redirigiendo a Stripe…';
+        try {
+          const token = localStorage.getItem('hogaresrd_token');
+          const res   = await fetch('/api/stripe/create-checkout', {
+            method:  'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            credentials: 'include',
+          });
+          const data = await res.json();
+          if (data.url) {
+            window.location.href = data.url;
+          } else {
+            alert(data.error || 'Error al iniciar el pago. Intenta de nuevo.');
+            this.disabled = false;
+            this.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> Agregar método de pago';
+          }
+        } catch(e) {
+          alert('Error de conexión. Intenta de nuevo.');
+          this.disabled = false;
+          this.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> Agregar método de pago';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
