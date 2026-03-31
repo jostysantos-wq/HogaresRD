@@ -1275,5 +1275,849 @@
     ],
     "created_at": "2026-03-10T10:13:24.237Z",
     "updated_at": "2026-03-15T10:13:24.237Z"
+  },
+  {
+    "id": "app_seed_m1_1774936776801_0eoa",
+    "listing_id": "listing_seed_app_seed_m1_1774936776801_0eoa",
+    "listing_title": "Apartamento en Piantini — 3 Hab, Vista Panorámica",
+    "listing_price": "250000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_maria_001",
+      "name": "María Reyes",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "maria.reyes@hogaresrd.com",
+      "phone": "809-555-0101"
+    },
+    "status": "en_aprobacion",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "270000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Pre-aprobación bancaria lista. Busco cerrar en 60 días.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "ebb79797-3ada-41d6-ae91-4ff5c4cdc9d6",
+        "app_id": "app_seed_m1_1774936776801_sren",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-13T05:59:36.801Z"
+      },
+      {
+        "id": "6135dd55-8d3d-4e43-9274-30d75d79d677",
+        "app_id": "app_seed_m1_1774936776801_gt28",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-16T05:59:36.801Z"
+      },
+      {
+        "id": "bf961e7e-c42e-4363-899a-f8d0f572a19e",
+        "app_id": "app_seed_m1_1774936776801_h5bv",
+        "type": "status_change",
+        "description": "Documentos solicitados",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "documentos_requeridos"
+        },
+        "created_at": "2026-03-19T05:59:36.801Z"
+      },
+      {
+        "id": "03617890-79f3-4e2e-92de-6b3cfd1c63eb",
+        "app_id": "app_seed_m1_1774936776801_9f4m",
+        "type": "status_change",
+        "description": "Documentos recibidos",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "documentos_enviados"
+        },
+        "created_at": "2026-03-23T05:59:36.801Z"
+      },
+      {
+        "id": "ca64d9c1-9075-447b-8ab3-d32761ba436a",
+        "app_id": "app_seed_m1_1774936776801_4t1n",
+        "type": "status_change",
+        "description": "En proceso de aprobación",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_aprobacion"
+        },
+        "created_at": "2026-03-26T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-25T05:59:36.801Z",
+    "updated_at": "2026-03-26T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_m2_1774936776801_qrde",
+    "listing_id": "listing_seed_app_seed_m2_1774936776801_qrde",
+    "listing_title": "Villa en Casa de Campo — 4 Hab con Piscina",
+    "listing_price": "780000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Laura Sánchez",
+      "phone": "809-555-0201",
+      "email": "laura.s@gmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_maria_001",
+      "name": "María Reyes",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "maria.reyes@hogaresrd.com",
+      "phone": "809-555-0101"
+    },
+    "status": "reservado",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "800000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Pago de contado. Ya realizó visita, muy interesada.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "d8272f56-c741-40bb-873d-c68ba7633f80",
+        "app_id": "app_seed_m2_1774936776801_myir",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-09T05:59:36.801Z"
+      },
+      {
+        "id": "e412da3b-3faa-445e-a80e-2b240fbcfa61",
+        "app_id": "app_seed_m2_1774936776801_yx7k",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-12T05:59:36.801Z"
+      },
+      {
+        "id": "82af243f-bfb3-49a0-8c9c-f62c821df1ca",
+        "app_id": "app_seed_m2_1774936776801_apk9",
+        "type": "status_change",
+        "description": "Propiedad reservada",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "reservado"
+        },
+        "created_at": "2026-03-29T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-28T05:59:36.801Z",
+    "updated_at": "2026-03-29T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_m3_1774936776801_v3zj",
+    "listing_id": "listing_seed_app_seed_m3_1774936776801_v3zj",
+    "listing_title": "Penthouse en Naco — 2 Hab, Terraza Privada",
+    "listing_price": "320000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Roberto Díaz",
+      "phone": "809-555-0202",
+      "email": "r.diaz@outlook.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_maria_001",
+      "name": "María Reyes",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "maria.reyes@hogaresrd.com",
+      "phone": "809-555-0101"
+    },
+    "status": "documentos_requeridos",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "350000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Primer apartamento. Necesita orientación sobre el proceso.",
+    "documents_requested": [
+      "cédula",
+      "comprobante_ingresos",
+      "estado_cuenta"
+    ],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "2eb7a138-70ef-49d9-b6ec-af40e4003a13",
+        "app_id": "app_seed_m3_1774936776801_2spw",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-17T05:59:36.801Z"
+      },
+      {
+        "id": "e2574685-679c-427a-9934-984a7b6c42cf",
+        "app_id": "app_seed_m3_1774936776801_8uxb",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-19T05:59:36.801Z"
+      },
+      {
+        "id": "9a25bf12-5187-48b6-a7be-8da03b5844c8",
+        "app_id": "app_seed_m3_1774936776801_x356",
+        "type": "status_change",
+        "description": "Documentos solicitados",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "documentos_requeridos"
+        },
+        "created_at": "2026-03-21T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-20T05:59:36.801Z",
+    "updated_at": "2026-03-21T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_m4_1774936776801_hgmw",
+    "listing_id": "listing_seed_app_seed_m4_1774936776801_hgmw",
+    "listing_title": "Apartamento en Bella Vista — Remodelado",
+    "listing_price": "145000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carmen Vega",
+      "phone": "809-555-0203",
+      "email": "carmen.v@gmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_maria_001",
+      "name": "María Reyes",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "maria.reyes@hogaresrd.com",
+      "phone": "809-555-0101"
+    },
+    "status": "completado",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "160000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Proceso cerrado exitosamente. Cliente muy satisfecha.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "11d5064c-114f-4980-8c20-239567c2133f",
+        "app_id": "app_seed_m4_1774936776801_r37l",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-01-30T06:59:36.801Z"
+      },
+      {
+        "id": "4f796b73-4fce-459a-aa14-ac750af734ff",
+        "app_id": "app_seed_m4_1774936776801_6nef",
+        "type": "status_change",
+        "description": "Transacción completada",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "completado"
+        },
+        "created_at": "2026-03-31T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-30T05:59:36.801Z",
+    "updated_at": "2026-03-31T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_j1_1774936776801_3rmb",
+    "listing_id": "listing_seed_app_seed_j1_1774936776801_3rmb",
+    "listing_title": "Proyecto Bávaro Sunrise — 2 Hab Frente al Mar",
+    "listing_price": "195000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Carlos Méndez",
+      "phone": "809-555-0042",
+      "email": "cliente@hogaresrd.com",
+      "user_id": "usr_client_demo_001"
+    },
+    "broker": {
+      "user_id": "usr_broker_juan_001",
+      "name": "Juan Pérez",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "juan.perez@hogaresrd.com",
+      "phone": "809-555-0102"
+    },
+    "status": "aplicado",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "210000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Interesado en unidad de planta baja con acceso directo a la piscina.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "26c9f2dd-7ae0-4c4a-a5ff-2efd190925c8",
+        "app_id": "app_seed_j1_1774936776801_s2rp",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-30T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-29T05:59:36.801Z",
+    "updated_at": "2026-03-30T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_j2_1774936776801_f74k",
+    "listing_id": "listing_seed_app_seed_j2_1774936776801_f74k",
+    "listing_title": "Local Comercial en Zona Colonial — Santiago",
+    "listing_price": "85000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Miguel Torres",
+      "phone": "809-555-0301",
+      "email": "m.torres@yahoo.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_juan_001",
+      "name": "Juan Pérez",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "juan.perez@hogaresrd.com",
+      "phone": "809-555-0102"
+    },
+    "status": "pendiente_pago",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "90000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Para uso de negocio de gastronomía. Todo aprobado.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "029a5cb7-2e11-4278-bb40-f09a44b70fab",
+        "app_id": "app_seed_j2_1774936776801_366v",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-06T06:59:36.801Z"
+      },
+      {
+        "id": "8395cf6f-bcdd-4dd3-a555-33612da77704",
+        "app_id": "app_seed_j2_1774936776801_vce1",
+        "type": "status_change",
+        "description": "Aprobado",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aprobado"
+        },
+        "created_at": "2026-03-23T05:59:36.801Z"
+      },
+      {
+        "id": "9b15babc-9301-43ee-a770-987234984dda",
+        "app_id": "app_seed_j2_1774936776801_2urq",
+        "type": "status_change",
+        "description": "Pendiente de pago",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "pendiente_pago"
+        },
+        "created_at": "2026-03-28T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-27T05:59:36.801Z",
+    "updated_at": "2026-03-28T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_j3_1774936776801_xxew",
+    "listing_id": "listing_seed_app_seed_j3_1774936776801_xxew",
+    "listing_title": "Casa en Los Cacicazgos — 5 Hab, Jardín",
+    "listing_price": "620000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Isabel Mora",
+      "phone": "809-555-0302",
+      "email": "isabel.m@gmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_juan_001",
+      "name": "Juan Pérez",
+      "agency_name": "HogaresRD Inmobiliaria Demo",
+      "email": "juan.perez@hogaresrd.com",
+      "phone": "809-555-0102"
+    },
+    "status": "rechazado",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "600000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Rechazado por documentación insuficiente de ingresos.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "86b80906-14fb-4df0-abfe-b381d3d6eb1b",
+        "app_id": "app_seed_j3_1774936776801_rbrc",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-11T05:59:36.801Z"
+      },
+      {
+        "id": "9c941bad-06b2-443d-a378-77edf1780410",
+        "app_id": "app_seed_j3_1774936776801_295y",
+        "type": "status_change",
+        "description": "Solicitud rechazada — documentación insuficiente",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "rechazado"
+        },
+        "created_at": "2026-03-24T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-23T05:59:36.801Z",
+    "updated_at": "2026-03-24T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_s1_1774936776801_4xg1",
+    "listing_id": "listing_seed_app_seed_s1_1774936776801_4xg1",
+    "listing_title": "Torre Serralles — Piso 12, 3 Hab",
+    "listing_price": "410000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Andrés Luna",
+      "phone": "809-555-0401",
+      "email": "andres.luna@gmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_sofia_001",
+      "name": "Sofía Ramírez",
+      "agency_name": "Ramírez Realty",
+      "email": "sofia.ramirez@hogaresrd.com",
+      "phone": "809-555-0103"
+    },
+    "status": "pago_enviado",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "430000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Pago inicial enviado. En espera de confirmación.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "a446fb1a-53b5-45d3-867b-2eca02859985",
+        "app_id": "app_seed_s1_1774936776801_rnbu",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-02-24T06:59:36.801Z"
+      },
+      {
+        "id": "74564978-cf3e-4cbb-ae98-99486265b664",
+        "app_id": "app_seed_s1_1774936776801_8372",
+        "type": "status_change",
+        "description": "Aprobado",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aprobado"
+        },
+        "created_at": "2026-03-21T05:59:36.801Z"
+      },
+      {
+        "id": "ab691e9f-508e-418f-afde-90d10f7d3d61",
+        "app_id": "app_seed_s1_1774936776801_x680",
+        "type": "status_change",
+        "description": "Pendiente de pago",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "pendiente_pago"
+        },
+        "created_at": "2026-03-26T05:59:36.801Z"
+      },
+      {
+        "id": "ba186fef-abd3-404d-8cce-c18777b0b400",
+        "app_id": "app_seed_s1_1774936776801_ih0z",
+        "type": "status_change",
+        "description": "Pago enviado por cliente",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "pago_enviado"
+        },
+        "created_at": "2026-03-30T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-29T05:59:36.801Z",
+    "updated_at": "2026-03-30T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_s2_1774936776801_u1az",
+    "listing_id": "listing_seed_app_seed_s2_1774936776801_u1az",
+    "listing_title": "Apartamento en Evaristo Morales — Reformado",
+    "listing_price": "175000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Patricia Ruiz",
+      "phone": "809-555-0402",
+      "email": "p.ruiz@hotmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_sofia_001",
+      "name": "Sofía Ramírez",
+      "agency_name": "Ramírez Realty",
+      "email": "sofia.ramirez@hogaresrd.com",
+      "phone": "809-555-0103"
+    },
+    "status": "documentos_enviados",
+    "status_reason": "",
+    "financing": "hipoteca",
+    "pre_approved": true,
+    "budget": "185000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Documentos subidos. Pendiente revisión del banco.",
+    "documents_requested": [],
+    "documents_uploaded": [
+      "cédula",
+      "comprobante_ingresos"
+    ],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "3be59fca-d561-4958-a119-97dd593798aa",
+        "app_id": "app_seed_s2_1774936776801_bmuf",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-15T05:59:36.801Z"
+      },
+      {
+        "id": "689c8385-cac9-45ed-93d1-47c2a1373d6f",
+        "app_id": "app_seed_s2_1774936776801_sbh2",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-17T05:59:36.801Z"
+      },
+      {
+        "id": "7cbe56df-a232-4fbc-97a5-e767aa556b24",
+        "app_id": "app_seed_s2_1774936776801_sf1l",
+        "type": "status_change",
+        "description": "Documentos solicitados",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "documentos_requeridos"
+        },
+        "created_at": "2026-03-21T05:59:36.801Z"
+      },
+      {
+        "id": "38e95685-6194-4f99-8fd3-ba362544845a",
+        "app_id": "app_seed_s2_1774936776801_uimw",
+        "type": "status_change",
+        "description": "Documentos recibidos",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "documentos_enviados"
+        },
+        "created_at": "2026-03-27T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-26T05:59:36.801Z",
+    "updated_at": "2026-03-27T05:59:36.801Z"
+  },
+  {
+    "id": "app_seed_s3_1774936776801_ne7b",
+    "listing_id": "listing_seed_app_seed_s3_1774936776801_ne7b",
+    "listing_title": "Villa en Punta Cana — Proyecto Nuevo, 3 Hab",
+    "listing_price": "290000",
+    "listing_type": "venta",
+    "client": {
+      "name": "Héctor Vargas",
+      "phone": "809-555-0403",
+      "email": "h.vargas@gmail.com",
+      "user_id": "guest"
+    },
+    "broker": {
+      "user_id": "usr_broker_sofia_001",
+      "name": "Sofía Ramírez",
+      "agency_name": "Ramírez Realty",
+      "email": "sofia.ramirez@hogaresrd.com",
+      "phone": "809-555-0103"
+    },
+    "status": "en_revision",
+    "status_reason": "",
+    "financing": "contado",
+    "pre_approved": false,
+    "budget": "310000",
+    "timeline": "3-6 meses",
+    "intent": "comprar",
+    "contact_method": "whatsapp",
+    "notes": "Cliente extranjero, pago en USD. Todo en orden.",
+    "documents_requested": [],
+    "documents_uploaded": [],
+    "tours": [],
+    "payment": {
+      "amount": null,
+      "currency": "USD",
+      "receipt_path": null,
+      "receipt_uploaded_at": null,
+      "verification_status": "none",
+      "verified_at": null,
+      "verified_by": null,
+      "notes": ""
+    },
+    "timeline_events": [
+      {
+        "id": "14cb8bcf-f58a-4401-90e8-f9878b473c2e",
+        "app_id": "app_seed_s3_1774936776801_9w6s",
+        "type": "status_change",
+        "description": "Aplicación recibida",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "aplicado"
+        },
+        "created_at": "2026-03-22T05:59:36.801Z"
+      },
+      {
+        "id": "60942b0e-dfe5-4d4b-afd5-2e0dd13d34aa",
+        "app_id": "app_seed_s3_1774936776801_fc8p",
+        "type": "status_change",
+        "description": "En revisión",
+        "actor": "system",
+        "actor_name": "Sistema",
+        "data": {
+          "from": null,
+          "to": "en_revision"
+        },
+        "created_at": "2026-03-25T05:59:36.801Z"
+      }
+    ],
+    "created_at": "2026-03-24T05:59:36.801Z",
+    "updated_at": "2026-03-25T05:59:36.801Z"
   }
 ]
