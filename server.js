@@ -170,6 +170,7 @@ app.use('/api/leads',         require('./routes/leads'));
 app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
+app.use('/api/chat',          require('./routes/chat'));
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {

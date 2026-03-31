@@ -3049,37 +3049,91 @@
     }
   };
 
-  // ── Chat IA ─────────────────────────────────────────────────
-  const chatResponses = [
-    'Para mejorar la tasa de conversion, te recomiendo hacer seguimiento dentro de las primeras 24 horas de recibir una aplicacion.',
-    'El mercado inmobiliario en Santo Domingo ha mostrado un incremento del 8% en precios este ano. Los sectores de Piantini y Naco lideran la demanda.',
-    'Para un cliente en etapa de documentos, lo ideal es ofrecerle una lista clara de los requisitos y un plazo razonable de 5-7 dias.',
-    'Las propiedades con precio entre RD$ 8M y RD$ 15M tienen el mayor volumen de aplicaciones en nuestra plataforma actualmente.',
-    'Para acelerar el proceso de aprobacion, asegurate de que todos los documentos del cliente esten completos antes de pasar a la etapa de revision bancaria.',
-    'Recuerda agendar el tour de la propiedad dentro de los primeros 3 dias de recibir una aplicacion aprobada. Esto aumenta el cierre en un 40%.',
-  ];
-  let chatIdx = 0;
-  function appendChatMsg(text, isUser) {
+  // ── Chat IA (Claude-powered) ────────────────────────────────
+  const chatHistory = []; // { role: 'user'|'assistant', content: string }
+
+  function appendChatMsg(text, isUser, id) {
     const msgs = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = 'chat-msg ' + (isUser ? 'chat-msg-user' : 'chat-msg-bot');
-    div.innerHTML = `<div class="chat-msg-avatar">${isUser ? 'Tu' : 'IA'}</div><div class="chat-msg-bubble">${esc(text)}</div>`;
+    if (id) div.id = id;
+    // Render newlines as <br> for readable multi-line responses
+    const safe = esc(text).replace(/\n/g, '<br>');
+    div.innerHTML = `<div class="chat-msg-avatar">${isUser ? 'Tú' : 'IA'}</div><div class="chat-msg-bubble">${safe}</div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+    return div;
   }
-  function sendChat() {
+
+  function setChatInputState(disabled) {
+    document.getElementById('chatInput').disabled = disabled;
+    document.getElementById('chatSendBtn').disabled = disabled;
+  }
+
+  async function sendChat() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
+
+    // Show user message
     appendChatMsg(text, true);
+    chatHistory.push({ role: 'user', content: text });
     input.value = '';
-    setTimeout(() => {
-      appendChatMsg(chatResponses[chatIdx % chatResponses.length], false);
-      chatIdx++;
-    }, 800);
+    setChatInputState(true);
+
+    // Typing indicator
+    const typingId = 'chat-typing-' + Date.now();
+    const typingDiv = appendChatMsg('...', false, typingId);
+    typingDiv.querySelector('.chat-msg-bubble').classList.add('chat-typing');
+
+    // Build broker context snapshot from loaded data
+    const context = { brokerName: currentUser.name };
+    if (applications && applications.length) {
+      const pipeline = {};
+      applications.forEach(a => { pipeline[a.status] = (pipeline[a.status] || 0) + 1; });
+      const weekAgo = new Date(Date.now() - 7 * 86400000);
+      context.stats = {
+        total: applications.length,
+        pipeline,
+        new_this_week: applications.filter(a => new Date(a.created_at) >= weekAgo).length,
+      };
+    }
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: chatHistory.slice(0, -1), // exclude the message we just added
+          context,
+        }),
+      });
+
+      // Remove typing indicator
+      typingDiv.remove();
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = data.error || 'Error al conectar con el asistente. Intenta de nuevo.';
+        appendChatMsg(errMsg, false);
+        chatHistory.pop(); // remove failed user message from history
+      } else {
+        appendChatMsg(data.reply, false);
+        chatHistory.push({ role: 'assistant', content: data.reply });
+      }
+    } catch (err) {
+      typingDiv.remove();
+      appendChatMsg('Error de conexión. Verifica tu red e intenta de nuevo.', false);
+      chatHistory.pop();
+    }
+
+    setChatInputState(false);
+    document.getElementById('chatInput').focus();
   }
+
   document.getElementById('chatSendBtn').onclick = sendChat;
-  document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+  document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendChat(); });
 
   // ── Chart Colors ──────────────────────────────────────────
   const CHART_COLORS = ['#0038A8','#CF142B','#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
