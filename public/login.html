@@ -150,12 +150,13 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-        localStorage.setItem('hogaresrd_token', data.token);
+        // JWT is now in an httpOnly cookie set by the server — do NOT store in localStorage.
+        // Keep hogaresrd_user for display purposes (name, role) throughout the session.
         if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
         const role = data.user?.role;
         let next = params.get('next');
         if (!next) {
-          if (role === 'agency') next = '/broker';
+          if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') next = '/broker';
           else next = '/home';
         }
         window.location.href = next;

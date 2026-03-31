@@ -4,12 +4,31 @@ const path       = require('path');
 const fs         = require('fs');
 const multer     = require('multer');
 const nodemailer = require('nodemailer');
+const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { userAuth } = require('./auth');
+const { logSec } = require('./security-log');
+// file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
+const { fileTypeFromFile } = require('file-type');
 
 const router    = express.Router();
 const ADMIN_KEY = process.env.ADMIN_KEY; // required — enforced at startup by server.js
 const BASE_URL  = process.env.BASE_URL || 'http://localhost:3000';
+
+// ── Rate limiter for anonymous application creation (Item 11) ────────────
+// 5 new applications per IP per hour — stops spam/flooding without
+// impacting legitimate use (real clients submit once per listing).
+const appCreateLimiter = rateLimit({
+  windowMs:        60 * 60 * 1000, // 1 hour
+  max:             5,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { error: 'Demasiadas solicitudes. Por favor espera antes de enviar otra aplicación.' },
+  handler: (req, res, next, options) => {
+    logSec('app_spam_blocked', req, { listing_id: req.body?.listing_id });
+    res.status(429).json(options.message);
+  },
+});
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -66,6 +85,37 @@ const STATUS_FLOW = {
 // ── File upload (documents & receipts) ────────────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'data', 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
+
+// Allowed MIME types for uploaded documents / receipts / proofs
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
+  'application/pdf',
+]);
+
+// Validate a file's actual MIME type (magic bytes) after multer saves it.
+// Deletes the file and returns false if the type is not allowed.
+async function validateMime(filePath) {
+  try {
+    const result = await fileTypeFromFile(filePath);
+    // result is undefined for plain-text or unknown formats — block them
+    if (!result || !ALLOWED_MIME_TYPES.has(result.mime)) {
+      fs.unlink(filePath, () => {}); // async delete, ignore errors
+      return false;
+    }
+    return true;
+  } catch {
+    fs.unlink(filePath, () => {});
+    return false;
+  }
+}
+
+// Guard a file path against path-traversal attacks.
+// Returns the resolved absolute path if it is within DOCS_DIR, otherwise null.
+function guardDocPath(rawPath) {
+  const resolved = path.resolve(rawPath);
+  const base     = path.resolve(DOCS_DIR) + path.sep;
+  return resolved.startsWith(base) ? resolved : null;
+}
 
 const docStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, DOCS_DIR),
@@ -189,15 +239,37 @@ function buildPaymentReminderEmail(app, inst) {
 // ══════════════════════════════════════════════════════════════════
 // ── POST /  — Create application ─────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
-router.post('/', (req, res) => {
+router.post('/', appCreateLimiter, (req, res) => {
   const {
     listing_id, listing_title, listing_price, listing_type,
     name, phone, email, user_id,
     financing, pre_approved, contact_method, budget, timeline, intent, notes,
+    _hp, // honeypot — must be absent or empty (bots fill all fields)
   } = req.body;
+
+  // ── Honeypot: bots fill hidden fields; real users never see them ──
+  if (_hp) {
+    // Return 200 to the bot so it thinks it succeeded (don't reveal the block)
+    return res.status(200).json({ success: true, id: `fake_${Date.now()}` });
+  }
 
   if (!name || !phone || !listing_id)
     return res.status(400).json({ error: 'name, phone y listing_id son requeridos' });
+
+  // ── Input validation (Sprint 3, Item 11) ─────────────────────────
+  const nameTrimmed  = name.trim();
+  const phoneTrimmed = phone.trim();
+  const emailTrimmed = (email || '').trim();
+
+  if (nameTrimmed.length < 2 || nameTrimmed.length > 120)
+    return res.status(400).json({ error: 'El nombre debe tener entre 2 y 120 caracteres' });
+
+  // Phone: allow digits, spaces, dashes, parentheses, leading +
+  if (!/^\+?[\d\s\-().]{7,20}$/.test(phoneTrimmed))
+    return res.status(400).json({ error: 'Número de teléfono inválido' });
+
+  if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrimmed))
+    return res.status(400).json({ error: 'Correo electrónico inválido' });
 
   // Find listing to get affiliated broker
   const listing = store.getListingById(listing_id);
@@ -228,9 +300,9 @@ router.post('/', (req, res) => {
     listing_price:  listing_price || listing?.price || '',
     listing_type:   listing_type  || listing?.type  || '',
     client: {
-      name:    name.trim(),
-      phone:   phone.trim(),
-      email:   (email || '').trim(),
+      name:    nameTrimmed,
+      phone:   phoneTrimmed,
+      email:   emailTrimmed,
       user_id: user_id || null,
     },
     broker,
@@ -478,7 +550,7 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
 });
 
 // ── POST /:id/documents/upload  — Client uploads documents ──────
-router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), (req, res) => {
+router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -490,6 +562,16 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), (re
 
   if (!req.files || !req.files.length)
     return res.status(400).json({ error: 'No se recibieron archivos' });
+
+  // Validate MIME types — reject any file whose magic bytes don't match allowed types
+  for (const f of req.files) {
+    const ok = await validateMime(f.path);
+    if (!ok) {
+      // Delete the rest of the batch files too
+      req.files.forEach(x => { if (x.path !== f.path) fs.unlink(x.path, () => {}); });
+      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Solo se aceptan imágenes (JPG, PNG, WEBP, GIF) y PDF.` });
+    }
+  }
 
   const requestId = req.body.request_id || null;
   const docType   = req.body.type || 'other';
@@ -601,7 +683,9 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
 
   if (!fs.existsSync(doc.path)) return res.status(404).json({ error: 'Archivo no encontrado' });
 
-  res.sendFile(path.resolve(doc.path));
+  const safePath = guardDocPath(doc.path);
+  if (!safePath) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  res.sendFile(safePath);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -701,7 +785,7 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 
 // ── POST /:id/payment/upload  — Client uploads receipt ──────────
-router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), (req, res) => {
+router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -711,6 +795,10 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), (req, 
   if (!isClient) return res.status(403).json({ error: 'Solo el cliente puede subir recibo' });
 
   if (!req.file) return res.status(400).json({ error: 'Recibo es requerido' });
+
+  // Validate MIME type via magic bytes
+  if (!(await validateMime(req.file.path)))
+    return res.status(400).json({ error: 'Tipo de archivo no permitido. Solo se aceptan imágenes y PDF.' });
 
   app.payment.receipt_path = req.file.path;
   app.payment.receipt_filename = req.file.filename;
@@ -803,7 +891,9 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
   if (!app.payment.receipt_path || !fs.existsSync(app.payment.receipt_path))
     return res.status(404).json({ error: 'Recibo no encontrado' });
 
-  res.sendFile(path.resolve(app.payment.receipt_path));
+  const safeReceipt = guardDocPath(app.payment.receipt_path);
+  if (!safeReceipt) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  res.sendFile(safeReceipt);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -951,7 +1041,7 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
 });
 
 // ── POST /:id/payment-plan/:iid/upload  — Client uploads proof ───
-router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof'), (req, res) => {
+router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof'), async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
   const user     = store.getUserById(req.user.sub);
@@ -962,6 +1052,10 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
   if (!inst)       return res.status(404).json({ error: 'Cuota no encontrada' });
   if (!req.file)   return res.status(400).json({ error: 'Archivo requerido' });
   if (inst.status === 'approved') return res.status(400).json({ error: 'Este pago ya fue aprobado' });
+
+  // Validate MIME type via magic bytes
+  if (!(await validateMime(req.file.path)))
+    return res.status(400).json({ error: 'Tipo de archivo no permitido. Solo se aceptan imágenes y PDF.' });
   inst.proof_path        = req.file.path;
   inst.proof_filename    = req.file.filename;
   inst.proof_original    = req.file.originalname;
@@ -1082,7 +1176,9 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst?.proof_path)               return res.status(404).json({ error: 'Comprobante no encontrado' });
   if (!fs.existsSync(inst.proof_path)) return res.status(404).json({ error: 'Archivo no encontrado' });
-  res.sendFile(path.resolve(inst.proof_path));
+  const safeProof = guardDocPath(inst.proof_path);
+  if (!safeProof) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  res.sendFile(safeProof);
 });
 
 // ── PUT /:id/assign  — Admin reassigns broker ────────────────────

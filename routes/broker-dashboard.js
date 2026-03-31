@@ -1,6 +1,7 @@
 const express    = require('express');
 const store      = require('./store');
 const { userAuth } = require('./auth');
+const { logSec } = require('./security-log');
 
 const router = express.Router();
 
@@ -8,8 +9,14 @@ const router = express.Router();
 router.use(userAuth, (req, res, next) => {
   const user = store.getUserById(req.user.sub);
   const allowed = ['agency', 'broker', 'inmobiliaria'];
-  if (!user || !allowed.includes(user.role))
+  if (!user || !allowed.includes(user.role)) {
+    logSec('role_violation', req, {
+      userId:       req.user.sub,
+      actualRole:   user?.role || 'unknown',
+      requiredRole: 'broker|agency|inmobiliaria',
+    });
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias pueden acceder' });
+  }
   req.brokerUser = user;
   next();
 });

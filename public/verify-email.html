@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Verificar Correo — HogaresRD</title>
+  <link rel="icon" href="/favicon.ico"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef3fa;
+      --card: #ffffff;
+      --text: #1a2b40;
+      --muted: #4d6a8a;
+      --border: #d0dcea;
+      --primary: #002D62;
+      --primary-light: #eef3fa;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --error: #dc2626;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --warn: #d97706;
+      --warn-bg: #fffbeb;
+      --warn-border: #fde68a;
+    }
+    [data-theme="dark"] {
+      --bg: #0f1923;
+      --card: #1a2535;
+      --text: #e2eaf5;
+      --muted: #7a9bbf;
+      --border: #2d3f55;
+      --primary-light: #1e2d42;
+      --success-bg: #052e16;
+      --success-border: #166534;
+      --error-bg: #450a0a;
+      --error-border: #991b1b;
+      --warn-bg: #1c1500;
+      --warn-border: #92400e;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,45,98,0.08);
+    }
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .btn {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      margin-top: 12px;
+    }
+    [data-theme="dark"] .btn-outline { color: #7ab3ff; border-color: #7ab3ff; }
+    .btn-sm { padding: 9px 20px; font-size: 0.85rem; }
+    .alert {
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+      text-align: left;
+      line-height: 1.5;
+    }
+    .alert-success { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success); }
+    .alert-error   { background: var(--error-bg);   border: 1px solid var(--error-border);   color: var(--error); }
+    .alert-warn    { background: var(--warn-bg);     border: 1px solid var(--warn-border);    color: var(--warn); }
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: var(--primary);
+      margin-bottom: 36px;
+    }
+    [data-theme="dark"] .logo-link { color: #7ab3ff; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #resendMsg { font-size: 0.85rem; margin-top: 12px; min-height: 20px; }
+    .theme-btn {
+      position: fixed; top: 16px; right: 16px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 12px;
+      font-size: 0.8rem; cursor: pointer; color: var(--muted);
+    }
+    @media (max-width: 480px) { .card { padding: 36px 24px; } }
+  </style>
+</head>
+<body>
+  <button class="theme-btn" onclick="toggleTheme()">🌙 Tema</button>
+
+  <a href="/home" class="logo-link">🏠 HogaresRD</a>
+
+  <div class="card" id="card">
+    <div class="spinner" id="spinner"></div>
+    <p style="color:var(--muted);font-size:.9rem;">Procesando...</p>
+  </div>
+
+  <script>
+    // ── Theme ──────────────────────────────────────────────────────────
+    const html = document.documentElement;
+    const saved = localStorage.getItem('theme');
+    if (saved) html.dataset.theme = saved;
+    function toggleTheme() {
+      const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      html.dataset.theme = next;
+      localStorage.setItem('theme', next);
+    }
+
+    // ── Render helpers ─────────────────────────────────────────────────
+    function render(icon, title, body, actions) {
+      document.getElementById('card').innerHTML = `
+        <span class="icon">${icon}</span>
+        <h1>${title}</h1>
+        <p>${body}</p>
+        ${actions}
+      `;
+    }
+
+    function renderSuccess() {
+      // Determine where to redirect based on stored role
+      let dashLink = '/home';
+      try {
+        const u = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+        if (u && ['agency','broker','inmobiliaria'].includes(u.role)) dashLink = '/broker';
+      } catch {}
+
+      // Update emailVerified in localStorage so the banner disappears immediately
+      try {
+        const u = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+        if (u) { u.emailVerified = true; localStorage.setItem('hogaresrd_user', JSON.stringify(u)); }
+      } catch {}
+
+      render('✅', '¡Correo verificado!',
+        'Tu dirección de correo electrónico ha sido confirmada. Ya tienes acceso completo a tu cuenta.',
+        `<a href="${dashLink}" class="btn">Ir a mi cuenta →</a>`
+      );
+    }
+
+    function renderExpired() {
+      render('⏰', 'Enlace expirado',
+        'Este enlace de verificación ya caducó (válido por 24 horas). Puedes solicitar uno nuevo.',
+        `<button class="btn" onclick="resend()">Reenviar verificación</button>
+         <br/><a href="/login" class="btn btn-outline btn-sm" style="margin-top:12px;display:inline-block;">Iniciar sesión</a>
+         <p id="resendMsg"></p>`
+      );
+    }
+
+    function renderInvalid() {
+      render('❌', 'Enlace inválido',
+        'Este enlace de verificación no es válido o ya fue utilizado. Si crees que es un error, inicia sesión y solicita un nuevo enlace.',
+        `<a href="/login" class="btn">Iniciar sesión</a>`
+      );
+    }
+
+    function renderLoading() {
+      document.getElementById('card').innerHTML = `
+        <div class="spinner"></div>
+        <p style="color:var(--muted);font-size:.9rem;">Verificando tu correo...</p>
+      `;
+    }
+
+    function renderAlreadyVerified() {
+      let dashLink = '/home';
+      try {
+        const u = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+        if (u && ['agency','broker','inmobiliaria'].includes(u.role)) dashLink = '/broker';
+      } catch {}
+      render('✔️', 'Ya verificado',
+        'Este correo ya fue verificado anteriormente.',
+        `<a href="${dashLink}" class="btn">Ir a mi cuenta →</a>`
+      );
+    }
+
+    // ── Resend ─────────────────────────────────────────────────────────
+    async function resend() {
+      const btn = document.querySelector('.card .btn');
+      const msg = document.getElementById('resendMsg');
+      if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+      try {
+        const r = await fetch('/api/auth/resend-verification', { method: 'POST' });
+        const d = await r.json();
+        if (r.ok) {
+          if (msg) { msg.style.color = 'var(--success)'; msg.textContent = '✅ ' + (d.message || 'Correo enviado. Revisa tu bandeja.'); }
+        } else {
+          if (msg) { msg.style.color = 'var(--error)'; msg.textContent = d.error || 'Error al enviar.'; }
+          if (btn) { btn.disabled = false; btn.textContent = 'Reenviar verificación'; }
+        }
+      } catch {
+        if (msg) { msg.style.color = 'var(--error)'; msg.textContent = 'Error de conexión.'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Reenviar verificación'; }
+      }
+    }
+
+    // ── Main ───────────────────────────────────────────────────────────
+    (async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get('status');
+      const token  = params.get('token');
+
+      if (status === 'success') { renderSuccess(); return; }
+      if (status === 'expired') { renderExpired(); return; }
+      if (status === 'invalid') { renderInvalid(); return; }
+
+      // Direct token in URL (user clicked the email link directly to this page)
+      // The API does a server-side redirect, so this case is only hit if JS-navigated.
+      if (token) {
+        renderLoading();
+        // Navigate to the API endpoint — it will redirect back with ?status=
+        window.location.href = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+        return;
+      }
+
+      // No params at all — show generic help
+      render('📧', 'Verifica tu correo',
+        'Revisa tu bandeja de entrada y haz clic en el enlace de verificación que te enviamos al registrarte.',
+        `<button class="btn" onclick="resend()">Reenviar verificación</button>
+         <p id="resendMsg"></p>`
+      );
+    })();
+  </script>
+</body>
+</html>

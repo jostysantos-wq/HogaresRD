@@ -3,10 +3,11 @@ const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const FILES = {
-  users:        path.join(DATA_DIR, 'users.json'),
-  activity:     path.join(DATA_DIR, 'activity.json'),
-  submissions:  path.join(DATA_DIR, 'submissions.json'),
-  applications: path.join(DATA_DIR, 'applications.json'),
+  users:          path.join(DATA_DIR, 'users.json'),
+  activity:       path.join(DATA_DIR, 'activity.json'),
+  submissions:    path.join(DATA_DIR, 'submissions.json'),
+  applications:   path.join(DATA_DIR, 'applications.json'),
+  revokedTokens:  path.join(DATA_DIR, 'revoked_tokens.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -106,6 +107,37 @@ function saveApplication(app) {
   write(FILES.applications, all);
 }
 
+// ── Revoked tokens (session invalidation) ─────────────────────────────────
+// Each entry: { jti, exp, revokedAt }
+// `exp` is a Unix timestamp (seconds).  Entries are pruned when they would
+// have expired naturally anyway — the JWT is already invalid at that point.
+
+function _readRevoked() {
+  try {
+    if (!fs.existsSync(FILES.revokedTokens)) return [];
+    return JSON.parse(fs.readFileSync(FILES.revokedTokens, 'utf8'));
+  } catch { return []; }
+}
+
+function _writeRevoked(tokens) {
+  fs.writeFileSync(FILES.revokedTokens, JSON.stringify(tokens, null, 2));
+}
+
+function revokeToken(jti, exp) {
+  if (!jti) return;
+  const now   = Math.floor(Date.now() / 1000);
+  // Prune expired entries while we have the file open
+  const live  = _readRevoked().filter(t => t.exp > now);
+  live.push({ jti, exp, revokedAt: new Date().toISOString() });
+  _writeRevoked(live);
+}
+
+function isTokenRevoked(jti) {
+  if (!jti) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return _readRevoked().some(t => t.jti === jti && t.exp > now);
+}
+
 // ── Multi-role helpers ─────────────────────────────────────────────────────
 function getUsersByRole(role) {
   return getUsers().filter(u => u.role === role);
@@ -129,4 +161,5 @@ module.exports = {
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
   getUsersByRole, getUsersByInmobiliaria,
+  revokeToken, isTokenRevoked,
 };

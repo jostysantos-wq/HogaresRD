@@ -395,30 +395,23 @@
     });
 
     /* ── Auth ── */
-    let token, user;
+    // JWT lives in an httpOnly cookie — not accessible from JS.
+    // hogaresrd_user in localStorage holds display data (name, role).
+    let user;
     try {
-      token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
       user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
     } catch(e) {}
 
-    // Parse JWT to get user info if we have token but no user object
-    function parseJwt(t) {
-      try {
-        const b = t.split('.')[1];
-        const s = atob(b.replace(/-/g, '+').replace(/_/g, '/'));
-        return JSON.parse(s);
-      } catch(e) { return null; }
+    if (!user || !user.id) {
+      window.location.href = '/login';
     }
 
-    if (!token) {
-      window.location.href = '/login';
-    } else if (!user) {
-      const payload = parseJwt(token);
-      if (payload) {
-        user = { name: payload.name || payload.email || 'Usuario', email: payload.email || '' };
-      } else {
-        window.location.href = '/login';
-      }
+    // ── Email verification banner ──────────────────────────────────────
+    if (user && user.emailVerified === false) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#fffbeb;border-bottom:2px solid #fde68a;color:#92400e;padding:10px 20px;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
+      banner.innerHTML = `<span>⚠️ <strong>Verifica tu correo electrónico.</strong> Revisa tu bandeja de entrada o <a href="/verify-email" style="color:#b45309;font-weight:700;">solicita un nuevo enlace</a>.</span>`;
+      document.body.insertBefore(banner, document.body.firstChild);
     }
 
     // Auth nav bar
@@ -452,12 +445,9 @@
       }
     })();
 
-    function logout() {
-      try {
-        localStorage.removeItem('hogaresrd_token');
-        localStorage.removeItem('hogaresrd_user');
-        localStorage.removeItem('token');
-      } catch(e) {}
+    async function logout() {
+      try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+      ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
       window.location.href = '/home';
     }
 
@@ -578,7 +568,8 @@
     }
 
     /* ── API ── */
-    const API_HEADERS = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    // JWT cookie is sent automatically (same-origin). No Authorization header needed.
+    const API_HEADERS = { 'Content-Type': 'application/json' };
 
     async function apiGet(url) {
       const res = await fetch(url, { headers: API_HEADERS });
@@ -593,9 +584,9 @@
     }
 
     async function apiUpload(url, formData) {
+      // Cookie is sent automatically — no Authorization header needed.
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);

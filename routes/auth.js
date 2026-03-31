@@ -5,6 +5,7 @@ const crypto     = require('crypto');
 const nodemailer = require('nodemailer');
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
+const { logSec } = require('./security-log');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET; // required — enforced at startup by server.js
@@ -30,29 +31,109 @@ const resetLimiter = rateLimit({
   message:   { error: 'Demasiadas solicitudes de restablecimiento. Intenta en una hora.' },
 });
 
+const resendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Intenta en una hora.' },
+});
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
 
 function signToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+  // jti (JWT ID) is a unique identifier per-token, used for revocation (Sprint 3)
+  const jti = crypto.randomUUID();
+  return jwt.sign({ sub: user.id, role: user.role, name: user.name, jti }, JWT_SECRET, { expiresIn: '30d' });
 }
 
 function safeUser(user) {
-  const { passwordHash, resetToken, resetTokenExpiry, ...safe } = user;
+  const { passwordHash, resetToken, resetTokenExpiry, emailVerifyToken, emailVerifyExpiry, ...safe } = user;
   return safe;
 }
 
+// Generates a SHA-256-hashed verification token, attaches fields to user in place,
+// and returns the raw (unhashed) token to embed in the email link.
+function attachVerifyToken(user) {
+  const raw  = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.createHash('sha256').update(raw).digest('hex');
+  user.emailVerified     = false;
+  user.emailVerifyToken  = hash;
+  user.emailVerifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 h
+  return raw;
+}
+
+function sendVerificationEmail(user, rawToken) {
+  const verifyUrl = `${BASE_URL}/verify-email?token=${rawToken}`;
+  return transporter.sendMail({
+    from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    to:      user.email,
+    subject: 'Verifica tu correo — HogaresRD 🔐',
+    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Verifica tu correo electrónico</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+            Hola <strong>${user.name.split(' ')[0]}</strong>, gracias por registrarte en HogaresRD.
+          </p>
+          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
+            Para activar tu cuenta y acceder a todas las funciones, haz clic en el botón a continuación. Este enlace expira en <strong>24 horas</strong>.
+          </p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${verifyUrl}" style="display:inline-block;background:#002D62;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.2px;">
+              ✅ Verificar mi correo
+            </a>
+          </div>
+          <p style="margin:24px 0 0;font-size:0.8rem;color:#7a9bbf;line-height:1.5;">
+            Si no creaste esta cuenta, ignora este correo. Si el botón no funciona, copia este enlace en tu navegador:<br/>
+            <a href="${verifyUrl}" style="color:#4d6a8a;word-break:break-all;">${verifyUrl}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+  }).catch(err => console.error('Verification email error:', err.message));
+}
+
+// Cookie name for the JWT (short to save bandwidth)
+const COOKIE_NAME = 'hrdt';
+const IS_PROD     = process.env.NODE_ENV === 'production';
+
 // ── Auth middleware (exported for other routes) ────────────────────────────
+// Accepts either an httpOnly cookie (preferred) or a Bearer token in the
+// Authorization header (kept for backward-compat with existing 30-day sessions
+// and API clients that can't use cookies).
 function userAuth(req, res, next) {
-  const header = req.headers['authorization'];
-  if (!header) return res.status(401).json({ error: 'No autenticado' });
-  const token = header.replace('Bearer ', '');
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  const token = cookieToken || headerToken;
+  if (!token) return res.status(401).json({ error: 'No autenticado' });
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
+
+    // Sprint 3: check revocation list (handles forced logout / stolen-token invalidation)
+    if (payload.jti && store.isTokenRevoked(payload.jti)) {
+      logSec('token_rejected', req, { reason: 'revoked', userId: payload.sub });
+      return res.status(401).json({ error: 'Sesión inválida. Inicia sesión de nuevo.' });
+    }
+
+    req.user = payload;
     next();
   } catch {
+    logSec('token_rejected', req, { reason: 'invalid_jwt' });
     res.status(401).json({ error: 'Token inválido o expirado' });
   }
 }
@@ -96,6 +177,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       marketingOptIn:    marketingOptIn !== false,
     };
 
+    const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
 
     // Welcome email — pull top 3 trending listings by views
@@ -236,6 +318,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
 </body></html>`,
     }).catch(err => console.error('Welcome email error:', err.message));
 
+    sendVerificationEmail(user, verifyRawToken);
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
@@ -273,6 +356,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       marketingOptIn:  true,
     };
 
+    const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
 
     transporter.sendMail({
@@ -315,6 +399,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 </body></html>`,
     }).catch(err => console.error('Agency welcome email error:', err.message));
 
+    sendVerificationEmail(user, verifyRawToken);
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
@@ -357,6 +442,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       inmobiliaria_joined_at:    null,
     };
 
+    const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
 
     transporter.sendMail({
@@ -393,6 +479,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
 </body></html>`,
     }).catch(err => console.error('Broker welcome email error:', err.message));
 
+    sendVerificationEmail(user, verifyRawToken);
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
@@ -431,6 +518,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
       join_requests:   [],
     };
 
+    const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
 
     transporter.sendMail({
@@ -467,6 +555,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
 </body></html>`,
     }).catch(err => console.error('Inmobiliaria welcome email error:', err.message));
 
+    sendVerificationEmail(user, verifyRawToken);
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
@@ -479,15 +568,35 @@ router.post('/login', authLimiter, async (req, res, next) => {
       return res.status(400).json({ error: 'Correo y contraseña requeridos' });
 
     const user = store.getUserByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
+    if (!user) {
+      logSec('login_failed', req, { email, reason: 'unknown_email' });
+      return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
+    }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
+    if (!valid) {
+      logSec('login_failed', req, { email, reason: 'wrong_password', userId: user.id });
+      return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
+    }
 
     user.lastLoginAt = new Date().toISOString();
     store.saveUser(user);
 
-    res.json({ token: signToken(user), user: safeUser(user) });
+    logSec('login_success', req, { userId: user.id, role: user.role });
+
+    const token = signToken(user);
+
+    // Set JWT in an httpOnly cookie — XSS-proof primary auth mechanism.
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure:   IS_PROD,      // HTTPS-only in production
+      sameSite: 'lax',        // CSRF protection; still works with normal navigation
+      maxAge:   30 * 24 * 60 * 60 * 1000, // 30 days in ms
+    });
+
+    // Also return the token in the body so mobile / API clients can store it.
+    // Browsers should rely on the cookie; web pages can ignore data.token.
+    res.json({ token, user: safeUser(user) });
   } catch (err) { next(err); }
 });
 
@@ -496,6 +605,27 @@ router.get('/me', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json(safeUser(user));
+});
+
+// ── Logout ─────────────────────────────────────────────────────────────────
+// Revokes the current token (by jti) and clears the httpOnly cookie.
+router.post('/logout', (req, res) => {
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  const token = cookieToken || headerToken;
+
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      if (payload.jti) {
+        store.revokeToken(payload.jti, payload.exp);
+        logSec('logout', req, { userId: payload.sub });
+      }
+    } catch { /* token already invalid — nothing to revoke */ }
+  }
+
+  res.clearCookie(COOKIE_NAME, { httpOnly: true, secure: IS_PROD, sameSite: 'lax' });
+  res.json({ success: true });
 });
 
 // ── Forgot password ────────────────────────────────────────────────────────
@@ -508,10 +638,15 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   const user = store.getUserByEmail(email);
   if (!user) return;
 
-  const token = crypto.randomBytes(32).toString('hex');
-  user.resetToken       = token;
+  // Sprint 3: store a SHA-256 hash of the token — raw token only lives in the email link.
+  // Even if users.json is read by an attacker, the tokens cannot be replayed.
+  const rawToken   = crypto.randomBytes(32).toString('hex');
+  const tokenHash  = crypto.createHash('sha256').update(rawToken).digest('hex');
+  user.resetToken       = tokenHash;  // hashed; never the raw value
   user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
   store.saveUser(user);
+
+  logSec('reset_requested', req, { userId: user.id });
 
   transporter.sendMail({
     from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
@@ -527,7 +662,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
           <p style="color:#4d6a8a;line-height:1.6;">Recibimos una solicitud para restablecer la contraseña de tu cuenta en HogaresRD. Haz clic en el botón a continuación para crear una nueva contraseña.</p>
           <p style="color:#4d6a8a;"><strong>Este enlace expira en 1 hora.</strong></p>
           <div style="margin-top:24px;">
-            <a href="${BASE_URL}/reset-password?token=${token}" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
+            <a href="${BASE_URL}/reset-password?token=${rawToken}" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
               Restablecer Contraseña →
             </a>
           </div>
@@ -549,8 +684,12 @@ router.post('/reset-password', async (req, res, next) => {
     if (password.length < 8)
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
 
+    // Sprint 3: compare the SHA-256 hash of the submitted token against the stored hash.
+    // The raw token is never stored — even a DB breach can't reveal usable reset tokens.
+    const submittedHash = crypto.createHash('sha256').update(token).digest('hex');
+
     const users = store.getUsers();
-    const user  = users.find(u => u.resetToken === token);
+    const user  = users.find(u => u.resetToken === submittedHash);
     if (!user)
       return res.status(400).json({ error: 'Enlace inválido o ya utilizado' });
     if (new Date(user.resetTokenExpiry) < new Date())
@@ -561,7 +700,46 @@ router.post('/reset-password', async (req, res, next) => {
     user.resetTokenExpiry = null;
     store.saveUser(user);
 
+    logSec('reset_used', req, { userId: user.id });
     res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+  } catch (err) { next(err); }
+});
+
+// ── Verify email ───────────────────────────────────────────────────────────
+// The link in the email is a GET — verifies and redirects to the landing page.
+router.get('/verify-email', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
+
+  const submittedHash = crypto.createHash('sha256').update(token).digest('hex');
+  const users = store.getUsers();
+  const user  = users.find(u => u.emailVerifyToken === submittedHash);
+
+  if (!user) return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
+  if (new Date(user.emailVerifyExpiry) < new Date())
+    return res.redirect(`${BASE_URL}/verify-email?status=expired`);
+
+  user.emailVerified     = true;
+  user.emailVerifyToken  = null;
+  user.emailVerifyExpiry = null;
+  store.saveUser(user);
+
+  logSec('email_verified', req, { userId: user.id });
+  res.redirect(`${BASE_URL}/verify-email?status=success`);
+});
+
+// ── Resend verification email ──────────────────────────────────────────────
+router.post('/resend-verification', resendLimiter, userAuth, async (req, res, next) => {
+  try {
+    const user = store.getUserById(req.user.sub);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (user.emailVerified) return res.json({ success: true, message: 'Tu correo ya está verificado.' });
+
+    const rawToken = attachVerifyToken(user);
+    store.saveUser(user);
+    sendVerificationEmail(user, rawToken);
+    logSec('verification_resent', req, { userId: user.id });
+    res.json({ success: true, message: 'Correo de verificación enviado. Revisa tu bandeja de entrada.' });
   } catch (err) { next(err); }
 });
 

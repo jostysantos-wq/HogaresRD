@@ -21,14 +21,18 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   path.join(DATA_DIR, 'users.json'),
   path.join(DATA_DIR, 'activity.json'),
   path.join(DATA_DIR, 'applications.json'),
+  path.join(DATA_DIR, 'revoked_tokens.json'),  // Sprint 3: token revocation list
+  path.join(DATA_DIR, 'security_log.json'),    // Sprint 3: security event log
 ].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 const DOCS_DIR = path.join(DATA_DIR, 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 
-const express    = require('express');
-const nodemailer = require('nodemailer');
-const multer     = require('multer');
-const cron       = require('node-cron');
+const express      = require('express');
+const cookieParser = require('cookie-parser');
+const helmet       = require('helmet');
+const nodemailer   = require('nodemailer');
+const multer       = require('multer');
+const cron         = require('node-cron');
 const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
 
 const app  = express();
@@ -127,21 +131,31 @@ const ALLOWED_ORIGINS = (() => {
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  // Same-origin requests (e.g. pages served by this Express app) have no Origin header
-  // at all, so CORS headers are not needed and not set.
+  // Same-origin requests (pages served by this Express app) carry no Origin header,
+  // so no CORS headers are needed.
   if (origin) {
     if (ALLOWED_ORIGINS.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true'); // allow httpOnly cookie
       res.setHeader('Vary', 'Origin');
     }
-    // If the origin is not in the list we simply don't set the CORS header,
-    // so the browser blocks the request — no explicit rejection needed.
+    // Unrecognised origins get no CORS header → browser blocks them.
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-key');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+// ── Security headers (helmet) ─────────────────────────────────────
+// CSP is intentionally disabled for now — inline scripts are pervasive.
+// All other headers (HSTS, X-Frame-Options, X-Content-Type-Options, etc.)
+// are active. Tighten CSP with nonces/hashes in a future sprint.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false, // pages embed cross-origin media
+}));
+
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -223,6 +237,7 @@ app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
+app.get('/verify-email',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 
 app.post('/submit', async (req, res) => {
   const body = req.body;
