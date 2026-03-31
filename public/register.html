@@ -8,14 +8,12 @@
     :root {
       --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
       --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --input-bg: #f5f8fd; --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --shadow: 0 4px 24px rgba(0,56,168,0.13); --error: #CF142B;
+      --shadow: 0 4px 24px rgba(0,56,168,0.13);
     }
     [data-theme="dark"] {
       --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
       --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --input-bg: #00162e; --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --shadow: 0 4px 24px rgba(0,0,0,0.5); --error: #e8374e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -29,47 +27,68 @@
     .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
     .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-    .auth-card { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 2.5rem 2.25rem; width: 100%; max-width: 440px; }
-    .auth-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.35rem; }
-    .auth-subtitle { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2rem; }
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem; }
 
-    .field { margin-bottom: 1.1rem; }
-    .field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
-    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
-    .field input:focus { border-color: var(--accent); }
-    .field input.invalid { border-color: var(--error); }
+    .selector-wrap { width: 100%; max-width: 580px; }
 
-    .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; }
-    .error-msg { font-size: 0.85rem; color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
-    .error-msg.visible { display: block; }
+    .selector-title { font-size: 1.7rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 0.4rem; }
+    .selector-sub { font-size: 0.95rem; color: var(--text-muted); text-align: center; margin-bottom: 2.25rem; }
 
-    .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.25rem; }
-    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .account-cards { display: flex; flex-direction: column; gap: 1rem; }
 
-    .auth-links { margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--text-muted); }
+    .account-card {
+      display: flex; align-items: center; gap: 1.1rem;
+      background: var(--bg-card); border: 2px solid var(--border);
+      border-radius: 16px; padding: 1.25rem 1.4rem;
+      text-decoration: none; cursor: pointer;
+      transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
+      box-shadow: 0 2px 10px rgba(0,56,168,0.06);
+    }
+    .account-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 6px 24px rgba(0,56,168,0.14);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .card-icon svg { width: 26px; height: 26px; fill: #fff; }
+
+    .icon-user    { background: linear-gradient(135deg, #0038A8, #3b82f6); }
+    .icon-broker  { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+    .icon-inm     { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+
+    .card-body { flex: 1; min-width: 0; }
+    .card-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem; }
+    .card-desc  { font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
+
+    .card-badge {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 20px;
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .badge-free    { background: rgba(0,56,168,0.1); color: var(--accent); }
+    .badge-pro     { background: rgba(8,145,178,0.12); color: #0891b2; }
+    .badge-empresa { background: rgba(124,58,237,0.12); color: #7c3aed; }
+
+    .card-arrow { color: var(--text-muted); font-size: 1.3rem; flex-shrink: 0; transition: transform 0.18s, color 0.18s; }
+    .account-card:hover .card-arrow { transform: translateX(4px); color: var(--accent); }
+
+    .divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.75rem 0 1.25rem; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-text { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+
+    .auth-links { text-align: center; font-size: 0.88rem; color: var(--text-muted); }
     .auth-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
     .auth-links a:hover { text-decoration: underline; }
 
-    .checkbox-field { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1rem 0 0.25rem; }
-    .checkbox-field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
-    .checkbox-field label { font-size: 0.83rem; color: var(--text-muted); line-height: 1.4; cursor: pointer; }
-    .checkbox-field label a { color: var(--accent); font-weight: 600; text-decoration: underline; }
-    .checkbox-field input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
-    .checkbox-field input[type="checkbox"]:disabled + label { opacity: 0.55; cursor: not-allowed; }
-    .tc-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.2rem 0 0 1.45rem; opacity: 0.8; }
-
-    .agency-callout { display: flex; align-items: center; gap: 0.9rem; background: color-mix(in srgb, var(--accent) 7%, transparent); border: 1.5px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 1.75rem; text-decoration: none; transition: border-color 0.18s, background 0.18s; }
-    .agency-callout:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-    .agency-callout-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .agency-callout-icon svg { width: 20px; height: 20px; fill: #fff; }
-    .agency-callout-text { flex: 1; min-width: 0; }
-    .agency-callout-title { font-size: 0.88rem; font-weight: 700; color: var(--text); line-height: 1.2; }
-    .agency-callout-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
-    .agency-callout-arrow { color: var(--accent); font-size: 1.1rem; flex-shrink: 0; }
-
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+    @media (max-width: 480px) {
+      .card-badge { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -87,70 +106,61 @@
   </nav>
 
   <main>
-    <div class="auth-card">
-      <h1 class="auth-title">Crear Cuenta</h1>
-      <p class="auth-subtitle">Gratis. Recibe recomendaciones personalizadas y guarda tus favoritas.</p>
+    <div class="selector-wrap">
+      <h1 class="selector-title">¿Qué tipo de cuenta necesitas?</h1>
+      <p class="selector-sub">Selecciona el perfil que mejor describe tu rol en HogaresRD.</p>
 
-      <a href="/register-agency" class="agency-callout">
-        <div class="agency-callout-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        </div>
-        <div class="agency-callout-text">
-          <div class="agency-callout-title">¿Eres agente o inmobiliaria?</div>
-          <div class="agency-callout-sub">Usa el registro especializado para acceder a enlaces afiliados y herramientas de agente</div>
-        </div>
-        <div class="agency-callout-arrow">→</div>
-      </a>
+      <div class="account-cards">
 
-      <div class="error-msg" id="errorMsg"></div>
-
-      <form id="registerForm" novalidate>
-        <div class="field">
-          <label>Nombre completo</label>
-          <input type="text" id="name" placeholder="Juan Pérez" required autocomplete="name" />
-        </div>
-        <div class="field">
-          <label>Correo electrónico</label>
-          <input type="email" id="email" placeholder="tu@correo.com" required autocomplete="email" />
-        </div>
-        <div class="field">
-          <label>Contraseña</label>
-          <input type="password" id="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
-          <div class="pw-strength-wrap" id="pwStrengthWrap" style="margin-top:6px;display:none;">
-            <div style="display:flex;gap:3px;margin-bottom:5px;">
-              <div class="pw-bar" id="pwBar1" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
-              <div class="pw-bar" id="pwBar2" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
-              <div class="pw-bar" id="pwBar3" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
-              <div class="pw-bar" id="pwBar4" style="height:4px;flex:1;border-radius:2px;background:#e0e8f5;transition:background .2s;"></div>
-            </div>
-            <ul class="pw-rules" style="list-style:none;padding:0;margin:0;font-size:0.75rem;display:flex;flex-wrap:wrap;gap:4px 12px;">
-              <li id="rule-len"  style="color:#94a3b8;">✗ 8+ caracteres</li>
-              <li id="rule-up"   style="color:#94a3b8;">✗ Mayúscula</li>
-              <li id="rule-low"  style="color:#94a3b8;">✗ Minúscula</li>
-              <li id="rule-num"  style="color:#94a3b8;">✗ Número</li>
-              <li id="rule-spec" style="color:#94a3b8;">✗ Especial (!@#...)</li>
-            </ul>
+        <!-- Cliente -->
+        <a href="/register-user" class="account-card">
+          <div class="card-icon icon-user">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
           </div>
-          <p class="hint">Al menos 8 caracteres</p>
-        </div>
-        <div class="field">
-          <label>Confirmar contraseña</label>
-          <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
-        </div>
-        <div class="checkbox-field">
-          <input type="checkbox" id="tcAccept" disabled />
-          <label for="tcAccept">He leído y acepto los <a id="tcLink" href="/terminos-usuario" target="_blank" rel="noopener" onclick="unlockTc()">Términos y Condiciones de Uso</a> de HogaresRD.</label>
-        </div>
-        <p class="tc-hint" id="tcHint">Debes abrir el enlace y leer los términos antes de poder aceptarlos.</p>
-        <div class="checkbox-field" style="margin-top:0.6rem;">
-          <input type="checkbox" id="marketingOptIn" checked />
-          <label for="marketingOptIn">Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electrónico. Puedo cancelar en cualquier momento.</label>
-        </div>
-        <button type="submit" class="btn-primary" id="submitBtn">Crear Cuenta</button>
-      </form>
+          <div class="card-body">
+            <div class="card-title">Cliente</div>
+            <div class="card-desc">Busca propiedades, guarda favoritos y aplica a hogares en venta o alquiler.</div>
+          </div>
+          <span class="card-badge badge-free">Gratis</span>
+          <span class="card-arrow">→</span>
+        </a>
+
+        <!-- Agente / Broker -->
+        <a href="/register-agency" class="account-card">
+          <div class="card-icon icon-broker">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.94 0 13.36 0c-1.34 0-2.38.7-3.36 1.68L9 3 7.98 1.68C7.02.7 5.98 0 4.64 0 2.06 0 0 2.06 0 4.64c0 .48.1.92.18 1.36H0v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7.82-4c.91 0 1.82.74 1.82 1.64 0 .48-.2.92-.51 1.24L9 9.45 5.51 4.88C5.2 4.56 5 4.12 5 3.64 5 2.74 5.91 2 6.82 2c.5 0 1.02.28 1.34.64L9 3.57l.84-.93C10.16 2.28 10.68 2 11.18 2zM20 20H2V8h16v12z"/></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Agente / Broker</div>
+            <div class="card-desc">Gestiona clientes, publica propiedades y haz seguimiento de tu pipeline de ventas.</div>
+          </div>
+          <span class="card-badge badge-pro">Profesional</span>
+          <span class="card-arrow">→</span>
+        </a>
+
+        <!-- Inmobiliaria -->
+        <a href="/register-inmobiliaria" class="account-card">
+          <div class="card-icon icon-inm">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Inmobiliaria</div>
+            <div class="card-desc">Administra tu empresa, vincula agentes a tu equipo y supervisa todas las operaciones.</div>
+          </div>
+          <span class="card-badge badge-empresa">Empresa</span>
+          <span class="card-arrow">→</span>
+        </a>
+
+      </div>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">¿Ya tienes cuenta?</span>
+        <div class="divider-line"></div>
+      </div>
 
       <div class="auth-links">
-        ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+        <a href="/login">Iniciar sesión →</a>
       </div>
     </div>
   </main>
@@ -166,120 +176,7 @@
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
     }
-
     redirectIfAuth();
-
-    // ── Password strength meter ────────────────────────────────────
-    (function initPwStrength() {
-      const input = document.getElementById('password') || document.getElementById('newPassword');
-      if (!input) return;
-      const wrap  = document.getElementById('pwStrengthWrap');
-      const bars  = [1,2,3,4].map(i => document.getElementById('pwBar' + i));
-      const rules = {
-        len:  document.getElementById('rule-len'),
-        up:   document.getElementById('rule-up'),
-        low:  document.getElementById('rule-low'),
-        num:  document.getElementById('rule-num'),
-        spec: document.getElementById('rule-spec'),
-      };
-      const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
-
-      function update() {
-        const v = input.value;
-        if (!v) { if (wrap) wrap.style.display = 'none'; return; }
-        if (wrap) wrap.style.display = 'block';
-
-        const checks = {
-          len:  v.length >= 8,
-          up:   /[A-Z]/.test(v),
-          low:  /[a-z]/.test(v),
-          num:  /[0-9]/.test(v),
-          spec: /[^A-Za-z0-9]/.test(v),
-        };
-        const score = Object.values(checks).filter(Boolean).length; // 0-5
-
-        Object.entries(checks).forEach(([k, ok]) => {
-          if (!rules[k]) return;
-          rules[k].textContent = (ok ? '✓ ' : '✗ ') + rules[k].textContent.slice(2);
-          rules[k].style.color = ok ? '#22c55e' : '#94a3b8';
-        });
-
-        // 4 bars: light up progressively
-        const level = Math.max(0, score - 1); // 0-4
-        bars.forEach((b, i) => {
-          b.style.background = i < level ? colors[Math.min(level - 1, 3)] : '#e0e8f5';
-        });
-      }
-      input.addEventListener('input', update);
-    })();
-
-    function unlockTc() {
-      const cb   = document.getElementById('tcAccept');
-      const hint = document.getElementById('tcHint');
-      // small delay so the tab actually opens before we give feedback
-      setTimeout(() => {
-        cb.disabled = false;
-        hint.textContent = 'Puedes aceptar los términos ahora.';
-      }, 800);
-    }
-
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      const err = document.getElementById('errorMsg');
-      err.classList.remove('visible');
-
-      const name            = document.getElementById('name').value.trim();
-      const email           = document.getElementById('email').value.trim();
-      const password        = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-      const marketingOptIn  = document.getElementById('marketingOptIn').checked;
-
-      if (!name || !email || !password) {
-        err.textContent = 'Todos los campos son requeridos.';
-        return err.classList.add('visible');
-      }
-      function validatePw(p) {
-        if (!p || p.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
-        if (!/[A-Z]/.test(p)) return 'Incluye al menos una letra mayúscula';
-        if (!/[a-z]/.test(p)) return 'Incluye al menos una letra minúscula';
-        if (!/[0-9]/.test(p)) return 'Incluye al menos un número';
-        if (!/[^A-Za-z0-9]/.test(p)) return 'Incluye al menos un carácter especial (!@#$%...)';
-        return null;
-      }
-      const pwErr = validatePw(password);
-      if (pwErr) {
-        err.textContent = pwErr;
-        return err.classList.add('visible');
-      }
-      if (password !== confirmPassword) {
-        err.textContent = 'Las contraseñas no coinciden.';
-        return err.classList.add('visible');
-      }
-      if (!document.getElementById('tcAccept').checked) {
-        err.textContent = 'Debes leer y aceptar los Términos y Condiciones para continuar.';
-        return err.classList.add('visible');
-      }
-
-      btn.disabled = true;
-      btn.textContent = 'Creando cuenta...';
-
-      try {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password, marketingOptIn }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-        window.location.href = '/login?registered=1';
-      } catch (ex) {
-        err.textContent = ex.message;
-        err.classList.add('visible');
-        btn.disabled = false;
-        btn.textContent = 'Crear Cuenta';
-      }
-    });
   </script>
 </body>
 </html>

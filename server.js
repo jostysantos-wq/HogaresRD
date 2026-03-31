@@ -215,6 +215,7 @@ app.get('/submit', (req, res) => {
 
 app.get('/login',                (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+app.get('/register-user',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-user.html')));
 app.get('/register-agency',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-agency.html')));
 app.get('/register-broker',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-broker.html')));
 app.get('/register-inmobiliaria',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-inmobiliaria.html')));
