@@ -178,6 +178,13 @@
       localStorage.setItem('theme', next);
     }
     redirectIfAuth();
+
+    // Hide client card when coming from the pro/agent flow
+    if (new URLSearchParams(window.location.search).get('pro') === '1') {
+      document.querySelector('.account-card[href="/register-user"]').style.display = 'none';
+      document.querySelector('.selector-title').textContent = '¿Qué tipo de cuenta profesional necesitas?';
+      document.querySelector('.selector-sub').textContent = 'Selecciona el perfil que mejor describe tu rol en HogaresRD. Estas cuentas requieren un plan mensual.';
+    }
   </script>
 </body>
 </html>
