@@ -3107,6 +3107,7 @@
           <div class="equipo-avatar">${esc(av)}</div>
           <div style="flex:1;min-width:0;">
             <div class="equipo-name">${esc(b.name)}</div>
+            ${b.jobTitle ? `<div class="equipo-meta" style="color:var(--accent);font-weight:600;font-size:0.74rem;">${esc(b.jobTitle)}</div>` : ''}
             <div class="equipo-meta">${esc(b.email)}</div>
             ${b.licenseNumber ? `<div class="equipo-meta">Lic. ${esc(b.licenseNumber)}</div>` : ''}
             <span class="equipo-apps">${b.app_count} aplicacion(es)</span>
@@ -3179,8 +3180,8 @@
     const exportBtn = document.getElementById('exportTeamBtn');
     if (exportBtn) {
       exportBtn.onclick = () => {
-        const rows = [['Nombre','Correo','Teléfono','Licencia','Aplicaciones','Fecha Afiliación']];
-        allBrokers.forEach(b => rows.push([b.name, b.email, b.phone||'', b.licenseNumber||'', b.app_count, b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '']));
+        const rows = [['Nombre','Cargo','Correo','Teléfono','Licencia','Aplicaciones','Fecha Afiliación']];
+        allBrokers.forEach(b => rows.push([b.name, b.jobTitle||'', b.email, b.phone||'', b.licenseNumber||'', b.app_count, b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '']));
         const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
         const a = document.createElement('a');
         a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -3262,6 +3263,7 @@
       document.getElementById('bmdInfoGrid').innerHTML = [
         { label: 'Correo', value: b.email },
         { label: 'Teléfono', value: b.phone || '—' },
+        { label: 'Cargo / Título', value: b.jobTitle || '—' },
         { label: 'Licencia', value: b.licenseNumber || '—' },
         { label: 'Tipo', value: b.role === 'agency' ? 'Agente Broker' : 'Broker' },
         { label: 'Afiliado desde', value: b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '—' },

@@ -199,6 +199,7 @@ router.get('/brokers', userAuth, inmobiliariaAuth, (req, res) => {
     email:         b.email,
     phone:         b.phone || '',
     licenseNumber: b.licenseNumber || '',
+    jobTitle:      b.jobTitle || '',
     joined_at:     b.inmobiliaria_joined_at || b.createdAt,
     app_count:     store.getApplicationsByBroker(b.id).length,
   }));
@@ -346,6 +347,7 @@ router.get('/brokers/:brokerId/details', userAuth, inmobiliariaAuth, (req, res) 
   res.json({
     id: broker.id, name: broker.name, email: broker.email, phone: broker.phone || '',
     licenseNumber: broker.licenseNumber || '', role: broker.role,
+    jobTitle: broker.jobTitle || '',
     joined_at: broker.inmobiliaria_joined_at || broker.createdAt,
     emailVerified: broker.emailVerified !== false,
     app_count: store.getApplicationsByBroker(broker.id).length,

@@ -33,8 +33,9 @@
     .section-divider { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 1.4rem 0 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
     .field { margin-bottom: 1rem; }
     .field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
-    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
-    .field input:focus { border-color: var(--accent); }
+    .field input, .field select { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%234d6a8a' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.9rem center; padding-right: 2.2rem; cursor: pointer; }
     .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
     .error-msg { font-size: 0.85rem; color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
@@ -103,6 +104,36 @@
           <label>Número de licencia MIREX *</label>
           <input type="text" id="licenseNumber" placeholder="MIREX-2024-000000" required />
           <p class="hint">Licencia emitida por el Ministerio de Relaciones Exteriores</p>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Cargo / Título</label>
+            <select id="jobTitle">
+              <option value="">— Selecciona un cargo —</option>
+              <optgroup label="Ventas">
+                <option>Agente Inmobiliario</option>
+                <option>Agente Senior</option>
+                <option>Asesor de Ventas</option>
+                <option>Ejecutivo de Ventas</option>
+                <option>Director de Ventas</option>
+              </optgroup>
+              <optgroup label="Gerencia">
+                <option>Gerente Comercial</option>
+                <option>Gerente de Sucursal</option>
+                <option>Coordinador de Operaciones</option>
+                <option>Supervisor de Agentes</option>
+              </optgroup>
+              <optgroup label="Dirección">
+                <option>Director General</option>
+                <option>Socio / Propietario</option>
+              </optgroup>
+              <option value="__other__">Otro (especificar)</option>
+            </select>
+          </div>
+          <div class="field" id="jobTitleCustomWrap" style="display:none;">
+            <label>Especifica tu cargo</label>
+            <input type="text" id="jobTitleCustom" placeholder="Ej. Broker Asociado" maxlength="60" />
+          </div>
         </div>
 
         <div class="section-divider">Contraseña</div>
@@ -218,6 +249,12 @@
       }, 800);
     }
 
+    document.getElementById('jobTitle').addEventListener('change', function() {
+      const wrap = document.getElementById('jobTitleCustomWrap');
+      wrap.style.display = this.value === '__other__' ? '' : 'none';
+      if (this.value !== '__other__') document.getElementById('jobTitleCustom').value = '';
+    });
+
     document.getElementById('brokerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -228,6 +265,8 @@
       const email           = document.getElementById('email').value.trim();
       const phone           = document.getElementById('phone').value.trim();
       const licenseNumber   = document.getElementById('licenseNumber').value.trim();
+      const jobTitleSel     = document.getElementById('jobTitle').value;
+      const jobTitle        = jobTitleSel === '__other__' ? document.getElementById('jobTitleCustom').value.trim() : jobTitleSel;
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -264,7 +303,7 @@
         const res = await fetch('/api/auth/register/broker', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, licenseNumber, password }),
+          body: JSON.stringify({ name, email, phone, licenseNumber, password, jobTitle }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');

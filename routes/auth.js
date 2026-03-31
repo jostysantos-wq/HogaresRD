@@ -342,7 +342,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
 // ── Register Agency ────────────────────────────────────────────────────────
 router.post('/register/agency', authLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, agencyName, licenseNumber, phone } = req.body;
+    const { name, email, password, agencyName, licenseNumber, phone, jobTitle } = req.body;
 
     if (!name || !email || !password || !agencyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -362,6 +362,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       phone:           phone.trim(),
       agencyName:      agencyName.trim(),
       licenseNumber:   licenseNumber.trim(),
+      jobTitle:        (jobTitle || '').trim().slice(0, 60),
       refToken,
       createdAt:       new Date().toISOString(),
       lastLoginAt:     null,
@@ -423,7 +424,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 // ── Register Broker ────────────────────────────────────────────────────────
 router.post('/register/broker', authLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, phone, licenseNumber } = req.body;
+    const { name, email, password, phone, licenseNumber, jobTitle } = req.body;
 
     if (!name || !email || !password || !phone || !licenseNumber)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -442,6 +443,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       name:            name.trim(),
       phone:           phone.trim(),
       licenseNumber:   licenseNumber.trim(),
+      jobTitle:        (jobTitle || '').trim().slice(0, 60),
       refToken,
       createdAt:       new Date().toISOString(),
       lastLoginAt:     null,
