@@ -339,7 +339,7 @@
     async function logout() {
       try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
       ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
-      window.location.href = '/login?logout=1';
+      window.location.href = '/home';
     }
 
     // Listings

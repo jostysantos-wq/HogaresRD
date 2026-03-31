@@ -35,7 +35,7 @@ async function logout() {
   // Tell the server to clear the httpOnly cookie
   try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
   _clearLocal();
-  window.location.href = '/login?logout=1';
+  window.location.href = '/home';
 }
 
 // Redirect to /login if not authenticated
