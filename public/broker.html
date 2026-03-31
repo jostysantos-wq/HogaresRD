@@ -616,6 +616,23 @@
     .jr-reject-btn  { background: #DC2626; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; }
     .equipo-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 1rem 0 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
     .equipo-badge { background: #EF4444; color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 20px; }
+    /* ── TEAM MANAGEMENT PAGES ───────────────────────────────── */
+    .team-sidebar-badge { background: #EF4444; color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.42rem; border-radius: 20px; margin-left: 5px; vertical-align: middle; line-height: 1; }
+    .team-page-header { margin-bottom: 1.5rem; }
+    .team-page-header h2 { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 0 0 0.3rem; }
+    .team-page-header p { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+    .team-stats-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .team-stat-card { flex: 1; min-width: 130px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+    .team-stat-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.35rem; }
+    .team-stat-value { font-size: 1.7rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .team-perf-card { display: flex; align-items: center; gap: 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem; transition: border-color 0.15s; }
+    .team-perf-card:hover { border-color: var(--accent); }
+    .team-perf-rank { width: 28px; font-size: 1rem; text-align: center; flex-shrink: 0; }
+    .team-perf-bar-wrap { flex: 1; height: 6px; background: var(--bg-section); border-radius: 3px; overflow: hidden; margin-top: 0.4rem; }
+    .team-perf-bar { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.6s ease; }
+    .team-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); }
+    .team-empty svg { width: 48px; height: 48px; fill: var(--border); }
+    .team-empty p { font-size: 0.88rem; margin: 0; }
 
     /* Broker filter (inmobiliaria view) */
     .broker-filter-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.78rem; }
@@ -811,6 +828,20 @@
       <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
       <span class="sidebar-nav-label">Terminos</span>
     </button>
+    <!-- ── Gestión de Equipo (inmobiliaria only) ─────────────── -->
+    <div class="sidebar-section-label" id="sidebarTeamLabel" style="display:none">Gestión de Equipo</div>
+    <button class="sidebar-nav-item" data-page="team-members" id="teamMembersNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <span class="sidebar-nav-label">Miembros</span>
+    </button>
+    <button class="sidebar-nav-item" data-page="team-requests" id="teamRequestsNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zm-7-7h5v5h-5z"/></svg>
+      <span class="sidebar-nav-label">Solicitudes<span class="team-sidebar-badge" id="jrBadge" style="display:none">0</span></span>
+    </button>
+    <button class="sidebar-nav-item" data-page="team-performance" id="teamPerfNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+      <span class="sidebar-nav-label">Rendimiento</span>
+    </button>
   </nav>
 
   <div class="sidebar-footer">
@@ -882,11 +913,6 @@
     <button class="section-nav-btn" data-section="auditoria">
       <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
       Auditoria
-    </button>
-    <button class="section-nav-btn" data-section="equipo" id="equipoNavBtn" style="display:none">
-      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      Equipo
-      <span class="equipo-badge" id="jrBadge" style="display:none">0</span>
     </button>
   </div>
 
@@ -1042,16 +1068,55 @@
     </table>
   </div>
 
-  <!-- Section: Equipo (inmobiliaria only) -->
-  <div class="section-pane" id="section-equipo">
-    <h3 class="section-title">Solicitudes Pendientes</h3>
-    <div id="jrList"><p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p></div>
-
-    <h3 class="section-title" style="margin-top:1.5rem;">Agentes Afiliados</h3>
-    <div class="equipo-grid" id="brokerTeamGrid"><p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p></div>
-  </div>
 
   </div><!-- /page-dashboard -->
+
+  <!-- ═══ PAGE: TEAM — MIEMBROS ════════════════════════════ -->
+  <div class="page-section" id="page-team-members">
+    <div class="team-page-header">
+      <h2>Agentes Afiliados</h2>
+      <p>Gestiona los agentes vinculados a tu inmobiliaria</p>
+    </div>
+    <div class="team-stats-bar">
+      <div class="team-stat-card">
+        <div class="team-stat-label">Total Agentes</div>
+        <div class="team-stat-value" id="teamMembersCount">--</div>
+      </div>
+      <div class="team-stat-card">
+        <div class="team-stat-label">Aplicaciones Totales</div>
+        <div class="team-stat-value" id="teamTotalApps">--</div>
+      </div>
+      <div class="team-stat-card">
+        <div class="team-stat-label">Solicitudes Pendientes</div>
+        <div class="team-stat-value" id="teamPendingCount">--</div>
+      </div>
+    </div>
+    <div class="equipo-grid" id="brokerTeamGrid">
+      <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TEAM — SOLICITUDES ══════════════════════════ -->
+  <div class="page-section" id="page-team-requests">
+    <div class="team-page-header">
+      <h2>Solicitudes de Afiliación</h2>
+      <p>Revisa y aprueba solicitudes de agentes que quieren unirse a tu inmobiliaria</p>
+    </div>
+    <div id="jrList">
+      <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TEAM — RENDIMIENTO ══════════════════════════ -->
+  <div class="page-section" id="page-team-performance">
+    <div class="team-page-header">
+      <h2>Rendimiento del Equipo</h2>
+      <p>Ranking de actividad por agente basado en aplicaciones gestionadas</p>
+    </div>
+    <div id="teamPerfList">
+      <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
 
   <!-- ═══ EXPORT MODAL ══════════════════════════════════════ -->
   <div class="export-modal-backdrop" id="exportModal">
@@ -1636,7 +1701,10 @@
   document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
 
   if (isInmobiliariaRole) {
-    document.getElementById('equipoNavBtn').style.display = '';
+    ['sidebarTeamLabel','teamMembersNavBtn','teamRequestsNavBtn','teamPerfNavBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
     loadEquipo();
   }
   if (isBrokerRole) {
@@ -2815,12 +2883,20 @@
   function renderEquipo(data) {
     const { brokers = [], pending_requests = [] } = data;
 
-    // Badge
+    // Badge on sidebar Solicitudes button
     const badge = document.getElementById('jrBadge');
     if (badge) {
       badge.textContent = pending_requests.length;
       badge.style.display = pending_requests.length ? '' : 'none';
     }
+
+    // Stats cards on Miembros page
+    const elCount = document.getElementById('teamMembersCount');
+    const elApps  = document.getElementById('teamTotalApps');
+    const elPend  = document.getElementById('teamPendingCount');
+    if (elCount) elCount.textContent = brokers.length;
+    if (elApps)  elApps.textContent  = brokers.reduce((s, b) => s + (b.app_count || 0), 0);
+    if (elPend)  elPend.textContent  = pending_requests.length;
 
     // Join requests
     const jrList = document.getElementById('jrList');
@@ -2870,6 +2946,44 @@
         btn.onclick = () => removeBroker(btn.dataset.id, btn.dataset.name);
       });
     }
+
+    // Render performance page
+    renderTeamPerformance(brokers);
+  }
+
+  function renderTeamPerformance(brokers) {
+    const el = document.getElementById('teamPerfList');
+    if (!el) return;
+    if (!brokers.length) {
+      el.innerHTML = `<div class="team-empty">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+        <p>No hay agentes afiliados aún.</p>
+      </div>`;
+      return;
+    }
+    const max = Math.max(...brokers.map(b => b.app_count || 0), 1);
+    const sorted = [...brokers].sort((a, b) => (b.app_count || 0) - (a.app_count || 0));
+    const medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = sorted.map((b, i) => {
+      const av = (b.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const pct = Math.round(((b.app_count || 0) / max) * 100);
+      const rank = medals[i] || `<span style="font-size:0.82rem;font-weight:700;color:var(--text-muted);">${i + 1}</span>`;
+      return `<div class="team-perf-card">
+        <div class="team-perf-rank">${rank}</div>
+        <div class="equipo-avatar">${esc(av)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.88rem;font-weight:700;color:var(--text);">${esc(b.name)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.1rem;">${esc(b.email)}</div>
+          <div class="team-perf-bar-wrap">
+            <div class="team-perf-bar" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;min-width:60px;">
+          <div style="font-size:1.2rem;font-weight:800;color:var(--accent);">${b.app_count || 0}</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);">aplicaciones</div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   async function respondJoinRequest(brokerId, action) {
@@ -2996,7 +3110,10 @@
   const PAGE_TITLES = {
     dashboard: 'Dashboard', 'chat-ia': 'Chat IA',
     notificaciones: 'Notificaciones', contrasena: 'Gestion de Contrasena',
-    apps: 'Apps', terminos: 'Terminos y Condiciones'
+    apps: 'Apps', terminos: 'Terminos y Condiciones',
+    'team-members': 'Equipo — Miembros',
+    'team-requests': 'Equipo — Solicitudes',
+    'team-performance': 'Equipo — Rendimiento',
   };
   let currentPage = 'dashboard';
 
@@ -3017,6 +3134,7 @@
     document.getElementById('page-' + page).classList.add('active');
     document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
     if (page === 'notificaciones') loadNotifications();
+    if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
   }
 
   // ── Dashboard Section Nav (internal tabs) ──────────────────
@@ -3037,7 +3155,6 @@
     if (section === 'archivo') loadArchive();
     if (section === 'auditoria') loadAudit();
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
-    if (section === 'equipo') loadEquipo();
   }
 
   // ── Sidebar collapse & mobile ───────────────────────────────
