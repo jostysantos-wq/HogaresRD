@@ -70,8 +70,9 @@
       flex-shrink: 0; white-space: nowrap;
     }
     .badge-free    { background: rgba(0,56,168,0.1); color: var(--accent); }
-    .badge-pro     { background: rgba(8,145,178,0.12); color: #0891b2; }
+    .badge-pro     { background: rgba(202,138,4,0.12); color: #92610a; }
     .badge-empresa { background: rgba(124,58,237,0.12); color: #7c3aed; }
+    [data-theme="dark"] .badge-pro { color: #fbbf24; background: rgba(251,191,36,0.15); }
 
     .card-arrow { color: var(--text-muted); font-size: 1.3rem; flex-shrink: 0; transition: transform 0.18s, color 0.18s; }
     .account-card:hover .card-arrow { transform: translateX(4px); color: var(--accent); }
@@ -134,7 +135,7 @@
             <div class="card-title">Agente / Broker</div>
             <div class="card-desc">Gestiona clientes, publica propiedades y haz seguimiento de tu pipeline de ventas.</div>
           </div>
-          <span class="card-badge badge-pro">Profesional</span>
+          <span class="card-badge badge-pro">Plan mensual</span>
           <span class="card-arrow">→</span>
         </a>
 
@@ -147,7 +148,7 @@
             <div class="card-title">Inmobiliaria</div>
             <div class="card-desc">Administra tu empresa, vincula agentes a tu equipo y supervisa todas las operaciones.</div>
           </div>
-          <span class="card-badge badge-empresa">Empresa</span>
+          <span class="card-badge badge-empresa">Plan mensual</span>
           <span class="card-arrow">→</span>
         </a>
 

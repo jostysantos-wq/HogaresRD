@@ -54,21 +54,40 @@
 
     .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 
-    .register-cta {
-      margin-top: 1.5rem;
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem 1.1rem;
-      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-      text-decoration: none;
-      background: color-mix(in srgb, var(--accent) 4%, transparent);
-      transition: border-color 0.2s, background 0.2s;
+    .new-account-section { margin-top: 1.5rem; }
+    .new-account-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted);
+      text-align: center; margin-bottom: 0.65rem;
     }
-    .register-cta:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
-    .register-cta-text { display: flex; flex-direction: column; gap: 0.2rem; }
-    .register-cta-label { font-size: 0.78rem; color: var(--text-muted); }
-    .register-cta-action { font-size: 0.92rem; font-weight: 700; color: var(--accent); }
-    .register-cta-arrow { font-size: 1.2rem; color: var(--accent); flex-shrink: 0; }
+    .account-options { display: flex; flex-direction: column; gap: 0.5rem; }
+    .acc-option {
+      display: flex; align-items: center; gap: 0.85rem;
+      padding: 0.75rem 1rem; border-radius: 11px;
+      border: 1.5px solid var(--border); text-decoration: none;
+      transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+    }
+    .acc-option:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); box-shadow: 0 2px 10px rgba(0,56,168,0.10); }
+    .acc-option-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .acc-opt-free  { background: linear-gradient(135deg, #dce8ff, #bfd4ff); }
+    .acc-opt-pro   { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .acc-option-body { flex: 1; min-width: 0; }
+    .acc-option-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .acc-option-sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .acc-option-badge {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 2px 7px; border-radius: 20px;
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .badge-free { background: rgba(0,56,168,0.1); color: var(--accent); }
+    .badge-paid { background: rgba(202,138,4,0.12); color: #92610a; }
+    [data-theme="dark"] .badge-paid { color: #fbbf24; background: rgba(251,191,36,0.15); }
+    .acc-option-arrow { color: var(--text-muted); font-size: 1rem; flex-shrink: 0; transition: transform 0.18s; }
+    .acc-option:hover .acc-option-arrow { transform: translateX(3px); color: var(--accent); }
 
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
   </style>
@@ -110,13 +129,29 @@
         <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
       </div>
 
-      <a href="/register" class="register-cta">
-        <div class="register-cta-text">
-          <span class="register-cta-label">¿No tienes una cuenta?</span>
-          <span class="register-cta-action">Crear cuenta gratis →</span>
+      <div class="new-account-section">
+        <div class="new-account-label">¿No tienes cuenta?</div>
+        <div class="account-options">
+          <a href="/register-user" class="acc-option">
+            <div class="acc-option-icon acc-opt-free">🏠</div>
+            <div class="acc-option-body">
+              <div class="acc-option-title">Soy comprador o inquilino</div>
+              <div class="acc-option-sub">Busca, guarda favoritos y aplica a propiedades</div>
+            </div>
+            <span class="acc-option-badge badge-free">Gratis</span>
+            <span class="acc-option-arrow">→</span>
+          </a>
+          <a href="/register" class="acc-option">
+            <div class="acc-option-icon acc-opt-pro">💼</div>
+            <div class="acc-option-body">
+              <div class="acc-option-title">Soy agente o inmobiliaria</div>
+              <div class="acc-option-sub">Publica propiedades y gestiona tu equipo</div>
+            </div>
+            <span class="acc-option-badge badge-paid">Plan mensual</span>
+            <span class="acc-option-arrow">→</span>
+          </a>
         </div>
-        <span class="register-cta-arrow">🏠</span>
-      </a>
+      </div>
     </div>
   </main>
 
