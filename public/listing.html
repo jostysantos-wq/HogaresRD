@@ -720,7 +720,7 @@
   function renderNav(user) {
     const area = document.getElementById('navAuthArea');
     if (!user) {
-      area.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a><a href="/register" class="btn-primary">Registrarse</a>`;
+      area.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a>`;
     } else {
       const initials = user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '?';
       const first    = user.name ? user.name.split(' ')[0] : '';

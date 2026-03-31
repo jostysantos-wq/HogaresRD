@@ -54,6 +54,22 @@
 
     .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 
+    .register-cta {
+      margin-top: 1.5rem;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      text-decoration: none;
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .register-cta:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .register-cta-text { display: flex; flex-direction: column; gap: 0.2rem; }
+    .register-cta-label { font-size: 0.78rem; color: var(--text-muted); }
+    .register-cta-action { font-size: 0.92rem; font-weight: 700; color: var(--accent); }
+    .register-cta-arrow { font-size: 1.2rem; color: var(--accent); flex-shrink: 0; }
+
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
   </style>
 </head>
@@ -92,9 +108,15 @@
 
       <div class="auth-links">
         <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
-        <hr class="divider" />
-        ¿No tienes cuenta? <a href="/register">Regístrate gratis</a>
       </div>
+
+      <a href="/register" class="register-cta">
+        <div class="register-cta-text">
+          <span class="register-cta-label">¿No tienes una cuenta?</span>
+          <span class="register-cta-action">Crear cuenta gratis →</span>
+        </div>
+        <span class="register-cta-arrow">🏠</span>
+      </a>
     </div>
   </main>
 

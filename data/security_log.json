@@ -1,0 +1,112 @@
+[
+  {
+    "id": "sec_1774927831029_bk3r",
+    "timestamp": "2026-03-31T03:30:31.029Z",
+    "type": "login_failed",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "email": "broker@hogaresrd.com",
+    "reason": "wrong_password",
+    "userId": "usr_broker_demo_001",
+    "attempts": 1
+  },
+  {
+    "id": "sec_1774928103472_idaw",
+    "timestamp": "2026-03-31T03:35:03.472Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001",
+    "role": "agency"
+  },
+  {
+    "id": "sec_1774928129942_yzb2",
+    "timestamp": "2026-03-31T03:35:29.942Z",
+    "type": "logout",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/logout",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001"
+  },
+  {
+    "id": "sec_1774928740999_tnil",
+    "timestamp": "2026-03-31T03:45:40.999Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001",
+    "role": "agency"
+  },
+  {
+    "id": "sec_1774928761635_53h5",
+    "timestamp": "2026-03-31T03:46:01.635Z",
+    "type": "logout",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/logout",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001"
+  },
+  {
+    "id": "sec_1774932460910_2j33",
+    "timestamp": "2026-03-31T04:47:40.910Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001",
+    "role": "agency"
+  },
+  {
+    "id": "sec_1774934235894_c350",
+    "timestamp": "2026-03-31T05:17:15.894Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "userId": "usr_broker_demo_001",
+    "role": "agency"
+  },
+  {
+    "id": "sec_1774935281918_ocx2",
+    "timestamp": "2026-03-31T05:34:41.918Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "curl/8.7.1",
+    "userId": "usr_inm_demo_001",
+    "role": "inmobiliaria"
+  },
+  {
+    "id": "sec_1774935386701_yyhb",
+    "timestamp": "2026-03-31T05:36:26.701Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "curl/8.7.1",
+    "userId": "usr_inm_demo_001",
+    "role": "inmobiliaria"
+  },
+  {
+    "id": "sec_1774936790456_1j63",
+    "timestamp": "2026-03-31T05:59:50.456Z",
+    "type": "login_success",
+    "ip": "::1",
+    "method": "POST",
+    "path": "/login",
+    "userAgent": "curl/8.7.1",
+    "userId": "usr_broker_maria_001",
+    "role": "broker"
+  }
+]

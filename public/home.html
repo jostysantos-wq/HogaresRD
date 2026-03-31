@@ -873,9 +873,7 @@
     let _cardObserver  = null;
 
     function renderLoggedOut(el) {
-      el.innerHTML = `
-        <a href="/login" class="btn-ghost">Iniciar sesión</a>
-        <a href="/register" class="btn-primary">Registrarse</a>`;
+      el.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a>`;
     }
 
     function renderLoggedIn(el, user) {
