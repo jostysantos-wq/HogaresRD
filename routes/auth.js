@@ -157,7 +157,7 @@ function userAuth(req, res, next) {
 // ── Register ───────────────────────────────────────────────────────────────
 router.post('/register', authLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, marketingOptIn } = req.body;
+    const { name, email, password, phone, marketingOptIn } = req.body;
 
     if (!name || !email || !password)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -172,7 +172,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       email:            email.toLowerCase().trim(),
       passwordHash,
       name:             name.trim(),
-      phone:            '',
+      phone:            phone?.trim() || '',
       createdAt:        new Date().toISOString(),
       lastLoginAt:      null,
       role:             'user',

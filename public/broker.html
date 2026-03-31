@@ -1470,6 +1470,25 @@
   </div>
 
   <!-- ═══ PAGE: CONTRASENA ══════════════════════════════════ -->
+  <!-- ═══ PAGE: NOTIF SETTINGS (phone/SMS) — embedded in contrasena ══ -->
+  <div class="settings-card" id="phoneSettingsCard" style="margin-bottom:1.5rem;">
+    <h2 class="settings-card-title">Notificaciones SMS / WhatsApp</h2>
+    <p class="settings-card-desc">Recibe alertas de nuevos mensajes y aplicaciones en tu teléfono vía WhatsApp.</p>
+    <div id="phoneSettingsMsg" style="margin-bottom:.75rem;font-size:.85rem;min-height:1em;"></div>
+    <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);display:block;margin-bottom:.4rem;">Número de teléfono</label>
+        <input id="phoneInput" type="tel" placeholder="809-555-0000"
+          style="width:100%;padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:.9rem;outline:none;" />
+      </div>
+      <button onclick="savePhone()"
+        style="padding:.65rem 1.4rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+        Guardar teléfono
+      </button>
+    </div>
+    <p style="font-size:.78rem;color:var(--text-muted);margin-top:.6rem;">💡 Recibirás mensajes de WhatsApp cuando un cliente te escriba o envíe una aplicación.</p>
+  </div>
+
   <div class="page-section" id="page-contrasena">
     <div class="settings-card">
       <h2 class="settings-card-title">Cambiar Contrasena</h2>
@@ -4390,6 +4409,44 @@
   })();
 
 })();
+</script>
+
+<!-- ── Phone / notification settings ─────────────────────── -->
+<script>
+  // Pre-fill phone from user data on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = typeof getUser === 'function' ? getUser() : null;
+    if (user?.phone) {
+      const el = document.getElementById('phoneInput');
+      if (el) el.value = user.phone;
+    }
+  });
+
+  async function savePhone() {
+    const phone = document.getElementById('phoneInput')?.value?.trim();
+    const msgEl = document.getElementById('phoneSettingsMsg');
+    if (!phone) { msgEl.style.color='#dc2626'; msgEl.textContent='Ingresa un número de teléfono.'; return; }
+    try {
+      const res  = await fetch('/api/user/profile', {
+        method:      'PATCH',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ phone }),
+      });
+      if (res.ok) {
+        // Update localStorage so getUser() reflects the new phone
+        const stored = JSON.parse(localStorage.getItem('hogaresrd_user') || '{}');
+        stored.phone = phone;
+        localStorage.setItem('hogaresrd_user', JSON.stringify(stored));
+        msgEl.style.color = '#16a34a';
+        msgEl.textContent = '✓ Teléfono guardado. Recibirás notificaciones en WhatsApp.';
+      } else {
+        const d = await res.json();
+        msgEl.style.color = '#dc2626';
+        msgEl.textContent = d.error || 'Error al guardar.';
+      }
+    } catch { msgEl.style.color='#dc2626'; msgEl.textContent='Error de conexión.'; }
+  }
 </script>
 
 <!-- ── Mensajes (broker chat) ──────────────────────────────── -->

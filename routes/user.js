@@ -70,4 +70,25 @@ router.get('/recommendations', userAuth, (req, res) => {
   res.json({ listings: getRecommendations(req.user.sub, 10) });
 });
 
+// PATCH /api/user/profile — update mutable profile fields (name, phone)
+router.patch('/profile', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const { name, phone } = req.body;
+
+  if (name !== undefined) {
+    const trimmed = (name + '').trim();
+    if (!trimmed) return res.status(400).json({ error: 'El nombre no puede estar vacío' });
+    user.name = trimmed;
+  }
+
+  if (phone !== undefined) {
+    user.phone = (phone + '').trim();
+  }
+
+  store.saveUser(user);
+  res.json({ success: true, user: { id: user.id, name: user.name, phone: user.phone } });
+});
+
 module.exports = router;

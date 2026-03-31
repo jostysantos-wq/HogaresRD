@@ -8,6 +8,7 @@ const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { userAuth } = require('./auth');
 const { logSec } = require('./security-log');
+const notify     = require('../utils/twilio');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
@@ -373,6 +374,21 @@ router.post('/', appCreateLimiter, (req, res) => {
   }
 
   res.status(201).json({ ok: true, id: app.id });
+
+  // WhatsApp broker notification (fire-and-forget)
+  setImmediate(async () => {
+    try {
+      const brokerUser = broker.user_id ? store.getUserById(broker.user_id) : null;
+      if (brokerUser?.phone) {
+        await notify.notifyBrokerNewApplication({
+          brokerPhone:   brokerUser.phone,
+          clientName:    app.client.name,
+          propertyTitle: app.listing_title,
+          appId:         app.id,
+        });
+      }
+    } catch (e) { console.error('[notify-app]', e.message); }
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -467,13 +483,29 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   store.saveApplication(app);
 
-  // Notify client
+  // Notify client via email
   if (app.client.email) {
     const email = statusEmail(app, oldStatus, status, reason);
     sendNotification(app.client.email, email.subject, email.html);
   }
 
   res.json(app);
+
+  // SMS client notification (fire-and-forget)
+  setImmediate(async () => {
+    try {
+      const clientPhone = app.client.phone ||
+        (app.client.user_id ? store.getUserById(app.client.user_id)?.phone : null);
+      if (clientPhone) {
+        await notify.notifyClientStatusChange({
+          clientPhone,
+          propertyTitle: app.listing_title,
+          newStatus:     status,
+          appId:         app.id,
+        });
+      }
+    } catch (e) { console.error('[notify-status]', e.message); }
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════

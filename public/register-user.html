@@ -111,6 +111,10 @@
           <input type="email" id="email" placeholder="tu@correo.com" required autocomplete="email" />
         </div>
         <div class="field">
+          <label>Teléfono <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(opcional — para recibir notificaciones SMS)</span></label>
+          <input type="tel" id="phone" placeholder="809-555-0000" autocomplete="tel" />
+        </div>
+        <div class="field">
           <label>Contraseña</label>
           <input type="password" id="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
           <div class="pw-strength-wrap" id="pwStrengthWrap" style="margin-top:6px;display:none;">
@@ -205,6 +209,7 @@
 
       const name            = document.getElementById('name').value.trim();
       const email           = document.getElementById('email').value.trim();
+      const phone           = document.getElementById('phone').value.trim();
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
       const marketingOptIn  = document.getElementById('marketingOptIn').checked;
@@ -231,7 +236,7 @@
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password, marketingOptIn }),
+          body: JSON.stringify({ name, email, phone, password, marketingOptIn }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');

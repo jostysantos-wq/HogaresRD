@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const store   = require('./store');
+const notify  = require('../utils/twilio');
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria'];
 
@@ -196,6 +197,37 @@ router.post('/:id/messages', requireLogin, (req, res) => {
 
   store.saveConversation(conv);
   res.json({ message: msg, conversation: conv });
+
+  // ── Fire-and-forget notifications ────────────────────────────────────────
+  setImmediate(async () => {
+    try {
+      if (isBroker) {
+        // Broker replied → notify client via SMS
+        const clientUser = store.getUserById(conv.clientId);
+        if (clientUser?.phone) {
+          await notify.notifyClientBrokerReply({
+            clientPhone:    clientUser.phone,
+            brokerName:     user.name,
+            propertyTitle:  conv.propertyTitle,
+            messagePreview: text.trim(),
+            convId:         conv.id,
+          });
+        }
+      } else {
+        // Client sent message → notify broker via WhatsApp
+        const brokerUser = conv.brokerId ? store.getUserById(conv.brokerId) : null;
+        if (brokerUser?.phone) {
+          await notify.notifyBrokerNewMessage({
+            brokerPhone:    brokerUser.phone,
+            clientName:     user.name,
+            propertyTitle:  conv.propertyTitle,
+            messagePreview: text.trim(),
+            convId:         conv.id,
+          });
+        }
+      }
+    } catch (e) { console.error('[notify]', e.message); }
+  });
 });
 
 // ── PUT /api/conversations/:id/read ──────────────────────────────────────
