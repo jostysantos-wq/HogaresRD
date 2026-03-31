@@ -18,8 +18,10 @@
       --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
       --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
       --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
-      --nav-bg: rgba(255,255,255,0.96);
+      --nav-bg: rgba(255,255,255,0.97);
+      --topbar-bg: rgba(255,255,255,0.98);
       --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
+      --topbar-h: 108px;
     }
     [data-theme="dark"] {
       --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
@@ -31,14 +33,19 @@
       --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
       --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
       --nav-bg: rgba(0,12,36,0.97);
+      --topbar-bg: rgba(0,18,56,0.98);
       --toggle-bg: #002268; --toggle-knob: #e8f0fb;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
 
-    /* NAV */
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    /* ── NAV ─────────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1100;
+      background: var(--nav-bg); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    }
     .nav-inner { max-width: 100%; margin: 0 auto; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; gap: 1.5rem; }
     .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
     .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
@@ -53,86 +60,325 @@
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 1rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 44px; height: 24px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 3px; transition: background 0.3s; }
+    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 44px; height: 24px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 3px; transition: background 0.3s; flex-shrink: 0; }
     .theme-toggle::after { content: ''; width: 18px; height: 18px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 3px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
     [data-theme="dark"] .theme-toggle::after { transform: translateX(20px); }
 
-    /* LAYOUT */
-    .map-layout { display: flex; height: calc(100vh - 56px); margin-top: 56px; }
+    /* ── TOP SEARCH BAR ───────────────────────────────────────── */
+    .map-topbar {
+      position: fixed; top: 56px; left: 0; right: 0; z-index: 1000;
+      background: var(--topbar-bg); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,56,168,0.10);
+      padding: 0.55rem 1.25rem 0.55rem;
+    }
 
-    /* SIDEBAR */
-    .map-sidebar { width: 420px; flex-shrink: 0; background: var(--bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.3s; }
-    .map-sidebar.collapsed { width: 0; }
+    /* Row 1: tabs + search */
+    .topbar-row1 { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.45rem; }
 
-    /* Sidebar search header */
-    .sidebar-header { padding: 0; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+    /* Pill tabs */
+    .tt-tabs { display: flex; background: var(--bg-section); border-radius: 10px; padding: 3px; flex-shrink: 0; }
+    .tt-tab {
+      padding: 0.32rem 0.85rem; border: none; background: transparent;
+      color: var(--text-muted); font-size: 0.82rem; font-weight: 700;
+      border-radius: 8px; cursor: pointer;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+    .tt-tab.active {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 2px 8px rgba(0,56,168,0.25);
+    }
+    .tt-tab:hover:not(.active) { color: var(--text); background: var(--border); }
 
-    /* Type tabs */
-    .sb-tabs { display: flex; border-bottom: 1px solid var(--border); }
-    .sb-tab { flex: 1; padding: 0.7rem 0.5rem; border: none; background: none; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color 0.18s, border-color 0.18s, background 0.18s; }
-    .sb-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
-    .sb-tab:hover:not(.active) { color: var(--text); background: var(--bg); }
+    /* Search input */
+    .topbar-search {
+      flex: 1; display: flex; align-items: center; gap: 0.5rem;
+      background: var(--bg-card); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 0 0.75rem; height: 38px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-width: 0;
+    }
+    .topbar-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,56,168,0.12); }
+    .topbar-search svg { width: 16px; height: 16px; fill: var(--text-muted); flex-shrink: 0; }
+    .topbar-search input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 0.88rem; outline: none; min-width: 0; }
+    .topbar-search input::placeholder { color: var(--text-muted); }
+    .topbar-search-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 7px; padding: 0.3rem 0.85rem;
+      font-size: 0.8rem; font-weight: 700; cursor: pointer; flex-shrink: 0;
+      transition: background 0.18s;
+    }
+    .topbar-search-btn:hover { background: var(--accent-hover); }
 
-    /* Search input row */
-    .sb-search-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
-    .sb-search-row svg { width: 17px; height: 17px; fill: var(--text-muted); flex-shrink: 0; }
-    .sb-search-input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 0.88rem; outline: none; min-width: 0; }
-    .sb-search-input::placeholder { color: var(--text-muted); }
-    .sb-search-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.45rem 0.9rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: background 0.18s; }
-    .sb-search-btn:hover { background: var(--accent-hover); }
+    /* Row 2: home type pills + other filters */
+    .topbar-row2 { display: flex; align-items: center; gap: 0.45rem; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+    .topbar-row2::-webkit-scrollbar { display: none; }
 
-    /* Filter pills row */
-    .sb-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; padding: 0.65rem 1rem; align-items: center; }
-    .sf-select { padding: 0.38rem 1.8rem 0.38rem 0.65rem; border: 1.5px solid var(--border); border-radius: 20px; background: var(--bg); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.4rem center; background-size: 15px; transition: border-color 0.18s; }
-    .sf-select:focus, .sf-select.active { border-color: var(--accent); color: var(--accent); }
-    .sb-clear-btn { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); background: none; border: none; cursor: pointer; text-decoration: underline; white-space: nowrap; padding: 0; }
-    .sb-clear-btn:hover { color: var(--accent); }
+    /* Home type icon pills */
+    .htype-pill {
+      display: flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card); color: var(--text-muted);
+      font-size: 0.77rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.18s, color 0.18s, background 0.18s, box-shadow 0.18s;
+    }
+    .htype-pill .ht-icon { font-size: 0.9rem; }
+    .htype-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .htype-pill.active {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); font-weight: 700;
+      box-shadow: 0 1px 6px rgba(0,56,168,0.15);
+    }
 
-    /* Count bar */
-    .sb-count-bar { padding: 0.45rem 1rem; font-size: 0.78rem; color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .sb-count-bar strong { color: var(--text); font-weight: 700; }
+    /* Filter selects */
+    .tf-select {
+      padding: 0.3rem 1.8rem 0.3rem 0.65rem;
+      border: 1.5px solid var(--border); border-radius: 20px;
+      background: var(--bg-card); color: var(--text);
+      font-size: 0.77rem; font-weight: 600; cursor: pointer;
+      outline: none; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.4rem center;
+      background-size: 15px; flex-shrink: 0;
+      transition: border-color 0.18s;
+      white-space: nowrap;
+    }
+    .tf-select:focus { border-color: var(--accent); }
+    .tf-select.has-value { border-color: var(--accent); color: var(--accent); }
 
-    .sidebar-list { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.65rem; }
-    .sidebar-list::-webkit-scrollbar { width: 6px; }
+    /* Divider */
+    .topbar-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+    /* Clear btn */
+    .topbar-clear-btn {
+      padding: 0.3rem 0.65rem; border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: none; color: var(--text-muted);
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.18s, color 0.18s;
+      display: flex; align-items: center; gap: 0.25rem;
+    }
+    .topbar-clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* Save search button */
+    .save-search-btn {
+      margin-left: auto; flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.3rem 0.85rem; border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card); color: var(--text-muted);
+      font-size: 0.77rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .save-search-btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+    .save-search-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .save-search-btn.saved { border-color: var(--green); color: var(--green); background: #e6f7ef; }
+
+    /* Saved searches dropdown */
+    .saved-searches-wrap { position: relative; flex-shrink: 0; }
+    .saved-searches-btn {
+      display: flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card); color: var(--text-muted);
+      font-size: 0.77rem; font-weight: 700; cursor: pointer;
+      transition: border-color 0.18s, color 0.18s;
+      white-space: nowrap;
+    }
+    .saved-searches-btn svg { width: 13px; height: 13px; fill: currentColor; }
+    .saved-searches-btn .ss-count {
+      background: var(--accent); color: #fff;
+      font-size: 0.65rem; font-weight: 800;
+      min-width: 16px; height: 16px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 3px;
+    }
+    .saved-searches-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .saved-dropdown {
+      position: absolute; top: calc(100% + 8px); right: 0; min-width: 260px;
+      background: var(--bg-card); border: 1.5px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow-md);
+      z-index: 2000; overflow: hidden;
+      animation: fadeDown 0.18s ease;
+    }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    .saved-dropdown-header {
+      padding: 0.65rem 1rem; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .saved-dropdown-empty { padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem; }
+    .saved-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1rem; cursor: pointer; transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
+    }
+    .saved-item:last-child { border-bottom: none; }
+    .saved-item:hover { background: var(--bg-section); }
+    .saved-item-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .saved-item-info { flex: 1; min-width: 0; }
+    .saved-item-label { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .saved-item-meta { font-size: 0.72rem; color: var(--text-muted); }
+    .saved-item-del {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 1rem; cursor: pointer; padding: 0.2rem; line-height: 1;
+      transition: color 0.15s; flex-shrink: 0;
+    }
+    .saved-item-del:hover { color: var(--red); }
+
+    /* ── MAP AREA ──────────────────────────────────────────────── */
+    .map-area {
+      position: fixed;
+      top: calc(56px + var(--topbar-h));
+      left: 0; right: 0; bottom: 0;
+      display: flex;
+    }
+    #map { width: 100%; height: 100%; }
+
+    /* ── FLOATING SIDEBAR ─────────────────────────────────────── */
+    .map-sidebar {
+      position: absolute; top: 0.75rem; left: 0.75rem; bottom: 0.75rem;
+      width: 370px; z-index: 800;
+      background: var(--bg-card); border-radius: 14px;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      display: flex; flex-direction: column; overflow: hidden;
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+    }
+    .map-sidebar.hidden {
+      transform: translateX(-420px); opacity: 0; pointer-events: none;
+    }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-header-info { display: flex; flex-direction: column; gap: 0.1rem; }
+    .sidebar-count { font-size: 0.85rem; font-weight: 800; color: var(--text); }
+    .sidebar-view-count { font-size: 0.72rem; color: var(--text-muted); }
+    .sidebar-header-actions { display: flex; align-items: center; gap: 0.4rem; }
+    .sidebar-close-btn {
+      background: var(--bg-section); border: none; border-radius: 8px;
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: color 0.15s, background 0.15s;
+    }
+    .sidebar-close-btn:hover { background: var(--border); color: var(--text); }
+    .sidebar-close-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    .sidebar-list { flex: 1; overflow-y: auto; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.55rem; }
+    .sidebar-list::-webkit-scrollbar { width: 5px; }
     .sidebar-list::-webkit-scrollbar-track { background: transparent; }
     .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    /* LISTING CARDS IN SIDEBAR */
-    .map-card { display: flex; gap: 0.75rem; padding: 0.75rem; background: var(--bg-card); border-radius: 12px; border: 1.5px solid var(--border); text-decoration: none; color: var(--text); cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
-    .map-card:hover, .map-card.active { border-color: var(--accent); box-shadow: var(--shadow-sm); }
-    .map-card-img { width: 110px; height: 85px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #002D62, #004aaa); display: flex; align-items: center; justify-content: center; }
+    /* ── LISTING CARDS ────────────────────────────────────────── */
+    .map-card {
+      display: flex; gap: 0.7rem; padding: 0.65rem;
+      background: var(--bg); border-radius: 10px;
+      border: 1.5px solid transparent;
+      text-decoration: none; color: var(--text); cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .map-card:hover, .map-card.active {
+      border-color: var(--accent); background: var(--bg-card);
+      box-shadow: var(--shadow-sm);
+    }
+    .map-card-img {
+      width: 95px; height: 75px; border-radius: 8px; overflow: hidden;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #002D62, #004aaa);
+      display: flex; align-items: center; justify-content: center;
+    }
     .map-card-img img { width: 100%; height: 100%; object-fit: cover; }
-    .map-card-img svg { width: 28px; height: 28px; fill: rgba(255,255,255,0.3); }
+    .map-card-img svg { width: 24px; height: 24px; fill: rgba(255,255,255,0.3); }
     .map-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-    .map-card-price { font-size: 1rem; font-weight: 800; color: var(--accent); }
-    .map-card-title { font-size: 0.8rem; font-weight: 600; line-height: 1.3; margin: 0.15rem 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .map-card-loc { font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.2rem; }
-    .map-card-loc svg { width: 10px; height: 10px; fill: var(--text-muted); flex-shrink: 0; }
-    .map-card-specs { display: flex; gap: 0.6rem; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .map-card-price { font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+    .map-card-title { font-size: 0.78rem; font-weight: 600; line-height: 1.3; margin: 0.12rem 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .map-card-loc { font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.2rem; }
+    .map-card-loc svg { width: 9px; height: 9px; fill: var(--text-muted); flex-shrink: 0; }
+    .map-card-specs { display: flex; gap: 0.5rem; font-size: 0.68rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .map-card-badge {
+      display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px;
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.04em; margin-bottom: 0.15rem;
+    }
+    .badge-venta { background: #dce8ff; color: var(--accent); }
+    .badge-alquiler { background: #e6f7ef; color: var(--green); }
 
-    /* MAP */
+    /* ── MAP CONTAINER ────────────────────────────────────────── */
     .map-container { flex: 1; position: relative; }
-    #map { width: 100%; height: 100%; }
 
-    /* TOGGLE SIDEBAR BTN */
-    .toggle-sidebar { position: absolute; top: 0.75rem; left: 0.75rem; z-index: 800; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 8px; padding: 0.5rem; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; }
-    .toggle-sidebar svg { width: 20px; height: 20px; fill: var(--text); }
-    .toggle-sidebar:hover { border-color: var(--accent); }
+    /* ── MAP CONTROLS ─────────────────────────────────────────── */
+    /* Show list button */
+    .show-list-btn {
+      position: absolute; top: 0.75rem; left: 0.75rem; z-index: 700;
+      display: flex; align-items: center; gap: 0.4rem;
+      background: var(--bg-card); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 0.5rem 0.85rem;
+      font-size: 0.82rem; font-weight: 700; color: var(--text);
+      cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s, color 0.2s, opacity 0.3s;
+    }
+    .show-list-btn svg { width: 16px; height: 16px; fill: currentColor; }
+    .show-list-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .show-list-btn.hidden { opacity: 0; pointer-events: none; }
 
-    /* VIEW TOGGLE */
-    .view-toggle { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 800; display: flex; background: var(--bg-card); border-radius: 50px; box-shadow: var(--shadow-lg); border: 1.5px solid var(--border); overflow: hidden; }
-    .vt-btn { padding: 0.6rem 1.25rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; background: none; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+    /* Count badge on map */
+    .map-count-badge {
+      position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%);
+      z-index: 700; background: var(--bg-card);
+      border: 1.5px solid var(--border); border-radius: 20px;
+      padding: 0.4rem 1rem; font-size: 0.78rem; font-weight: 700;
+      color: var(--text-muted); box-shadow: var(--shadow-sm);
+      pointer-events: none; white-space: nowrap;
+      transition: opacity 0.3s;
+    }
+    .map-count-badge strong { color: var(--text); }
+
+    /* Boundary toggle */
+    .boundary-btn {
+      position: absolute; top: 0.75rem; right: 3.5rem; z-index: 700;
+      display: flex; align-items: center; gap: 0.35rem;
+      background: var(--bg-card); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 0.5rem 0.75rem;
+      font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+      cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .boundary-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .boundary-btn:hover, .boundary-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    /* View toggle (list/map) */
+    .view-toggle {
+      position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      z-index: 800; display: flex; background: var(--bg-card); border-radius: 50px;
+      box-shadow: var(--shadow-lg); border: 1.5px solid var(--border); overflow: hidden;
+    }
+    .vt-btn {
+      padding: 0.6rem 1.25rem; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; border: none; background: none; color: var(--text-muted);
+      display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;
+    }
     .vt-btn.active { background: var(--accent); color: #fff; }
     .vt-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
-    /* CUSTOM PRICE MARKERS */
-    .price-marker { background: var(--accent, #0038A8); color: #fff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.5rem; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid #fff; cursor: pointer; transition: transform 0.15s, background 0.15s; }
+    /* ── CUSTOM MARKERS ───────────────────────────────────────── */
+    .price-marker {
+      background: var(--accent, #0038A8); color: #fff;
+      font-size: 0.7rem; font-weight: 800; padding: 0.22rem 0.48rem;
+      border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      border: 2px solid #fff; cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
     .price-marker:hover { transform: scale(1.15); z-index: 999 !important; }
     .price-marker.active { background: var(--green, #0a7c4f); transform: scale(1.15); }
     .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; }
     .leaflet-popup-content { margin: 0 !important; padding: 0 !important; min-width: 260px; }
 
-    /* POPUP CARD */
+    /* ── POPUP ────────────────────────────────────────────────── */
     .popup-card { font-family: 'Segoe UI', system-ui, sans-serif; }
     .popup-img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px 12px 0 0; display: block; }
     .popup-body { padding: 0.85rem; }
@@ -143,10 +389,24 @@
     .popup-btn { display: block; width: 100%; padding: 0.5rem; background: #0038A8; color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; }
     .popup-btn:hover { background: #002c8a; }
 
-    /* LOADING */
-    .sidebar-loading { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
+    /* ── LOADING / EMPTY ──────────────────────────────────────── */
+    .sidebar-loading { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.85rem; }
+    .sidebar-loading svg { width: 36px; height: 36px; fill: var(--border); display: block; margin: 0 auto 0.75rem; }
 
-    /* HAMBURGER */
+    /* ── TOAST ────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 6rem; left: 50%; transform: translateX(-50%) translateY(0);
+      background: #1e293b; color: #fff; border-radius: 10px;
+      padding: 0.65rem 1.25rem; font-size: 0.82rem; font-weight: 600;
+      box-shadow: var(--shadow-lg); z-index: 9999;
+      display: flex; align-items: center; gap: 0.5rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .toast.show { opacity: 1; }
+    .toast svg { width: 16px; height: 16px; fill: var(--green); flex-shrink: 0; }
+
+    /* ── HAMBURGER / MOBILE ────────────────────────────────────── */
     .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 0.3rem; color: var(--text); }
     .hamburger svg { width: 24px; height: 24px; fill: currentColor; }
     .mobile-menu { display: none; position: fixed; inset: 0; z-index: 9999; }
@@ -159,17 +419,25 @@
     .mm-link { text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem; padding: 0.85rem 0.75rem; border-radius: 10px; transition: background 0.2s; }
     .mm-link:hover, .mm-link.active { background: var(--accent-light); color: var(--accent); }
 
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
+      :root { --topbar-h: 116px; }
       .nav-links { display: none; }
       .hamburger { display: block; }
-      .map-sidebar { position: fixed; top: 56px; left: 0; bottom: 0; z-index: 900; width: 100%; max-width: 100%; }
-      .map-sidebar.collapsed { width: 0; display: none; }
-      .view-toggle { bottom: 1.5rem; }
+    }
+    @media (max-width: 700px) {
+      :root { --topbar-h: 130px; }
+      .topbar-row1 { flex-wrap: wrap; }
+      .topbar-search { min-width: 100%; order: 3; }
+      .tt-tabs { order: 1; }
+      .map-sidebar { left: 0; right: 0; bottom: 0; top: auto; width: 100%; border-radius: 14px 14px 0 0; max-height: 65vh; }
+      .map-sidebar.hidden { transform: translateY(120%); }
+      .show-list-btn { left: 50%; transform: translateX(-50%); top: auto; bottom: 5.5rem; }
     }
   </style>
 </head>
 <body>
 
+  <!-- ── NAV ─────────────────────────────────────────────────── -->
   <nav>
     <div class="nav-inner">
       <a href="/home" class="logo">
@@ -213,78 +481,130 @@
     </div>
   </div>
 
-  <div class="map-layout">
+  <!-- ── TOP SEARCH BAR ───────────────────────────────────────── -->
+  <div class="map-topbar" id="mapTopbar">
 
-    <!-- SIDEBAR -->
-    <div class="map-sidebar" id="sidebar">
-      <div class="sidebar-header">
-
-        <!-- Tabs: Comprar / Alquilar -->
-        <div class="sb-tabs">
-          <button class="sb-tab active" data-type="venta">Comprar</button>
-          <button class="sb-tab" data-type="alquiler">Alquilar</button>
-          <button class="sb-tab" data-type="">Todo</button>
-        </div>
-
-        <!-- Search input -->
-        <div class="sb-search-row">
-          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input class="sb-search-input" type="text" id="sbSearchInput" placeholder="Zona, sector, ciudad…" autocomplete="off" />
-          <button class="sb-search-btn" id="sbSearchBtn">Buscar</button>
-        </div>
-
-        <!-- Filter pills -->
-        <div class="sb-filters">
-          <!-- hidden type select kept for JS compat -->
-          <select class="sf-select" id="fType" style="display:none">
-            <option value="">Todos</option>
-            <option value="venta">Venta</option>
-            <option value="alquiler">Alquiler</option>
-          </select>
-          <select class="sf-select" id="fProperty">
-            <option value="">Tipo</option>
-            <option value="apartamento">Apartamento</option>
-            <option value="casa">Casa</option>
-            <option value="villa">Villa</option>
-            <option value="terreno">Terreno</option>
-            <option value="penthouse">Penthouse</option>
-          </select>
-          <select class="sf-select" id="fBeds">
-            <option value="">Hab.</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-            <option value="4">4+</option>
-          </select>
-          <select class="sf-select" id="fPrice">
-            <option value="">Precio</option>
-            <option value="0-100000">≤ $100K</option>
-            <option value="100000-200000">$100K–$200K</option>
-            <option value="200000-500000">$200K–$500K</option>
-            <option value="500000-1000000">$500K–$1M</option>
-            <option value="1000000-">$1M+</option>
-          </select>
-          <button class="sb-clear-btn" id="sbClearBtn">Limpiar</button>
-        </div>
-
-        <!-- Result count -->
-        <div class="sb-count-bar">
-          <span><strong id="listingCount">0</strong> propiedades</span>
-          <span id="listingViewCount" style="font-size:0.72rem;"></span>
-        </div>
+    <!-- Row 1: Tabs + Search input -->
+    <div class="topbar-row1">
+      <div class="tt-tabs" id="ttTabs">
+        <button class="tt-tab active" data-type="venta">Comprar</button>
+        <button class="tt-tab" data-type="alquiler">Alquilar</button>
+        <button class="tt-tab" data-type="">Todo</button>
       </div>
 
-      <div class="sidebar-list" id="sidebarList">
-        <div class="sidebar-loading">Cargando propiedades...</div>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="topSearchInput" placeholder="Zona, sector, ciudad…" autocomplete="off" />
+        <button class="topbar-search-btn" id="topSearchBtn">Buscar</button>
       </div>
     </div>
 
-    <!-- MAP -->
-    <div class="map-container">
-      <button class="toggle-sidebar" id="toggleSidebar" onclick="toggleSidebar()" title="Mostrar/ocultar lista">
-        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <!-- Row 2: Home type pills + filters + save search -->
+    <div class="topbar-row2" id="topbarRow2">
+
+      <!-- Home type pills -->
+      <button class="htype-pill active" data-value=""><span class="ht-icon">🏘</span> Todos</button>
+      <button class="htype-pill" data-value="casa"><span class="ht-icon">🏠</span> Casa</button>
+      <button class="htype-pill" data-value="apartamento"><span class="ht-icon">🏢</span> Apartamento</button>
+      <button class="htype-pill" data-value="villa"><span class="ht-icon">🏡</span> Villa</button>
+      <button class="htype-pill" data-value="penthouse"><span class="ht-icon">⭐</span> Penthouse</button>
+      <button class="htype-pill" data-value="terreno"><span class="ht-icon">🌿</span> Terreno</button>
+
+      <div class="topbar-divider"></div>
+
+      <select class="tf-select" id="fBeds">
+        <option value="">Habitaciones</option>
+        <option value="1">1+ hab.</option>
+        <option value="2">2+ hab.</option>
+        <option value="3">3+ hab.</option>
+        <option value="4">4+ hab.</option>
+      </select>
+
+      <select class="tf-select" id="fPrice">
+        <option value="">Precio</option>
+        <option value="0-100000">≤ $100K</option>
+        <option value="100000-200000">$100K – $200K</option>
+        <option value="200000-500000">$200K – $500K</option>
+        <option value="500000-1000000">$500K – $1M</option>
+        <option value="1000000-">$1M+</option>
+      </select>
+
+      <button class="topbar-clear-btn" id="topClearBtn">
+        <svg viewBox="0 0 24 24" width="12" height="12"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+        Limpiar
       </button>
+
+      <div class="topbar-divider"></div>
+
+      <!-- Save search button -->
+      <button class="save-search-btn" id="saveSearchBtn">
+        <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+        Guardar búsqueda
+      </button>
+
+      <!-- Saved searches dropdown trigger -->
+      <div class="saved-searches-wrap" id="savedSearchesWrap" style="display:none">
+        <button class="saved-searches-btn" id="savedSearchesBtn">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm2 5h12v2H6zm3 5h6v2H9z"/></svg>
+          Guardadas
+          <span class="ss-count" id="ssCount">0</span>
+        </button>
+        <div class="saved-dropdown" id="savedDropdown" style="display:none">
+          <div class="saved-dropdown-header">Búsquedas guardadas</div>
+          <div id="savedList"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── MAP AREA ──────────────────────────────────────────────── -->
+  <div class="map-area">
+
+    <!-- FLOATING SIDEBAR -->
+    <div class="map-sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-header-info">
+          <div class="sidebar-count"><strong id="listingCount">0</strong> propiedades</div>
+          <div class="sidebar-view-count" id="listingViewCount"></div>
+        </div>
+        <div class="sidebar-header-actions">
+          <button class="sidebar-close-btn" id="closeSidebar" title="Cerrar lista">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="sidebar-list" id="sidebarList">
+        <div class="sidebar-loading">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Cargando propiedades…
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP CONTAINER -->
+    <div class="map-container">
+      <!-- Show list button (visible when sidebar hidden) -->
+      <button class="show-list-btn hidden" id="showListBtn">
+        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        Ver lista
+        <strong id="showListCount" style="background:var(--accent);color:#fff;border-radius:12px;padding:0 6px;font-size:0.72rem;margin-left:2px;"></strong>
+      </button>
+
+      <!-- Boundary toggle -->
+      <button class="boundary-btn active" id="boundaryBtn" title="Mostrar/ocultar provincias">
+        <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>
+        Provincias
+      </button>
+
       <div id="map"></div>
+
+      <!-- Count badge -->
+      <div class="map-count-badge" id="mapCountBadge">
+        <strong id="mapCountNum">0</strong> propiedades en el mapa
+      </div>
+
+      <!-- View toggle -->
       <div class="view-toggle">
         <button class="vt-btn active" id="vtMap">
           <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
@@ -299,10 +619,28 @@
 
   </div>
 
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+    <span id="toastMsg">Búsqueda guardada</span>
+  </div>
+
+  <!-- Hidden select for JS compat -->
+  <select id="fType" style="display:none">
+    <option value="">Todos</option>
+    <option value="venta">Venta</option>
+    <option value="alquiler">Alquiler</option>
+  </select>
+  <select id="fProperty" style="display:none">
+    <option value=""></option>
+  </select>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
-    // Theme
+  (function() {
+
+    // ── Theme ─────────────────────────────────────────────────
     const html = document.documentElement;
     html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
     document.getElementById('themeToggle').addEventListener('click', () => {
@@ -311,7 +649,7 @@
       localStorage.setItem('theme', next);
     });
 
-    // Auth nav (simplified)
+    // ── Auth nav ──────────────────────────────────────────────
     (function() {
       const area = document.getElementById('navAuthArea');
       let token, user;
@@ -319,32 +657,79 @@
       if (token && user) {
         const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
         area.innerHTML = `
-          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.85rem;font-weight:600;padding:0.4rem 1rem;border-radius:8px;text-decoration:none;">Publicar</a>
-          <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>`;
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.85rem;font-weight:600;padding:0.4rem 1rem;border-radius:8px;text-decoration:none;white-space:nowrap;">Publicar</a>
+          <div style="width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>`;
       }
     })();
 
+    // ── Helpers ───────────────────────────────────────────────
     function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function formatPrice(p) {
       const n = Number(p);
-      if (!n) return 'Consultar';
+      if (!n) return '?';
       if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
       if (n >= 1000)    return '$' + (n/1000).toFixed(0) + 'K';
       return '$' + n.toLocaleString('en-US');
     }
     function formatPriceFull(p) { return p ? '$' + Number(p).toLocaleString('en-US') : 'Precio a consultar'; }
 
+    function showToast(msg, duration) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), duration || 2500);
+    }
+
     // ── Map Setup ─────────────────────────────────────────────
     const DR_CENTER = [18.7357, -70.1627];
     const map = L.map('map', { zoomControl: false }).setView(DR_CENTER, 9);
-
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
-      maxZoom: 19
+    // Tile layer — subtle carto style
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 20
     }).addTo(map);
 
+    // ── Province Boundaries ───────────────────────────────────
+    let boundaryLayer = null;
+    let boundaryVisible = true;
+
+    const boundaryStyle = {
+      color: '#0038A8', weight: 1.5, opacity: 0.45,
+      fillColor: '#0038A8', fillOpacity: 0.04
+    };
+    const boundaryHoverStyle = {
+      color: '#0038A8', weight: 2.5, opacity: 0.75,
+      fillColor: '#0038A8', fillOpacity: 0.10
+    };
+
+    fetch('https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/dominican-republic.geojson')
+      .then(r => r.json())
+      .then(geojson => {
+        boundaryLayer = L.geoJSON(geojson, {
+          style: () => ({ ...boundaryStyle }),
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties.name || feature.properties.NAME || '';
+            if (name) layer.bindTooltip(name, { sticky: true, opacity: 0.85, className: 'province-tooltip' });
+            layer.on('mouseover', function() { this.setStyle(boundaryHoverStyle); });
+            layer.on('mouseout',  function() { boundaryLayer.resetStyle(this); });
+          }
+        }).addTo(map);
+      })
+      .catch(() => {}); // silently fail if offline
+
+    document.getElementById('boundaryBtn').addEventListener('click', function() {
+      this.classList.toggle('active');
+      if (boundaryLayer) {
+        boundaryVisible = !boundaryVisible;
+        if (boundaryVisible) map.addLayer(boundaryLayer);
+        else map.removeLayer(boundaryLayer);
+      }
+    });
+
+    // ── Marker Cluster ────────────────────────────────────────
     const markerCluster = L.markerClusterGroup({
       maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
@@ -352,28 +737,41 @@
       zoomToBoundsOnClick: true,
       iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
-        let size = 'small';
-        if (count > 10) size = 'medium';
-        if (count > 30) size = 'large';
+        const sz = count > 30 ? 52 : count > 10 ? 44 : 36;
+        const fs = count > 30 ? '0.88rem' : '0.78rem';
         return L.divIcon({
-          html: `<div style="background:var(--accent,#0038A8);color:#fff;border-radius:50%;width:${size==='small'?36:size==='medium'?44:52}px;height:${size==='small'?36:size==='medium'?44:52}px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${size==='small'?'0.78rem':'0.88rem'};box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid #fff;">${count}</div>`,
+          html: `<div style="background:var(--accent,#0038A8);color:#fff;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${fs};box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid #fff;">${count}</div>`,
           className: '',
-          iconSize: [size==='small'?36:size==='medium'?44:52, size==='small'?36:size==='medium'?44:52]
+          iconSize: [sz, sz]
         });
       }
     });
     map.addLayer(markerCluster);
 
     let allListings = [];
+    let filteredListings = [];
     let markers = {};
     let activeCard = null;
     let activeMarker = null;
+    let searchQuery = '';
 
-    // ── Sidebar Toggle ────────────────────────────────────────
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-      setTimeout(() => map.invalidateSize(), 350);
+    // ── Sidebar toggle ────────────────────────────────────────
+    const sidebar = document.getElementById('sidebar');
+    const showListBtn = document.getElementById('showListBtn');
+
+    function openSidebar() {
+      sidebar.classList.remove('hidden');
+      showListBtn.classList.add('hidden');
+      setTimeout(() => map.invalidateSize(), 320);
     }
+    function closeSidebar() {
+      sidebar.classList.add('hidden');
+      showListBtn.classList.remove('hidden');
+      setTimeout(() => map.invalidateSize(), 320);
+    }
+
+    document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
+    showListBtn.addEventListener('click', openSidebar);
 
     // ── Load Listings ─────────────────────────────────────────
     async function loadListings() {
@@ -392,43 +790,70 @@
         if (max) params.set('priceMax', max);
       }
 
-      document.getElementById('sidebarList').innerHTML = '<div class="sidebar-loading">Cargando propiedades...</div>';
+      document.getElementById('sidebarList').innerHTML = `
+        <div class="sidebar-loading">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Cargando propiedades…
+        </div>`;
 
       try {
         const res  = await fetch('/api/listings?' + params.toString());
         const data = await res.json();
         allListings = (data.listings || []).filter(l => l.lat && l.lng);
-
-        document.getElementById('listingCount').textContent = allListings.length;
-
-        renderSidebar(allListings);
-        renderMarkers(allListings);
-
-        // Fit bounds if we have listings
-        if (allListings.length) {
-          const bounds = L.latLngBounds(allListings.map(l => [parseFloat(l.lat), parseFloat(l.lng)]));
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-        }
+        applyClientFilter();
       } catch(e) {
         document.getElementById('sidebarList').innerHTML = '<div class="sidebar-loading">Error al cargar. Intenta de nuevo.</div>';
       }
     }
 
-    // ── Render Sidebar Cards ──────────────────────────────────
+    function applyClientFilter() {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filteredListings = allListings.filter(l =>
+          (l.title||'').toLowerCase().includes(q) ||
+          (l.city||'').toLowerCase().includes(q) ||
+          (l.sector||'').toLowerCase().includes(q) ||
+          (l.province||'').toLowerCase().includes(q));
+      } else {
+        filteredListings = allListings;
+      }
+      updateCountDisplay(filteredListings.length);
+      renderSidebar(filteredListings);
+      renderMarkers(filteredListings);
+      if (filteredListings.length) {
+        const bounds = L.latLngBounds(filteredListings.map(l => [parseFloat(l.lat), parseFloat(l.lng)]));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      }
+    }
+
+    function updateCountDisplay(n) {
+      document.getElementById('listingCount').textContent = n;
+      document.getElementById('showListCount').textContent = n;
+      document.getElementById('mapCountNum').textContent = n;
+    }
+
+    // ── Render Sidebar ────────────────────────────────────────
     function renderSidebar(listings) {
       const container = document.getElementById('sidebarList');
       if (!listings.length) {
-        container.innerHTML = '<div class="sidebar-loading">No se encontraron propiedades con coordenadas en esta área.</div>';
+        container.innerHTML = `
+          <div class="sidebar-loading">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            No se encontraron propiedades con estos filtros.
+          </div>`;
         return;
       }
       container.innerHTML = listings.map(l => {
         const img = Array.isArray(l.images) && l.images.length
           ? `<img src="${esc(l.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'" />`
           : `<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
+        const badgeClass = l.type === 'venta' ? 'badge-venta' : 'badge-alquiler';
+        const badgeText  = l.type === 'venta' ? 'Venta' : 'Alquiler';
         return `
           <div class="map-card" id="card-${esc(l.id)}" onclick="focusListing('${esc(l.id)}')" ondblclick="window.location.href='/listing/${esc(l.id)}'">
             <div class="map-card-img">${img}</div>
             <div class="map-card-body">
+              <span class="map-card-badge ${badgeClass}">${badgeText}</span>
               <div class="map-card-price">${formatPriceFull(l.price)}</div>
               <div class="map-card-title">${esc(l.title)}</div>
               <div class="map-card-loc">
@@ -436,7 +861,7 @@
                 ${esc(l.sector || l.city)}${l.province ? ', ' + esc(l.province) : ''}
               </div>
               <div class="map-card-specs">
-                ${l.bedrooms ? `<span>${l.bedrooms} hab.</span>` : ''}
+                ${l.bedrooms  ? `<span>${l.bedrooms} hab.</span>` : ''}
                 ${l.bathrooms ? `<span>${l.bathrooms} baños</span>` : ''}
                 ${l.area_const ? `<span>${l.area_const} m²</span>` : ''}
               </div>
@@ -449,25 +874,18 @@
     function renderMarkers(listings) {
       markerCluster.clearLayers();
       markers = {};
-
       listings.forEach(l => {
-        const lat = parseFloat(l.lat);
-        const lng = parseFloat(l.lng);
+        const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
         if (isNaN(lat) || isNaN(lng)) return;
-
         const icon = L.divIcon({
           className: '',
           html: `<div class="price-marker" data-id="${esc(l.id)}">${formatPrice(l.price)}</div>`,
-          iconSize: [70, 28],
-          iconAnchor: [35, 28]
+          iconSize: [70, 28], iconAnchor: [35, 28]
         });
-
         const marker = L.marker([lat, lng], { icon });
-
         const img = Array.isArray(l.images) && l.images.length
           ? `<img class="popup-img" src="${esc(l.images[0])}" alt="" onerror="this.style.display='none'" />`
           : '';
-
         marker.bindPopup(`
           <div class="popup-card">
             ${img}
@@ -476,15 +894,14 @@
               <div class="popup-title">${esc(l.title)}</div>
               <div class="popup-loc">${esc([l.sector || l.city, l.province].filter(Boolean).join(', '))}</div>
               <div class="popup-specs">
-                ${l.bedrooms ? `<span>${l.bedrooms} hab.</span>` : ''}
+                ${l.bedrooms  ? `<span>${l.bedrooms} hab.</span>` : ''}
                 ${l.bathrooms ? `<span>${l.bathrooms} baños</span>` : ''}
                 ${l.area_const ? `<span>${l.area_const} m²</span>` : ''}
               </div>
-              <a class="popup-btn" href="/listing/${esc(l.id)}">Ver Propiedad</a>
+              <a class="popup-btn" href="/listing/${esc(l.id)}">Ver Propiedad →</a>
             </div>
           </div>
         `, { maxWidth: 280, minWidth: 260 });
-
         marker.on('click', () => highlightCard(l.id));
         markers[l.id] = marker;
         markerCluster.addLayer(marker);
@@ -492,20 +909,15 @@
     }
 
     // ── Focus / Highlight ─────────────────────────────────────
-    function focusListing(id) {
+    window.focusListing = function(id) {
       const listing = allListings.find(l => l.id === id);
       if (!listing) return;
-
-      const lat = parseFloat(listing.lat);
-      const lng = parseFloat(listing.lng);
+      const lat = parseFloat(listing.lat), lng = parseFloat(listing.lng);
       map.setView([lat, lng], 16, { animate: true });
-
-      // Highlight marker
       if (activeMarker) {
         const el = activeMarker.getElement();
         if (el) el.querySelector('.price-marker')?.classList.remove('active');
       }
-
       const marker = markers[id];
       if (marker) {
         markerCluster.zoomToShowLayer(marker, () => {
@@ -515,9 +927,8 @@
         });
         activeMarker = marker;
       }
-
       highlightCard(id);
-    }
+    };
 
     function highlightCard(id) {
       if (activeCard) activeCard.classList.remove('active');
@@ -529,71 +940,199 @@
       }
     }
 
-    // ── Reload markers when map moves ─────────────────────────
+    // Update "in view" count when map moves
     map.on('moveend', () => {
       const bounds = map.getBounds();
-      const visible = allListings.filter(l => {
+      const visible = filteredListings.filter(l => {
         const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
         return bounds.contains([lat, lng]);
       });
       const viewEl = document.getElementById('listingViewCount');
-      if (viewEl) viewEl.textContent = visible.length < allListings.length ? `(${visible.length} en vista)` : '';
+      if (viewEl) viewEl.textContent = visible.length < filteredListings.length ? `${visible.length} en esta área` : '';
     });
 
     // ── Tab switching ─────────────────────────────────────────
-    document.querySelectorAll('.sb-tab').forEach(tab => {
+    document.querySelectorAll('.tt-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.sb-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tt-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById('fType').value = tab.dataset.type;
         loadListings();
       });
     });
 
-    // ── Search input ──────────────────────────────────────────
-    let searchQuery = '';
-    function applySearch() {
-      searchQuery = document.getElementById('sbSearchInput').value.trim().toLowerCase();
-      const filtered = searchQuery
-        ? allListings.filter(l =>
-            (l.title||'').toLowerCase().includes(searchQuery) ||
-            (l.city||'').toLowerCase().includes(searchQuery) ||
-            (l.sector||'').toLowerCase().includes(searchQuery) ||
-            (l.province||'').toLowerCase().includes(searchQuery))
-        : allListings;
-      renderSidebar(filtered);
-      renderMarkers(filtered);
-      document.getElementById('listingCount').textContent = filtered.length;
-    }
-    document.getElementById('sbSearchBtn').addEventListener('click', applySearch);
-    document.getElementById('sbSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') applySearch(); });
-
-    // ── Filter selects — auto-apply on change ─────────────────
-    ['fProperty','fBeds','fPrice'].forEach(id => {
-      document.getElementById(id).addEventListener('change', () => {
+    // ── Home type pills ───────────────────────────────────────
+    document.querySelectorAll('.htype-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.htype-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        document.getElementById('fProperty').value = pill.dataset.value;
         searchQuery = '';
-        document.getElementById('sbSearchInput').value = '';
+        document.getElementById('topSearchInput').value = '';
         loadListings();
       });
     });
 
-    // ── Clear filters ─────────────────────────────────────────
-    document.getElementById('sbClearBtn').addEventListener('click', () => {
-      document.getElementById('sbSearchInput').value = '';
+    // ── Search input ──────────────────────────────────────────
+    function applySearch() {
+      searchQuery = document.getElementById('topSearchInput').value.trim().toLowerCase();
+      applyClientFilter();
+    }
+    document.getElementById('topSearchBtn').addEventListener('click', applySearch);
+    document.getElementById('topSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') applySearch(); });
+
+    // ── Filter selects auto-apply ─────────────────────────────
+    ['fBeds', 'fPrice'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('change', () => {
+        el.classList.toggle('has-value', !!el.value);
+        searchQuery = '';
+        document.getElementById('topSearchInput').value = '';
+        loadListings();
+      });
+    });
+
+    // ── Clear all filters ─────────────────────────────────────
+    document.getElementById('topClearBtn').addEventListener('click', () => {
+      document.getElementById('topSearchInput').value = '';
       document.getElementById('fType').value = '';
       document.getElementById('fProperty').value = '';
       document.getElementById('fBeds').value = '';
       document.getElementById('fPrice').value = '';
-      document.querySelectorAll('.sb-tab').forEach((t,i) => t.classList.toggle('active', i===2)); // "Todo"
+      document.getElementById('fBeds').classList.remove('has-value');
+      document.getElementById('fPrice').classList.remove('has-value');
+      document.querySelectorAll('.tt-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+      document.getElementById('fType').value = 'venta';
+      document.querySelectorAll('.htype-pill').forEach((p, i) => p.classList.toggle('active', i === 0));
       searchQuery = '';
       loadListings();
     });
 
-    // ── Update count display after load ──────────────────────
-    const _origLoadListings = loadListings;
+    // ── Save Search ───────────────────────────────────────────
+    const SAVED_KEY = 'hogaresrd_saved_searches';
+
+    function getSavedSearches() {
+      try { return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function setSavedSearches(arr) {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(arr));
+    }
+
+    function buildSearchLabel() {
+      const parts = [];
+      const activeTab = document.querySelector('.tt-tab.active');
+      if (activeTab) {
+        const type = activeTab.dataset.type;
+        if (type === 'venta') parts.push('Comprar');
+        else if (type === 'alquiler') parts.push('Alquilar');
+      }
+      const activePill = document.querySelector('.htype-pill.active');
+      if (activePill && activePill.dataset.value) {
+        parts.push(activePill.textContent.trim());
+      }
+      const q = document.getElementById('topSearchInput').value.trim();
+      if (q) parts.push(`"${q}"`);
+      const beds = document.getElementById('fBeds');
+      if (beds.value) parts.push(beds.options[beds.selectedIndex].text);
+      const price = document.getElementById('fPrice');
+      if (price.value) parts.push(price.options[price.selectedIndex].text);
+      return parts.length ? parts.join(' · ') : 'Todas las propiedades';
+    }
+
+    function buildSearchSnapshot() {
+      return {
+        id: Date.now(),
+        label: buildSearchLabel(),
+        type:  document.getElementById('fType').value,
+        property: document.getElementById('fProperty').value,
+        beds:  document.getElementById('fBeds').value,
+        price: document.getElementById('fPrice').value,
+        query: document.getElementById('topSearchInput').value.trim(),
+        savedAt: new Date().toLocaleDateString('es-DO')
+      };
+    }
+
+    function applySnapshot(s) {
+      document.getElementById('fType').value = s.type || '';
+      document.getElementById('fProperty').value = s.property || '';
+      document.getElementById('fBeds').value = s.beds || '';
+      document.getElementById('fPrice').value = s.price || '';
+      document.getElementById('fBeds').classList.toggle('has-value', !!s.beds);
+      document.getElementById('fPrice').classList.toggle('has-value', !!s.price);
+      document.getElementById('topSearchInput').value = s.query || '';
+      searchQuery = s.query ? s.query.toLowerCase() : '';
+      // Update tabs
+      document.querySelectorAll('.tt-tab').forEach(t => t.classList.toggle('active', t.dataset.type === (s.type || '')));
+      // Update pills
+      document.querySelectorAll('.htype-pill').forEach(p => p.classList.toggle('active', p.dataset.value === (s.property || '')));
+      loadListings();
+    }
+
+    function renderSavedDropdown() {
+      const searches = getSavedSearches();
+      const wrap = document.getElementById('savedSearchesWrap');
+      const countEl = document.getElementById('ssCount');
+      const listEl = document.getElementById('savedList');
+
+      if (searches.length === 0) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+      countEl.textContent = searches.length;
+      listEl.innerHTML = searches.map(s => `
+        <div class="saved-item" onclick="loadSavedSearch(${s.id})">
+          <span class="saved-item-icon">🔍</span>
+          <div class="saved-item-info">
+            <div class="saved-item-label">${esc(s.label)}</div>
+            <div class="saved-item-meta">Guardada el ${esc(s.savedAt)}</div>
+          </div>
+          <button class="saved-item-del" onclick="event.stopPropagation();deleteSavedSearch(${s.id})" title="Eliminar">×</button>
+        </div>`).join('');
+    }
+
+    window.loadSavedSearch = function(id) {
+      const s = getSavedSearches().find(x => x.id === id);
+      if (s) {
+        applySnapshot(s);
+        document.getElementById('savedDropdown').style.display = 'none';
+        showToast('Búsqueda aplicada');
+      }
+    };
+    window.deleteSavedSearch = function(id) {
+      setSavedSearches(getSavedSearches().filter(x => x.id !== id));
+      renderSavedDropdown();
+    };
+
+    document.getElementById('saveSearchBtn').addEventListener('click', () => {
+      const snapshot = buildSearchSnapshot();
+      const existing = getSavedSearches();
+      // Avoid exact duplicates by label
+      if (!existing.some(s => s.label === snapshot.label)) {
+        setSavedSearches([snapshot, ...existing].slice(0, 10)); // max 10 saved
+        showToast('✓ Búsqueda guardada');
+      } else {
+        showToast('Esta búsqueda ya está guardada');
+      }
+      renderSavedDropdown();
+    });
+
+    // Saved searches dropdown toggle
+    document.getElementById('savedSearchesBtn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      const dd = document.getElementById('savedDropdown');
+      dd.style.display = dd.style.display === 'none' ? '' : 'none';
+    });
+    document.addEventListener('click', () => {
+      const dd = document.getElementById('savedDropdown');
+      if (dd) dd.style.display = 'none';
+    });
 
     // ── Init ──────────────────────────────────────────────────
+    renderSavedDropdown();
     loadListings();
+
+  })();
   </script>
 </body>
 </html>
