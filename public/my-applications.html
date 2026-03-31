@@ -448,7 +448,7 @@
     async function logout() {
       try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
       ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
-      window.location.href = '/home';
+      window.location.href = '/login?logout=1';
     }
 
     /* ── Helpers ── */
@@ -571,14 +571,21 @@
     // JWT cookie is sent automatically (same-origin). No Authorization header needed.
     const API_HEADERS = { 'Content-Type': 'application/json' };
 
+    function handle401() {
+      ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
+      window.location.href = '/login?logout=1';
+    }
+
     async function apiGet(url) {
       const res = await fetch(url, { headers: API_HEADERS });
+      if (res.status === 401) { handle401(); return; }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
 
     async function apiPost(url, body) {
       const res = await fetch(url, { method: 'POST', headers: API_HEADERS, body: JSON.stringify(body) });
+      if (res.status === 401) { handle401(); return; }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
@@ -589,6 +596,7 @@
         method: 'POST',
         body: formData
       });
+      if (res.status === 401) { handle401(); return; }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
