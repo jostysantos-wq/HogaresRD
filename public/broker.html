@@ -451,6 +451,31 @@
     .toast.success { border-color: var(--green); color: var(--green); }
     .toast.error { border-color: var(--red); color: var(--red); }
 
+    /* ── Email verify notification ── */
+    #verifyNotification { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 600; width: 340px; max-width: calc(100vw - 2rem); background: var(--bg-card); border: 1.5px solid #fbbf24; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 1.1rem 1.25rem; display: flex; gap: 0.85rem; align-items: flex-start; transform: translateX(110%); transition: transform 0.35s cubic-bezier(.4,0,.2,1); }
+    #verifyNotification.show { transform: translateX(0); }
+    .vn-icon { width: 36px; height: 36px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; }
+    .vn-body { flex: 1; min-width: 0; }
+    .vn-title { font-size: 0.88rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem; }
+    .vn-sub { font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
+    .vn-actions { display: flex; gap: 0.5rem; margin-top: 0.65rem; flex-wrap: wrap; }
+    .vn-btn { font-size: 0.75rem; font-weight: 700; padding: 5px 12px; border-radius: 7px; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .vn-btn-primary { background: #f59e0b; color: #fff; }
+    .vn-btn-primary:hover { opacity: 0.85; }
+    .vn-btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .vn-btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+    .vn-close { background: none; border: none; font-size: 1rem; color: var(--text-muted); cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; margin-top: -2px; }
+    .vn-close:hover { color: var(--text); }
+    .vn-msg { font-size: 0.75rem; margin-top: 0.4rem; font-weight: 600; }
+
+    /* Inline verify card inside dashboard */
+    .verify-inline-card { display: flex; align-items: center; gap: 0.9rem; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1.25rem; }
+    .verify-inline-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .verify-inline-body { flex: 1; min-width: 0; font-size: 0.84rem; color: #92400e; line-height: 1.4; }
+    .verify-inline-body strong { font-weight: 800; }
+    [data-theme="dark"] .verify-inline-card { background: rgba(251,191,36,0.07); border-color: rgba(251,191,36,0.3); }
+    [data-theme="dark"] .verify-inline-body { color: #fbbf24; }
+
     /* ── MODAL ────────────────────────────────────────────────── */
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 400; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     .modal-backdrop.open { display: flex; }
@@ -887,6 +912,14 @@
 
   <!-- ═══ PAGE: DASHBOARD ═══════════════════════════════════ -->
   <div class="page-section active" id="page-dashboard">
+
+  <!-- Email verify inline card (injected by JS if needed) -->
+  <div id="verifyInlineCard" class="verify-inline-card" style="display:none">
+    <span class="verify-inline-icon">✉️</span>
+    <div class="verify-inline-body">
+      <strong>Correo sin verificar.</strong> Algunas funciones están limitadas hasta que confirmes tu dirección de correo electrónico.
+    </div>
+  </div>
 
   <!-- Internal Section Nav (tabs) -->
   <div class="section-nav" id="sectionNav">
@@ -1450,6 +1483,21 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Email verification notification (shown only if unverified) -->
+<div id="verifyNotification" role="alert" aria-live="polite">
+  <div class="vn-icon">⚠️</div>
+  <div class="vn-body">
+    <div class="vn-title">Verifica tu correo</div>
+    <div class="vn-sub">Revisa tu bandeja de entrada y confirma tu dirección para acceder a todas las funciones.</div>
+    <div class="vn-actions">
+      <button class="vn-btn vn-btn-primary" id="vnResendBtn">Reenviar correo</button>
+      <button class="vn-btn vn-btn-ghost" id="vnDismissBtn">Más tarde</button>
+    </div>
+    <div class="vn-msg" id="vnMsg"></div>
+  </div>
+  <button class="vn-close" id="vnCloseBtn" aria-label="Cerrar">✕</button>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -1470,9 +1518,6 @@
 
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
   const isInmobiliariaRole = currentUser.role === 'inmobiliaria';
-
-  // Email verification check — backward compat: missing field = treat as verified (old accounts)
-  const isEmailVerified = currentUser.emailVerified !== false;
 
   // ── Full user data (affiliation fields, etc.) ───────────────
   // Initialized after API helper is defined below to avoid temporal dead zone.
@@ -1633,40 +1678,60 @@
     });
   };
 
-  // Now that API is defined, fetch full user data (affiliation fields, etc.)
+  // Now that API is defined, fetch full user data — also used for fresh email verification check
   (async () => {
-    try { currentUserFull = await API('/api/auth/me'); } catch {}
-  })();
-
-  // ── Email verification banner ──────────────────────────────────────
-  (function renderEmailVerifyBanner() {
-    if (isEmailVerified) return;
-    const banner = document.createElement('div');
-    banner.id = 'emailVerifyBanner';
-    banner.style.cssText = 'background:#fffbeb;border-bottom:2px solid #fde68a;color:#92400e;padding:10px 20px;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
-    banner.innerHTML = `
-      <span>⚠️ <strong>Verifica tu correo electrónico</strong> para acceder a todas las funciones.
-        Revisa tu bandeja de entrada o
-        <button id="resendVerifyBtn" style="background:none;border:none;color:#b45309;font-weight:700;cursor:pointer;text-decoration:underline;font-size:0.85rem;padding:0;">reenvía el correo</button>.
-      </span>
-      <span id="resendVerifyMsg" style="font-size:0.8rem;color:#16a34a;"></span>
-    `;
-    // Insert at top of body (before the app container)
-    document.body.insertBefore(banner, document.body.firstChild);
-
-    document.getElementById('resendVerifyBtn').onclick = async function() {
-      this.disabled = true; this.textContent = 'Enviando...';
-      const msg = document.getElementById('resendVerifyMsg');
-      try {
-        const r = await API('/api/auth/resend-verification', { method: 'POST' });
-        msg.textContent = '✅ Correo enviado. Revisa tu bandeja.';
-      } catch(e) {
-        msg.style.color = '#dc2626';
-        msg.textContent = e.message || 'Error al enviar.';
-        this.disabled = false; this.textContent = 'reenvía el correo';
+    try {
+      currentUserFull = await API('/api/auth/me');
+      // Sync localStorage so the check is accurate on next load
+      if (currentUserFull) {
+        const stored = JSON.parse(localStorage.getItem('hogaresrd_user') || '{}');
+        stored.emailVerified = currentUserFull.emailVerified;
+        localStorage.setItem('hogaresrd_user', JSON.stringify(stored));
       }
-    };
+      // Use fresh server value — don't rely on potentially stale localStorage
+      const verified = currentUserFull?.emailVerified !== false;
+      if (!verified) showEmailVerifyUI();
+    } catch {}
   })();
+
+  // ── Email verification notification (popup + inline card) ─────────
+  function showEmailVerifyUI() {
+    const notif       = document.getElementById('verifyNotification');
+    const inlineCard  = document.getElementById('verifyInlineCard');
+    const resendBtn   = document.getElementById('vnResendBtn');
+    const dismissBtn  = document.getElementById('vnDismissBtn');
+    const closeBtn    = document.getElementById('vnCloseBtn');
+    const msgEl       = document.getElementById('vnMsg');
+
+    // Show inline card in dashboard
+    if (inlineCard) inlineCard.style.display = 'flex';
+
+    // Show slide-in notification (slight delay so page renders first)
+    if (notif) setTimeout(() => notif.classList.add('show'), 600);
+
+    function hideNotif() {
+      if (notif) { notif.classList.remove('show'); }
+    }
+
+    if (closeBtn)   closeBtn.onclick   = hideNotif;
+    if (dismissBtn) dismissBtn.onclick = hideNotif;
+
+    if (resendBtn) {
+      resendBtn.onclick = async function() {
+        resendBtn.disabled = true; resendBtn.textContent = 'Enviando...';
+        msgEl.style.color = '';
+        try {
+          await API('/api/auth/resend-verification', { method: 'POST' });
+          msgEl.style.color = '#16a34a';
+          msgEl.textContent = '✅ Correo enviado. Revisa tu bandeja.';
+        } catch(e) {
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = e.message || 'Error al enviar.';
+          resendBtn.disabled = false; resendBtn.textContent = 'Reenviar correo';
+        }
+      };
+    }
+  }
 
   // ── Toast ──────────────────────────────────────────────────
   const toastEl = document.getElementById('toast');
