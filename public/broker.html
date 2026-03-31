@@ -659,6 +659,64 @@
     .team-empty svg { width: 48px; height: 48px; fill: var(--border); }
     .team-empty p { font-size: 0.88rem; margin: 0; }
 
+    /* ── Team member action menu ── */
+    .equipo-card { position: relative; }
+    .equipo-menu-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: background 0.15s; font-size: 1.1rem; line-height: 1; flex-shrink: 0; }
+    .equipo-menu-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .equipo-dropdown { position: absolute; top: 2.5rem; right: 0.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-md); z-index: 100; min-width: 180px; overflow: hidden; display: none; }
+    .equipo-dropdown.open { display: block; }
+    .equipo-dropdown-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 1rem; font-size: 0.83rem; font-weight: 600; color: var(--text); cursor: pointer; transition: background 0.12s; border: none; background: none; width: 100%; text-align: left; }
+    .equipo-dropdown-item:hover { background: var(--accent-light); }
+    .equipo-dropdown-item.danger { color: var(--red); }
+    .equipo-dropdown-item.danger:hover { background: rgba(239,68,68,0.08); }
+    .equipo-dropdown-item svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Members search bar ── */
+    .team-search-bar { display: flex; align-items: center; gap: 0.6rem; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 0.5rem 0.85rem; margin-bottom: 1.1rem; transition: border-color 0.2s; }
+    .team-search-bar:focus-within { border-color: var(--accent); }
+    .team-search-bar svg { width: 16px; height: 16px; fill: var(--text-muted); flex-shrink: 0; }
+    .team-search-bar input { border: none; background: transparent; color: var(--text); font-size: 0.88rem; outline: none; flex: 1; }
+    .team-search-bar input::placeholder { color: var(--text-muted); }
+
+    /* ── Invite link bar ── */
+    .invite-bar { display: flex; align-items: center; gap: 0.6rem; background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1.5px dashed color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 10px; padding: 0.65rem 1rem; margin-bottom: 1.25rem; }
+    .invite-bar-label { font-size: 0.78rem; color: var(--text-muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .invite-bar-label strong { color: var(--accent); font-size: 0.8rem; }
+    .invite-copy-btn { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s; white-space: nowrap; }
+    .invite-copy-btn:hover { opacity: 0.85; }
+
+    /* ── Broker detail modal ── */
+    .broker-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 700; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .broker-modal-backdrop.open { display: flex; }
+    .broker-modal { background: var(--bg-card); border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    .broker-modal-header { padding: 1.4rem 1.5rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 1rem; }
+    .broker-modal-avatar { width: 52px; height: 52px; border-radius: 14px; background: var(--accent); color: #fff; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .broker-modal-name { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+    .broker-modal-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .broker-modal-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+    .broker-modal-close:hover { color: var(--text); }
+    .broker-modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
+    .broker-modal-section { margin-bottom: 1.25rem; }
+    .broker-modal-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.6rem; }
+    .broker-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .broker-info-item { background: var(--input-bg); border-radius: 8px; padding: 0.55rem 0.75rem; }
+    .broker-info-item-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .broker-info-item-value { font-size: 0.88rem; color: var(--text); font-weight: 700; margin-top: 0.15rem; word-break: break-all; }
+    .broker-app-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+    .broker-app-row:last-child { border-bottom: none; }
+    .broker-app-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+    .broker-app-client { color: var(--text-muted); font-size: 0.74rem; }
+    .broker-notes-area { width: 100%; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; color: var(--text); font-size: 0.85rem; resize: vertical; min-height: 80px; outline: none; font-family: inherit; transition: border-color 0.2s; }
+    .broker-notes-area:focus { border-color: var(--accent); }
+    .broker-modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .broker-modal-footer .btn-sm { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .broker-modal-footer .btn-primary-sm { background: var(--accent); color: #fff; }
+    .broker-modal-footer .btn-primary-sm:hover { opacity: 0.85; }
+    .broker-modal-footer .btn-ghost-sm { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .broker-modal-footer .btn-ghost-sm:hover { color: var(--text); }
+    .broker-modal-footer .btn-danger-sm { background: transparent; color: var(--red); border: 1px solid var(--red); margin-left: auto; }
+    .broker-modal-footer .btn-danger-sm:hover { background: rgba(239,68,68,0.08); }
+
     /* Broker filter (inmobiliaria view) */
     .broker-filter-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.78rem; }
     .broker-filter-row svg { width: 14px; height: 14px; fill: var(--accent); flex-shrink: 0; }
@@ -1106,9 +1164,15 @@
 
   <!-- ═══ PAGE: TEAM — MIEMBROS ════════════════════════════ -->
   <div class="page-section" id="page-team-members">
-    <div class="team-page-header">
-      <h2>Agentes Afiliados</h2>
-      <p>Gestiona los agentes vinculados a tu inmobiliaria</p>
+    <div class="team-page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <h2>Agentes Afiliados</h2>
+        <p>Gestiona los agentes vinculados a tu inmobiliaria</p>
+      </div>
+      <button class="btn-export" id="exportTeamBtn" style="font-size:0.78rem;padding:0.5rem 1rem;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px;vertical-align:middle;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Exportar CSV
+      </button>
     </div>
     <div class="team-stats-bar">
       <div class="team-stat-card">
@@ -1123,6 +1187,14 @@
         <div class="team-stat-label">Solicitudes Pendientes</div>
         <div class="team-stat-value" id="teamPendingCount">--</div>
       </div>
+    </div>
+    <div class="invite-bar">
+      <span class="invite-bar-label"><strong>Enlace de afiliación:</strong> Comparte este enlace con agentes para que soliciten unirse a tu equipo</span>
+      <button class="invite-copy-btn" id="inviteCopyBtn">Copiar enlace</button>
+    </div>
+    <div class="team-search-bar">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="teamSearchInput" placeholder="Buscar agente por nombre o correo..." />
     </div>
     <div class="equipo-grid" id="brokerTeamGrid">
       <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
@@ -1148,6 +1220,39 @@
     </div>
     <div id="teamPerfList">
       <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- ═══ BROKER DETAIL MODAL ══════════════════════════════════ -->
+  <div class="broker-modal-backdrop" id="brokerDetailModal">
+    <div class="broker-modal">
+      <div class="broker-modal-header">
+        <div class="broker-modal-avatar" id="bmdAvatar">--</div>
+        <div>
+          <div class="broker-modal-name" id="bmdName">—</div>
+          <div class="broker-modal-meta" id="bmdMeta">—</div>
+        </div>
+        <button class="broker-modal-close" id="bmdClose">✕</button>
+      </div>
+      <div class="broker-modal-body">
+        <div class="broker-modal-section">
+          <div class="broker-modal-section-title">Información del Agente</div>
+          <div class="broker-info-grid" id="bmdInfoGrid"></div>
+        </div>
+        <div class="broker-modal-section" id="bmdAppsSection">
+          <div class="broker-modal-section-title">Aplicaciones Recientes</div>
+          <div id="bmdAppsList"></div>
+        </div>
+        <div class="broker-modal-section">
+          <div class="broker-modal-section-title">Notas Internas <span style="font-size:0.68rem;color:var(--text-muted);font-weight:400;">(solo visibles para tu inmobiliaria)</span></div>
+          <textarea class="broker-notes-area" id="bmdNotes" placeholder="Escribe notas sobre este agente..."></textarea>
+        </div>
+      </div>
+      <div class="broker-modal-footer">
+        <button class="btn-sm btn-primary-sm" id="bmdSaveNotes">Guardar Notas</button>
+        <button class="btn-sm btn-ghost-sm" id="bmdSendReset">🔒 Reset Contraseña</button>
+        <button class="btn-sm btn-danger-sm" id="bmdRemove">Desvincular</button>
+      </div>
     </div>
   </div>
 
@@ -2988,13 +3093,17 @@
     }
 
     // Broker team grid
+    const allBrokers = brokers;
     const grid = document.getElementById('brokerTeamGrid');
-    if (!brokers.length) {
-      grid.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;grid-column:1/-1;">No hay agentes afiliados.</p>`;
-    } else {
-      grid.innerHTML = brokers.map(b => {
+
+    function renderGrid(list) {
+      if (!list.length) {
+        grid.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;grid-column:1/-1;">No se encontraron agentes.</p>`;
+        return;
+      }
+      grid.innerHTML = list.map(b => {
         const av = b.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        return `<div class="equipo-card" data-id="${esc(b.id)}">
+        return `<div class="equipo-card" data-id="${esc(b.id)}" style="overflow:visible;">
           <div class="equipo-avatar">${esc(av)}</div>
           <div style="flex:1;min-width:0;">
             <div class="equipo-name">${esc(b.name)}</div>
@@ -3002,14 +3111,82 @@
             ${b.licenseNumber ? `<div class="equipo-meta">Lic. ${esc(b.licenseNumber)}</div>` : ''}
             <span class="equipo-apps">${b.app_count} aplicacion(es)</span>
           </div>
-          <button class="equipo-remove-btn" title="Desvincular agente" data-id="${esc(b.id)}" data-name="${esc(b.name)}">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          </button>
+          <button class="equipo-menu-btn" data-id="${esc(b.id)}" title="Opciones">⋯</button>
+          <div class="equipo-dropdown" id="drop_${esc(b.id)}">
+            <button class="equipo-dropdown-item" data-action="view" data-id="${esc(b.id)}">
+              <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+              Ver detalles
+            </button>
+            <button class="equipo-dropdown-item" data-action="reset" data-id="${esc(b.id)}" data-name="${esc(b.name)}">
+              <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+              Resetear contraseña
+            </button>
+            <button class="equipo-dropdown-item danger" data-action="remove" data-id="${esc(b.id)}" data-name="${esc(b.name)}">
+              <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+              Desvincular
+            </button>
+          </div>
         </div>`;
       }).join('');
-      grid.querySelectorAll('.equipo-remove-btn').forEach(btn => {
-        btn.onclick = () => removeBroker(btn.dataset.id, btn.dataset.name);
+
+      // Dropdown toggle
+      grid.querySelectorAll('.equipo-menu-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const drop = document.getElementById('drop_' + btn.dataset.id);
+          document.querySelectorAll('.equipo-dropdown.open').forEach(d => { if (d !== drop) d.classList.remove('open'); });
+          drop.classList.toggle('open');
+        };
       });
+      document.addEventListener('click', () => document.querySelectorAll('.equipo-dropdown.open').forEach(d => d.classList.remove('open')), { once: false });
+
+      // Action handlers
+      grid.querySelectorAll('.equipo-dropdown-item').forEach(item => {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.equipo-dropdown.open').forEach(d => d.classList.remove('open'));
+          const { action, id, name } = item.dataset;
+          if (action === 'view')   openBrokerModal(id);
+          if (action === 'reset')  sendBrokerReset(id, name);
+          if (action === 'remove') removeBroker(id, name);
+        };
+      });
+    }
+
+    renderGrid(allBrokers);
+
+    // Search
+    const searchInput = document.getElementById('teamSearchInput');
+    if (searchInput) {
+      searchInput.oninput = () => {
+        const q = searchInput.value.toLowerCase();
+        renderGrid(q ? allBrokers.filter(b => b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q)) : allBrokers);
+      };
+    }
+
+    // Invite copy
+    const inviteBtn = document.getElementById('inviteCopyBtn');
+    if (inviteBtn) {
+      inviteBtn.onclick = () => {
+        navigator.clipboard.writeText(window.location.origin + '/register-agency').then(() => {
+          inviteBtn.textContent = '✓ Copiado!';
+          setTimeout(() => { inviteBtn.textContent = 'Copiar enlace'; }, 2000);
+        });
+      };
+    }
+
+    // Export CSV
+    const exportBtn = document.getElementById('exportTeamBtn');
+    if (exportBtn) {
+      exportBtn.onclick = () => {
+        const rows = [['Nombre','Correo','Teléfono','Licencia','Aplicaciones','Fecha Afiliación']];
+        allBrokers.forEach(b => rows.push([b.name, b.email, b.phone||'', b.licenseNumber||'', b.app_count, b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '']));
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+        a.download = 'equipo_' + new Date().toISOString().slice(0,10) + '.csv';
+        a.click();
+      };
     }
 
     // Render performance page
@@ -3057,6 +3234,84 @@
       toast(action === 'approve' ? 'Agente aprobado ✓' : 'Solicitud rechazada');
       loadEquipo();
     } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── Broker detail modal ────────────────────────────────────────
+  const statusLabels = { aplicado:'Aplicado', en_revision:'En Revisión', documentos_requeridos:'Docs. Requeridos', documentos_enviados:'Docs. Enviados', documentos_insuficientes:'Docs. Insuficientes', en_aprobacion:'En Aprobación', reservado:'Reservado', aprobado:'Aprobado', pendiente_pago:'Pendiente Pago', pago_enviado:'Pago Enviado', pago_aprobado:'Pago Aprobado', completado:'Completado', rechazado:'Rechazado' };
+  const statusColors = { aplicado:'#3b82f6', en_revision:'#f59e0b', documentos_requeridos:'#f97316', documentos_enviados:'#8b5cf6', en_aprobacion:'#06b6d4', reservado:'#6366f1', aprobado:'#22c55e', pendiente_pago:'#ef4444', pago_enviado:'#f59e0b', pago_aprobado:'#10b981', completado:'#16a34a', rechazado:'#ef4444' };
+
+  async function openBrokerModal(brokerId) {
+    const modal = document.getElementById('brokerDetailModal');
+    modal.classList.add('open');
+    document.getElementById('bmdName').textContent = 'Cargando...';
+    document.getElementById('bmdInfoGrid').innerHTML = '';
+    document.getElementById('bmdAppsList').innerHTML = '';
+    document.getElementById('bmdNotes').value = '';
+
+    // Close handlers
+    document.getElementById('bmdClose').onclick = () => modal.classList.remove('open');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); };
+
+    try {
+      const b = await API(`/api/inmobiliaria/brokers/${brokerId}/details`);
+      const av = (b.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      document.getElementById('bmdAvatar').textContent = av;
+      document.getElementById('bmdName').textContent  = b.name;
+      document.getElementById('bmdMeta').textContent  = b.email + (b.phone ? ' · ' + b.phone : '');
+
+      document.getElementById('bmdInfoGrid').innerHTML = [
+        { label: 'Correo', value: b.email },
+        { label: 'Teléfono', value: b.phone || '—' },
+        { label: 'Licencia', value: b.licenseNumber || '—' },
+        { label: 'Tipo', value: b.role === 'agency' ? 'Agente Broker' : 'Broker' },
+        { label: 'Afiliado desde', value: b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '—' },
+        { label: 'Email verificado', value: b.emailVerified ? '✅ Sí' : '⚠️ No' },
+        { label: 'Aplicaciones', value: String(b.app_count) },
+      ].map(i => `<div class="broker-info-item"><div class="broker-info-item-label">${i.label}</div><div class="broker-info-item-value">${esc(i.value)}</div></div>`).join('');
+
+      const appsList = document.getElementById('bmdAppsList');
+      if (!b.recent_apps.length) {
+        appsList.innerHTML = `<p style="font-size:0.8rem;color:var(--text-muted);">Sin aplicaciones aún.</p>`;
+      } else {
+        appsList.innerHTML = b.recent_apps.map(a => `
+          <div class="broker-app-row">
+            <div>
+              <div class="broker-app-title">${esc(a.title)}</div>
+              ${a.client ? `<div class="broker-app-client">${esc(a.client)}</div>` : ''}
+            </div>
+            <span style="font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:color-mix(in srgb,${statusColors[a.status]||'#888'} 12%,transparent);color:${statusColors[a.status]||'#888'};flex-shrink:0;">${statusLabels[a.status]||a.status}</span>
+          </div>`).join('');
+      }
+
+      document.getElementById('bmdNotes').value = b.notes || '';
+
+      // Footer actions
+      document.getElementById('bmdSaveNotes').onclick = async () => {
+        const notes = document.getElementById('bmdNotes').value;
+        await API(`/api/inmobiliaria/brokers/${brokerId}/notes`, { method: 'PATCH', body: { notes } });
+        toast('Notas guardadas');
+      };
+      document.getElementById('bmdSendReset').onclick = () => {
+        modal.classList.remove('open');
+        sendBrokerReset(brokerId, b.name);
+      };
+      document.getElementById('bmdRemove').onclick = () => {
+        modal.classList.remove('open');
+        removeBroker(brokerId, b.name);
+      };
+    } catch(e) {
+      document.getElementById('bmdName').textContent = 'Error al cargar';
+    }
+  }
+
+  async function sendBrokerReset(brokerId, brokerName) {
+    if (!confirm(`¿Enviar correo de restablecimiento de contraseña a ${brokerName}?`)) return;
+    try {
+      await API(`/api/inmobiliaria/brokers/${brokerId}/send-reset`, { method: 'POST' });
+      toast(`Correo de restablecimiento enviado a ${brokerName}`);
+    } catch(e) {
+      toast(e.message || 'Error al enviar correo', 'error');
+    }
   }
 
   async function removeBroker(brokerId, brokerName) {

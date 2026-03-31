@@ -1,4 +1,5 @@
 const express      = require('express');
+const crypto       = require('crypto');
 const nodemailer   = require('nodemailer');
 const store        = require('./store');
 const { userAuth } = require('./auth');
@@ -326,6 +327,79 @@ router.get('/profile', userAuth, inmobiliariaAuth, (req, res) => {
   const inm = req.inmobiliariaUser;
   const { passwordHash, resetToken, resetTokenExpiry, ...safe } = inm;
   res.json(safe);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── GET /brokers/:brokerId/details ── Full broker info + recent apps
+// ══════════════════════════════════════════════════════════════════
+router.get('/brokers/:brokerId/details', userAuth, inmobiliariaAuth, (req, res) => {
+  const inm    = req.inmobiliariaUser;
+  const broker = store.getUserById(req.params.brokerId);
+  if (!broker || broker.inmobiliaria_id !== inm.id)
+    return res.status(404).json({ error: 'Agente no encontrado' });
+
+  const apps = store.getApplicationsByBroker(broker.id)
+    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    .slice(0, 10)
+    .map(a => ({ id: a.id, title: a.listing_title, status: a.status, updated_at: a.updated_at, client: a.client?.name }));
+
+  res.json({
+    id: broker.id, name: broker.name, email: broker.email, phone: broker.phone || '',
+    licenseNumber: broker.licenseNumber || '', role: broker.role,
+    joined_at: broker.inmobiliaria_joined_at || broker.createdAt,
+    emailVerified: broker.emailVerified !== false,
+    app_count: store.getApplicationsByBroker(broker.id).length,
+    notes: broker.inm_notes || '',
+    recent_apps: apps,
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── POST /brokers/:brokerId/send-reset ── Send password reset email
+// ══════════════════════════════════════════════════════════════════
+router.post('/brokers/:brokerId/send-reset', userAuth, inmobiliariaAuth, async (req, res) => {
+  const inm    = req.inmobiliariaUser;
+  const broker = store.getUserById(req.params.brokerId);
+  if (!broker || broker.inmobiliaria_id !== inm.id)
+    return res.status(404).json({ error: 'Agente no encontrado' });
+
+  const rawToken  = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  broker.resetToken       = tokenHash;
+  broker.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  store.saveUser(broker);
+
+  send(broker.email, 'Restablecer tu contraseña — HogaresRD', `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
+      <div style="background:#002D62;padding:28px 32px;">
+        <h2 style="color:#fff;margin:0;font-size:1.3rem;">🔒 Restablecer Contraseña</h2>
+      </div>
+      <div style="padding:28px 32px;background:#fff;">
+        <p style="color:#1a2b40;">Hola <strong>${broker.name}</strong>,</p>
+        <p style="color:#4d6a8a;line-height:1.6;">El administrador de <strong>${inm.name || 'tu inmobiliaria'}</strong> ha solicitado restablecer tu contraseña. Haz clic a continuación para crear una nueva.</p>
+        <p style="color:#4d6a8a;"><strong>Este enlace expira en 1 hora.</strong></p>
+        <div style="margin-top:24px;">
+          <a href="${BASE_URL}/reset-password?token=${rawToken}" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Restablecer Contraseña →</a>
+        </div>
+      </div>
+      <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;">HogaresRD · República Dominicana</div>
+    </div>`);
+
+  res.json({ success: true });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── PATCH /brokers/:brokerId/notes ── Save internal notes
+// ══════════════════════════════════════════════════════════════════
+router.patch('/brokers/:brokerId/notes', userAuth, inmobiliariaAuth, (req, res) => {
+  const inm    = req.inmobiliariaUser;
+  const broker = store.getUserById(req.params.brokerId);
+  if (!broker || broker.inmobiliaria_id !== inm.id)
+    return res.status(404).json({ error: 'Agente no encontrado' });
+
+  broker.inm_notes = (req.body.notes || '').trim().slice(0, 1000);
+  store.saveUser(broker);
+  res.json({ success: true });
 });
 
 module.exports = router;
