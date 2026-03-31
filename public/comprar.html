@@ -604,7 +604,15 @@
       }
     }
 
-    function applyFilters() { loadListings(1); renderFilterChips(); }
+    function applyFilters() {
+      loadListings(1);
+      renderFilterChips();
+      // Meta Pixel — Search
+      if (window.MetaPixel) {
+        const q = document.getElementById('fProvince')?.value || document.getElementById('fPropertyType')?.value || '';
+        window.MetaPixel.track('Search', { search_string: q });
+      }
+    }
     function resetFilters() {
       ['fProvince','fPropertyType','fCondition','fBedrooms','fAgency'].forEach(id => document.getElementById(id).value = '');
       ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
@@ -626,5 +634,6 @@
 
     loadListings(1);
   </script>
+<script src="/js/pixel.js" defer></script>
 </body>
 </html>

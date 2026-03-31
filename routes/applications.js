@@ -339,6 +339,20 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   store.saveApplication(app);
 
+  // Meta CAPI — Lead (fire-and-forget)
+  setImmediate(async () => {
+    try {
+      const meta = require('../utils/meta');
+      await meta.trackLead({
+        email: app.client.email, phone: app.client.phone, name: app.client.name,
+        ip: req.ip, userAgent: req.headers['user-agent'],
+        fbc: req.cookies?._fbc, fbp: req.cookies?._fbp,
+        eventId: `lead_${app.id}`,
+        listingTitle: app.listing_title, listingId: app.listing_id,
+      });
+    } catch (_) {}
+  });
+
   // Build application notification HTML
   function newAppHtml(recipientLabel) {
     return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">

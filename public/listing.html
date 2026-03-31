@@ -1019,6 +1019,13 @@
       window._lastAppId = data.id;
       document.getElementById('applyFormWrap').style.display    = 'none';
       document.getElementById('applySuccessWrap').style.display = 'block';
+      // Meta Pixel — Lead (deduplicated with CAPI via eventId)
+      if (window.MetaPixel) {
+        window.MetaPixel.track('Lead', {
+          content_name: window._currentListing?.title || document.title,
+          content_ids:  [listing?.id || listingId],
+        }, `lead_${data.id}`);
+      }
       const trackLink = document.getElementById('applyTrackLink');
       if (trackLink) trackLink.style.display = token ? 'inline-block' : 'none';
     })
@@ -1254,6 +1261,17 @@ const tabsHtml = shuffled.map((a, i) =>
       // Map was initialized while hidden — force it to recalculate tile layout
       if (window._listingMap) window._listingMap.invalidateSize();
 
+      // Meta Pixel — ViewContent
+      if (window.MetaPixel) {
+        window.MetaPixel.track('ViewContent', {
+          content_type: 'product',
+          content_name: listing.title,
+          content_ids:  [listingId],
+          value:        Number(listing.price) || 0,
+          currency:     'USD',
+        }, `vc_${listingId}_${Date.now()}`);
+      }
+
       // ── Mortgage Calculator ───────────────────────────────
       const mcPrice = document.getElementById('mcPrice');
       mcPrice.value = Number(listing.price).toLocaleString('en-US');
@@ -1426,5 +1444,6 @@ const tabsHtml = shuffled.map((a, i) =>
     }
   }
 </script>
+<script src="/js/pixel.js" defer></script>
 </body>
 </html>

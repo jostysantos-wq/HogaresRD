@@ -177,6 +177,14 @@ app.use('/api/broker',        require('./routes/broker-dashboard'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/conversations'));
+app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
+
+// ── Public config endpoint (pixel ID is intentionally public) ─────────────
+app.get('/api/config/meta', (req, res) => {
+  const pixelId = process.env.META_PIXEL_ID;
+  if (!pixelId) return res.json({ pixelId: null });
+  res.json({ pixelId });
+});
 
 // ── Photo upload endpoint ──────────────────────────────────────
 app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {

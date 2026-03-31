@@ -196,6 +196,18 @@ router.post('/register', authLimiter, async (req, res, next) => {
     const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
 
+    // Meta CAPI — CompleteRegistration (fire-and-forget)
+    setImmediate(async () => {
+      try {
+        const meta = require('../utils/meta');
+        await meta.trackCompleteRegistration({
+          email: user.email, phone: user.phone, name: user.name,
+          ip: req.ip, userAgent: req.headers['user-agent'],
+          eventId: `reg_${user.id}`,
+        });
+      } catch (_) {}
+    });
+
     // Welcome email — pull top 3 trending listings by views
     const trending = store.getListings()
       .sort((a, b) => (b.views || 0) - (a.views || 0))

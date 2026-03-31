@@ -223,6 +223,22 @@ router.post('/webhook', (req, res) => {
         store.saveUser(user);
         console.log(`[Stripe] Payment succeeded → user ${user.id}`);
       }
+      // Meta CAPI — Purchase (fire-and-forget)
+      if (user && invoice.amount_paid > 0) {
+        setImmediate(async () => {
+          try {
+            const meta = require('../utils/meta');
+            await meta.trackPurchase({
+              email: user.email, phone: user.phone, name: user.name,
+              ip: null, userAgent: null,
+              eventId:  `purch_${invoice.id}`,
+              value:    invoice.amount_paid / 100,
+              currency: (invoice.currency || 'usd').toUpperCase(),
+              planName: user.subscriptionPlan || 'Pro',
+            });
+          } catch (_) {}
+        });
+      }
       break;
     }
 

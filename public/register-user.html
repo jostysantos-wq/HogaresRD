@@ -240,6 +240,8 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
+        // Meta Pixel — CompleteRegistration (deduped with CAPI via eventId reg_<userId>)
+        if (window.MetaPixel) window.MetaPixel.track('CompleteRegistration', { status: 'registered' });
         window.location.href = '/login?registered=1';
       } catch (ex) {
         err.textContent = ex.message;
@@ -249,5 +251,6 @@
       }
     });
   </script>
+<script src="/js/pixel.js" defer></script>
 </body>
 </html>

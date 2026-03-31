@@ -286,6 +286,8 @@
           });
           const data = await res.json();
           if (data.url) {
+            // Meta Pixel — InitiateCheckout
+            if (window.MetaPixel) window.MetaPixel.track('InitiateCheckout');
             window.location.href = data.url;
           } else {
             alert(data.error || 'Error al iniciar el pago. Intenta de nuevo.');
@@ -300,5 +302,6 @@
       });
     })();
   </script>
+<script src="/js/pixel.js" defer></script>
 </body>
 </html>

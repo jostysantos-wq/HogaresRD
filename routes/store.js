@@ -9,6 +9,7 @@ const FILES = {
   applications:   path.join(DATA_DIR, 'applications.json'),
   revokedTokens:  path.join(DATA_DIR, 'revoked_tokens.json'),
   conversations:  path.join(DATA_DIR, 'conversations.json'),
+  metaLeads:      path.join(DATA_DIR, 'meta_leads.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -139,6 +140,19 @@ function isTokenRevoked(jti) {
   return _readRevoked().some(t => t.jti === jti && t.exp > now);
 }
 
+// ── Meta Leads ────────────────────────────────────────────────────────────
+ensureFile(FILES.metaLeads);
+
+function getMetaLeads() { return read(FILES.metaLeads); }
+
+function appendMetaLead(lead) {
+  const all = getMetaLeads();
+  // Deduplicate by leadgenId
+  if (lead.leadgenId && all.some(l => l.leadgenId === lead.leadgenId)) return;
+  all.unshift(lead);
+  write(FILES.metaLeads, all);
+}
+
 // ── Conversations ─────────────────────────────────────────────────────────
 ensureFile(FILES.conversations);
 
@@ -186,6 +200,7 @@ module.exports = {
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
   getConversations, getConversationById, getConversationsByClient,
   getConversationsForBroker, saveConversation,
+  getMetaLeads, appendMetaLead,
   getUsersByRole, getUsersByInmobiliaria,
   revokeToken, isTokenRevoked,
 };
