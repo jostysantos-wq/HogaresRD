@@ -19,7 +19,7 @@ const cookieParser    = require('cookie-parser');
 // ── Helper: resolve user from cookie or Bearer token ─────────────────────
 function getUser(req) {
   try {
-    const cookieToken = req.cookies?.hogaresrd_session;
+    const cookieToken = req.cookies?.hrdt;
     const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
     const token = cookieToken || headerToken;
     if (!token) return null;
