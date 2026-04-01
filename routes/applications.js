@@ -504,22 +504,6 @@ router.put('/:id/status', userAuth, (req, res) => {
   }
 
   res.json(app);
-
-  // SMS client notification (fire-and-forget)
-  setImmediate(async () => {
-    try {
-      const clientPhone = app.client.phone ||
-        (app.client.user_id ? store.getUserById(app.client.user_id)?.phone : null);
-      if (clientPhone) {
-        await notify.notifyClientStatusChange({
-          clientPhone,
-          propertyTitle: app.listing_title,
-          newStatus:     status,
-          appId:         app.id,
-        });
-      }
-    } catch (e) { console.error('[notify-status]', e.message); }
-  });
 });
 
 // ══════════════════════════════════════════════════════════════════

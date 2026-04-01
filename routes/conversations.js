@@ -1,7 +1,23 @@
-const express = require('express');
-const router  = express.Router();
-const store   = require('./store');
-const notify  = require('../utils/twilio');
+const express      = require('express');
+const router       = express.Router();
+const nodemailer   = require('nodemailer');
+const store        = require('./store');
+const notify       = require('../utils/twilio');
+
+const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+});
+
+function _sendMail(to, subject, html) {
+  if (!to || !process.env.EMAIL_USER) return;
+  transporter.sendMail({
+    from: `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    to, subject, html,
+  }).catch(err => console.error('[conv-mail]', err.message));
+}
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria'];
 
@@ -201,17 +217,25 @@ router.post('/:id/messages', requireLogin, (req, res) => {
   // ── Fire-and-forget notifications ────────────────────────────────────────
   setImmediate(async () => {
     try {
+      const preview = text.trim().slice(0, 120) + (text.trim().length > 120 ? '…' : '');
       if (isBroker) {
-        // Broker replied → notify client via SMS
+        // Broker replied → notify client via email
         const clientUser = store.getUserById(conv.clientId);
-        if (clientUser?.phone) {
-          await notify.notifyClientBrokerReply({
-            clientPhone:    clientUser.phone,
-            brokerName:     user.name,
-            propertyTitle:  conv.propertyTitle,
-            messagePreview: text.trim(),
-            convId:         conv.id,
-          });
+        if (clientUser?.email) {
+          _sendMail(
+            clientUser.email,
+            `HogaresRD — ${user.name} te respondió sobre "${conv.propertyTitle}"`,
+            `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+              <div style="background:#002D62;color:#fff;padding:1.2rem 1.5rem;border-radius:12px 12px 0 0;">
+                <h2 style="margin:0;font-size:1.1rem;">💬 Nuevo mensaje de tu agente</h2>
+              </div>
+              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
+                <p style="margin:0 0 0.5rem;"><strong>${user.name}</strong> respondió sobre <strong>${conv.propertyTitle}</strong>:</p>
+                <blockquote style="margin:0.75rem 0;padding:0.75rem 1rem;background:#f5f8ff;border-left:3px solid #0038A8;border-radius:4px;color:#1a2b40;">${preview}</blockquote>
+                <a href="${BASE_URL}/mensajes?conv=${conv.id}" style="display:inline-block;margin-top:1rem;background:#0038A8;color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver conversación →</a>
+              </div>
+            </div>`
+          );
         }
       } else {
         // Client sent message → notify broker via WhatsApp
