@@ -23,19 +23,16 @@ struct ContentView: View {
             FeedView()
                 .tabItem { Label("Feed",     systemImage: "newspaper.fill") }
                 .tag(0)
-            HomeView()
-                .tabItem { Label("Inicio",   systemImage: "house.fill") }
+            BrowseView()
+                .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
                 .tag(1)
             // Centre slot — intercepted by onChange, never displays content
             Color.clear
                 .tabItem { Label("Publicar", systemImage: "plus.circle.fill") }
                 .tag(2)
-            BrowseView()
-                .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
+            NotificationsView()
+                .tabItem { Label("Alertas",  systemImage: "bell.fill") }
                 .tag(3)
-            ProfileView()
-                .tabItem { Label("Perfil",   systemImage: "person.circle.fill") }
-                .tag(4)
         }
         .tint(Color.rdBlue)
         .onChange(of: selectedTab) { _, new in

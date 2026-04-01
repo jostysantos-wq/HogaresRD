@@ -14,14 +14,16 @@ struct BrowseView: View {
     @State private var error:         String?   = nil
 
     // Map state
-    @State private var showMap         = true
     @State private var selectedListing: Listing? = nil
     @State private var pins:            [Listing] = []
 
     // Filter sheet
     @State private var showFilters     = false
-    @State private var showLocationSheet = false
     @State private var filterProvince: String?   = nil
+
+    // Search
+    @State private var searchText:       String = ""
+    @State private var showSearchPage:   Bool   = false
 
     // Client-side filters
     @State private var filterMinPrice:     Double? = nil
@@ -43,6 +45,10 @@ struct BrowseView: View {
     // Location
     @StateObject private var locationManager = LocationManager()
     @State private var centerOnUser          = false
+    @State private var targetCoordinate: CLLocationCoordinate2D? = nil
+    @State private var targetZoom: Double = 35_000
+    @State private var searchCenter: CLLocationCoordinate2D? = nil
+    @State private var searchRadius: Double = 0 // km
 
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
@@ -57,6 +63,14 @@ struct BrowseView: View {
     // MARK: - Computed: filtered listings
     private var filteredListings: [Listing] {
         listings.filter { listing in
+            // Radius filter — only show properties within the search radius
+            if let center = searchCenter, searchRadius > 0,
+               let lat = listing.lat, let lng = listing.lng {
+                let listingLoc = CLLocation(latitude: lat, longitude: lng)
+                let centerLoc  = CLLocation(latitude: center.latitude, longitude: center.longitude)
+                let distanceKm = listingLoc.distance(from: centerLoc) / 1000.0
+                if distanceKm > searchRadius { return false }
+            }
             if let min = filterMinPrice, let p = Double(listing.price), p < min { return false }
             if let max = filterMaxPrice, let p = Double(listing.price), p > max { return false }
             if let minB = filterMinBedrooms,
@@ -73,6 +87,30 @@ struct BrowseView: View {
                 for a in filterAmenities { if !has.contains(a.lowercased()) { return false } }
             }
             return true
+        }
+    }
+
+    /// Compute search radius (km) based on zoom level of location
+    /// Smaller zoom = neighborhood (tighter radius), larger zoom = province (wider)
+    private static func radiusForZoom(_ zoom: Double) -> Double {
+        switch zoom {
+        case ...4_000:   return 3     // tight neighborhood (~3 km)
+        case ...8_000:   return 5     // neighborhood / sector (~5 km)
+        case ...15_000:  return 10    // city area (~10 km)
+        case ...30_000:  return 20    // large city (~20 km)
+        case ...50_000:  return 35    // metro area (~35 km)
+        default:         return 50    // province-wide (~50 km)
+        }
+    }
+
+    /// Pins filtered by search radius (same logic as filteredListings but for map)
+    private var filteredPins: [Listing] {
+        guard let center = searchCenter, searchRadius > 0 else { return pins }
+        let centerLoc = CLLocation(latitude: center.latitude, longitude: center.longitude)
+        return pins.filter { listing in
+            guard let lat = listing.lat, let lng = listing.lng else { return false }
+            let dist = CLLocation(latitude: lat, longitude: lng).distance(from: centerLoc) / 1000.0
+            return dist <= searchRadius
         }
     }
 
@@ -105,29 +143,47 @@ struct BrowseView: View {
     // MARK: - body
     var body: some View {
         ZStack(alignment: .top) {
-            if showMap {
-                mapContent
-                    .ignoresSafeArea()
-            } else {
-                NavigationStack {
-                    listLayer
-                        .navigationBarHidden(true)
+            mapContent
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    searchBarButton
+                    filterIconButton
+                }
+                .padding(.top, 56)
+                .padding(.horizontal, 16)
+
+                // Expanded list — sits right below search bar
+                if sheetExpanded {
+                    expandedListOverlay
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-
-            HStack(spacing: 10) {
-                searchBarButton
-                filterIconButton
-            }
-            .padding(.top, 56)
-            .padding(.horizontal, 16)
         }
         .ignoresSafeArea(edges: .top)
         .onAppear     { selectedType = initialType }
         .onChange(of: selectedType) { Task { await load(reset: true) } }
         .task         { await load(reset: true) }
         .sheet(isPresented: $showFilters) { filterSheet }
-        .sheet(isPresented: $showLocationSheet) { locationSheet }
+        .fullScreenCover(isPresented: $showSearchPage) {
+            SearchPageView(
+                searchText: $searchText,
+                filterProvince: $filterProvince,
+                searchCenter: $searchCenter,
+                searchRadius: $searchRadius,
+                targetCoordinate: $targetCoordinate,
+                targetZoom: $targetZoom,
+                onSelect: {
+                    showSearchPage = false
+                    Task { await load(reset: true) }
+                },
+                onClear: {
+                    showSearchPage = false
+                    Task { await load(reset: true) }
+                }
+            )
+        }
         .sheet(isPresented: Binding(
             get:  { detailListingID != nil },
             set:  { if !$0 { detailListingID = nil } }
@@ -146,10 +202,12 @@ struct BrowseView: View {
     private var mapContent: some View {
         ZStack(alignment: .bottom) {
             NativeMapView(
-                listings:     pins,
+                listings:     filteredPins,
                 selected:     $selectedListing,
                 centerOnUser: $centerOnUser,
                 userLocation: locationManager.location,
+                targetCoordinate: $targetCoordinate,
+                targetZoom:   targetZoom,
                 mapState:     mapState
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -176,10 +234,6 @@ struct BrowseView: View {
             .opacity(sheetExpanded ? 0 : 1)
 
             bottomSheet
-
-            mapToggleButton
-                .padding(.bottom, grabBarHeight + 8)
-                .opacity(sheetExpanded ? 0 : 1)
         }
         .onTapGesture {
             // Tap on empty map area dismisses callout
@@ -297,7 +351,8 @@ struct BrowseView: View {
 
     // MARK: - Bottom sheet
     private var grabBarHeight: CGFloat { 56 }
-    private var sheetExpandedHeight: CGFloat { UIScreen.main.bounds.height * 0.75 }
+    // Expand almost to top — leave room for status bar + search bar (~110pt)
+    private var sheetExpandedHeight: CGFloat { UIScreen.main.bounds.height - 110 }
 
     private var currentSheetHeight: CGFloat {
         let base = sheetExpanded ? sheetExpandedHeight : grabBarHeight
@@ -315,48 +370,73 @@ struct BrowseView: View {
                 .padding(.bottom, 5)
 
             HStack {
+                Spacer()
                 if loading && listings.isEmpty {
                     Text("Cargando...")
                         .font(.subheadline).foregroundStyle(.secondary)
                 } else {
                     Text("\(filteredListings.count) propiedades")
                         .font(.subheadline.bold())
-                    if let prov = filterProvince {
-                        Text("en \(prov)")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
                 }
                 Spacer()
-                if !sheetExpanded {
-                    Label("Ver todas", systemImage: "chevron.up")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color.rdBlue)
-                }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
-
-            if sheetExpanded {
-                expandedListContent
-            }
         }
-        .frame(height: currentSheetHeight, alignment: .top)
+        .frame(height: grabBarHeight, alignment: .top)
         .frame(maxWidth: .infinity)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: sheetExpanded ? 22 : 18, style: .continuous))
-        .shadow(color: .black.opacity(0.15), radius: sheetExpanded ? 20 : 8, y: -3)
-        .padding(.bottom, sheetExpanded ? 0 : tabBarHeight)  // sit just above tab bar
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: -3)
+        .padding(.bottom, tabBarHeight)
+        .opacity(sheetExpanded ? 0 : 1)
         .gesture(
             DragGesture()
                 .updating($dragOffset) { v, s, _ in s = v.translation.height }
                 .onEnded { v in
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         if v.translation.height < -50 { sheetExpanded = true }
-                        else if v.translation.height > 50 { sheetExpanded = false; selectedListing = nil }
                     }
                 }
         )
-        .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.82), value: dragOffset)
+    }
+
+    // MARK: - Expanded list overlay (below search bar, full remaining height)
+    @ViewBuilder
+    private var expandedListOverlay: some View {
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Text("\(filteredListings.count) propiedades")
+                        .font(.subheadline.bold())
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+
+                expandedListContent
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+
+            // Floating "Mapa" button
+            Button {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    sheetExpanded = false
+                    selectedListing = nil
+                }
+            } label: {
+                Label("Mapa", systemImage: "map.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.rdBlue)
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+            }
+            .padding(.bottom, tabBarHeight + 16)
+        }
     }
 
     // Expanded: single-column full-width cards (larger images)
@@ -403,18 +483,30 @@ struct BrowseView: View {
         }
     }
 
+    // MARK: - Search bar (tappable — opens search page)
     private var searchBarButton: some View {
-        Button { showLocationSheet = true } label: {
+        Button {
+            showSearchPage = true
+        } label: {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Color.rdBlue)
-                Text(filterProvince ?? "Buscar provincia, ciudad...")
-                    .font(.subheadline)
-                    .foregroundStyle(filterProvince == nil ? .secondary : .primary)
+                if searchText.isEmpty {
+                    Text("Buscar provincia, ciudad...")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(searchText)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
-                if filterProvince != nil {
+                if !searchText.isEmpty {
                     Button {
+                        searchText = ""
                         filterProvince = nil
+                        searchCenter = nil
+                        searchRadius = 0
                         Task { await load(reset: true) }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -427,7 +519,6 @@ struct BrowseView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
             .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
         }
-        .buttonStyle(.plain)
     }
 
     private var filterIconButton: some View {
@@ -457,66 +548,7 @@ struct BrowseView: View {
         }
     }
 
-    private var mapToggleButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                showMap.toggle()
-                if !showMap { selectedListing = nil }
-            }
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: showMap ? "list.bullet" : "map.fill")
-                Text(showMap ? "Lista" : "Mapa").fontWeight(.semibold)
-            }
-            .font(.subheadline)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 22).padding(.vertical, 13)
-            .background(Color.rdBlue, in: Capsule())
-            .shadow(color: Color.rdBlue.opacity(0.4), radius: 10, y: 4)
-        }
-    }
-
-    // MARK: - List layer (full screen)
-    @ViewBuilder
-    private var listLayer: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                Color.clear.frame(height: 80)
-
-                if loading && listings.isEmpty {
-                    ProgressView("Cargando propiedades...").padding(.top, 60)
-                } else if let err = error {
-                    VStack(spacing: 12) {
-                        Image(systemName: "wifi.slash")
-                            .font(.largeTitle).foregroundStyle(Color.rdRed)
-                        Text(err).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button("Reintentar") { Task { await load(reset: true) } }
-                            .buttonStyle(.borderedProminent).tint(Color.rdBlue)
-                    }.padding()
-                } else {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredListings) { listing in
-                            NavigationLink { ListingDetailView(id: listing.id) } label: {
-                                ListingRow(listing: listing, isSelected: false)
-                            }
-                            .buttonStyle(.plain)
-                            .onAppear {
-                                if listing.id == filteredListings.last?.id, page < totalPages {
-                                    Task { await loadMore() }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    if loading && !listings.isEmpty { ProgressView().padding() }
-                    Color.clear.frame(height: 90)
-                }
-            }
-            .refreshable { await load(reset: true) }
-
-            mapToggleButton.padding(.bottom, 20)
-        }
-    }
+    // (Lista view removed — listings accessible via swipe-up sheet)
 
     // MARK: - Filter sheet (comprehensive – no location)
     private var filterSheet: some View {
@@ -731,63 +763,7 @@ struct BrowseView: View {
         .presentationDetents([.large])
     }
 
-    // MARK: - Location sheet (province/city only)
-    private var locationSheet: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Button {
-                        filterProvince = nil
-                        showLocationSheet = false
-                        Task { await load(reset: true) }
-                    } label: {
-                        HStack {
-                            Image(systemName: "mappin.and.ellipse")
-                                .foregroundStyle(Color.rdBlue)
-                            Text("Todas las ubicaciones")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if filterProvince == nil {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.rdBlue)
-                                    .fontWeight(.bold)
-                            }
-                        }
-                    }
-                }
-
-                Section("Provincias") {
-                    ForEach(drProvinces, id: \.self) { prov in
-                        Button {
-                            filterProvince = prov
-                            showLocationSheet = false
-                            Task { await load(reset: true) }
-                        } label: {
-                            HStack {
-                                Image(systemName: "mappin.circle.fill")
-                                    .foregroundStyle(Color.rdBlue)
-                                Text(prov).foregroundStyle(.primary)
-                                Spacer()
-                                if filterProvince == prov {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.rdBlue)
-                                        .fontWeight(.bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Ubicación")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cerrar") { showLocationSheet = false }
-                }
-            }
-        }
-        .presentationDetents([.large])
-    }
+    // (Location sheet removed — replaced by inline search suggestions)
 
     private func formatCurrency(_ value: Double) -> String {
         let f = NumberFormatter()
@@ -1189,13 +1165,578 @@ struct GridCard: View {
 }
 
 // MARK: - Province list
-private let drProvinces: [String] = [
-    "Distrito Nacional", "Santo Domingo", "Santiago", "La Romana",
-    "San Pedro de Macorís", "Puerto Plata", "La Altagracia", "Duarte",
-    "San Cristóbal", "Espaillat", "Peravia", "La Vega", "Samaná",
-    "El Seibo", "Hato Mayor", "Monte Plata", "María Trinidad Sánchez",
-    "Hermanas Mirabal", "Valverde", "Montecristi", "Dajabón",
-    "Santiago Rodríguez", "Elías Piña", "San Juan", "Azua",
-    "Baoruco", "Barahona", "Independencia", "Pedernales",
-    "San José de Ocoa", "Sánchez Ramírez",
+// MARK: - Location data model
+struct LocationSuggestion: Identifiable {
+    let id = UUID()
+    let name: String
+    let province: String
+    let icon: String
+    let popular: Bool
+    let lat: Double
+    let lng: Double
+    let zoom: Double  // meters for region span
+}
+
+// MARK: - Full-screen Search Page
+struct SearchPageView: View {
+    @Binding var searchText: String
+    @Binding var filterProvince: String?
+    @Binding var searchCenter: CLLocationCoordinate2D?
+    @Binding var searchRadius: Double
+    @Binding var targetCoordinate: CLLocationCoordinate2D?
+    @Binding var targetZoom: Double
+    var onSelect: () -> Void
+    var onClear: () -> Void
+
+    @State private var query: String = ""
+    @FocusState private var fieldFocused: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    private var suggestions: [LocationSuggestion] {
+        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        if q.isEmpty { return [] }
+        return drLocationData.filter {
+            $0.name.lowercased().contains(q) ||
+            $0.province.lowercased().contains(q)
+        }.prefix(15).map { $0 }
+    }
+
+    private var popularLocations: [LocationSuggestion] {
+        drLocationData.filter { $0.popular }
+    }
+
+    private var provinces: [LocationSuggestion] {
+        drLocationData.filter { $0.icon == "mappin.circle.fill" }
+    }
+
+    /// Compute search radius (km) based on zoom level of location
+    private static func radiusForZoom(_ zoom: Double) -> Double {
+        switch zoom {
+        case ...4_000:   return 3
+        case ...8_000:   return 5
+        case ...15_000:  return 10
+        case ...30_000:  return 20
+        case ...50_000:  return 35
+        default:         return 50
+        }
+    }
+
+    private func select(_ suggestion: LocationSuggestion) {
+        searchText = suggestion.name
+        filterProvince = suggestion.province
+        targetZoom = suggestion.zoom
+        targetCoordinate = CLLocationCoordinate2D(latitude: suggestion.lat, longitude: suggestion.lng)
+        searchCenter = CLLocationCoordinate2D(latitude: suggestion.lat, longitude: suggestion.lng)
+        searchRadius = Self.radiusForZoom(suggestion.zoom)
+        onSelect()
+    }
+
+    private func clearSearch() {
+        searchText = ""
+        filterProvince = nil
+        searchCenter = nil
+        searchRadius = 0
+        onClear()
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Search field
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.rdBlue)
+                    TextField("Buscar provincia, ciudad, sector...", text: $query)
+                        .font(.subheadline)
+                        .focused($fieldFocused)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.words)
+                        .onSubmit {
+                            if let first = suggestions.first {
+                                select(first)
+                            }
+                        }
+                    if !query.isEmpty {
+                        Button {
+                            query = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+
+                // Results
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if !query.isEmpty {
+                            // Search results
+                            if suggestions.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.title)
+                                        .foregroundStyle(.tertiary)
+                                    Text("No se encontraron resultados")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.top, 60)
+                            } else {
+                                ForEach(suggestions) { s in
+                                    suggestionRow(s)
+                                }
+                            }
+                        } else {
+                            // All locations option
+                            Button {
+                                clearSearch()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 40, height: 40)
+                                        Image(systemName: "mappin.and.ellipse")
+                                            .foregroundStyle(Color.rdBlue)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Todas las ubicaciones")
+                                            .font(.subheadline).bold()
+                                            .foregroundStyle(.primary)
+                                        Text("República Dominicana")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if filterProvince == nil {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Color.rdBlue)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                            }
+
+                            Divider().padding(.leading, 68)
+
+                            // Popular locations
+                            sectionHeader("Ubicaciones populares", icon: "star.fill")
+
+                            ForEach(popularLocations) { s in
+                                suggestionRow(s)
+                            }
+
+                            Divider().padding(.leading, 68).padding(.top, 4)
+
+                            // Provinces
+                            sectionHeader("Provincias", icon: "map.fill")
+
+                            ForEach(provinces) { s in
+                                suggestionRow(s)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 40)
+                }
+                .padding(.top, 8)
+            }
+            .navigationTitle("Buscar ubicación")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            query = ""
+            fieldFocused = true
+        }
+    }
+
+    // MARK: - Row
+
+    private func suggestionRow(_ suggestion: LocationSuggestion) -> some View {
+        Button {
+            select(suggestion)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 40, height: 40)
+                    Image(systemName: suggestion.icon)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.rdBlue)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(suggestion.name)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    if suggestion.name != suggestion.province {
+                        Text(suggestion.province)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if filterProvince == suggestion.province && searchText == suggestion.name {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.rdBlue)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+    }
+
+    private func sectionHeader(_ title: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(Color.rdBlue)
+            Text(title)
+                .font(.caption).bold()
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 6)
+    }
+}
+
+private let drLocationData: [LocationSuggestion] = [
+
+    // ════════════════════════════════════════════════════════════════
+    // POPULAR SECTORS (shown when search is empty)
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Piantini",             province: "Distrito Nacional",    icon: "building.2.fill", popular: true,  lat: 18.4722, lng: -69.9388, zoom: 3_000),
+    LocationSuggestion(name: "Naco",                 province: "Distrito Nacional",    icon: "building.2.fill", popular: true,  lat: 18.4755, lng: -69.9335, zoom: 3_000),
+    LocationSuggestion(name: "Bella Vista",          province: "Distrito Nacional",    icon: "building.2.fill", popular: true,  lat: 18.4690, lng: -69.9420, zoom: 3_000),
+    LocationSuggestion(name: "Punta Cana",           province: "La Altagracia",       icon: "beach.umbrella",  popular: true,  lat: 18.5820, lng: -68.4055, zoom: 15_000),
+    LocationSuggestion(name: "Bávaro",               province: "La Altagracia",       icon: "beach.umbrella",  popular: true,  lat: 18.6870, lng: -68.4540, zoom: 10_000),
+    LocationSuggestion(name: "Juan Dolio",           province: "San Pedro de Macorís",icon: "beach.umbrella",  popular: true,  lat: 18.4280, lng: -69.4320, zoom: 8_000),
+    LocationSuggestion(name: "Los Cacicazgos",       province: "Distrito Nacional",    icon: "building.2.fill", popular: true,  lat: 18.4650, lng: -69.9450, zoom: 3_000),
+    LocationSuggestion(name: "Evaristo Morales",     province: "Distrito Nacional",    icon: "building.2.fill", popular: true,  lat: 18.4780, lng: -69.9310, zoom: 3_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // DISTRITO NACIONAL — Sectors
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Gazcue",               province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4630, lng: -69.9230, zoom: 3_000),
+    LocationSuggestion(name: "Arroyo Hondo",         province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4950, lng: -69.9500, zoom: 4_000),
+    LocationSuggestion(name: "Ensanche Paraíso",     province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4590, lng: -69.9480, zoom: 3_000),
+    LocationSuggestion(name: "La Esperilla",         province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4740, lng: -69.9360, zoom: 3_000),
+    LocationSuggestion(name: "El Vergel",            province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4700, lng: -69.9290, zoom: 3_000),
+    LocationSuggestion(name: "Renacimiento",         province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4830, lng: -69.9450, zoom: 3_000),
+    LocationSuggestion(name: "Julieta Morales",      province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4790, lng: -69.9280, zoom: 3_000),
+    LocationSuggestion(name: "Los Prados",           province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4830, lng: -69.9310, zoom: 3_000),
+    LocationSuggestion(name: "La Julia",             province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4770, lng: -69.9370, zoom: 3_000),
+    LocationSuggestion(name: "Zona Colonial",        province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4735, lng: -69.8850, zoom: 2_000),
+    LocationSuggestion(name: "El Millón",            province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4880, lng: -69.9360, zoom: 3_000),
+    LocationSuggestion(name: "Los Ríos",             province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4770, lng: -69.9530, zoom: 3_000),
+    LocationSuggestion(name: "Ensanche Ozama",       province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4850, lng: -69.8720, zoom: 3_000),
+    LocationSuggestion(name: "Ensanche Luperón",     province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4900, lng: -69.9430, zoom: 3_000),
+    LocationSuggestion(name: "Villa Juana",          province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4740, lng: -69.9120, zoom: 3_000),
+    LocationSuggestion(name: "Cristo Rey",           province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4900, lng: -69.9180, zoom: 3_000),
+    LocationSuggestion(name: "Viejo Arroyo Hondo",   province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4980, lng: -69.9600, zoom: 4_000),
+    LocationSuggestion(name: "Mirador Sur",          province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4550, lng: -69.9580, zoom: 3_000),
+    LocationSuggestion(name: "Mirador Norte",        province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4970, lng: -69.9580, zoom: 3_000),
+    LocationSuggestion(name: "Ensanche Quisqueya",   province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4820, lng: -69.9220, zoom: 3_000),
+    LocationSuggestion(name: "San Gerónimo",         province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4670, lng: -69.9300, zoom: 2_500),
+    LocationSuggestion(name: "Miraflores",           province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4850, lng: -69.9450, zoom: 3_000),
+    LocationSuggestion(name: "Alma Rosa",            province: "Distrito Nacional",    icon: "building.2.fill", popular: false, lat: 18.4930, lng: -69.8600, zoom: 4_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SANTO DOMINGO (Province) — Municipalities & Sectors
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Santo Domingo Este",   province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4880, lng: -69.8570, zoom: 12_000),
+    LocationSuggestion(name: "Santo Domingo Norte",  province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5400, lng: -69.9100, zoom: 15_000),
+    LocationSuggestion(name: "Santo Domingo Oeste",  province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4900, lng: -69.9800, zoom: 12_000),
+    LocationSuggestion(name: "Los Alcarrizos",       province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5130, lng: -70.0100, zoom: 8_000),
+    LocationSuggestion(name: "Pedro Brand",          province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5300, lng: -70.0600, zoom: 10_000),
+    LocationSuggestion(name: "Boca Chica",           province: "Santo Domingo",        icon: "beach.umbrella",  popular: false, lat: 18.4480, lng: -69.6060, zoom: 6_000),
+    LocationSuggestion(name: "Los Jardines",         province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5060, lng: -69.8800, zoom: 4_000),
+    LocationSuggestion(name: "Villa Mella",          province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5500, lng: -69.9230, zoom: 6_000),
+    LocationSuggestion(name: "Guerra",               province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5380, lng: -69.7200, zoom: 10_000),
+    LocationSuggestion(name: "La Victoria",          province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.5720, lng: -69.8400, zoom: 8_000),
+    LocationSuggestion(name: "Mendoza",              province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4950, lng: -69.8600, zoom: 4_000),
+    LocationSuggestion(name: "Isabelita",            province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4900, lng: -69.8500, zoom: 4_000),
+    LocationSuggestion(name: "Las Américas",         province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4600, lng: -69.7100, zoom: 8_000),
+    LocationSuggestion(name: "San Isidro",           province: "Santo Domingo",        icon: "building.2.fill", popular: false, lat: 18.4970, lng: -69.8150, zoom: 5_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SANTIAGO — Province & Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Santiago de los Caballeros", province: "Santiago",        icon: "building.2.fill", popular: false, lat: 19.4500, lng: -70.6940, zoom: 15_000),
+    LocationSuggestion(name: "Villa Bisonó (Navarrete)", province: "Santiago",          icon: "building.2.fill", popular: false, lat: 19.5470, lng: -70.8590, zoom: 8_000),
+    LocationSuggestion(name: "Tamboril",             province: "Santiago",              icon: "building.2.fill", popular: false, lat: 19.4830, lng: -70.6100, zoom: 8_000),
+    LocationSuggestion(name: "Licey al Medio",       province: "Santiago",              icon: "building.2.fill", popular: false, lat: 19.4300, lng: -70.6100, zoom: 6_000),
+    LocationSuggestion(name: "Puñal",                province: "Santiago",              icon: "building.2.fill", popular: false, lat: 19.3900, lng: -70.5650, zoom: 8_000),
+    LocationSuggestion(name: "San José de las Matas",province: "Santiago",              icon: "mountain.2.fill", popular: false, lat: 19.3340, lng: -70.9310, zoom: 10_000),
+    LocationSuggestion(name: "Jánico",               province: "Santiago",              icon: "mountain.2.fill", popular: false, lat: 19.3330, lng: -70.7780, zoom: 10_000),
+    LocationSuggestion(name: "Pedro García",         province: "Santiago",              icon: "building.2.fill", popular: false, lat: 19.3800, lng: -70.7000, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // LA ALTAGRACIA — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Higüey",               province: "La Altagracia",        icon: "building.2.fill", popular: false, lat: 18.6150, lng: -68.7080, zoom: 10_000),
+    LocationSuggestion(name: "San Rafael del Yuma",  province: "La Altagracia",        icon: "building.2.fill", popular: false, lat: 18.4280, lng: -68.6710, zoom: 10_000),
+    LocationSuggestion(name: "Cap Cana",             province: "La Altagracia",        icon: "beach.umbrella",  popular: false, lat: 18.5150, lng: -68.3700, zoom: 8_000),
+    LocationSuggestion(name: "Verón",                province: "La Altagracia",        icon: "building.2.fill", popular: false, lat: 18.6750, lng: -68.4620, zoom: 6_000),
+    LocationSuggestion(name: "Uvero Alto",           province: "La Altagracia",        icon: "beach.umbrella",  popular: false, lat: 18.7600, lng: -68.5200, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // LA ROMANA — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "La Romana (ciudad)",   province: "La Romana",            icon: "building.2.fill", popular: false, lat: 18.4270, lng: -68.9730, zoom: 10_000),
+    LocationSuggestion(name: "Casa de Campo",        province: "La Romana",            icon: "beach.umbrella",  popular: false, lat: 18.4170, lng: -68.9280, zoom: 8_000),
+    LocationSuggestion(name: "Guaymate",             province: "La Romana",            icon: "building.2.fill", popular: false, lat: 18.4820, lng: -68.8680, zoom: 8_000),
+    LocationSuggestion(name: "Villa Hermosa",        province: "La Romana",            icon: "building.2.fill", popular: false, lat: 18.4060, lng: -69.0420, zoom: 8_000),
+    LocationSuggestion(name: "Bayahíbe",             province: "La Romana",            icon: "beach.umbrella",  popular: false, lat: 18.3690, lng: -68.8380, zoom: 6_000),
+    LocationSuggestion(name: "Dominicus",            province: "La Romana",            icon: "beach.umbrella",  popular: false, lat: 18.3600, lng: -68.8200, zoom: 5_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SAN PEDRO DE MACORÍS — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San Pedro de Macorís (ciudad)", province: "San Pedro de Macorís", icon: "building.2.fill", popular: false, lat: 18.4530, lng: -69.3080, zoom: 10_000),
+    LocationSuggestion(name: "Consuelo",             province: "San Pedro de Macorís", icon: "building.2.fill", popular: false, lat: 18.4760, lng: -69.3020, zoom: 6_000),
+    LocationSuggestion(name: "Quisqueya",            province: "San Pedro de Macorís", icon: "building.2.fill", popular: false, lat: 18.5000, lng: -69.3770, zoom: 6_000),
+    LocationSuggestion(name: "Ramón Santana",        province: "San Pedro de Macorís", icon: "building.2.fill", popular: false, lat: 18.5380, lng: -69.2050, zoom: 8_000),
+    LocationSuggestion(name: "Guayacanes",           province: "San Pedro de Macorís", icon: "beach.umbrella",  popular: false, lat: 18.4350, lng: -69.4700, zoom: 5_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // PUERTO PLATA — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Puerto Plata (ciudad)",province: "Puerto Plata",         icon: "building.2.fill", popular: false, lat: 19.7930, lng: -70.6880, zoom: 10_000),
+    LocationSuggestion(name: "Sosúa",                province: "Puerto Plata",         icon: "beach.umbrella",  popular: false, lat: 19.7520, lng: -70.5170, zoom: 6_000),
+    LocationSuggestion(name: "Cabarete",             province: "Puerto Plata",         icon: "beach.umbrella",  popular: false, lat: 19.7580, lng: -70.4210, zoom: 6_000),
+    LocationSuggestion(name: "Imbert",               province: "Puerto Plata",         icon: "building.2.fill", popular: false, lat: 19.7410, lng: -70.8340, zoom: 8_000),
+    LocationSuggestion(name: "Luperón",              province: "Puerto Plata",         icon: "building.2.fill", popular: false, lat: 19.8600, lng: -70.9570, zoom: 8_000),
+    LocationSuggestion(name: "Altamira",             province: "Puerto Plata",         icon: "building.2.fill", popular: false, lat: 19.6720, lng: -70.8330, zoom: 8_000),
+    LocationSuggestion(name: "Costámbar",            province: "Puerto Plata",         icon: "beach.umbrella",  popular: false, lat: 19.8100, lng: -70.7300, zoom: 5_000),
+    LocationSuggestion(name: "Playa Dorada",         province: "Puerto Plata",         icon: "beach.umbrella",  popular: false, lat: 19.7900, lng: -70.6380, zoom: 5_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SAMANÁ — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Santa Bárbara de Samaná", province: "Samaná",            icon: "beach.umbrella",  popular: false, lat: 19.2060, lng: -69.3360, zoom: 8_000),
+    LocationSuggestion(name: "Las Terrenas",         province: "Samaná",               icon: "beach.umbrella",  popular: false, lat: 19.3100, lng: -69.5420, zoom: 8_000),
+    LocationSuggestion(name: "Las Galeras",          province: "Samaná",               icon: "beach.umbrella",  popular: false, lat: 19.2090, lng: -69.2440, zoom: 6_000),
+    LocationSuggestion(name: "Sánchez",              province: "Samaná",               icon: "building.2.fill", popular: false, lat: 19.2330, lng: -69.6090, zoom: 6_000),
+    LocationSuggestion(name: "El Limón",             province: "Samaná",               icon: "mountain.2.fill", popular: false, lat: 19.2800, lng: -69.4500, zoom: 6_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // LA VEGA — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "La Vega (ciudad)",     province: "La Vega",              icon: "building.2.fill", popular: false, lat: 19.2200, lng: -70.5300, zoom: 10_000),
+    LocationSuggestion(name: "Jarabacoa",            province: "La Vega",              icon: "mountain.2.fill", popular: false, lat: 19.1200, lng: -70.6370, zoom: 10_000),
+    LocationSuggestion(name: "Constanza",            province: "La Vega",              icon: "mountain.2.fill", popular: false, lat: 18.9100, lng: -70.7500, zoom: 10_000),
+    LocationSuggestion(name: "Jima Abajo",           province: "La Vega",              icon: "building.2.fill", popular: false, lat: 19.1370, lng: -70.3910, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // DUARTE — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San Francisco de Macorís", province: "Duarte",           icon: "building.2.fill", popular: false, lat: 19.2930, lng: -70.0260, zoom: 10_000),
+    LocationSuggestion(name: "Pimentel",             province: "Duarte",               icon: "building.2.fill", popular: false, lat: 19.2200, lng: -69.9440, zoom: 8_000),
+    LocationSuggestion(name: "Las Guáranas",         province: "Duarte",               icon: "building.2.fill", popular: false, lat: 19.2010, lng: -69.9910, zoom: 8_000),
+    LocationSuggestion(name: "Castillo",             province: "Duarte",               icon: "building.2.fill", popular: false, lat: 19.2100, lng: -70.0050, zoom: 8_000),
+    LocationSuggestion(name: "Villa Riva",           province: "Duarte",               icon: "building.2.fill", popular: false, lat: 19.1750, lng: -69.9090, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SAN CRISTÓBAL — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San Cristóbal (ciudad)", province: "San Cristóbal",      icon: "building.2.fill", popular: false, lat: 18.4170, lng: -70.1070, zoom: 10_000),
+    LocationSuggestion(name: "Bajos de Haina",       province: "San Cristóbal",        icon: "building.2.fill", popular: false, lat: 18.4190, lng: -70.0280, zoom: 8_000),
+    LocationSuggestion(name: "Nigua",                province: "San Cristóbal",        icon: "building.2.fill", popular: false, lat: 18.3870, lng: -70.0850, zoom: 6_000),
+    LocationSuggestion(name: "Villa Altagracia",     province: "San Cristóbal",        icon: "building.2.fill", popular: false, lat: 18.6700, lng: -70.1700, zoom: 8_000),
+    LocationSuggestion(name: "Yaguate",              province: "San Cristóbal",        icon: "building.2.fill", popular: false, lat: 18.3640, lng: -70.1960, zoom: 8_000),
+    LocationSuggestion(name: "Cambita Garabitos",    province: "San Cristóbal",        icon: "building.2.fill", popular: false, lat: 18.4720, lng: -70.1720, zoom: 8_000),
+    LocationSuggestion(name: "Palenque",             province: "San Cristóbal",        icon: "beach.umbrella",  popular: false, lat: 18.2880, lng: -70.1200, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // ESPAILLAT — Municipalities & Towns
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Moca",                 province: "Espaillat",            icon: "building.2.fill", popular: false, lat: 19.3950, lng: -70.5230, zoom: 8_000),
+    LocationSuggestion(name: "Cayetano Germosén",    province: "Espaillat",            icon: "building.2.fill", popular: false, lat: 19.3470, lng: -70.4650, zoom: 8_000),
+    LocationSuggestion(name: "Gaspar Hernández",     province: "Espaillat",            icon: "building.2.fill", popular: false, lat: 19.6330, lng: -70.2900, zoom: 8_000),
+    LocationSuggestion(name: "Jamao al Norte",       province: "Espaillat",            icon: "building.2.fill", popular: false, lat: 19.5930, lng: -70.4490, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // PERAVIA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Baní",                 province: "Peravia",              icon: "building.2.fill", popular: false, lat: 18.2800, lng: -70.3300, zoom: 10_000),
+    LocationSuggestion(name: "Nizao",                province: "Peravia",              icon: "building.2.fill", popular: false, lat: 18.2450, lng: -70.2050, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // MARÍA TRINIDAD SÁNCHEZ — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Nagua",                province: "María Trinidad Sánchez", icon: "building.2.fill", popular: false, lat: 19.3820, lng: -69.8490, zoom: 8_000),
+    LocationSuggestion(name: "Río San Juan",         province: "María Trinidad Sánchez", icon: "beach.umbrella",  popular: false, lat: 19.6330, lng: -70.0770, zoom: 6_000),
+    LocationSuggestion(name: "Cabrera",              province: "María Trinidad Sánchez", icon: "beach.umbrella",  popular: false, lat: 19.6310, lng: -69.9050, zoom: 6_000),
+    LocationSuggestion(name: "El Factor",            province: "María Trinidad Sánchez", icon: "building.2.fill", popular: false, lat: 19.2800, lng: -69.7900, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // HERMANAS MIRABAL — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Salcedo",              province: "Hermanas Mirabal",     icon: "building.2.fill", popular: false, lat: 19.3760, lng: -70.4160, zoom: 8_000),
+    LocationSuggestion(name: "Tenares",              province: "Hermanas Mirabal",     icon: "building.2.fill", popular: false, lat: 19.3700, lng: -70.3530, zoom: 8_000),
+    LocationSuggestion(name: "Villa Tapia",          province: "Hermanas Mirabal",     icon: "building.2.fill", popular: false, lat: 19.3000, lng: -70.4360, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // EL SEIBO — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "El Seibo (ciudad)",    province: "El Seibo",             icon: "building.2.fill", popular: false, lat: 18.7650, lng: -69.0350, zoom: 8_000),
+    LocationSuggestion(name: "Miches",               province: "El Seibo",             icon: "beach.umbrella",  popular: false, lat: 18.9810, lng: -69.0460, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // HATO MAYOR — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Hato Mayor del Rey",   province: "Hato Mayor",           icon: "building.2.fill", popular: false, lat: 18.7640, lng: -69.2570, zoom: 8_000),
+    LocationSuggestion(name: "Sabana de la Mar",     province: "Hato Mayor",           icon: "building.2.fill", popular: false, lat: 19.0610, lng: -69.3860, zoom: 8_000),
+    LocationSuggestion(name: "El Valle",             province: "Hato Mayor",           icon: "building.2.fill", popular: false, lat: 18.7100, lng: -69.3500, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // MONTE PLATA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Monte Plata (ciudad)", province: "Monte Plata",          icon: "building.2.fill", popular: false, lat: 18.8070, lng: -69.7850, zoom: 8_000),
+    LocationSuggestion(name: "Bayaguana",            province: "Monte Plata",          icon: "building.2.fill", popular: false, lat: 18.7530, lng: -69.6340, zoom: 10_000),
+    LocationSuggestion(name: "Sabana Grande de Boyá",province: "Monte Plata",          icon: "building.2.fill", popular: false, lat: 18.9540, lng: -69.8010, zoom: 10_000),
+    LocationSuggestion(name: "Yamasá",               province: "Monte Plata",          icon: "building.2.fill", popular: false, lat: 18.7600, lng: -69.9800, zoom: 10_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SÁNCHEZ RAMÍREZ — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Cotuí",                province: "Sánchez Ramírez",      icon: "building.2.fill", popular: false, lat: 19.0600, lng: -70.1500, zoom: 8_000),
+    LocationSuggestion(name: "Fantino",              province: "Sánchez Ramírez",      icon: "building.2.fill", popular: false, lat: 19.1200, lng: -70.3000, zoom: 8_000),
+    LocationSuggestion(name: "Cevicos",              province: "Sánchez Ramírez",      icon: "building.2.fill", popular: false, lat: 19.0200, lng: -69.9800, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // VALVERDE — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Mao",                  province: "Valverde",             icon: "building.2.fill", popular: false, lat: 19.5560, lng: -71.0780, zoom: 8_000),
+    LocationSuggestion(name: "Esperanza",            province: "Valverde",             icon: "building.2.fill", popular: false, lat: 19.5900, lng: -70.9960, zoom: 8_000),
+    LocationSuggestion(name: "Laguna Salada",        province: "Valverde",             icon: "building.2.fill", popular: false, lat: 19.6280, lng: -71.0910, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // MONTECRISTI — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Montecristi (ciudad)", province: "Montecristi",          icon: "building.2.fill", popular: false, lat: 19.8700, lng: -71.6450, zoom: 8_000),
+    LocationSuggestion(name: "Castañuelas",          province: "Montecristi",          icon: "building.2.fill", popular: false, lat: 19.7200, lng: -71.5000, zoom: 8_000),
+    LocationSuggestion(name: "Guayubín",             province: "Montecristi",          icon: "building.2.fill", popular: false, lat: 19.6360, lng: -71.3470, zoom: 8_000),
+    LocationSuggestion(name: "Villa Vásquez",        province: "Montecristi",          icon: "building.2.fill", popular: false, lat: 19.7420, lng: -71.4310, zoom: 6_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // DAJABÓN — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Dajabón (ciudad)",     province: "Dajabón",              icon: "building.2.fill", popular: false, lat: 19.5490, lng: -71.7080, zoom: 8_000),
+    LocationSuggestion(name: "Loma de Cabrera",      province: "Dajabón",              icon: "building.2.fill", popular: false, lat: 19.4270, lng: -71.6190, zoom: 8_000),
+    LocationSuggestion(name: "Restauración",         province: "Dajabón",              icon: "building.2.fill", popular: false, lat: 19.3130, lng: -71.6930, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SANTIAGO RODRÍGUEZ — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San Ignacio de Sabaneta", province: "Santiago Rodríguez", icon: "building.2.fill", popular: false, lat: 19.3850, lng: -71.3440, zoom: 8_000),
+    LocationSuggestion(name: "Monción",              province: "Santiago Rodríguez",   icon: "building.2.fill", popular: false, lat: 19.3200, lng: -71.1740, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SAN JUAN — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San Juan de la Maguana", province: "San Juan",            icon: "building.2.fill", popular: false, lat: 18.8060, lng: -71.2300, zoom: 10_000),
+    LocationSuggestion(name: "Las Matas de Farfán",  province: "San Juan",             icon: "building.2.fill", popular: false, lat: 18.8750, lng: -71.5150, zoom: 8_000),
+    LocationSuggestion(name: "El Cercado",           province: "San Juan",             icon: "building.2.fill", popular: false, lat: 18.7430, lng: -71.3620, zoom: 8_000),
+    LocationSuggestion(name: "Vallejuelo",           province: "San Juan",             icon: "building.2.fill", popular: false, lat: 18.6560, lng: -71.3340, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // AZUA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Azua de Compostela",   province: "Azua",                 icon: "building.2.fill", popular: false, lat: 18.4530, lng: -70.7290, zoom: 10_000),
+    LocationSuggestion(name: "Padre Las Casas",      province: "Azua",                 icon: "building.2.fill", popular: false, lat: 18.7370, lng: -70.9390, zoom: 8_000),
+    LocationSuggestion(name: "Peralta",              province: "Azua",                 icon: "building.2.fill", popular: false, lat: 18.5600, lng: -70.7650, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // BARAHONA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Barahona (ciudad)",    province: "Barahona",             icon: "building.2.fill", popular: false, lat: 18.2000, lng: -71.1000, zoom: 10_000),
+    LocationSuggestion(name: "Cabral",               province: "Barahona",             icon: "building.2.fill", popular: false, lat: 18.2430, lng: -71.2180, zoom: 8_000),
+    LocationSuggestion(name: "Paraíso",              province: "Barahona",             icon: "beach.umbrella",  popular: false, lat: 18.0160, lng: -71.1610, zoom: 6_000),
+    LocationSuggestion(name: "Enriquillo",           province: "Barahona",             icon: "building.2.fill", popular: false, lat: 17.8940, lng: -71.2350, zoom: 8_000),
+    LocationSuggestion(name: "Vicente Noble",        province: "Barahona",             icon: "building.2.fill", popular: false, lat: 18.3910, lng: -71.1810, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // BAORUCO — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Neyba",                province: "Baoruco",              icon: "building.2.fill", popular: false, lat: 18.4870, lng: -71.4180, zoom: 8_000),
+    LocationSuggestion(name: "Tamayo",               province: "Baoruco",              icon: "building.2.fill", popular: false, lat: 18.4900, lng: -71.3550, zoom: 8_000),
+    LocationSuggestion(name: "Galván",               province: "Baoruco",              icon: "building.2.fill", popular: false, lat: 18.5000, lng: -71.3400, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // INDEPENDENCIA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Jimaní",               province: "Independencia",        icon: "building.2.fill", popular: false, lat: 18.4930, lng: -71.8410, zoom: 8_000),
+    LocationSuggestion(name: "Duvergé",              province: "Independencia",        icon: "building.2.fill", popular: false, lat: 18.3610, lng: -71.5280, zoom: 8_000),
+    LocationSuggestion(name: "La Descubierta",       province: "Independencia",        icon: "building.2.fill", popular: false, lat: 18.5650, lng: -71.7280, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // PEDERNALES — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Pedernales (ciudad)",  province: "Pedernales",           icon: "building.2.fill", popular: false, lat: 18.0370, lng: -71.7440, zoom: 8_000),
+    LocationSuggestion(name: "Oviedo",               province: "Pedernales",           icon: "building.2.fill", popular: false, lat: 17.8110, lng: -71.3760, zoom: 8_000),
+    LocationSuggestion(name: "Bahía de las Águilas", province: "Pedernales",           icon: "beach.umbrella",  popular: false, lat: 17.8400, lng: -71.6200, zoom: 6_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // ELÍAS PIÑA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Comendador",           province: "Elías Piña",           icon: "building.2.fill", popular: false, lat: 18.8760, lng: -71.6940, zoom: 8_000),
+    LocationSuggestion(name: "Bánica",               province: "Elías Piña",           icon: "building.2.fill", popular: false, lat: 19.0230, lng: -71.6650, zoom: 8_000),
+    LocationSuggestion(name: "Hondo Valle",          province: "Elías Piña",           icon: "building.2.fill", popular: false, lat: 18.7230, lng: -71.6770, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // SAN JOSÉ DE OCOA — Municipalities
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "San José de Ocoa (ciudad)", province: "San José de Ocoa", icon: "mountain.2.fill", popular: false, lat: 18.5460, lng: -70.5060, zoom: 8_000),
+    LocationSuggestion(name: "Sabana Larga",         province: "San José de Ocoa",     icon: "building.2.fill", popular: false, lat: 18.6030, lng: -70.5450, zoom: 8_000),
+    LocationSuggestion(name: "Rancho Arriba",        province: "San José de Ocoa",     icon: "building.2.fill", popular: false, lat: 18.6960, lng: -70.4850, zoom: 8_000),
+
+    // ════════════════════════════════════════════════════════════════
+    // PROVINCES (for province-wide searches)
+    // ════════════════════════════════════════════════════════════════
+    LocationSuggestion(name: "Distrito Nacional",       province: "Distrito Nacional",      icon: "mappin.circle.fill", popular: false, lat: 18.4861, lng: -69.9312, zoom: 15_000),
+    LocationSuggestion(name: "Santo Domingo",           province: "Santo Domingo",          icon: "mappin.circle.fill", popular: false, lat: 18.5000, lng: -69.8500, zoom: 35_000),
+    LocationSuggestion(name: "Santiago",                province: "Santiago",                icon: "mappin.circle.fill", popular: false, lat: 19.4500, lng: -70.6900, zoom: 40_000),
+    LocationSuggestion(name: "La Romana",               province: "La Romana",              icon: "mappin.circle.fill", popular: false, lat: 18.4270, lng: -68.9730, zoom: 35_000),
+    LocationSuggestion(name: "San Pedro de Macorís",    province: "San Pedro de Macorís",   icon: "mappin.circle.fill", popular: false, lat: 18.4530, lng: -69.3080, zoom: 35_000),
+    LocationSuggestion(name: "Puerto Plata",            province: "Puerto Plata",           icon: "mappin.circle.fill", popular: false, lat: 19.7930, lng: -70.6880, zoom: 40_000),
+    LocationSuggestion(name: "La Altagracia",           province: "La Altagracia",          icon: "mappin.circle.fill", popular: false, lat: 18.6150, lng: -68.6200, zoom: 60_000),
+    LocationSuggestion(name: "Duarte",                  province: "Duarte",                 icon: "mappin.circle.fill", popular: false, lat: 19.2930, lng: -70.0260, zoom: 50_000),
+    LocationSuggestion(name: "San Cristóbal",           province: "San Cristóbal",          icon: "mappin.circle.fill", popular: false, lat: 18.4170, lng: -70.1070, zoom: 40_000),
+    LocationSuggestion(name: "Espaillat",               province: "Espaillat",              icon: "mappin.circle.fill", popular: false, lat: 19.3950, lng: -70.5230, zoom: 40_000),
+    LocationSuggestion(name: "Peravia",                 province: "Peravia",                icon: "mappin.circle.fill", popular: false, lat: 18.2800, lng: -70.3300, zoom: 40_000),
+    LocationSuggestion(name: "La Vega",                 province: "La Vega",                icon: "mappin.circle.fill", popular: false, lat: 19.2200, lng: -70.5300, zoom: 50_000),
+    LocationSuggestion(name: "Samaná",                  province: "Samaná",                 icon: "mappin.circle.fill", popular: false, lat: 19.2060, lng: -69.3360, zoom: 50_000),
+    LocationSuggestion(name: "El Seibo",                province: "El Seibo",               icon: "mappin.circle.fill", popular: false, lat: 18.7650, lng: -69.0350, zoom: 50_000),
+    LocationSuggestion(name: "Hato Mayor",              province: "Hato Mayor",             icon: "mappin.circle.fill", popular: false, lat: 18.7640, lng: -69.2570, zoom: 50_000),
+    LocationSuggestion(name: "Monte Plata",             province: "Monte Plata",            icon: "mappin.circle.fill", popular: false, lat: 18.8070, lng: -69.7850, zoom: 60_000),
+    LocationSuggestion(name: "María Trinidad Sánchez",  province: "María Trinidad Sánchez", icon: "mappin.circle.fill", popular: false, lat: 19.3820, lng: -69.8490, zoom: 50_000),
+    LocationSuggestion(name: "Hermanas Mirabal",        province: "Hermanas Mirabal",       icon: "mappin.circle.fill", popular: false, lat: 19.3600, lng: -70.3300, zoom: 40_000),
+    LocationSuggestion(name: "Valverde",                province: "Valverde",               icon: "mappin.circle.fill", popular: false, lat: 19.5900, lng: -70.9800, zoom: 40_000),
+    LocationSuggestion(name: "Montecristi",             province: "Montecristi",            icon: "mappin.circle.fill", popular: false, lat: 19.8500, lng: -71.6500, zoom: 50_000),
+    LocationSuggestion(name: "Dajabón",                 province: "Dajabón",                icon: "mappin.circle.fill", popular: false, lat: 19.5490, lng: -71.7080, zoom: 40_000),
+    LocationSuggestion(name: "Santiago Rodríguez",      province: "Santiago Rodríguez",     icon: "mappin.circle.fill", popular: false, lat: 19.4720, lng: -71.3400, zoom: 40_000),
+    LocationSuggestion(name: "Elías Piña",              province: "Elías Piña",             icon: "mappin.circle.fill", popular: false, lat: 18.8760, lng: -71.6940, zoom: 50_000),
+    LocationSuggestion(name: "San Juan",                province: "San Juan",               icon: "mappin.circle.fill", popular: false, lat: 18.8060, lng: -71.2300, zoom: 60_000),
+    LocationSuggestion(name: "Azua",                    province: "Azua",                   icon: "mappin.circle.fill", popular: false, lat: 18.4530, lng: -70.7290, zoom: 50_000),
+    LocationSuggestion(name: "Baoruco",                 province: "Baoruco",                icon: "mappin.circle.fill", popular: false, lat: 18.4900, lng: -71.4200, zoom: 50_000),
+    LocationSuggestion(name: "Barahona",                province: "Barahona",               icon: "mappin.circle.fill", popular: false, lat: 18.2000, lng: -71.1000, zoom: 50_000),
+    LocationSuggestion(name: "Independencia",           province: "Independencia",          icon: "mappin.circle.fill", popular: false, lat: 18.4900, lng: -71.8400, zoom: 60_000),
+    LocationSuggestion(name: "Pedernales",              province: "Pedernales",             icon: "mappin.circle.fill", popular: false, lat: 18.0400, lng: -71.7500, zoom: 60_000),
+    LocationSuggestion(name: "San José de Ocoa",        province: "San José de Ocoa",       icon: "mappin.circle.fill", popular: false, lat: 18.5460, lng: -70.5060, zoom: 40_000),
+    LocationSuggestion(name: "Sánchez Ramírez",         province: "Sánchez Ramírez",        icon: "mappin.circle.fill", popular: false, lat: 19.0600, lng: -70.1500, zoom: 50_000),
 ]

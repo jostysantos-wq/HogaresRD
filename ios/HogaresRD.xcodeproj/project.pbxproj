@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1F4E7A900000002 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F4E7A900000001 /* NotificationsView.swift */; };
 		AA11000000000000000000C1 /* HogaresRDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B1 /* HogaresRDApp.swift */; };
 		AA11000000000000000000C2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B2 /* ContentView.swift */; };
 		AA11000000000000000000C3 /* Listing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B3 /* Listing.swift */; };
@@ -37,6 +38,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B1F4E7A900000001 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B1 /* HogaresRDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HogaresRDApp.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B3 /* Listing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listing.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 		AA11000000000000000000A5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B1F4E7A900000001 /* NotificationsView.swift */,
 				AA11000000000000000000B6 /* HomeView.swift */,
 				AA11000000000000000000B7 /* BrowseView.swift */,
 				AA11000000000000000000B8 /* ListingDetailView.swift */,
@@ -221,6 +224,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1F4E7A900000002 /* NotificationsView.swift in Sources */,
 				AA11000000000000000000C1 /* HogaresRDApp.swift in Sources */,
 				AA11000000000000000000C2 /* ContentView.swift in Sources */,
 				AA11000000000000000000C3 /* Listing.swift in Sources */,

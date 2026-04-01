@@ -33,6 +33,8 @@ struct NativeMapView: UIViewRepresentable {
     @Binding var selected:     Listing?
     @Binding var centerOnUser: Bool
     var userLocation:          CLLocationCoordinate2D?
+    @Binding var targetCoordinate: CLLocationCoordinate2D?
+    var targetZoom: Double = 35_000
     @ObservedObject var mapState: MapStateStore
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -64,6 +66,15 @@ struct NativeMapView: UIViewRepresentable {
             map.setRegion(MKCoordinateRegion(center: coord,
                                              latitudinalMeters: 5_000,
                                              longitudinalMeters: 5_000),
+                          animated: true)
+        }
+
+        // ── Center on target coordinate (search result) ─────────────────
+        if let target = targetCoordinate {
+            DispatchQueue.main.async { self.targetCoordinate = nil }
+            map.setRegion(MKCoordinateRegion(center: target,
+                                             latitudinalMeters: targetZoom,
+                                             longitudinalMeters: targetZoom),
                           animated: true)
         }
 
