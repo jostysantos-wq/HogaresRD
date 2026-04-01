@@ -176,7 +176,7 @@ app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
-app.use('/api/conversations', require('./routes/conversations'));
+app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
