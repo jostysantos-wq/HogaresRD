@@ -8,8 +8,9 @@ struct ListingDetailView: View {
     @State private var loading         = true
     @State private var imageIndex      = 0
     @State private var blueprintIndex  = 0
-    @State private var showContact     = false
-    @State private var showApply       = false
+    @State private var showContact      = false
+    @State private var showApply        = false
+    @State private var showContactAgent = false
 
     var body: some View {
         Group {
@@ -38,6 +39,11 @@ struct ListingDetailView: View {
         }
         .sheet(isPresented: $showApply) {
             if let l = listing { LeadApplicationView(listing: l) }
+        }
+        .sheet(isPresented: $showContactAgent) {
+            if let l = listing {
+                ContactAgentSheet(listing: l).environmentObject(APIService.shared)
+            }
         }
         .task { await load() }
     }
@@ -132,9 +138,9 @@ struct ListingDetailView: View {
                         agencySection(agencies, listing: l)
                     }
 
-                    // ── Contact CTA ────────────────────────────────
-                    Button { showContact = true } label: {
-                        Label("Agendar Consulta", systemImage: "calendar.badge.plus")
+                    // ── Contactar Agente (primary CTA) ─────────────
+                    Button { showContactAgent = true } label: {
+                        Label("Contactar Agente", systemImage: "bubble.left.and.bubble.right.fill")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -143,15 +149,26 @@ struct ListingDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
-                    // ── Apply CTA ──────────────────────────────────
-                    Button { showApply = true } label: {
-                        Label("Aplicar para esta Propiedad", systemImage: "checkmark.seal.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.rdGreen)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    // ── Secondary: Consulta + Aplicar ───────────────
+                    HStack(spacing: 10) {
+                        Button { showContact = true } label: {
+                            Label("Consulta", systemImage: "calendar.badge.plus")
+                                .font(.subheadline).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.rdBlue.opacity(0.08))
+                                .foregroundStyle(Color.rdBlue)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        Button { showApply = true } label: {
+                            Label("Aplicar", systemImage: "checkmark.seal.fill")
+                                .font(.subheadline).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.rdGreen.opacity(0.08))
+                                .foregroundStyle(Color.rdGreen)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                     }
                 }
                 .padding()
@@ -700,6 +717,115 @@ struct ContactSheet: View {
             sent = true
         } catch {
             errorMsg = "No se pudo enviar. Intenta de nuevo."
+        }
+        sending = false
+    }
+}
+
+// MARK: - Contact Agent Sheet
+
+struct ContactAgentSheet: View {
+    let listing: Listing
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+
+    @State private var message    = ""
+    @State private var sending    = false
+    @State private var errorMsg:  String?
+    @State private var createdConv: Conversation?
+
+    var body: some View {
+        NavigationStack {
+            if let conv = createdConv {
+                // ── Navigate straight into the thread after creation ──
+                ConversationThreadView(conversation: conv)
+                    .environmentObject(api)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Listo") { dismiss() }
+                                .fontWeight(.semibold)
+                        }
+                    }
+            } else {
+                // ── Compose initial message ───────────────────────────
+                composeView
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var composeView: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(listing.title)
+                        .font(.subheadline).bold()
+                    Text(listing.priceFormatted)
+                        .font(.caption).foregroundStyle(Color.rdBlue)
+                }
+                .padding(.vertical, 2)
+            } header: { Text("Propiedad") }
+
+            Section {
+                TextField("Hola, estoy interesado en esta propiedad…", text: $message, axis: .vertical)
+                    .lineLimit(4...8)
+            } header: { Text("Tu mensaje") }
+
+            if let err = errorMsg {
+                Section {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdRed)
+                }
+            }
+
+            Section {
+                Button {
+                    Task { await start() }
+                } label: {
+                    if sending {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Text("Iniciar conversación")
+                            .bold()
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .disabled(sending || message.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .navigationTitle("Contactar Agente")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancelar") { dismiss() }
+            }
+        }
+        .onAppear {
+            // Pre-fill a starter message
+            if message.isEmpty {
+                message = "Hola, estoy interesado en \"\(listing.title)\". ¿Podría darme más información?"
+            }
+        }
+    }
+
+    private func start() async {
+        let text = message.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        guard api.currentUser != nil else {
+            errorMsg = "Debes iniciar sesión para contactar a un agente."
+            return
+        }
+        sending = true; errorMsg = nil
+        do {
+            let conv = try await api.startConversation(
+                propertyId:    listing.id,
+                propertyTitle: listing.title,
+                message:       text
+            )
+            createdConv = conv
+        } catch {
+            errorMsg = error.localizedDescription
         }
         sending = false
     }

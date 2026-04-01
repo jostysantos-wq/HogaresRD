@@ -65,6 +65,16 @@ struct ProfileView: View {
                         }
                     }
                 }
+                NavigationLink {
+                    ConversationsView().environmentObject(api)
+                } label: {
+                    Label("Mis mensajes", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                NavigationLink {
+                    ApplicationsView().environmentObject(api)
+                } label: {
+                    Label("Mis aplicaciones", systemImage: "doc.text.fill")
+                }
                 if user.isAgency {
                     NavigationLink {
                         AgencyDashboardView()

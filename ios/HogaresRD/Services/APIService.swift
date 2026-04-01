@@ -211,6 +211,92 @@ class APIService: ObservableObject {
         _ = try await URLSession.shared.data(for: req)
     }
 
+    // MARK: - Conversations
+
+    func getConversations() async throws -> [Conversation] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode([Conversation].self, from: data)
+    }
+
+    func getConversation(id: String, since: String? = nil) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/conversations/\(id)")!
+        if let since = since {
+            comps.queryItems = [URLQueryItem(name: "since", value: since)]
+        }
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(Conversation.self, from: data)
+    }
+
+    func startConversation(propertyId: String, propertyTitle: String, message: String) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: String] = [
+            "propertyId":    propertyId,
+            "propertyTitle": propertyTitle,
+            "message":       message
+        ]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al iniciar la conversación")
+        }
+        let result = try decoder.decode(ConversationResponse.self, from: data)
+        return result.conversation
+    }
+
+    func sendMessage(conversationId: String, text: String) async throws -> ConvMessage {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(conversationId)/messages")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONEncoder().encode(["text": text])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al enviar el mensaje")
+        }
+        let result = try decoder.decode(SendMessageResponse.self, from: data)
+        return result.message
+    }
+
+    func markConversationRead(id: String) async throws {
+        guard let t = token else { return }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/read")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        _ = try? await URLSession.shared.data(for: req)
+    }
+
+    // MARK: - Applications
+
+    func getApplications() async throws -> [Application] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/my")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        // Backend returns { applications: [...] }
+        if let wrapper = try? decoder.decode(ApplicationsResponse.self, from: data) {
+            return wrapper.applications
+        }
+        return (try? decoder.decode([Application].self, from: data)) ?? []
+    }
+
     // MARK: - Submit Listing
 
     func submitListing(_ body: [String: Any]) async throws {

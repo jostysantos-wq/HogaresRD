@@ -27,6 +27,11 @@
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
 		AA33000000000000000000D2 /* AdCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C2 /* AdCard.swift */; };
 		AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA44000000000000000000C1 /* LeadApplicationView.swift */; };
+		AA55000000000000000000C1 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B1 /* Conversation.swift */; };
+		AA55000000000000000000C2 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B2 /* Application.swift */; };
+		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
+		AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B4 /* ConversationThreadView.swift */; };
+		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +56,11 @@
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C2 /* AdCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCard.swift; sourceTree = "<group>"; };
 		AA44000000000000000000C1 /* LeadApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadApplicationView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B1 /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B2 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B4 /* ConversationThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationThreadView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +110,8 @@
 					AA22000000000000000000C1 /* SavedStore.swift */,
 				AA11000000000000000000B4 /* User.swift */,
 				AA33000000000000000000C1 /* Ad.swift */,
+				AA55000000000000000000B1 /* Conversation.swift */,
+				AA55000000000000000000B2 /* Application.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -127,6 +139,9 @@
 					AA22000000000000000000C3 /* SavedListingsView.swift */,
 				AA33000000000000000000C2 /* AdCard.swift */,
 			AA44000000000000000000C1 /* LeadApplicationView.swift */,
+			AA55000000000000000000B3 /* ConversationsView.swift */,
+			AA55000000000000000000B4 /* ConversationThreadView.swift */,
+			AA55000000000000000000B5 /* ApplicationsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -219,6 +234,11 @@
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
 			AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */,
 					AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
+			AA55000000000000000000C1 /* Conversation.swift in Sources */,
+			AA55000000000000000000C2 /* Application.swift in Sources */,
+			AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
+			AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
+			AA55000000000000000000C5 /* ApplicationsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
