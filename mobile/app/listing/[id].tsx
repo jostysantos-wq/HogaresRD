@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import GlassButton from '@/components/GlassButton';
 import { colors, radius, shadow, glass, CONDITION_COLORS, TYPE_LABELS } from '@/constants/theme';
 import { endpoints } from '@/constants/api';
+import { useAuth } from '@/hooks/useAuth';
 import type { Listing } from '@/hooks/useListings';
 
 const { width } = Dimensions.get('window');
@@ -127,7 +128,7 @@ const bmStyles = StyleSheet.create({
   navBtn: { padding: 12 },
 });
 
-// ─── Inquiry Modal ────────────────────────────────────────────────────────────
+// ─── Anonymous Inquiry Modal ──────────────────────────────────────────────────
 function InquiryModal({ listing, visible, onClose }: { listing: Listing; visible: boolean; onClose: () => void }) {
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -175,8 +176,8 @@ function InquiryModal({ listing, visible, onClose }: { listing: Listing; visible
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={iqStyles.form}>
           {[
-            { label: 'Nombre completo *', val: name,    set: setName,    key: 'name',  ph: 'Tu nombre' },
-            { label: 'Teléfono *',        val: phone,   set: setPhone,   key: 'phone', ph: '+1 (809) 000-0000' },
+            { label: 'Nombre completo *', val: name,  set: setName,  key: 'name',  ph: 'Tu nombre' },
+            { label: 'Teléfono *',        val: phone, set: setPhone, key: 'phone', ph: '+1 (809) 000-0000' },
             { label: 'Correo electrónico *', val: email, set: setEmail, key: 'email', ph: 'tu@correo.com' },
           ].map(f => (
             <View key={f.key} style={iqStyles.field}>
@@ -237,15 +238,141 @@ const iqStyles = StyleSheet.create({
   sendText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
 
+// ─── Contact Agent Modal (logged-in chat) ─────────────────────────────────────
+function ContactAgentModal({ listing, visible, onClose, onConversationCreated }: {
+  listing: Listing;
+  visible: boolean;
+  onClose: () => void;
+  onConversationCreated: (convId: string) => void;
+}) {
+  const { authHeaders } = useAuth();
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  async function handleSend() {
+    const text = message.trim();
+    if (!text) {
+      Alert.alert('Escribe un mensaje', 'Cuéntale al agente en qué puedes estar interesado.');
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch(endpoints.conversations, {
+        method:  'POST',
+        headers: authHeaders(),
+        body:    JSON.stringify({
+          propertyId:    listing.id,
+          propertyTitle: listing.title,
+          propertyImage: listing.images?.[0] || null,
+          message:       text,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al enviar');
+      setMessage('');
+      onClose();
+      onConversationCreated(data.id);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo enviar. Intenta de nuevo.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Header */}
+        <View style={caStyles.header}>
+          <View>
+            <Text style={caStyles.headerTitle}>Contactar Agente</Text>
+            <Text style={caStyles.headerSub} numberOfLines={1}>{listing.title}</Text>
+          </View>
+          <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <Ionicons name="close" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Message input */}
+        <View style={caStyles.body}>
+          <Text style={caStyles.hint}>
+            Tu mensaje irá directamente al agente responsable de esta propiedad.
+          </Text>
+          <TextInput
+            style={caStyles.messageInput}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Hola, estoy interesado en esta propiedad y me gustaría más información…"
+            placeholderTextColor={colors.textLight}
+            multiline
+            autoFocus
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Send button */}
+        <View style={caStyles.footer}>
+          <TouchableOpacity
+            style={[caStyles.sendBtn, sending && { opacity: 0.6 }]}
+            onPress={handleSend}
+            disabled={sending}
+            activeOpacity={0.85}
+          >
+            {sending
+              ? <ActivityIndicator color="#fff" />
+              : <>
+                  <Ionicons name="send" size={18} color="#fff" />
+                  <Text style={caStyles.sendText}>Enviar mensaje</Text>
+                </>
+            }
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const caStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  headerSub:   { fontSize: 12, color: colors.textMuted, marginTop: 2, maxWidth: 260 },
+  body: {
+    flex: 1, padding: 20, gap: 12,
+  },
+  hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  messageInput: {
+    flex: 1,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    padding: 14, fontSize: 15, color: colors.text,
+    backgroundColor: colors.bg, minHeight: 120,
+  },
+  footer: {
+    padding: 16, paddingBottom: 32,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  sendBtn: {
+    backgroundColor: colors.primary, borderRadius: radius.md,
+    height: 52, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 10,
+  },
+  sendText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ListingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id }  = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
+  const { user } = useAuth();
+
+  const [listing,      setListing]      = useState<Listing | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(false);
   const [showInquiry,  setShowInquiry]  = useState(false);
+  const [showContact,  setShowContact]  = useState(false);
   const [showBp,       setShowBp]       = useState(false);
   const [bpIndex,      setBpIndex]      = useState(0);
 
@@ -284,6 +411,26 @@ export default function ListingScreen() {
   const blueprints = (listing.blueprints || []).filter(Boolean);
   const agencies   = listing.agencies || [];
 
+  function handleContactAgent() {
+    if (!user) {
+      Alert.alert(
+        'Inicia sesión',
+        'Necesitas una cuenta para chatear con el agente.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Iniciar sesión', onPress: () => router.push('/auth/login') },
+        ],
+      );
+      return;
+    }
+    setShowContact(true);
+  }
+
+  function handleConversationCreated(convId: string) {
+    // Navigate to the conversation — mensajes screen (built in step 4)
+    router.push(`/mensajes/${convId}` as any);
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: listing.title, headerStyle: { backgroundColor: colors.primary }, headerTintColor: '#fff' }} />
@@ -320,10 +467,10 @@ export default function ListingScreen() {
           {/* Specs */}
           {(listing.bedrooms || listing.bathrooms || listing.area || listing.units_total) ? (
             <View style={styles.specsRow}>
-              {listing.bedrooms     ? <SpecPill icon="bed-outline"    label={`${listing.bedrooms} hab.`} /> : null}
-              {listing.bathrooms    ? <SpecPill icon="water-outline"  label={`${listing.bathrooms} baños`} /> : null}
-              {listing.area         ? <SpecPill icon="expand-outline" label={`${listing.area} m²`} /> : null}
-              {listing.units_total  ? <SpecPill icon="business-outline" label={`${listing.units_available || '?'} / ${listing.units_total} unid.`} /> : null}
+              {listing.bedrooms    ? <SpecPill icon="bed-outline"      label={`${listing.bedrooms} hab.`} /> : null}
+              {listing.bathrooms   ? <SpecPill icon="water-outline"    label={`${listing.bathrooms} baños`} /> : null}
+              {listing.area        ? <SpecPill icon="expand-outline"   label={`${listing.area} m²`} /> : null}
+              {listing.units_total ? <SpecPill icon="business-outline" label={`${listing.units_available || '?'} / ${listing.units_total} unid.`} /> : null}
             </View>
           ) : null}
 
@@ -437,37 +584,56 @@ export default function ListingScreen() {
             </View>
           ) : null}
 
-          <View style={{ height: 100 }} />
+          <View style={{ height: 110 }} />
         </View>
       </ScrollView>
 
       {/* Sticky glass CTA bar */}
       <View style={[styles.cta, { paddingBottom: insets.bottom + 8 }]}>
         <BlurView intensity={glass.tabBar} tint="light" style={StyleSheet.absoluteFill} />
-        {/* Top highlight edge */}
         <View style={styles.ctaTopEdge} pointerEvents="none" />
 
+        {/* Contactar Agente — primary */}
         <GlassButton
-          label="Solicitar información"
-          icon="mail-outline"
-          onPress={() => setShowInquiry(true)}
+          label="Contactar Agente"
+          icon="chatbubble-outline"
+          onPress={handleContactAgent}
           size="lg"
           style={{ flex: 1 }}
         />
+
+        {/* Solicitar info — secondary icon button */}
+        <TouchableOpacity
+          style={styles.iconCta}
+          onPress={() => setShowInquiry(true)}
+          activeOpacity={0.8}
+        >
+          <BlurView intensity={glass.button} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={styles.iconCtaHighlight} pointerEvents="none" />
+          <Ionicons name="mail-outline" size={22} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Call — only if agency has phone */}
         {agencies[0]?.phone && (
           <TouchableOpacity
-            style={styles.callCta}
+            style={styles.iconCta}
             onPress={() => Linking.openURL(`tel:${agencies[0].phone}`)}
             activeOpacity={0.8}
           >
             <BlurView intensity={glass.button} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={styles.callCtaHighlight} pointerEvents="none" />
+            <View style={styles.iconCtaHighlight} pointerEvents="none" />
             <Ionicons name="call" size={22} color={colors.primary} />
           </TouchableOpacity>
         )}
       </View>
 
-      <InquiryModal listing={listing} visible={showInquiry} onClose={() => setShowInquiry(false)} />
+      <InquiryModal   listing={listing} visible={showInquiry} onClose={() => setShowInquiry(false)} />
+      <ContactAgentModal
+        listing={listing}
+        visible={showContact}
+        onClose={() => setShowContact(false)}
+        onConversationCreated={handleConversationCreated}
+      />
       <BlueprintModal blueprints={blueprints} visible={showBp} initialIndex={bpIndex} onClose={() => setShowBp(false)} />
     </>
   );
@@ -549,7 +715,7 @@ const styles = StyleSheet.create({
   },
   constructoraText: { fontSize: 13, color: colors.textMuted },
   cta: {
-    flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 14,
+    flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 14,
     position: 'relative', overflow: 'hidden',
     borderTopWidth: 0,
   },
@@ -557,14 +723,15 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: 1,
     backgroundColor: 'rgba(255,255,255,0.70)',
   },
-  callCta: {
-    width: 56, height: 56, borderRadius: radius.xl,
+  iconCta: {
+    width: 52, height: 52, borderRadius: radius.xl,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden', position: 'relative',
     borderWidth: 1, borderColor: glass.lightBorder,
     ...glass.shadow,
+    alignSelf: 'center',
   },
-  callCtaHighlight: {
+  iconCtaHighlight: {
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
     backgroundColor: 'rgba(255,255,255,0.55)',
