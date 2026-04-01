@@ -81,6 +81,13 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => icon(focused, 'search', 'search-outline'),
         }}
       />
+      <Tabs.Screen
+        name="cuenta"
+        options={{
+          title: 'Cuenta',
+          tabBarIcon: ({ focused }) => icon(focused, 'person-circle', 'person-circle-outline'),
+        }}
+      />
     </Tabs>
   );
 }
