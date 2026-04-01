@@ -32,6 +32,8 @@
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
 		AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B4 /* ConversationThreadView.swift */; };
 		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
+		AA66000000000000000000C1 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA66000000000000000000B1 /* MapView.swift */; };
+		AA77000000000000000000C1 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA77000000000000000000B1 /* LocationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +63,8 @@
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B4 /* ConversationThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationThreadView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
+		AA66000000000000000000B1 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		AA77000000000000000000B1 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +124,7 @@
 			isa = PBXGroup;
 			children = (
 				AA11000000000000000000B5 /* APIService.swift */,
+				AA77000000000000000000B1 /* LocationManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -142,6 +147,7 @@
 			AA55000000000000000000B3 /* ConversationsView.swift */,
 			AA55000000000000000000B4 /* ConversationThreadView.swift */,
 			AA55000000000000000000B5 /* ApplicationsView.swift */,
+			AA66000000000000000000B1 /* MapView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -239,6 +245,8 @@
 			AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
 			AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
 			AA55000000000000000000C5 /* ApplicationsView.swift in Sources */,
+			AA66000000000000000000C1 /* MapView.swift in Sources */,
+			AA77000000000000000000C1 /* LocationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,6 +387,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
 				INFOPLIST_KEY_NSAppTransportSecurity = "<dict><key>NSAllowsArbitraryLoads</key><true/></dict>";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD uses your location to show properties near you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -408,6 +417,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD uses your location to show properties near you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

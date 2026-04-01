@@ -4,6 +4,7 @@ import MapKit
 struct ListingDetailView: View {
     let id: String
     @EnvironmentObject var saved: SavedStore
+    @Environment(\.dismiss) var dismiss
     @State private var listing:        Listing?
     @State private var loading         = true
     @State private var imageIndex      = 0
@@ -11,6 +12,9 @@ struct ListingDetailView: View {
     @State private var showContact      = false
     @State private var showApply        = false
     @State private var showContactAgent = false
+    @State private var showFullGallery  = false
+
+    private let heroHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
     var body: some View {
         Group {
@@ -23,17 +27,7 @@ struct ListingDetailView: View {
                 ContentUnavailableView("No encontrado", systemImage: "house.slash")
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    if let l = listing { saved.toggle(l.id) }
-                } label: {
-                    Image(systemName: listing.map { saved.isSaved($0.id) ? "heart.fill" : "heart" } ?? "heart")
-                        .foregroundStyle(listing.map { saved.isSaved($0.id) ? Color.rdRed : Color.primary } ?? Color.primary)
-                }
-            }
-        }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showContact) {
             if let l = listing { ContactSheet(listing: l) }
         }
@@ -45,6 +39,9 @@ struct ListingDetailView: View {
                 ContactAgentSheet(listing: l).environmentObject(APIService.shared)
             }
         }
+        .fullScreenCover(isPresented: $showFullGallery) {
+            if let l = listing { FullGalleryView(images: l.allImageURLs, startIndex: imageIndex) }
+        }
         .task { await load() }
     }
 
@@ -52,163 +49,306 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func detailBody(_ l: Listing) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        ZStack(alignment: .top) {
+            // Hero image behind everything
+            heroImages(l)
 
-                // ── Image Carousel ─────────────────────────────────
-                imageCarousel(l)
+            // Scrollable content that overlaps the image
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // Transparent spacer so the image is visible (opacity 0.001 to capture touches)
+                    Color.white.opacity(0.001).frame(height: heroHeight - 30)
 
-                VStack(alignment: .leading, spacing: 24) {
-
-                    // ── Badges & Title ─────────────────────────────
-                    headerSection(l)
-
-                    Divider()
-
-                    // ── Specs Grid ─────────────────────────────────
-                    specsSection(l)
-
-                    // ── Project Meta (proyecto only) ───────────────
-                    if l.type == "proyecto" { projectMetaSection(l) }
-
-                    // ── Description ────────────────────────────────
-                    if let desc = l.description, !desc.isEmpty {
-                        sectionBlock("Descripción") {
-                            Text(desc)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-
-                    // ── Tags ───────────────────────────────────────
-                    if let tags = l.tags, !tags.isEmpty {
-                        sectionBlock("Características") {
-                            FlowLayout(spacing: 8) {
-                                ForEach(tags, id: \.self) { tag in
-                                    Text(tag)
-                                        .font(.caption).bold()
-                                        .padding(.horizontal, 10).padding(.vertical, 5)
-                                        .background(Color.rdRed.opacity(0.08))
-                                        .foregroundStyle(Color.rdRed)
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Amenities ──────────────────────────────────
-                    if !l.amenities.isEmpty {
-                        sectionBlock("Amenidades") {
-                            FlowLayout(spacing: 8) {
-                                ForEach(l.amenities, id: \.self) { a in
-                                    Text(a)
-                                        .font(.caption).bold()
-                                        .padding(.horizontal, 10).padding(.vertical, 5)
-                                        .background(Color.rdBlue.opacity(0.08))
-                                        .foregroundStyle(Color.rdBlue)
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Unit Types ─────────────────────────────────
-                    if let units = l.unit_types, !units.isEmpty {
-                        unitTypesSection(units)
-                    }
-
-                    // ── Blueprints ─────────────────────────────────
-                    if let bps = l.blueprints, !bps.isEmpty {
-                        blueprintsSection(bps, l: l)
-                    }
-
-                    // ── Construction Company ───────────────────────
-                    if let builder = l.construction_company {
-                        builderSection(builder)
-                    }
-
-                    // ── Map ────────────────────────────────────────
-                    if let lat = l.lat, let lng = l.lng {
-                        mapSection(lat: lat, lng: lng, title: l.title, address: l.address)
-                    }
-
-                    // ── Agency Contact ─────────────────────────────
-                    if let agencies = l.agencies, !agencies.isEmpty {
-                        agencySection(agencies, listing: l)
-                    }
-
-                    // ── Contactar Agente (primary CTA) ─────────────
-                    Button { showContactAgent = true } label: {
-                        Label("Contactar Agente", systemImage: "bubble.left.and.bubble.right.fill")
-                            .font(.headline)
+                    // Content card with rounded top corners
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Drag indicator
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.secondary.opacity(0.4))
+                            .frame(width: 38, height: 5)
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.rdBlue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
+                            .padding(.top, 14)
 
-                    // ── Secondary: Consulta + Aplicar ───────────────
-                    HStack(spacing: 10) {
-                        Button { showContact = true } label: {
-                            Label("Consulta", systemImage: "calendar.badge.plus")
-                                .font(.subheadline).bold()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.rdBlue.opacity(0.08))
-                                .foregroundStyle(Color.rdBlue)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        // ── Price + Save ──────────────────────────────
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(l.priceFormatted)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(Color.rdBlue)
+                                HStack(spacing: 8) {
+                                    Text(l.typeLabel)
+                                        .font(.caption).bold()
+                                        .padding(.horizontal, 10).padding(.vertical, 4)
+                                        .background(l.type == "venta" ? Color.rdGreen : l.type == "alquiler" ? Color.rdBlue : Color.rdRed)
+                                        .foregroundStyle(.white).clipShape(Capsule())
+                                    if let cond = l.condition, !cond.isEmpty {
+                                        Text(cond)
+                                            .font(.caption).bold()
+                                            .padding(.horizontal, 10).padding(.vertical, 4)
+                                            .background(Color(.systemGray5))
+                                            .foregroundStyle(.secondary).clipShape(Capsule())
+                                    }
+                                }
+                            }
+                            Spacer()
+                            Button {
+                                saved.toggle(l.id)
+                            } label: {
+                                Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
+                                    .font(.title2)
+                                    .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
+                            }
                         }
-                        Button { showApply = true } label: {
-                            Label("Aplicar", systemImage: "checkmark.seal.fill")
-                                .font(.subheadline).bold()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.rdGreen.opacity(0.08))
-                                .foregroundStyle(Color.rdGreen)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        // ── Title & Location ──────────────────────────
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(l.title).font(.title3).bold()
+                            let parts = [l.sector, l.city, l.province].compactMap { v in (v?.isEmpty == false) ? v : nil }
+                            if !parts.isEmpty {
+                                Label(parts.joined(separator: ", "), systemImage: "mappin.circle.fill")
+                                    .foregroundStyle(.secondary).font(.subheadline)
+                            }
+                            if let addr = l.address, !addr.isEmpty {
+                                Label(addr, systemImage: "map")
+                                    .foregroundStyle(.secondary).font(.caption)
+                            }
                         }
+
+                        // ── Quick Stats Bar ───────────────────────────
+                        quickStatsBar(l)
+
+                        Divider()
+
+                        // ── Specs Grid ─────────────────────────────
+                        specsSection(l)
+
+                        // ── Project Meta (proyecto only) ───────────
+                        if l.type == "proyecto" { projectMetaSection(l) }
+
+                        // ── Description ────────────────────────────
+                        if let desc = l.description, !desc.isEmpty {
+                            sectionBlock("Descripción") {
+                                Text(desc)
+                                    .font(.body)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+
+                        // ── Tags ───────────────────────────────────
+                        if let tags = l.tags, !tags.isEmpty {
+                            sectionBlock("Características") {
+                                FlowLayout(spacing: 8) {
+                                    ForEach(tags, id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption).bold()
+                                            .padding(.horizontal, 10).padding(.vertical, 5)
+                                            .background(Color.rdRed.opacity(0.08))
+                                            .foregroundStyle(Color.rdRed)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Amenities ──────────────────────────────
+                        if !l.amenities.isEmpty {
+                            sectionBlock("Amenidades") {
+                                FlowLayout(spacing: 8) {
+                                    ForEach(l.amenities, id: \.self) { a in
+                                        Text(a)
+                                            .font(.caption).bold()
+                                            .padding(.horizontal, 10).padding(.vertical, 5)
+                                            .background(Color.rdBlue.opacity(0.08))
+                                            .foregroundStyle(Color.rdBlue)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Unit Types ─────────────────────────────
+                        if let units = l.unit_types, !units.isEmpty {
+                            unitTypesSection(units)
+                        }
+
+                        // ── Blueprints ─────────────────────────────
+                        if let bps = l.blueprints, !bps.isEmpty {
+                            blueprintsSection(bps, l: l)
+                        }
+
+                        // ── Construction Company ───────────────────
+                        if let builder = l.construction_company {
+                            builderSection(builder)
+                        }
+
+                        // ── Map ────────────────────────────────────
+                        if let lat = l.lat, let lng = l.lng {
+                            mapSection(lat: lat, lng: lng, title: l.title, address: l.address)
+                        }
+
+                        // ── Agency Contact ─────────────────────────
+                        if let agencies = l.agencies, !agencies.isEmpty {
+                            agencySection(agencies, listing: l)
+                        }
+
+                        Color.clear.frame(height: 90)
                     }
+                    .padding(.horizontal, 16)
+                    .background(
+                        Color(.systemBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .shadow(color: .black.opacity(0.15), radius: 16, y: -6)
+                    )
                 }
-                .padding()
+            }
+
+            // Floating top bar (back, share, image counter)
+            heroOverlayBar(l)
+
+            // Sticky CTA at the bottom
+            if listing != nil {
+                VStack(spacing: 0) {
+                    Spacer()
+                    stickyCTA(l)
+                }
             }
         }
+        .ignoresSafeArea(edges: .top)
     }
 
-    // MARK: - Image Carousel
+    // MARK: - Hero Images
 
     @ViewBuilder
-    private func imageCarousel(_ l: Listing) -> some View {
+    private func heroImages(_ l: Listing) -> some View {
         if !l.images.isEmpty {
             TabView(selection: $imageIndex) {
                 ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
                     let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
                     AsyncImage(url: url) { phase in
                         switch phase {
-                        case .success(let image): image.resizable().scaledToFill()
-                        default: Rectangle().fill(Color.rdBlue.opacity(0.12))
-                            .overlay(Image(systemName: "photo").font(.largeTitle).foregroundStyle(Color.rdBlue.opacity(0.3)))
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            Rectangle().fill(Color(.systemGray6))
+                                .overlay(Image(systemName: "photo").font(.system(size: 40)).foregroundStyle(Color(.systemGray3)))
                         }
                     }
-                    .frame(height: 280).clipped().tag(i)
+                    .frame(height: heroHeight)
+                    .clipped()
+                    .tag(i)
+                    .onTapGesture { showFullGallery = true }
                 }
             }
-            .tabViewStyle(.page)
-            .frame(height: 280)
-
-            HStack(spacing: 5) {
-                ForEach(0..<l.images.count, id: \.self) { i in
-                    Circle()
-                        .fill(i == imageIndex ? Color.rdBlue : Color(.systemGray4))
-                        .frame(width: i == imageIndex ? 8 : 5, height: i == imageIndex ? 8 : 5)
-                }
-            }
-            .padding(.vertical, 8).frame(maxWidth: .infinity)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: heroHeight)
         } else {
-            Rectangle().fill(Color.rdBlue.opacity(0.12)).frame(height: 220)
-                .overlay(Image(systemName: "house.fill").font(.system(size: 50)).foregroundStyle(Color.rdBlue.opacity(0.3)))
+            Rectangle().fill(Color(.systemGray6)).frame(height: heroHeight)
+                .overlay(Image(systemName: "house.fill").font(.system(size: 50)).foregroundStyle(Color(.systemGray3)))
         }
+    }
+
+    // MARK: - Hero Overlay Bar
+
+    @ViewBuilder
+    private func heroOverlayBar(_ l: Listing) -> some View {
+        HStack {
+            // Back button
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+            }
+
+            Spacer()
+
+            // Image counter
+            if l.images.count > 1 {
+                Text("\(imageIndex + 1)/\(l.images.count)")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+            }
+
+            // Share button
+            Button { } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 54)
+    }
+
+    // MARK: - Quick Stats Bar
+
+    @ViewBuilder
+    private func quickStatsBar(_ l: Listing) -> some View {
+        HStack(spacing: 0) {
+            if let b = l.bedrooms, !b.isEmpty {
+                statPill(icon: "bed.double.fill", value: b, label: "Hab.")
+            }
+            if let b = l.bathrooms, !b.isEmpty {
+                statPill(icon: "shower.fill", value: b, label: "Baños")
+            }
+            if let a = l.area_const, !a.isEmpty {
+                statPill(icon: "ruler", value: "\(a) m²", label: "Área")
+            }
+            if let p = l.parking, !p.isEmpty {
+                statPill(icon: "car.fill", value: p, label: "Parqueo")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color.rdBlue.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func statPill(icon: String, value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(Color.rdBlue)
+            Text(value).font(.subheadline.bold())
+            Text(label).font(.system(size: 10)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Sticky CTA
+
+    @ViewBuilder
+    private func stickyCTA(_ l: Listing) -> some View {
+        HStack(spacing: 10) {
+            Button { showContact = true } label: {
+                Label("Consulta", systemImage: "calendar.badge.plus")
+                    .font(.subheadline).bold()
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
+                    .foregroundStyle(Color.rdBlue)
+            }
+
+            Button { showContactAgent = true } label: {
+                Label("Contactar", systemImage: "bubble.left.fill")
+                    .font(.subheadline).bold()
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.regularMaterial)
     }
 
     // MARK: - Header
@@ -828,5 +968,55 @@ struct ContactAgentSheet: View {
             errorMsg = error.localizedDescription
         }
         sending = false
+    }
+}
+
+// MARK: - Full Screen Gallery
+
+struct FullGalleryView: View {
+    let images: [URL]
+    let startIndex: Int
+    @Environment(\.dismiss) var dismiss
+    @State private var current: Int = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $current) {
+                ForEach(Array(images.enumerated()), id: \.offset) { i, url in
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFit()
+                        default:
+                            ProgressView().tint(.white)
+                        }
+                    }
+                    .tag(i)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+
+            VStack {
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 38, height: 38)
+                            .background(.ultraThinMaterial.opacity(0.5), in: Circle())
+                    }
+                    Spacer()
+                    Text("\(current + 1) / \(images.count)")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 54)
+                Spacer()
+            }
+        }
+        .onAppear { current = startIndex }
     }
 }

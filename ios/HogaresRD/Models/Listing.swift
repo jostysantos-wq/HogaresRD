@@ -1,6 +1,7 @@
 import Foundation
 
-struct Listing: Decodable, Identifiable {
+struct Listing: Decodable, Identifiable, Equatable {
+    static func == (lhs: Listing, rhs: Listing) -> Bool { lhs.id == rhs.id }
     let id: String
     let title: String
     let type: String
@@ -74,8 +75,11 @@ struct Listing: Decodable, Identifiable {
         units_total          = try? c.decode(Int.self,    forKey: .units_total)
         project_stage        = try? c.decode(String.self, forKey: .project_stage)
         delivery_date        = try? c.decode(String.self, forKey: .delivery_date)
-        lat                  = try? c.decode(Double.self, forKey: .lat)
-        lng                  = try? c.decode(Double.self, forKey: .lng)
+        // API may return lat/lng as a JSON string OR as a number — handle both
+        lat = (try? c.decode(Double.self, forKey: .lat))
+            ?? (try? c.decode(String.self, forKey: .lat)).flatMap(Double.init)
+        lng = (try? c.decode(Double.self, forKey: .lng))
+            ?? (try? c.decode(String.self, forKey: .lng)).flatMap(Double.init)
         tags                 = try? c.decode([String].self,           forKey: .tags)
         agencies             = try? c.decode([Agency].self,           forKey: .agencies)
         unit_types           = try? c.decode([ListingUnit].self,         forKey: .unit_types)
@@ -94,6 +98,14 @@ struct Listing: Decodable, Identifiable {
             return f.string(from: NSNumber(value: n)) ?? "$\(price)"
         }
         return "$\(price)"
+    }
+
+    /// Compact price for map pins: "$1.2M", "$450K", "$85K"
+    var shortPrice: String {
+        guard let n = Double(price) else { return "$?" }
+        if n >= 1_000_000 { return String(format: "$%.1fM", n / 1_000_000) }
+        if n >= 1_000     { return String(format: "$%.0fK", n / 1_000) }
+        return priceFormatted
     }
 
     var typeLabel: String {
