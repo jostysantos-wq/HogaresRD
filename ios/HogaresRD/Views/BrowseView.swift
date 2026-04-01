@@ -435,7 +435,7 @@ struct BrowseView: View {
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
             }
-            .padding(.bottom, tabBarHeight + 16)
+            .padding(.bottom, tabBarHeight + 4)
         }
     }
 
@@ -456,9 +456,12 @@ struct BrowseView: View {
                             }
                         }
                     }
+
+                    // Footer below last listing
+                    listFooter
                 }
                 .padding(.horizontal, 14)
-                .padding(.bottom, 40)
+                .padding(.bottom, 100)
             }
             .onChange(of: selectedListing) { listing in
                 if let id = listing?.id {
@@ -466,6 +469,46 @@ struct BrowseView: View {
                 }
             }
         }
+    }
+
+    // MARK: - List footer
+    private var listFooter: some View {
+        VStack(spacing: 12) {
+            Divider().padding(.horizontal, 20)
+
+            VStack(spacing: 8) {
+                Image(systemName: "house.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.rdBlue.opacity(0.4))
+
+                Text("HogaresRD")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+
+                Text("Los listados pueden estar sujetos a cambios de precio y disponibilidad. Verifica la información directamente con el agente antes de tomar decisiones.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+
+                HStack(spacing: 16) {
+                    Link("Términos", destination: URL(string: "https://hogaresrd.com/terminos")!)
+                        .font(.caption2.bold())
+                        .foregroundStyle(Color.rdBlue)
+                    Text("·").foregroundStyle(.tertiary)
+                    Link("Privacidad", destination: URL(string: "https://hogaresrd.com/privacidad")!)
+                        .font(.caption2.bold())
+                        .foregroundStyle(Color.rdBlue)
+                    Text("·").foregroundStyle(.tertiary)
+                    Link("Ayuda", destination: URL(string: "https://hogaresrd.com/contacto")!)
+                        .font(.caption2.bold())
+                        .foregroundStyle(Color.rdBlue)
+                }
+                .padding(.top, 4)
+            }
+            .padding(.vertical, 16)
+        }
+        .padding(.top, 8)
     }
 
     // MARK: - UI elements
