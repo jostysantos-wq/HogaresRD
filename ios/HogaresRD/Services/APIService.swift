@@ -908,6 +908,36 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Push Notifications
+
+    func registerPushToken(token: String) async throws {
+        guard let t = self.token else { return }
+        let url = URL(string: "\(apiBase)/api/push/subscribe")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "type": "ios",
+            "deviceToken": token
+        ])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al registrar notificaciones")
+        }
+    }
+
+    func unregisterPushToken() async throws {
+        guard let t = self.token else { return }
+        let url = URL(string: "\(apiBase)/api/push/subscribe")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (_, _) = try await URLSession.shared.data(for: req)
+    }
+
     // MARK: - Private
 
     @MainActor

@@ -354,19 +354,151 @@ struct ProfileMenuView: View {
 // MARK: - Settings Views
 
 struct NotificationSettingsView: View {
+    @EnvironmentObject var api: APIService
+    @StateObject private var pushService = PushNotificationService.shared
+
+    @State private var pushEnabled = false
+    @State private var loading = false
+    @State private var errorMsg: String?
+
+    // In-app notification preferences (local)
+    @AppStorage("notif_newListings")   private var newListings = true
+    @AppStorage("notif_priceDrops")    private var priceDrops = true
+    @AppStorage("notif_similar")       private var similar = false
+    @AppStorage("notif_agentMessages") private var agentMessages = true
+    @AppStorage("notif_appUpdates")    private var appUpdates = false
+
     var body: some View {
         List {
-            Section("Alertas de propiedades") {
-                Toggle("Nuevas propiedades", isOn: .constant(true))
-                Toggle("Bajas de precio", isOn: .constant(true))
-                Toggle("Propiedades similares", isOn: .constant(false))
+            // ── Push Notifications ──
+            Section {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
+                        Image(systemName: "bell.badge.fill")
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Notificaciones push")
+                            .font(.subheadline).bold()
+                        Text("Recibe alertas en tiempo real sobre propiedades, mensajes y actualizaciones.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+
+                HStack {
+                    Label(pushEnabled ? "Activadas" : "Desactivadas",
+                          systemImage: pushEnabled ? "bell.fill" : "bell.slash.fill")
+                    Spacer()
+                    if loading {
+                        ProgressView()
+                    } else {
+                        Toggle("", isOn: Binding(
+                            get: { pushEnabled },
+                            set: { newVal in Task { await togglePush(newVal) } }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+
+                if !pushService.isAuthorized && pushEnabled == false {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text("Las notificaciones push no están habilitadas en los ajustes del sistema.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let err = errorMsg {
+                    Label(err, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
+
+            // ── Property alerts ──
+            Section("Alertas de propiedades") {
+                Toggle(isOn: $newListings) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Nuevas propiedades")
+                        Text("Notificaciones de nuevos listados que coinciden con tus criterios")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $priceDrops) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Bajas de precio")
+                        Text("Alertas cuando bajan los precios de propiedades guardadas")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $similar) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Propiedades similares")
+                        Text("Sugerencias basadas en tus búsquedas recientes")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            // ── General ──
             Section("General") {
-                Toggle("Mensajes de agentes", isOn: .constant(true))
-                Toggle("Actualizaciones de aplicación", isOn: .constant(false))
+                Toggle(isOn: $agentMessages) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mensajes de agentes")
+                        Text("Notificaciones cuando un agente te envía un mensaje")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $appUpdates) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Actualizaciones de aplicación")
+                        Text("Novedades y mejoras de HogaresRD")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
         }
-        .navigationTitle("Notifications")
+        .navigationTitle("Notificaciones")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            pushService.checkAuthorizationStatus()
+            pushEnabled = pushService.isAuthorized && pushService.deviceToken != nil
+        }
+    }
+
+    private func togglePush(_ enable: Bool) async {
+        loading = true
+        errorMsg = nil
+
+        if enable {
+            let granted = await pushService.requestPermission()
+            await MainActor.run {
+                pushEnabled = granted
+                if !granted {
+                    errorMsg = "Permiso denegado. Habilita las notificaciones en Ajustes > HogaresRD."
+                }
+                loading = false
+            }
+        } else {
+            do {
+                try await api.unregisterPushToken()
+                await MainActor.run {
+                    pushEnabled = false
+                    loading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMsg = "Error al desactivar notificaciones."
+                    loading = false
+                }
+            }
+        }
     }
 }
 

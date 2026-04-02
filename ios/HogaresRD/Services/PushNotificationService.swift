@@ -1,0 +1,67 @@
+import Foundation
+import UserNotifications
+import UIKit
+
+class PushNotificationService: NSObject, ObservableObject {
+    static let shared = PushNotificationService()
+
+    @Published var isAuthorized = false
+    @Published var deviceToken: String?
+
+    override init() {
+        super.init()
+        checkAuthorizationStatus()
+    }
+
+    func checkAuthorizationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                self.isAuthorized = settings.authorizationStatus == .authorized
+            }
+        }
+    }
+
+    func requestPermission() async -> Bool {
+        do {
+            let granted = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .badge, .sound])
+            await MainActor.run {
+                self.isAuthorized = granted
+                if granted {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+            return granted
+        } catch {
+            print("Push permission error: \(error)")
+            return false
+        }
+    }
+
+    func handleDeviceToken(_ tokenData: Data) {
+        let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
+        DispatchQueue.main.async {
+            self.deviceToken = token
+        }
+        Task {
+            await registerTokenWithServer(token)
+        }
+    }
+
+    func handleRegistrationError(_ error: Error) {
+        print("APNs registration error: \(error)")
+    }
+
+    private func registerTokenWithServer(_ token: String) async {
+        do {
+            try await APIService.shared.registerPushToken(token: token)
+            print("Push token registered with server")
+        } catch {
+            print("Failed to register push token: \(error)")
+        }
+    }
+}
+
+extension Notification.Name {
+    static let pushNotificationTapped = Notification.Name("pushNotificationTapped")
+}

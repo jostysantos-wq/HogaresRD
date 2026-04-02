@@ -3,6 +3,7 @@ const router  = express.Router();
 const crypto  = require('crypto');
 const store   = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
+const { notify: pushNotify } = require('./push');
 
 const uid = () => 'tour_' + crypto.randomBytes(8).toString('hex');
 const slotUid = () => 'avail_' + crypto.randomBytes(8).toString('hex');
@@ -175,6 +176,14 @@ router.post('/request', optionalAuth, (req, res) => {
 
   store.saveTour(tour);
   res.status(201).json(tour);
+
+  // Push notification → broker
+  pushNotify(broker_id, {
+    type: 'tour_update',
+    title: 'Nueva Solicitud de Visita',
+    body: `${name} solicitó una visita para ${listingTitle} el ${date} a las ${time}`,
+    url: '/broker.html',
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -231,6 +240,18 @@ router.put('/:id/status', userAuth, (req, res) => {
   tour.updated_at  = new Date().toISOString();
   store.saveTour(tour);
 
+  // Push notification → client
+  if (tour.client_id) {
+    pushNotify(tour.client_id, {
+      type: 'tour_update',
+      title: status === 'confirmed' ? 'Visita Confirmada ✓' : 'Visita Rechazada',
+      body: status === 'confirmed'
+        ? `Tu visita a ${tour.listing_title} el ${tour.requested_date} a las ${tour.requested_time} fue confirmada`
+        : `Tu visita a ${tour.listing_title} fue rechazada${notes ? ': ' + notes : ''}`,
+      url: '/profile',
+    });
+  }
+
   res.json(tour);
 });
 
@@ -250,6 +271,24 @@ router.put('/:id/cancel', userAuth, (req, res) => {
   tour.status     = 'cancelled';
   tour.updated_at = new Date().toISOString();
   store.saveTour(tour);
+
+  // Push notification → the other party
+  const cancelledByBroker = tour.broker_id === req.user.sub;
+  if (cancelledByBroker && tour.client_id) {
+    pushNotify(tour.client_id, {
+      type: 'tour_update',
+      title: 'Visita Cancelada',
+      body: `La visita a ${tour.listing_title} el ${tour.requested_date} fue cancelada por el agente`,
+      url: '/profile',
+    });
+  } else if (!cancelledByBroker) {
+    pushNotify(tour.broker_id, {
+      type: 'tour_update',
+      title: 'Visita Cancelada',
+      body: `${tour.client_name} canceló la visita a ${tour.listing_title} del ${tour.requested_date}`,
+      url: '/broker.html',
+    });
+  }
 
   res.json(tour);
 });

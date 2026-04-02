@@ -9,6 +9,7 @@ const store      = require('./store');
 const { userAuth } = require('./auth');
 const { logSec } = require('./security-log');
 const notify     = require('../utils/twilio');
+const { notify: pushNotify } = require('./push');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
@@ -389,6 +390,24 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   res.status(201).json({ ok: true, id: app.id });
 
+  // Push notification → broker (fire-and-forget)
+  if (broker.user_id) {
+    pushNotify(broker.user_id, {
+      type: 'new_application',
+      title: 'Nueva Aplicación',
+      body: `${app.client.name} aplicó para ${app.listing_title}`,
+      url: '/broker.html',
+    });
+  }
+  if (inmobiliaria_id) {
+    pushNotify(inmobiliaria_id, {
+      type: 'new_application',
+      title: 'Nueva Aplicación',
+      body: `${app.client.name} aplicó para ${app.listing_title} (${broker.name || 'agente'})`,
+      url: '/broker.html',
+    });
+  }
+
   // WhatsApp broker notification (fire-and-forget)
   setImmediate(async () => {
     try {
@@ -505,6 +524,16 @@ router.put('/:id/status', userAuth, (req, res) => {
   if (app.client.email) {
     const email = statusEmail(app, oldStatus, status, reason);
     sendNotification(app.client.email, email.subject, email.html);
+  }
+
+  // Push notification → client
+  if (app.client.user_id) {
+    pushNotify(app.client.user_id, {
+      type: 'status_changed',
+      title: 'Estado Actualizado',
+      body: `Tu aplicación para ${app.listing_title} cambió a: ${STATUS_LABELS[status] || status}`,
+      url: `/my-applications?id=${app.id}`,
+    });
   }
 
   res.json(app);
@@ -691,6 +720,18 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   }
 
   store.saveApplication(app);
+
+  // Push notification → client (document reviewed)
+  if (app.client.user_id) {
+    const docLabel = status === 'approved' ? 'aprobado ✓' : 'rechazado';
+    pushNotify(app.client.user_id, {
+      type: 'document_reviewed',
+      title: `Documento ${docLabel}`,
+      body: `"${doc.original_name}" fue ${docLabel} en tu aplicación para ${app.listing_title}`,
+      url: `/my-applications?id=${app.id}`,
+    });
+  }
+
   res.json(app);
 });
 
@@ -900,6 +941,18 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
   if (app.client.email) {
     const email = statusEmail(app, null, app.status, notes);
     sendNotification(app.client.email, email.subject, email.html);
+  }
+
+  // Push notification → client (payment reviewed)
+  if (app.client.user_id) {
+    pushNotify(app.client.user_id, {
+      type: 'payment_approved',
+      title: approved ? 'Pago Aprobado ✓' : 'Pago Rechazado',
+      body: approved
+        ? `Tu pago para ${app.listing_title} ha sido aprobado`
+        : `Tu pago para ${app.listing_title} fue rechazado${notes ? ': ' + notes : ''}`,
+      url: `/my-applications?id=${app.id}`,
+    });
   }
 
   res.json(app);

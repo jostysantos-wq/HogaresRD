@@ -3,6 +3,7 @@ const router       = express.Router();
 const nodemailer   = require('nodemailer');
 const store        = require('./store');
 const notify       = require('../utils/twilio');
+const { notify: pushNotify } = require('./push');
 
 const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
 
@@ -213,6 +214,24 @@ router.post('/:id/messages', requireLogin, (req, res) => {
 
   store.saveConversation(conv);
   res.json({ message: msg, conversation: conv });
+
+  // Push notification → recipient
+  const preview = text.trim().slice(0, 80) + (text.trim().length > 80 ? '…' : '');
+  if (isBroker && conv.clientId) {
+    pushNotify(conv.clientId, {
+      type: 'new_message',
+      title: `💬 ${user.name}`,
+      body: preview,
+      url: `/mensajes?conv=${conv.id}`,
+    });
+  } else if (!isBroker && conv.brokerId) {
+    pushNotify(conv.brokerId, {
+      type: 'new_message',
+      title: `💬 ${user.name}`,
+      body: preview,
+      url: `/broker.html`,
+    });
+  }
 
   // ── Fire-and-forget notifications ────────────────────────────────────────
   setImmediate(async () => {

@@ -2,6 +2,17 @@ require('dotenv').config();
 const path       = require('path');
 const fs         = require('fs');
 
+// ── VAPID keys for Web Push ───────────────────────────────────
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  const webpush = require('web-push');
+  const vapidKeys = webpush.generateVAPIDKeys();
+  console.log('Generated VAPID keys (add to .env):');
+  console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
+  console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
+  process.env.VAPID_PUBLIC_KEY = vapidKeys.publicKey;
+  process.env.VAPID_PRIVATE_KEY = vapidKeys.privateKey;
+}
+
 // ── Startup: fail fast if required secrets are missing ────────────
 (function checkEnv() {
   const required = ['JWT_SECRET', 'ADMIN_KEY'];
@@ -26,6 +37,10 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   path.join(DATA_DIR, 'availability.json'),   // Tour scheduling: broker availability
   path.join(DATA_DIR, 'tours.json'),           // Tour scheduling: visit requests
 ].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
+// Object-keyed data files (seeded with {})
+[path.join(DATA_DIR, 'push_subscriptions.json')].forEach(f => {
+  if (!fs.existsSync(f)) fs.writeFileSync(f, '{}');
+});
 const DOCS_DIR = path.join(DATA_DIR, 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 
@@ -182,6 +197,7 @@ app.use('/api/conversations', require('./routes/auth').userAuth, require('./rout
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
+app.use('/api/push',              require('./routes/push').router);
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 app.get('/api/config/meta', (req, res) => {

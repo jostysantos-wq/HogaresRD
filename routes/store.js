@@ -13,6 +13,7 @@ const FILES = {
   availability:   path.join(DATA_DIR, 'availability.json'),
   tours:          path.join(DATA_DIR, 'tours.json'),
   twofa_sessions: path.join(DATA_DIR, 'twofa_sessions.json'),
+  pushSubscriptions: path.join(DATA_DIR, 'push_subscriptions.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -270,6 +271,65 @@ function cleanExpiredTwoFASessions() {
   write(FILES.twofa_sessions, all);
 }
 
+// ── Push Subscriptions ───────────────────────────────────────────────────
+// Stored as object: { [userId]: { web: [...], ios: [...], preferences: {...} } }
+function _ensurePushFile() {
+  if (!fs.existsSync(FILES.pushSubscriptions)) fs.writeFileSync(FILES.pushSubscriptions, '{}');
+}
+_ensurePushFile();
+
+function _readPush() {
+  try { return JSON.parse(fs.readFileSync(FILES.pushSubscriptions, 'utf8')); }
+  catch { return {}; }
+}
+function _writePush(data) { fs.writeFileSync(FILES.pushSubscriptions, JSON.stringify(data, null, 2)); }
+
+function getPushSubscriptions() { return _readPush(); }
+
+function getPushSubscriptionsByUser(userId) {
+  const all = _readPush();
+  return all[userId] || { web: [], ios: [], preferences: {} };
+}
+
+function savePushSubscription(userId, data) {
+  const all  = _readPush();
+  if (!all[userId]) all[userId] = { web: [], ios: [], preferences: {} };
+
+  if (data.type === 'web' && data.subscription) {
+    // Avoid duplicates by endpoint
+    const exists = all[userId].web.some(s => s.endpoint === data.subscription.endpoint);
+    if (!exists) all[userId].web.push(data.subscription);
+  } else if (data.type === 'ios' && data.deviceToken) {
+    if (!all[userId].ios.includes(data.deviceToken)) {
+      all[userId].ios.push(data.deviceToken);
+    }
+  }
+  _writePush(all);
+}
+
+function removePushSubscription(userId, type, identifier) {
+  const all = _readPush();
+  if (!all[userId]) return;
+  if (type === 'web') {
+    all[userId].web = all[userId].web.filter(s => s.endpoint !== identifier);
+  } else if (type === 'ios') {
+    all[userId].ios = all[userId].ios.filter(t => t !== identifier);
+  }
+  _writePush(all);
+}
+
+function getPushPreferences(userId) {
+  const all = _readPush();
+  return (all[userId] && all[userId].preferences) || {};
+}
+
+function savePushPreferences(userId, prefs) {
+  const all = _readPush();
+  if (!all[userId]) all[userId] = { web: [], ios: [], preferences: {} };
+  all[userId].preferences = prefs;
+  _writePush(all);
+}
+
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
@@ -285,4 +345,6 @@ module.exports = {
   getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing,
   getBookedSlots, saveTour,
   getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, cleanExpiredTwoFASessions,
+  getPushSubscriptions, getPushSubscriptionsByUser, savePushSubscription,
+  removePushSubscription, getPushPreferences, savePushPreferences,
 };

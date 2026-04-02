@@ -1027,6 +1027,10 @@
     </button>
     <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
     <div class="topbar-spacer"></div>
+    <button id="pushToggleBtn" onclick="window._togglePush()" title="Notificaciones" style="position:relative;background:none;border:none;cursor:pointer;padding:6px;margin-right:8px;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="color:var(--text-muted);"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+      <span id="pushDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#9ca3af;border:2px solid var(--bg-card);"></span>
+    </button>
     <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
   </div>
 
@@ -5056,6 +5060,105 @@
       toast('Reporte Excel descargado');
     }
   })();
+
+  // ── Push Notifications ─────────────────────────────────────
+  let _pushSubscribed = false;
+
+  async function initPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.log('Push not supported');
+      return;
+    }
+
+    const reg = await navigator.serviceWorker.register('/sw.js');
+
+    const sub = await reg.pushManager.getSubscription();
+    _pushSubscribed = sub !== null;
+    updatePushUI(_pushSubscribed);
+
+    if (sub) {
+      try {
+        await API('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'web', subscription: sub.toJSON() }),
+        });
+      } catch(e) { console.log('Push sync error:', e); }
+    }
+  }
+
+  async function subscribePush() {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        toast('Notificaciones bloqueadas. Habilítalas en la configuración del navegador.', 'error');
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+
+      const { publicKey } = await API('/api/push/vapid-key');
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      await API('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'web', subscription: sub.toJSON() }),
+      });
+
+      _pushSubscribed = true;
+      updatePushUI(true);
+      toast('Notificaciones activadas');
+    } catch(e) {
+      console.error('Push subscribe error:', e);
+      toast('Error al activar notificaciones', 'error');
+    }
+  }
+
+  async function unsubscribePush() {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await sub.unsubscribe();
+        await API('/api/push/subscribe', { method: 'DELETE' });
+      }
+      _pushSubscribed = false;
+      updatePushUI(false);
+      toast('Notificaciones desactivadas');
+    } catch(e) { toast('Error', 'error'); }
+  }
+
+  function updatePushUI(subscribed) {
+    const btn = document.getElementById('pushToggleBtn');
+    const dot = document.getElementById('pushDot');
+    if (btn) btn.title = subscribed ? 'Notificaciones activadas' : 'Activar notificaciones';
+    if (dot) dot.style.background = subscribed ? '#22c55e' : '#9ca3af';
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  window._togglePush = async function() {
+    if (_pushSubscribed) {
+      await unsubscribePush();
+    } else {
+      await subscribePush();
+    }
+  };
+
+  // Initialize push after user is loaded
+  initPushNotifications();
 
 })();
 </script>
