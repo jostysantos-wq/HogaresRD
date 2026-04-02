@@ -1479,26 +1479,25 @@
   </div>
 
   <!-- ═══ PAGE: CONTRASENA ══════════════════════════════════ -->
-  <!-- ═══ PAGE: NOTIF SETTINGS (phone/SMS) — embedded in contrasena ══ -->
-  <div class="settings-card" id="phoneSettingsCard" style="margin-bottom:1.5rem;">
-    <h2 class="settings-card-title">Notificaciones SMS / WhatsApp</h2>
-    <p class="settings-card-desc">Recibe alertas de nuevos mensajes y aplicaciones en tu teléfono vía WhatsApp.</p>
-    <div id="phoneSettingsMsg" style="margin-bottom:.75rem;font-size:.85rem;min-height:1em;"></div>
-    <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
-      <div style="flex:1;min-width:180px;">
-        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);display:block;margin-bottom:.4rem;">Número de teléfono</label>
-        <input id="phoneInput" type="tel" placeholder="809-555-0000"
-          style="width:100%;padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:.9rem;outline:none;" />
-      </div>
-      <button onclick="savePhone()"
-        style="padding:.65rem 1.4rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;">
-        Guardar teléfono
-      </button>
-    </div>
-    <p style="font-size:.78rem;color:var(--text-muted);margin-top:.6rem;">💡 Recibirás mensajes de WhatsApp cuando un cliente te escriba o envíe una aplicación.</p>
-  </div>
-
   <div class="page-section" id="page-contrasena">
+    <!-- ═══ NOTIF SETTINGS (phone/SMS) ══ -->
+    <div class="settings-card" id="phoneSettingsCard" style="margin-bottom:1.5rem;">
+      <h2 class="settings-card-title">Notificaciones SMS / WhatsApp</h2>
+      <p class="settings-card-desc">Recibe alertas de nuevos mensajes y aplicaciones en tu teléfono vía WhatsApp.</p>
+      <div id="phoneSettingsMsg" style="margin-bottom:.75rem;font-size:.85rem;min-height:1em;"></div>
+      <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;">
+          <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);display:block;margin-bottom:.4rem;">Número de teléfono</label>
+          <input id="phoneInput" type="tel" placeholder="809-555-0000"
+            style="width:100%;padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:.9rem;outline:none;" />
+        </div>
+        <button onclick="savePhone()"
+          style="padding:.65rem 1.4rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+          Guardar teléfono
+        </button>
+      </div>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-top:.6rem;">💡 Recibirás mensajes de WhatsApp cuando un cliente te escriba o envíe una aplicación.</p>
+    </div>
     <div class="settings-card">
       <h2 class="settings-card-title">Cambiar Contrasena</h2>
       <p class="settings-card-desc">Actualiza tu contrasena de acceso al portal de broker.</p>
@@ -4738,9 +4737,9 @@
   .avail-mday{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;border-radius:6px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;color:var(--text);position:relative;}
   .avail-mday:hover:not(.empty):not(.past){border-color:var(--accent);transform:scale(1.1);}
   .avail-mday.empty{visibility:hidden;pointer-events:none;}
-  .avail-mday.past{opacity:0.25;cursor:default;pointer-events:none;}
-  .avail-mday.available{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent,#0038A8);}
-  .avail-mday.blocked{background:#fee2e2;color:#991b1b;}
+  .avail-mday.past{opacity:0.3;cursor:default;pointer-events:none;}
+  .avail-mday.available{background:color-mix(in srgb,var(--accent) 25%,transparent);color:var(--accent,#0038A8);font-weight:600;}
+  .avail-mday.blocked{background:#fee2e2;color:#991b1b;font-weight:600;}
   .avail-mday.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800;}
   .avail-mday.drag-select{outline:2px solid var(--accent);outline-offset:-1px;}
   .cal-year-btn{background:none;border:1.5px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--text);transition:all .15s;}
