@@ -357,6 +357,25 @@ class APIService: ObservableObject {
         _ = try await URLSession.shared.data(for: req)
     }
 
+    func saveBrokerOverride(date: String, available: Bool) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/override")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = ["date": date, "available": available]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await URLSession.shared.data(for: req)
+    }
+
+    func deleteBrokerOverride(overrideId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/override/\(overrideId)")!)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        _ = try await URLSession.shared.data(for: req)
+    }
+
     // MARK: - Conversations
 
     func getConversations() async throws -> [Conversation] {

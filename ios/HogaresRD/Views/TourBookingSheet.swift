@@ -669,134 +669,341 @@ struct BrokerToursView: View {
     }
 }
 
-// MARK: - Broker Availability View
+// MARK: - Broker Availability View (Year Calendar)
 
 struct BrokerAvailabilityView: View {
     @EnvironmentObject var api: APIService
     @State private var weekly:    [AvailabilitySlot] = []
     @State private var overrides: [AvailabilitySlot] = []
     @State private var loading = true
+    @State private var duration = 30
+    @State private var calYear: Int = Calendar.current.component(.year, from: Date())
 
-    // Add slot form
-    @State private var selectedDay  = 1
-    @State private var startTime    = Date()
-    @State private var endTime      = Date()
-    @State private var duration     = 30
-    @State private var showAddSheet = false
+    // Add time sheet
+    @State private var editingDay: Int?
+    @State private var editStart = Date()
+    @State private var editEnd   = Date()
 
-    private let dayOptions = [
-        (1, "Lunes"), (2, "Martes"), (3, "Miércoles"),
-        (4, "Jueves"), (5, "Viernes"), (6, "Sábado"), (0, "Domingo")
-    ]
+    // Day order: Mon(1)→Sun(0)
+    private let dayOrder  = [1, 2, 3, 4, 5, 6, 0]
+    private let dayNames  = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+    private let dayFull   = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+    private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    private func slotsForDay(_ dow: Int) -> [AvailabilitySlot] {
+        weekly.filter { $0.day_of_week == dow }
+    }
+
+    // Set of active weekdays (0=Sun..6=Sat)
+    private var activeDays: Set<Int> {
+        Set(weekly.map { $0.day_of_week })
+    }
+
+    // Set of blocked date strings
+    private var blockedDates: Set<String> {
+        Set(overrides.filter { $0.available == false }.compactMap { $0.date })
+    }
+
+    // Find override for a date
+    private func overrideForDate(_ dateStr: String) -> AvailabilitySlot? {
+        overrides.first { $0.date == dateStr && $0.available == false }
+    }
 
     var body: some View {
-        List {
-            // Weekly schedule
-            Section("Horario Semanal") {
-                if weekly.isEmpty && !loading {
-                    Text("No tienes horarios configurados.")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // ── Duration picker ──
+                HStack {
+                    Text("Duración de cita")
                         .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    ForEach(weekly) { slot in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(slot.dayName)
-                                    .font(.subheadline).bold()
-                                    .foregroundStyle(Color.rdBlue)
-                                Text("\(slot.start_time) - \(slot.end_time)")
-                                    .font(.caption)
-                                Text("Citas de \(slot.slot_duration_min) min")
-                                    .font(.caption2).foregroundStyle(.tertiary)
-                            }
-                            Spacer()
-                            Button {
-                                Task { await deleteSlot(slot.id) }
-                            } label: {
-                                Image(systemName: "trash")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.rdRed)
-                            }
-                        }
+                    Spacer()
+                    Picker("", selection: $duration) {
+                        Text("15 min").tag(15)
+                        Text("30 min").tag(30)
+                        Text("60 min").tag(60)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 220)
+                }
+                .padding(.horizontal, 16)
+
+                // ── Weekly recurring schedule strip ──
+                weeklyStripSection
+
+                Divider().padding(.horizontal, 16)
+
+                // ── Year calendar header ──
+                HStack {
+                    Button { calYear -= 1 } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                    Spacer()
+                    Text(String(calYear))
+                        .font(.title2.bold())
+                    Spacer()
+                    Button { calYear += 1 } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.rdBlue)
                     }
                 }
+                .padding(.horizontal, 24)
 
-                Button {
-                    showAddSheet = true
-                } label: {
-                    Label("Agregar horario", systemImage: "plus.circle.fill")
-                        .font(.subheadline).bold()
-                        .foregroundStyle(Color.rdBlue)
+                // ── Legend ──
+                HStack(spacing: 16) {
+                    legendDot(color: Color.rdBlue, label: "Disponible")
+                    legendDot(color: Color.rdRed, label: "Bloqueado")
+                    legendDot(color: Color(.systemGray4), label: "Sin horario")
                 }
-            }
+                .font(.caption2)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
 
-            // Blocked dates
-            Section("Días Bloqueados") {
-                let blocked = overrides.filter { $0.available == false }
-                if blocked.isEmpty {
-                    Text("No hay días bloqueados.")
-                        .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    ForEach(blocked) { override in
-                        HStack {
-                            Text(override.date ?? "")
-                                .font(.subheadline)
-                            Spacer()
-                            Button {
-                                Task { await deleteSlot(override.id) }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color.rdRed)
-                            }
-                        }
+                // ── 12-month grid ──
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ], spacing: 16) {
+                    ForEach(1...12, id: \.self) { month in
+                        monthCard(month: month, year: calYear)
                     }
                 }
+                .padding(.horizontal, 12)
             }
+            .padding(.vertical, 16)
         }
         .navigationTitle("Disponibilidad")
         .task { await load() }
         .refreshable { await load() }
-        .sheet(isPresented: $showAddSheet) {
-            addSlotSheet
+        .sheet(item: $editingDay) { dow in
+            addTimeSheet(for: dow)
         }
     }
 
-    // MARK: - Add Slot Sheet
+    // MARK: - Legend Dot
 
-    private var addSlotSheet: some View {
-        NavigationStack {
-            Form {
-                Picker("Día", selection: $selectedDay) {
-                    ForEach(dayOptions, id: \.0) { val, name in
-                        Text(name).tag(val)
+    private func legendDot(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Weekly Strip
+
+    private var weeklyStripSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Horario Semanal Recurrente")
+                .font(.subheadline.bold())
+                .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(dayOrder, id: \.self) { dow in
+                        weeklyDayChip(dow)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+
+    private func weeklyDayChip(_ dow: Int) -> some View {
+        let slots = slotsForDay(dow)
+        let isActive = !slots.isEmpty
+
+        return VStack(spacing: 4) {
+            // Toggle day
+            Button {
+                Task { await toggleDay(dow) }
+            } label: {
+                Text(dayNames[dow])
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(isActive ? .white : .secondary)
+                    .frame(width: 44, height: 32)
+                    .background(isActive ? Color.rdBlue : Color(.systemGray5))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            // Time ranges
+            if isActive {
+                VStack(spacing: 2) {
+                    ForEach(slots) { slot in
+                        Text("\(slot.start_time)-\(slot.end_time)")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.rdBlue)
                     }
                 }
 
-                DatePicker("Desde", selection: $startTime, displayedComponents: .hourAndMinute)
-                DatePicker("Hasta", selection: $endTime, displayedComponents: .hourAndMinute)
+                // Edit button
+                Button {
+                    editingDay = dow
+                } label: {
+                    Text("editar")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.rdBlue.opacity(0.7))
+                }
+            }
+        }
+    }
 
-                Picker("Duración de cita", selection: $duration) {
-                    Text("15 minutos").tag(15)
-                    Text("30 minutos").tag(30)
-                    Text("60 minutos").tag(60)
+    // MARK: - Month Card
+
+    private func monthCard(month: Int, year: Int) -> some View {
+        let cal = Calendar.current
+        let firstOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1))!
+        let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)!.count
+        // weekday of 1st: 1=Sun...7=Sat → convert to 0=Sun...6=Sat
+        let firstWeekday = cal.component(.weekday, from: firstOfMonth) - 1 // 0=Sun
+        // We display Mon first, so offset: Mon=0, Tue=1 ... Sun=6
+        let monFirstOffset = (firstWeekday + 6) % 7
+
+        let dayHeaders = ["L", "M", "X", "J", "V", "S", "D"]
+
+        return VStack(spacing: 4) {
+            Text(monthNames[month - 1])
+                .font(.system(size: 13, weight: .bold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Day headers
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
+                ForEach(dayHeaders, id: \.self) { h in
+                    Text(h)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // Day cells
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
+                // Empty cells before first day
+                ForEach(0..<monFirstOffset, id: \.self) { _ in
+                    Text("").frame(height: 24)
+                }
+
+                ForEach(1...daysInMonth, id: \.self) { day in
+                    let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
+                    let dateObj = cal.date(from: DateComponents(year: year, month: month, day: day))!
+                    // weekday: 1=Sun...7=Sat → convert to 0=Sun...6=Sat
+                    let dow = cal.component(.weekday, from: dateObj) - 1
+                    let hasSchedule = activeDays.contains(dow)
+                    let isBlocked = blockedDates.contains(dateStr)
+                    let today = todayStr()
+                    let isPast = dateStr < today
+
+                    Button {
+                        Task { await toggleDate(dateStr, isBlocked: isBlocked) }
+                    } label: {
+                        Text("\(day)")
+                            .font(.system(size: 11, weight: dateStr == today ? .bold : .regular))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 24)
+                            .background(dayCellColor(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
+                            .foregroundStyle(dayCellForeground(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(dateStr == today ? Color.rdBlue : Color.clear, lineWidth: 1.5)
+                            )
+                    }
+                    .disabled(isPast)
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        )
+    }
+
+    // MARK: - Day Cell Styling
+
+    private func dayCellColor(hasSchedule: Bool, isBlocked: Bool, isPast: Bool) -> Color {
+        if isPast { return Color(.systemGray6) }
+        if isBlocked { return Color.rdRed.opacity(0.15) }
+        if hasSchedule { return Color.rdBlue.opacity(0.12) }
+        return Color(.systemGray6).opacity(0.5)
+    }
+
+    private func dayCellForeground(hasSchedule: Bool, isBlocked: Bool, isPast: Bool) -> Color {
+        if isPast { return .secondary.opacity(0.4) }
+        if isBlocked { return Color.rdRed }
+        if hasSchedule { return Color.rdBlue }
+        return .secondary
+    }
+
+    private func todayStr() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    // MARK: - Add Time Sheet
+
+    private func addTimeSheet(for dow: Int) -> some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(dayFull[dow])
+                        .font(.headline)
+                        .foregroundStyle(Color.rdBlue)
+                }
+
+                // Existing slots for this day
+                let existing = slotsForDay(dow)
+                if !existing.isEmpty {
+                    Section("Horarios actuales") {
+                        ForEach(existing) { slot in
+                            HStack {
+                                Text("\(slot.start_time) – \(slot.end_time)")
+                                    .font(.subheadline)
+                                Spacer()
+                                Button {
+                                    Task {
+                                        await deleteSlot(slot.id)
+                                        editingDay = nil
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(Color.rdRed)
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("Agregar nuevo horario") {
+                    DatePicker("Desde", selection: $editStart, displayedComponents: .hourAndMinute)
+                    DatePicker("Hasta", selection: $editEnd, displayedComponents: .hourAndMinute)
                 }
 
                 Section {
                     Button {
-                        Task { await addSlot() }
+                        Task { await addSlotForDay(dow) }
                     } label: {
-                        Text("Guardar")
+                        Text("Agregar Horario")
                             .bold().frame(maxWidth: .infinity)
+                            .foregroundStyle(.white)
                     }
+                    .listRowBackground(Color.rdBlue)
                 }
             }
-            .navigationTitle("Agregar Horario")
+            .navigationTitle("Editar Horario")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { showAddSheet = false }
+                    Button("Cerrar") { editingDay = nil }
                 }
             }
         }
+        .presentationDetents([.medium])
     }
 
     // MARK: - Actions
@@ -810,19 +1017,46 @@ struct BrokerAvailabilityView: View {
         loading = false
     }
 
-    private func addSlot() async {
+    private func toggleDay(_ dow: Int) async {
+        let slots = slotsForDay(dow)
+        if slots.isEmpty {
+            try? await api.saveBrokerAvailability(
+                dayOfWeek: dow, startTime: "09:00", endTime: "17:00", duration: duration
+            )
+        } else {
+            for slot in slots {
+                try? await api.deleteBrokerAvailability(slotId: slot.id)
+            }
+        }
+        await load()
+    }
+
+    private func toggleDate(_ dateStr: String, isBlocked: Bool) async {
+        if isBlocked {
+            // Unblock: find and delete the override
+            if let existing = overrideForDate(dateStr) {
+                try? await api.deleteBrokerOverride(overrideId: existing.id)
+            }
+        } else {
+            // Block: create override with available=false
+            try? await api.saveBrokerOverride(date: dateStr, available: false)
+        }
+        await load()
+    }
+
+    private func addSlotForDay(_ dow: Int) async {
         let cal = Calendar.current
-        let sH = cal.component(.hour, from: startTime)
-        let sM = cal.component(.minute, from: startTime)
-        let eH = cal.component(.hour, from: endTime)
-        let eM = cal.component(.minute, from: endTime)
+        let sH = cal.component(.hour, from: editStart)
+        let sM = cal.component(.minute, from: editStart)
+        let eH = cal.component(.hour, from: editEnd)
+        let eM = cal.component(.minute, from: editEnd)
         let start = String(format: "%02d:%02d", sH, sM)
         let end   = String(format: "%02d:%02d", eH, eM)
 
         try? await api.saveBrokerAvailability(
-            dayOfWeek: selectedDay, startTime: start, endTime: end, duration: duration
+            dayOfWeek: dow, startTime: start, endTime: end, duration: duration
         )
-        showAddSheet = false
+        editingDay = nil
         await load()
     }
 
@@ -830,6 +1064,11 @@ struct BrokerAvailabilityView: View {
         try? await api.deleteBrokerAvailability(slotId: id)
         await load()
     }
+}
+
+// Make Int conform to Identifiable for sheet(item:)
+extension Int: @retroactive Identifiable {
+    public var id: Int { self }
 }
 
 // MARK: - Client My Tours View

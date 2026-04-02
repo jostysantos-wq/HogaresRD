@@ -1595,51 +1595,41 @@
 
   <!-- ═══ PAGE: AVAILABILITY ═══════════════════════════════════ -->
   <div class="page-section" id="page-availability">
-    <div class="settings-card" style="max-width:900px;">
+    <div class="settings-card" style="max-width:1000px;">
       <h2 class="settings-card-title">Disponibilidad para Visitas</h2>
-      <p class="settings-card-desc">Configura los horarios en que los clientes pueden agendar visitas contigo.</p>
+      <p class="settings-card-desc">Configura tu horario semanal y toca fechas en el calendario para bloquear dias especificos.</p>
 
-      <h3 style="font-size:0.95rem;font-weight:700;margin:1.5rem 0 1rem;">Horario Semanal</h3>
-      <div id="availWeeklyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem;"></div>
-
-      <div style="background:var(--bg,#f7f8fa);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
-        <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:0.75rem;">Agregar Horario</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:0.75rem;align-items:end;">
-          <div>
-            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Dia</label>
-            <select id="availDay" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
-              <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miercoles</option>
-              <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sabado</option><option value="0">Domingo</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Desde</label>
-            <input type="time" id="availStart" value="09:00" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
-          </div>
-          <div>
-            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Hasta</label>
-            <input type="time" id="availEnd" value="12:00" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
-          </div>
-          <div>
-            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Duracion</label>
-            <select id="availDuration" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
-              <option value="30">30 min</option><option value="60">60 min</option><option value="15">15 min</option>
-            </select>
-          </div>
-          <button onclick="addAvailSlot()" style="padding:0.5rem 1.25rem;background:var(--accent,#0038A8);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+      <!-- ── Weekly recurring schedule ─────────────── -->
+      <div style="margin:1.25rem 0;">
+        <h3 style="font-size:0.92rem;font-weight:700;margin-bottom:0.5rem;">Horario Semanal Recurrente</h3>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Toca un dia para activarlo/desactivarlo. Estos horarios se repiten cada semana.</p>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-muted);">Duracion de cita:</span>
+          <select id="availDuration" style="padding:0.35rem 0.7rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.8rem;background:var(--bg-card,#fff);color:var(--text);">
+            <option value="30" selected>30 min</option><option value="15">15 min</option><option value="60">60 min</option>
+          </select>
         </div>
+        <div class="avail-week-strip" id="availWeekStrip"></div>
       </div>
 
-      <h3 style="font-size:0.95rem;font-weight:700;margin:1.5rem 0 1rem;">Dias Bloqueados</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Bloquea dias especificos donde no estaras disponible (vacaciones, feriados, etc.)</p>
-      <div style="display:flex;gap:0.75rem;align-items:end;margin-bottom:1rem;">
-        <div>
-          <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Fecha</label>
-          <input type="date" id="blockDate" style="padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+      <div style="height:1px;background:var(--border);margin:1.25rem 0;"></div>
+
+      <!-- ── Year calendar ─────────────────────────── -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <h3 style="font-size:0.92rem;font-weight:700;">Calendario Anual</h3>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button onclick="availCalPrevYear()" class="cal-year-btn">&laquo;</button>
+          <span id="availCalYear" style="font-size:0.92rem;font-weight:700;min-width:50px;text-align:center;"></span>
+          <button onclick="availCalNextYear()" class="cal-year-btn">&raquo;</button>
         </div>
-        <button onclick="blockDay()" style="padding:0.5rem 1.25rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;">Bloquear dia</button>
       </div>
-      <div id="blockedDaysList"></div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem;">Toca una fecha para bloquearla/desbloquearla. Arrastra para seleccionar un rango de vacaciones.</p>
+      <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;font-size:0.72rem;">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);"></span> Disponible</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1px solid #fca5a5;"></span> Bloqueado</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:var(--bg,#f5f5f5);border:1px solid var(--border);"></span> Sin horario</span>
+      </div>
+      <div id="availYearCal" class="avail-year-cal"></div>
     </div>
   </div>
 
@@ -4721,6 +4711,40 @@
   .avail-card-del:hover{color:#ef4444;}
   .block-chip{display:inline-flex;align-items:center;gap:0.4rem;background:#fee2e2;color:#991b1b;padding:0.35rem 0.8rem;border-radius:8px;font-size:0.78rem;font-weight:600;margin:0.25rem;}
   .block-chip button{background:none;border:none;cursor:pointer;color:#991b1b;font-size:1rem;padding:0;line-height:1;}
+
+  /* ── Weekly strip ────────────────────────────────── */
+  .avail-week-strip{display:flex;gap:0.4rem;}
+  .avail-ws-day{flex:1;border:1.5px solid var(--border,#e5e7eb);border-radius:10px;padding:0.5rem 0.25rem;text-align:center;cursor:pointer;transition:all .2s;user-select:none;min-width:0;}
+  .avail-ws-day:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent);}
+  .avail-ws-day.active{border-color:var(--accent,#0038A8);background:color-mix(in srgb,var(--accent) 6%,transparent);}
+  .avail-ws-name{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted,#999);}
+  .avail-ws-day.active .avail-ws-name{color:var(--accent,#0038A8);}
+  .avail-ws-times{margin-top:0.3rem;font-size:0.68rem;color:var(--text-muted);line-height:1.4;}
+  .avail-ws-day.active .avail-ws-times{color:var(--accent,#0038A8);font-weight:600;}
+  .avail-ws-dot{width:6px;height:6px;border-radius:50%;margin:0.25rem auto 0;background:var(--border);}
+  .avail-ws-day.active .avail-ws-dot{background:var(--accent,#0038A8);}
+  .avail-ws-actions{margin-top:0.25rem;display:flex;flex-direction:column;gap:2px;align-items:center;}
+  .avail-ws-edit{font-size:0.62rem;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;font-weight:600;}
+  .avail-ws-edit:hover{text-decoration:underline;}
+
+  /* ── Year calendar ─────────────────────────────── */
+  .avail-year-cal{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;}
+  @media(max-width:750px){.avail-year-cal{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:480px){.avail-year-cal{grid-template-columns:1fr;}}
+  .avail-month-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:0.75rem;overflow:hidden;}
+  .avail-month-title{font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;text-align:center;}
+  .avail-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .avail-mday-hdr{font-size:0.6rem;font-weight:700;color:var(--text-muted,#999);text-align:center;padding:2px 0;}
+  .avail-mday{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;border-radius:6px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;color:var(--text);position:relative;}
+  .avail-mday:hover:not(.empty):not(.past){border-color:var(--accent);transform:scale(1.1);}
+  .avail-mday.empty{visibility:hidden;pointer-events:none;}
+  .avail-mday.past{opacity:0.25;cursor:default;pointer-events:none;}
+  .avail-mday.available{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent,#0038A8);}
+  .avail-mday.blocked{background:#fee2e2;color:#991b1b;}
+  .avail-mday.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800;}
+  .avail-mday.drag-select{outline:2px solid var(--accent);outline-offset:-1px;}
+  .cal-year-btn{background:none;border:1.5px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--text);transition:all .15s;}
+  .cal-year-btn:hover{border-color:var(--accent);color:var(--accent);}
 </style>
 <script>
 (function(){
@@ -4812,55 +4836,224 @@
     } catch {}
   };
 
-  // ── Availability ──────────────────────────────
+  // ── Availability (Year Calendar) ────────────────
+  const DAY_ORDER = [1,2,3,4,5,6,0];
+  const DAY_SHORT = {1:'Lun',2:'Mar',3:'Mie',4:'Jue',5:'Vie',6:'Sab',0:'Dom'};
+  const DAY_HDR = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const MONTH_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let _calYear = new Date().getFullYear();
+  let _dragStart = null;
+
   async function loadAvailability() {
     try {
       const res = await fetch('/api/tours/broker-availability', { credentials: 'include' });
       if (res.ok) _availData = await res.json();
     } catch {}
-    renderAvailability();
+    renderWeekStrip();
+    renderYearCal();
   }
 
-  function renderAvailability() {
-    const grid = document.getElementById('availWeeklyGrid');
-    if (!_availData.weekly || !_availData.weekly.length) {
-      grid.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;grid-column:1/-1;">No tienes horarios configurados. Agrega uno abajo.</p>';
-    } else {
-      grid.innerHTML = _availData.weekly.map(s => `<div class="avail-card">
-        <button class="avail-card-del" onclick="deleteAvailSlot('${s.id}')" title="Eliminar">&times;</button>
-        <div class="avail-card-day">${DAY_NAMES[s.day_of_week]}</div>
-        <div class="avail-card-time">${s.start_time} - ${s.end_time}</div>
-        <div class="avail-card-dur">Citas de ${s.slot_duration_min} min</div>
-      </div>`).join('');
-    }
+  // ── Weekly strip ──────────────────────────────
+  function renderWeekStrip() {
+    const strip = document.getElementById('availWeekStrip');
+    const weekly = _availData.weekly || [];
+    const byDay = {}; DAY_ORDER.forEach(d => byDay[d] = []);
+    weekly.forEach(s => { if (byDay[s.day_of_week]) byDay[s.day_of_week].push(s); });
 
-    const blockList = document.getElementById('blockedDaysList');
-    const overrides = (_availData.overrides || []).filter(o => !o.available);
-    if (!overrides.length) {
-      blockList.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">No hay dias bloqueados.</p>';
-    } else {
-      blockList.innerHTML = overrides.map(o => {
-        const d = new Date(o.date + 'T12:00:00');
-        return `<span class="block-chip">${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()} <button onclick="deleteAvailSlot('${o.id}')">&times;</button></span>`;
-      }).join('');
-    }
+    strip.innerHTML = DAY_ORDER.map(dow => {
+      const slots = byDay[dow];
+      const isActive = slots.length > 0;
+      const times = slots.map(s => `${s.start_time}-${s.end_time}`).join('<br>');
+      return `<div class="avail-ws-day${isActive ? ' active' : ''}" onclick="toggleDay(${dow})">
+        <div class="avail-ws-name">${DAY_SHORT[dow]}</div>
+        <div class="avail-ws-dot"></div>
+        ${isActive ? `<div class="avail-ws-times">${times}</div>
+          <div class="avail-ws-actions"><button class="avail-ws-edit" onclick="event.stopPropagation();editDayTimes(${dow})">editar</button></div>` : ''}
+      </div>`;
+    }).join('');
   }
 
-  window.addAvailSlot = async function() {
-    const body = {
-      day_of_week:       Number(document.getElementById('availDay').value),
-      start_time:        document.getElementById('availStart').value,
-      end_time:          document.getElementById('availEnd').value,
-      slot_duration_min: Number(document.getElementById('availDuration').value),
-    };
-    try {
+  window.toggleDay = async function(dow) {
+    const slots = (_availData.weekly || []).filter(s => s.day_of_week === dow);
+    if (slots.length > 0) {
+      if (!confirm(`Desactivar ${DAY_NAMES[dow]}?`)) return;
+      for (const s of slots) {
+        try { await fetch(`/api/tours/broker-availability/${s.id}`, { method: 'DELETE', credentials: 'include' }); } catch {}
+      }
+    } else {
+      const dur = Number(document.getElementById('availDuration').value) || 30;
       await fetch('/api/tours/broker-availability', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ day_of_week: dow, start_time: '09:00', end_time: '17:00', slot_duration_min: dur }),
       });
-      loadAvailability();
-    } catch {}
+    }
+    loadAvailability();
+  };
+
+  window.editDayTimes = function(dow) {
+    const slots = (_availData.weekly || []).filter(s => s.day_of_week === dow);
+    const current = slots.length ? `${slots[0].start_time} - ${slots[0].end_time}` : '09:00 - 17:00';
+    const startVal = slots.length ? slots[0].start_time : '09:00';
+    const endVal   = slots.length ? slots[0].end_time   : '17:00';
+    const html = `<div style="position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)this.remove()">
+      <div style="background:var(--bg-card,#fff);border-radius:14px;padding:1.5rem;width:340px;max-width:92%;" onclick="event.stopPropagation()">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">${DAY_NAMES[dow]}</h3>
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;">
+          <input type="time" id="_editStart" value="${startVal}" style="flex:1;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);">
+          <span style="font-weight:600;">a</span>
+          <input type="time" id="_editEnd" value="${endVal}" style="flex:1;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);color:var(--text);">
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:0.6rem;border:1.5px solid var(--border);border-radius:8px;background:none;color:var(--text);font-size:0.85rem;cursor:pointer;">Cancelar</button>
+          <button onclick="_saveEditDay(${dow},this)" style="flex:1;padding:0.6rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;">Guardar</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  };
+
+  window._saveEditDay = async function(dow, btn) {
+    const start = document.getElementById('_editStart').value;
+    const end   = document.getElementById('_editEnd').value;
+    if (!start || !end || start >= end) return alert('Horario invalido');
+    // Delete old slots for this day
+    const slots = (_availData.weekly || []).filter(s => s.day_of_week === dow);
+    for (const s of slots) {
+      try { await fetch(`/api/tours/broker-availability/${s.id}`, { method: 'DELETE', credentials: 'include' }); } catch {}
+    }
+    const dur = Number(document.getElementById('availDuration').value) || 30;
+    await fetch('/api/tours/broker-availability', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ day_of_week: dow, start_time: start, end_time: end, slot_duration_min: dur }),
+    });
+    btn.closest('[style*=fixed]').remove();
+    loadAvailability();
+  };
+
+  // ── Year calendar ──────────────────────────────
+  window.availCalPrevYear = function() { _calYear--; renderYearCal(); };
+  window.availCalNextYear = function() { _calYear++; renderYearCal(); };
+
+  function renderYearCal() {
+    document.getElementById('availCalYear').textContent = _calYear;
+    const cal = document.getElementById('availYearCal');
+    const weekly = _availData.weekly || [];
+    const activeDays = new Set(weekly.map(s => s.day_of_week));
+    const blockedDates = new Set(
+      (_availData.overrides || []).filter(o => !o.available).map(o => o.date)
+    );
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    let html = '';
+    for (let m = 0; m < 12; m++) {
+      const firstDay = new Date(_calYear, m, 1).getDay();
+      const daysInMonth = new Date(_calYear, m + 1, 0).getDate();
+
+      html += `<div class="avail-month-card"><div class="avail-month-title">${MONTH_FULL[m]}</div><div class="avail-month-grid">`;
+      // Day headers
+      html += DAY_HDR.map(d => `<div class="avail-mday-hdr">${d}</div>`).join('');
+      // Empty cells
+      for (let i = 0; i < firstDay; i++) html += '<div class="avail-mday empty"></div>';
+      // Days
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${_calYear}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dow = new Date(_calYear, m, d).getDay();
+        const isPast = dateStr < todayStr;
+        const isBlocked = blockedDates.has(dateStr);
+        const isAvail = activeDays.has(dow) && !isBlocked;
+        const isToday = dateStr === todayStr;
+        let cls = 'avail-mday';
+        if (isPast) cls += ' past';
+        else if (isBlocked) cls += ' blocked';
+        else if (isAvail) cls += ' available';
+        if (isToday) cls += ' today';
+        html += `<div class="${cls}" data-date="${dateStr}" onmousedown="calDragStart('${dateStr}')" onmouseenter="calDragOver('${dateStr}')" onmouseup="calDragEnd('${dateStr}')" onclick="calToggleDate('${dateStr}')">${d}</div>`;
+      }
+      html += '</div></div>';
+    }
+    cal.innerHTML = html;
+  }
+
+  // Drag-to-select range
+  window.calDragStart = function(date) { _dragStart = date; };
+  window.calDragOver = function(date) {
+    if (!_dragStart) return;
+    // Highlight range
+    document.querySelectorAll('.avail-mday.drag-select').forEach(el => el.classList.remove('drag-select'));
+    const allDays = Array.from(document.querySelectorAll('.avail-mday[data-date]'));
+    let inRange = false;
+    const [a, b] = [_dragStart, date].sort();
+    allDays.forEach(el => {
+      const d = el.dataset.date;
+      if (d >= a && d <= b && !el.classList.contains('past')) {
+        el.classList.add('drag-select');
+      }
+    });
+  };
+  window.calDragEnd = async function(date) {
+    if (!_dragStart) return;
+    const [a, b] = [_dragStart, date].sort();
+    _dragStart = null;
+    document.querySelectorAll('.avail-mday.drag-select').forEach(el => el.classList.remove('drag-select'));
+
+    if (a === b) return; // single click handled by calToggleDate
+
+    // Range selection: block or unblock all dates
+    const blockedDates = new Set((_availData.overrides || []).filter(o => !o.available).map(o => o.date));
+    // If most are available, block them. If most are blocked, unblock them.
+    const dates = [];
+    const cur = new Date(a + 'T12:00:00');
+    const endD = new Date(b + 'T12:00:00');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    while (cur <= endD) {
+      const ds = cur.toISOString().slice(0, 10);
+      if (ds >= todayStr) dates.push(ds);
+      cur.setDate(cur.getDate() + 1);
+    }
+    const blockedCount = dates.filter(d => blockedDates.has(d)).length;
+    const shouldBlock = blockedCount < dates.length / 2;
+
+    if (shouldBlock) {
+      if (!confirm(`Bloquear ${dates.length} dias (${a} a ${b})?`)) return;
+      for (const d of dates) {
+        if (!blockedDates.has(d)) {
+          await fetch('/api/tours/broker-availability/override', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: d, available: false }),
+          });
+        }
+      }
+    } else {
+      if (!confirm(`Desbloquear ${dates.length} dias (${a} a ${b})?`)) return;
+      const overrides = (_availData.overrides || []).filter(o => !o.available && dates.includes(o.date));
+      for (const o of overrides) {
+        await fetch(`/api/tours/broker-availability/${o.id}`, { method: 'DELETE', credentials: 'include' });
+      }
+    }
+    loadAvailability();
+  };
+
+  window.calToggleDate = async function(dateStr) {
+    if (_dragStart && _dragStart !== dateStr) return; // handled by drag
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (dateStr < todayStr) return;
+
+    const blockedOverride = (_availData.overrides || []).find(o => !o.available && o.date === dateStr);
+    if (blockedOverride) {
+      // Unblock
+      await fetch(`/api/tours/broker-availability/${blockedOverride.id}`, { method: 'DELETE', credentials: 'include' });
+    } else {
+      // Block
+      await fetch('/api/tours/broker-availability/override', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr, available: false }),
+      });
+    }
+    loadAvailability();
   };
 
   window.blockDay = async function() {
