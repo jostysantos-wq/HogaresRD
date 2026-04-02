@@ -21,11 +21,11 @@
   {
     "id": "usr_inm_demo_001",
     "email": "inmobiliaria@hogaresrd.com",
-    "passwordHash": "$2b$10$f2LlzTTzxmuY/zQ9NSFTkuPn318.FscmKr1KxJxbJDyTZwCm7o1OS",
+    "passwordHash": "$2b$10$urh9ZcU.pw4SeTq1LBdUcOs9navHSYch2OM6cweIDx/m7cOcmXmk.",
     "name": "HogaresRD Inmobiliaria Demo",
     "phone": "809-555-0010",
     "createdAt": "2026-01-01T00:00:00.000Z",
-    "lastLoginAt": "2026-03-31T05:36:26.700Z",
+    "lastLoginAt": "2026-04-02T05:14:17.565Z",
     "role": "inmobiliaria",
     "emailVerified": true,
     "marketingOptIn": false,
@@ -49,8 +49,19 @@
         "license": "AG-2024-005",
         "status": "pending",
         "requested_at": "2026-03-27T05:59:36.801Z"
+      },
+      {
+        "broker_id": "usr_broker_felix_001",
+        "broker_name": "Félix Taveras",
+        "broker_email": "felix.taveras@hogaresrd.com",
+        "broker_phone": "809-555-0301",
+        "license": "FT-2024-009",
+        "status": "pending",
+        "requested_at": "2026-03-28T08:00:00.000Z"
       }
-    ]
+    ],
+    "password": "$2b$10$hNpKK/r8rVp6oDMMl5EkD.VqWyXH56XILV/M6yrIxpuzDCCI6rHfG",
+    "lockedUntil": null
   },
   {
     "id": "usr_client_demo_001",
@@ -84,7 +95,9 @@
     "inmobiliaria_pending_name": null,
     "join_requests": [],
     "loginAttempts": 0,
-    "loginLockedUntil": null
+    "loginLockedUntil": null,
+    "jobTitle": "Agente de Ventas Senior",
+    "notes": "Excelente rendimiento en el sector de Piantini. Especialista en propiedades de lujo."
   },
   {
     "id": "usr_broker_juan_001",
@@ -106,7 +119,9 @@
     "inmobiliaria_pending_name": null,
     "join_requests": [],
     "loginAttempts": 0,
-    "loginLockedUntil": null
+    "loginLockedUntil": null,
+    "jobTitle": "Asesor Comercial",
+    "notes": ""
   },
   {
     "id": "usr_broker_sofia_001",
@@ -133,7 +148,9 @@
     "inmobiliaria_pending_name": null,
     "join_requests": [],
     "loginAttempts": 0,
-    "loginLockedUntil": null
+    "loginLockedUntil": null,
+    "jobTitle": "Gerente de Proyectos",
+    "notes": "Maneja los proyectos nuevos de Arroyo Hondo."
   },
   {
     "id": "usr_broker_pedro_001",
@@ -181,5 +198,77 @@
     "join_requests": [],
     "loginAttempts": 0,
     "loginLockedUntil": null
+  },
+  {
+    "id": "usr_broker_carlos_001",
+    "name": "Carlos Méndez",
+    "email": "carlos.mendez@hogaresrd.com",
+    "phone": "809-555-0201",
+    "role": "broker",
+    "licenseNumber": "CM-2024-005",
+    "jobTitle": "Agente de Ventas",
+    "password": "$2b$10$x9HovV1NRwqLSRPZL/bgkOjji/O4mK8bYc5kN6az0qReQWZ0j51WS",
+    "emailVerified": true,
+    "inmobiliaria_id": "usr_inm_demo_001",
+    "inmobiliaria_name": "HogaresRD Inmobiliaria Demo",
+    "inmobiliaria_join_status": "approved",
+    "inmobiliaria_joined_at": "2026-01-15T10:00:00.000Z",
+    "createdAt": "2026-01-10T08:00:00.000Z",
+    "notes": "",
+    "passwordHash": "$2b$10$VBTnTYmV/JocmjnAqxoHPe1H5GKRDm9bzObgSlZ/DyAQS8lEUZuF6"
+  },
+  {
+    "id": "usr_broker_luisa_001",
+    "name": "Luisa Fernández",
+    "email": "luisa.fernandez@hogaresrd.com",
+    "phone": "809-555-0202",
+    "role": "agency",
+    "licenseNumber": "LF-2024-006",
+    "jobTitle": "Coordinadora de Alquileres",
+    "password": "$2b$10$x9HovV1NRwqLSRPZL/bgkOjji/O4mK8bYc5kN6az0qReQWZ0j51WS",
+    "emailVerified": true,
+    "inmobiliaria_id": "usr_inm_demo_001",
+    "inmobiliaria_name": "HogaresRD Inmobiliaria Demo",
+    "inmobiliaria_join_status": "approved",
+    "inmobiliaria_joined_at": "2026-02-01T14:30:00.000Z",
+    "createdAt": "2026-01-28T09:00:00.000Z",
+    "notes": "Especialista en alquileres zona colonial.",
+    "passwordHash": "$2b$10$cJgXe1dalu8CG0Vo53GC6uSiw4hlHdwweBTZPdTcziU.8mDYwgO46"
+  },
+  {
+    "id": "usr_broker_roberto_001",
+    "name": "Roberto Sánchez",
+    "email": "roberto.sanchez@hogaresrd.com",
+    "phone": "809-555-0203",
+    "role": "broker",
+    "licenseNumber": "RS-2024-007",
+    "jobTitle": "Agente Junior",
+    "password": "$2b$10$x9HovV1NRwqLSRPZL/bgkOjji/O4mK8bYc5kN6az0qReQWZ0j51WS",
+    "emailVerified": false,
+    "inmobiliaria_id": "usr_inm_demo_001",
+    "inmobiliaria_name": "HogaresRD Inmobiliaria Demo",
+    "inmobiliaria_join_status": "approved",
+    "inmobiliaria_joined_at": "2026-03-10T11:00:00.000Z",
+    "createdAt": "2026-03-05T16:00:00.000Z",
+    "notes": "",
+    "passwordHash": "$2b$10$NhJdwG0LtDZ0RnA3GegFyuGfGvdALoOxStdOMammwdsFdwg9cp26q"
+  },
+  {
+    "id": "usr_broker_diana_001",
+    "name": "Diana Castillo",
+    "email": "diana.castillo@hogaresrd.com",
+    "phone": "809-555-0204",
+    "role": "agency",
+    "licenseNumber": "DC-2024-008",
+    "jobTitle": "Directora Comercial",
+    "password": "$2b$10$x9HovV1NRwqLSRPZL/bgkOjji/O4mK8bYc5kN6az0qReQWZ0j51WS",
+    "emailVerified": true,
+    "inmobiliaria_id": "usr_inm_demo_001",
+    "inmobiliaria_name": "HogaresRD Inmobiliaria Demo",
+    "inmobiliaria_join_status": "approved",
+    "inmobiliaria_joined_at": "2025-11-20T09:00:00.000Z",
+    "createdAt": "2025-11-15T10:00:00.000Z",
+    "notes": "Lider del equipo de Santiago. Consistentemente top performer.",
+    "passwordHash": "$2b$10$4pzjOT4e0lRr0wxkUwyNTeIUbjyLxcVxPxyxTm2RCoBZ2HOvziX4a"
   }
 ]

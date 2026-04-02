@@ -1,0 +1,518 @@
+import Foundation
+
+// MARK: - Analytics
+
+struct DashboardAnalytics: Decodable {
+    let totalApps: Int
+    let enRevision: Int
+    let docsPendientes: Int
+    let aprobadas: Int
+    let rechazadas: Int
+    let conversionRate: Double
+    let avgDaysToClose: Double
+    let newThisMonth: Int
+    let appsPerDay: [DayCount]
+    let appsPerMonth: [MonthCount]
+    let pipeline: PipelineCounts
+    let topListings: [TopListing]
+
+    enum CodingKeys: String, CodingKey {
+        case totalApps = "total_apps"
+        case enRevision = "en_revision"
+        case docsPendientes = "docs_pendientes"
+        case aprobadas, rechazadas
+        case conversionRate = "conversion_rate"
+        case avgDaysToClose = "avg_days_to_close"
+        case newThisMonth = "new_this_month"
+        case appsPerDay = "apps_per_day"
+        case appsPerMonth = "apps_per_month"
+        case pipeline
+        case topListings = "top_listings"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalApps       = (try? c.decode(Int.self, forKey: .totalApps)) ?? 0
+        enRevision      = (try? c.decode(Int.self, forKey: .enRevision)) ?? 0
+        docsPendientes  = (try? c.decode(Int.self, forKey: .docsPendientes)) ?? 0
+        aprobadas       = (try? c.decode(Int.self, forKey: .aprobadas)) ?? 0
+        rechazadas      = (try? c.decode(Int.self, forKey: .rechazadas)) ?? 0
+        conversionRate  = (try? c.decode(Double.self, forKey: .conversionRate)) ?? 0
+        avgDaysToClose  = (try? c.decode(Double.self, forKey: .avgDaysToClose)) ?? 0
+        newThisMonth    = (try? c.decode(Int.self, forKey: .newThisMonth)) ?? 0
+        appsPerDay      = (try? c.decode([DayCount].self, forKey: .appsPerDay)) ?? []
+        appsPerMonth    = (try? c.decode([MonthCount].self, forKey: .appsPerMonth)) ?? []
+        pipeline        = (try? c.decode(PipelineCounts.self, forKey: .pipeline)) ?? PipelineCounts()
+        topListings     = (try? c.decode([TopListing].self, forKey: .topListings)) ?? []
+    }
+}
+
+struct DayCount: Decodable, Identifiable {
+    var id: String { date }
+    let date: String
+    let count: Int
+}
+
+struct MonthCount: Decodable, Identifiable {
+    var id: String { month }
+    let month: String
+    let count: Int
+}
+
+struct PipelineCounts: Decodable {
+    let submitted: Int
+    let reviewing: Int
+    let approved: Int
+    let rejected: Int
+    let closed: Int
+
+    init() { submitted = 0; reviewing = 0; approved = 0; rejected = 0; closed = 0 }
+}
+
+struct TopListing: Decodable, Identifiable {
+    var id: String { listingId }
+    let listingId: String
+    let title: String
+    let location: String?
+    let price: String?
+    let appCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case listingId = "listing_id"
+        case title, location, price
+        case appCount = "app_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        listingId = (try? c.decode(String.self, forKey: .listingId)) ?? UUID().uuidString
+        title     = (try? c.decode(String.self, forKey: .title)) ?? "—"
+        location  = try? c.decode(String.self, forKey: .location)
+        price     = try? c.decode(String.self, forKey: .price)
+        appCount  = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
+    }
+}
+
+// MARK: - Sales
+
+struct DashboardSales: Decodable {
+    let totalRevenue: Double
+    let totalSales: Int
+    let avgPrice: Double
+    let pipelineValue: Double
+    let monthlySales: [MonthlySale]
+    let salesByType: [SaleByType]
+    let recentSales: [SaleRecord]
+
+    enum CodingKeys: String, CodingKey {
+        case totalRevenue = "total_revenue"
+        case totalSales = "total_sales"
+        case avgPrice = "avg_price"
+        case pipelineValue = "pipeline_value"
+        case monthlySales = "monthly_sales"
+        case salesByType = "sales_by_type"
+        case recentSales = "recent_sales"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalRevenue  = (try? c.decode(Double.self, forKey: .totalRevenue)) ?? 0
+        totalSales    = (try? c.decode(Int.self, forKey: .totalSales)) ?? 0
+        avgPrice      = (try? c.decode(Double.self, forKey: .avgPrice)) ?? 0
+        pipelineValue = (try? c.decode(Double.self, forKey: .pipelineValue)) ?? 0
+        monthlySales  = (try? c.decode([MonthlySale].self, forKey: .monthlySales)) ?? []
+        salesByType   = (try? c.decode([SaleByType].self, forKey: .salesByType)) ?? []
+        recentSales   = (try? c.decode([SaleRecord].self, forKey: .recentSales)) ?? []
+    }
+}
+
+struct MonthlySale: Decodable, Identifiable {
+    var id: String { month }
+    let month: String
+    let revenue: Double
+    let count: Int
+}
+
+struct SaleByType: Decodable, Identifiable {
+    var id: String { type }
+    let type: String
+    let count: Int
+    let revenue: Double
+}
+
+struct SaleRecord: Decodable, Identifiable {
+    let id: String
+    let client: String?
+    let property: String?
+    let price: Double?
+    let date: String?
+    let paymentStatus: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, client, property, price, date
+        case paymentStatus = "payment_status"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        client        = try? c.decode(String.self, forKey: .client)
+        property      = try? c.decode(String.self, forKey: .property)
+        price         = try? c.decode(Double.self, forKey: .price)
+        date          = try? c.decode(String.self, forKey: .date)
+        paymentStatus = try? c.decode(String.self, forKey: .paymentStatus)
+    }
+
+    var priceFormatted: String {
+        guard let p = price, p > 0 else { return "—" }
+        let f = NumberFormatter()
+        f.numberStyle = .currency; f.currencyCode = "USD"; f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: p)) ?? "$\(Int(p))"
+    }
+}
+
+// MARK: - Accounting
+
+struct DashboardAccounting: Decodable {
+    let totalEarned: Double
+    let pendingCommission: Double
+    let commissionRate: Double
+    let verifiedPayments: Int
+    let monthlyCommissions: [MonthlyCommission]
+    let records: [AccountingRecord]
+
+    enum CodingKeys: String, CodingKey {
+        case totalEarned = "total_earned"
+        case pendingCommission = "pending_commission"
+        case commissionRate = "commission_rate"
+        case verifiedPayments = "verified_payments"
+        case monthlyCommissions = "monthly_commissions"
+        case records
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalEarned        = (try? c.decode(Double.self, forKey: .totalEarned)) ?? 0
+        pendingCommission  = (try? c.decode(Double.self, forKey: .pendingCommission)) ?? 0
+        commissionRate     = (try? c.decode(Double.self, forKey: .commissionRate)) ?? 0.03
+        verifiedPayments   = (try? c.decode(Int.self, forKey: .verifiedPayments)) ?? 0
+        monthlyCommissions = (try? c.decode([MonthlyCommission].self, forKey: .monthlyCommissions)) ?? []
+        records            = (try? c.decode([AccountingRecord].self, forKey: .records)) ?? []
+    }
+}
+
+struct MonthlyCommission: Decodable, Identifiable {
+    var id: String { month }
+    let month: String
+    let commission: Double
+}
+
+struct AccountingRecord: Decodable, Identifiable {
+    let id: String
+    let client: String?
+    let property: String?
+    let price: Double?
+    let commission: Double?
+    let paymentStatus: String?
+    let date: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, client, property, price, commission
+        case paymentStatus = "payment_status"
+        case date
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        client        = try? c.decode(String.self, forKey: .client)
+        property      = try? c.decode(String.self, forKey: .property)
+        price         = try? c.decode(Double.self, forKey: .price)
+        commission    = try? c.decode(Double.self, forKey: .commission)
+        paymentStatus = try? c.decode(String.self, forKey: .paymentStatus)
+        date          = try? c.decode(String.self, forKey: .date)
+    }
+}
+
+// MARK: - Documents Archive
+
+struct DashboardDocuments: Decodable {
+    let documents: [ArchiveDocument]
+    let total: Int
+    let page: Int
+    let pages: Int
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        documents = (try? c.decode([ArchiveDocument].self, forKey: .documents)) ?? []
+        total     = (try? c.decode(Int.self, forKey: .total)) ?? 0
+        page      = (try? c.decode(Int.self, forKey: .page)) ?? 1
+        pages     = (try? c.decode(Int.self, forKey: .pages)) ?? 1
+    }
+
+    enum CodingKeys: String, CodingKey { case documents, total, page, pages }
+}
+
+struct ArchiveDocument: Decodable, Identifiable {
+    let id: String
+    let name: String?
+    let type: String?
+    let status: String?
+    let client: String?
+    let property: String?
+    let uploadDate: String?
+    let fileSize: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, type, status, client, property
+        case uploadDate = "upload_date"
+        case fileSize = "file_size"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id         = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        name       = try? c.decode(String.self, forKey: .name)
+        type       = try? c.decode(String.self, forKey: .type)
+        status     = try? c.decode(String.self, forKey: .status)
+        client     = try? c.decode(String.self, forKey: .client)
+        property   = try? c.decode(String.self, forKey: .property)
+        uploadDate = try? c.decode(String.self, forKey: .uploadDate)
+        fileSize   = try? c.decode(String.self, forKey: .fileSize)
+    }
+}
+
+// MARK: - Audit Log
+
+struct DashboardAudit: Decodable {
+    let events: [AuditEvent]
+    let total: Int
+    let page: Int
+    let pages: Int
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        events = (try? c.decode([AuditEvent].self, forKey: .events)) ?? []
+        total  = (try? c.decode(Int.self, forKey: .total)) ?? 0
+        page   = (try? c.decode(Int.self, forKey: .page)) ?? 1
+        pages  = (try? c.decode(Int.self, forKey: .pages)) ?? 1
+    }
+
+    enum CodingKeys: String, CodingKey { case events, total, page, pages }
+}
+
+struct AuditEvent: Decodable, Identifiable {
+    let id: String
+    let type: String?
+    let description: String?
+    let actor: String?
+    let client: String?
+    let listing: String?
+    let timestamp: String?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id          = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        type        = try? c.decode(String.self, forKey: .type)
+        description = try? c.decode(String.self, forKey: .description)
+        actor       = try? c.decode(String.self, forKey: .actor)
+        client      = try? c.decode(String.self, forKey: .client)
+        listing     = try? c.decode(String.self, forKey: .listing)
+        timestamp   = try? c.decode(String.self, forKey: .timestamp)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, description, actor, client, listing, timestamp
+    }
+
+    var icon: String {
+        switch type {
+        case "status_change":     return "arrow.triangle.2.circlepath"
+        case "checklist_complete": return "checkmark.circle.fill"
+        case "checklist_item":    return "checklist"
+        case "document":          return "doc.fill"
+        case "tour":              return "figure.walk"
+        case "payment":           return "creditcard.fill"
+        case "note":              return "bubble.left.fill"
+        default:                  return "clock.fill"
+        }
+    }
+
+    var iconColor: Color {
+        switch type {
+        case "status_change":      return .blue
+        case "checklist_complete": return .green
+        case "document":           return .purple
+        case "tour":               return .orange
+        case "payment":            return .green
+        case "note":               return .gray
+        default:                   return .secondary
+        }
+    }
+}
+
+// MARK: - Inmobiliaria Team
+
+struct TeamBroker: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let email: String
+    let phone: String?
+    let licenseNumber: String?
+    let jobTitle: String?
+    let joinedAt: String?
+    let appCount: Int
+    let emailVerified: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone
+        case licenseNumber = "licenseNumber"
+        case jobTitle = "jobTitle"
+        case joinedAt = "joined_at"
+        case appCount = "app_count"
+        case emailVerified = "emailVerified"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id             = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        name           = (try? c.decode(String.self, forKey: .name)) ?? "—"
+        email          = (try? c.decode(String.self, forKey: .email)) ?? ""
+        phone          = try? c.decode(String.self, forKey: .phone)
+        licenseNumber  = try? c.decode(String.self, forKey: .licenseNumber)
+        jobTitle       = try? c.decode(String.self, forKey: .jobTitle)
+        joinedAt       = try? c.decode(String.self, forKey: .joinedAt)
+        appCount       = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
+        emailVerified  = try? c.decode(Bool.self, forKey: .emailVerified)
+    }
+
+    var initials: String {
+        name.components(separatedBy: " ")
+            .prefix(2)
+            .compactMap { $0.first }
+            .map { String($0) }
+            .joined()
+            .uppercased()
+    }
+}
+
+struct JoinRequest: Decodable, Identifiable {
+    let id: String
+    let brokerId: String
+    let brokerName: String
+    let brokerEmail: String
+    let brokerLicense: String?
+    let brokerPhone: String?
+    let requestedAt: String?
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case brokerId = "broker_id"
+        case brokerName = "broker_name"
+        case brokerEmail = "broker_email"
+        case brokerLicense = "broker_license"
+        case brokerPhone = "broker_phone"
+        case requestedAt = "requested_at"
+        case status
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        brokerId      = (try? c.decode(String.self, forKey: .brokerId)) ?? ""
+        brokerName    = (try? c.decode(String.self, forKey: .brokerName)) ?? "—"
+        brokerEmail   = (try? c.decode(String.self, forKey: .brokerEmail)) ?? ""
+        brokerLicense = try? c.decode(String.self, forKey: .brokerLicense)
+        brokerPhone   = try? c.decode(String.self, forKey: .brokerPhone)
+        requestedAt   = try? c.decode(String.self, forKey: .requestedAt)
+        status        = (try? c.decode(String.self, forKey: .status)) ?? "pending"
+    }
+}
+
+struct TeamResponse: Decodable {
+    var brokers: [TeamBroker]
+    let pendingRequests: [JoinRequest]
+
+    enum CodingKeys: String, CodingKey {
+        case brokers
+        case pendingRequests = "pending_requests"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        brokers         = (try? c.decode([TeamBroker].self, forKey: .brokers)) ?? []
+        pendingRequests = (try? c.decode([JoinRequest].self, forKey: .pendingRequests)) ?? []
+    }
+}
+
+struct BrokerDetail: Decodable {
+    let id: String
+    let name: String
+    let email: String
+    let phone: String?
+    let licenseNumber: String?
+    let role: String?
+    let jobTitle: String?
+    let joinedAt: String?
+    let emailVerified: Bool?
+    let appCount: Int
+    let notes: String?
+    let recentApps: [BrokerApp]
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone, role, notes
+        case licenseNumber = "licenseNumber"
+        case jobTitle = "jobTitle"
+        case joinedAt = "joined_at"
+        case emailVerified = "emailVerified"
+        case appCount = "app_count"
+        case recentApps = "recent_apps"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = (try? c.decode(String.self, forKey: .id)) ?? ""
+        name          = (try? c.decode(String.self, forKey: .name)) ?? "—"
+        email         = (try? c.decode(String.self, forKey: .email)) ?? ""
+        phone         = try? c.decode(String.self, forKey: .phone)
+        licenseNumber = try? c.decode(String.self, forKey: .licenseNumber)
+        role          = try? c.decode(String.self, forKey: .role)
+        jobTitle      = try? c.decode(String.self, forKey: .jobTitle)
+        joinedAt      = try? c.decode(String.self, forKey: .joinedAt)
+        emailVerified = try? c.decode(Bool.self, forKey: .emailVerified)
+        appCount      = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
+        notes         = try? c.decode(String.self, forKey: .notes)
+        recentApps    = (try? c.decode([BrokerApp].self, forKey: .recentApps)) ?? []
+    }
+}
+
+struct BrokerApp: Decodable, Identifiable {
+    let id: String
+    let title: String?
+    let status: String?
+    let updatedAt: String?
+    let clientName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, status
+        case updatedAt = "updated_at"
+        case clientName = "client_name"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id         = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        title      = try? c.decode(String.self, forKey: .title)
+        status     = try? c.decode(String.self, forKey: .status)
+        updatedAt  = try? c.decode(String.self, forKey: .updatedAt)
+        // Handle nested client object
+        if let clientDict = try? c.decode([String: String].self, forKey: .clientName) {
+            clientName = clientDict["name"]
+        } else {
+            clientName = try? c.decode(String.self, forKey: .clientName)
+        }
+    }
+}
+
+import SwiftUI

@@ -17,7 +17,9 @@ struct User: Codable {
             .joined()
             .uppercased()
     }
-    var isAgency: Bool { role == "agency" }
+    var isAgency: Bool { role == "agency" || role == "broker" || role == "inmobiliaria" }
+    var isInmobiliaria: Bool { role == "inmobiliaria" }
+    var isBroker: Bool { role == "broker" || role == "agency" }
 }
 
 struct AuthResponse: Codable {

@@ -287,7 +287,7 @@ struct FeedView: View {
     }
 }
 
-// MARK: - Reel Card (pure visual — no gesture interceptors)
+// MARK: - Reel Card
 
 struct ReelCard: View {
     let listing:     Listing
@@ -297,6 +297,8 @@ struct ReelCard: View {
 
     @EnvironmentObject var saved: SavedStore
     @State private var imageIndex = 0
+    @State private var heartScale: CGFloat = 1.0
+    @State private var doubleTapHeart = false
 
     /// Binding shim so ScrollView can track the current page as Int?
     private var imageIndexBinding: Binding<Int?> {
@@ -308,9 +310,6 @@ struct ReelCard: View {
             ZStack(alignment: .bottom) {
 
                 // ── Horizontal image carousel ─────────────────────────
-                // Uses ScrollView instead of TabView(.page) so that taps
-                // are NOT consumed by UIPageViewController and can pass
-                // through to the Button overlay above.
                 let urls = listing.allImageURLs
                 if urls.isEmpty {
                     ZStack {
@@ -355,13 +354,28 @@ struct ReelCard: View {
                     .clipped()
                 }
 
-                // ── Transparent nav button (above carousel, below overlays) ──
-                Button { onTap() } label: {
-                    Color.clear
+                // ── Gradient scrim ────────────────────────────
+                LinearGradient(
+                    colors: [
+                        .black.opacity(0.85),
+                        .black.opacity(0.5),
+                        .black.opacity(0.1),
+                        .clear
+                    ],
+                    startPoint: .bottom,
+                    endPoint: .init(x: 0.5, y: 0.45)
+                )
+                .allowsHitTesting(false)
+
+                // ── Double-tap heart overlay (centered) ──────
+                if doubleTapHeart {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(Color.rdRed)
+                        .shadow(color: .black.opacity(0.3), radius: 10)
+                        .transition(.scale.combined(with: .opacity))
                         .frame(width: geo.size.width, height: geo.size.height)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
 
                 // ── Top-right controls (counter + heart) ──────────────
                 VStack {
@@ -376,20 +390,32 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Heart — highPriorityGesture guarantees this
-                            // intercepts the tap BEFORE the card's onTapGesture
-                            Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
-                                .shadow(color: .black.opacity(0.4), radius: 4)
-                                .padding(12)            // larger hit area
-                                .contentShape(Rectangle())
-                                .highPriorityGesture(
-                                    TapGesture().onEnded {
-                                        saved.toggle(listing.id)
-                                        onSaveTap()
-                                    }
-                                )
+                            // Heart button
+                            Button {
+                                toggleSave()
+                            } label: {
+                                Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
+                                    .shadow(color: .black.opacity(0.5), radius: 4)
+                                    .scaleEffect(heartScale)
+                                    .frame(width: 48, height: 48)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            // Share button
+                            Button {
+                                shareListing()
+                            } label: {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .shadow(color: .black.opacity(0.5), radius: 4)
+                                    .frame(width: 48, height: 48)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.top, 48)
                         .padding(.trailing, 4)
@@ -397,19 +423,7 @@ struct ReelCard: View {
                     Spacer()
                 }
 
-                // ── Gradient scrim ────────────────────────────
-                LinearGradient(
-                    colors: [
-                        .black.opacity(0.85),
-                        .black.opacity(0.5),
-                        .black.opacity(0.1),
-                        .clear
-                    ],
-                    startPoint: .bottom,
-                    endPoint: .init(x: 0.5, y: 0.45)
-                )
-
-                // ── Text overlay ──────────────────────────────
+                // ── Text overlay (tappable → detail) ─────────────────
                 VStack(alignment: .leading, spacing: 10) {
 
                     HStack(spacing: 8) {
@@ -478,21 +492,80 @@ struct ReelCard: View {
                             .buttonStyle(.plain)
                         }
                         Spacer()
-                        HStack(spacing: 4) {
-                            Text("Ver detalles")
-                                .font(.caption).bold()
-                                .foregroundStyle(.white.opacity(0.8))
-                            Image(systemName: "chevron.up")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
+                        Button { onTap() } label: {
+                            HStack(spacing: 4) {
+                                Text("Ver detalles")
+                                    .font(.caption).bold()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 90)
             }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                doubleTapLike()
+            }
+            .onTapGesture(count: 1) {
+                onTap()
+            }
         }
         .ignoresSafeArea()
+    }
+
+    // MARK: - Actions
+
+    private func toggleSave() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+            heartScale = 1.3
+        }
+        saved.toggle(listing.id)
+        onSaveTap()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                heartScale = 1.0
+            }
+        }
+    }
+
+    private func doubleTapLike() {
+        guard !saved.isSaved(listing.id) else { return }
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+        impact.impactOccurred()
+        saved.toggle(listing.id)
+        onSaveTap()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+            doubleTapHeart = true
+            heartScale = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                doubleTapHeart = false
+            }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                heartScale = 1.0
+            }
+        }
+    }
+
+    private func shareListing() {
+        let url = "https://hogaresrd.com/listing/\(listing.id)"
+        let text = "\(listing.title) – \(listing.priceFormatted)\n\(url)"
+        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(av, animated: true)
+        }
     }
 
     // MARK: - Helpers

@@ -172,6 +172,48 @@ class APIService: ObservableObject {
         return try await login(email: email, password: password)
     }
 
+    func registerBroker(name: String, email: String, password: String,
+                        phone: String, licenseNumber: String,
+                        jobTitle: String? = nil) async throws -> User {
+        let url = URL(string: "\(apiBase)/api/auth/register/broker")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [
+            "name": name, "email": email, "password": password,
+            "phone": phone, "licenseNumber": licenseNumber
+        ]
+        if let jobTitle { body["jobTitle"] = jobTitle }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al crear la cuenta de broker")
+        }
+        return try await login(email: email, password: password)
+    }
+
+    func registerInmobiliaria(name: String, email: String, password: String,
+                              phone: String, companyName: String, licenseNumber: String) async throws -> User {
+        let url = URL(string: "\(apiBase)/api/auth/register/inmobiliaria")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "name": name, "email": email, "password": password,
+            "phone": phone, "companyName": companyName, "licenseNumber": licenseNumber
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al crear la cuenta de inmobiliaria")
+        }
+        return try await login(email: email, password: password)
+    }
+
     func logout() {
         currentUser = nil
         token = nil
@@ -311,6 +353,204 @@ class APIService: ObservableObject {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al enviar la propiedad")
+        }
+    }
+
+    // MARK: - Broker Dashboard
+
+    func getDashboardAnalytics(range: String = "30d") async throws -> DashboardAnalytics {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/analytics")!
+        comps.queryItems = [URLQueryItem(name: "range", value: range)]
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(DashboardAnalytics.self, from: data)
+    }
+
+    func getDashboardSales() async throws -> DashboardSales {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/broker-dashboard/sales")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(DashboardSales.self, from: data)
+    }
+
+    func getDashboardAccounting(commissionRate: Double = 0.03) async throws -> DashboardAccounting {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/accounting")!
+        comps.queryItems = [URLQueryItem(name: "commission_rate", value: "\(commissionRate)")]
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(DashboardAccounting.self, from: data)
+    }
+
+    func getDashboardDocuments(status: String? = nil, type: String? = nil, search: String? = nil, page: Int = 1) async throws -> DashboardDocuments {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/documents/archive")!
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "20")
+        ]
+        if let s = status { items.append(.init(name: "status", value: s)) }
+        if let t = type   { items.append(.init(name: "type", value: t)) }
+        if let s = search { items.append(.init(name: "search", value: s)) }
+        comps.queryItems = items
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(DashboardDocuments.self, from: data)
+    }
+
+    func getDashboardAudit(search: String? = nil, type: String? = nil, page: Int = 1) async throws -> DashboardAudit {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/audit")!
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "50")
+        ]
+        if let s = search { items.append(.init(name: "search", value: s)) }
+        if let t = type   { items.append(.init(name: "type", value: t)) }
+        comps.queryItems = items
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(DashboardAudit.self, from: data)
+    }
+
+    // MARK: - Chat IA (Claude)
+
+    func sendChatMessage(message: String, history: [[String: String]], context: [String: Any] = [:]) async throws -> String {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/chat")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        var body: [String: Any] = [
+            "message": message,
+            "history": history
+        ]
+        if !context.isEmpty { body["context"] = context }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al enviar mensaje")
+        }
+        if let json = try? JSONDecoder().decode([String: String].self, from: data),
+           let reply = json["reply"] {
+            return reply
+        }
+        throw APIError.server("Respuesta inválida del servidor")
+    }
+
+    // MARK: - Inmobiliaria Team
+
+    func getTeamBrokers() async throws -> TeamResponse {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(TeamResponse.self, from: data)
+    }
+
+    func getBrokerDetail(brokerId: String) async throws -> BrokerDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/details")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(BrokerDetail.self, from: data)
+    }
+
+    func approveBroker(brokerId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/approve")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al aprobar agente")
+        }
+    }
+
+    func rejectBroker(brokerId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/reject")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al rechazar agente")
+        }
+    }
+
+    func removeBroker(brokerId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/remove")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al desvincular agente")
+        }
+    }
+
+    func saveBrokerNotes(brokerId: String, notes: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/notes")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["notes": notes])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al guardar notas")
+        }
+    }
+
+    func sendBrokerPasswordReset(brokerId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/send-reset")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al enviar reset de contraseña")
+        }
+    }
+
+    func changePassword(current: String, newPassword: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/auth/change-password")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: String] = ["currentPassword": current, "newPassword": newPassword]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al cambiar la contraseña")
         }
     }
 

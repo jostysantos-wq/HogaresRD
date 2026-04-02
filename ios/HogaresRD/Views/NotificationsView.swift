@@ -140,10 +140,18 @@ struct ProfileMenuView: View {
                             Text(user.email)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if user.isAgency {
-                                Label("Agente Inmobiliario", systemImage: "building.2.fill")
+                            if user.isInmobiliaria {
+                                Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+                            } else if user.isAgency {
+                                Label("Agente / Broker", systemImage: "person.badge.key.fill")
                                     .font(.caption2).bold()
                                     .foregroundStyle(Color.rdBlue)
+                            } else {
+                                Label("Cliente", systemImage: "person.fill")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(Color.rdGreen)
                             }
                         }
                     }
@@ -167,7 +175,7 @@ struct ProfileMenuView: View {
                                     .clipShape(Capsule())
                             }
                             Button {
-                                authSheet = .register
+                                authSheet = .pickRole
                             } label: {
                                 Text("Crear cuenta")
                                     .font(.caption).bold()
@@ -183,7 +191,7 @@ struct ProfileMenuView: View {
                 }
             }
 
-            // ── Account / Notifications / App / Saved Homes ──
+            // ── Account / Notifications / App ──
             Section {
                 NavigationLink {
                     ProfileView()
@@ -200,35 +208,95 @@ struct ProfileMenuView: View {
                 } label: {
                     Label("App", systemImage: "gearshape.fill")
                 }
-                NavigationLink {
-                    SavedListingsView()
-                } label: {
-                    HStack {
-                        Label("Saved Homes", systemImage: "heart.fill")
-                        Spacer()
-                        if !saved.savedIDs.isEmpty {
-                            Text("\(saved.savedIDs.count)")
-                                .font(.caption2).bold()
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 7).padding(.vertical, 3)
-                                .background(Color.rdRed)
-                                .clipShape(Capsule())
+                // Saved Homes — only for clients (not brokers/inmobiliarias)
+                if !(api.currentUser?.isAgency ?? false) {
+                    NavigationLink {
+                        SavedListingsView()
+                    } label: {
+                        HStack {
+                            Label("Saved Homes", systemImage: "heart.fill")
+                            Spacer()
+                            if !saved.savedIDs.isEmpty {
+                                Text("\(saved.savedIDs.count)")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 7).padding(.vertical, 3)
+                                    .background(Color.rdRed)
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                 }
             }
 
-            // ── Renters Tools ──
-            Section("Renters Tools") {
-                NavigationLink {
-                    ApplicationsView()
-                } label: {
-                    Label("Application", systemImage: "doc.text.fill")
+            // ── Role-specific tools ──
+            if let user = api.currentUser, user.isAgency {
+                // Broker / Inmobiliaria tools
+                Section("Herramientas de Agente") {
+                    NavigationLink {
+                        if user.isInmobiliaria {
+                            InmobiliariaDashboardView().environmentObject(api)
+                        } else {
+                            BrokerDashboardView().environmentObject(api)
+                        }
+                    } label: {
+                        Label("Dashboard", systemImage: "chart.bar.fill")
+                    }
+                    NavigationLink {
+                        ChatIAView().environmentObject(api)
+                    } label: {
+                        Label("Chat IA", systemImage: "brain.head.profile.fill")
+                    }
+                    NavigationLink {
+                        ConversationsView().environmentObject(api)
+                    } label: {
+                        Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    NavigationLink {
+                        AgencyDashboardView().environmentObject(api)
+                    } label: {
+                        Label("Mi portafolio", systemImage: "briefcase.fill")
+                    }
+                    NavigationLink {
+                        ApplicationsView()
+                    } label: {
+                        Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
+                    }
                 }
-                NavigationLink {
-                    ConnectorsView()
-                } label: {
-                    Label("Connectors", systemImage: "link")
+
+                // Inmobiliaria-only team management
+                if user.isInmobiliaria {
+                    Section("Gestión de Equipo") {
+                        NavigationLink {
+                            InmobiliariaTeamListView().environmentObject(api)
+                        } label: {
+                            Label("Mis agentes", systemImage: "person.2.fill")
+                        }
+                        NavigationLink {
+                            InmobiliariaRequestsListView().environmentObject(api)
+                        } label: {
+                            Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
+                        }
+                        NavigationLink {
+                            InmobiliariaPerformanceListView().environmentObject(api)
+                        } label: {
+                            Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                    }
+                }
+            } else {
+                // Client / Renter tools
+                Section("Herramientas de Cliente") {
+                    NavigationLink {
+                        ApplicationsView()
+                    } label: {
+                        Label("Mis aplicaciones", systemImage: "doc.text.fill")
+                    }
+                    NavigationLink {
+                        ConnectorsView()
+                    } label: {
+                        Label("Conectores", systemImage: "link")
+                    }
                 }
             }
 
