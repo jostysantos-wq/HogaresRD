@@ -7,7 +7,7 @@ const { userAuth, optionalAuth } = require('./auth');
 const uid = () => 'tour_' + crypto.randomBytes(8).toString('hex');
 const slotUid = () => 'avail_' + crypto.randomBytes(8).toString('hex');
 
-const BROKER_ROLES = ['agency', 'broker', 'inmobiliaria'];
+const BROKER_ROLES = ['agency', 'broker', 'inmobiliaria', 'secretary'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -195,8 +195,16 @@ router.get('/broker-requests', userAuth, (req, res) => {
   if (!BROKER_ROLES.includes(req.user.role)) {
     return res.status(403).json({ error: 'Solo agentes pueden ver solicitudes de visita' });
   }
-  const tours = store.getToursByBroker(req.user.sub)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  let tours;
+  if (req.user.role === 'secretary') {
+    const user = store.getUserById(req.user.sub);
+    const teamMembers = store.getUsersByInmobiliaria(user.inmobiliaria_id);
+    const teamIds = new Set(teamMembers.map(m => m.id));
+    tours = store.getTours().filter(t => teamIds.has(t.broker_id));
+  } else {
+    tours = store.getToursByBroker(req.user.sub);
+  }
+  tours.sort((a, b) => b.created_at.localeCompare(a.created_at));
   res.json(tours);
 });
 

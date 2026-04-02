@@ -404,4 +404,86 @@ router.patch('/brokers/:brokerId/notes', userAuth, inmobiliariaAuth, (req, res) 
   res.json({ success: true });
 });
 
+// ── Secretary Management ──────────────────────────────────────────────────
+
+router.get('/secretaries', userAuth, inmobiliariaAuth, (req, res) => {
+  const secretaries = store.getSecretariesByInmobiliaria(req.inmobiliariaUser.id);
+  res.json({
+    secretaries: secretaries.map(s => ({
+      id: s.id, name: s.name, email: s.email, phone: s.phone,
+      joinedAt: s.inmobiliaria_joined_at || s.createdAt,
+    })),
+  });
+});
+
+router.post('/secretaries/invite', userAuth, inmobiliariaAuth, (req, res) => {
+  const { email, name } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+
+  // Check if user already exists
+  const existing = store.getUserByEmail(email);
+  if (existing) return res.status(400).json({ error: 'Este correo ya está registrado' });
+
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  const user = req.inmobiliariaUser;
+
+  if (!user.secretary_invites) user.secretary_invites = [];
+  user.secretary_invites.push({
+    email, name: name || '',
+    token,
+    invitedAt: new Date().toISOString(),
+    status: 'pending',
+  });
+  store.saveUser(user);
+
+  // Send invitation email
+  const inviteUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/register-secretary?token=${token}`;
+  send(email, `Invitación como Secretaria — ${user.agencyName || user.name} en HogaresRD`,
+    `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Invitación de Secretaria</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+            <strong>${user.agencyName || user.name}</strong> te ha invitado como secretaria en HogaresRD.
+          </p>
+          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
+            Como secretaria, podrás gestionar aplicaciones, aprobar pagos de clientes y acceder al panel de la inmobiliaria.
+          </p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${inviteUrl}" style="display:inline-block;background:#002D62;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;">
+              Aceptar invitación →
+            </a>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`);
+
+  res.json({ success: true, message: 'Invitación enviada' });
+});
+
+router.post('/secretaries/:id/remove', userAuth, inmobiliariaAuth, (req, res) => {
+  const secretary = store.getUserById(req.params.id);
+  if (!secretary || secretary.role !== 'secretary' || secretary.inmobiliaria_id !== req.inmobiliariaUser.id)
+    return res.status(404).json({ error: 'Secretaria no encontrada' });
+
+  secretary.role = 'deactivated';
+  secretary.inmobiliaria_id = null;
+  secretary.deactivatedAt = new Date().toISOString();
+  store.saveUser(secretary);
+
+  res.json({ success: true });
+});
+
 module.exports = router;

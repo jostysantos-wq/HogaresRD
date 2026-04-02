@@ -38,6 +38,7 @@
 		AA990000000000000000000000D2 /* Tour.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D1 /* Tour.swift */; };
 		AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D3 /* TourBookingSheet.swift */; };
 		F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */; };
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
 		AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B4 /* ConversationThreadView.swift */; };
 		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
@@ -78,6 +79,7 @@
 		AA990000000000000000000000D1 /* Tour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tour.swift; sourceTree = "<group>"; };
 		AA990000000000000000000000D3 /* TourBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourBookingSheet.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingAnalyticsView.swift; sourceTree = "<group>"; };
+		D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretaryDashboardView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B4 /* ConversationThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationThreadView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 			AA880000000000000000000000C1 /* ChatIAView.swift */,
 				AA990000000000000000000000D3 /* TourBookingSheet.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */,
+				D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -283,6 +286,7 @@
 				AA990000000000000000000000D2 /* Tour.swift in Sources */,
 				AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */,
 				F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

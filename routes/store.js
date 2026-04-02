@@ -186,8 +186,14 @@ function getUsersByRole(role) {
 
 function getUsersByInmobiliaria(inmobiliariaId) {
   return getUsers().filter(u =>
-    (u.role === 'broker' || u.role === 'agency') &&
+    (u.role === 'broker' || u.role === 'agency' || u.role === 'secretary') &&
     u.inmobiliaria_id === inmobiliariaId
+  );
+}
+
+function getSecretariesByInmobiliaria(inmobiliariaId) {
+  return getUsers().filter(u =>
+    u.role === 'secretary' && u.inmobiliaria_id === inmobiliariaId
   );
 }
 
@@ -273,7 +279,7 @@ module.exports = {
   getConversations, getConversationById, getConversationsByClient,
   getConversationsForBroker, saveConversation,
   getMetaLeads, appendMetaLead,
-  getUsersByRole, getUsersByInmobiliaria,
+  getUsersByRole, getUsersByInmobiliaria, getSecretariesByInmobiliaria,
   revokeToken, isTokenRevoked,
   getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
   getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing,

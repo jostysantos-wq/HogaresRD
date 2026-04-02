@@ -1897,7 +1897,7 @@
     const stored = localStorage.getItem('hogaresrd_user');
     if (!stored) { location.href = '/login'; return; }
     const userObj = JSON.parse(stored);
-    if (!['agency', 'broker', 'inmobiliaria'].includes(userObj.role)) {
+    if (!['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
       location.href = '/login'; return;
     }
     currentUser = userObj;
@@ -1905,6 +1905,7 @@
 
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
   const isInmobiliariaRole = currentUser.role === 'inmobiliaria';
+  const isSecretaryRole = currentUser.role === 'secretary';
 
   // ── Full user data (affiliation fields, etc.) ───────────────
   // Initialized after API helper is defined below to avoid temporal dead zone.
@@ -2149,7 +2150,7 @@
   };
 
   // ── Role-aware UI setup ────────────────────────────────────
-  const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria' };
+  const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria', secretary: 'Secretaria' };
   document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
 
   if (isInmobiliariaRole) {
@@ -2158,6 +2159,11 @@
       if (el) el.style.display = '';
     });
     loadEquipo();
+  }
+  if (isSecretaryRole) {
+    // Secretary sees: Aplicaciones, Analiticas, Archivo, Auditoria, Mis Propiedades
+    // Hide: Ventas, Contabilidad tabs
+    document.querySelectorAll('.section-nav-btn[data-section="ventas"], .section-nav-btn[data-section="contabilidad"]').forEach(el => el.style.display = 'none');
   }
   if (isBrokerRole) {
     initAffiliationBanner();
@@ -3754,6 +3760,7 @@
   });
 
   function showSection(section) {
+    if (isSecretaryRole && (section === 'ventas' || section === 'contabilidad')) return;
     currentSection = section;
     document.querySelectorAll('.section-nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`.section-nav-btn[data-section="${section}"]`).classList.add('active');

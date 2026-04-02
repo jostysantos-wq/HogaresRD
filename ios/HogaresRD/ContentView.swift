@@ -258,6 +258,10 @@ struct ProfileTabView: View {
             Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
                 .font(.caption2).bold()
                 .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+        } else if user.isSecretary {
+            Label("Secretaria", systemImage: "person.text.rectangle.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color(red: 0.18, green: 0.55, blue: 0.34))
         } else if user.isAgency {
             Label("Agente / Broker", systemImage: "person.badge.key.fill")
                 .font(.caption2).bold()
@@ -282,6 +286,8 @@ struct ProfileTabView: View {
             NavigationLink {
                 if user.isInmobiliaria {
                     InmobiliariaDashboardView().environmentObject(api)
+                } else if user.isSecretary {
+                    SecretaryDashboardView().environmentObject(api)
                 } else {
                     BrokerDashboardView().environmentObject(api)
                 }

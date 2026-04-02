@@ -950,6 +950,70 @@ router.post('/register/admin', authLimiter, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Register Secretary (via invitation) ───────────────────────────────────
+router.post('/register/secretary', authLimiter, async (req, res, next) => {
+  try {
+    const { token: inviteToken, name, password, phone } = req.body;
+    if (!inviteToken || !name || !password)
+      return res.status(400).json({ error: 'Token, nombre y contraseña requeridos' });
+
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
+
+    // Find the inmobiliaria with this invite token
+    const users = store.getUsers();
+    let inmobiliaria = null;
+    let invite = null;
+    for (const u of users) {
+      if (u.role === 'inmobiliaria' && Array.isArray(u.secretary_invites)) {
+        const inv = u.secretary_invites.find(i => i.token === inviteToken && i.status === 'pending');
+        if (inv) { inmobiliaria = u; invite = inv; break; }
+      }
+    }
+
+    if (!inmobiliaria || !invite)
+      return res.status(400).json({ error: 'Invitación inválida o expirada' });
+
+    // Check email not already registered
+    if (store.getUserByEmail(invite.email))
+      return res.status(400).json({ error: 'Este correo ya está registrado' });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = {
+      id: `usr_sec_${crypto.randomBytes(6).toString('hex')}`,
+      email: invite.email,
+      name,
+      phone: phone || '',
+      role: 'secretary',
+      passwordHash: hashedPassword,
+      inmobiliaria_id: inmobiliaria.id,
+      inmobiliaria_name: inmobiliaria.agencyName || inmobiliaria.name,
+      inmobiliaria_joined_at: new Date().toISOString(),
+      invited_by: inmobiliaria.id,
+      createdAt: new Date().toISOString(),
+      emailVerified: true, // invited users are pre-verified
+      favorites: [],
+    };
+
+    store.saveUser(user);
+
+    // Mark invite as accepted
+    invite.status = 'accepted';
+    invite.acceptedAt = new Date().toISOString();
+    invite.userId = user.id;
+    store.saveUser(inmobiliaria);
+
+    logSec('secretary_registered', req, { userId: user.id, inmobiliariaId: inmobiliaria.id });
+
+    const jwtToken = signToken(user);
+    res.cookie('hrdt', jwtToken, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    res.status(201).json({ token: jwtToken, user: safeUser(user) });
+  } catch (err) { next(err); }
+});
+
 // ── 2FA: Verify code ──────────────────────────────────────────────────────
 router.post('/2fa/verify', twoFALimiter, (req, res) => {
   const { twoFASessionId, code } = req.body;

@@ -8,7 +8,7 @@ const router = express.Router();
 // All endpoints require logged-in broker / agency (compat) / inmobiliaria
 router.use(userAuth, (req, res, next) => {
   const user = store.getUserById(req.user.sub);
-  const allowed = ['agency', 'broker', 'inmobiliaria'];
+  const allowed = ['agency', 'broker', 'inmobiliaria', 'secretary'];
   if (!user || !allowed.includes(user.role)) {
     logSec('role_violation', req, {
       userId:       req.user.sub,
@@ -28,6 +28,8 @@ router.use(userAuth, (req, res, next) => {
 function brokerApps(user) {
   if (user.role === 'inmobiliaria')
     return store.getApplicationsByInmobiliaria(user.id);
+  if (user.role === 'secretary')
+    return store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
   return store.getApplicationsByBroker(user.id);
 }
 
@@ -129,6 +131,8 @@ router.get('/analytics', (req, res) => {
 // ── GET /sales ──────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/sales', (req, res) => {
+  if (req.brokerUser.role === 'secretary')
+    return res.status(403).json({ error: 'Acceso restringido para secretarias' });
   const apps = brokerApps(req.brokerUser);
 
   const completedApps = apps.filter(a =>
@@ -318,6 +322,8 @@ router.get('/audit', (req, res) => {
 // ── GET /accounting ─────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 router.get('/accounting', (req, res) => {
+  if (req.brokerUser.role === 'secretary')
+    return res.status(403).json({ error: 'Acceso restringido para secretarias' });
   const apps = brokerApps(req.brokerUser);
   const commissionRate = parseFloat(req.query.commission_rate) || 0.03; // 3% default
 

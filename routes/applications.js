@@ -417,6 +417,8 @@ router.get('/', userAuth, (req, res) => {
     apps = store.getApplications();
   } else if (user.role === 'inmobiliaria') {
     apps = store.getApplicationsByInmobiliaria(user.id);
+  } else if (user.role === 'secretary') {
+    apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
   } else if (['agency', 'broker'].includes(user.role)) {
     apps = store.getApplicationsByBroker(user.id);
   } else {
@@ -452,11 +454,12 @@ router.get('/:id', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
 
-  if (!isBroker && !isInmobiliaria && !isClient && !admin)
+  if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
   res.json(app);
@@ -472,8 +475,9 @@ router.put('/:id/status', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const admin = isAdmin(req) || user?.role === 'admin';
-  if (!isBroker && !isInmobiliaria && !admin)
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
   const { status, reason } = req.body;
@@ -516,7 +520,8 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
-  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   const { documents } = req.body; // [{ type, label, required }]
@@ -655,7 +660,9 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
-  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+  const user = store.getUserById(req.user.sub);
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   const doc = app.documents_uploaded.find(d => d.id === req.params.docId);
@@ -664,8 +671,6 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   const { status, note } = req.body; // 'approved' or 'rejected'
   if (!['approved', 'rejected'].includes(status))
     return res.status(400).json({ error: 'status debe ser approved o rejected' });
-
-  const user = store.getUserById(req.user.sub);
   doc.review_status = status;
   doc.review_note   = note || '';
   doc.reviewed_at   = new Date().toISOString();
@@ -861,11 +866,12 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
-  if (app.broker.user_id !== req.user.sub && !isAdmin(req))
+  const user = store.getUserById(req.user.sub);
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   const { approved, notes } = req.body;
-  const user = store.getUserById(req.user.sub);
 
   app.payment.verification_status = approved ? 'approved' : 'rejected';
   app.payment.verified_at = new Date().toISOString();
@@ -1001,10 +1007,11 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
   const user = store.getUserById(req.user.sub);
   const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isBrokerOwner  = app.broker.user_id === req.user.sub;
   const admin          = isAdmin(req) || user?.role === 'admin';
 
-  if (!isBrokerOwner && !isInmobiliaria && !admin)
+  if (!isBrokerOwner && !isInmobiliaria && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
   // Broker can only create the plan (first time). Once it exists, only inmobiliaria can edit.
@@ -1114,9 +1121,10 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
   if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
   const user = store.getUserById(req.user.sub);
   const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isBrokerOwner  = app.broker.user_id === req.user.sub;
   const admin          = isAdmin(req) || user?.role === 'admin';
-  if (!isInmobiliaria && !isBrokerOwner && !admin)
+  if (!isInmobiliaria && !isSecretary && !isBrokerOwner && !admin)
     return res.status(403).json({ error: 'No autorizado' });
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });
