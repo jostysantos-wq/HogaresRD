@@ -39,6 +39,14 @@ const resendLimiter = rateLimit({
   message: { error: 'Demasiadas solicitudes. Intenta en una hora.' },
 });
 
+const twoFALimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de verificación. Intenta en 15 minutos.' },
+});
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
@@ -51,7 +59,7 @@ function signToken(user) {
 }
 
 function safeUser(user) {
-  const { passwordHash, resetToken, resetTokenExpiry, emailVerifyToken, emailVerifyExpiry, ...safe } = user;
+  const { passwordHash, resetToken, resetTokenExpiry, emailVerifyToken, emailVerifyExpiry, biometricTokenHash, ...safe } = user;
   return safe;
 }
 
@@ -122,6 +130,44 @@ function sendVerificationEmail(user, rawToken) {
   </table>
 </body></html>`,
   }).catch(err => console.error('Verification email error:', err.message));
+}
+
+function send2FAEmail(user, code) {
+  return transporter.sendMail({
+    from: `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject: 'Tu código de verificación — HogaresRD 🔐',
+    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Código de verificación</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;text-align:center;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+            Hola <strong>${user.name.split(' ')[0]}</strong>, tu código de verificación es:
+          </p>
+          <div style="margin:24px 0;padding:20px;background:#f0f4f9;border-radius:12px;display:inline-block;">
+            <span style="font-size:2.5rem;font-weight:900;letter-spacing:0.5em;color:#002D62;font-family:'Courier New',monospace;">${code}</span>
+          </div>
+          <p style="margin:16px 0 0;font-size:0.85rem;color:#4d6a8a;">
+            Este código expira en <strong>5 minutos</strong>.
+          </p>
+          <p style="margin:16px 0 0;font-size:0.8rem;color:#7a9bbf;">
+            Si no solicitaste este código, ignora este mensaje.
+          </p>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+  }).catch(err => console.error('2FA email error:', err.message));
 }
 
 // Cookie name for the JWT (short to save bandwidth)
@@ -681,6 +727,27 @@ router.post('/login', authLimiter, async (req, res, next) => {
     user.loginLockedUntil = null;
     store.saveUser(user);
 
+    // ── 2FA check ─────────────────────────────────────────
+    if (user.twoFAEnabled) {
+      const sessionId = crypto.randomUUID();
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+      store.saveTwoFASession({
+        id: sessionId,
+        userId: user.id,
+        codeHash,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        attempts: 0,
+        verified: false,
+      });
+
+      send2FAEmail(user, code);
+      logSec('2fa_required', req, { userId: user.id });
+      return res.json({ requires2FA: true, twoFASessionId: sessionId, method: user.twoFAMethod || 'email' });
+    }
+
     logSec('login_success', req, { userId: user.id, role: user.role });
 
     const token = signToken(user);
@@ -881,6 +948,226 @@ router.post('/register/admin', authLimiter, async (req, res, next) => {
     logSec('admin_registered', req, { userId: user.id, email: user.email });
     res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
+});
+
+// ── 2FA: Verify code ──────────────────────────────────────────────────────
+router.post('/2fa/verify', twoFALimiter, (req, res) => {
+  const { twoFASessionId, code } = req.body;
+  if (!twoFASessionId || !code) return res.status(400).json({ error: 'Sesión y código requeridos' });
+
+  const session = store.getTwoFASession(twoFASessionId);
+  if (!session) return res.status(400).json({ error: 'Sesión de verificación inválida o expirada' });
+  if (new Date(session.expiresAt) < new Date()) {
+    store.deleteTwoFASession(twoFASessionId);
+    return res.status(400).json({ error: 'Código expirado. Inicia sesión nuevamente.' });
+  }
+  if (session.attempts >= 5) {
+    store.deleteTwoFASession(twoFASessionId);
+    logSec('2fa_max_attempts', req, { userId: session.userId });
+    return res.status(429).json({ error: 'Demasiados intentos. Inicia sesión nuevamente.' });
+  }
+
+  const codeHash = crypto.createHash('sha256').update(String(code)).digest('hex');
+  if (codeHash !== session.codeHash) {
+    session.attempts++;
+    store.saveTwoFASession(session);
+    logSec('2fa_failed', req, { userId: session.userId, attempts: session.attempts });
+    return res.status(401).json({ error: 'Código incorrecto', attemptsRemaining: 5 - session.attempts });
+  }
+
+  // Success — issue token
+  store.deleteTwoFASession(twoFASessionId);
+  const user = store.getUserById(session.userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  logSec('2fa_verified', req, { userId: user.id });
+  logSec('login_success', req, { userId: user.id, role: user.role, via: '2fa' });
+
+  const token = signToken(user);
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true, secure: IS_PROD, sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+  res.json({ token, user: safeUser(user) });
+});
+
+// ── 2FA: Resend code ──────────────────────────────────────────────────────
+router.post('/2fa/resend', twoFALimiter, (req, res) => {
+  const { twoFASessionId } = req.body;
+  if (!twoFASessionId) return res.status(400).json({ error: 'Sesión requerida' });
+
+  const session = store.getTwoFASession(twoFASessionId);
+  if (!session) return res.status(400).json({ error: 'Sesión inválida o expirada' });
+  if (new Date(session.expiresAt) < new Date()) {
+    store.deleteTwoFASession(twoFASessionId);
+    return res.status(400).json({ error: 'Sesión expirada. Inicia sesión nuevamente.' });
+  }
+
+  const user = store.getUserById(session.userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Generate new code
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  session.codeHash = crypto.createHash('sha256').update(code).digest('hex');
+  session.expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  session.attempts = 0;
+  store.saveTwoFASession(session);
+
+  send2FAEmail(user, code);
+  logSec('2fa_code_resent', req, { userId: user.id });
+  res.json({ success: true, message: 'Código reenviado' });
+});
+
+// ── 2FA: Enable (requires auth) ──────────────────────────────────────────
+router.post('/2fa/enable', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const sessionId = crypto.randomUUID();
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+  store.saveTwoFASession({
+    id: sessionId,
+    userId: user.id,
+    codeHash,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    attempts: 0,
+    purpose: 'enable',
+  });
+
+  send2FAEmail(user, code);
+  logSec('2fa_enable_requested', req, { userId: user.id });
+  res.json({ sessionId });
+});
+
+// ── 2FA: Confirm enable ──────────────────────────────────────────────────
+router.post('/2fa/confirm-enable', userAuth, (req, res) => {
+  const { sessionId, code } = req.body;
+  if (!sessionId || !code) return res.status(400).json({ error: 'Sesión y código requeridos' });
+
+  const session = store.getTwoFASession(sessionId);
+  if (!session || session.userId !== req.user.sub) return res.status(400).json({ error: 'Sesión inválida' });
+  if (new Date(session.expiresAt) < new Date()) {
+    store.deleteTwoFASession(sessionId);
+    return res.status(400).json({ error: 'Código expirado' });
+  }
+
+  const codeHash = crypto.createHash('sha256').update(String(code)).digest('hex');
+  if (codeHash !== session.codeHash) {
+    session.attempts++;
+    store.saveTwoFASession(session);
+    return res.status(401).json({ error: 'Código incorrecto' });
+  }
+
+  store.deleteTwoFASession(sessionId);
+  const user = store.getUserById(req.user.sub);
+  user.twoFAEnabled = true;
+  user.twoFAMethod = 'email';
+  user.twoFAEnabledAt = new Date().toISOString();
+  store.saveUser(user);
+
+  logSec('2fa_enabled', req, { userId: user.id });
+  res.json({ success: true, twoFAEnabled: true });
+});
+
+// ── 2FA: Disable (requires auth + password) ──────────────────────────────
+router.post('/2fa/disable', userAuth, async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Contraseña requerida' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Contraseña incorrecta' });
+
+  user.twoFAEnabled = false;
+  user.twoFAMethod = null;
+  store.saveUser(user);
+
+  logSec('2fa_disabled', req, { userId: user.id });
+  res.json({ success: true, twoFAEnabled: false });
+});
+
+// ── Biometric: Register token ────────────────────────────────────────────
+router.post('/biometric/register', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const rawToken = crypto.randomBytes(64).toString('hex');
+  user.biometricTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  store.saveUser(user);
+
+  logSec('biometric_registered', req, { userId: user.id });
+  res.json({ biometricToken: rawToken });
+});
+
+// ── Biometric: Login ─────────────────────────────────────────────────────
+router.post('/biometric/login', authLimiter, async (req, res) => {
+  const { email, biometricToken } = req.body;
+  if (!email || !biometricToken) return res.status(400).json({ error: 'Email y token biométrico requeridos' });
+
+  const user = store.getUserByEmail(email);
+  if (!user || !user.biometricTokenHash) {
+    logSec('biometric_login_failed', req, { email, reason: 'no_biometric' });
+    return res.status(401).json({ error: 'Autenticación biométrica no disponible' });
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(biometricToken).digest('hex');
+  if (tokenHash !== user.biometricTokenHash) {
+    logSec('biometric_login_failed', req, { email, reason: 'invalid_token' });
+    return res.status(401).json({ error: 'Token biométrico inválido' });
+  }
+
+  // Account lockout check
+  if (user.loginLockedUntil && new Date(user.loginLockedUntil) > new Date()) {
+    return res.status(429).json({ error: 'Cuenta bloqueada temporalmente' });
+  }
+
+  user.lastLoginAt = new Date().toISOString();
+  user.loginAttempts = 0;
+  user.loginLockedUntil = null;
+  store.saveUser(user);
+
+  // If 2FA is enabled, still require it (biometric replaces password, not 2FA)
+  if (user.twoFAEnabled) {
+    const sessionId = crypto.randomUUID();
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    store.saveTwoFASession({
+      id: sessionId, userId: user.id, codeHash,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      attempts: 0,
+    });
+
+    send2FAEmail(user, code);
+    logSec('2fa_required', req, { userId: user.id, via: 'biometric' });
+    return res.json({ requires2FA: true, twoFASessionId: sessionId, method: user.twoFAMethod || 'email' });
+  }
+
+  logSec('biometric_login_success', req, { userId: user.id });
+  const token = signToken(user);
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true, secure: IS_PROD, sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+  res.json({ token, user: safeUser(user) });
+});
+
+// ── Biometric: Revoke ────────────────────────────────────────────────────
+router.post('/biometric/revoke', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  user.biometricTokenHash = null;
+  store.saveUser(user);
+
+  logSec('biometric_revoked', req, { userId: user.id });
+  res.json({ success: true });
 });
 
 // Optional auth — sets req.user if token present, but doesn't reject

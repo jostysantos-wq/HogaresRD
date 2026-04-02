@@ -12,6 +12,7 @@ const FILES = {
   metaLeads:      path.join(DATA_DIR, 'meta_leads.json'),
   availability:   path.join(DATA_DIR, 'availability.json'),
   tours:          path.join(DATA_DIR, 'tours.json'),
+  twofa_sessions: path.join(DATA_DIR, 'twofa_sessions.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -238,6 +239,31 @@ function saveTour(tour) {
   write(FILES.tours, all);
 }
 
+// ── 2FA Sessions ─────────────────────────────────────────────────────────
+ensureFile(FILES.twofa_sessions);
+
+function getTwoFASessions()              { return read(FILES.twofa_sessions); }
+function getTwoFASession(id)             { return getTwoFASessions().find(s => s.id === id) || null; }
+
+function saveTwoFASession(session) {
+  const all = getTwoFASessions();
+  const idx = all.findIndex(s => s.id === session.id);
+  if (idx === -1) all.push(session);
+  else all[idx] = session;
+  write(FILES.twofa_sessions, all);
+}
+
+function deleteTwoFASession(id) {
+  const all = getTwoFASessions().filter(s => s.id !== id);
+  write(FILES.twofa_sessions, all);
+}
+
+function cleanExpiredTwoFASessions() {
+  const now = new Date();
+  const all = getTwoFASessions().filter(s => new Date(s.expiresAt) > now);
+  write(FILES.twofa_sessions, all);
+}
+
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
@@ -252,4 +278,5 @@ module.exports = {
   getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
   getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing,
   getBookedSlots, saveTour,
+  getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, cleanExpiredTwoFASessions,
 };

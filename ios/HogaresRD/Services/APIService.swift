@@ -114,7 +114,7 @@ class APIService: ObservableObject {
 
     // MARK: - Auth
 
-    func login(email: String, password: String) async throws -> User {
+    func login(email: String, password: String) async throws -> LoginResult {
         let url = URL(string: "\(apiBase)/api/auth/login")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -126,9 +126,15 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error de inicio de sesión")
         }
-        let auth = try decoder.decode(AuthResponse.self, from: data)
-        await persist(user: auth.user, token: auth.token)
-        return auth.user
+        let loginResp = try decoder.decode(LoginResponse.self, from: data)
+        if loginResp.requires2FA == true, let sid = loginResp.twoFASessionId {
+            return .requires2FA(sessionId: sid, method: loginResp.method ?? "email")
+        }
+        guard let user = loginResp.user, let token = loginResp.token else {
+            throw APIError.server("Respuesta inesperada")
+        }
+        await persist(user: user, token: token)
+        return .success(user)
     }
 
     // Register user → server returns {success, user} (no token), so we login afterwards
@@ -149,7 +155,9 @@ class APIService: ObservableObject {
             throw APIError.server("Error al crear la cuenta")
         }
         // Auto-login after registration to obtain token
-        return try await login(email: email, password: password)
+        let result = try await login(email: email, password: password)
+        if case .success(let user) = result { return user }
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
     }
 
     func registerAgency(name: String, email: String, password: String,
@@ -169,7 +177,9 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al crear la cuenta de agente")
         }
-        return try await login(email: email, password: password)
+        let result = try await login(email: email, password: password)
+        if case .success(let user) = result { return user }
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
     }
 
     func registerBroker(name: String, email: String, password: String,
@@ -191,7 +201,9 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al crear la cuenta de broker")
         }
-        return try await login(email: email, password: password)
+        let result = try await login(email: email, password: password)
+        if case .success(let user) = result { return user }
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
     }
 
     func registerInmobiliaria(name: String, email: String, password: String,
@@ -211,7 +223,9 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al crear la cuenta de inmobiliaria")
         }
-        return try await login(email: email, password: password)
+        let result = try await login(email: email, password: password)
+        if case .success(let user) = result { return user }
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
     }
 
     func logout() {
@@ -374,6 +388,140 @@ class APIService: ObservableObject {
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         _ = try await URLSession.shared.data(for: req)
+    }
+
+    // MARK: - Two-Factor Authentication
+
+    func verify2FA(sessionId: String, code: String) async throws -> User {
+        let url = URL(string: "\(apiBase)/api/auth/2fa/verify")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: String] = ["twoFASessionId": sessionId, "code": code]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Codigo invalido")
+        }
+        let auth = try decoder.decode(AuthResponse.self, from: data)
+        await persist(user: auth.user, token: auth.token)
+        return auth.user
+    }
+
+    func resend2FA(sessionId: String) async throws {
+        let url = URL(string: "\(apiBase)/api/auth/2fa/resend")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(["twoFASessionId": sessionId])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error reenviando codigo")
+        }
+    }
+
+    func enable2FA() async throws -> String {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/enable")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONEncoder().encode(["method": "email"])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error habilitando 2FA")
+        }
+        let result = try JSONDecoder().decode([String: String].self, from: data)
+        guard let sid = result["sessionId"] else { throw APIError.server("Respuesta inesperada") }
+        return sid
+    }
+
+    func confirmEnable2FA(sessionId: String, code: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/confirm-enable")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: String] = ["sessionId": sessionId, "code": code]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Codigo invalido")
+        }
+    }
+
+    func disable2FA(password: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/disable")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONEncoder().encode(["password": password])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error desactivando 2FA")
+        }
+    }
+
+    func registerBiometric() async throws -> String {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/biometric/register")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error registrando biometrico")
+        }
+        let result = try JSONDecoder().decode([String: String].self, from: data)
+        guard let bioToken = result["biometricToken"] else { throw APIError.server("Respuesta inesperada") }
+        return bioToken
+    }
+
+    func loginWithBiometric(email: String, biometricToken: String) async throws -> LoginResult {
+        let url = URL(string: "\(apiBase)/api/auth/biometric/login")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(["email": email, "biometricToken": biometricToken])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error de autenticacion biometrica")
+        }
+        let loginResp = try decoder.decode(LoginResponse.self, from: data)
+        if loginResp.requires2FA == true, let sid = loginResp.twoFASessionId {
+            return .requires2FA(sessionId: sid, method: loginResp.method ?? "email")
+        }
+        guard let user = loginResp.user, let token = loginResp.token else {
+            throw APIError.server("Respuesta inesperada")
+        }
+        await persist(user: user, token: token)
+        return .success(user)
+    }
+
+    func revokeBiometric() async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/biometric/revoke")!)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            throw APIError.server("Error revocando biometrico")
+        }
     }
 
     // MARK: - Listing Analytics

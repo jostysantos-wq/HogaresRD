@@ -1627,6 +1627,57 @@
       </div>
       <button class="btn btn-primary" id="pwSaveBtn" style="margin-top:0.5rem;">Guardar Contrasena</button>
     </div>
+
+  <!-- 2FA Settings Card -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3 class="card-title">Verificación en Dos Pasos</h3>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">
+      Añade una capa extra de seguridad. Se te pedirá un código enviado a tu correo cada vez que inicies sesión.
+    </p>
+    <div id="twoFAStatus" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <span id="twoFAStatusDot" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>
+      <span id="twoFAStatusText" style="font-size:0.88rem;font-weight:600;">Cargando...</span>
+    </div>
+    <div id="twoFAActions">
+      <button class="btn btn-primary" id="toggleTwoFABtn" onclick="toggle2FA()">Activar</button>
+    </div>
+  </div>
+
+  <!-- 2FA Enable Modal -->
+  <div class="la-detail-overlay" id="twoFAModal">
+    <div class="la-detail-modal" style="max-width:420px;text-align:center;">
+      <button class="la-detail-close" onclick="close2FAModal()">&times;</button>
+      <div id="twoFAModalContent">
+        <div style="font-size:2rem;margin-bottom:8px;">🔐</div>
+        <h3 style="margin:0 0 8px;">Verificar tu correo</h3>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Ingresa el código de 6 dígitos enviado a tu correo</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:1rem;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="0" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="1" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="2" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="3" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="4" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+          <input type="text" maxlength="1" inputmode="numeric" class="twofa-s-digit" data-idx="5" style="width:44px;height:52px;text-align:center;font-size:1.3rem;font-weight:700;border:2px solid var(--border);border-radius:10px;outline:none;background:var(--bg-card);color:var(--text);font-family:monospace;">
+        </div>
+        <button class="btn btn-primary" id="confirm2FABtn" disabled onclick="confirm2FAEnable()" style="width:100%;">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2FA Disable Modal -->
+  <div class="la-detail-overlay" id="twoFADisableModal">
+    <div class="la-detail-modal" style="max-width:420px;">
+      <button class="la-detail-close" onclick="close2FADisableModal()">&times;</button>
+      <div style="text-align:center;">
+        <div style="font-size:2rem;margin-bottom:8px;">⚠️</div>
+        <h3 style="margin:0 0 8px;">Desactivar 2FA</h3>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Ingresa tu contraseña para desactivar la verificación en dos pasos</p>
+        <input type="password" id="disable2FAPassword" placeholder="Tu contraseña" style="width:100%;padding:0.65rem;border:1px solid var(--border);border-radius:10px;font-size:0.88rem;background:var(--bg-card);color:var(--text);margin-bottom:1rem;font-family:inherit;">
+        <button class="btn btn-primary" onclick="confirm2FADisable()" style="width:100%;background:#ef4444;border-color:#ef4444;">Desactivar</button>
+      </div>
+    </div>
+  </div>
+
   </div>
 
   <!-- ═══ PAGE: APPS ════════════════════════════════════════ -->
@@ -3689,6 +3740,7 @@
     document.getElementById('page-' + page).classList.add('active');
     document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
     if (page === 'notificaciones') loadNotifications();
+    if (page === 'contrasena') load2FAStatus();
     if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
     if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
@@ -3795,6 +3847,125 @@
       msg.className = 'error'; msg.textContent = e.message;
     }
   };
+
+  // ── 2FA Settings ───────────────────────────────────────────
+  let _2faEnabled = false;
+  let _2faSessionId = null;
+
+  async function load2FAStatus() {
+    try {
+      const user = await API('/api/auth/me');
+      _2faEnabled = !!user.twoFAEnabled;
+      update2FAStatusUI();
+    } catch(e) {}
+  }
+
+  function update2FAStatusUI() {
+    const dot = document.getElementById('twoFAStatusDot');
+    const text = document.getElementById('twoFAStatusText');
+    const btn = document.getElementById('toggleTwoFABtn');
+    if (_2faEnabled) {
+      dot.style.background = '#22c55e';
+      text.textContent = 'Activado';
+      btn.textContent = 'Desactivar';
+      btn.style.background = '#ef4444';
+      btn.style.borderColor = '#ef4444';
+    } else {
+      dot.style.background = '#f59e0b';
+      text.textContent = 'Desactivado';
+      btn.textContent = 'Activar';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }
+  }
+
+  window.toggle2FA = async function() {
+    if (_2faEnabled) {
+      document.getElementById('twoFADisableModal').classList.add('open');
+      document.getElementById('disable2FAPassword').value = '';
+      document.getElementById('disable2FAPassword').focus();
+    } else {
+      try {
+        const res = await API('/api/auth/2fa/enable', { method: 'POST' });
+        _2faSessionId = res.sessionId;
+        document.getElementById('twoFAModal').classList.add('open');
+        document.querySelectorAll('.twofa-s-digit').forEach(d => { d.value = ''; });
+        document.querySelector('.twofa-s-digit[data-idx="0"]').focus();
+      } catch(e) {
+        toast('Error: ' + e.message, 'error');
+      }
+    }
+  };
+
+  window.close2FAModal = function() {
+    document.getElementById('twoFAModal').classList.remove('open');
+  };
+
+  window.close2FADisableModal = function() {
+    document.getElementById('twoFADisableModal').classList.remove('open');
+  };
+
+  // Digit input handlers for settings 2FA modal
+  document.querySelectorAll('.twofa-s-digit').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = val;
+      if (val && +e.target.dataset.idx < 5) {
+        document.querySelector(`.twofa-s-digit[data-idx="${+e.target.dataset.idx + 1}"]`).focus();
+      }
+      const code = Array.from(document.querySelectorAll('.twofa-s-digit')).map(d => d.value).join('');
+      document.getElementById('confirm2FABtn').disabled = code.length !== 6;
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && +e.target.dataset.idx > 0) {
+        document.querySelector(`.twofa-s-digit[data-idx="${+e.target.dataset.idx - 1}"]`).focus();
+      }
+    });
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+      document.querySelectorAll('.twofa-s-digit').forEach((d, i) => { d.value = paste[i] || ''; });
+      if (paste.length === 6) document.getElementById('confirm2FABtn').disabled = false;
+    });
+  });
+
+  window.confirm2FAEnable = async function() {
+    const code = Array.from(document.querySelectorAll('.twofa-s-digit')).map(d => d.value).join('');
+    try {
+      await API('/api/auth/2fa/confirm-enable', {
+        method: 'POST',
+        body: { sessionId: _2faSessionId, code },
+      });
+      _2faEnabled = true;
+      update2FAStatusUI();
+      close2FAModal();
+      toast('Verificación en dos pasos activada', 'success');
+    } catch(e) {
+      toast('Error: ' + e.message, 'error');
+      document.querySelectorAll('.twofa-s-digit').forEach(d => { d.value = ''; });
+      document.querySelector('.twofa-s-digit[data-idx="0"]').focus();
+    }
+  };
+
+  window.confirm2FADisable = async function() {
+    const pwd = document.getElementById('disable2FAPassword').value;
+    if (!pwd) { toast('Ingresa tu contraseña', 'error'); return; }
+    try {
+      await API('/api/auth/2fa/disable', {
+        method: 'POST',
+        body: { password: pwd },
+      });
+      _2faEnabled = false;
+      update2FAStatusUI();
+      close2FADisableModal();
+      toast('Verificación en dos pasos desactivada', 'success');
+    } catch(e) {
+      toast('Error: ' + e.message, 'error');
+    }
+  };
+
+  // Load 2FA status when settings page is shown
+  setTimeout(() => load2FAStatus(), 2000);
 
   // ── Chat IA (Claude-powered) ────────────────────────────────
   const chatHistory = []; // { role: 'user'|'assistant', content: string }

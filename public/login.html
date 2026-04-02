@@ -90,6 +90,11 @@
     .acc-option:hover .acc-option-arrow { transform: translateX(3px); color: var(--accent); }
 
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+    .twofa-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .twofa-digit { width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; border: 2px solid var(--border,#d1d5db); border-radius: 12px; outline: none; background: var(--bg-input,#fff); color: var(--text,#1a2b40); font-family: 'Courier New', monospace; transition: border-color 0.15s; }
+    .twofa-digit:focus { border-color: var(--accent,#002D62); box-shadow: 0 0 0 3px rgba(0,45,98,0.1); }
+    .twofa-digit.filled { border-color: var(--accent,#002D62); background: rgba(0,45,98,0.03); }
   </style>
 </head>
 <body>
@@ -124,6 +129,34 @@
         </div>
         <button type="submit" class="btn-primary" id="submitBtn">Iniciar Sesión</button>
       </form>
+
+      <!-- 2FA Code Entry -->
+      <div id="twoFASection" style="display:none;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:2rem;margin-bottom:8px;">🔐</div>
+          <h2 style="margin:0 0 4px;font-size:1.1rem;">Verificación en dos pasos</h2>
+          <p style="margin:0;font-size:0.85rem;color:var(--muted,#6b7280);">Ingresa el código de 6 dígitos enviado a tu correo</p>
+        </div>
+        <div class="twofa-inputs" id="twoFAInputs">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="0" autofocus>
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="1">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="2">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="3">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="4">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="twofa-digit" data-idx="5">
+        </div>
+        <div class="error-msg" id="twoFAError"></div>
+        <button type="button" class="btn-primary" id="verify2FABtn" disabled>Verificar</button>
+        <div style="text-align:center;margin-top:12px;">
+          <span id="twoFATimer" style="font-size:0.82rem;color:var(--muted,#6b7280);"></span>
+        </div>
+        <div style="text-align:center;margin-top:8px;">
+          <button type="button" id="resend2FABtn" style="background:none;border:none;color:var(--accent,#002D62);font-weight:600;cursor:pointer;font-size:0.85rem;">Reenviar código</button>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+          <button type="button" id="back2FABtn" style="background:none;border:none;color:var(--muted,#6b7280);cursor:pointer;font-size:0.82rem;">← Volver al login</button>
+        </div>
+      </div>
 
       <div class="auth-links">
         <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
@@ -207,6 +240,13 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
+
+        // Check if 2FA is required
+        if (data.requires2FA) {
+          show2FAForm(data.twoFASessionId);
+          return;
+        }
+
         // JWT is now in an httpOnly cookie set by the server — do NOT store in localStorage.
         // Keep hogaresrd_user for display purposes (name, role) throughout the session.
         if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
@@ -225,6 +265,154 @@
         btn.textContent = 'Iniciar Sesión';
       }
     });
+
+    let _2faSessionId = null;
+    let _2faTimerInterval = null;
+
+    function show2FAForm(sessionId) {
+      _2faSessionId = sessionId;
+      document.getElementById('loginForm').style.display = 'none';
+      document.querySelector('.auth-links').style.display = 'none';
+      document.querySelector('.new-account-section').style.display = 'none';
+      document.getElementById('twoFASection').style.display = 'block';
+      // Focus first digit
+      document.querySelector('.twofa-digit[data-idx="0"]').focus();
+      // Start countdown
+      start2FATimer(300); // 5 minutes
+    }
+
+    function hide2FAForm() {
+      document.getElementById('loginForm').style.display = '';
+      document.querySelector('.auth-links').style.display = '';
+      document.querySelector('.new-account-section').style.display = '';
+      document.getElementById('twoFASection').style.display = 'none';
+      document.getElementById('twoFAError').classList.remove('visible');
+      clearInterval(_2faTimerInterval);
+      // Clear inputs
+      document.querySelectorAll('.twofa-digit').forEach(d => { d.value = ''; d.classList.remove('filled'); });
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = 'Iniciar Sesión';
+    }
+
+    function start2FATimer(seconds) {
+      clearInterval(_2faTimerInterval);
+      let remaining = seconds;
+      const el = document.getElementById('twoFATimer');
+      function update() {
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        el.textContent = `Código expira en ${m}:${String(s).padStart(2, '0')}`;
+        if (remaining <= 0) {
+          clearInterval(_2faTimerInterval);
+          el.textContent = 'Código expirado';
+          el.style.color = '#ef4444';
+        }
+        remaining--;
+      }
+      update();
+      _2faTimerInterval = setInterval(update, 1000);
+    }
+
+    function get2FACode() {
+      return Array.from(document.querySelectorAll('.twofa-digit')).map(d => d.value).join('');
+    }
+
+    // Digit input handling
+    document.querySelectorAll('.twofa-digit').forEach(input => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val;
+        e.target.classList.toggle('filled', val.length > 0);
+        if (val && e.target.dataset.idx < 5) {
+          document.querySelector(`.twofa-digit[data-idx="${+e.target.dataset.idx + 1}"]`).focus();
+        }
+        document.getElementById('verify2FABtn').disabled = get2FACode().length !== 6;
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && e.target.dataset.idx > 0) {
+          document.querySelector(`.twofa-digit[data-idx="${+e.target.dataset.idx - 1}"]`).focus();
+        }
+        if (e.key === 'Enter' && get2FACode().length === 6) {
+          document.getElementById('verify2FABtn').click();
+        }
+      });
+      // Handle paste
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        document.querySelectorAll('.twofa-digit').forEach((d, i) => {
+          d.value = paste[i] || '';
+          d.classList.toggle('filled', !!paste[i]);
+        });
+        if (paste.length === 6) {
+          document.querySelector(`.twofa-digit[data-idx="5"]`).focus();
+          document.getElementById('verify2FABtn').disabled = false;
+        }
+      });
+    });
+
+    // Verify button
+    document.getElementById('verify2FABtn').addEventListener('click', async () => {
+      const code = get2FACode();
+      const btn = document.getElementById('verify2FABtn');
+      const err = document.getElementById('twoFAError');
+      err.classList.remove('visible');
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      try {
+        const res = await fetch('/api/auth/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ twoFASessionId: _2faSessionId, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Código inválido');
+
+        if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
+        const role = data.user?.role;
+        const params = new URLSearchParams(window.location.search);
+        let next = params.get('next');
+        if (!next) {
+          if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') next = '/subscribe';
+          else next = '/home';
+        }
+        window.location.href = next;
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Verificar';
+        // Clear inputs for retry
+        document.querySelectorAll('.twofa-digit').forEach(d => { d.value = ''; d.classList.remove('filled'); });
+        document.querySelector('.twofa-digit[data-idx="0"]').focus();
+      }
+    });
+
+    // Resend button
+    document.getElementById('resend2FABtn').addEventListener('click', async () => {
+      const btn = document.getElementById('resend2FABtn');
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+      try {
+        const res = await fetch('/api/auth/2fa/resend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ twoFASessionId: _2faSessionId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        start2FATimer(300);
+        document.getElementById('twoFATimer').style.color = '';
+      } catch (ex) {
+        showError(ex.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Reenviar código';
+    });
+
+    // Back button
+    document.getElementById('back2FABtn').addEventListener('click', hide2FAForm);
   </script>
 <script src="/js/pixel.js" defer></script>
 </body>

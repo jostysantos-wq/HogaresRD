@@ -227,20 +227,97 @@ struct LoginForm: View {
     @State private var password = ""
     @State private var loading = false
     @State private var error: String?
+    @State private var show2FA = false
+    @State private var twoFASessionId = ""
+    @State private var twoFACode = ""
+    @State private var twoFALoading = false
+    @State private var twoFAError: String?
+
+    private let bio = BiometricService.shared
 
     var body: some View {
         VStack(spacing: 16) {
-            FloatingField(label: "Correo electrónico", text: $email)
-                .keyboardType(.emailAddress)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            FloatingField(label: "Contraseña", text: $password, isSecure: true)
+            if !show2FA {
+                FloatingField(label: "Correo electrónico", text: $email)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                FloatingField(label: "Contraseña", text: $password, isSecure: true)
 
-            if let err = error { ErrorBanner(message: err) }
+                if let err = error { ErrorBanner(message: err) }
 
-            ActionButton(label: "Iniciar sesión", color: Color.rdBlue, loading: loading,
-                         disabled: email.isEmpty || password.isEmpty) {
-                Task { await login() }
+                ActionButton(label: "Iniciar sesión", color: Color.rdBlue, loading: loading,
+                             disabled: email.isEmpty || password.isEmpty) {
+                    Task { await login() }
+                }
+
+                // Biometric login button
+                if bio.isAvailable, let savedEmail = bio.savedBiometricEmail(),
+                   bio.hasBiometricToken(for: savedEmail) {
+                    Button {
+                        Task { await loginWithBiometric(savedEmail) }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: bio.biometricIcon)
+                                .font(.title3)
+                            Text("Iniciar con \(bio.biometricLabel)")
+                                .font(.subheadline).bold()
+                        }
+                        .foregroundStyle(Color.rdBlue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.rdBlue.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                // 2FA Code Entry
+                VStack(spacing: 16) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.rdBlue)
+
+                    Text("Verificación en dos pasos")
+                        .font(.headline)
+                    Text("Ingresa el código de 6 dígitos enviado a tu correo")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    TextField("000000", text: $twoFACode)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                        .frame(maxWidth: 200)
+                        .padding()
+                        .background(Color(.secondarySystemFill))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .onChange(of: twoFACode) { _, val in
+                            twoFACode = String(val.filter(\.isNumber).prefix(6))
+                        }
+
+                    if let err = twoFAError { ErrorBanner(message: err) }
+
+                    ActionButton(label: "Verificar", color: Color.rdBlue, loading: twoFALoading,
+                                 disabled: twoFACode.count != 6) {
+                        Task { await verify2FA() }
+                    }
+
+                    Button("Reenviar código") {
+                        Task { await resend2FA() }
+                    }
+                    .font(.subheadline).bold()
+                    .foregroundStyle(Color.rdBlue)
+
+                    Button("← Volver") {
+                        show2FA = false
+                        twoFACode = ""
+                        twoFAError = nil
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal)
@@ -250,10 +327,61 @@ struct LoginForm: View {
     private func login() async {
         loading = true; error = nil
         do {
-            _ = try await api.login(email: email, password: password)
-            onSuccess()
+            let result = try await api.login(email: email, password: password)
+            switch result {
+            case .success:
+                onSuccess()
+            case .requires2FA(let sid, _):
+                twoFASessionId = sid
+                show2FA = true
+            }
         } catch { self.error = error.localizedDescription }
         loading = false
+    }
+
+    private func loginWithBiometric(_ savedEmail: String) async {
+        loading = true; error = nil
+        do {
+            let authenticated = try await bio.authenticate(reason: "Inicia sesión en HogaresRD")
+            guard authenticated else { loading = false; return }
+            guard let bioToken = bio.getBiometricToken(for: savedEmail) else {
+                error = "Token biométrico no encontrado"
+                loading = false
+                return
+            }
+            let result = try await api.loginWithBiometric(email: savedEmail, biometricToken: bioToken)
+            switch result {
+            case .success:
+                onSuccess()
+            case .requires2FA(let sid, _):
+                email = savedEmail
+                twoFASessionId = sid
+                show2FA = true
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func verify2FA() async {
+        twoFALoading = true; twoFAError = nil
+        do {
+            _ = try await api.verify2FA(sessionId: twoFASessionId, code: twoFACode)
+            onSuccess()
+        } catch {
+            twoFAError = error.localizedDescription
+            twoFACode = ""
+        }
+        twoFALoading = false
+    }
+
+    private func resend2FA() async {
+        do {
+            try await api.resend2FA(sessionId: twoFASessionId)
+        } catch {
+            twoFAError = error.localizedDescription
+        }
     }
 }
 

@@ -8,6 +8,8 @@ struct User: Codable {
     let phone: String?
     let agencyName: String?
     let marketingOptIn: Bool?
+    let twoFAEnabled: Bool?
+    let twoFAMethod: String?
 
     var firstName: String { name.components(separatedBy: " ").first ?? name }
     var initials: String {
@@ -26,6 +28,19 @@ struct User: Codable {
 struct AuthResponse: Codable {
     let token: String
     let user: User
+}
+
+struct LoginResponse: Decodable {
+    let token: String?
+    let user: User?
+    let requires2FA: Bool?
+    let twoFASessionId: String?
+    let method: String?
+}
+
+enum LoginResult {
+    case success(User)
+    case requires2FA(sessionId: String, method: String)
 }
 
 struct Inmobiliaria: Codable, Identifiable {

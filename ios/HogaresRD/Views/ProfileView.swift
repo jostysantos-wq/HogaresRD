@@ -63,7 +63,7 @@ struct ProfileView: View {
                     Label("Cambiar contraseña", systemImage: "lock.fill")
                 }
                 NavigationLink {
-                    TwoFactorSettingsView()
+                    TwoFactorSettingsView().environmentObject(api)
                 } label: {
                     HStack {
                         Label("Verificación en dos pasos", systemImage: "shield.lefthalf.filled.badge.checkmark")
@@ -360,9 +360,24 @@ struct PasswordRequirementsView: View {
 // MARK: - Two-Factor Authentication Settings
 
 struct TwoFactorSettingsView: View {
+    @EnvironmentObject var api: APIService
     @State private var twoFAEnabled = false
-    @State private var showSetupSheet = false
-    @State private var selectedMethod = "app"
+    @State private var loading = true
+    @State private var showEnableSheet = false
+    @State private var showDisableAlert = false
+    @State private var enableSessionId = ""
+    @State private var verifyCode = ""
+    @State private var verifyLoading = false
+    @State private var verifyError: String?
+    @State private var disablePassword = ""
+    @State private var disableLoading = false
+    @State private var disableError: String?
+
+    // Biometric
+    @State private var biometricEnabled = false
+    @State private var biometricLoading = false
+
+    private let bio = BiometricService.shared
 
     var body: some View {
         List {
@@ -376,7 +391,7 @@ struct TwoFactorSettingsView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Verificación en dos pasos")
                             .font(.subheadline).bold()
-                        Text("Añade una capa extra de seguridad a tu cuenta. Se te pedirá un código además de tu contraseña.")
+                        Text("Añade una capa extra de seguridad. Se enviará un código a tu correo cada vez que inicies sesión.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -384,92 +399,203 @@ struct TwoFactorSettingsView: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Estado") {
-                HStack {
-                    Label(twoFAEnabled ? "Activado" : "Desactivado",
-                          systemImage: twoFAEnabled ? "checkmark.shield.fill" : "shield.slash.fill")
-                    Spacer()
-                    Circle()
-                        .fill(twoFAEnabled ? Color.green : Color.orange)
-                        .frame(width: 10, height: 10)
-                }
-            }
-
-            Section("Métodos disponibles") {
-                twoFAMethodRow(
-                    icon: "iphone.gen3",
-                    title: "App de autenticación",
-                    subtitle: "Google Authenticator, Authy, etc.",
-                    method: "app"
-                )
-                twoFAMethodRow(
-                    icon: "message.fill",
-                    title: "SMS",
-                    subtitle: "Recibe un código por mensaje de texto",
-                    method: "sms"
-                )
-                twoFAMethodRow(
-                    icon: "envelope.fill",
-                    title: "Correo electrónico",
-                    subtitle: "Recibe un código a tu email registrado",
-                    method: "email"
-                )
-            }
-
-            Section {
-                Button {
-                    showSetupSheet = true
-                } label: {
+            if loading {
+                Section { ProgressView() }
+            } else {
+                Section("Correo electrónico (OTP)") {
                     HStack {
+                        Label(twoFAEnabled ? "Activado" : "Desactivado",
+                              systemImage: twoFAEnabled ? "checkmark.shield.fill" : "shield.slash.fill")
                         Spacer()
-                        Text(twoFAEnabled ? "Reconfigurar 2FA" : "Activar Verificación")
-                            .bold()
-                        Spacer()
+                        Circle()
+                            .fill(twoFAEnabled ? Color.green : Color.orange)
+                            .frame(width: 10, height: 10)
                     }
-                }
-                .listRowBackground(Color.rdBlue)
-                .foregroundStyle(.white)
-            }
 
-            if twoFAEnabled {
-                Section {
-                    Button(role: .destructive) {
-                        twoFAEnabled = false
+                    Button {
+                        if twoFAEnabled {
+                            showDisableAlert = true
+                        } else {
+                            Task { await startEnable() }
+                        }
                     } label: {
-                        Label("Desactivar verificación en dos pasos", systemImage: "shield.slash")
+                        HStack {
+                            Spacer()
+                            Text(twoFAEnabled ? "Desactivar 2FA" : "Activar 2FA")
+                                .bold()
+                            Spacer()
+                        }
+                    }
+                    .listRowBackground(twoFAEnabled ? Color.red : Color.rdBlue)
+                    .foregroundStyle(.white)
+                }
+
+                if bio.isAvailable {
+                    Section("\(bio.biometricLabel)") {
+                        HStack {
+                            Image(systemName: bio.biometricIcon)
+                                .font(.title2)
+                                .foregroundStyle(Color.rdBlue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Iniciar sesión con \(bio.biometricLabel)")
+                                    .font(.subheadline)
+                                Text("Usa tu rostro o huella para acceder rápidamente")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if biometricLoading {
+                                ProgressView()
+                            } else {
+                                Toggle("", isOn: Binding(
+                                    get: { biometricEnabled },
+                                    set: { newVal in Task { await toggleBiometric(newVal) } }
+                                ))
+                                .labelsHidden()
+                            }
+                        }
                     }
                 }
             }
         }
-        .navigationTitle("Verificación 2FA")
+        .navigationTitle("Seguridad")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Próximamente", isPresented: $showSetupSheet) {
-            Button("OK") {}
+        .task { await loadStatus() }
+        .sheet(isPresented: $showEnableSheet) {
+            NavigationStack {
+                VStack(spacing: 20) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Color.rdBlue)
+                    Text("Ingresa el código enviado a tu correo")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    TextField("000000", text: $verifyCode)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                        .frame(maxWidth: 200)
+                        .padding()
+                        .background(Color(.secondarySystemFill))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .onChange(of: verifyCode) { _, val in
+                            verifyCode = String(val.filter(\.isNumber).prefix(6))
+                        }
+
+                    if let err = verifyError {
+                        Text(err).font(.caption).foregroundStyle(.red)
+                    }
+
+                    Button {
+                        Task { await confirmEnable() }
+                    } label: {
+                        if verifyLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Confirmar")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(verifyCode.count == 6 ? Color.rdBlue : Color.gray)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .disabled(verifyCode.count != 6 || verifyLoading)
+
+                    Spacer()
+                }
+                .padding()
+                .navigationTitle("Verificar código")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancelar") { showEnableSheet = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .alert("Desactivar 2FA", isPresented: $showDisableAlert) {
+            SecureField("Contraseña", text: $disablePassword)
+            Button("Cancelar", role: .cancel) { disablePassword = "" }
+            Button("Desactivar", role: .destructive) {
+                Task { await confirmDisable() }
+            }
         } message: {
-            Text("La configuración de verificación en dos pasos estará disponible pronto.")
+            Text("Ingresa tu contraseña para desactivar la verificación en dos pasos.")
         }
     }
 
-    private func twoFAMethodRow(icon: String, title: String, subtitle: String, method: String) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.tertiarySystemFill))
-                    .frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.rdBlue)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: selectedMethod == method ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(selectedMethod == method ? Color.rdBlue : Color(.tertiaryLabel))
+    private func loadStatus() async {
+        loading = true
+        let user = api.currentUser
+        twoFAEnabled = user?.twoFAEnabled ?? false
+        if let email = user?.email {
+            biometricEnabled = bio.hasBiometricToken(for: email)
         }
-        .contentShape(Rectangle())
-        .onTapGesture { selectedMethod = method }
+        loading = false
+    }
+
+    private func startEnable() async {
+        do {
+            enableSessionId = try await api.enable2FA()
+            verifyCode = ""
+            verifyError = nil
+            showEnableSheet = true
+        } catch {
+            verifyError = error.localizedDescription
+        }
+    }
+
+    private func confirmEnable() async {
+        verifyLoading = true; verifyError = nil
+        do {
+            try await api.confirmEnable2FA(sessionId: enableSessionId, code: verifyCode)
+            twoFAEnabled = true
+            showEnableSheet = false
+        } catch {
+            verifyError = error.localizedDescription
+            verifyCode = ""
+        }
+        verifyLoading = false
+    }
+
+    private func confirmDisable() async {
+        do {
+            try await api.disable2FA(password: disablePassword)
+            twoFAEnabled = false
+            disablePassword = ""
+        } catch {
+            disablePassword = ""
+        }
+    }
+
+    private func toggleBiometric(_ enable: Bool) async {
+        biometricLoading = true
+        do {
+            if enable {
+                let authenticated = try await bio.authenticate(reason: "Habilitar \(bio.biometricLabel) para HogaresRD")
+                guard authenticated else { biometricLoading = false; return }
+                let bioToken = try await api.registerBiometric()
+                if let email = api.currentUser?.email {
+                    try bio.saveBiometricToken(bioToken, for: email)
+                    bio.saveBiometricEmail(email)
+                }
+                biometricEnabled = true
+            } else {
+                try await api.revokeBiometric()
+                if let email = api.currentUser?.email {
+                    bio.deleteBiometricToken(for: email)
+                }
+                bio.clearBiometricEmail()
+                biometricEnabled = false
+            }
+        } catch {
+            print("Biometric toggle error: \(error)")
+        }
+        biometricLoading = false
     }
 }
 
