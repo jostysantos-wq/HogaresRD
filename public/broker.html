@@ -4719,8 +4719,17 @@
   .avail-mday.available{background:color-mix(in srgb,var(--accent) 25%,transparent);color:var(--accent,#0038A8);font-weight:600;}
   .avail-mday.blocked{background:#fee2e2;color:#991b1b;font-weight:600;}
   .avail-mday.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800;}
+  .avail-mday.selected{outline:2.5px solid var(--accent);outline-offset:-1px;transform:scale(1.08);}
   .avail-mday.drag-select{outline:2px solid var(--accent);outline-offset:-1px;}
   .cal-year-btn{background:none;border:1.5px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--text);transition:all .15s;}
+
+  /* ── Multi-select floating bar ─────────────────── */
+  .avail-select-bar{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:2500;background:var(--accent,#0038A8);color:#fff;border-radius:14px;padding:0.6rem 1rem;display:flex;align-items:center;gap:0.75rem;box-shadow:0 8px 30px rgba(0,0,0,.25);animation:slideUp .2s;font-size:0.85rem;font-weight:600;}
+  .avail-select-bar button{padding:0.4rem 0.9rem;border-radius:8px;border:none;font-size:0.8rem;font-weight:700;cursor:pointer;transition:opacity .15s;}
+  .avail-select-bar button:hover{opacity:0.85;}
+  .avail-select-bar .sb-edit{background:#fff;color:var(--accent);}
+  .avail-select-bar .sb-clear{background:rgba(255,255,255,0.2);color:#fff;}
+  @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
   .cal-year-btn:hover{border-color:var(--accent);color:var(--accent);}
 
   /* ── Day editor modal ──────────────────────────── */
@@ -4837,23 +4846,24 @@
     } catch {}
   };
 
-  // ── Availability (Unified Calendar + Day Editor) ────
+  // ── Availability (Unified Calendar + Multi-Select + Day Editor) ────
   const DAY_HDR = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
   const MONTH_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   let _calYear = new Date().getFullYear();
-  let _dragStart = null;
+  let _selectedDates = new Set();
 
   async function loadAvailability() {
     try {
       const res = await fetch('/api/tours/broker-availability', { credentials: 'include' });
       if (res.ok) _availData = await res.json();
     } catch {}
+    _selectedDates.clear();
     renderYearCal();
+    updateSelectBar();
   }
 
-  // ── Year calendar ──────────────────────────────
-  window.availCalPrevYear = function() { _calYear--; renderYearCal(); };
-  window.availCalNextYear = function() { _calYear++; renderYearCal(); };
+  window.availCalPrevYear = function() { _calYear--; _selectedDates.clear(); renderYearCal(); updateSelectBar(); };
+  window.availCalNextYear = function() { _calYear++; _selectedDates.clear(); renderYearCal(); updateSelectBar(); };
 
   function getActiveDays() { return new Set((_availData.weekly || []).map(s => s.day_of_week)); }
   function getBlockedDates() { return new Set((_availData.overrides || []).filter(o => !o.available).map(o => o.date)); }
@@ -4866,8 +4876,6 @@
     const blockedDates = getBlockedDates();
     const todayStr = new Date().toISOString().slice(0, 10);
     const weekly = _availData.weekly || [];
-
-    // Build lookup: dow → time summary
     const dowTimes = {};
     for (let d = 0; d < 7; d++) {
       const slots = weekly.filter(s => s.day_of_week === d);
@@ -4878,7 +4886,6 @@
     for (let m = 0; m < 12; m++) {
       const firstDay = new Date(_calYear, m, 1).getDay();
       const daysInMonth = new Date(_calYear, m + 1, 0).getDate();
-
       html += `<div class="avail-month-card"><div class="avail-month-title">${MONTH_FULL[m]}</div><div class="avail-month-grid">`;
       html += DAY_HDR.map(d => `<div class="avail-mday-hdr">${d}</div>`).join('');
       for (let i = 0; i < firstDay; i++) html += '<div class="avail-mday empty"></div>';
@@ -4889,79 +4896,132 @@
         const isBlocked = blockedDates.has(dateStr);
         const isAvail = activeDays.has(dow) && !isBlocked;
         const isToday = dateStr === todayStr;
+        const isSel = _selectedDates.has(dateStr);
         let cls = 'avail-mday';
         if (isPast) cls += ' past';
         else if (isBlocked) cls += ' blocked';
         else if (isAvail) cls += ' available';
         if (isToday) cls += ' today';
+        if (isSel) cls += ' selected';
         const tooltip = isBlocked ? 'Bloqueado' : (isAvail ? dowTimes[dow] : 'Sin horario');
-        html += `<div class="${cls}" data-date="${dateStr}" title="${esc(tooltip)}"
-          onmousedown="calDragStart('${dateStr}')" onmouseenter="calDragOver('${dateStr}')" onmouseup="calDragEnd('${dateStr}')"
-          onclick="openDayEditor('${dateStr}')">${d}</div>`;
+        html += `<div class="${cls}" data-date="${dateStr}" title="${esc(tooltip)}" onclick="calClickDate('${dateStr}')">${d}</div>`;
       }
       html += '</div></div>';
     }
     cal.innerHTML = html;
   }
 
-  // ── Drag-to-select range (vacation blocking) ──────
-  window.calDragStart = function(date) { _dragStart = date; };
-  window.calDragOver = function(date) {
-    if (!_dragStart) return;
-    document.querySelectorAll('.avail-mday.drag-select').forEach(el => el.classList.remove('drag-select'));
-    const [a, b] = [_dragStart, date].sort();
-    document.querySelectorAll('.avail-mday[data-date]').forEach(el => {
-      const d = el.dataset.date;
-      if (d >= a && d <= b && !el.classList.contains('past')) el.classList.add('drag-select');
-    });
-  };
-  window.calDragEnd = async function(date) {
-    if (!_dragStart) return;
-    const [a, b] = [_dragStart, date].sort();
-    _dragStart = null;
-    document.querySelectorAll('.avail-mday.drag-select').forEach(el => el.classList.remove('drag-select'));
-    if (a === b) return; // single click → day editor
-    // Range: block or unblock
-    const blockedDates = getBlockedDates();
-    const dates = [];
-    const cur = new Date(a + 'T12:00:00');
-    const endD = new Date(b + 'T12:00:00');
-    const todayStr = new Date().toISOString().slice(0, 10);
-    while (cur <= endD) { const ds = cur.toISOString().slice(0, 10); if (ds >= todayStr) dates.push(ds); cur.setDate(cur.getDate() + 1); }
-    const blockedCount = dates.filter(d => blockedDates.has(d)).length;
-    const shouldBlock = blockedCount < dates.length / 2;
-    if (shouldBlock) {
-      if (!confirm(`Bloquear ${dates.length} dias (${a} a ${b})?`)) return;
-      for (const d of dates) { if (!blockedDates.has(d)) await fetch('/api/tours/broker-availability/override', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date:d,available:false}) }); }
-    } else {
-      if (!confirm(`Desbloquear ${dates.length} dias?`)) return;
-      const overrides = (_availData.overrides || []).filter(o => !o.available && dates.includes(o.date));
-      for (const o of overrides) await fetch(`/api/tours/broker-availability/${o.id}`, { method:'DELETE', credentials:'include' });
-    }
-    loadAvailability();
-  };
-
-  // ── Day editor modal ──────────────────────────────
-  window.openDayEditor = function(dateStr) {
-    if (_dragStart && _dragStart !== dateStr) return;
+  // ── Click handler: tap to select/deselect, single-tap opens editor ──
+  let _lastClickTime = 0;
+  window.calClickDate = function(dateStr) {
     const todayStr = new Date().toISOString().slice(0, 10);
     if (dateStr < todayStr) return;
+    const now = Date.now();
 
-    const dateObj = new Date(dateStr + 'T12:00:00');
+    // If already have selections, toggle this date in the selection
+    if (_selectedDates.size > 0) {
+      if (_selectedDates.has(dateStr)) _selectedDates.delete(dateStr);
+      else _selectedDates.add(dateStr);
+      refreshSelectionUI();
+      updateSelectBar();
+      return;
+    }
+
+    // No selections yet: single tap opens editor, but if they tap another within 500ms, start multi-select
+    if (now - _lastClickTime < 400 && _lastTapDate && _lastTapDate !== dateStr) {
+      // Start multi-select with both dates
+      _selectedDates.add(_lastTapDate);
+      _selectedDates.add(dateStr);
+      _lastTapDate = null;
+      refreshSelectionUI();
+      updateSelectBar();
+      return;
+    }
+
+    _lastClickTime = now;
+    _lastTapDate = dateStr;
+
+    // Delay single-tap to allow for double-tap detection
+    setTimeout(() => {
+      if (_selectedDates.size > 0) return; // multi-select started
+      if (_lastTapDate === dateStr) {
+        _lastTapDate = null;
+        openDayEditor([dateStr]);
+      }
+    }, 350);
+  };
+  let _lastTapDate = null;
+
+  function refreshSelectionUI() {
+    document.querySelectorAll('.avail-mday[data-date]').forEach(el => {
+      el.classList.toggle('selected', _selectedDates.has(el.dataset.date));
+    });
+  }
+
+  // ── Floating selection bar ──────────────────────
+  function updateSelectBar() {
+    let bar = document.getElementById('availSelectBar');
+    if (_selectedDates.size === 0) {
+      if (bar) bar.remove();
+      return;
+    }
+    if (!bar) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="avail-select-bar" id="availSelectBar"></div>');
+      bar = document.getElementById('availSelectBar');
+    }
+    const n = _selectedDates.size;
+    bar.innerHTML = `
+      <span>${n} dia${n > 1 ? 's' : ''} seleccionado${n > 1 ? 's' : ''}</span>
+      <button class="sb-edit" onclick="editSelectedDates()">Editar</button>
+      <button class="sb-clear" onclick="clearSelection()">✕</button>
+    `;
+  }
+
+  window.clearSelection = function() {
+    _selectedDates.clear();
+    refreshSelectionUI();
+    updateSelectBar();
+  };
+
+  window.editSelectedDates = function() {
+    openDayEditor(Array.from(_selectedDates));
+  };
+
+  // ── Day editor modal (supports multiple dates) ──────
+  window.openDayEditor = function(dates) {
+    if (!Array.isArray(dates)) dates = [dates];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    dates = dates.filter(d => d >= todayStr);
+    if (!dates.length) return;
+
+    const isMulti = dates.length > 1;
+    const firstDate = dates[0];
+    const dateObj = new Date(firstDate + 'T12:00:00');
     const dow = dateObj.getDay();
     const dayName = DAY_NAMES[dow];
-    const dateFormatted = `${dateObj.getDate()} de ${MONTH_FULL[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
-    const weeklySlots = getWeeklyForDow(dow);
-    const blockedOverride = (_availData.overrides || []).find(o => !o.available && o.date === dateStr);
+
+    // Header text
+    let headerTitle, headerSub;
+    if (isMulti) {
+      headerTitle = `${dates.length} dias seleccionados`;
+      // Summarize: unique weekday names
+      const weekdays = [...new Set(dates.map(d => DAY_NAMES[new Date(d + 'T12:00:00').getDay()]))];
+      headerSub = weekdays.join(', ');
+    } else {
+      headerTitle = dayName;
+      headerSub = `${dateObj.getDate()} de ${MONTH_FULL[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
+    }
+
+    // For single date, use weekly schedule for that DOW
+    const weeklySlots = isMulti ? [] : getWeeklyForDow(dow);
+    const blockedOverride = isMulti ? null : (_availData.overrides || []).find(o => !o.available && o.date === firstDate);
     const isBlocked = !!blockedOverride;
     const hasSchedule = weeklySlots.length > 0;
 
-    // Determine current status
-    let status = 'off'; // no schedule
+    let status = 'off';
     if (isBlocked) status = 'blocked';
     else if (hasSchedule) status = 'available';
 
-    // Build time rows from weekly schedule
     const timeRows = weeklySlots.length > 0
       ? weeklySlots.map((s, i) => `<div class="de-time-row" data-idx="${i}">
           <input type="time" class="de-start" value="${s.start_time}">
@@ -4976,10 +5036,14 @@
           <button class="de-remove" onclick="this.closest('.de-time-row').remove()">✕</button>
         </div>`;
 
-    const html = `<div class="day-editor-overlay" onclick="if(event.target===this)this.remove()">
+    // For multi-select, "apply to all weekdays" covers all unique DOWs
+    const uniqueDows = [...new Set(dates.map(d => new Date(d + 'T12:00:00').getDay()))];
+    const dowLabel = uniqueDows.map(d => DAY_NAMES[d]).join(', ');
+
+    const html = `<div class="day-editor-overlay" onclick="if(event.target===this){this.remove();clearSelection();}">
       <div class="day-editor" onclick="event.stopPropagation()">
-        <h3>${dayName}</h3>
-        <div class="de-weekday">${dateFormatted}</div>
+        <h3>${esc(headerTitle)}</h3>
+        <div class="de-weekday">${esc(headerSub)}</div>
 
         <div class="de-status-bar">
           <button class="de-status-btn${status === 'available' ? ' active-avail' : ''}" onclick="deSetStatus(this,'available')" data-status="available">
@@ -5000,26 +5064,25 @@
         </div>
 
         <label class="de-apply-all">
-          <input type="checkbox" id="deApplyAll">
-          <span>Aplicar a todos los <strong>${dayName}</strong></span>
+          <input type="checkbox" id="deApplyAll" ${isMulti ? 'checked' : ''}>
+          <span>Aplicar a todos los <strong>${esc(dowLabel)}</strong></span>
         </label>
 
         <div class="de-actions">
-          <button class="de-cancel" onclick="this.closest('.day-editor-overlay').remove()">Cancelar</button>
-          <button class="de-save" onclick="deSave('${dateStr}', ${dow})">Guardar</button>
+          <button class="de-cancel" onclick="this.closest('.day-editor-overlay').remove();clearSelection();">Cancelar</button>
+          <button class="de-save" onclick="deSaveMulti()">Guardar</button>
         </div>
       </div>
     </div>`;
+    // Store dates for save
+    window._deSaveDates = dates;
     document.body.insertAdjacentHTML('beforeend', html);
   };
 
   window.deSetStatus = function(btn, status) {
-    btn.closest('.de-status-bar').querySelectorAll('.de-status-btn').forEach(b => {
-      b.className = 'de-status-btn';
-    });
+    btn.closest('.de-status-bar').querySelectorAll('.de-status-btn').forEach(b => b.className = 'de-status-btn');
     btn.classList.add(status === 'available' ? 'active-avail' : status === 'blocked' ? 'active-blocked' : 'active-off');
-    const timesSection = document.getElementById('deTimesSection');
-    timesSection.style.display = status === 'available' ? '' : 'none';
+    document.getElementById('deTimesSection').style.display = status === 'available' ? '' : 'none';
   };
 
   window.deAddTimeRow = function() {
@@ -5033,14 +5096,14 @@
     `);
   };
 
-  window.deSave = async function(dateStr, dow) {
+  window.deSaveMulti = async function() {
+    const dates = window._deSaveDates || [];
     const overlay = document.querySelector('.day-editor-overlay');
     const activeBtn = overlay.querySelector('.de-status-btn.active-avail, .de-status-btn.active-blocked, .de-status-btn.active-off');
     const status = activeBtn?.dataset?.status || 'off';
     const applyAll = document.getElementById('deApplyAll').checked;
     const dur = Number(document.getElementById('availDuration').value) || 30;
 
-    // Collect time rows
     const timeRows = overlay.querySelectorAll('.de-time-row');
     const times = [];
     timeRows.forEach(row => {
@@ -5049,44 +5112,47 @@
       if (start && end && start < end) times.push({ start, end });
     });
 
-    if (status === 'available' && times.length === 0) {
-      alert('Agrega al menos un horario.');
-      return;
-    }
+    if (status === 'available' && times.length === 0) { alert('Agrega al menos un horario.'); return; }
 
-    // Remove existing blocked override for this date
-    const blockedOverride = (_availData.overrides || []).find(o => !o.available && o.date === dateStr);
-    if (blockedOverride) {
-      await fetch(`/api/tours/broker-availability/override/${blockedOverride.id}`, { method:'DELETE', credentials:'include' });
-    }
+    // Collect unique DOWs from selected dates
+    const uniqueDows = [...new Set(dates.map(d => new Date(d + 'T12:00:00').getDay()))];
 
-    if (status === 'blocked') {
-      // Block this specific date
-      await fetch('/api/tours/broker-availability/override', {
-        method:'POST', credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ date: dateStr, available: false }),
-      });
-    }
-
-    if (applyAll || status === 'available' || status === 'off') {
-      // Update weekly schedule for this DOW
-      const oldSlots = getWeeklyForDow(dow);
-      for (const s of oldSlots) {
-        await fetch(`/api/tours/broker-availability/${s.id}`, { method:'DELETE', credentials:'include' });
+    // Process each selected date: handle overrides
+    for (const dateStr of dates) {
+      const blockedOverride = (_availData.overrides || []).find(o => !o.available && o.date === dateStr);
+      if (blockedOverride) {
+        await fetch(`/api/tours/broker-availability/override/${blockedOverride.id}`, { method:'DELETE', credentials:'include' });
       }
-      if (status === 'available') {
-        for (const t of times) {
-          await fetch('/api/tours/broker-availability', {
-            method:'POST', credentials:'include',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ day_of_week: dow, start_time: t.start, end_time: t.end, slot_duration_min: dur }),
-          });
+      if (status === 'blocked') {
+        await fetch('/api/tours/broker-availability/override', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ date: dateStr, available: false }),
+        });
+      }
+    }
+
+    // Update weekly schedule for affected DOWs
+    if (applyAll || status === 'available' || status === 'off') {
+      for (const dow of uniqueDows) {
+        const oldSlots = getWeeklyForDow(dow);
+        for (const s of oldSlots) {
+          await fetch(`/api/tours/broker-availability/${s.id}`, { method:'DELETE', credentials:'include' });
+        }
+        if (status === 'available') {
+          for (const t of times) {
+            await fetch('/api/tours/broker-availability', {
+              method:'POST', credentials:'include',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ day_of_week: dow, start_time: t.start, end_time: t.end, slot_duration_min: dur }),
+            });
+          }
         }
       }
     }
 
     overlay.remove();
+    clearSelection();
     loadAvailability();
   };
 

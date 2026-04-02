@@ -678,7 +678,9 @@ struct BrokerAvailabilityView: View {
     @State private var loading = true
     @State private var duration = 30
     @State private var calYear: Int = Calendar.current.component(.year, from: Date())
-    @State private var editingDate: String?
+    @State private var editingDates: [String] = []
+    @State private var showEditor = false
+    @State private var selectedDates: Set<String> = []
 
     private let dayFull   = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
     private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -740,8 +742,11 @@ struct BrokerAvailabilityView: View {
                 .padding(.horizontal, 16)
 
                 // ── Instruction ──
-                Text("Toca un día para configurar horarios")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text(selectedDates.isEmpty
+                     ? "Toca un día para editarlo, o selecciona varios"
+                     : "\(selectedDates.count) día\(selectedDates.count > 1 ? "s" : "") seleccionado\(selectedDates.count > 1 ? "s" : "")")
+                    .font(.caption).foregroundStyle(selectedDates.isEmpty ? .secondary : Color.rdBlue)
+                    .fontWeight(selectedDates.isEmpty ? .regular : .bold)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
 
                 // ── 12-month grid ──
@@ -760,14 +765,57 @@ struct BrokerAvailabilityView: View {
         .navigationTitle("Disponibilidad")
         .task { await load() }
         .refreshable { await load() }
-        .sheet(item: $editingDate) { dateStr in
+        .overlay(alignment: .bottom) {
+            if !selectedDates.isEmpty {
+                HStack(spacing: 12) {
+                    Text("\(selectedDates.count) día\(selectedDates.count > 1 ? "s" : "")")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+
+                    Button {
+                        editingDates = selectedDates.sorted()
+                        showEditor = true
+                    } label: {
+                        Text("Editar")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(.white)
+                            .foregroundStyle(Color.rdBlue)
+                            .clipShape(Capsule())
+                    }
+
+                    Button {
+                        selectedDates.removeAll()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(8)
+                            .background(.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .background(Color.rdBlue)
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
+                .padding(.bottom, 16)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.3), value: selectedDates.isEmpty)
+            }
+        }
+        .sheet(isPresented: $showEditor) {
             DayEditorSheet(
-                dateStr: dateStr,
+                dates: editingDates,
                 weekly: weekly,
                 overrides: overrides,
                 duration: duration,
                 api: api,
-                onSave: { await load(); editingDate = nil }
+                onSave: {
+                    await load()
+                    selectedDates.removeAll()
+                    showEditor = false
+                }
             )
         }
     }
@@ -819,21 +867,40 @@ struct BrokerAvailabilityView: View {
                     let isPast = dateStr < today
 
                     Button {
-                        editingDate = dateStr
+                        if selectedDates.isEmpty {
+                            // Single tap → open editor for this day
+                            editingDates = [dateStr]
+                            showEditor = true
+                        } else {
+                            // Multi-select mode: toggle
+                            if selectedDates.contains(dateStr) {
+                                selectedDates.remove(dateStr)
+                            } else {
+                                selectedDates.insert(dateStr)
+                            }
+                        }
                     } label: {
+                        let isSelected = selectedDates.contains(dateStr)
                         Text("\(day)")
                             .font(.system(size: 11, weight: dateStr == today ? .black : (hasSchedule && !isBlocked ? .semibold : .regular)))
                             .frame(maxWidth: .infinity)
                             .frame(height: 26)
-                            .background(dayCellColor(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
-                            .foregroundStyle(dayCellFg(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
+                            .background(isSelected ? Color.rdBlue.opacity(0.35) : dayCellColor(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
+                            .foregroundStyle(isSelected ? Color.rdBlue : dayCellFg(hasSchedule: hasSchedule, isBlocked: isBlocked, isPast: isPast))
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .stroke(dateStr == today ? Color.rdBlue : .clear, lineWidth: 2)
+                                    .stroke(isSelected ? Color.rdBlue : (dateStr == today ? Color.rdBlue : .clear), lineWidth: isSelected ? 2.5 : 2)
                             )
+                            .scaleEffect(isSelected ? 1.08 : 1.0)
                     }
                     .disabled(isPast)
+                    .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        if !isPast {
+                            // Long press starts multi-select
+                            selectedDates.insert(dateStr)
+                        }
+                    })
                 }
             }
         }
@@ -871,7 +938,7 @@ struct BrokerAvailabilityView: View {
 // MARK: - Day Editor Sheet
 
 struct DayEditorSheet: View {
-    let dateStr: String
+    let dates: [String]
     let weekly: [AvailabilitySlot]
     let overrides: [AvailabilitySlot]
     let duration: Int
@@ -891,8 +958,10 @@ struct DayEditorSheet: View {
     private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                               "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
+    private var isMulti: Bool { dates.count > 1 }
+    private var firstDateStr: String { dates.first ?? "" }
     private var dateObj: Date {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: dateStr) ?? Date()
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: firstDateStr) ?? Date()
     }
     private var dow: Int { Calendar.current.component(.weekday, from: dateObj) - 1 }
     private var dayName: String { dayFull[dow] }
@@ -904,8 +973,24 @@ struct DayEditorSheet: View {
         return "\(d) de \(monthNames[m - 1]), \(y)"
     }
 
-    private var weeklySlots: [AvailabilitySlot] { weekly.filter { $0.day_of_week == dow } }
-    private var isBlocked: Bool { overrides.contains { $0.date == dateStr && $0.available == false } }
+    private var uniqueDows: [Int] {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+        let dows = dates.compactMap { f.date(from: $0) }.map { Calendar.current.component(.weekday, from: $0) - 1 }
+        return Array(Set(dows)).sorted()
+    }
+    private var dowLabel: String {
+        uniqueDows.map { dayFull[$0] }.joined(separator: ", ")
+    }
+
+    private var headerTitle: String {
+        isMulti ? "\(dates.count) días seleccionados" : dayName
+    }
+    private var headerSub: String {
+        isMulti ? dowLabel : formattedDate
+    }
+
+    private var weeklySlots: [AvailabilitySlot] { isMulti ? [] : weekly.filter { $0.day_of_week == dow } }
+    private var isBlocked: Bool { isMulti ? false : overrides.contains { $0.date == firstDateStr && $0.available == false } }
 
     var body: some View {
         NavigationStack {
@@ -913,8 +998,8 @@ struct DayEditorSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // ── Header ──
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(dayName).font(.title2.bold())
-                        Text(formattedDate).font(.subheadline).foregroundStyle(.secondary)
+                        Text(headerTitle).font(.title2.bold())
+                        Text(headerSub).font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.horizontal)
 
@@ -995,7 +1080,7 @@ struct DayEditorSheet: View {
                             Image(systemName: "arrow.triangle.2.circlepath")
                                 .font(.caption)
                                 .foregroundStyle(Color.rdBlue)
-                            Text("Aplicar a todos los \(dayName)")
+                            Text("Aplicar a todos los \(isMulti ? dowLabel : dayName)")
                                 .font(.subheadline)
                         }
                     }
@@ -1084,7 +1169,10 @@ struct DayEditorSheet: View {
 
     private func setupInitialState() {
         let cal = Calendar.current
-        if isBlocked {
+        if isMulti {
+            status = .available
+            applyToAll = true
+        } else if isBlocked {
             status = .blocked
         } else if !weeklySlots.isEmpty {
             status = .available
@@ -1114,34 +1202,39 @@ struct DayEditorSheet: View {
 
     private func save() async {
         let cal = Calendar.current
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
 
-        // Remove existing blocked override for this date
-        if let existing = overrides.first(where: { $0.date == dateStr && $0.available == false }) {
-            try? await api.deleteBrokerOverride(overrideId: existing.id)
-        }
-
-        if status == .blocked {
-            try? await api.saveBrokerOverride(date: dateStr, available: false)
-        }
-
-        if applyToAll || status == .available || status == .off {
-            // Update weekly schedule for this DOW
-            let oldSlots = weeklySlots
-            for s in oldSlots {
-                try? await api.deleteBrokerAvailability(slotId: s.id)
+        // Process overrides for each selected date
+        for dateStr in dates {
+            if let existing = overrides.first(where: { $0.date == dateStr && $0.available == false }) {
+                try? await api.deleteBrokerOverride(overrideId: existing.id)
             }
-            if status == .available {
-                for range in timeRanges {
-                    let sH = cal.component(.hour, from: range.start)
-                    let sM = cal.component(.minute, from: range.start)
-                    let eH = cal.component(.hour, from: range.end)
-                    let eM = cal.component(.minute, from: range.end)
-                    let start = String(format: "%02d:%02d", sH, sM)
-                    let end = String(format: "%02d:%02d", eH, eM)
-                    if start < end {
-                        try? await api.saveBrokerAvailability(
-                            dayOfWeek: dow, startTime: start, endTime: end, duration: duration
-                        )
+            if status == .blocked {
+                try? await api.saveBrokerOverride(date: dateStr, available: false)
+            }
+        }
+
+        // Update weekly schedule for affected DOWs
+        if applyToAll || status == .available || status == .off {
+            let affectedDows = uniqueDows
+            for dowVal in affectedDows {
+                let oldSlots = weekly.filter { $0.day_of_week == dowVal }
+                for s in oldSlots {
+                    try? await api.deleteBrokerAvailability(slotId: s.id)
+                }
+                if status == .available {
+                    for range in timeRanges {
+                        let sH = cal.component(.hour, from: range.start)
+                        let sM = cal.component(.minute, from: range.start)
+                        let eH = cal.component(.hour, from: range.end)
+                        let eM = cal.component(.minute, from: range.end)
+                        let start = String(format: "%02d:%02d", sH, sM)
+                        let end = String(format: "%02d:%02d", eH, eM)
+                        if start < end {
+                            try? await api.saveBrokerAvailability(
+                                dayOfWeek: dowVal, startTime: start, endTime: end, duration: duration
+                            )
+                        }
                     }
                 }
             }

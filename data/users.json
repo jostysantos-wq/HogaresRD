@@ -2,7 +2,7 @@
   {
     "id": "usr_broker_demo_001",
     "email": "broker@hogaresrd.com",
-    "passwordHash": "$2b$10$wUAuesSsuBB3cYEKN9iTuuzFAxEEEoMwman6yhouDDzIaGhtShU/a",
+    "passwordHash": "$2b$10$2iBZKuWbYXMRR2ght3IWGeHrQV452rf4LhGKccjtf/RfmBi4XpGDu",
     "name": "Demo Broker",
     "phone": "809-555-0001",
     "createdAt": "2026-01-01T00:00:00.000Z",
@@ -21,11 +21,11 @@
   {
     "id": "usr_inm_demo_001",
     "email": "inmobiliaria@hogaresrd.com",
-    "passwordHash": "$2b$10$urh9ZcU.pw4SeTq1LBdUcOs9navHSYch2OM6cweIDx/m7cOcmXmk.",
+    "passwordHash": "$2b$10$2iBZKuWbYXMRR2ght3IWGeHrQV452rf4LhGKccjtf/RfmBi4XpGDu",
     "name": "HogaresRD Inmobiliaria Demo",
     "phone": "809-555-0010",
     "createdAt": "2026-01-01T00:00:00.000Z",
-    "lastLoginAt": "2026-04-02T05:14:17.565Z",
+    "lastLoginAt": "2026-04-02T08:52:59.888Z",
     "role": "inmobiliaria",
     "emailVerified": true,
     "marketingOptIn": false,
