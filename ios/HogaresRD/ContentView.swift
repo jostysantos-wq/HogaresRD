@@ -309,6 +309,16 @@ struct ProfileTabView: View {
             } label: {
                 Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
             }
+            NavigationLink {
+                BrokerToursView().environmentObject(api)
+            } label: {
+                Label("Visitas agendadas", systemImage: "calendar.badge.clock")
+            }
+            NavigationLink {
+                BrokerAvailabilityView().environmentObject(api)
+            } label: {
+                Label("Disponibilidad", systemImage: "clock.badge.checkmark")
+            }
         }
     }
 
@@ -338,6 +348,11 @@ struct ProfileTabView: View {
 
     private var clientToolsSection: some View {
         Section("Herramientas") {
+            NavigationLink {
+                MyToursView().environmentObject(api)
+            } label: {
+                Label("Mis visitas", systemImage: "calendar.badge.clock")
+            }
             NavigationLink {
                 ApplicationsView()
             } label: {

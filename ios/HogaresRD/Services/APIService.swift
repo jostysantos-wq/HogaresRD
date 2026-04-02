@@ -253,6 +253,110 @@ class APIService: ObservableObject {
         _ = try await URLSession.shared.data(for: req)
     }
 
+    // MARK: - Tours
+
+    func fetchAvailableSlots(brokerId: String, date: String) async throws -> [AvailableSlot] {
+        let url = URL(string: "\(Self.baseURL)/api/tours/availability/\(brokerId)?date=\(date)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(AvailableSlotsResponse.self, from: data).slots
+    }
+
+    func fetchSchedule(brokerId: String, month: String) async throws -> [String] {
+        let url = URL(string: "\(Self.baseURL)/api/tours/schedule/\(brokerId)?month=\(month)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(ScheduleResponse.self, from: data).available_dates
+    }
+
+    func requestTour(listingId: String, brokerId: String, date: String, time: String,
+                     name: String, phone: String, email: String, notes: String) async throws -> TourRequest {
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/request")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
+        let body: [String: String] = [
+            "listing_id": listingId, "broker_id": brokerId, "date": date,
+            "time": time, "name": name, "phone": phone, "email": email, "notes": notes
+        ]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode == 409 {
+            throw APIError.server("Este horario ya no está disponible.")
+        }
+        return try JSONDecoder().decode(TourRequest.self, from: data)
+    }
+
+    func fetchMyTourRequests() async throws -> [TourRequest] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/my-requests")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode([TourRequest].self, from: data)
+    }
+
+    func fetchBrokerTourRequests() async throws -> [TourRequest] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-requests")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode([TourRequest].self, from: data)
+    }
+
+    func updateTourStatus(tourId: String, status: String, notes: String? = nil) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/status")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        var body: [String: String] = ["status": status]
+        if let n = notes { body["notes"] = n }
+        req.httpBody = try JSONEncoder().encode(body)
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al actualizar visita")
+        }
+    }
+
+    func cancelTour(tourId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/cancel")!)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al cancelar visita")
+        }
+    }
+
+    func fetchBrokerAvailability() async throws -> BrokerAvailabilityResponse {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode(BrokerAvailabilityResponse.self, from: data)
+    }
+
+    func saveBrokerAvailability(dayOfWeek: Int, startTime: String, endTime: String, duration: Int = 30) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = [
+            "day_of_week": dayOfWeek, "start_time": startTime,
+            "end_time": endTime, "slot_duration_min": duration
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await URLSession.shared.data(for: req)
+    }
+
+    func deleteBrokerAvailability(slotId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/\(slotId)")!)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        _ = try await URLSession.shared.data(for: req)
+    }
+
     // MARK: - Conversations
 
     func getConversations() async throws -> [Conversation] {

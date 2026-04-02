@@ -23,6 +23,8 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   path.join(DATA_DIR, 'applications.json'),
   path.join(DATA_DIR, 'revoked_tokens.json'),  // Sprint 3: token revocation list
   path.join(DATA_DIR, 'security_log.json'),    // Sprint 3: security event log
+  path.join(DATA_DIR, 'availability.json'),   // Tour scheduling: broker availability
+  path.join(DATA_DIR, 'tours.json'),           // Tour scheduling: visit requests
 ].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
 const DOCS_DIR = path.join(DATA_DIR, 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
@@ -178,6 +180,7 @@ app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
+app.use('/api/tours',         require('./routes/tours'));
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 app.get('/api/config/meta', (req, res) => {

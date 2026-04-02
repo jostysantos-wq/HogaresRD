@@ -168,6 +168,12 @@ struct Agency: Codable {
     let name: String?
     let email: String?
     let phone: String?
+    let userId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, email, phone
+        case userId = "user_id"
+    }
 
     var slug: String? {
         guard let n = name else { return nil }

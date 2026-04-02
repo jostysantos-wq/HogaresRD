@@ -915,6 +915,15 @@
       <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
       <span class="sidebar-nav-label">Terminos</span>
     </button>
+    <div class="sidebar-section-label">Visitas</div>
+    <button class="sidebar-nav-item" data-page="tour-requests">
+      <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
+      <span class="sidebar-nav-label">Solicitudes<span class="team-sidebar-badge" id="tourBadge" style="display:none">0</span></span>
+    </button>
+    <button class="sidebar-nav-item" data-page="availability">
+      <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      <span class="sidebar-nav-label">Disponibilidad</span>
+    </button>
     <!-- ── Gestión de Equipo (inmobiliaria only) ─────────────── -->
     <div class="sidebar-section-label" id="sidebarTeamLabel" style="display:none">Gestión de Equipo</div>
     <button class="sidebar-nav-item" data-page="team-members" id="teamMembersNavBtn" style="display:none">
@@ -1562,6 +1571,75 @@
         <div class="app-tile-desc">Gestiona tu cartera de clientes y seguimientos.</div>
         <span class="badge badge-orange" style="font-size:0.65rem;margin-top:auto;">Proximamente</span>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TOUR REQUESTS ════════════════════════════════ -->
+  <div class="page-section" id="page-tour-requests">
+    <div class="settings-card" style="max-width:900px;">
+      <h2 class="settings-card-title">Solicitudes de Visita</h2>
+      <p class="settings-card-desc">Gestiona las solicitudes de visita de tus clientes.</p>
+
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <button class="tour-tab active" data-tour-tab="pending" onclick="switchTourTab('pending')">Pendientes <span id="tourPendingCount" style="background:#f59e0b;color:#fff;border-radius:99px;font-size:0.7rem;padding:1px 6px;margin-left:4px;">0</span></button>
+        <button class="tour-tab" data-tour-tab="confirmed" onclick="switchTourTab('confirmed')">Confirmadas</button>
+        <button class="tour-tab" data-tour-tab="history" onclick="switchTourTab('history')">Historial</button>
+      </div>
+      <div id="tourRequestsList"></div>
+      <div id="tourRequestsEmpty" style="text-align:center;padding:3rem 0;color:var(--text-muted,#999);display:none;">
+        <svg viewBox="0 0 24 24" style="width:48px;height:48px;fill:currentColor;opacity:0.3;margin-bottom:1rem;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
+        <p>No hay solicitudes en esta categoria.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: AVAILABILITY ═══════════════════════════════════ -->
+  <div class="page-section" id="page-availability">
+    <div class="settings-card" style="max-width:900px;">
+      <h2 class="settings-card-title">Disponibilidad para Visitas</h2>
+      <p class="settings-card-desc">Configura los horarios en que los clientes pueden agendar visitas contigo.</p>
+
+      <h3 style="font-size:0.95rem;font-weight:700;margin:1.5rem 0 1rem;">Horario Semanal</h3>
+      <div id="availWeeklyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem;"></div>
+
+      <div style="background:var(--bg,#f7f8fa);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+        <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:0.75rem;">Agregar Horario</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:0.75rem;align-items:end;">
+          <div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Dia</label>
+            <select id="availDay" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+              <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miercoles</option>
+              <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sabado</option><option value="0">Domingo</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Desde</label>
+            <input type="time" id="availStart" value="09:00" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Hasta</label>
+            <input type="time" id="availEnd" value="12:00" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Duracion</label>
+            <select id="availDuration" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+              <option value="30">30 min</option><option value="60">60 min</option><option value="15">15 min</option>
+            </select>
+          </div>
+          <button onclick="addAvailSlot()" style="padding:0.5rem 1.25rem;background:var(--accent,#0038A8);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+        </div>
+      </div>
+
+      <h3 style="font-size:0.95rem;font-weight:700;margin:1.5rem 0 1rem;">Dias Bloqueados</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Bloquea dias especificos donde no estaras disponible (vacaciones, feriados, etc.)</p>
+      <div style="display:flex;gap:0.75rem;align-items:end;margin-bottom:1rem;">
+        <div>
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Fecha</label>
+          <input type="date" id="blockDate" style="padding:0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card,#fff);color:var(--text);">
+        </div>
+        <button onclick="blockDay()" style="padding:0.5rem 1.25rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;">Bloquear dia</button>
+      </div>
+      <div id="blockedDaysList"></div>
     </div>
   </div>
 
@@ -3496,6 +3574,8 @@
     'team-members': 'Equipo — Miembros',
     'team-requests': 'Equipo — Solicitudes',
     'team-performance': 'Equipo — Rendimiento',
+    'tour-requests': 'Solicitudes de Visita',
+    'availability': 'Disponibilidad para Visitas',
   };
   let currentPage = 'dashboard';
 
@@ -3517,6 +3597,8 @@
     document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
     if (page === 'notificaciones') loadNotifications();
     if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
+    if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
+    if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
   }
 
   // ── Dashboard Section Nav (internal tabs) ──────────────────
@@ -4612,6 +4694,206 @@
     } catch {}
   }, 30000);
 
+})();
+</script>
+<!-- ── Tour management ─────────────────────────────────────── -->
+<style>
+  .tour-tab{padding:0.5rem 1rem;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;color:var(--text);font-size:0.82rem;font-weight:600;cursor:pointer;transition:all .15s;}
+  .tour-tab:hover{border-color:var(--accent,#0038A8);color:var(--accent,#0038A8);}
+  .tour-tab.active{background:var(--accent,#0038A8);color:#fff;border-color:var(--accent,#0038A8);}
+  .tour-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .tour-card-info{flex:1;min-width:200px;}
+  .tour-card-title{font-size:0.92rem;font-weight:700;color:var(--text);margin-bottom:0.3rem;}
+  .tour-card-meta{font-size:0.78rem;color:var(--text-muted,#999);}
+  .tour-card-actions{display:flex;gap:0.5rem;flex-shrink:0;}
+  .tour-card-actions button{padding:0.45rem 1rem;border:none;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;transition:opacity .15s;}
+  .tour-card-actions button:hover{opacity:0.85;}
+  .tour-badge{display:inline-block;padding:0.15rem 0.6rem;border-radius:99px;font-size:0.7rem;font-weight:700;margin-left:0.5rem;}
+  .tour-badge-pending{background:#fef3c7;color:#92400e;}
+  .tour-badge-confirmed{background:#d1fae5;color:#065f46;}
+  .tour-badge-rejected{background:#fee2e2;color:#991b1b;}
+  .tour-badge-cancelled{background:#e5e7eb;color:#6b7280;}
+  .avail-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:1rem;position:relative;}
+  .avail-card-day{font-size:0.82rem;font-weight:700;color:var(--accent,#0038A8);margin-bottom:0.4rem;}
+  .avail-card-time{font-size:0.88rem;font-weight:600;color:var(--text);}
+  .avail-card-dur{font-size:0.72rem;color:var(--text-muted,#999);margin-top:0.25rem;}
+  .avail-card-del{position:absolute;top:0.5rem;right:0.5rem;background:none;border:none;cursor:pointer;color:var(--text-muted,#999);font-size:1.1rem;transition:color .15s;}
+  .avail-card-del:hover{color:#ef4444;}
+  .block-chip{display:inline-flex;align-items:center;gap:0.4rem;background:#fee2e2;color:#991b1b;padding:0.35rem 0.8rem;border-radius:8px;font-size:0.78rem;font-weight:600;margin:0.25rem;}
+  .block-chip button{background:none;border:none;cursor:pointer;color:#991b1b;font-size:1rem;padding:0;line-height:1;}
+</style>
+<script>
+(function(){
+  const DAY_NAMES = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
+  const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let _tourTab = 'pending';
+  let _tourData = [];
+  let _availData = { weekly: [], overrides: [] };
+
+  // ── Tour Requests ─────────────────────────────
+  window.switchTourTab = function(tab) {
+    _tourTab = tab;
+    document.querySelectorAll('.tour-tab').forEach(t => t.classList.toggle('active', t.dataset.tourTab === tab));
+    renderTourRequests();
+  };
+
+  async function loadTourRequests() {
+    try {
+      const res = await fetch('/api/tours/broker-requests', { credentials: 'include' });
+      if (res.ok) _tourData = await res.json();
+    } catch {}
+    const pending = _tourData.filter(t => t.status === 'pending').length;
+    const badge = document.getElementById('tourBadge');
+    const countEl = document.getElementById('tourPendingCount');
+    if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'inline' : 'none'; }
+    if (countEl) countEl.textContent = pending;
+    renderTourRequests();
+  }
+
+  function renderTourRequests() {
+    let filtered;
+    if (_tourTab === 'pending') filtered = _tourData.filter(t => t.status === 'pending');
+    else if (_tourTab === 'confirmed') filtered = _tourData.filter(t => t.status === 'confirmed');
+    else filtered = _tourData.filter(t => ['rejected','cancelled','completed'].includes(t.status));
+
+    const list = document.getElementById('tourRequestsList');
+    const empty = document.getElementById('tourRequestsEmpty');
+    if (!filtered.length) {
+      list.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(t => {
+      const d = new Date(t.requested_date + 'T12:00:00');
+      const dateStr = `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+      const h = parseInt(t.requested_time.split(':')[0]);
+      const m = t.requested_time.split(':')[1];
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      const timeStr = `${h12}:${m} ${ampm}`;
+
+      const badgeCls = { pending:'tour-badge-pending', confirmed:'tour-badge-confirmed', rejected:'tour-badge-rejected', cancelled:'tour-badge-cancelled', completed:'tour-badge-confirmed' };
+      const badgeLabel = { pending:'Pendiente', confirmed:'Confirmada', rejected:'Rechazada', cancelled:'Cancelada', completed:'Completada' };
+
+      let actions = '';
+      if (t.status === 'pending') {
+        actions = `<div class="tour-card-actions">
+          <button style="background:#16a34a;color:#fff;" onclick="updateTourStatus('${t.id}','confirmed')">Confirmar</button>
+          <button style="background:#ef4444;color:#fff;" onclick="updateTourStatus('${t.id}','rejected')">Rechazar</button>
+        </div>`;
+      }
+
+      return `<div class="tour-card">
+        <div class="tour-card-info">
+          <div class="tour-card-title">${esc(t.listing_title)} <span class="tour-badge ${badgeCls[t.status]||''}">${badgeLabel[t.status]||t.status}</span></div>
+          <div class="tour-card-meta">
+            <strong>${dateStr} a las ${timeStr}</strong><br>
+            ${esc(t.client_name)} &middot; ${esc(t.client_phone)} ${t.client_email ? '&middot; '+esc(t.client_email) : ''}
+            ${t.client_notes ? '<br><em>'+esc(t.client_notes)+'</em>' : ''}
+          </div>
+        </div>
+        ${actions}
+      </div>`;
+    }).join('');
+  }
+
+  window.updateTourStatus = async function(id, status) {
+    const label = status === 'confirmed' ? 'confirmar' : 'rechazar';
+    if (!confirm('Seguro que deseas ' + label + ' esta visita?')) return;
+    try {
+      const res = await fetch(`/api/tours/${id}/status`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) loadTourRequests();
+    } catch {}
+  };
+
+  // ── Availability ──────────────────────────────
+  async function loadAvailability() {
+    try {
+      const res = await fetch('/api/tours/broker-availability', { credentials: 'include' });
+      if (res.ok) _availData = await res.json();
+    } catch {}
+    renderAvailability();
+  }
+
+  function renderAvailability() {
+    const grid = document.getElementById('availWeeklyGrid');
+    if (!_availData.weekly || !_availData.weekly.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;grid-column:1/-1;">No tienes horarios configurados. Agrega uno abajo.</p>';
+    } else {
+      grid.innerHTML = _availData.weekly.map(s => `<div class="avail-card">
+        <button class="avail-card-del" onclick="deleteAvailSlot('${s.id}')" title="Eliminar">&times;</button>
+        <div class="avail-card-day">${DAY_NAMES[s.day_of_week]}</div>
+        <div class="avail-card-time">${s.start_time} - ${s.end_time}</div>
+        <div class="avail-card-dur">Citas de ${s.slot_duration_min} min</div>
+      </div>`).join('');
+    }
+
+    const blockList = document.getElementById('blockedDaysList');
+    const overrides = (_availData.overrides || []).filter(o => !o.available);
+    if (!overrides.length) {
+      blockList.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">No hay dias bloqueados.</p>';
+    } else {
+      blockList.innerHTML = overrides.map(o => {
+        const d = new Date(o.date + 'T12:00:00');
+        return `<span class="block-chip">${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()} <button onclick="deleteAvailSlot('${o.id}')">&times;</button></span>`;
+      }).join('');
+    }
+  }
+
+  window.addAvailSlot = async function() {
+    const body = {
+      day_of_week:       Number(document.getElementById('availDay').value),
+      start_time:        document.getElementById('availStart').value,
+      end_time:          document.getElementById('availEnd').value,
+      slot_duration_min: Number(document.getElementById('availDuration').value),
+    };
+    try {
+      await fetch('/api/tours/broker-availability', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      loadAvailability();
+    } catch {}
+  };
+
+  window.blockDay = async function() {
+    const date = document.getElementById('blockDate').value;
+    if (!date) return alert('Selecciona una fecha');
+    try {
+      await fetch('/api/tours/broker-availability/override', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, available: false }),
+      });
+      loadAvailability();
+    } catch {}
+  };
+
+  window.deleteAvailSlot = async function(id) {
+    if (!confirm('Eliminar este horario?')) return;
+    try {
+      await fetch(`/api/tours/broker-availability/${id}`, { method: 'DELETE', credentials: 'include' });
+      loadAvailability();
+    } catch {
+      try { await fetch(`/api/tours/broker-availability/override/${id}`, { method: 'DELETE', credentials: 'include' }); loadAvailability(); } catch {}
+    }
+  };
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  // Expose for showPage hook
+  window._loadTourRequests = loadTourRequests;
+  window._loadAvailability = loadAvailability;
+
+  // Auto-load on page load
+  setTimeout(() => { loadTourRequests(); loadAvailability(); }, 1500);
 })();
 </script>
 <script src="/js/pixel.js" defer></script>

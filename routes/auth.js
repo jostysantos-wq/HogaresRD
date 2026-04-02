@@ -883,5 +883,19 @@ router.post('/register/admin', authLimiter, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Optional auth — sets req.user if token present, but doesn't reject
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) { req.user = null; return next(); }
+  try {
+    const token   = header.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.jti && store.isTokenRevoked(decoded.jti)) { req.user = null; return next(); }
+    req.user = decoded;
+  } catch { req.user = null; }
+  next();
+}
+
 module.exports        = router;
 module.exports.userAuth = userAuth;
+module.exports.optionalAuth = optionalAuth;

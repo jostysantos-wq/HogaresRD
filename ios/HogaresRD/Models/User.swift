@@ -5,6 +5,7 @@ struct User: Codable {
     let name: String
     let email: String
     let role: String
+    let phone: String?
     let agencyName: String?
     let marketingOptIn: Bool?
 

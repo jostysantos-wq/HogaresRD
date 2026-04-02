@@ -270,6 +270,32 @@
     .modal-ref-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 20px; padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
     .modal-ref-badge svg { width: 11px; height: 11px; fill: currentColor; }
 
+    /* ── TOUR BOOKING ────────────────────────────────────────── */
+    .btn-tour { display: flex; width: 100%; text-align: center; padding: 0.85rem; background: linear-gradient(135deg, var(--accent), #1e50a0); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; gap: 0.5rem; transition: opacity 0.2s; margin-top: 0.6rem; }
+    .btn-tour:hover { opacity: 0.9; }
+    .tour-calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 1rem; }
+    .tour-cal-header { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-align: center; padding: 0.3rem 0; }
+    .tour-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s; color: var(--text); background: none; }
+    .tour-cal-day:hover:not(.disabled):not(.empty) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .tour-cal-day.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .tour-cal-day.available { background: color-mix(in srgb, var(--green) 10%, transparent); }
+    .tour-cal-day.disabled { color: var(--text-muted); opacity: 0.35; cursor: default; pointer-events: none; }
+    .tour-cal-day.empty { visibility: hidden; pointer-events: none; }
+    .tour-month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .tour-month-nav button { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.3rem 0.6rem; cursor: pointer; color: var(--text); font-size: 0.85rem; font-weight: 600; }
+    .tour-month-nav button:hover { border-color: var(--accent); color: var(--accent); }
+    .tour-month-label { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .tour-slots { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    .tour-slot { padding: 0.6rem 0.5rem; border: 1.5px solid var(--border); border-radius: 8px; text-align: center; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s; color: var(--text); background: none; }
+    .tour-slot:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .tour-slot.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .tour-no-slots { text-align: center; padding: 1.5rem 0; color: var(--text-muted); font-size: 0.85rem; }
+    .tour-step-indicator { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .tour-step { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; border: 2px solid var(--border); color: var(--text-muted); }
+    .tour-step.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .tour-step.done { background: var(--green); color: #fff; border-color: var(--green); }
+    .tour-step-line { width: 24px; height: 2px; background: var(--border); }
+
     /* ── AGENCY TABS ─────────────────────────────────────────── */
     .agencies-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
     .agency-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -512,6 +538,10 @@
             <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             Compartir
           </button>
+          <button class="btn-tour" id="tourBtn" onclick="openTourModal()" style="display:none">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
+            Agendar Visita
+          </button>
         </div>
 
         <!-- AGENCIES -->
@@ -605,6 +635,82 @@
       <div class="modal-success-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
       <h3>¡Consulta enviada!</h3>
       <p>Tu información fue enviada a las inmobiliarias afiliadas. Un agente se pondrá en contacto contigo pronto.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TOUR BOOKING MODAL -->
+<div class="modal-backdrop" id="tourModal" onclick="if(event.target===this)closeTourModal()">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-close" onclick="closeTourModal()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+
+    <div id="tourFormWrap">
+      <!-- Step indicator -->
+      <div class="tour-step-indicator">
+        <div class="tour-step active" id="tourStep1">1</div>
+        <div class="tour-step-line"></div>
+        <div class="tour-step" id="tourStep2">2</div>
+        <div class="tour-step-line"></div>
+        <div class="tour-step" id="tourStep3">3</div>
+      </div>
+
+      <!-- Step 1: Date selection -->
+      <div id="tourDateStep">
+        <div class="modal-title">Agendar Visita</div>
+        <div class="modal-sub">Selecciona un dia disponible para visitar la propiedad.</div>
+        <div class="tour-month-nav">
+          <button onclick="tourPrevMonth()">&laquo; Anterior</button>
+          <span class="tour-month-label" id="tourMonthLabel"></span>
+          <button onclick="tourNextMonth()">Siguiente &raquo;</button>
+        </div>
+        <div class="tour-calendar" id="tourCalendar"></div>
+        <div id="tourCalNote" style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:color-mix(in srgb, var(--green) 25%, transparent);vertical-align:middle;margin-right:4px;"></span> Disponible
+        </div>
+      </div>
+
+      <!-- Step 2: Time selection -->
+      <div id="tourTimeStep" style="display:none">
+        <div class="modal-title">Selecciona la Hora</div>
+        <div class="modal-sub" id="tourTimeSub">Horarios disponibles para <strong id="tourSelectedDateLabel"></strong></div>
+        <div id="tourSlotsWrap">
+          <div class="tour-slots" id="tourSlots"></div>
+        </div>
+        <div id="tourSlotsLoading" style="text-align:center;padding:2rem 0;display:none;">
+          <div style="width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+          <button class="btn-cta-ghost" onclick="tourGoToStep(1)" style="flex:1">Cambiar fecha</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Contact info -->
+      <div id="tourContactStep" style="display:none">
+        <div class="modal-title">Tus datos de contacto</div>
+        <div class="modal-sub">Completa tu informacion para confirmar la visita el <strong id="tourSummaryDateTime"></strong></div>
+        <form id="tourForm" onsubmit="submitTourRequest(event)">
+          <div class="modal-field"><label>Nombre completo *</label><input type="text" id="tourName" required placeholder="Tu nombre"></div>
+          <div class="modal-field"><label>Telefono *</label><input type="tel" id="tourPhone" required placeholder="+1 (809) 000-0000"></div>
+          <div class="modal-field"><label>Correo electronico</label><input type="email" id="tourEmail" placeholder="tu@correo.com"></div>
+          <div class="modal-field"><label>Notas (opcional)</label><textarea id="tourNotes" placeholder="Algo que el agente deba saber..." style="min-height:60px;"></textarea></div>
+          <p class="modal-note">El agente debera confirmar tu solicitud de visita. Recibiras una notificacion cuando sea aprobada.</p>
+          <div style="display:flex;gap:0.75rem;">
+            <button type="button" class="btn-cta-ghost" onclick="tourGoToStep(2)" style="flex:1">Atras</button>
+            <button type="submit" class="modal-submit" id="tourSubmitBtn" style="flex:2">Solicitar Visita</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div id="tourSuccess" class="modal-success" style="display:none">
+      <div class="modal-success-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+      <h3>Visita solicitada!</h3>
+      <p>Tu solicitud ha sido enviada al agente. Recibiras una confirmacion cuando sea aprobada.</p>
+      <div id="tourSuccessDetails" style="margin-top:1rem;padding:0.8rem;background:var(--bg,#f7f8fa);border-radius:10px;font-size:0.85rem;">
+        <div style="font-weight:700;margin-bottom:0.3rem;" id="tourSuccessDate"></div>
+        <div style="color:var(--text-muted);" id="tourSuccessTime"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1248,6 +1354,7 @@ const tabsHtml = shuffled.map((a, i) =>
   (async () => {
     // Auth
     const user = await fetchMe();
+    window._currentUser = user;
     renderNav(user);
 
     // Fetch listing
@@ -1256,6 +1363,7 @@ const tabsHtml = shuffled.map((a, i) =>
       if (!res.ok) throw new Error('not found');
       const listing = await res.json();
       renderListing(listing);
+      initTourBtn();
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('listingPage').style.display  = '';
       // Map was initialized while hidden — force it to recalculate tile layout
@@ -1408,6 +1516,214 @@ const tabsHtml = shuffled.map((a, i) =>
   document.getElementById('contactModal').addEventListener('click', function(e) {
     if (e.target === this) closeContactModal();
   });
+  // ── Tour Booking ──────────────────────────────────────────────
+  let _tourBrokerId = null;
+  let _tourMonth = new Date();
+  let _tourAvailDates = [];
+  let _tourSelectedDate = null;
+  let _tourSelectedTime = null;
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DAY_NAMES = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+
+  function initTourBtn() {
+    const listing = window._currentListing;
+    if (!listing || !listing.agencies || !listing.agencies.length) return;
+    // Find first agency with user_id
+    const agency = listing.agencies.find(a => a.user_id);
+    if (!agency) return;
+    _tourBrokerId = agency.user_id;
+    document.getElementById('tourBtn').style.display = 'flex';
+  }
+
+  function openTourModal() {
+    if (!_tourBrokerId) return;
+    _tourMonth = new Date();
+    _tourSelectedDate = null;
+    _tourSelectedTime = null;
+    document.getElementById('tourFormWrap').style.display = '';
+    document.getElementById('tourSuccess').style.display = 'none';
+    tourGoToStep(1);
+    document.getElementById('tourModal').classList.add('open');
+    loadTourMonth();
+  }
+
+  function closeTourModal() {
+    document.getElementById('tourModal').classList.remove('open');
+  }
+
+  function tourGoToStep(step) {
+    document.getElementById('tourDateStep').style.display = step === 1 ? '' : 'none';
+    document.getElementById('tourTimeStep').style.display = step === 2 ? '' : 'none';
+    document.getElementById('tourContactStep').style.display = step === 3 ? '' : 'none';
+    ['tourStep1','tourStep2','tourStep3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (i + 1 < step) el.classList.add('done');
+      else if (i + 1 === step) el.classList.add('active');
+    });
+  }
+
+  async function loadTourMonth() {
+    const y = _tourMonth.getFullYear();
+    const m = _tourMonth.getMonth() + 1;
+    const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+    document.getElementById('tourMonthLabel').textContent = `${MONTH_NAMES[m-1]} ${y}`;
+
+    try {
+      const res = await fetch(`/api/tours/schedule/${_tourBrokerId}?month=${monthStr}`);
+      const data = await res.json();
+      _tourAvailDates = data.available_dates || [];
+    } catch { _tourAvailDates = []; }
+
+    renderTourCalendar(y, m);
+  }
+
+  function renderTourCalendar(year, month) {
+    const cal = document.getElementById('tourCalendar');
+    let html = DAY_NAMES.map(d => `<div class="tour-cal-header">${d}</div>`).join('');
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (let i = 0; i < firstDay; i++) html += '<div class="tour-cal-day empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isPast = dateStr < today;
+      const isAvail = _tourAvailDates.includes(dateStr);
+      const isSelected = dateStr === _tourSelectedDate;
+      let cls = 'tour-cal-day';
+      if (isPast || !isAvail) cls += ' disabled';
+      else if (isSelected) cls += ' active';
+      else if (isAvail) cls += ' available';
+      html += `<div class="${cls}" data-date="${dateStr}" onclick="selectTourDate('${dateStr}')">${d}</div>`;
+    }
+    cal.innerHTML = html;
+  }
+
+  function tourPrevMonth() {
+    _tourMonth.setMonth(_tourMonth.getMonth() - 1);
+    const now = new Date();
+    if (_tourMonth.getFullYear() < now.getFullYear() || (_tourMonth.getFullYear() === now.getFullYear() && _tourMonth.getMonth() < now.getMonth())) {
+      _tourMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    loadTourMonth();
+  }
+
+  function tourNextMonth() {
+    _tourMonth.setMonth(_tourMonth.getMonth() + 1);
+    loadTourMonth();
+  }
+
+  async function selectTourDate(dateStr) {
+    _tourSelectedDate = dateStr;
+    _tourSelectedTime = null;
+    const dateObj = new Date(dateStr + 'T12:00:00');
+    const label = `${DAY_NAMES[dateObj.getDay()]} ${dateObj.getDate()} de ${MONTH_NAMES[dateObj.getMonth()]}`;
+    document.getElementById('tourSelectedDateLabel').textContent = label;
+
+    tourGoToStep(2);
+
+    // Load available slots
+    document.getElementById('tourSlots').innerHTML = '';
+    document.getElementById('tourSlotsLoading').style.display = '';
+
+    try {
+      const res = await fetch(`/api/tours/availability/${_tourBrokerId}?date=${dateStr}`);
+      const data = await res.json();
+      document.getElementById('tourSlotsLoading').style.display = 'none';
+
+      if (!data.slots || !data.slots.length) {
+        document.getElementById('tourSlots').innerHTML = '<div class="tour-no-slots">No hay horarios disponibles para esta fecha.</div>';
+        return;
+      }
+
+      document.getElementById('tourSlots').innerHTML = data.slots.map(s => {
+        const h = parseInt(s.time.split(':')[0]);
+        const m = s.time.split(':')[1];
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        return `<button type="button" class="tour-slot" data-time="${s.time}" onclick="selectTourTime('${s.time}')">${h12}:${m} ${ampm}</button>`;
+      }).join('');
+    } catch {
+      document.getElementById('tourSlotsLoading').style.display = 'none';
+      document.getElementById('tourSlots').innerHTML = '<div class="tour-no-slots">Error al cargar horarios.</div>';
+    }
+  }
+
+  function selectTourTime(time) {
+    _tourSelectedTime = time;
+    document.querySelectorAll('.tour-slot').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.tour-slot[data-time="${time}"]`).classList.add('active');
+
+    // Format summary
+    const dateObj = new Date(_tourSelectedDate + 'T12:00:00');
+    const h = parseInt(time.split(':')[0]);
+    const m = time.split(':')[1];
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+    const summary = `${dateObj.getDate()} de ${MONTH_NAMES[dateObj.getMonth()]}, ${h12}:${m} ${ampm}`;
+    document.getElementById('tourSummaryDateTime').textContent = summary;
+
+    // Pre-fill from logged-in user
+    const me = window._currentUser;
+    if (me) {
+      if (me.name && !document.getElementById('tourName').value) document.getElementById('tourName').value = me.name;
+      if (me.email && !document.getElementById('tourEmail').value) document.getElementById('tourEmail').value = me.email;
+      if (me.phone && !document.getElementById('tourPhone').value) document.getElementById('tourPhone').value = me.phone;
+    }
+
+    tourGoToStep(3);
+  }
+
+  async function submitTourRequest(e) {
+    e.preventDefault();
+    const btn = document.getElementById('tourSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const listing = window._currentListing || {};
+    const body = {
+      listing_id: listing.id || new URLSearchParams(location.search).get('id'),
+      broker_id:  _tourBrokerId,
+      date:       _tourSelectedDate,
+      time:       _tourSelectedTime,
+      name:       document.getElementById('tourName').value.trim(),
+      phone:      document.getElementById('tourPhone').value.trim(),
+      email:      document.getElementById('tourEmail').value.trim(),
+      notes:      document.getElementById('tourNotes').value.trim(),
+    };
+
+    try {
+      const res = await fetch('/api/tours/request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Show success
+        document.getElementById('tourFormWrap').style.display = 'none';
+        document.getElementById('tourSuccess').style.display = '';
+        const dateObj = new Date(_tourSelectedDate + 'T12:00:00');
+        const h = parseInt(_tourSelectedTime.split(':')[0]);
+        const m = _tourSelectedTime.split(':')[1];
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        document.getElementById('tourSuccessDate').textContent = `${DAY_NAMES[dateObj.getDay()]} ${dateObj.getDate()} de ${MONTH_NAMES[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
+        document.getElementById('tourSuccessTime').textContent = `${h12}:${m} ${ampm}`;
+      } else {
+        alert(data.error || 'Error al solicitar visita');
+        btn.disabled = false;
+        btn.textContent = 'Solicitar Visita';
+      }
+    } catch {
+      alert('Error de conexion');
+      btn.disabled = false;
+      btn.textContent = 'Solicitar Visita';
+    }
+  }
+
   async function sendContactMsg() {
     const text = document.getElementById('contactMsgInput').value.trim();
     const msgEl = document.getElementById('contactModalMsg');

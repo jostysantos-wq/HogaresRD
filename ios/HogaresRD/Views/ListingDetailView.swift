@@ -13,6 +13,12 @@ struct ListingDetailView: View {
     @State private var showApply        = false
     @State private var showContactAgent = false
     @State private var showFullGallery  = false
+    @State private var showTourBooking  = false
+
+    // Mortgage calculator state
+    @State private var mcDownPercent: Double = 30
+    @State private var mcRate:        Double = 12
+    @State private var mcTermYears:   Int    = 20
 
     private let heroHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
@@ -41,6 +47,12 @@ struct ListingDetailView: View {
         }
         .fullScreenCover(isPresented: $showFullGallery) {
             if let l = listing { FullGalleryView(images: l.allImageURLs, startIndex: imageIndex) }
+        }
+        .sheet(isPresented: $showTourBooking) {
+            if let l = listing, let brokerId = l.agencies?.first(where: { $0.userId != nil })?.userId {
+                TourBookingSheet(listing: l, brokerId: brokerId)
+                    .environmentObject(APIService.shared)
+            }
         }
         .task { await load() }
     }
@@ -132,6 +144,11 @@ struct ListingDetailView: View {
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
+                        }
+
+                        // ── Mortgage Calculator ────────────────────
+                        if let priceNum = Double(l.price), priceNum > 0 {
+                            mortgageCalculatorSection(price: priceNum)
                         }
 
                         // ── Tags ───────────────────────────────────
@@ -326,10 +343,24 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func stickyCTA(_ l: Listing) -> some View {
-        HStack(spacing: 10) {
+        let hasBroker = l.agencies?.first(where: { $0.userId != nil }) != nil
+
+        HStack(spacing: 8) {
+            if hasBroker {
+                Button { showTourBooking = true } label: {
+                    Label("Visita", systemImage: "calendar.badge.clock")
+                        .font(.caption).bold()
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
+                        .foregroundStyle(Color.rdBlue)
+                }
+            }
+
             Button { showContact = true } label: {
-                Label("Consulta", systemImage: "calendar.badge.plus")
-                    .font(.subheadline).bold()
+                Label("Consulta", systemImage: "phone.fill")
+                    .font(.caption).bold()
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity)
                     .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -338,8 +369,8 @@ struct ListingDetailView: View {
             }
 
             Button { showContactAgent = true } label: {
-                Label("Contactar", systemImage: "bubble.left.fill")
-                    .font(.subheadline).bold()
+                Label("Chat", systemImage: "bubble.left.fill")
+                    .font(.caption).bold()
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity)
                     .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
@@ -432,33 +463,244 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func projectMetaSection(_ l: Listing) -> some View {
         if l.units_available != nil || l.project_stage != nil {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text("Información del Proyecto").font(.headline)
 
+                // Units availability card
                 if let avail = l.units_available, let total = l.units_total, total > 0 {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("Unidades disponibles")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                            Spacer()
-                            Text("\(avail) / \(total)")
-                                .font(.subheadline).bold()
-                                .foregroundStyle(avail > 0 ? Color.rdGreen : Color.rdRed)
+                    VStack(spacing: 12) {
+                        HStack(spacing: 16) {
+                            // Available count
+                            VStack(spacing: 4) {
+                                Text("\(avail)")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(Color.rdGreen)
+                                Text("Disponibles")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            // Divider
+                            Rectangle()
+                                .fill(Color(.systemGray4))
+                                .frame(width: 1, height: 40)
+
+                            // Total count
+                            VStack(spacing: 4) {
+                                Text("\(total)")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.primary)
+                                Text("Total")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            // Divider
+                            Rectangle()
+                                .fill(Color(.systemGray4))
+                                .frame(width: 1, height: 40)
+
+                            // Sold/reserved
+                            VStack(spacing: 4) {
+                                Text("\(total - avail)")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(Color.rdRed)
+                                Text("Vendidas")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color(.systemGray5)).frame(height: 8)
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.rdGreen)
-                                    .frame(width: geo.size.width * CGFloat(avail) / CGFloat(total), height: 8)
+
+                        // Progress bar
+                        VStack(spacing: 4) {
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .fill(Color(.systemGray5))
+                                        .frame(height: 10)
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.rdGreen, Color.rdGreen.opacity(0.7)],
+                                                startPoint: .leading, endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(
+                                            width: geo.size.width * CGFloat(avail) / CGFloat(total),
+                                            height: 10
+                                        )
+                                }
+                            }
+                            .frame(height: 10)
+
+                            HStack {
+                                Text("\(Int(Double(avail) / Double(total) * 100))% disponible")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                                Spacer()
+                                if avail <= 5 && avail > 0 {
+                                    Text("Pocas unidades restantes")
+                                        .font(.caption2).bold()
+                                        .foregroundStyle(Color.rdRed)
+                                }
                             }
                         }
-                        .frame(height: 8)
+                    }
+                    .padding(14)
+                    .background(Color.rdGreen.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.rdGreen.opacity(0.15), lineWidth: 1))
+                }
+
+                // Stage + delivery
+                if l.project_stage != nil || l.delivery_date != nil {
+                    HStack(spacing: 12) {
+                        if let stage = l.project_stage, !stage.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "hammer.fill")
+                                    .font(.caption).foregroundStyle(Color.rdBlue)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("Etapa").font(.system(size: 10)).foregroundStyle(.secondary)
+                                    Text(stage).font(.caption).bold()
+                                }
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(Color.rdBlue.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        if let date = l.delivery_date, !date.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "calendar")
+                                    .font(.caption).foregroundStyle(Color.rdBlue)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("Entrega").font(.system(size: 10)).foregroundStyle(.secondary)
+                                    Text(date).font(.caption).bold()
+                                }
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(Color.rdBlue.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        Spacer()
                     }
                 }
             }
         }
+    }
+
+    // MARK: - Mortgage Calculator
+
+    @ViewBuilder
+    private func mortgageCalculatorSection(price: Double) -> some View {
+        let downAmount = price * mcDownPercent / 100
+        let loanAmount = price - downAmount
+        let monthlyRate = mcRate / 100 / 12
+        let totalPayments = Double(mcTermYears * 12)
+        let monthly: Double = {
+            guard monthlyRate > 0, totalPayments > 0, loanAmount > 0 else { return 0 }
+            let factor = pow(1 + monthlyRate, totalPayments)
+            return loanAmount * (monthlyRate * factor) / (factor - 1)
+        }()
+
+        sectionBlock("Calculadora Hipotecaria") {
+            VStack(spacing: 16) {
+                // Result card
+                VStack(spacing: 6) {
+                    Text("Pago mensual estimado")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(formatCurrency(monthly) + "/mes")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(Color.rdBlue)
+                    HStack(spacing: 24) {
+                        VStack(spacing: 2) {
+                            Text("Inicial")
+                                .font(.caption2).foregroundStyle(.secondary)
+                            Text(formatCurrency(downAmount))
+                                .font(.caption).bold()
+                        }
+                        VStack(spacing: 2) {
+                            Text("Financiado")
+                                .font(.caption2).foregroundStyle(.secondary)
+                            Text(formatCurrency(loanAmount))
+                                .font(.caption).bold()
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.rdBlue.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                // Input controls
+                VStack(spacing: 14) {
+                    // Down payment slider
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Inicial")
+                                .font(.caption).bold().foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(Int(mcDownPercent))%")
+                                .font(.caption).bold()
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(Color.rdBlue.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                        Slider(value: $mcDownPercent, in: 0...80, step: 5)
+                            .tint(Color.rdBlue)
+                    }
+
+                    // Interest rate slider
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Tasa de interés")
+                                .font(.caption).bold().foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "%.1f%%", mcRate))
+                                .font(.caption).bold()
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(Color.rdBlue.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                        Slider(value: $mcRate, in: 3...20, step: 0.5)
+                            .tint(Color.rdBlue)
+                    }
+
+                    // Term picker
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Plazo")
+                            .font(.caption).bold().foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            ForEach([10, 15, 20, 25, 30], id: \.self) { years in
+                                Button {
+                                    mcTermYears = years
+                                } label: {
+                                    Text("\(years)a")
+                                        .font(.caption).bold()
+                                        .padding(.horizontal, 12).padding(.vertical, 8)
+                                        .frame(maxWidth: .infinity)
+                                        .background(mcTermYears == years ? Color.rdBlue : Color(.systemGray6))
+                                        .foregroundStyle(mcTermYears == years ? .white : .primary)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text("* Cálculo estimado. Tasas típicas en RD: 10-14% (RD$) o 7-9% (USD). Consulte su banco para tasas actuales.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private func formatCurrency(_ value: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = "USD"
+        f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: value)) ?? "$\(Int(value))"
     }
 
     // MARK: - Unit Types
@@ -466,24 +708,26 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func unitTypesSection(_ units: [ListingUnit]) -> some View {
         sectionBlock("Tipos de Unidades") {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 ForEach(Array(units.enumerated()), id: \.offset) { _, u in
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Header: name + availability badge
                         HStack {
                             Text(u.name ?? u.bedroomLabel)
                                 .font(.subheadline).bold()
                             Spacer()
                             if let avail = u.available, let total = u.total {
-                                Text("\(avail)/\(total) disp.")
-                                    .font(.caption).bold()
-                                    .padding(.horizontal, 8).padding(.vertical, 3)
-                                    .background(avail > 0 ? Color.rdGreen.opacity(0.12) : Color(.systemGray5))
-                                    .foregroundStyle(avail > 0 ? Color.rdGreen : .secondary)
+                                Text("\(avail) de \(total) disponibles")
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(avail > 0 ? Color.rdGreen.opacity(0.12) : Color.rdRed.opacity(0.12))
+                                    .foregroundStyle(avail > 0 ? Color.rdGreen : Color.rdRed)
                                     .clipShape(Capsule())
                             }
                         }
 
-                        HStack(spacing: 16) {
+                        // Specs row
+                        HStack(spacing: 14) {
                             if let area = u.area, !area.isEmpty {
                                 Label("\(area) m²", systemImage: "square.split.2x2")
                                     .font(.caption).foregroundStyle(.secondary)
@@ -493,19 +737,45 @@ struct ListingDetailView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             if let baths = u.bathrooms, !baths.isEmpty {
-                                Label(baths, systemImage: "shower.fill")
+                                Label("\(baths) baños", systemImage: "shower.fill")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             if let park = u.parking, !park.isEmpty {
-                                Label(park, systemImage: "car.fill")
+                                Label("\(park) parq.", systemImage: "car.fill")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
 
+                        // Price
                         if let price = u.priceFormatted {
                             Text(price)
                                 .font(.headline).bold()
                                 .foregroundStyle(Color.rdBlue)
+                        }
+
+                        // Availability progress bar
+                        if let avail = u.available, let total = u.total, total > 0 {
+                            VStack(spacing: 4) {
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(Color(.systemGray5))
+                                            .frame(height: 6)
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(avail > 0 ? Color.rdGreen : Color.rdRed)
+                                            .frame(
+                                                width: geo.size.width * CGFloat(avail) / CGFloat(total),
+                                                height: 6
+                                            )
+                                    }
+                                }
+                                .frame(height: 6)
+                                HStack {
+                                    Text("\(Int(Double(avail) / Double(total) * 100))% disponible")
+                                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                                    Spacer()
+                                }
+                            }
                         }
                     }
                     .padding(14)

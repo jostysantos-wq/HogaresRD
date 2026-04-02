@@ -34,6 +34,8 @@
 		AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C3 /* BrokerDashboardView.swift */; };
 		AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */; };
 		AA880000000000000000000000C2 /* ChatIAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA880000000000000000000000C1 /* ChatIAView.swift */; };
+		AA990000000000000000000000D2 /* Tour.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D1 /* Tour.swift */; };
+		AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D3 /* TourBookingSheet.swift */; };
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
 		AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B4 /* ConversationThreadView.swift */; };
 		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
@@ -70,6 +72,8 @@
 		AA550000000000000000000000C3 /* BrokerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerDashboardView.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InmobiliariaDashboardView.swift; sourceTree = "<group>"; };
 		AA880000000000000000000000C1 /* ChatIAView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatIAView.swift; sourceTree = "<group>"; };
+		AA990000000000000000000000D1 /* Tour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tour.swift; sourceTree = "<group>"; };
+		AA990000000000000000000000D3 /* TourBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourBookingSheet.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B4 /* ConversationThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationThreadView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
@@ -127,6 +131,7 @@
 				AA55000000000000000000B1 /* Conversation.swift */,
 				AA55000000000000000000B2 /* Application.swift */,
 				AA550000000000000000000000C1 /* DashboardModels.swift */,
+				AA990000000000000000000000D1 /* Tour.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -163,6 +168,7 @@
 			AA55000000000000000000B5 /* ApplicationsView.swift */,
 			AA66000000000000000000B1 /* MapView.swift */,
 			AA880000000000000000000000C1 /* ChatIAView.swift */,
+				AA990000000000000000000000D3 /* TourBookingSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -267,6 +273,8 @@
 			AA66000000000000000000C1 /* MapView.swift in Sources */,
 			AA77000000000000000000C1 /* LocationManager.swift in Sources */,
 			AA880000000000000000000000C2 /* ChatIAView.swift in Sources */,
+				AA990000000000000000000000D2 /* Tour.swift in Sources */,
+				AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -10,6 +10,8 @@ const FILES = {
   revokedTokens:  path.join(DATA_DIR, 'revoked_tokens.json'),
   conversations:  path.join(DATA_DIR, 'conversations.json'),
   metaLeads:      path.join(DATA_DIR, 'meta_leads.json'),
+  availability:   path.join(DATA_DIR, 'availability.json'),
+  tours:          path.join(DATA_DIR, 'tours.json'),
 };
 
 const ACTIVITY_CAP = 200;
@@ -192,6 +194,50 @@ function getApplicationsByInmobiliaria(inmobiliariaId) {
   return getApplications().filter(a => a.inmobiliaria_id === inmobiliariaId);
 }
 
+// ── Availability ──────────────────────────────────────────────────────────
+ensureFile(FILES.availability);
+
+function getAvailability()                   { return read(FILES.availability); }
+function getAvailabilityByBroker(brokerId)   { return getAvailability().filter(a => a.broker_id === brokerId); }
+
+function saveAvailabilitySlot(slot) {
+  const all = getAvailability();
+  const idx = all.findIndex(a => a.id === slot.id);
+  if (idx === -1) all.push(slot);
+  else all[idx] = slot;
+  write(FILES.availability, all);
+}
+
+function deleteAvailabilitySlot(id) {
+  const all = getAvailability().filter(a => a.id !== id);
+  write(FILES.availability, all);
+}
+
+// ── Tours ─────────────────────────────────────────────────────────────────
+ensureFile(FILES.tours);
+
+function getTours()                    { return read(FILES.tours); }
+function getTourById(id)               { return getTours().find(t => t.id === id) || null; }
+function getToursByBroker(brokerId)    { return getTours().filter(t => t.broker_id === brokerId); }
+function getToursByClient(clientId)    { return getTours().filter(t => t.client_id === clientId); }
+function getToursByListing(listingId)  { return getTours().filter(t => t.listing_id === listingId); }
+
+function getBookedSlots(brokerId, date) {
+  return getTours().filter(t =>
+    t.broker_id === brokerId &&
+    t.requested_date === date &&
+    (t.status === 'confirmed' || t.status === 'pending')
+  );
+}
+
+function saveTour(tour) {
+  const all = getTours();
+  const idx = all.findIndex(t => t.id === tour.id);
+  if (idx === -1) all.unshift(tour);
+  else all[idx] = tour;
+  write(FILES.tours, all);
+}
+
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
@@ -203,4 +249,7 @@ module.exports = {
   getMetaLeads, appendMetaLead,
   getUsersByRole, getUsersByInmobiliaria,
   revokeToken, isTokenRevoked,
+  getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
+  getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing,
+  getBookedSlots, saveTour,
 };

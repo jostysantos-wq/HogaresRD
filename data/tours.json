@@ -1,0 +1,19 @@
+[
+  {
+    "id": "tour_b9309aece36d15c6",
+    "listing_id": "test123",
+    "listing_title": "Propiedad",
+    "broker_id": "usr_inm_demo_001",
+    "client_id": null,
+    "client_name": "Test Client",
+    "client_email": "",
+    "client_phone": "809-555-9999",
+    "requested_date": "2026-04-06",
+    "requested_time": "09:00",
+    "status": "pending",
+    "broker_notes": "",
+    "client_notes": "",
+    "created_at": "2026-04-02T06:26:43.645Z",
+    "updated_at": "2026-04-02T06:26:43.645Z"
+  }
+]
