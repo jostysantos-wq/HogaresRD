@@ -24,23 +24,9 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   }
 })();
 
-// ── Ensure data dir & seed files (must run before any route requires) ─────
+// ── Ensure documents directory exists (uploads go to filesystem) ───────────
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-[
-  path.join(DATA_DIR, 'submissions.json'),
-  path.join(DATA_DIR, 'users.json'),
-  path.join(DATA_DIR, 'activity.json'),
-  path.join(DATA_DIR, 'applications.json'),
-  path.join(DATA_DIR, 'revoked_tokens.json'),  // Sprint 3: token revocation list
-  path.join(DATA_DIR, 'security_log.json'),    // Sprint 3: security event log
-  path.join(DATA_DIR, 'availability.json'),   // Tour scheduling: broker availability
-  path.join(DATA_DIR, 'tours.json'),           // Tour scheduling: visit requests
-].forEach(f => { if (!fs.existsSync(f)) fs.writeFileSync(f, '[]'); });
-// Object-keyed data files (seeded with {})
-[path.join(DATA_DIR, 'push_subscriptions.json')].forEach(f => {
-  if (!fs.existsSync(f)) fs.writeFileSync(f, '{}');
-});
 const DOCS_DIR = path.join(DATA_DIR, 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 
@@ -52,9 +38,9 @@ const multer       = require('multer');
 const cron         = require('node-cron');
 const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
 
+const store = require('./routes/store');
 const app  = express();
 const PORT = process.env.PORT || 3000;
-const SUBMISSIONS_FILE = path.join(__dirname, 'data', 'submissions.json');
 const ADMIN_KEY = process.env.ADMIN_KEY; // enforced present by checkEnv() above
 const ADMIN_EMAIL = 'Jostysantos@gmail.com';
 
@@ -63,24 +49,13 @@ const ADMIN_EMAIL = 'Jostysantos@gmail.com';
   const seedFile = path.join(__dirname, 'seeds', 'listings.json');
   if (!fs.existsSync(seedFile)) return;
   const seeds = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
-  const submissions = JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
-  const existingIds = new Set(submissions.map(s => s.id));
-  let changed = false;
+  const existingIds = new Set(store.getAllSubmissions().map(s => s.id));
   seeds.forEach(seed => {
     if (!existingIds.has(seed.id)) {
-      submissions.push(seed);
-      changed = true;
+      store.saveListing(seed);
     }
   });
-  if (changed) fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
 })();
-
-function readSubmissions() {
-  return JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
-}
-function writeSubmissions(data) {
-  fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(data, null, 2));
-}
 
 // ── Email transporter ──────────────────────────────────────────
 const transporter = nodemailer.createTransport({
@@ -326,10 +301,8 @@ app.post('/submit', async (req, res) => {
     submittedAt: new Date().toISOString(),
   };
 
-  // Save to file
-  const submissions = readSubmissions();
-  submissions.push(submission);
-  writeSubmissions(submissions);
+  // Save to store
+  store.saveListing(submission);
 
   // Send notification email
   try {
@@ -385,37 +358,34 @@ app.get('/admin', (req, res) => {
 });
 
 app.get('/admin/submissions', adminAuth, (req, res) => {
-  res.json(readSubmissions());
+  res.json(store.getAllSubmissions());
 });
 
 app.post('/admin/submissions/:id/approve', adminAuth, (req, res) => {
-  const submissions = readSubmissions();
-  const sub = submissions.find(s => s.id === req.params.id);
+  const sub = store.getListingById(req.params.id);
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
   sub.status     = 'approved';
   sub.approvedAt = new Date().toISOString();
-  writeSubmissions(submissions);
+  store.saveListing(sub);
   res.json({ success: true });
 });
 
 app.post('/admin/submissions/:id/reject', adminAuth, (req, res) => {
-  const submissions = readSubmissions();
-  const sub = submissions.find(s => s.id === req.params.id);
+  const sub = store.getListingById(req.params.id);
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
   sub.status     = 'rejected';
   sub.rejectedAt = new Date().toISOString();
-  writeSubmissions(submissions);
+  store.saveListing(sub);
   res.json({ success: true });
 });
 
 // Merge agency claim into target listing
 app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
-  const submissions = readSubmissions();
-  const claim = submissions.find(s => s.id === req.params.id);
+  const claim = store.getListingById(req.params.id);
   if (!claim) return res.status(404).json({ error: 'Solicitud no encontrada' });
   if (claim.submission_type !== 'agency_claim') return res.status(400).json({ error: 'No es una solicitud de agencia' });
 
-  const target = submissions.find(s => s.id === claim.claim_listing_id);
+  const target = store.getListingById(claim.claim_listing_id);
   if (!target) return res.status(404).json({ error: `Anuncio #${claim.claim_listing_id} no encontrado` });
 
   // Merge agencies from claim into target listing
@@ -423,18 +393,18 @@ app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
   const newAgencies = Array.isArray(claim.agencies) ? claim.agencies : [];
   target.agencies.push(...newAgencies);
   target.updatedAt = new Date().toISOString();
+  store.saveListing(target);
 
   // Mark claim as approved
   claim.status     = 'approved';
   claim.approvedAt = new Date().toISOString();
+  store.saveListing(claim);
 
-  writeSubmissions(submissions);
   res.json({ success: true, targetId: target.id });
 });
 
 // ── Unsubscribe ────────────────────────────────────────────────
 app.get('/unsubscribe', (req, res) => {
-  const store = require('./routes/store');
   const token = req.query.token || '';
   let userId;
   try { userId = Buffer.from(token, 'base64').toString('utf8'); } catch { userId = ''; }

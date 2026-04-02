@@ -1,339 +1,940 @@
-const fs   = require('fs');
-const path = require('path');
+const Database = require('better-sqlite3');
+const path     = require('path');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const FILES = {
-  users:          path.join(DATA_DIR, 'users.json'),
-  activity:       path.join(DATA_DIR, 'activity.json'),
-  submissions:    path.join(DATA_DIR, 'submissions.json'),
-  applications:   path.join(DATA_DIR, 'applications.json'),
-  revokedTokens:  path.join(DATA_DIR, 'revoked_tokens.json'),
-  conversations:  path.join(DATA_DIR, 'conversations.json'),
-  metaLeads:      path.join(DATA_DIR, 'meta_leads.json'),
-  availability:   path.join(DATA_DIR, 'availability.json'),
-  tours:          path.join(DATA_DIR, 'tours.json'),
-  twofa_sessions: path.join(DATA_DIR, 'twofa_sessions.json'),
-  pushSubscriptions: path.join(DATA_DIR, 'push_subscriptions.json'),
-};
+// ── Database setup ────────────────────────────────────────────────────────
+const DB_PATH = path.join(__dirname, '..', 'data', 'hogaresrd.db');
+const db = new Database(DB_PATH);
+
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('foreign_keys = OFF');
 
 const ACTIVITY_CAP = 200;
 
-function read(file)       { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-function write(file, data){ fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
+// ── Schema ────────────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id                       TEXT PRIMARY KEY,
+    email                    TEXT UNIQUE COLLATE NOCASE,
+    passwordHash             TEXT,
+    password                 TEXT,
+    name                     TEXT,
+    phone                    TEXT,
+    role                     TEXT,
+    emailVerified            INTEGER DEFAULT 0,
+    marketingOptIn           INTEGER DEFAULT 0,
+    createdAt                TEXT,
+    lastLoginAt              TEXT,
+    licenseNumber            TEXT,
+    refToken                 TEXT,
+    stripeCustomerId         TEXT,
+    inmobiliaria_id          TEXT,
+    inmobiliaria_name        TEXT,
+    inmobiliaria_join_status TEXT,
+    inmobiliaria_joined_at   TEXT,
+    inmobiliaria_pending_id  TEXT,
+    inmobiliaria_pending_name TEXT,
+    loginAttempts            INTEGER DEFAULT 0,
+    loginLockedUntil         TEXT,
+    lockedUntil              TEXT,
+    jobTitle                 TEXT,
+    notes                    TEXT,
+    twoFAEnabled             INTEGER DEFAULT 0,
+    biometricTokenHash       TEXT,
+    favorites                TEXT DEFAULT '[]',
+    agency                   TEXT,
+    join_requests            TEXT DEFAULT '[]',
+    secretary_invites        TEXT,
+    subscription             TEXT,
+    profile                  TEXT,
+    _extra                   TEXT DEFAULT '{}'
+  );
 
-// ── Users ──────────────────────────────────────────────────────────────────
-function getUsers()               { return read(FILES.users); }
-function getUserById(id)          { return getUsers().find(u => u.id === id) || null; }
-function getUserByEmail(email)    { return getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()) || null; }
-function getUserByRefToken(token) { return getUsers().find(u => u.refToken === token) || null; }
+  CREATE TABLE IF NOT EXISTS activity (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId    TEXT,
+    type      TEXT,
+    listingId TEXT,
+    timestamp TEXT,
+    data      TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_activity_userId ON activity(userId);
+  CREATE INDEX IF NOT EXISTS idx_activity_type   ON activity(type);
+
+  CREATE TABLE IF NOT EXISTS submissions (
+    id                 TEXT PRIMARY KEY,
+    title              TEXT,
+    type               TEXT,
+    condition          TEXT,
+    description        TEXT,
+    price              TEXT,
+    area_const         TEXT,
+    area_land          TEXT,
+    bedrooms           TEXT,
+    bathrooms          TEXT,
+    parking            TEXT,
+    province           TEXT,
+    city               TEXT,
+    sector             TEXT,
+    address            TEXT,
+    lat                TEXT,
+    lng                TEXT,
+    name               TEXT,
+    email              TEXT,
+    phone              TEXT,
+    role               TEXT,
+    status             TEXT DEFAULT 'pending',
+    submittedAt        TEXT,
+    approvedAt         TEXT,
+    rejectedAt         TEXT,
+    updatedAt          TEXT,
+    views              INTEGER DEFAULT 0,
+    floors             TEXT,
+    units_total        TEXT,
+    units_available    TEXT,
+    project_stage      TEXT,
+    delivery_date      TEXT,
+    submission_type    TEXT,
+    claim_listing_id   TEXT,
+    amenities          TEXT DEFAULT '[]',
+    agencies           TEXT DEFAULT '[]',
+    images             TEXT DEFAULT '[]',
+    blueprints         TEXT DEFAULT '[]',
+    tags               TEXT DEFAULT '[]',
+    unit_types         TEXT DEFAULT '[]',
+    construction_company TEXT,
+    _extra             TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
+
+  CREATE TABLE IF NOT EXISTS applications (
+    id                  TEXT PRIMARY KEY,
+    listing_id          TEXT,
+    listing_title       TEXT,
+    listing_price       TEXT,
+    listing_type        TEXT,
+    status              TEXT,
+    status_reason       TEXT,
+    inmobiliaria_id     TEXT,
+    created_at          TEXT,
+    updated_at          TEXT,
+    financing           TEXT,
+    pre_approved        INTEGER DEFAULT 0,
+    budget              TEXT,
+    timeline            TEXT,
+    intent              TEXT,
+    contact_method      TEXT,
+    notes               TEXT,
+    broker_id           TEXT,
+    client_name         TEXT,
+    client_email        TEXT,
+    client_phone        TEXT,
+    client              TEXT,
+    broker              TEXT,
+    payment             TEXT,
+    payment_plan        TEXT,
+    documents_requested TEXT DEFAULT '[]',
+    documents_uploaded  TEXT DEFAULT '[]',
+    tours               TEXT DEFAULT '[]',
+    timeline_events     TEXT DEFAULT '[]',
+    _extra              TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_applications_broker_id ON applications(broker_id);
+  CREATE INDEX IF NOT EXISTS idx_applications_inmobiliaria ON applications(inmobiliaria_id);
+
+  CREATE TABLE IF NOT EXISTS revoked_tokens (
+    jti       TEXT PRIMARY KEY,
+    exp       INTEGER,
+    revokedAt TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS conversations (
+    id       TEXT PRIMARY KEY,
+    clientId TEXT,
+    brokerId TEXT,
+    data     TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_conversations_clientId ON conversations(clientId);
+  CREATE INDEX IF NOT EXISTS idx_conversations_brokerId ON conversations(brokerId);
+
+  CREATE TABLE IF NOT EXISTS meta_leads (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    leadgenId  TEXT UNIQUE,
+    data       TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS availability (
+    id                TEXT PRIMARY KEY,
+    broker_id         TEXT,
+    day_of_week       INTEGER,
+    start_time        TEXT,
+    end_time          TEXT,
+    slot_duration_min INTEGER,
+    max_concurrent    INTEGER DEFAULT 1,
+    active            INTEGER DEFAULT 1,
+    type              TEXT,
+    specific_date     TEXT,
+    created_at        TEXT,
+    updated_at        TEXT,
+    _extra            TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_availability_broker ON availability(broker_id);
+
+  CREATE TABLE IF NOT EXISTS tours (
+    id              TEXT PRIMARY KEY,
+    listing_id      TEXT,
+    listing_title   TEXT,
+    broker_id       TEXT,
+    client_id       TEXT,
+    client_name     TEXT,
+    client_email    TEXT,
+    client_phone    TEXT,
+    requested_date  TEXT,
+    requested_time  TEXT,
+    status          TEXT,
+    broker_notes    TEXT,
+    client_notes    TEXT,
+    created_at      TEXT,
+    updated_at      TEXT,
+    _extra          TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_tours_broker  ON tours(broker_id);
+  CREATE INDEX IF NOT EXISTS idx_tours_client  ON tours(client_id);
+  CREATE INDEX IF NOT EXISTS idx_tours_listing ON tours(listing_id);
+
+  CREATE TABLE IF NOT EXISTS twofa_sessions (
+    id   TEXT PRIMARY KEY,
+    data TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    userId      TEXT PRIMARY KEY,
+    web         TEXT DEFAULT '[]',
+    ios         TEXT DEFAULT '[]',
+    preferences TEXT DEFAULT '{}'
+  );
+`);
+
+// ── JSON columns per table ────────────────────────────────────────────────
+const USER_JSON_COLS     = ['favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile', '_extra'];
+const USER_BOOL_COLS     = ['emailVerified', 'marketingOptIn', 'twoFAEnabled'];
+const USER_KNOWN_COLS    = [
+  'id', 'email', 'passwordHash', 'password', 'name', 'phone', 'role',
+  'emailVerified', 'marketingOptIn', 'createdAt', 'lastLoginAt', 'licenseNumber',
+  'refToken', 'stripeCustomerId', 'inmobiliaria_id', 'inmobiliaria_name',
+  'inmobiliaria_join_status', 'inmobiliaria_joined_at', 'inmobiliaria_pending_id',
+  'inmobiliaria_pending_name', 'loginAttempts', 'loginLockedUntil', 'lockedUntil',
+  'jobTitle', 'notes', 'twoFAEnabled', 'biometricTokenHash',
+  'favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile',
+];
+
+const SUBMISSION_JSON_COLS  = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'construction_company', '_extra'];
+const SUBMISSION_KNOWN_COLS = [
+  'id', 'title', 'type', 'condition', 'description', 'price', 'area_const', 'area_land',
+  'bedrooms', 'bathrooms', 'parking', 'province', 'city', 'sector', 'address', 'lat', 'lng',
+  'name', 'email', 'phone', 'role', 'status', 'submittedAt', 'approvedAt', 'rejectedAt',
+  'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'project_stage',
+  'delivery_date', 'submission_type', 'claim_listing_id',
+  'amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'construction_company',
+];
+
+const APP_JSON_COLS  = ['client', 'broker', 'payment', 'payment_plan', 'documents_requested', 'documents_uploaded', 'tours', 'timeline_events', '_extra'];
+const APP_BOOL_COLS  = ['pre_approved'];
+const APP_KNOWN_COLS = [
+  'id', 'listing_id', 'listing_title', 'listing_price', 'listing_type', 'status',
+  'status_reason', 'inmobiliaria_id', 'created_at', 'updated_at', 'financing',
+  'pre_approved', 'budget', 'timeline', 'intent', 'contact_method', 'notes',
+  'broker_id', 'client_name', 'client_email', 'client_phone',
+  'client', 'broker', 'payment', 'payment_plan', 'documents_requested',
+  'documents_uploaded', 'tours', 'timeline_events',
+];
+
+const AVAIL_JSON_COLS  = ['_extra'];
+const AVAIL_BOOL_COLS  = ['active'];
+const AVAIL_KNOWN_COLS = [
+  'id', 'broker_id', 'day_of_week', 'start_time', 'end_time', 'slot_duration_min',
+  'max_concurrent', 'active', 'type', 'specific_date', 'created_at', 'updated_at',
+];
+
+const TOUR_JSON_COLS  = ['_extra'];
+const TOUR_KNOWN_COLS = [
+  'id', 'listing_id', 'listing_title', 'broker_id', 'client_id', 'client_name',
+  'client_email', 'client_phone', 'requested_date', 'requested_time', 'status',
+  'broker_notes', 'client_notes', 'created_at', 'updated_at',
+];
+
+// ── Hydration helpers ─────────────────────────────────────────────────────
+
+function _jsonParse(val, fallback) {
+  if (val == null) return fallback;
+  if (typeof val !== 'string') return val;
+  try { return JSON.parse(val); } catch { return fallback; }
+}
+
+function _jsonStringify(val) {
+  if (val == null) return null;
+  if (typeof val === 'string') return val;
+  return JSON.stringify(val);
+}
+
+function hydrateUser(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  // Parse JSON columns
+  for (const col of USER_JSON_COLS) {
+    if (col === '_extra') continue;
+    const fallback = (col === 'favorites' || col === 'join_requests') ? [] : null;
+    obj[col] = _jsonParse(obj[col], fallback);
+  }
+  // Booleans
+  for (const col of USER_BOOL_COLS) {
+    if (obj[col] !== undefined && obj[col] !== null) obj[col] = !!obj[col];
+  }
+  // Merge _extra into top-level
+  const extra = _jsonParse(obj._extra, {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!(k in obj)) obj[k] = v;
+  }
+  return obj;
+}
+
+function dehydrateUser(user) {
+  const row = {};
+  const extra = {};
+  for (const [k, v] of Object.entries(user)) {
+    if (USER_KNOWN_COLS.includes(k)) {
+      if (USER_JSON_COLS.includes(k) && k !== '_extra') {
+        row[k] = _jsonStringify(v);
+      } else if (USER_BOOL_COLS.includes(k)) {
+        row[k] = v ? 1 : 0;
+      } else {
+        row[k] = v === undefined ? null : v;
+      }
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
+  return row;
+}
+
+function hydrateSubmission(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  for (const col of SUBMISSION_JSON_COLS) {
+    if (col === '_extra') continue;
+    const fallback = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types'].includes(col) ? [] : null;
+    obj[col] = _jsonParse(obj[col], fallback);
+  }
+  const extra = _jsonParse(obj._extra, {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!(k in obj)) obj[k] = v;
+  }
+  return obj;
+}
+
+function dehydrateSubmission(sub) {
+  const row = {};
+  const extra = {};
+  for (const [k, v] of Object.entries(sub)) {
+    if (SUBMISSION_KNOWN_COLS.includes(k)) {
+      if (SUBMISSION_JSON_COLS.includes(k) && k !== '_extra') {
+        row[k] = _jsonStringify(v);
+      } else {
+        row[k] = v === undefined ? null : v;
+      }
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
+  return row;
+}
+
+function hydrateApplication(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  for (const col of APP_JSON_COLS) {
+    if (col === '_extra') continue;
+    const fallback = ['documents_requested', 'documents_uploaded', 'tours', 'timeline_events'].includes(col) ? [] : null;
+    obj[col] = _jsonParse(obj[col], fallback);
+  }
+  for (const col of APP_BOOL_COLS) {
+    if (obj[col] !== undefined && obj[col] !== null) obj[col] = !!obj[col];
+  }
+  const extra = _jsonParse(obj._extra, {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!(k in obj)) obj[k] = v;
+  }
+  return obj;
+}
+
+function dehydrateApplication(app) {
+  const row = {};
+  const extra = {};
+  for (const [k, v] of Object.entries(app)) {
+    if (APP_KNOWN_COLS.includes(k)) {
+      if (APP_JSON_COLS.includes(k) && k !== '_extra') {
+        row[k] = _jsonStringify(v);
+      } else if (APP_BOOL_COLS.includes(k)) {
+        row[k] = v ? 1 : 0;
+      } else {
+        row[k] = v === undefined ? null : v;
+      }
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
+  return row;
+}
+
+function hydrateAvailability(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  for (const col of AVAIL_BOOL_COLS) {
+    if (obj[col] !== undefined && obj[col] !== null) obj[col] = !!obj[col];
+  }
+  const extra = _jsonParse(obj._extra, {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!(k in obj)) obj[k] = v;
+  }
+  return obj;
+}
+
+function dehydrateAvailability(slot) {
+  const row = {};
+  const extra = {};
+  for (const [k, v] of Object.entries(slot)) {
+    if (AVAIL_KNOWN_COLS.includes(k)) {
+      if (AVAIL_BOOL_COLS.includes(k)) {
+        row[k] = v ? 1 : 0;
+      } else {
+        row[k] = v === undefined ? null : v;
+      }
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
+  return row;
+}
+
+function hydrateTour(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  const extra = _jsonParse(obj._extra, {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!(k in obj)) obj[k] = v;
+  }
+  return obj;
+}
+
+function dehydrateTour(tour) {
+  const row = {};
+  const extra = {};
+  for (const [k, v] of Object.entries(tour)) {
+    if (TOUR_KNOWN_COLS.includes(k)) {
+      row[k] = v === undefined ? null : v;
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
+  return row;
+}
+
+// ── Generic upsert builder ───────────────────────────────────────────────
+
+function buildUpsert(table, row, pkCol) {
+  const cols = Object.keys(row);
+  const placeholders = cols.map(() => '?').join(', ');
+  const updates = cols.filter(c => c !== pkCol).map(c => `${c} = excluded.${c}`).join(', ');
+  const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})
+    ON CONFLICT(${pkCol}) DO UPDATE SET ${updates}`;
+  return { sql, values: cols.map(c => row[c] === undefined ? null : row[c]) };
+}
+
+// ── Prepared statements ──────────────────────────────────────────────────
+
+const stmts = {
+  getAllUsers:           db.prepare('SELECT * FROM users'),
+  getUserById:          db.prepare('SELECT * FROM users WHERE id = ?'),
+  getUserByEmail:       db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE'),
+  getUserByRefToken:    db.prepare('SELECT * FROM users WHERE refToken = ?'),
+  getUsersByRole:       db.prepare('SELECT * FROM users WHERE role = ?'),
+  getUsersByInmobiliaria: db.prepare(
+    "SELECT * FROM users WHERE role IN ('broker', 'agency', 'secretary') AND inmobiliaria_id = ?"
+  ),
+  getSecretariesByInmobiliaria: db.prepare(
+    "SELECT * FROM users WHERE role = 'secretary' AND inmobiliaria_id = ?"
+  ),
+
+  // Activity
+  getActivityByUser:    db.prepare('SELECT * FROM activity WHERE userId = ? ORDER BY id ASC'),
+  getListingActivity:   db.prepare(
+    "SELECT * FROM activity WHERE type = 'view_listing' AND listingId IS NOT NULL AND timestamp >= ?"
+  ),
+  insertActivity:       db.prepare(
+    'INSERT INTO activity (userId, type, listingId, timestamp, data) VALUES (@userId, @type, @listingId, @timestamp, @data)'
+  ),
+  countActivityByUser:  db.prepare('SELECT COUNT(*) as cnt FROM activity WHERE userId = ?'),
+  deleteOldestActivity: db.prepare(
+    'DELETE FROM activity WHERE id IN (SELECT id FROM activity WHERE userId = ? ORDER BY id ASC LIMIT ?)'
+  ),
+
+  // Submissions
+  getAllSubmissions:     db.prepare('SELECT * FROM submissions'),
+  getApprovedSubmissions: db.prepare("SELECT * FROM submissions WHERE status = 'approved'"),
+  getSubmissionById:    db.prepare('SELECT * FROM submissions WHERE id = ?'),
+
+  // Applications
+  getAllApplications:   db.prepare('SELECT * FROM applications'),
+  getApplicationById:  db.prepare('SELECT * FROM applications WHERE id = ?'),
+  getAppsByBroker:     db.prepare(
+    "SELECT * FROM applications WHERE broker_id = ? OR json_extract(broker, '$.user_id') = ?"
+  ),
+  getAppsByClient:     db.prepare(
+    "SELECT * FROM applications WHERE client_name = ? OR client_email = ? COLLATE NOCASE OR json_extract(client, '$.user_id') = ? OR json_extract(client, '$.email') = ? COLLATE NOCASE"
+  ),
+  getAppsByInmobiliaria: db.prepare('SELECT * FROM applications WHERE inmobiliaria_id = ?'),
+
+  // Revoked tokens
+  insertRevokedToken:  db.prepare(
+    'INSERT OR REPLACE INTO revoked_tokens (jti, exp, revokedAt) VALUES (?, ?, ?)'
+  ),
+  pruneRevokedTokens:  db.prepare('DELETE FROM revoked_tokens WHERE exp <= ?'),
+  isTokenRevoked:      db.prepare('SELECT 1 FROM revoked_tokens WHERE jti = ? AND exp > ?'),
+
+  // Conversations
+  getAllConversations:  db.prepare('SELECT * FROM conversations'),
+  getConversationById: db.prepare('SELECT * FROM conversations WHERE id = ?'),
+  getConvsByClient:    db.prepare('SELECT * FROM conversations WHERE clientId = ?'),
+  getConvsForBroker:   db.prepare('SELECT * FROM conversations WHERE brokerId IS NULL OR brokerId = ?'),
+
+  // Meta leads
+  getAllMetaLeads:      db.prepare('SELECT * FROM meta_leads ORDER BY id DESC'),
+  getMetaLeadByLeadgenId: db.prepare('SELECT 1 FROM meta_leads WHERE leadgenId = ?'),
+  insertMetaLead:      db.prepare('INSERT INTO meta_leads (leadgenId, data) VALUES (?, ?)'),
+
+  // Availability
+  getAllAvailability:   db.prepare('SELECT * FROM availability'),
+  getAvailByBroker:    db.prepare('SELECT * FROM availability WHERE broker_id = ?'),
+  deleteAvailSlot:     db.prepare('DELETE FROM availability WHERE id = ?'),
+
+  // Tours
+  getAllTours:          db.prepare('SELECT * FROM tours'),
+  getTourById:         db.prepare('SELECT * FROM tours WHERE id = ?'),
+  getToursByBroker:    db.prepare('SELECT * FROM tours WHERE broker_id = ?'),
+  getToursByClient:    db.prepare('SELECT * FROM tours WHERE client_id = ?'),
+  getToursByListing:   db.prepare('SELECT * FROM tours WHERE listing_id = ?'),
+  getBookedSlots:      db.prepare(
+    "SELECT * FROM tours WHERE broker_id = ? AND requested_date = ? AND status IN ('confirmed', 'pending')"
+  ),
+
+  // 2FA Sessions
+  getAllTwoFA:          db.prepare('SELECT * FROM twofa_sessions'),
+  getTwoFAById:        db.prepare('SELECT * FROM twofa_sessions WHERE id = ?'),
+  deleteTwoFA:         db.prepare('DELETE FROM twofa_sessions WHERE id = ?'),
+
+  // Push subscriptions
+  getAllPush:           db.prepare('SELECT * FROM push_subscriptions'),
+  getPushByUser:       db.prepare('SELECT * FROM push_subscriptions WHERE userId = ?'),
+};
+
+// ── Users ─────────────────────────────────────────────────────────────────
+
+function getUsers() {
+  return stmts.getAllUsers.all().map(hydrateUser);
+}
+
+function getUserById(id) {
+  return hydrateUser(stmts.getUserById.get(id));
+}
+
+function getUserByEmail(email) {
+  return hydrateUser(stmts.getUserByEmail.get(email));
+}
+
+function getUserByRefToken(token) {
+  return hydrateUser(stmts.getUserByRefToken.get(token));
+}
 
 function saveUser(user) {
-  const users = getUsers();
-  const idx   = users.findIndex(u => u.id === user.id);
-  if (idx === -1) users.push(user);
-  else users[idx] = user;
-  write(FILES.users, users);
+  const row = dehydrateUser(user);
+  const { sql, values } = buildUpsert('users', row, 'id');
+  db.prepare(sql).run(...values);
 }
 
-// ── Activity ───────────────────────────────────────────────────────────────
+function getUsersByRole(role) {
+  return stmts.getUsersByRole.all(role).map(hydrateUser);
+}
+
+function getUsersByInmobiliaria(inmobiliariaId) {
+  return stmts.getUsersByInmobiliaria.all(inmobiliariaId).map(hydrateUser);
+}
+
+function getSecretariesByInmobiliaria(inmobiliariaId) {
+  return stmts.getSecretariesByInmobiliaria.all(inmobiliariaId).map(hydrateUser);
+}
+
+// ── Activity ──────────────────────────────────────────────────────────────
+
 function getActivityByUser(userId, limit = 200) {
-  return read(FILES.activity).filter(e => e.userId === userId).slice(-limit);
-}
-
-// Returns all view_listing events from the last N milliseconds (for trending)
-function getListingActivity(sinceMs) {
-  return read(FILES.activity).filter(e =>
-    e.type === 'view_listing' && e.listingId && new Date(e.timestamp) >= sinceMs
-  );
-}
-
-function appendActivity(event) {
-  const all        = read(FILES.activity);
-  all.push(event);
-  const userEvents = all.filter(e => e.userId === event.userId);
-  if (userEvents.length > ACTIVITY_CAP) {
-    const toRemove = userEvents.length - ACTIVITY_CAP;
-    let removed    = 0;
-    const trimmed  = all.filter(e => {
-      if (e.userId === event.userId && removed < toRemove) { removed++; return false; }
-      return true;
-    });
-    write(FILES.activity, trimmed);
-  } else {
-    write(FILES.activity, all);
-  }
-}
-
-// ── Listings ───────────────────────────────────────────────────────────────
-function getListings(filters = {}) {
-  return read(FILES.submissions).filter(s => {
-    if (s.status !== 'approved') return false;
-    if (filters.province    && s.province !== filters.province) return false;
-    if (filters.city        && s.city     !== filters.city)     return false;
-    if (filters.type        && s.type     !== filters.type)     return false;
-    if (filters.condition   && s.condition !== filters.condition) return false;
-    if (filters.priceMax    && Number(s.price) > Number(filters.priceMax)) return false;
-    if (filters.priceMin    && Number(s.price) < Number(filters.priceMin)) return false;
-    if (filters.bedroomsMin && Number(s.bedrooms) < Number(filters.bedroomsMin)) return false;
-    return true;
+  const rows = stmts.getActivityByUser.all(userId);
+  return rows.slice(-limit).map(r => {
+    const obj = { userId: r.userId, type: r.type, listingId: r.listingId, timestamp: r.timestamp };
+    const data = _jsonParse(r.data, {});
+    if (data && typeof data === 'object') {
+      Object.assign(obj, data);
+    }
+    return obj;
   });
 }
 
+function getListingActivity(sinceMs) {
+  // sinceMs is a Date object or timestamp - convert to ISO string for comparison
+  const sinceStr = (sinceMs instanceof Date) ? sinceMs.toISOString() : new Date(sinceMs).toISOString();
+  return stmts.getListingActivity.all(sinceStr).map(r => {
+    const obj = { userId: r.userId, type: r.type, listingId: r.listingId, timestamp: r.timestamp };
+    const data = _jsonParse(r.data, {});
+    if (data && typeof data === 'object') {
+      Object.assign(obj, data);
+    }
+    return obj;
+  });
+}
+
+function appendActivity(event) {
+  const knownCols = ['userId', 'type', 'listingId', 'timestamp'];
+  const params = {
+    userId: event.userId || null,
+    type: event.type || null,
+    listingId: event.listingId || null,
+    timestamp: event.timestamp || null,
+    data: '{}',
+  };
+  // Everything else goes into data
+  const dataObj = {};
+  for (const [k, v] of Object.entries(event)) {
+    if (!knownCols.includes(k)) {
+      dataObj[k] = v;
+    }
+  }
+  params.data = JSON.stringify(dataObj);
+  stmts.insertActivity.run(params);
+
+  // Enforce per-user cap
+  const { cnt } = stmts.countActivityByUser.get(event.userId);
+  if (cnt > ACTIVITY_CAP) {
+    stmts.deleteOldestActivity.run(event.userId, cnt - ACTIVITY_CAP);
+  }
+}
+
+// ── Listings (submissions) ────────────────────────────────────────────────
+
+function getListings(filters = {}) {
+  let sql = "SELECT * FROM submissions WHERE status = 'approved'";
+  const params = [];
+
+  if (filters.province) {
+    sql += ' AND province = ?';
+    params.push(filters.province);
+  }
+  if (filters.city) {
+    sql += ' AND city = ?';
+    params.push(filters.city);
+  }
+  if (filters.type) {
+    sql += ' AND type = ?';
+    params.push(filters.type);
+  }
+  if (filters.condition) {
+    sql += ' AND condition = ?';
+    params.push(filters.condition);
+  }
+  if (filters.priceMax) {
+    sql += ' AND CAST(price AS REAL) <= ?';
+    params.push(Number(filters.priceMax));
+  }
+  if (filters.priceMin) {
+    sql += ' AND CAST(price AS REAL) >= ?';
+    params.push(Number(filters.priceMin));
+  }
+  if (filters.bedroomsMin) {
+    sql += ' AND CAST(bedrooms AS REAL) >= ?';
+    params.push(Number(filters.bedroomsMin));
+  }
+
+  return db.prepare(sql).all(...params).map(hydrateSubmission);
+}
+
+function getAllSubmissions() {
+  return stmts.getAllSubmissions.all().map(hydrateSubmission);
+}
+
 function getListingById(id) {
-  return read(FILES.submissions).find(s => s.id === id) || null;
+  return hydrateSubmission(stmts.getSubmissionById.get(id));
 }
 
 function saveListing(listing) {
-  const all = read(FILES.submissions);
-  const idx = all.findIndex(s => s.id === listing.id);
-  if (idx === -1) all.push(listing);
-  else all[idx] = listing;
-  write(FILES.submissions, all);
+  const row = dehydrateSubmission(listing);
+  const { sql, values } = buildUpsert('submissions', row, 'id');
+  db.prepare(sql).run(...values);
 }
 
 // ── Applications ──────────────────────────────────────────────────────────
-function ensureFile(file) {
-  if (!fs.existsSync(file)) fs.writeFileSync(file, '[]');
-}
-ensureFile(FILES.applications);
 
-function getApplications()           { return read(FILES.applications); }
-function getApplicationById(id)      { return getApplications().find(a => a.id === id) || null; }
-function getApplicationsByBroker(uid) { return getApplications().filter(a => a.broker && a.broker.user_id === uid); }
+function getApplications() {
+  return stmts.getAllApplications.all().map(hydrateApplication);
+}
+
+function getApplicationById(id) {
+  return hydrateApplication(stmts.getApplicationById.get(id));
+}
+
+function getApplicationsByBroker(uid) {
+  return stmts.getAppsByBroker.all(uid, uid).map(hydrateApplication);
+}
+
 function getApplicationsByClient(uidOrEmail) {
-  return getApplications().filter(a =>
-    a.client.user_id === uidOrEmail || (a.client.email && a.client.email.toLowerCase() === uidOrEmail.toLowerCase())
-  );
+  return stmts.getAppsByClient.all(uidOrEmail, uidOrEmail, uidOrEmail, uidOrEmail).map(hydrateApplication);
 }
+
+function getApplicationsByInmobiliaria(inmobiliariaId) {
+  return stmts.getAppsByInmobiliaria.all(inmobiliariaId).map(hydrateApplication);
+}
+
 function saveApplication(app) {
-  const all = getApplications();
-  const idx = all.findIndex(a => a.id === app.id);
-  if (idx === -1) all.unshift(app);
-  else all[idx] = app;
-  write(FILES.applications, all);
+  const row = dehydrateApplication(app);
+  const { sql, values } = buildUpsert('applications', row, 'id');
+  db.prepare(sql).run(...values);
 }
 
-// ── Revoked tokens (session invalidation) ─────────────────────────────────
-// Each entry: { jti, exp, revokedAt }
-// `exp` is a Unix timestamp (seconds).  Entries are pruned when they would
-// have expired naturally anyway — the JWT is already invalid at that point.
-
-function _readRevoked() {
-  try {
-    if (!fs.existsSync(FILES.revokedTokens)) return [];
-    return JSON.parse(fs.readFileSync(FILES.revokedTokens, 'utf8'));
-  } catch { return []; }
-}
-
-function _writeRevoked(tokens) {
-  fs.writeFileSync(FILES.revokedTokens, JSON.stringify(tokens, null, 2));
-}
+// ── Revoked Tokens ────────────────────────────────────────────────────────
 
 function revokeToken(jti, exp) {
   if (!jti) return;
-  const now   = Math.floor(Date.now() / 1000);
-  // Prune expired entries while we have the file open
-  const live  = _readRevoked().filter(t => t.exp > now);
-  live.push({ jti, exp, revokedAt: new Date().toISOString() });
-  _writeRevoked(live);
+  const now = Math.floor(Date.now() / 1000);
+  // Prune expired entries
+  stmts.pruneRevokedTokens.run(now);
+  stmts.insertRevokedToken.run(jti, exp, new Date().toISOString());
 }
 
 function isTokenRevoked(jti) {
   if (!jti) return false;
   const now = Math.floor(Date.now() / 1000);
-  return _readRevoked().some(t => t.jti === jti && t.exp > now);
-}
-
-// ── Meta Leads ────────────────────────────────────────────────────────────
-ensureFile(FILES.metaLeads);
-
-function getMetaLeads() { return read(FILES.metaLeads); }
-
-function appendMetaLead(lead) {
-  const all = getMetaLeads();
-  // Deduplicate by leadgenId
-  if (lead.leadgenId && all.some(l => l.leadgenId === lead.leadgenId)) return;
-  all.unshift(lead);
-  write(FILES.metaLeads, all);
+  return !!stmts.isTokenRevoked.get(jti, now);
 }
 
 // ── Conversations ─────────────────────────────────────────────────────────
-ensureFile(FILES.conversations);
 
-function getConversations()       { return read(FILES.conversations); }
-function getConversationById(id)  { return getConversations().find(c => c.id === id) || null; }
+function hydrateConversation(row) {
+  if (!row) return null;
+  return _jsonParse(row.data, null);
+}
+
+function getConversations() {
+  return stmts.getAllConversations.all().map(hydrateConversation).filter(Boolean);
+}
+
+function getConversationById(id) {
+  return hydrateConversation(stmts.getConversationById.get(id));
+}
 
 function getConversationsByClient(clientId) {
-  return getConversations().filter(c => c.clientId === clientId);
+  return stmts.getConvsByClient.all(clientId).map(hydrateConversation).filter(Boolean);
 }
 
 function getConversationsForBroker(brokerId) {
-  // Broker sees convs assigned to them OR unassigned
-  return getConversations().filter(c => !c.brokerId || c.brokerId === brokerId);
+  return stmts.getConvsForBroker.all(brokerId).map(hydrateConversation).filter(Boolean);
 }
 
 function saveConversation(conv) {
-  const all = getConversations();
-  const idx = all.findIndex(c => c.id === conv.id);
-  if (idx === -1) all.unshift(conv);
-  else all[idx] = conv;
-  write(FILES.conversations, all);
+  const sql = `INSERT INTO conversations (id, clientId, brokerId, data)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET clientId = excluded.clientId, brokerId = excluded.brokerId, data = excluded.data`;
+  db.prepare(sql).run(conv.id, conv.clientId || null, conv.brokerId || null, JSON.stringify(conv));
 }
 
-// ── Multi-role helpers ─────────────────────────────────────────────────────
-function getUsersByRole(role) {
-  return getUsers().filter(u => u.role === role);
+// ── Meta Leads ────────────────────────────────────────────────────────────
+
+function getMetaLeads() {
+  return stmts.getAllMetaLeads.all().map(r => _jsonParse(r.data, null)).filter(Boolean);
 }
 
-function getUsersByInmobiliaria(inmobiliariaId) {
-  return getUsers().filter(u =>
-    (u.role === 'broker' || u.role === 'agency' || u.role === 'secretary') &&
-    u.inmobiliaria_id === inmobiliariaId
-  );
-}
-
-function getSecretariesByInmobiliaria(inmobiliariaId) {
-  return getUsers().filter(u =>
-    u.role === 'secretary' && u.inmobiliaria_id === inmobiliariaId
-  );
-}
-
-function getApplicationsByInmobiliaria(inmobiliariaId) {
-  return getApplications().filter(a => a.inmobiliaria_id === inmobiliariaId);
+function appendMetaLead(lead) {
+  if (lead.leadgenId && stmts.getMetaLeadByLeadgenId.get(lead.leadgenId)) return;
+  stmts.insertMetaLead.run(lead.leadgenId || null, JSON.stringify(lead));
 }
 
 // ── Availability ──────────────────────────────────────────────────────────
-ensureFile(FILES.availability);
 
-function getAvailability()                   { return read(FILES.availability); }
-function getAvailabilityByBroker(brokerId)   { return getAvailability().filter(a => a.broker_id === brokerId); }
+function getAvailability() {
+  return stmts.getAllAvailability.all().map(hydrateAvailability);
+}
+
+function getAvailabilityByBroker(brokerId) {
+  return stmts.getAvailByBroker.all(brokerId).map(hydrateAvailability);
+}
 
 function saveAvailabilitySlot(slot) {
-  const all = getAvailability();
-  const idx = all.findIndex(a => a.id === slot.id);
-  if (idx === -1) all.push(slot);
-  else all[idx] = slot;
-  write(FILES.availability, all);
+  const row = dehydrateAvailability(slot);
+  const { sql, values } = buildUpsert('availability', row, 'id');
+  db.prepare(sql).run(...values);
 }
 
 function deleteAvailabilitySlot(id) {
-  const all = getAvailability().filter(a => a.id !== id);
-  write(FILES.availability, all);
+  stmts.deleteAvailSlot.run(id);
 }
 
 // ── Tours ─────────────────────────────────────────────────────────────────
-ensureFile(FILES.tours);
 
-function getTours()                    { return read(FILES.tours); }
-function getTourById(id)               { return getTours().find(t => t.id === id) || null; }
-function getToursByBroker(brokerId)    { return getTours().filter(t => t.broker_id === brokerId); }
-function getToursByClient(clientId)    { return getTours().filter(t => t.client_id === clientId); }
-function getToursByListing(listingId)  { return getTours().filter(t => t.listing_id === listingId); }
+function getTours() {
+  return stmts.getAllTours.all().map(hydrateTour);
+}
+
+function getTourById(id) {
+  return hydrateTour(stmts.getTourById.get(id));
+}
+
+function getToursByBroker(brokerId) {
+  return stmts.getToursByBroker.all(brokerId).map(hydrateTour);
+}
+
+function getToursByClient(clientId) {
+  return stmts.getToursByClient.all(clientId).map(hydrateTour);
+}
+
+function getToursByListing(listingId) {
+  return stmts.getToursByListing.all(listingId).map(hydrateTour);
+}
 
 function getBookedSlots(brokerId, date) {
-  return getTours().filter(t =>
-    t.broker_id === brokerId &&
-    t.requested_date === date &&
-    (t.status === 'confirmed' || t.status === 'pending')
-  );
+  return stmts.getBookedSlots.all(brokerId, date).map(hydrateTour);
 }
 
 function saveTour(tour) {
-  const all = getTours();
-  const idx = all.findIndex(t => t.id === tour.id);
-  if (idx === -1) all.unshift(tour);
-  else all[idx] = tour;
-  write(FILES.tours, all);
+  const row = dehydrateTour(tour);
+  const { sql, values } = buildUpsert('tours', row, 'id');
+  db.prepare(sql).run(...values);
 }
 
-// ── 2FA Sessions ─────────────────────────────────────────────────────────
-ensureFile(FILES.twofa_sessions);
+// ── 2FA Sessions ──────────────────────────────────────────────────────────
 
-function getTwoFASessions()              { return read(FILES.twofa_sessions); }
-function getTwoFASession(id)             { return getTwoFASessions().find(s => s.id === id) || null; }
+function getTwoFASessions() {
+  return stmts.getAllTwoFA.all().map(r => _jsonParse(r.data, null)).filter(Boolean);
+}
+
+function getTwoFASession(id) {
+  const row = stmts.getTwoFAById.get(id);
+  if (!row) return null;
+  return _jsonParse(row.data, null);
+}
 
 function saveTwoFASession(session) {
-  const all = getTwoFASessions();
-  const idx = all.findIndex(s => s.id === session.id);
-  if (idx === -1) all.push(session);
-  else all[idx] = session;
-  write(FILES.twofa_sessions, all);
+  const sql = `INSERT INTO twofa_sessions (id, data) VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data = excluded.data`;
+  db.prepare(sql).run(session.id, JSON.stringify(session));
 }
 
 function deleteTwoFASession(id) {
-  const all = getTwoFASessions().filter(s => s.id !== id);
-  write(FILES.twofa_sessions, all);
+  stmts.deleteTwoFA.run(id);
 }
 
 function cleanExpiredTwoFASessions() {
   const now = new Date();
-  const all = getTwoFASessions().filter(s => new Date(s.expiresAt) > now);
-  write(FILES.twofa_sessions, all);
+  const all = stmts.getAllTwoFA.all();
+  for (const row of all) {
+    const session = _jsonParse(row.data, null);
+    if (session && new Date(session.expiresAt) <= now) {
+      stmts.deleteTwoFA.run(row.id);
+    }
+  }
 }
 
 // ── Push Subscriptions ───────────────────────────────────────────────────
-// Stored as object: { [userId]: { web: [...], ios: [...], preferences: {...} } }
-function _ensurePushFile() {
-  if (!fs.existsSync(FILES.pushSubscriptions)) fs.writeFileSync(FILES.pushSubscriptions, '{}');
-}
-_ensurePushFile();
 
-function _readPush() {
-  try { return JSON.parse(fs.readFileSync(FILES.pushSubscriptions, 'utf8')); }
-  catch { return {}; }
+function getPushSubscriptions() {
+  const rows = stmts.getAllPush.all();
+  const result = {};
+  for (const row of rows) {
+    result[row.userId] = {
+      web: _jsonParse(row.web, []),
+      ios: _jsonParse(row.ios, []),
+      preferences: _jsonParse(row.preferences, {}),
+    };
+  }
+  return result;
 }
-function _writePush(data) { fs.writeFileSync(FILES.pushSubscriptions, JSON.stringify(data, null, 2)); }
-
-function getPushSubscriptions() { return _readPush(); }
 
 function getPushSubscriptionsByUser(userId) {
-  const all = _readPush();
-  return all[userId] || { web: [], ios: [], preferences: {} };
+  const row = stmts.getPushByUser.get(userId);
+  if (!row) return { web: [], ios: [], preferences: {} };
+  return {
+    web: _jsonParse(row.web, []),
+    ios: _jsonParse(row.ios, []),
+    preferences: _jsonParse(row.preferences, {}),
+  };
 }
 
 function savePushSubscription(userId, data) {
-  const all  = _readPush();
-  if (!all[userId]) all[userId] = { web: [], ios: [], preferences: {} };
+  const current = getPushSubscriptionsByUser(userId);
 
   if (data.type === 'web' && data.subscription) {
-    // Avoid duplicates by endpoint
-    const exists = all[userId].web.some(s => s.endpoint === data.subscription.endpoint);
-    if (!exists) all[userId].web.push(data.subscription);
+    const exists = current.web.some(s => s.endpoint === data.subscription.endpoint);
+    if (!exists) current.web.push(data.subscription);
   } else if (data.type === 'ios' && data.deviceToken) {
-    if (!all[userId].ios.includes(data.deviceToken)) {
-      all[userId].ios.push(data.deviceToken);
+    if (!current.ios.includes(data.deviceToken)) {
+      current.ios.push(data.deviceToken);
     }
   }
-  _writePush(all);
+
+  const sql = `INSERT INTO push_subscriptions (userId, web, ios, preferences)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(userId) DO UPDATE SET web = excluded.web, ios = excluded.ios, preferences = excluded.preferences`;
+  db.prepare(sql).run(userId, JSON.stringify(current.web), JSON.stringify(current.ios), JSON.stringify(current.preferences));
 }
 
 function removePushSubscription(userId, type, identifier) {
-  const all = _readPush();
-  if (!all[userId]) return;
+  const current = getPushSubscriptionsByUser(userId);
   if (type === 'web') {
-    all[userId].web = all[userId].web.filter(s => s.endpoint !== identifier);
+    current.web = current.web.filter(s => s.endpoint !== identifier);
   } else if (type === 'ios') {
-    all[userId].ios = all[userId].ios.filter(t => t !== identifier);
+    current.ios = current.ios.filter(t => t !== identifier);
   }
-  _writePush(all);
+  const sql = `INSERT INTO push_subscriptions (userId, web, ios, preferences)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(userId) DO UPDATE SET web = excluded.web, ios = excluded.ios, preferences = excluded.preferences`;
+  db.prepare(sql).run(userId, JSON.stringify(current.web), JSON.stringify(current.ios), JSON.stringify(current.preferences));
 }
 
 function getPushPreferences(userId) {
-  const all = _readPush();
-  return (all[userId] && all[userId].preferences) || {};
+  const row = stmts.getPushByUser.get(userId);
+  if (!row) return {};
+  return _jsonParse(row.preferences, {});
 }
 
 function savePushPreferences(userId, prefs) {
-  const all = _readPush();
-  if (!all[userId]) all[userId] = { web: [], ios: [], preferences: {} };
-  all[userId].preferences = prefs;
-  _writePush(all);
+  const current = getPushSubscriptionsByUser(userId);
+  const sql = `INSERT INTO push_subscriptions (userId, web, ios, preferences)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(userId) DO UPDATE SET preferences = excluded.preferences`;
+  db.prepare(sql).run(userId, JSON.stringify(current.web), JSON.stringify(current.ios), JSON.stringify(prefs));
 }
+
+// ── Exports ───────────────────────────────────────────────────────────────
 
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing,
+  getAllSubmissions,
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
   getConversations, getConversationById, getConversationsByClient,
