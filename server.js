@@ -181,6 +181,7 @@ app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
+app.use('/api/listing-analytics', require('./routes/listing-analytics'));
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 app.get('/api/config/meta', (req, res) => {

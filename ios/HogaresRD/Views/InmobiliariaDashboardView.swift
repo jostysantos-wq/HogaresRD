@@ -8,7 +8,7 @@ struct InmobiliariaDashboardView: View {
 
     private let tabs = [
         "Aplicaciones", "Analíticas", "Ventas", "Contabilidad",
-        "Archivo", "Auditoría",
+        "Archivo", "Auditoría", "Mis Propiedades",
         "Agentes", "Solicitudes", "Rendimiento"
     ]
 
@@ -22,15 +22,15 @@ struct InmobiliariaDashboardView: View {
                             withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
                         } label: {
                             HStack(spacing: 4) {
-                                if i >= 6 {
-                                    Image(systemName: i == 6 ? "person.2.fill" : i == 7 ? "person.badge.plus" : "chart.bar.fill")
+                                if i >= 7 {
+                                    Image(systemName: i == 7 ? "person.2.fill" : i == 8 ? "person.badge.plus" : "chart.bar.fill")
                                         .font(.system(size: 10))
                                 }
                                 Text(title)
                             }
                             .font(.caption).bold()
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(selectedTab == i ? (i >= 6 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
+                            .background(selectedTab == i ? (i >= 7 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
                             .foregroundStyle(selectedTab == i ? .white : .primary)
                             .clipShape(Capsule())
                         }
@@ -53,10 +53,11 @@ struct InmobiliariaDashboardView: View {
                 DashboardAccountingTab().tag(3)
                 DashboardArchiveTab().tag(4)
                 DashboardAuditTab().tag(5)
+                DashboardListingAnalyticsTab().tag(6)
                 // Inmobiliaria-only team tabs
-                TeamMembersTab().tag(6)
-                TeamRequestsTab().tag(7)
-                TeamPerformanceTab().tag(8)
+                TeamMembersTab().tag(7)
+                TeamRequestsTab().tag(8)
+                TeamPerformanceTab().tag(9)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)

@@ -376,6 +376,39 @@ class APIService: ObservableObject {
         _ = try await URLSession.shared.data(for: req)
     }
 
+    // MARK: - Listing Analytics
+
+    func getListingAnalyticsSummary(range: String = "all") async throws -> ListingAnalyticsSummary {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/summary")!
+        comps.queryItems = [URLQueryItem(name: "range", value: range)]
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(ListingAnalyticsSummary.self, from: data)
+    }
+
+    func getListingAnalyticsList(sort: String = "views", range: String = "all") async throws -> [ListingAnalyticsItem] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/listings")!
+        comps.queryItems = [
+            URLQueryItem(name: "sort", value: sort),
+            URLQueryItem(name: "range", value: range),
+        ]
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(ListingAnalyticsListResponse.self, from: data).listings
+    }
+
+    func getListingAnalyticsDetail(id: String) async throws -> ListingAnalyticsDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/listing-analytics/listing/\(id)")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(ListingAnalyticsDetail.self, from: data)
+    }
+
     // MARK: - Conversations
 
     func getConversations() async throws -> [Conversation] {

@@ -515,4 +515,148 @@ struct BrokerApp: Decodable, Identifiable {
     }
 }
 
+// MARK: - Listing Analytics
+
+struct ListingAnalyticsSummary: Decodable {
+    let totalListings: Int
+    let totalViews: Int
+    let totalTours: Int
+    let totalFavorites: Int
+    let viewsTrend: [ViewDay]
+    let topPerforming: [ListingAnalyticsItem]
+
+    enum CodingKeys: String, CodingKey {
+        case totalListings = "total_listings"
+        case totalViews = "total_views"
+        case totalTours = "total_tours"
+        case totalFavorites = "total_favorites"
+        case viewsTrend = "views_trend"
+        case topPerforming = "top_performing"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalListings  = (try? c.decode(Int.self, forKey: .totalListings)) ?? 0
+        totalViews     = (try? c.decode(Int.self, forKey: .totalViews)) ?? 0
+        totalTours     = (try? c.decode(Int.self, forKey: .totalTours)) ?? 0
+        totalFavorites = (try? c.decode(Int.self, forKey: .totalFavorites)) ?? 0
+        viewsTrend     = (try? c.decode([ViewDay].self, forKey: .viewsTrend)) ?? []
+        topPerforming  = (try? c.decode([ListingAnalyticsItem].self, forKey: .topPerforming)) ?? []
+    }
+}
+
+struct ViewDay: Decodable {
+    let date: String
+    let views: Int
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        date  = (try? c.decode(String.self, forKey: .date)) ?? ""
+        views = (try? c.decode(Int.self, forKey: .views)) ?? 0
+    }
+    enum CodingKeys: String, CodingKey { case date, views }
+}
+
+struct ListingAnalyticsItem: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let city: String
+    let province: String
+    let price: String
+    let image: String?
+    let views: Int
+    let tours: Int
+    let favorites: Int
+    let daysOnMarket: Int
+    let conversion: String
+    let type: String?
+    let condition: String?
+    let bedrooms: String?
+    let bathrooms: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, city, province, price, image, views, tours, favorites
+        case daysOnMarket = "days_on_market"
+        case conversion, type, condition, bedrooms, bathrooms
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id           = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        title        = (try? c.decode(String.self, forKey: .title)) ?? ""
+        city         = (try? c.decode(String.self, forKey: .city)) ?? ""
+        province     = (try? c.decode(String.self, forKey: .province)) ?? ""
+        price        = (try? c.decode(String.self, forKey: .price)) ?? "0"
+        image        = try? c.decode(String.self, forKey: .image)
+        views        = (try? c.decode(Int.self, forKey: .views)) ?? 0
+        tours        = (try? c.decode(Int.self, forKey: .tours)) ?? 0
+        favorites    = (try? c.decode(Int.self, forKey: .favorites)) ?? 0
+        daysOnMarket = (try? c.decode(Int.self, forKey: .daysOnMarket)) ?? 0
+        conversion   = (try? c.decode(String.self, forKey: .conversion)) ?? "0.0"
+        type         = try? c.decode(String.self, forKey: .type)
+        condition    = try? c.decode(String.self, forKey: .condition)
+        bedrooms     = try? c.decode(String.self, forKey: .bedrooms)
+        bathrooms    = try? c.decode(String.self, forKey: .bathrooms)
+    }
+
+    var priceFormatted: String {
+        let n = Double(price) ?? 0
+        if n >= 1_000_000 { return String(format: "$%.1fM", n / 1_000_000) }
+        if n >= 1_000 { return String(format: "$%.0fK", n / 1_000) }
+        return String(format: "$%.0f", n)
+    }
+}
+
+struct ListingAnalyticsListResponse: Decodable {
+    let listings: [ListingAnalyticsItem]
+}
+
+struct ListingAnalyticsDetail: Decodable {
+    let id: String
+    let title: String
+    let city: String
+    let province: String
+    let price: String
+    let image: String?
+    let views: Int
+    let toursCount: Int
+    let favorites: Int
+    let daysOnMarket: Int
+    let conversion: String
+    let viewsTrend: [ViewDay]
+    let tourStatus: TourStatusBreakdown
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, city, province, price, image, views, favorites, conversion
+        case toursCount = "tours_count"
+        case daysOnMarket = "days_on_market"
+        case viewsTrend = "views_trend"
+        case tourStatus = "tour_status"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id           = (try? c.decode(String.self, forKey: .id)) ?? ""
+        title        = (try? c.decode(String.self, forKey: .title)) ?? ""
+        city         = (try? c.decode(String.self, forKey: .city)) ?? ""
+        province     = (try? c.decode(String.self, forKey: .province)) ?? ""
+        price        = (try? c.decode(String.self, forKey: .price)) ?? "0"
+        image        = try? c.decode(String.self, forKey: .image)
+        views        = (try? c.decode(Int.self, forKey: .views)) ?? 0
+        toursCount   = (try? c.decode(Int.self, forKey: .toursCount)) ?? 0
+        favorites    = (try? c.decode(Int.self, forKey: .favorites)) ?? 0
+        daysOnMarket = (try? c.decode(Int.self, forKey: .daysOnMarket)) ?? 0
+        conversion   = (try? c.decode(String.self, forKey: .conversion)) ?? "0.0"
+        viewsTrend   = (try? c.decode([ViewDay].self, forKey: .viewsTrend)) ?? []
+        tourStatus   = (try? c.decode(TourStatusBreakdown.self, forKey: .tourStatus)) ?? TourStatusBreakdown()
+    }
+}
+
+struct TourStatusBreakdown: Decodable {
+    var pending: Int = 0
+    var confirmed: Int = 0
+    var completed: Int = 0
+    var cancelled: Int = 0
+}
+
 import SwiftUI

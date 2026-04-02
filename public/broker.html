@@ -530,6 +530,54 @@
     .commission-input-row input { width: 80px; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; background: var(--bg-card); color: var(--text); text-align: center; font-family: inherit; }
     .commission-input-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
+    /* ── Listing Analytics (Mis Propiedades) ─────────────────── */
+    .la-range-row { display: flex; gap: 0.4rem; margin-bottom: 1.25rem; }
+    .la-range-btn { padding: 0.4rem 0.9rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; font-weight: 500; cursor: pointer; background: var(--bg-card); color: var(--text-muted); transition: all 0.15s; font-family: inherit; }
+    .la-range-btn:hover { border-color: var(--text-muted); color: var(--text); }
+    .la-range-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .la-sort-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+    .la-sort-row label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .la-sort-row select { padding: 0.4rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
+    .la-listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+    .la-listing-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+    .la-listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    .la-card-img { width: 100%; height: 140px; object-fit: cover; background: var(--bg-section); }
+    .la-card-body { padding: 0.9rem 1rem; }
+    .la-card-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .la-card-location { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.6rem; }
+    .la-card-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .la-stat { text-align: center; }
+    .la-stat-val { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .la-stat-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .la-card-footer { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem 0.75rem; border-top: 1px solid var(--border); }
+    .la-card-price { font-size: 0.85rem; font-weight: 700; color: var(--green); }
+    .la-card-days { font-size: 0.7rem; color: var(--text-muted); }
+    .la-card-conversion { font-size: 0.7rem; font-weight: 600; color: var(--accent); background: rgba(0,56,168,0.08); padding: 0.15rem 0.45rem; border-radius: 4px; }
+
+    /* Listing Detail Modal */
+    .la-detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .la-detail-overlay.open { display: flex; }
+    .la-detail-modal { background: var(--bg-card); border-radius: 16px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative; }
+    .la-detail-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); line-height: 1; }
+    .la-detail-close:hover { color: var(--text); }
+    .la-detail-header { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .la-detail-img { width: 120px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--bg-section); }
+    .la-detail-info h2 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .la-detail-info p { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+    .la-detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .la-detail-stat { text-align: center; background: var(--bg-section); border-radius: 10px; padding: 0.75rem 0.5rem; }
+    .la-detail-stat .val { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .la-detail-stat .lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .la-detail-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .la-detail-chart-box { background: var(--bg-section); border-radius: 10px; padding: 1rem; position: relative; max-height: 260px; }
+    @media (max-width: 640px) {
+      .la-detail-charts { grid-template-columns: 1fr; }
+      .la-detail-header { flex-direction: column; }
+      .la-detail-stats { grid-template-columns: repeat(2, 1fr); }
+      .chart-row { grid-template-columns: 1fr; }
+      .la-listings-grid { grid-template-columns: 1fr; }
+    }
+
     /* ── PAYMENT PLAN ────────────────────────────────────────── */
     .pp-header { background: var(--bg-section); border-radius: 10px; padding: 1rem 1.1rem; border: 1px solid var(--border); margin-bottom: 1rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .pp-header-info { flex: 1; min-width: 0; }
@@ -1018,6 +1066,10 @@
       <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h5v2h-5V5zm0 4h5v2h-5V9zm0 4h5v2h-5v-2zM7 5h3v2H7V5zm0 4h3v2H7V9zm0 4h3v2H7v-2zm0 4h10v2H7v-2z"/></svg>
       Auditoria
     </button>
+    <button class="section-nav-btn" data-section="mis-propiedades">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Mis Propiedades
+    </button>
   </div>
 
   <!-- Affiliation Banner (broker role only, shown/hidden by JS) -->
@@ -1172,6 +1224,65 @@
     </table>
   </div>
 
+
+  <!-- Section: Mis Propiedades (Listing Analytics) -->
+  <div class="section-pane" id="section-mis-propiedades">
+    <div class="la-range-row">
+      <button class="la-range-btn active" data-range="all">Todo</button>
+      <button class="la-range-btn" data-range="7d">7 días</button>
+      <button class="la-range-btn" data-range="30d">30 días</button>
+      <button class="la-range-btn" data-range="90d">90 días</button>
+    </div>
+    <div class="summary-grid" id="laMetrics">
+      <div class="metric-card">
+        <div class="metric-label">Propiedades</div>
+        <div class="metric-value" id="laTotal" style="color:var(--accent)">--</div>
+        <div class="metric-subtitle">Listados activos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Vistas Totales</div>
+        <div class="metric-value" id="laViews" style="color:var(--accent)">--</div>
+        <div class="metric-subtitle">Todas las propiedades</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tours Solicitados</div>
+        <div class="metric-value" id="laTours" style="color:var(--green)">--</div>
+        <div class="metric-subtitle">Visitas agendadas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Favoritos</div>
+        <div class="metric-value" id="laFavs" style="color:var(--red)">--</div>
+        <div class="metric-subtitle">Guardados por usuarios</div>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-container" style="max-height:340px;"><canvas id="chartViewsTrend"></canvas></div>
+      <div class="chart-container" style="max-height:340px;"><canvas id="chartTopListings"></canvas></div>
+    </div>
+    <h3 class="section-title" style="margin:1.5rem 0 0.75rem;">Rendimiento por Propiedad</h3>
+    <div class="la-sort-row">
+      <label>Ordenar por:</label>
+      <select id="laSortBy">
+        <option value="views">Vistas</option>
+        <option value="tours">Tours</option>
+        <option value="favorites">Favoritos</option>
+        <option value="conversion">Conversión</option>
+        <option value="days">Días en mercado</option>
+        <option value="price">Precio</option>
+      </select>
+    </div>
+    <div id="laListingsGrid" class="la-listings-grid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Listing Detail Modal -->
+  <div class="la-detail-overlay" id="laDetailOverlay">
+    <div class="la-detail-modal">
+      <button class="la-detail-close" onclick="closeLADetail()">&times;</button>
+      <div id="laDetailContent"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
 
   </div><!-- /page-dashboard -->
 
@@ -3544,7 +3655,7 @@
 
   // ── Section Navigation ─────────────────────────────────────
   let currentSection = 'aplicaciones';
-  let analyticsLoaded = false, salesLoaded = false, accountingLoaded = false;
+  let analyticsLoaded = false, salesLoaded = false, accountingLoaded = false, listingAnalyticsLoaded = false;
   let salesData = [], accountingData = [];
   let chartInstances = {};
 
@@ -3601,6 +3712,7 @@
     if (section === 'archivo') loadArchive();
     if (section === 'auditoria') loadAudit();
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
+    if (section === 'mis-propiedades' && !listingAnalyticsLoaded) loadListingAnalytics();
   }
 
   // ── Sidebar collapse & mobile ───────────────────────────────
@@ -4258,6 +4370,217 @@
     });
     downloadCSV(rows, 'contabilidad_hogaresrd.csv');
   };
+
+  // ── Listing Analytics (Mis Propiedades) ─────────────────────
+  let laCurrentRange = 'all';
+  let laListingsData = [];
+
+  document.querySelector('#section-mis-propiedades .la-range-row')?.addEventListener('click', e => {
+    const btn = e.target.closest('.la-range-btn');
+    if (!btn) return;
+    document.querySelectorAll('.la-range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    laCurrentRange = btn.dataset.range;
+    listingAnalyticsLoaded = false;
+    loadListingAnalytics();
+  });
+
+  document.getElementById('laSortBy')?.addEventListener('change', () => {
+    listingAnalyticsLoaded = false;
+    loadListingAnalytics();
+  });
+
+  async function loadListingAnalytics() {
+    try {
+      const sort = document.getElementById('laSortBy')?.value || 'views';
+      const rangeQ = laCurrentRange !== 'all' ? `&range=${laCurrentRange}` : '';
+
+      const [summary, listData] = await Promise.all([
+        API(`/api/listing-analytics/summary?range=${laCurrentRange}`),
+        API(`/api/listing-analytics/listings?sort=${sort}${rangeQ}`),
+      ]);
+      laListingsData = listData.listings || [];
+
+      // Update metrics
+      document.getElementById('laTotal').textContent = summary.total_listings || 0;
+      document.getElementById('laViews').textContent = fmtNum(summary.total_views || 0);
+      document.getElementById('laTours').textContent = summary.total_tours || 0;
+      document.getElementById('laFavs').textContent = summary.total_favorites || 0;
+
+      // Views trend chart
+      const defs = getChartDefaults();
+      if (summary.views_trend && summary.views_trend.length) {
+        destroyChart('chartViewsTrend');
+        chartInstances['chartViewsTrend'] = new Chart(document.getElementById('chartViewsTrend'), {
+          type: 'line',
+          data: {
+            labels: summary.views_trend.map(d => d.date.slice(5)),
+            datasets: [{
+              label: 'Vistas',
+              data: summary.views_trend.map(d => d.views),
+              borderColor: '#0038A8',
+              backgroundColor: 'rgba(0,56,168,0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 1,
+              pointHoverRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, title: { display: true, text: 'Vistas (últimos 30 días)', color: defs.color } },
+            scales: {
+              x: { ticks: { color: defs.color, maxTicksLimit: 8, font: { size: 10 } }, grid: { color: defs.gridColor } },
+              y: { beginAtZero: true, ticks: { color: defs.color }, grid: { color: defs.gridColor } }
+            }
+          }
+        });
+      }
+
+      // Top listings horizontal bar
+      const top = summary.top_performing || [];
+      if (top.length) {
+        destroyChart('chartTopListings');
+        chartInstances['chartTopListings'] = new Chart(document.getElementById('chartTopListings'), {
+          type: 'bar',
+          data: {
+            labels: top.map(t => t.title.length > 25 ? t.title.slice(0, 25) + '…' : t.title),
+            datasets: [
+              { label: 'Vistas', data: top.map(t => t.views), backgroundColor: '#0038A8', borderRadius: 4 },
+              { label: 'Tours', data: top.map(t => t.tours * 5), backgroundColor: '#22c55e', borderRadius: 4 },
+              { label: 'Favoritos', data: top.map(t => t.favorites * 3), backgroundColor: '#ef4444', borderRadius: 4 },
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: defs.color, font: { size: 10 } } }, title: { display: true, text: 'Top Propiedades', color: defs.color } },
+            scales: {
+              x: { stacked: true, ticks: { color: defs.color }, grid: { color: defs.gridColor } },
+              y: { stacked: true, ticks: { color: defs.color, font: { size: 10 } }, grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Render listing cards
+      renderListingCards(laListingsData);
+      listingAnalyticsLoaded = true;
+    } catch (e) {
+      console.error('Listing analytics error:', e);
+      toast('Error cargando analíticas de propiedades: ' + e.message, 'error');
+    }
+  }
+
+  function fmtNum(n) {
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return n;
+  }
+
+  function renderListingCards(listings) {
+    const grid = document.getElementById('laListingsGrid');
+    if (!listings.length) {
+      grid.innerHTML = '<p style="text-align:center;color:var(--text-muted);grid-column:1/-1;padding:2rem;">No tienes propiedades publicadas.</p>';
+      return;
+    }
+    grid.innerHTML = listings.map(l => `
+      <div class="la-listing-card" onclick="openLADetail('${l.id}')">
+        ${l.image ? `<img class="la-card-img" src="${l.image}" alt="" loading="lazy">` : '<div class="la-card-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.75rem;">Sin imagen</div>'}
+        <div class="la-card-body">
+          <div class="la-card-title">${l.title}</div>
+          <div class="la-card-location">${l.city || ''}, ${l.province || ''}</div>
+          <div class="la-card-stats">
+            <div class="la-stat"><div class="la-stat-val" style="color:var(--accent)">${l.views}</div><div class="la-stat-label">Vistas</div></div>
+            <div class="la-stat"><div class="la-stat-val" style="color:var(--green)">${l.tours}</div><div class="la-stat-label">Tours</div></div>
+            <div class="la-stat"><div class="la-stat-val" style="color:var(--red)">${l.favorites}</div><div class="la-stat-label">Favoritos</div></div>
+            <div class="la-stat"><div class="la-stat-val" style="color:var(--purple)">${l.conversion}%</div><div class="la-stat-label">Conversión</div></div>
+          </div>
+        </div>
+        <div class="la-card-footer">
+          <span class="la-card-price">$${Number(l.price).toLocaleString('en-US')}</span>
+          <span class="la-card-days">${l.days_on_market}d en mercado</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.openLADetail = async function(id) {
+    const overlay = document.getElementById('laDetailOverlay');
+    const content = document.getElementById('laDetailContent');
+    overlay.classList.add('open');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const d = await API(`/api/listing-analytics/listing/${id}`);
+
+      content.innerHTML = `
+        <div class="la-detail-header">
+          ${d.image ? `<img class="la-detail-img" src="${d.image}" alt="">` : ''}
+          <div class="la-detail-info">
+            <h2>${d.title}</h2>
+            <p>${d.city || ''}, ${d.province || ''} · $${Number(d.price).toLocaleString('en-US')} · ${d.days_on_market} días en mercado</p>
+          </div>
+        </div>
+        <div class="la-detail-stats">
+          <div class="la-detail-stat"><div class="val" style="color:var(--accent)">${d.views}</div><div class="lbl">Vistas</div></div>
+          <div class="la-detail-stat"><div class="val" style="color:var(--green)">${d.tours_count}</div><div class="lbl">Tours</div></div>
+          <div class="la-detail-stat"><div class="val" style="color:var(--red)">${d.favorites}</div><div class="lbl">Favoritos</div></div>
+          <div class="la-detail-stat"><div class="val" style="color:var(--purple)">${d.conversion}%</div><div class="lbl">Conversión</div></div>
+        </div>
+        <div class="la-detail-charts">
+          <div class="la-detail-chart-box"><canvas id="chartDetailViews"></canvas></div>
+          <div class="la-detail-chart-box"><canvas id="chartDetailTours"></canvas></div>
+        </div>
+      `;
+
+      const defs = getChartDefaults();
+
+      // Views trend
+      if (d.views_trend?.length) {
+        destroyChart('chartDetailViews');
+        chartInstances['chartDetailViews'] = new Chart(document.getElementById('chartDetailViews'), {
+          type: 'line',
+          data: {
+            labels: d.views_trend.map(v => v.date.slice(5)),
+            datasets: [{ label: 'Vistas', data: d.views_trend.map(v => v.views), borderColor: '#0038A8', backgroundColor: 'rgba(0,56,168,0.08)', fill: true, tension: 0.3, pointRadius: 1 }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, title: { display: true, text: 'Vistas por Día', color: defs.color } },
+            scales: { x: { ticks: { color: defs.color, maxTicksLimit: 8, font: { size: 9 } }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color }, grid: { color: defs.gridColor } } }
+          }
+        });
+      }
+
+      // Tour status doughnut
+      if (d.tour_status) {
+        const ts = d.tour_status;
+        const tsLabels = ['Pendientes', 'Confirmados', 'Completados', 'Cancelados'];
+        const tsData = [ts.pending || 0, ts.confirmed || 0, ts.completed || 0, ts.cancelled || 0];
+        const tsColors = ['#f59e0b', '#22c55e', '#0038A8', '#ef4444'];
+        destroyChart('chartDetailTours');
+        chartInstances['chartDetailTours'] = new Chart(document.getElementById('chartDetailTours'), {
+          type: 'doughnut',
+          data: { labels: tsLabels, datasets: [{ data: tsData, backgroundColor: tsColors }] },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { title: { display: true, text: 'Estado de Tours', color: defs.color }, legend: { position: 'bottom', labels: { color: defs.color, font: { size: 10 } } } }
+          }
+        });
+      }
+    } catch (e) {
+      content.innerHTML = `<p style="text-align:center;color:var(--red);padding:2rem;">Error: ${e.message}</p>`;
+    }
+  };
+
+  window.closeLADetail = function() {
+    document.getElementById('laDetailOverlay').classList.remove('open');
+    destroyChart('chartDetailViews');
+    destroyChart('chartDetailTours');
+  };
+
+  document.getElementById('laDetailOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeLADetail();
+  });
 
   // ── Init ───────────────────────────────────────────────────
   renderFilters();
