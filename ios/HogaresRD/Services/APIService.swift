@@ -811,6 +811,56 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Secretary Management
+
+    struct SecretaryItem: Codable, Identifiable {
+        let id: String
+        let name: String
+        let email: String
+        let phone: String?
+        let joinedAt: String?
+    }
+
+    struct SecretariesResponse: Codable {
+        let secretaries: [SecretaryItem]
+    }
+
+    func getSecretaries() async throws -> [SecretaryItem] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try decoder.decode(SecretariesResponse.self, from: data).secretaries
+    }
+
+    func inviteSecretary(email: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries/invite")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["email": email])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al enviar invitación")
+        }
+    }
+
+    func removeSecretary(id: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries/\(id)/remove")!)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al remover secretaria")
+        }
+    }
+
     func saveBrokerNotes(brokerId: String, notes: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/notes")!

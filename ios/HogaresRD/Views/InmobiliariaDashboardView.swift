@@ -9,7 +9,7 @@ struct InmobiliariaDashboardView: View {
     private let tabs = [
         "Aplicaciones", "Analíticas", "Ventas", "Contabilidad",
         "Archivo", "Auditoría", "Mis Propiedades",
-        "Agentes", "Solicitudes", "Rendimiento"
+        "Agentes", "Solicitudes", "Rendimiento", "Secretarias"
     ]
 
     var body: some View {
@@ -23,7 +23,7 @@ struct InmobiliariaDashboardView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 if i >= 7 {
-                                    Image(systemName: i == 7 ? "person.2.fill" : i == 8 ? "person.badge.plus" : "chart.bar.fill")
+                                    Image(systemName: i == 7 ? "person.2.fill" : i == 8 ? "person.badge.plus" : i == 9 ? "chart.bar.fill" : "person.crop.circle.badge.checkmark")
                                         .font(.system(size: 10))
                                 }
                                 Text(title)
@@ -58,6 +58,7 @@ struct InmobiliariaDashboardView: View {
                 TeamMembersTab().tag(7)
                 TeamRequestsTab().tag(8)
                 TeamPerformanceTab().tag(9)
+                TeamSecretariesTab().tag(10)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
@@ -1019,4 +1020,245 @@ private func emptyTeamState(icon: String, title: String, subtitle: String) -> so
     }
     .frame(maxWidth: .infinity)
     .padding(.vertical, 40)
+}
+
+// ────────────────────────────────────────────────────────────────────
+// MARK: - Tab 10: Secretarias Management
+// ────────────────────────────────────────────────────────────────────
+
+struct TeamSecretariesTab: View {
+    @EnvironmentObject var api: APIService
+    @State private var secretaries: [APIService.SecretaryItem] = []
+    @State private var loading = true
+    @State private var inviteEmail = ""
+    @State private var inviting = false
+    @State private var successMsg: String?
+    @State private var errorMsg: String?
+    @State private var secToRemove: APIService.SecretaryItem?
+    @State private var showRemoveAlert = false
+
+    private let greenAccent = Color(red: 0.09, green: 0.63, blue: 0.21)
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Invite card
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("INVITAR SECRETARIA")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.5)
+
+                    HStack(spacing: 10) {
+                        TextField("correo@ejemplo.com", text: $inviteEmail)
+                            .font(.subheadline)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                            .padding(10)
+                            .background(Color(.tertiarySystemFill))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        Button {
+                            Task { await invite() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if inviting {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "paperplane.fill")
+                                        .font(.caption)
+                                }
+                                Text("Invitar")
+                                    .font(.caption).bold()
+                            }
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(greenAccent)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(inviting || inviteEmail.isEmpty)
+                    }
+
+                    Text("Se enviará un correo con un enlace de registro. La secretaria podrá gestionar aplicaciones y pagos, pero no tendrá acceso a ventas, contabilidad ni gestión de equipo.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(16)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal)
+
+                // Messages
+                if let msg = successMsg {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text(msg).font(.caption).bold()
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.green.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if let msg = errorMsg {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                        Text(msg).font(.caption).bold()
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.red.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                // List
+                if loading {
+                    ProgressView().padding(.top, 40)
+                } else if secretaries.isEmpty {
+                    emptyTeamState(
+                        icon: "person.crop.circle.badge.plus",
+                        title: "Sin secretarias",
+                        subtitle: "Invita secretarias para que gestionen aplicaciones y pagos de tu inmobiliaria."
+                    )
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("SECRETARIAS ACTIVAS (\(secretaries.count))")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.5)
+                            .padding(.horizontal)
+
+                        ForEach(secretaries) { sec in
+                            SecretaryCard(secretary: sec, onRemove: {
+                                secToRemove = sec
+                                showRemoveAlert = true
+                            })
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(.systemGroupedBackground))
+        .task { await load() }
+        .refreshable { await load() }
+        .alert("Remover Secretaria", isPresented: $showRemoveAlert) {
+            Button("Cancelar", role: .cancel) { secToRemove = nil }
+            Button("Remover", role: .destructive) {
+                if let sec = secToRemove {
+                    Task { await remove(sec) }
+                }
+            }
+        } message: {
+            if let sec = secToRemove {
+                Text("¿Estás seguro de remover a \(sec.name)? Ya no tendrá acceso al panel de la inmobiliaria.")
+            }
+        }
+    }
+
+    private func load() async {
+        loading = true
+        secretaries = (try? await api.getSecretaries()) ?? []
+        loading = false
+    }
+
+    private func invite() async {
+        inviting = true
+        errorMsg = nil
+        successMsg = nil
+        do {
+            try await api.inviteSecretary(email: inviteEmail)
+            withAnimation {
+                successMsg = "Invitación enviada a \(inviteEmail)"
+            }
+            inviteEmail = ""
+            let impact = UINotificationFeedbackGenerator()
+            impact.notificationOccurred(.success)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation { successMsg = nil }
+            }
+        } catch {
+            withAnimation {
+                errorMsg = error.localizedDescription
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation { errorMsg = nil }
+            }
+        }
+        inviting = false
+    }
+
+    private func remove(_ sec: APIService.SecretaryItem) async {
+        do {
+            try await api.removeSecretary(id: sec.id)
+            withAnimation {
+                secretaries.removeAll { $0.id == sec.id }
+                successMsg = "\(sec.name) ha sido removida."
+            }
+            let impact = UINotificationFeedbackGenerator()
+            impact.notificationOccurred(.success)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation { successMsg = nil }
+            }
+        } catch {
+            withAnimation {
+                errorMsg = error.localizedDescription
+            }
+        }
+        secToRemove = nil
+    }
+}
+
+struct SecretaryCard: View {
+    let secretary: APIService.SecretaryItem
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Avatar
+            let initials = secretary.name.split(separator: " ").prefix(2).map { String($0.prefix(1)) }.joined().uppercased()
+            ZStack {
+                Circle()
+                    .fill(Color(red: 0.09, green: 0.63, blue: 0.21))
+                    .frame(width: 40, height: 40)
+                Text(initials)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(secretary.name)
+                    .font(.subheadline).bold()
+                Text(secretary.email)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let phone = secretary.phone, !phone.isEmpty {
+                    Text(phone)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Spacer()
+
+            Button(role: .destructive) {
+                onRemove()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.red.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
 }

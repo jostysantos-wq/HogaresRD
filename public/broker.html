@@ -986,6 +986,10 @@
       <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
       <span class="sidebar-nav-label">Rendimiento</span>
     </button>
+    <button class="sidebar-nav-item" data-page="team-secretaries" id="teamSecNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="sidebar-nav-label">Secretarias</span>
+    </button>
   </nav>
 
   <div class="sidebar-footer">
@@ -1332,6 +1336,25 @@
       <p>Revisa y aprueba solicitudes de agentes que quieren unirse a tu inmobiliaria</p>
     </div>
     <div id="jrList">
+      <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TEAM — SECRETARIAS ══════════════════════════ -->
+  <div class="page-section" id="page-team-secretaries">
+    <div class="team-page-header">
+      <h2>Secretarias</h2>
+      <p>Invita y gestiona secretarias que pueden aprobar pagos y gestionar aplicaciones</p>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Invitar Secretaria</div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <input type="email" id="secInviteEmail" placeholder="correo@ejemplo.com" style="flex:1;min-width:200px;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.88rem;outline:none;font-family:inherit;background:var(--input-bg);color:var(--text);" />
+        <button onclick="window._inviteSecretary()" style="padding:0.6rem 1.25rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Enviar invitación</button>
+      </div>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.5rem;">Se enviará un correo con un enlace de registro. La secretaria tendrá acceso a aplicaciones, pagos y analíticas — pero no a ventas, contabilidad ni gestión de equipo.</p>
+    </div>
+    <div id="secList">
       <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
     </div>
   </div>
@@ -2154,7 +2177,7 @@
   document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
 
   if (isInmobiliariaRole) {
-    ['sidebarTeamLabel','teamMembersNavBtn','teamRequestsNavBtn','teamPerfNavBtn'].forEach(id => {
+    ['sidebarTeamLabel','teamMembersNavBtn','teamRequestsNavBtn','teamPerfNavBtn','teamSecNavBtn'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
@@ -3525,6 +3548,65 @@
     } catch(e) { toast(e.message, 'error'); }
   }
 
+  // ══════════════════════════════════════════════════════════
+  // ── Secretarias Management (inmobiliaria role) ──────────
+  // ══════════════════════════════════════════════════════════
+  async function loadSecretaries() {
+    if (!isInmobiliariaRole) return;
+    const el = document.getElementById('secList');
+    try {
+      const data = await API('/api/inmobiliaria/secretaries');
+      const secs = data.secretaries || [];
+      if (!secs.length) {
+        el.innerHTML = `<div class="team-empty">
+          <svg viewBox="0 0 24 24" style="width:48px;height:48px;fill:var(--border);"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <p>No hay secretarias registradas. Envía una invitación para comenzar.</p>
+        </div>`;
+        return;
+      }
+      el.innerHTML = `<div class="equipo-grid">${secs.map(s => {
+        const av = (s.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        return `<div class="equipo-card" style="overflow:visible;">
+          <div class="equipo-avatar" style="background:#16a34a;">${esc(av)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="equipo-name">${esc(s.name)}</div>
+            <div class="equipo-meta">${esc(s.email)}</div>
+            ${s.phone ? `<div class="equipo-meta">${esc(s.phone)}</div>` : ''}
+            <span class="equipo-apps" style="background:#dcfce7;color:#16a34a;">Secretaria</span>
+          </div>
+          <button class="equipo-menu-btn" title="Remover" onclick="window._removeSecretary('${esc(s.id)}','${esc(s.name)}')" style="color:var(--red);">✕</button>
+        </div>`;
+      }).join('')}</div>`;
+    } catch(e) {
+      el.innerHTML = `<p style="color:var(--red);font-size:0.82rem;">${esc(e.message)}</p>`;
+    }
+  }
+
+  window._inviteSecretary = async function() {
+    const emailEl = document.getElementById('secInviteEmail');
+    const email = emailEl.value.trim();
+    if (!email) { toast('Ingresa un correo electrónico', 'error'); return; }
+    try {
+      await API('/api/inmobiliaria/secretaries/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      toast('Invitación enviada a ' + email + ' ✓');
+      emailEl.value = '';
+      loadSecretaries();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
+  window._removeSecretary = async function(id, name) {
+    if (!confirm(`¿Estás seguro de remover a ${name} como secretaria? Ya no tendrá acceso al panel.`)) return;
+    try {
+      await API(`/api/inmobiliaria/secretaries/${id}/remove`, { method: 'POST' });
+      toast(name + ' removida ✓');
+      loadSecretaries();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
   // ── Broker detail modal ────────────────────────────────────────
   const statusLabels = { aplicado:'Aplicado', en_revision:'En Revisión', documentos_requeridos:'Docs. Requeridos', documentos_enviados:'Docs. Enviados', documentos_insuficientes:'Docs. Insuficientes', en_aprobacion:'En Aprobación', reservado:'Reservado', aprobado:'Aprobado', pendiente_pago:'Pendiente Pago', pago_enviado:'Pago Enviado', pago_aprobado:'Pago Aprobado', completado:'Completado', rechazado:'Rechazado' };
   const statusColors = { aplicado:'#3b82f6', en_revision:'#f59e0b', documentos_requeridos:'#f97316', documentos_enviados:'#8b5cf6', en_aprobacion:'#06b6d4', reservado:'#6366f1', aprobado:'#22c55e', pendiente_pago:'#ef4444', pago_enviado:'#f59e0b', pago_aprobado:'#10b981', completado:'#16a34a', rechazado:'#ef4444' };
@@ -3724,6 +3806,7 @@
     'team-members': 'Equipo — Miembros',
     'team-requests': 'Equipo — Solicitudes',
     'team-performance': 'Equipo — Rendimiento',
+    'team-secretaries': 'Equipo — Secretarias',
     'tour-requests': 'Solicitudes de Visita',
     'availability': 'Disponibilidad para Visitas',
   };
@@ -3748,6 +3831,7 @@
     if (page === 'notificaciones') loadNotifications();
     if (page === 'contrasena') load2FAStatus();
     if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
+    if (page === 'team-secretaries') loadSecretaries();
     if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
   }
