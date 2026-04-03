@@ -1500,7 +1500,7 @@
     }
 
     // ── Load each carousel section ─────────────────────────────
-    async function loadRecommendations(token, user) {
+    async function loadRecommendations(user) {
       const hasBP = user && user.buyingPower && user.buyingPower.calculatedMaxPrice;
 
       // Show CTA for logged-in users who haven't set buying power yet
@@ -1509,7 +1509,7 @@
       }
 
       try {
-        const res = await fetch('/api/user/recommendations', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('/api/user/recommendations', { credentials: 'include' });
         if (!res.ok) return;
         const { listings } = await res.json();
         if (!listings || !listings.length) return;
@@ -1622,7 +1622,7 @@
     }
 
     // ── Activity logging via IntersectionObserver (5s debounce) ─
-    function initActivityLogging(token) {
+    function initActivityLogging() {
       const viewTimers  = new Map();
       const loggedViews = new Set();
       const observer = new IntersectionObserver((entries) => {
@@ -1635,7 +1635,8 @@
                 loggedViews.add(id); viewTimers.delete(id);
                 fetch('/api/user/activity', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ type: 'view_listing', listingId: id }),
                 }).catch(() => {});
               }, 5000));
@@ -1689,25 +1690,30 @@
 
     // ── Init ───────────────────────────────────────────────────
     (async () => {
-      const token = localStorage.getItem('hogaresrd_token');
-      const area  = document.getElementById('navAuthArea');
+      const area = document.getElementById('navAuthArea');
 
-      if (!token) {
-        renderLoggedOut(area);
-      } else {
-        try {
-          const res = await fetch('/api/auth/me', { credentials: 'include', headers: { 'Authorization': `Bearer ${token}` } });
-          if (!res.ok) { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); renderLoggedOut(area); }
-          else {
-            const user = await res.json();
-            try { localStorage.setItem('hogaresrd_user', JSON.stringify(user)); } catch {}
-            renderLoggedIn(area, user);
-            _cardObserver = initActivityLogging(token);
-            _bpToken = token;
-            loadRecommendations(token, user);
-          }
-        } catch { renderLoggedOut(area); }
-      }
+      // Instant render from localStorage — avoids flash of login button
+      const cached = (() => {
+        try { const u = JSON.parse(localStorage.getItem('hogaresrd_user')); return (u && u.name) ? u : null; } catch { return null; }
+      })();
+      if (cached) renderLoggedIn(area, cached); else renderLoggedOut(area);
+
+      // Always verify via session cookie (source of truth)
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) {
+          ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
+          renderLoggedOut(area);
+          _isLoggedIn = false;
+        } else {
+          const user = await res.json();
+          try { localStorage.setItem('hogaresrd_user', JSON.stringify(user)); } catch {}
+          renderLoggedIn(area, user);
+          _isLoggedIn = true;
+          _cardObserver = initActivityLogging();
+          loadRecommendations(user);
+        }
+      } catch { /* network error — keep cached render */ }
 
       // Always load public sections after auth resolves
       loadRecentlyViewed();
@@ -1725,7 +1731,7 @@
     // ══════════════════════════════════════════════════════════════
     // Buying Power Calculator
     // ══════════════════════════════════════════════════════════════
-    let _bpToken     = null;
+    let _isLoggedIn  = false;
     let _bpType      = 'venta';
     let _bpBeds      = 0;
     let _bpCloseTimer = null;
@@ -1910,7 +1916,7 @@
     function monthlyInc(r) { return r.income ? Math.round(r.income / 12) : 0; }
 
     async function saveBuyingPower(budgetOnly) {
-      if (!_bpToken) { closeBPModal(); return; }
+      if (!_isLoggedIn) { closeBPModal(); return; }
 
       const budget = parseFloat(document.getElementById('bpBudget').value) || 0;
       if (!budget) {
@@ -1948,7 +1954,8 @@
       try {
         const res = await fetch('/api/user/profile/buying-power', {
           method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${_bpToken}`, 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
@@ -1977,9 +1984,7 @@
             if (old) old.replaceWith(old.cloneNode(true));
           });
         }
-        const recoRes = await fetch('/api/user/recommendations', {
-          headers: { 'Authorization': `Bearer ${_bpToken}` }
-        });
+        const recoRes = await fetch('/api/user/recommendations', { credentials: 'include' });
         if (recoRes.ok) {
           const { listings } = await recoRes.json();
           if (listings && listings.length) {

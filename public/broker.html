@@ -1911,22 +1911,41 @@
 </div>
 
 <script>
-(function() {
+(async function() {
   'use strict';
 
   // ── Auth ───────────────────────────────────────────────────
   // JWT lives in an httpOnly cookie — not readable by JS.
   // Role/display data comes from hogaresrd_user stored at login.
+  // We check localStorage first (instant), then fall back to the
+  // session cookie via /api/auth/me so that users with a valid
+  // cookie but empty localStorage are not bounced to login.
   let currentUser = null;
+
   try {
     const stored = localStorage.getItem('hogaresrd_user');
-    if (!stored) { location.href = '/login'; return; }
-    const userObj = JSON.parse(stored);
-    if (!['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
-      location.href = '/login'; return;
+    if (stored) {
+      const userObj = JSON.parse(stored);
+      if (['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
+        currentUser = userObj;
+      }
     }
-    currentUser = userObj;
-  } catch(e) { location.href = '/login'; return; }
+  } catch(e) {}
+
+  if (!currentUser) {
+    try {
+      const r = await fetch('/api/auth/me', { credentials: 'include' });
+      if (r.ok) {
+        const userObj = await r.json();
+        if (['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
+          try { localStorage.setItem('hogaresrd_user', JSON.stringify(userObj)); } catch {}
+          currentUser = userObj;
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (!currentUser) { location.href = '/login'; return; }
 
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
   const isInmobiliariaRole = currentUser.role === 'inmobiliaria';

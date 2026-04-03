@@ -175,13 +175,17 @@ async function redirectIfAuth() {
   resetIdle();
 })();
 
-// Fetch current user from server (always fresh from DB)
+// Fetch current user from server (always fresh from DB).
+// Tries the httpOnly session cookie first so that users with a valid
+// session but empty localStorage are not treated as logged-out.
 async function fetchMe() {
-  if (!isLoggedIn()) return null;
   try {
-    const res = await fetch('/api/auth/me', { headers: authHeaders() });
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
     if (res.status === 401) { _clearLocal(); return null; }
     if (!res.ok) return null;
-    return await res.json();
+    const user = await res.json();
+    // Keep localStorage in sync so subsequent pages render instantly
+    if (user) { try { localStorage.setItem('hogaresrd_user', JSON.stringify(user)); } catch {} }
+    return user;
   } catch { return null; }
 }

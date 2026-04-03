@@ -31,6 +31,8 @@
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
     .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.88rem; font-weight: 600; padding: 0.42rem 1rem; border-radius: 6px; cursor: pointer; text-decoration: none; transition: border-color 0.2s, color 0.2s; }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
     .btn-primary { background: var(--accent); border: none; color: #fff; font-size: 0.88rem; font-weight: 600; padding: 0.48rem 1.1rem; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s; }
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-primary svg { width: 15px; height: 15px; fill: #fff; }
@@ -881,7 +883,7 @@
   function renderNav(user) {
     const area = document.getElementById('navAuthArea');
     if (!user) {
-      area.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a>`;
+      area.innerHTML = `<a href="/login" class="btn-login">Iniciar sesión</a>`;
     } else {
       const initials = user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '?';
       const first    = user.name ? user.name.split(' ')[0] : '';

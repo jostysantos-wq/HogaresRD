@@ -411,17 +411,6 @@
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 
-    // ── Auth nav ─────────────────────────────────────────────────
-    (function() {
-      const user = typeof getUser === 'function' ? getUser() : null;
-      const area = document.getElementById('navAuthArea');
-      if (user) {
-        area.innerHTML = `<a href="/admin" class="btn-ghost" style="font-size:0.85rem;">${user.name || 'Mi cuenta'}</a><button class="btn-ghost" onclick="logout()" style="font-size:0.85rem;">Salir</button>`;
-      } else {
-        area.innerHTML = `<a href="/login" class="btn-login">Iniciar sesión</a>`;
-      }
-    })();
-
     // ── City data ─────────────────────────────────────────────────
     const CITY_DATA = {
       'santo-domingo': {
