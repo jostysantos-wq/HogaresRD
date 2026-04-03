@@ -267,7 +267,7 @@ router.post('/:id/inquiry', async (req, res) => {
   try {
     const sends = agencyEmails.map(to =>
       transporter.sendMail({
-        from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+        from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
         to,
         replyTo: email,
         subject: `Nueva consulta: ${listing.title}`,
@@ -275,7 +275,7 @@ router.post('/:id/inquiry', async (req, res) => {
       })
     );
     sends.push(transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      email,
       subject: '¡Tu consulta fue enviada! — HogaresRD',
       html:    clientHtml,

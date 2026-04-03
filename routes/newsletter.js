@@ -231,7 +231,7 @@ async function sendNewsletter() {
     const html = buildNewsletterHTML(user, { trending, newest, stats });
     try {
       await transporter.sendMail({
-        from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+        from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
         to:      user.email,
         subject: `🏠 Tu resumen del día — ${trending.length} propiedades en tendencia`,
         html,

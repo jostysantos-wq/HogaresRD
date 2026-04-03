@@ -96,7 +96,7 @@ function attachVerifyToken(user) {
 function sendVerificationEmail(user, rawToken) {
   const verifyUrl = `${BASE_URL}/verify-email?token=${rawToken}`;
   return transporter.sendMail({
-    from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to:      user.email,
     subject: 'Verifica tu correo — HogaresRD 🔐',
     html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -137,7 +137,7 @@ function sendVerificationEmail(user, rawToken) {
 
 function send2FAEmail(user, code) {
   return transporter.sendMail({
-    from: `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to: user.email,
     subject: 'Tu código de verificación — HogaresRD 🔐',
     html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -313,7 +313,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       : '';
 
     transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      user.email,
       subject: `¡Bienvenido a HogaresRD, ${user.name.split(' ')[0]}! Tu hogar ideal te espera 🏠`,
       html: `<!DOCTYPE html>
@@ -478,7 +478,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
           });
           store.saveUser(inm);
           transporter.sendMail({
-            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
             to:      inm.email,
             subject: `Nueva solicitud de afiliación — ${user.name}`,
             html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
@@ -500,7 +500,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
     }
 
     transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      user.email,
       subject: '¡Bienvenido a HogaresRD! Tu cuenta de inmobiliaria está lista 🏢',
       html: `<!DOCTYPE html>
@@ -610,7 +610,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
           store.saveUser(inm);
           // Notify the inmobiliaria of the pending request
           transporter.sendMail({
-            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
             to:      inm.email,
             subject: `Nueva solicitud de afiliación — ${user.name}`,
             html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
@@ -632,7 +632,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
     }
 
     transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      user.email,
       subject: '¡Bienvenido a HogaresRD! Tu cuenta de agente está lista 🏡',
       html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -712,7 +712,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
     store.saveUser(user);
 
     transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      user.email,
       subject: `¡Bienvenido a HogaresRD! ${companyName} está registrada 🏢`,
       html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -763,7 +763,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
         );
         candidates.forEach(agent => {
           transporter.sendMail({
-            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
             to:      agent.email,
             subject: `¡${companyName} ya está en HogaresRD! Conecta tu cuenta ahora 🔗`,
             html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -842,7 +842,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
         // Notify user by email (fire-and-forget)
         transporter.sendMail({
-          from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+          from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
           to:      user.email,
           subject: '⚠️ Tu cuenta ha sido bloqueada temporalmente — HogaresRD',
           html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -973,7 +973,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   logSec('reset_requested', req, { userId: user.id });
 
   transporter.sendMail({
-    from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to:      user.email,
     subject: 'Restablecer tu contraseña — HogaresRD',
     html: `

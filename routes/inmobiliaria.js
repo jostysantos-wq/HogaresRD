@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 function send(to, subject, html) {
   if (!process.env.EMAIL_USER) return;
   transporter.sendMail({
-    from: `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to, subject, html,
   }).catch(() => {});
 }

@@ -323,7 +323,7 @@ async function sendSearchAlertEmail(user, search, newListings, totalNew) {
 </body></html>`;
 
   await transporter.sendMail({
-    from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to:      user.email,
     subject: `🔔 ${totalNew === 1 ? 'Nueva propiedad' : totalNew + ' nuevas propiedades'} en "${search.name}" — HogaresRD`,
     html,
