@@ -1049,6 +1049,25 @@ router.get('/verify-email', (req, res) => {
   res.redirect(`${BASE_URL}/verify-email?status=success`);
 });
 
+// ── Public resend — by email address (for post-registration page, user not yet logged in) ──
+router.post('/resend-verification-public', resendLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Correo requerido' });
+  try {
+    const user = store.getUserByEmail(email.toLowerCase().trim());
+    // Always respond 200 — never reveal whether the email exists
+    if (!user || user.emailVerified) {
+      return res.json({ success: true, message: user?.emailVerified
+        ? 'Tu correo ya está verificado. Ya puedes iniciar sesión.'
+        : 'Si el correo está registrado, recibirás un nuevo enlace en breve.' });
+    }
+    const rawToken = attachVerifyToken(user);
+    store.saveUser(user);
+    sendVerificationEmail(user, rawToken);
+    res.json({ success: true, message: 'Correo enviado. Revisa tu bandeja de entrada (y la carpeta de spam).' });
+  } catch { res.json({ success: true }); }
+});
+
 // ── Resend verification email ──────────────────────────────────────────────
 router.post('/resend-verification', resendLimiter, userAuth, async (req, res, next) => {
   try {

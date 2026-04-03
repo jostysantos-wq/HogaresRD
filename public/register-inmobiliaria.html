@@ -271,7 +271,7 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-        window.location.href = '/login?registered=inmobiliaria';
+        window.location.href = '/register-success?' + new URLSearchParams({ role: 'inmobiliaria', email }).toString();
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.add('visible');

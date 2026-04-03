@@ -232,7 +232,7 @@
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
         // Meta Pixel — CompleteRegistration (deduped with CAPI via eventId reg_<userId>)
         if (window.MetaPixel) window.MetaPixel.track('CompleteRegistration', { status: 'registered' });
-        window.location.href = '/login?registered=1';
+        window.location.href = '/register-success?' + new URLSearchParams({ role: 'user', email }).toString();
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.add('visible');

@@ -309,7 +309,9 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-        window.location.href = '/login?registered=agency';
+        const p = new URLSearchParams({ role: 'agency', email: email });
+        if (agencyName) p.set('inm', agencyName);
+        window.location.href = '/register-success?' + p.toString();
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.add('visible');

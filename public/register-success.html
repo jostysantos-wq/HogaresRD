@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cuenta Creada — HogaresRD</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/css/core.css">
+
+  <style>
+    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 2rem;
+    }
+    .logo-link svg { width: 26px; height: 26px; fill: var(--accent); }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 480px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #002D62 0%, #1a5fa8 100%);
+      padding: 2.5rem 2.25rem 2rem;
+      text-align: center;
+    }
+    .success-icon {
+      width: 68px;
+      height: 68px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.1rem;
+      font-size: 2rem;
+    }
+    .card-header h1 {
+      color: #fff;
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+    }
+    .card-header p {
+      color: rgba(255,255,255,0.75);
+      font-size: 0.85rem;
+    }
+
+    .card-body { padding: 2rem 2.25rem; }
+
+    .email-box {
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .email-box-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .email-box-text { flex: 1; }
+    .email-box-text strong {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .email-box-text span {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .email-address {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 0.2rem;
+      word-break: break-all;
+    }
+
+    .steps { margin-bottom: 1.5rem; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .step-text strong { color: var(--text); }
+
+    .inm-pending {
+      background: color-mix(in srgb, #D97706 8%, transparent);
+      border: 1px solid color-mix(in srgb, #D97706 25%, transparent);
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.82rem;
+      color: #92400E;
+      line-height: 1.55;
+    }
+    [data-theme="dark"] .inm-pending { color: #FDE68A; }
+    .inm-pending strong { font-weight: 700; }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .resend-msg {
+      font-size: 0.82rem;
+      text-align: center;
+      margin-top: 0.6rem;
+      min-height: 18px;
+      color: var(--text-muted);
+    }
+    .resend-msg.ok  { color: #16A34A; }
+    .resend-msg.err { color: var(--error); }
+
+    .spam-hint {
+      text-align: center;
+      font-size: 0.77rem;
+      color: var(--text-muted);
+      margin-top: 1.25rem;
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 520px) { .card-body { padding: 1.5rem 1.25rem; } }
+  </style>
+</head>
+<body>
+  <a href="/home" class="logo-link">
+    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    HogaresRD
+  </a>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="success-icon">✅</div>
+      <h1 id="headerTitle">¡Cuenta creada exitosamente!</h1>
+      <p id="headerSub">Solo falta un paso para activarla.</p>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Email instruction box -->
+      <div class="email-box">
+        <div class="email-box-icon">📧</div>
+        <div class="email-box-text">
+          <strong>Verifica tu correo electrónico</strong>
+          <span>Te enviamos un enlace de verificación a:</span>
+          <span class="email-address" id="emailDisplay">tu correo</span>
+          <span>Haz clic en el enlace del correo para activar tu cuenta.</span>
+        </div>
+      </div>
+
+      <!-- Inmobiliaria pending notice (shown only when applicable) -->
+      <div class="inm-pending" id="inmPending" style="display:none;">
+        🕐 Tu solicitud de afiliación a <strong id="inmName"></strong> está <strong>pendiente de aprobación</strong>.
+        La inmobiliaria recibirá una notificación y podrá aprobarla desde su dashboard.
+      </div>
+
+      <!-- Steps -->
+      <div class="steps" id="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Revisa tu correo</strong> — busca un mensaje de HogaresRD en tu bandeja de entrada.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>Haz clic en "Verificar mi correo"</strong> dentro del mensaje para activar tu cuenta.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Inicia sesión</strong> y accede a tu dashboard profesional.</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <button class="btn-primary" id="resendBtn" onclick="resend()">Reenviar correo de verificación</button>
+      <a href="/login" class="btn-ghost">Ir a iniciar sesión</a>
+      <div class="resend-msg" id="resendMsg"></div>
+
+      <p class="spam-hint">¿No encuentras el correo? Revisa tu carpeta de <strong>Spam</strong> o <strong>Correo no deseado</strong>.</p>
+    </div>
+  </div>
+
+  <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+
+  <script>
+    // ── Theme ──────────────────────────────────────────────────────────────
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
+    // ── Read URL params ────────────────────────────────────────────────────
+    const params  = new URLSearchParams(window.location.search);
+    const email   = params.get('email')   || '';
+    const role    = params.get('role')    || '';
+    const inmName = params.get('inm')     || '';
+
+    // Show email
+    if (email) {
+      document.getElementById('emailDisplay').textContent = email;
+    }
+
+    // Inmobiliaria pending notice
+    if (inmName) {
+      document.getElementById('inmPending').style.display = '';
+      document.getElementById('inmName').textContent = inmName;
+    }
+
+    // Role-specific header copy
+    const titles = {
+      broker:        '¡Cuenta de Agente Broker creada!',
+      agency:        '¡Cuenta de Agente creada!',
+      inmobiliaria:  '¡Cuenta de Inmobiliaria creada!',
+      user:          '¡Cuenta creada exitosamente!',
+    };
+    if (titles[role]) document.getElementById('headerTitle').textContent = titles[role];
+
+    // ── Resend ─────────────────────────────────────────────────────────────
+    async function resend() {
+      const btn = document.getElementById('resendBtn');
+      const msg = document.getElementById('resendMsg');
+
+      if (!email) {
+        msg.className = 'resend-msg err';
+        msg.textContent = 'No se encontró la dirección de correo. Intenta desde el enlace original.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      msg.className = 'resend-msg';
+      msg.textContent = '';
+
+      try {
+        const res  = await fetch('/api/auth/resend-verification-public', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        msg.className = 'resend-msg ok';
+        msg.textContent = '✅ ' + (data.message || 'Correo enviado. Revisa tu bandeja de entrada.');
+        // Keep button disabled for 60 s to prevent spam
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Reenviar correo de verificación';
+          msg.textContent = '';
+        }, 60000);
+      } catch {
+        msg.className = 'resend-msg err';
+        msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        btn.disabled = false;
+        btn.textContent = 'Reenviar correo de verificación';
+      }
+    }
+  </script>
+  <script src="/js/pixel.js" defer></script>
+</body>
+</html>

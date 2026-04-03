@@ -357,7 +357,9 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-        window.location.href = '/login?registered=broker';
+        const p = new URLSearchParams({ role: 'broker', email: email });
+        if (inmobiliariaName) p.set('inm', inmobiliariaName);
+        window.location.href = '/register-success?' + p.toString();
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.add('visible');
