@@ -25,30 +25,54 @@
     .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
     .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
     .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
-    /* Nav dropdowns */
+        /* Nav dropdowns — mega menu style */
     .nav-item { position: relative; }
     .nav-dropdown {
-      position: absolute; top: 100%; left: 0; min-width: 200px;
+      position: absolute; top: calc(100% + 2px); left: 0;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 6px; box-shadow: var(--shadow-lg);
-      padding: 0.5rem 0; opacity: 0; visibility: hidden;
-      transform: translateY(4px);
-      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+      border-radius: 0 0 14px 14px;
+      box-shadow: 0 16px 48px rgba(17,17,16,0.13);
+      padding: 1.5rem 1.75rem 1.75rem;
+      opacity: 0; visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.18s ease;
       z-index: 200;
+      display: flex; gap: 0; min-width: 460px;
+      pointer-events: none;
     }
-    .nav-item:hover .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .nav-item:hover .nav-dropdown {
+      opacity: 1; visibility: visible; transform: translateY(0);
+      pointer-events: auto;
+    }
+    .nav-mega-col { flex: 1; }
+    .nav-mega-col + .nav-mega-col {
+      padding-left: 1.75rem; margin-left: 1.75rem;
+      border-left: 1px solid var(--border);
+    }
+    .nav-mega-heading {
+      font-size: 0.82rem; font-weight: 800; color: var(--text);
+      letter-spacing: -0.01em; margin-bottom: 0.8rem;
+    }
     .nav-dropdown a {
-      display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 500;
-      color: var(--text); text-decoration: none;
-      transition: background 0.15s, color 0.15s;
+      display: block; padding: 0.3rem 0;
+      font-size: 0.88rem; font-weight: 500;
+      color: var(--accent); text-decoration: none;
+      white-space: nowrap; transition: opacity 0.12s;
     }
-    .nav-dropdown a:hover { background: var(--accent-light); color: var(--accent); }
-    .nav-dropdown .dd-icon { font-size: 1rem; width: 1.2rem; text-align: center; }
+    .nav-dropdown a:hover { text-decoration: underline; opacity: 0.8; }
+    .nav-dropdown .nav-see-all {
+      color: var(--text); font-weight: 700; margin-top: 0.75rem;
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.85rem;
+    }
+    .nav-dropdown .nav-see-all:hover { text-decoration: none; opacity: 1; color: var(--accent); }
     .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
     .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    /* Dominican flag red — Iniciar Sesión nav button */
+    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
     .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
 
@@ -295,31 +319,82 @@
         <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
         <span class="logo-text">Hogares<span>RD</span></span>
       </a>
-            <div class="nav-links">
+      <div class="nav-links">
         <a class="nav-link" href="/home">Inicio</a>
+
+        <!-- Comprar -->
         <div class="nav-item">
           <a class="nav-link" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa">Explorar Mapa</a>
-            <a href="/comprar">Ver Listado</a>
-            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
-            <a href="/comparar">Comparar</a>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Propiedades en Venta</div>
+              <a href="/comprar">Casas en venta</a>
+              <a href="/comprar?tipo=apartamento">Apartamentos</a>
+              <a href="/comprar?tipo=villa">Villas y Penthouses</a>
+              <a href="/nuevos-proyectos">Proyectos nuevos</a>
+              <a href="/comprar?tipo=terreno">Terrenos</a>
+              <a href="/comprar?tipo=comercial">Locales comerciales</a>
+              <a href="/comprar" class="nav-see-all">Ver todas las propiedades →</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Recursos</div>
+              <a href="/mapa">Explorar en el mapa</a>
+              <a href="/comparar">Comparar propiedades</a>
+              <a href="/blog">Guía del comprador</a>
+              <a href="/register-agency">Encontrar un agente</a>
+              <a href="/nuevos-proyectos">Proyectos en pre-venta</a>
+            </div>
           </div>
         </div>
+
+        <!-- Alquilar -->
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar">Ver Listado</a>
-            <a href="/mapa?type=alquiler">Explorar Mapa</a>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Propiedades en Alquiler</div>
+              <a href="/alquilar">Apartamentos en alquiler</a>
+              <a href="/alquilar?tipo=casa">Casas en alquiler</a>
+              <a href="/alquilar?tipo=cuarto">Cuartos</a>
+              <a href="/alquilar?tipo=comercial">Locales comerciales</a>
+              <a href="/alquilar" class="nav-see-all">Ver todas las propiedades →</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Recursos</div>
+              <a href="/mapa?type=alquiler">Explorar en el mapa</a>
+              <a href="/blog">Guía del inquilino</a>
+              <a href="/register-agency">Encontrar un agente</a>
+            </div>
           </div>
         </div>
+
+        <!-- Vender -->
+        <div class="nav-item">
+          <a class="nav-link" href="/submit">Vender</a>
+          <div class="nav-dropdown">
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Publicar Propiedad</div>
+              <a href="/submit">Poner en venta</a>
+              <a href="/submit?tipo=alquiler">Poner en alquiler</a>
+              <a href="/register-inmobiliaria">Registrar inmobiliaria</a>
+              <a href="/register-agency">Trabajar como agente</a>
+              <a href="/submit" class="nav-see-all">Publicar ahora →</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Herramientas</div>
+              <a href="/blog">Guía del vendedor</a>
+              <a href="/mapa">Ver mercado actual</a>
+              <a href="/register-agency">Conectar con agentes</a>
+            </div>
+          </div>
+        </div>
+
         <a class="nav-link" href="/blog">Blog</a>
         <a class="nav-link" href="/about">Nosotros</a>
       </div>
-      </div>
       <div class="nav-actions">
         <div id="navAuthArea">
-          <a href="/login" class="btn-ghost">Iniciar sesion</a>
+          <a href="/login" class="btn-login">Iniciar sesión</a>
         </div>
         <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
           <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
