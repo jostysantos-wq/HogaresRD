@@ -660,6 +660,62 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
 
     sendVerificationEmail(user, verifyRawToken);
     res.status(201).json({ success: true, user: safeUser(user) });
+
+    // ── Notify agents who pre-registered with this company name ──────────
+    // (fire-and-forget, after response is sent)
+    try {
+      const normalise = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const inm_norm  = normalise(companyName);
+      if (inm_norm.length >= 3) {
+        const candidates = store.getUsers().filter(u =>
+          ['broker', 'agency'].includes(u.role) &&
+          !u.inmobiliaria_id &&
+          !u.inmobiliaria_join_status &&
+          u.inmobiliaria_name &&
+          normalise(u.inmobiliaria_name) === inm_norm
+        );
+        candidates.forEach(agent => {
+          transporter.sendMail({
+            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            to:      agent.email,
+            subject: `¡${companyName} ya está en HogaresRD! Conecta tu cuenta ahora 🔗`,
+            html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
+          <div style="font-size:1rem;font-weight:900;color:#fff;">🔗 HogaresRD — Conexión de Equipo</div>
+          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Buenas noticias, ${agent.name.split(' ')[0]}!</div>
+          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">${companyName} acaba de registrarse</div>
+        </td></tr>
+        <tr><td style="padding:32px 40px;">
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+            <strong>${companyName}</strong>, la inmobiliaria que indicaste cuando creaste tu cuenta, acaba de registrarse en HogaresRD.
+          </p>
+          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
+            Ahora puedes enviarles una solicitud de afiliación desde tu dashboard. Una vez que la aprueben, quedarás oficialmente vinculado a su equipo.
+          </p>
+          <div style="text-align:center;">
+            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
+          </div>
+          <p style="margin:20px 0 0;font-size:0.75rem;color:#7a9bbf;text-align:center;">
+            En tu dashboard encontrarás el botón "Buscar y solicitar" en la sección de afiliación.
+          </p>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+          }).catch(e => console.error('Agent notify email error:', e.message));
+        });
+      }
+    } catch (notifyErr) {
+      console.error('Agent notify scan error:', notifyErr.message);
+    }
   } catch (err) { next(err); }
 });
 
