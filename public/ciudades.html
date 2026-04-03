@@ -27,6 +27,26 @@
     .nav-links { display: flex; gap: 0.25rem; }
     .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 0.4rem 0.85rem; border-radius: 6px; transition: background 0.2s, color 0.2s; }
     .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+    /* Nav dropdowns */
+    .nav-item { position: relative; }
+    .nav-dropdown {
+      position: absolute; top: 100%; left: 0; min-width: 200px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow-lg);
+      padding: 0.5rem 0; opacity: 0; visibility: hidden;
+      transform: translateY(4px);
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+      z-index: 200;
+    }
+    .nav-item:hover .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .nav-dropdown a {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 500;
+      color: var(--text); text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-dropdown a:hover { background: var(--accent-light); color: var(--accent); }
+    .nav-dropdown .dd-icon { font-size: 1rem; width: 1.2rem; text-align: center; }
 
     /* HERO */
     .hero { background: linear-gradient(135deg, var(--accent) 0%, #1a5fa8 100%); color: #fff; padding: 3.5rem 2rem 3rem; text-align: center; }
@@ -61,12 +81,27 @@
       Hogares<span>RD</span>
     </a>
     <div class="nav-right">
-      <nav class="nav-links">
-        <a href="/home" class="nav-link">Inicio</a>
-        <a href="/comprar" class="nav-link">Comprar</a>
-        <a href="/alquilar" class="nav-link">Alquilar</a>
-        <a href="/ciudades" class="nav-link active">Ciudades</a>
-      </nav>
+              <nav class="nav-links">
+          <a class="nav-link" href="/home">Inicio</a>
+          <div class="nav-item">
+            <a class="nav-link" href="/mapa">Comprar</a>
+            <div class="nav-dropdown">
+              <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+              <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
+              <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
+              <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            </div>
+          </div>
+          <div class="nav-item">
+            <a class="nav-link" href="/alquilar">Alquilar</a>
+            <div class="nav-dropdown">
+              <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
+              <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            </div>
+          </div>
+          <a class="nav-link" href="/blog">Blog</a>
+          <a class="nav-link" href="/about">Nosotros</a>
+        </nav>
     </div>
   </nav>
 
