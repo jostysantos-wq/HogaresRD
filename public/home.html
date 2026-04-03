@@ -240,7 +240,7 @@
     .footer-bottom p { font-size: 0.82rem; color: var(--text-muted); }
 
     /* CAROUSELS */
-    .carousel-viewport { overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; }
+    .carousel-viewport { overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; overscroll-behavior-x: contain; touch-action: pan-y; }
     .carousel-viewport.dragging { cursor: grabbing; }
     .carousel-track { display: flex; gap: 1.5rem; will-change: transform; }
     .carousel-track .property-card { flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3); }
@@ -1248,7 +1248,7 @@
           track.style.transition = 'none';
           track.getBoundingClientRect(); // force reflow so 'none' takes effect
         } else {
-          track.style.transition = 'transform 0.4s ease';
+          track.style.transition = 'transform 0.38s cubic-bezier(0.33, 1, 0.68, 1)';
         }
         track.style.transform = `translateX(-${pos * cardStep()}px)`;
       }
@@ -1298,18 +1298,40 @@
       viewport.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX); });
       window .addEventListener('mousemove',   e => onDragMove(e.clientX));
       window .addEventListener('mouseup',     ()  => onDragEnd());
-      viewport.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX), { passive: true });
-      viewport.addEventListener('touchmove',  e => onDragMove(e.touches[0].clientX),  { passive: true });
-      viewport.addEventListener('touchend',   ()  => onDragEnd());
 
-      // Mouse-wheel scroll over the carousel advances cards
-      let wheelTimer = null;
+      // Touch: detect scroll direction first — only hijack horizontal swipes
+      let touchStartX = 0, touchStartY = 0, touchIsHoriz = null;
+      viewport.addEventListener('touchstart', e => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchIsHoriz = null;
+        onDragStart(touchStartX);
+      }, { passive: true });
+      viewport.addEventListener('touchmove', e => {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (touchIsHoriz === null && (dx > 5 || dy > 5)) touchIsHoriz = dx > dy;
+        if (touchIsHoriz === false) {
+          // Vertical swipe — cancel carousel drag so page scrolls freely
+          if (dragStart !== null) { dragStart = null; viewport.classList.remove('dragging'); }
+          return;
+        }
+        if (touchIsHoriz) { e.preventDefault(); onDragMove(e.touches[0].clientX); }
+      }, { passive: false });
+      viewport.addEventListener('touchend', () => { touchIsHoriz = null; onDragEnd(); });
+
+      // Mouse-wheel: only intercept horizontal (trackpad swipe) — vertical scroll passes to page
+      let wheelTimer = null, wheelAccum = 0;
       viewport.addEventListener('wheel', e => {
+        // Primarily vertical scroll → let page scroll normally
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
         e.preventDefault();
+        wheelAccum += e.deltaX;
         clearTimeout(wheelTimer);
         wheelTimer = setTimeout(() => {
-          setPos(pos + (e.deltaY > 0 || e.deltaX > 0 ? 1 : -1), true);
-        }, 50);
+          if (Math.abs(wheelAccum) > 20) setPos(pos + (wheelAccum > 0 ? 1 : -1), true);
+          wheelAccum = 0;
+        }, 80);
       }, { passive: false });
 
       window.addEventListener('resize', () => { if (items.length) rebuild(); });
