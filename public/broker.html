@@ -3865,6 +3865,13 @@
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
   }
 
+  // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
+  (function () {
+    const VALID = Object.keys(PAGE_TITLES).concat(['mensajes']);
+    const hash  = location.hash.slice(1);
+    if (hash && VALID.includes(hash)) showPage(hash);
+  })();
+
   // ── Dashboard Section Nav (internal tabs) ──────────────────
   document.getElementById('sectionNav').addEventListener('click', e => {
     const btn = e.target.closest('.section-nav-btn');
