@@ -1242,15 +1242,19 @@
         return c.getBoundingClientRect().width +
                parseFloat(getComputedStyle(track).gap || 0);
       }
+      // rawX = live pixel offset; pos = nearest card index (for infinite loop)
+      let rawX = 0;
+
       function setPos(p, animate) {
-        pos = p;
+        pos  = p;
+        rawX = p * cardStep();
         if (!animate) {
           track.style.transition = 'none';
-          track.getBoundingClientRect(); // force reflow so 'none' takes effect
+          track.getBoundingClientRect(); // flush reflow
         } else {
           track.style.transition = 'transform 0.38s cubic-bezier(0.33, 1, 0.68, 1)';
         }
-        track.style.transform = `translateX(-${pos * cardStep()}px)`;
+        track.style.transform = `translateX(-${rawX}px)`;
       }
       function rebuild() {
         cloneN = Math.min(perPage(), items.length);
@@ -1262,7 +1266,7 @@
       }
 
       track.addEventListener('transitionend', () => {
-        if (pos < cloneN)                    setPos(pos + items.length, false);
+        if (pos < cloneN)                     setPos(pos + items.length, false);
         else if (pos >= cloneN + items.length) setPos(pos - items.length, false);
       });
 
@@ -1270,34 +1274,32 @@
       document.getElementById(nextId).addEventListener('click', () => setPos(pos + 1, true));
 
       // ── Drag (mouse + touch) ─────────────────────────────────
-      let dragStart = null;
-      let dragX     = 0;
-      let baseX     = 0;
+      let dragStart = null, dragX = 0;
 
       function onDragStart(x) {
         dragStart = x; dragX = x;
-        baseX = pos * cardStep();
+        clearTimeout(snapTimer);
         viewport.classList.add('dragging');
         track.style.transition = 'none';
       }
       function onDragMove(x) {
         if (dragStart === null) return;
         dragX = x;
-        track.style.transform = `translateX(-${baseX - (x - dragStart)}px)`;
+        rawX -= (x - dragStart);
+        dragStart = x; // incremental delta so rawX tracks finger precisely
+        loopRawX();
+        track.style.transform = `translateX(-${rawX}px)`;
       }
       function onDragEnd() {
         if (dragStart === null) return;
-        const delta = dragX - dragStart;
         viewport.classList.remove('dragging');
         dragStart = null;
-        setPos(Math.abs(delta) > cardStep() * 0.15
-          ? pos + (delta < 0 ? 1 : -1)
-          : pos, true);
+        snapToNearest();
       }
 
-      viewport.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX); });
-      window .addEventListener('mousemove',   e => onDragMove(e.clientX));
-      window .addEventListener('mouseup',     ()  => onDragEnd());
+      viewport.addEventListener('mousedown', e => { e.preventDefault(); onDragStart(e.clientX); });
+      window.addEventListener('mousemove',   e => onDragMove(e.clientX));
+      window.addEventListener('mouseup',     ()  => onDragEnd());
 
       // Touch: detect scroll direction first — only hijack horizontal swipes
       let touchStartX = 0, touchStartY = 0, touchIsHoriz = null;
@@ -1312,7 +1314,6 @@
         const dy = Math.abs(e.touches[0].clientY - touchStartY);
         if (touchIsHoriz === null && (dx > 5 || dy > 5)) touchIsHoriz = dx > dy;
         if (touchIsHoriz === false) {
-          // Vertical swipe — cancel carousel drag so page scrolls freely
           if (dragStart !== null) { dragStart = null; viewport.classList.remove('dragging'); }
           return;
         }
@@ -1320,18 +1321,46 @@
       }, { passive: false });
       viewport.addEventListener('touchend', () => { touchIsHoriz = null; onDragEnd(); });
 
-      // Mouse-wheel: only intercept horizontal (trackpad swipe) — vertical scroll passes to page
-      let wheelTimer = null, wheelAccum = 0;
+      // ── Fluid wheel: move pixel-by-pixel, snap when idle ─────
+      let snapTimer = null;
+
+      function loopRawX() {
+        // Wrap rawX so it stays within the infinite-loop range
+        if (!items.length) return;
+        const step    = cardStep();
+        const loopLen = items.length * step;
+        if (rawX < (cloneN - 1) * step) rawX += loopLen;
+        if (rawX > (cloneN + items.length) * step) rawX -= loopLen;
+      }
+
+      function snapToNearest() {
+        const step = cardStep();
+        if (!step) return;
+        pos = Math.round(rawX / step);
+        // clamp inside the valid index range
+        pos = Math.max(cloneN - 1, Math.min(pos, cloneN + items.length));
+        rawX = pos * step;
+        track.style.transition = 'transform 0.32s cubic-bezier(0.33, 1, 0.68, 1)';
+        track.style.transform  = `translateX(-${rawX}px)`;
+        // transitionend will handle the infinite-loop reset
+      }
+
       viewport.addEventListener('wheel', e => {
-        // Primarily vertical scroll → let page scroll normally
+        // Vertical scroll → let the page handle it, don't touch the carousel
         if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
         e.preventDefault();
-        wheelAccum += e.deltaX;
-        clearTimeout(wheelTimer);
-        wheelTimer = setTimeout(() => {
-          if (Math.abs(wheelAccum) > 20) setPos(pos + (wheelAccum > 0 ? 1 : -1), true);
-          wheelAccum = 0;
-        }, 80);
+
+        // Pixel-mode vs line-mode delta normalisation
+        const delta = e.deltaMode === 1 ? e.deltaX * 30 : e.deltaX;
+        rawX += delta;
+        loopRawX();
+
+        track.style.transition = 'none';
+        track.style.transform  = `translateX(-${rawX}px)`;
+
+        // Snap to the nearest card once the user stops scrolling
+        clearTimeout(snapTimer);
+        snapTimer = setTimeout(snapToNearest, 160);
       }, { passive: false });
 
       window.addEventListener('resize', () => { if (items.length) rebuild(); });
