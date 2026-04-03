@@ -280,6 +280,160 @@
     .carousel-arrow svg { width: 18px; height: 18px; fill: currentColor; }
     .badge-views { background: rgba(234,120,0,0.92); color: #fff; }
     .badge-viewed { background: rgba(100,116,139,0.88); color: #fff; }
+    .badge-budget  { background: linear-gradient(135deg,#0a7c4e,#10b77e); color:#fff; }
+
+    /* ── Buying Power CTA card ─────────────────────────────────── */
+    .bp-cta-card {
+      display: flex; align-items: center; gap: 1.5rem;
+      background: linear-gradient(135deg, var(--blue) 0%, #1a4fa0 100%);
+      border-radius: 16px; padding: 1.5rem 2rem; color: #fff;
+      box-shadow: 0 4px 20px rgba(0,45,98,0.25);
+    }
+    .bp-cta-icon { font-size: 2.5rem; flex-shrink: 0; }
+    .bp-cta-content { flex: 1; }
+    .bp-cta-content h3 { margin: 0 0 0.35rem; font-size: 1.15rem; font-weight: 700; }
+    .bp-cta-content p  { margin: 0; font-size: 0.875rem; opacity: 0.88; line-height: 1.5; }
+    .bp-cta-btn {
+      flex-shrink: 0; background: #fff; color: var(--blue);
+      border: none; border-radius: 10px; padding: 0.75rem 1.5rem;
+      font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      white-space: nowrap; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .bp-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    @media(max-width:600px) {
+      .bp-cta-card { flex-direction: column; text-align: center; }
+      .bp-cta-btn  { width: 100%; }
+    }
+
+    /* ── Buying Power Modal ────────────────────────────────────── */
+    .bp-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .bp-overlay.open { opacity: 1; pointer-events: all; }
+    .bp-modal {
+      background: var(--bg-card); border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      width: 100%; max-width: 520px; max-height: 90vh;
+      overflow-y: auto; transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .bp-overlay.open .bp-modal { transform: translateY(0); }
+    .bp-modal-header {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1.5rem 1.5rem 0;
+    }
+    .bp-modal-icon { font-size: 2rem; }
+    .bp-modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 800; flex: 1; }
+    .bp-modal-header p  { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-secondary); }
+    .bp-close {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; width: 32px; height: 32px;
+      cursor: pointer; font-size: 1rem; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .bp-close:hover { background: var(--bg-hover, #f1f5f9); }
+    .bp-progress {
+      display: flex; align-items: center; gap: 0; padding: 1.25rem 1.5rem 0;
+    }
+    .bp-prog-step {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
+    }
+    .bp-prog-step.active { color: var(--blue); }
+    .bp-prog-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--border); display: flex; align-items: center;
+      justify-content: center; font-size: 0.7rem; font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .bp-prog-step.active .bp-prog-dot   { background: var(--blue); color: #fff; }
+    .bp-prog-step.done   .bp-prog-dot   { background: #10b981; color: #fff; }
+    .bp-prog-line { flex: 1; height: 2px; background: var(--border); margin: 0 0.5rem; }
+    .bp-prog-line.done { background: #10b981; }
+    .bp-step-body { padding: 1.25rem 1.5rem 1.5rem; }
+    .bp-step-body.hidden { display: none; }
+    .bp-field { margin-bottom: 1.25rem; }
+    .bp-field label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--text-secondary); margin-bottom: 0.5rem;
+    }
+    .bp-optional { font-weight: 400; opacity: 0.7; }
+    .bp-toggle-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .bp-toggle {
+      padding: 0.5rem 1rem; border-radius: 8px; border: 2px solid var(--border);
+      background: var(--bg); cursor: pointer; font-size: 0.85rem; font-weight: 600;
+      color: var(--text); transition: all 0.15s;
+    }
+    .bp-toggle.active {
+      border-color: var(--blue); background: rgba(0,68,204,0.08); color: var(--blue);
+    }
+    .bp-money-wrap { position: relative; }
+    .bp-money-wrap .bp-prefix {
+      position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%);
+      font-weight: 700; color: var(--text-secondary); font-size: 0.95rem;
+    }
+    .bp-money-input {
+      width: 100%; padding: 0.75rem 0.85rem 0.75rem 2rem;
+      border: 2px solid var(--border); border-radius: 10px;
+      background: var(--bg); color: var(--text);
+      font-size: 1rem; font-weight: 600; box-sizing: border-box;
+      transition: border-color 0.15s;
+    }
+    .bp-money-input:focus { outline: none; border-color: var(--blue); }
+    .bp-slider {
+      width: 100%; margin-top: 0.5rem; accent-color: var(--blue); cursor: pointer;
+    }
+    .bp-slider-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.2rem;
+    }
+    .bp-hint { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.35rem; }
+    .bp-result-card {
+      background: linear-gradient(135deg, #0a7c4e, #10b77e);
+      border-radius: 14px; padding: 1.25rem 1.5rem; color: #fff;
+      margin: 1.5rem 0 0; text-align: center;
+    }
+    .bp-result-label { font-size: 0.8rem; font-weight: 600; opacity: 0.9; margin-bottom: 0.4rem; }
+    .bp-result-amount { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .bp-result-sub { font-size: 0.78rem; opacity: 0.85; line-height: 1.5; }
+    .bp-result-breakdown {
+      display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+      margin-top: 0.75rem; padding-top: 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.25);
+    }
+    .bp-breakdown-item { font-size: 0.72rem; opacity: 0.85; text-align: center; }
+    .bp-breakdown-item strong { display: block; font-size: 0.9rem; opacity: 1; }
+    .bp-footer {
+      display: flex; gap: 0.75rem; align-items: center;
+      border-top: 1px solid var(--border); padding: 1rem 1.5rem;
+    }
+    .bp-btn-back {
+      background: none; border: 2px solid var(--border); border-radius: 10px;
+      padding: 0.7rem 1.25rem; cursor: pointer; font-weight: 600;
+      color: var(--text); font-size: 0.9rem; transition: all 0.15s;
+    }
+    .bp-btn-back:hover { border-color: var(--text); }
+    .bp-btn-primary {
+      flex: 1; background: var(--blue); color: #fff; border: none;
+      border-radius: 10px; padding: 0.8rem 1.5rem; font-weight: 700;
+      font-size: 0.95rem; cursor: pointer; transition: background 0.15s, transform 0.15s;
+    }
+    .bp-btn-primary:hover { background: #0033aa; transform: translateY(-1px); }
+    .bp-btn-skip {
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 0.8rem; cursor: pointer; text-decoration: underline;
+      padding: 0; flex-shrink: 0;
+    }
+    .bp-success-banner {
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem;
+      font-size: 0.85rem; color: #065f46; display: none;
+    }
+    [data-theme="dark"] .bp-success-banner { color: #6ee7b7; }
     @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
     @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 5rem); } }
 
@@ -502,6 +656,131 @@
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="recoTrack"></div></div>
+    </div>
+  </div>
+
+  <!-- BUYING POWER CTA — shown for logged-in users who haven't set their budget -->
+  <div id="bpCTASection" style="display:none;">
+    <div class="section">
+      <div class="bp-cta-card">
+        <div class="bp-cta-icon">💰</div>
+        <div class="bp-cta-content">
+          <h3>¿Cuánto puedes invertir?</h3>
+          <p>Calcula tu poder de compra y recibe recomendaciones personalizadas según tu presupuesto real.</p>
+        </div>
+        <button class="bp-cta-btn" onclick="openBPModal()">Calcular ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUYING POWER MODAL ─────────────────────────────────────────── -->
+  <div id="bpOverlay" class="bp-overlay" role="dialog" aria-modal="true" aria-label="Calculadora de Poder de Compra">
+    <div class="bp-modal">
+
+      <!-- Header -->
+      <div class="bp-modal-header">
+        <div class="bp-modal-icon">🏠</div>
+        <div style="flex:1">
+          <h2>Tu Poder de Compra</h2>
+          <p>Descubre cuánto puedes invertir en tu próximo hogar</p>
+        </div>
+        <button class="bp-close" onclick="closeBPModal()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <!-- Progress -->
+      <div class="bp-progress">
+        <div class="bp-prog-step active" id="bpDot1">
+          <div class="bp-prog-dot">1</div><span>Lo que buscas</span>
+        </div>
+        <div class="bp-prog-line" id="bpLine1"></div>
+        <div class="bp-prog-step" id="bpDot2">
+          <div class="bp-prog-dot">2</div><span>Tus finanzas</span>
+        </div>
+      </div>
+
+      <!-- Step 1: What you're looking for + budget -->
+      <div class="bp-step-body" id="bpStep1">
+        <div id="bpSuccessBanner" class="bp-success-banner">✅ ¡Perfil actualizado! Tus recomendaciones ya reflejan tu presupuesto.</div>
+
+        <div class="bp-field">
+          <label>¿Qué quieres hacer?</label>
+          <div class="bp-toggle-group" id="bpTypeGroup">
+            <button class="bp-toggle active" data-val="venta"    onclick="setBPType('venta')">🏠 Comprar</button>
+            <button class="bp-toggle"        data-val="alquiler" onclick="setBPType('alquiler')">🔑 Alquilar</button>
+          </div>
+        </div>
+
+        <div class="bp-field">
+          <label>¿Cuántas habitaciones necesitas?</label>
+          <div class="bp-toggle-group" id="bpBedsGroup">
+            <button class="bp-toggle active" data-val="0" onclick="setBPBeds(0)">Cualquiera</button>
+            <button class="bp-toggle" data-val="1" onclick="setBPBeds(1)">1+</button>
+            <button class="bp-toggle" data-val="2" onclick="setBPBeds(2)">2+</button>
+            <button class="bp-toggle" data-val="3" onclick="setBPBeds(3)">3+</button>
+            <button class="bp-toggle" data-val="4" onclick="setBPBeds(4)">4+</button>
+          </div>
+        </div>
+
+        <div class="bp-field">
+          <label>¿Cuál es tu presupuesto máximo? <span class="bp-optional">(DOP)</span></label>
+          <div class="bp-money-wrap">
+            <span class="bp-prefix">$</span>
+            <input type="number" id="bpBudget" class="bp-money-input" placeholder="5,000,000" min="0" step="100000" oninput="syncSlider()">
+          </div>
+          <input type="range" id="bpSlider" class="bp-slider" min="0" max="50000000" step="500000" value="0" oninput="syncBudget()">
+          <div class="bp-slider-labels"><span>$0</span><span>$25M</span><span>$50M+</span></div>
+        </div>
+
+        <div class="bp-footer">
+          <button class="bp-btn-primary" onclick="bpToStep2()">Continuar →</button>
+          <button class="bp-btn-skip" onclick="saveBuyingPower(true)">Solo guardar el presupuesto</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Financial details (optional) + live result -->
+      <div class="bp-step-body hidden" id="bpStep2">
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin:0 0 1.25rem;">Información opcional para calcular tu poder de compra exacto basado en tu ingreso y deudas.</p>
+
+        <div class="bp-field">
+          <label>Ingresos anuales <span class="bp-optional">— opcional</span></label>
+          <div class="bp-money-wrap">
+            <span class="bp-prefix">$</span>
+            <input type="number" id="bpIncome" class="bp-money-input" placeholder="1,200,000" min="0" step="50000" oninput="updateBPResult()">
+          </div>
+        </div>
+
+        <div class="bp-field">
+          <label>Deudas mensuales <span class="bp-optional">— opcional</span></label>
+          <div class="bp-money-wrap">
+            <span class="bp-prefix">$</span>
+            <input type="number" id="bpDebts" class="bp-money-input" placeholder="0" min="0" step="1000" oninput="updateBPResult()">
+          </div>
+          <div class="bp-hint">Préstamos, tarjetas de crédito, cuotas, etc.</div>
+        </div>
+
+        <div class="bp-field">
+          <label>Inicial disponible <span class="bp-optional">— opcional</span></label>
+          <div class="bp-money-wrap">
+            <span class="bp-prefix">$</span>
+            <input type="number" id="bpDown" class="bp-money-input" placeholder="500,000" min="0" step="50000" oninput="updateBPResult()">
+          </div>
+          <div class="bp-hint">Monto que puedes dar de entrada (típico en RD: 10–20%)</div>
+        </div>
+
+        <!-- Live result card -->
+        <div id="bpResultCard" class="bp-result-card" style="display:none;">
+          <div class="bp-result-label">Tu poder de compra estimado</div>
+          <div class="bp-result-amount" id="bpResultAmt">—</div>
+          <div class="bp-result-sub" id="bpResultSub"></div>
+          <div class="bp-result-breakdown" id="bpResultBreakdown"></div>
+        </div>
+
+        <div class="bp-footer">
+          <button class="bp-btn-back" onclick="bpToStep1()">← Atrás</button>
+          <button class="bp-btn-primary" onclick="saveBuyingPower(false)" id="bpSaveBtn">Guardar y ver recomendaciones</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1160,15 +1439,31 @@
     }
 
     // ── Load each carousel section ─────────────────────────────
-    async function loadRecommendations(token) {
+    async function loadRecommendations(token, user) {
+      const hasBP = user && user.buyingPower && user.buyingPower.calculatedMaxPrice;
+
+      // Show CTA for logged-in users who haven't set buying power yet
+      if (!hasBP) {
+        document.getElementById('bpCTASection').style.display = '';
+      }
+
       try {
         const res = await fetch('/api/user/recommendations', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) return;
         const { listings } = await res.json();
         if (!listings || !listings.length) return;
         const c = createCarousel('recoTrack', 'recoPrev', 'recoNext');
-        listings.forEach(l => c.add(buildListingCard(l, { label: 'Para Ti', cls: 'badge-featured' })));
+        // If buying power is set, show "Dentro de tu presupuesto" badge; otherwise "Para Ti"
+        const label = hasBP ? 'En tu presupuesto' : 'Para Ti';
+        const cls   = hasBP ? 'badge-budget' : 'badge-featured';
+        listings.forEach(l => c.add(buildListingCard(l, { label, cls })));
         if (_cardObserver) c.observe(_cardObserver);
+        // Update section title when buying power is active
+        if (hasBP) {
+          const fmt = n => '$' + Math.round(n/1000000*10)/10 + 'M';
+          document.querySelector('#recoSection .section-label').textContent = '💰 Tu presupuesto';
+          document.querySelector('#recoSection .section-title').textContent = 'Dentro de Tu Alcance';
+        }
         document.getElementById('recoSection').style.display = '';
       } catch {}
     }
@@ -1345,7 +1640,8 @@
             const user = await res.json();
             renderLoggedIn(area, user);
             _cardObserver = initActivityLogging(token);
-            loadRecommendations(token);
+            _bpToken = token;
+            loadRecommendations(token, user);
           }
         } catch { renderLoggedOut(area); }
       }
@@ -1361,6 +1657,197 @@
       try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
       ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
       window.location.href = '/home';
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Buying Power Calculator
+    // ══════════════════════════════════════════════════════════════
+    let _bpToken  = null;
+    let _bpType   = 'venta';
+    let _bpBeds   = 0;
+
+    function openBPModal() {
+      document.getElementById('bpOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeBPModal() {
+      document.getElementById('bpOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    // Close on backdrop click
+    document.getElementById('bpOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('bpOverlay')) closeBPModal();
+    });
+
+    function setBPType(val) {
+      _bpType = val;
+      document.querySelectorAll('#bpTypeGroup .bp-toggle').forEach(b =>
+        b.classList.toggle('active', b.dataset.val === val)
+      );
+    }
+    function setBPBeds(val) {
+      _bpBeds = val;
+      document.querySelectorAll('#bpBedsGroup .bp-toggle').forEach(b =>
+        b.classList.toggle('active', Number(b.dataset.val) === val)
+      );
+    }
+    function syncSlider() {
+      const v = parseFloat(document.getElementById('bpBudget').value) || 0;
+      document.getElementById('bpSlider').value = Math.min(v, 50000000);
+    }
+    function syncBudget() {
+      const v = parseFloat(document.getElementById('bpSlider').value) || 0;
+      document.getElementById('bpBudget').value = v || '';
+    }
+
+    function bpToStep2() {
+      document.getElementById('bpStep1').classList.add('hidden');
+      document.getElementById('bpStep2').classList.remove('hidden');
+      document.getElementById('bpDot1').classList.remove('active'); document.getElementById('bpDot1').classList.add('done');
+      document.getElementById('bpLine1').classList.add('done');
+      document.getElementById('bpDot2').classList.add('active');
+      updateBPResult();
+    }
+    function bpToStep1() {
+      document.getElementById('bpStep2').classList.add('hidden');
+      document.getElementById('bpStep1').classList.remove('hidden');
+      document.getElementById('bpDot1').classList.remove('done'); document.getElementById('bpDot1').classList.add('active');
+      document.getElementById('bpLine1').classList.remove('done');
+      document.getElementById('bpDot2').classList.remove('active');
+    }
+
+    function fmtDOP(n) {
+      if (!n) return '$0';
+      if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+      if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return '$' + Math.round(n/1000) + 'K';
+      return '$' + Math.round(n).toLocaleString('es-DO');
+    }
+
+    function calcBP() {
+      const budget = parseFloat(document.getElementById('bpBudget').value) || 0;
+      const income = parseFloat(document.getElementById('bpIncome').value) || 0;
+      const debts  = parseFloat(document.getElementById('bpDebts').value)  || 0;
+      const down   = parseFloat(document.getElementById('bpDown').value)   || 0;
+
+      if (!income) {
+        // No income info — use budget directly
+        return { maxPrice: budget, method: 'budget', budget, down, income: 0, debts: 0,
+                 monthlyPayment: 0, loanAmt: 0 };
+      }
+
+      // Dominican Republic mortgage: ~10% APR, 25-year term
+      const RATE = 0.10 / 12;
+      const N    = 25 * 12;
+      const monthlyIncome = income / 12;
+
+      // 28% gross income rule (housing payment ≤ 28% monthly income)
+      const maxPay28 = monthlyIncome * 0.28;
+      // 43% DTI rule (all debts ≤ 43% monthly income)
+      const maxPay43 = Math.max(0, monthlyIncome * 0.43 - debts);
+      const maxPayment = Math.min(maxPay28, maxPay43);
+
+      // Loan amount from payment: PV = PMT × (1 − (1+r)^−n) / r
+      const loanAmt   = maxPayment * ((1 - Math.pow(1 + RATE, -N)) / RATE);
+      const calcPrice = Math.round(loanAmt + down);
+
+      // If budget also provided, use whichever is lower (more conservative)
+      const maxPrice = budget > 0 ? Math.min(budget, calcPrice) : calcPrice;
+
+      return { maxPrice, method: 'calculated', budget, down, income, debts,
+               monthlyPayment: maxPayment, loanAmt };
+    }
+
+    function updateBPResult() {
+      const r = calcBP();
+      const card = document.getElementById('bpResultCard');
+
+      if (!r.maxPrice) { card.style.display = 'none'; return; }
+      card.style.display = '';
+
+      document.getElementById('bpResultAmt').textContent = fmtDOP(r.maxPrice);
+
+      if (r.method === 'calculated') {
+        document.getElementById('bpResultSub').textContent =
+          `Cuota mensual estimada: ${fmtDOP(r.monthlyPayment)} · Préstamo: ${fmtDOP(r.loanAmt)}`;
+        document.getElementById('bpResultBreakdown').innerHTML = `
+          <div class="bp-breakdown-item"><strong>${fmtDOP(r.income/12)}</strong>Ingreso/mes</div>
+          <div class="bp-breakdown-item"><strong>${fmtDOP(r.debts)}</strong>Deudas/mes</div>
+          <div class="bp-breakdown-item"><strong>${fmtDOP(r.down)}</strong>Inicial</div>
+          <div class="bp-breakdown-item"><strong>10% APR · 25 años</strong>Condiciones est.</div>
+        `;
+      } else {
+        document.getElementById('bpResultSub').textContent = 'Basado en tu presupuesto declarado';
+        document.getElementById('bpResultBreakdown').innerHTML = '';
+      }
+    }
+
+    async function saveBuyingPower(budgetOnly) {
+      if (!_bpToken) { closeBPModal(); return; }
+
+      const budget = parseFloat(document.getElementById('bpBudget').value) || 0;
+      if (!budget && budgetOnly) {
+        document.getElementById('bpBudget').focus(); return;
+      }
+
+      let payload;
+      if (budgetOnly) {
+        payload = { budget, propertyType: _bpType, bedrooms: _bpBeds, calculatedMaxPrice: budget };
+      } else {
+        const r = calcBP();
+        if (!r.maxPrice) { updateBPResult(); return; }
+        payload = {
+          budget:             r.budget,
+          annualIncome:       r.income,
+          monthlyDebts:       r.debts,
+          downPayment:        r.down,
+          calculatedMaxPrice: r.maxPrice,
+          propertyType:       _bpType,
+          bedrooms:           _bpBeds,
+        };
+      }
+
+      const btn = document.getElementById('bpSaveBtn') || document.querySelector('.bp-btn-primary');
+      if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+      try {
+        const res = await fetch('/api/user/profile/buying-power', {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${_bpToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Error guardando');
+
+        // Show success banner, refresh reco section
+        document.getElementById('bpSuccessBanner').style.display = 'block';
+        if (!budgetOnly) bpToStep1();
+
+        // Hide CTA, update reco section label
+        document.getElementById('bpCTASection').style.display = 'none';
+        document.querySelector('#recoSection .section-label').textContent = '💰 Tu presupuesto';
+        document.querySelector('#recoSection .section-title').textContent = 'Dentro de Tu Alcance';
+
+        // Reload recommendations with new profile
+        const track = document.getElementById('recoTrack');
+        if (track) track.innerHTML = '';
+        const recoRes = await fetch('/api/user/recommendations', {
+          headers: { 'Authorization': `Bearer ${_bpToken}` }
+        });
+        if (recoRes.ok) {
+          const { listings } = await recoRes.json();
+          if (listings && listings.length) {
+            const c = createCarousel('recoTrack', 'recoPrev', 'recoNext');
+            listings.forEach(l => c.add(buildListingCard(l, { label: 'En tu presupuesto', cls: 'badge-budget' })));
+            document.getElementById('recoSection').style.display = '';
+          }
+        }
+
+        setTimeout(closeBPModal, 1800);
+      } catch(e) {
+        alert('No se pudo guardar. Inténtalo de nuevo.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = budgetOnly ? 'Solo guardar el presupuesto' : 'Guardar y ver recomendaciones'; }
+      }
     }
   </script>
 <script src="/js/pixel.js" defer></script>

@@ -70,6 +70,51 @@ router.get('/recommendations', userAuth, (req, res) => {
   res.json({ listings: getRecommendations(req.user.sub, 10) });
 });
 
+// PATCH /api/user/profile/buying-power — save buying power and update recommendation profile
+router.patch('/profile/buying-power', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const {
+    budget, annualIncome, monthlyDebts, downPayment,
+    calculatedMaxPrice, propertyType, bedrooms,
+  } = req.body;
+
+  const maxPrice = Number(calculatedMaxPrice) || Number(budget) || 0;
+  if (!maxPrice || maxPrice <= 0)
+    return res.status(400).json({ error: 'Presupuesto inválido' });
+
+  user.buyingPower = {
+    budget:             Number(budget) || 0,
+    annualIncome:       Number(annualIncome) || 0,
+    monthlyDebts:       Number(monthlyDebts) || 0,
+    downPayment:        Number(downPayment) || 0,
+    calculatedMaxPrice: maxPrice,
+    propertyType:       propertyType || 'venta',
+    bedrooms:           Number(bedrooms) || 0,
+    updatedAt:          new Date().toISOString(),
+  };
+
+  // Feed buying power into the recommendation profile
+  const minPrice = Math.round(maxPrice * 0.5);
+  const currentTypes = user.profile.preferredTypes || [];
+  const newTypes = propertyType && !currentTypes.includes(propertyType)
+    ? [propertyType, ...currentTypes].slice(0, 3)
+    : (propertyType ? [propertyType, ...currentTypes.filter(t => t !== propertyType)].slice(0, 3) : currentTypes);
+
+  user.profile = {
+    ...user.profile,
+    priceMin:       minPrice,
+    priceMax:       maxPrice,
+    bedroomsMin:    Number(bedrooms) || user.profile.bedroomsMin || 0,
+    preferredTypes: newTypes,
+    scoredAt:       new Date().toISOString(),
+  };
+
+  store.saveUser(user);
+  res.json({ success: true, buyingPower: user.buyingPower });
+});
+
 // PATCH /api/user/profile — update mutable profile fields (name, phone)
 router.patch('/profile', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
