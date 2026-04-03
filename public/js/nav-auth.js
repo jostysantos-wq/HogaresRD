@@ -80,7 +80,10 @@
         <span class="_nav-dd-left"><span class="_nav-ic">&#128179;</span> Suscripci\u00f3n</span>
       </a>
       <a href="/broker#contrasena" class="_nav-dd">
-        <span class="_nav-dd-left"><span class="_nav-ic">&#128273;</span> Contrase\u00f1a y 2FA</span>
+        <span class="_nav-dd-left"><span class="_nav-ic">&#128273;</span> Contrase\u00f1a</span>
+      </a>
+      <a href="/broker#2fa" class="_nav-dd">
+        <span class="_nav-dd-left"><span class="_nav-ic">&#128737;</span> Verificaci\u00f3n 2FA</span>
       </a>`;
 
     const userMenu = `
