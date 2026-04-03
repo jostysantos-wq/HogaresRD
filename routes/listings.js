@@ -114,7 +114,7 @@ router.get('/agencies', (req, res) => {
   listings.forEach(l => {
     (l.agencies || []).forEach(a => {
       if (!a.name) return;
-      const slug = a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const slug = String(a.name).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       if (!map[slug]) map[slug] = { name: a.name, slug, count: 0 };
       map[slug].count++;
     });
@@ -129,7 +129,7 @@ router.get('/constructoras', (req, res) => {
   const map = {};
   listings.forEach(l => {
     if (!l.construction_company) return;
-    const name = l.construction_company;
+    const name = String(l.construction_company);
     const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     if (!map[slug]) map[slug] = { name, slug, count: 0 };
     map[slug].count++;

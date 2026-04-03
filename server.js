@@ -6,11 +6,20 @@ const fs         = require('fs');
 if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   const webpush = require('web-push');
   const vapidKeys = webpush.generateVAPIDKeys();
-  console.log('Generated VAPID keys (add to .env):');
-  console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
-  console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
-  process.env.VAPID_PUBLIC_KEY = vapidKeys.publicKey;
+  process.env.VAPID_PUBLIC_KEY  = vapidKeys.publicKey;
   process.env.VAPID_PRIVATE_KEY = vapidKeys.privateKey;
+  // Persist keys to .env so they survive restarts
+  const envPath = path.join(__dirname, '.env');
+  try {
+    let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+    if (!envContent.includes('VAPID_PUBLIC_KEY=')) {
+      envContent += `\nVAPID_PUBLIC_KEY=${vapidKeys.publicKey}\nVAPID_PRIVATE_KEY=${vapidKeys.privateKey}\n`;
+      fs.writeFileSync(envPath, envContent, 'utf8');
+      console.log('[vapid] Generated and saved VAPID keys to .env');
+    }
+  } catch (e) {
+    console.warn('[vapid] Could not write VAPID keys to .env:', e.message);
+  }
 }
 
 // ── Startup: fail fast if required secrets are missing ────────────
