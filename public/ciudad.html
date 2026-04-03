@@ -5,32 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title id="pageTitle">Ciudad — HogaresRD</title>
   <meta name="description" content="" id="metaDesc" />
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
-      --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
-      --red: #CF142B; --green: #0a7c4f; --border: #d0dcea;
-      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
-      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
-      --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
-      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --nav-bg: rgba(255,255,255,0.96);
-    }
-    [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
-      --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
-      --red: #e8374e; --green: #1db87a; --border: #002268;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --nav-bg: rgba(0,12,36,0.97);
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
 
     /* NAV */
     nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
@@ -48,7 +30,7 @@
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -117,7 +99,7 @@
 
     /* PROPERTY CARDS */
     .prop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 1.5rem; }
-    .prop-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; }
+    .prop-card { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; }
     .prop-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
     .card-img { height: 200px; background: linear-gradient(135deg, #002D62, #004aaa); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; overflow: hidden; }
     .card-img img { width: 100%; height: 100%; object-fit: cover; }
@@ -139,7 +121,7 @@
 
     /* STATES */
     .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 1.5rem; }
-    .sk-card { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+    .sk-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
     .sk-img { height: 200px; background: var(--border); animation: pulse 1.4s ease-in-out infinite; }
     .sk-body { padding: 1.1rem 1.25rem; }
     .skeleton { border-radius: 6px; background: var(--border); margin-bottom: 0.6rem; animation: pulse 1.4s ease-in-out infinite; }
@@ -162,7 +144,7 @@
     .section-title { font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 900; color: var(--text); margin-bottom: 0.75rem; }
     .city-description { font-size: 0.95rem; color: var(--text-muted); line-height: 1.8; max-width: 740px; margin-bottom: 2.75rem; }
     .highlights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 1.25rem; }
-    .highlight-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem; }
+    .highlight-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.75rem; }
     .highlight-icon { width: 46px; height: 46px; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 13px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
     .highlight-icon svg { width: 22px; height: 22px; fill: var(--accent); }
     .highlight-title { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 0.4rem; }
@@ -215,17 +197,17 @@
         <div class="nav-item">
           <a class="nav-link" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-            <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-            <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-            <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            <a href="/mapa">Explorar Mapa</a>
+            <a href="/comprar">Ver Listado</a>
+            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+            <a href="/comparar">Comparar</a>
           </div>
         </div>
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-            <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            <a href="/alquilar">Ver Listado</a>
+            <a href="/mapa?type=alquiler">Explorar Mapa</a>
           </div>
         </div>
         <a class="nav-link" href="/blog">Blog</a>
@@ -350,7 +332,7 @@
       localStorage.setItem('theme', next);
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 

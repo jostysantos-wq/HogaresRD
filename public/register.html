@@ -4,19 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crear Cuenta — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
   <style>
     :root {
-      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --shadow: 0 4px 24px rgba(0,56,168,0.13);
+      --toggle-bg: #D8D4CC;
+      --toggle-knob: #FFFFFF;
     }
     [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --toggle-bg: #3A3630;
+      --toggle-knob: #EDE9E3;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
     .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
@@ -34,26 +33,26 @@
     .account-card {
       display: flex; align-items: center; gap: 1.1rem;
       background: var(--bg-card); border: 2px solid var(--border);
-      border-radius: 16px; padding: 1.25rem 1.4rem;
+      border-radius: 8px; padding: 1.25rem 1.4rem;
       text-decoration: none; cursor: pointer;
       transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
-      box-shadow: 0 2px 10px rgba(0,56,168,0.06);
+      box-shadow: var(--shadow-sm);
     }
     .account-card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 6px 24px rgba(0,56,168,0.14);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-md);
       transform: translateY(-2px);
     }
 
     .card-icon {
-      width: 52px; height: 52px; border-radius: 14px;
+      width: 52px; height: 52px; border-radius: 6px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .card-icon svg { width: 26px; height: 26px; fill: #fff; }
 
-    .icon-user    { background: linear-gradient(135deg, #0038A8, #3b82f6); }
-    .icon-broker  { background: linear-gradient(135deg, #0891b2, #06b6d4); }
-    .icon-inm     { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+    .icon-user    { background: var(--text); }
+    .icon-broker  { background: var(--text-secondary); }
+    .icon-inm     { background: var(--text-secondary); }
 
     .card-body { flex: 1; min-width: 0; }
     .card-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem; }
@@ -61,10 +60,10 @@
 
     .card-badge {
       font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px;
-      text-transform: uppercase; padding: 3px 9px; border-radius: 20px;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 4px;
       flex-shrink: 0; white-space: nowrap;
     }
-    .badge-free    { background: rgba(0,56,168,0.1); color: var(--accent); }
+    .badge-free    { background: var(--bg-secondary); color: var(--text-secondary); }
     .badge-pro     { background: rgba(202,138,4,0.12); color: #92610a; }
     .badge-empresa { background: rgba(124,58,237,0.12); color: #7c3aed; }
     [data-theme="dark"] .badge-pro { color: #fbbf24; background: rgba(251,191,36,0.15); }

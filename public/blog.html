@@ -5,48 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blog — HogaresRD</title>
   <meta name="description" content="Consejos, guías y noticias del mercado inmobiliario dominicano. Todo lo que necesitas saber antes de comprar, alquilar o invertir en propiedades en RD." />
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg:           #f2f6ff;
-      --bg-card:      #ffffff;
-      --bg-section:   #e4ecff;
-      --text:         #001230;
-      --text-muted:   #3d5c85;
-      --accent:       #0038A8;
-      --accent-hover: #002c8a;
-      --accent-light: #dce8ff;
-      --red:          #CF142B;
-      --green:        #1B7A3E;
-      --border:       #c5d4f5;
-      --shadow-sm:    0 2px 8px rgba(0,56,168,0.09);
-      --shadow-md:    0 4px 20px rgba(0,56,168,0.13);
-      --shadow-lg:    0 8px 40px rgba(0,56,168,0.20);
-      --toggle-bg:    #b5ccf8;
-      --toggle-knob:  #ffffff;
-      --nav-bg:       rgba(255,255,255,0.96);
-    }
-    [data-theme="dark"] {
-      --bg:           #000c24;
-      --bg-card:      #001238;
-      --bg-section:   #000a1e;
-      --text:         #e8f0fb;
-      --text-muted:   #6a90cc;
-      --accent:       #5599ff;
-      --accent-hover: #4080f0;
-      --accent-light: #001238;
-      --red:          #e8374e;
-      --green:        #25a858;
-      --border:       #002268;
-      --shadow-sm:    0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg:    0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg:    #002268;
-      --toggle-knob:  #e8f0fb;
-      --nav-bg:       rgba(0,12,36,0.97);
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
 
     /* NAV */
     nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
@@ -64,7 +30,7 @@
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -108,9 +74,9 @@
 
     /* FEATURED */
     .featured-section { max-width: 1280px; margin: 0 auto; padding: 4rem 2rem 0; }
-    .section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); margin-bottom: 0.6rem; }
+    .section-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted, #9E9A94); }
     .section-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2.5rem; }
-    .featured-card { display: grid; grid-template-columns: 1.2fr 1fr; gap: 0; background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-md); margin-bottom: 2rem; transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; }
+    .featured-card { display: grid; grid-template-columns: 1.2fr 1fr; gap: 0; background: var(--bg-card); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-md); margin-bottom: 2rem; transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; }
     .featured-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
     .featured-img { aspect-ratio: 4/3; overflow: hidden; }
     .featured-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
@@ -126,7 +92,7 @@
     /* GRID */
     .blog-section { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 5rem; }
     .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
-    .blog-card { background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+    .blog-card { background: var(--bg-card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: box-shadow 0.2s, transform 0.2s; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
     .blog-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
     .blog-card-img { aspect-ratio: 16/9; overflow: hidden; }
     .blog-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
@@ -192,17 +158,17 @@
         <div class="nav-item">
           <a class="nav-link" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-            <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-            <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-            <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            <a href="/mapa">Explorar Mapa</a>
+            <a href="/comprar">Ver Listado</a>
+            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+            <a href="/comparar">Comparar</a>
           </div>
         </div>
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-            <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            <a href="/alquilar">Ver Listado</a>
+            <a href="/mapa?type=alquiler">Explorar Mapa</a>
           </div>
         </div>
         <a class="nav-link active" href="/blog">Blog</a>
@@ -225,7 +191,7 @@
       <div class="hero-shape hero-shape-3"></div>
     </div>
     <div class="hero-inner">
-      <div class="hero-eyebrow">✍️ Blog HogaresRD</div>
+      <div class="hero-eyebrow">Blog HogaresRD</div>
       <h1 class="hero-title">Todo sobre bienes raíces en <em>República Dominicana</em></h1>
       <p class="hero-sub">Guías prácticas, consejos de expertos, tendencias del mercado y todo lo que necesitas saber para tomar la mejor decisión inmobiliaria.</p>
     </div>
@@ -421,7 +387,7 @@
       try { localStorage.setItem('theme', next); } catch(e) {}
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 
@@ -460,7 +426,7 @@
               <a href="/busquedas-guardadas" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">🔔 Búsquedas Guardadas</a>
               <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
               <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
-                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
+                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
                 <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
               </div>
               <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>

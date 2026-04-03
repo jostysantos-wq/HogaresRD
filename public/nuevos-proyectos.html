@@ -5,34 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nuevos Proyectos — HogaresRD</title>
   <meta name="description" content="Descubre los nuevos proyectos y desarrollos residenciales en construcción en toda la República Dominicana." />
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
-      --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
-      --red: #CF142B; --green: #0a7c4f;
-      --border: #d0dcea;
-      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
-      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
-      --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
-      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --nav-bg: rgba(255,255,255,0.96);
-    }
-    [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
-      --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
-      --red: #e8374e; --green: #1db87a;
-      --border: #002268;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --nav-bg: rgba(0,12,36,0.97);
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
 
     /* NAV */
     nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
@@ -50,7 +30,7 @@
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -126,7 +106,7 @@
     .card-location { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
     .card-location svg { width: 13px; height: 13px; fill: var(--text-muted); flex-shrink: 0; }
     .card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
-    .meta-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 20px; background: var(--bg-section); color: var(--text-muted); border: 1px solid var(--border); }
+    .meta-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 10px; background: var(--bg-section); color: var(--text-muted); border: 1px solid var(--border); }
     .meta-pill svg { width: 11px; height: 11px; fill: var(--text-muted); }
     .card-specs { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); padding-top: 0.85rem; border-top: 1px solid var(--border); margin-top: auto; }
     .card-spec { display: flex; align-items: center; gap: 0.3rem; }
@@ -183,17 +163,17 @@
         <div class="nav-item">
           <a class="nav-link active" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-            <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-            <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-            <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            <a href="/mapa">Explorar Mapa</a>
+            <a href="/comprar">Ver Listado</a>
+            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+            <a href="/comparar">Comparar</a>
           </div>
         </div>
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-            <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            <a href="/alquilar">Ver Listado</a>
+            <a href="/mapa?type=alquiler">Explorar Mapa</a>
           </div>
         </div>
         <a class="nav-link" href="/blog">Blog</a>
@@ -339,7 +319,7 @@
       try { localStorage.setItem('theme', next); } catch(e) {}
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 
@@ -364,7 +344,7 @@
               <a href="/busquedas-guardadas" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">🔔 Búsquedas Guardadas</a>
               <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
               <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
-                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
+                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
                 <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
               </div>
               <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>

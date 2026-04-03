@@ -5,44 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Verificar Correo — HogaresRD</title>
   <link rel="icon" href="/favicon.ico"/>
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #eef3fa;
-      --card: #ffffff;
-      --text: #1a2b40;
-      --muted: #4d6a8a;
-      --border: #d0dcea;
-      --primary: #002D62;
-      --primary-light: #eef3fa;
-      --success: #16a34a;
-      --success-bg: #f0fdf4;
-      --success-border: #bbf7d0;
-      --error: #dc2626;
-      --error-bg: #fef2f2;
-      --error-border: #fecaca;
-      --warn: #d97706;
-      --warn-bg: #fffbeb;
-      --warn-border: #fde68a;
-    }
-    [data-theme="dark"] {
-      --bg: #0f1923;
-      --card: #1a2535;
-      --text: #e2eaf5;
-      --muted: #7a9bbf;
-      --border: #2d3f55;
-      --primary-light: #1e2d42;
-      --success-bg: #052e16;
-      --success-border: #166534;
-      --error-bg: #450a0a;
-      --error-border: #991b1b;
-      --warn-bg: #1c1500;
-      --warn-border: #92400e;
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: var(--font);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -53,12 +25,12 @@
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 8px;
       padding: 48px 40px;
       max-width: 460px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 4px 24px rgba(0,45,98,0.08);
+      box-shadow: 0 4px 24px rgba(17,17,16,0.06);
     }
     .icon {
       font-size: 3rem;
@@ -136,7 +108,7 @@
   </style>
 </head>
 <body>
-  <a href="/home" class="logo-link">🏠 HogaresRD</a>
+  <a href="/home" class="logo-link">HogaresRD</a>
 
   <div class="card" id="card">
     <div class="spinner" id="spinner"></div>

@@ -4,21 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mis Mensajes – HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #f7f8fa; --bg-card: #fff; --text: #1a1a2e; --text-muted: #6b7280;
-      --border: #e5e7eb; --accent: #2563eb; --accent-hover: #1d4ed8;
-      --accent-light: #eff6ff; --green: #16a34a; --red: #dc2626;
-      --nav-h: 64px;
-    }
-    [data-theme="dark"] {
-      --bg: #0f1117; --bg-card: #1a1d27; --text: #f0f0f5; --text-muted: #9ca3af;
-      --border: #2d3148; --accent-light: #1e2a4a;
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
 
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
 
     /* NAV */
     nav { position: sticky; top: 0; z-index: 100; background: var(--bg-card); border-bottom: 1px solid var(--border); height: var(--nav-h); display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; }

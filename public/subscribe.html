@@ -4,23 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Activar Plan — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --green: #0a7c4f; --green-bg: #e6f7ef;
-      --shadow: 0 4px 24px rgba(0,56,168,0.13);
-      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-    }
-    [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --green: #1db87a; --green-bg: #00261a;
-      --shadow: 0 4px 24px rgba(0,0,0,0.5);
-      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
     .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
@@ -33,7 +23,7 @@
     /* Trial badge */
     .trial-banner {
       background: var(--green-bg); border: 1.5px solid var(--green);
-      border-radius: 12px; padding: 0.85rem 1.1rem;
+      border-radius: 6px; padding: 0.85rem 1.1rem;
       display: flex; align-items: center; gap: 0.65rem;
       margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--green); font-weight: 600;
     }
@@ -42,7 +32,7 @@
     /* Expired banner */
     .expired-banner {
       background: #fff5f5; border: 1.5px solid #f87171;
-      border-radius: 12px; padding: 0.85rem 1.1rem;
+      border-radius: 6px; padding: 0.85rem 1.1rem;
       display: flex; align-items: center; gap: 0.65rem;
       margin-bottom: 1.5rem; font-size: 0.88rem; color: #b91c1c; font-weight: 600;
       display: none;
@@ -56,7 +46,7 @@
     /* Plan card */
     .plan-card {
       background: var(--bg-card); border: 2px solid var(--accent);
-      border-radius: 16px; padding: 1.75rem;
+      border-radius: 8px; padding: 1.75rem;
       box-shadow: var(--shadow); margin-bottom: 1.5rem;
     }
     .plan-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
@@ -186,7 +176,7 @@
       localStorage.setItem('theme', next);
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 

@@ -4,19 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ciudades — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --shadow: 0 4px 20px rgba(0,45,98,0.10);
-    }
-    [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     /* NAV */
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
@@ -32,7 +26,7 @@
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -60,8 +54,8 @@
     .cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
 
     /* CITY CARD */
-    .city-card { position: relative; border-radius: 16px; overflow: hidden; height: 200px; text-decoration: none; display: block; box-shadow: var(--shadow); transition: transform 0.25s, box-shadow 0.25s; }
-    .city-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,56,168,0.20); }
+    .city-card { position: relative; border-radius: 8px; overflow: hidden; height: 200px; text-decoration: none; display: block; box-shadow: var(--shadow); transition: transform 0.25s, box-shadow 0.25s; }
+    .city-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(17,17,16,0.14); }
     .city-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.4s; }
     .city-card:hover .city-bg { transform: scale(1.05); }
     .city-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,20,50,0.85) 0%, rgba(0,20,50,0.25) 60%, transparent 100%); }
@@ -69,7 +63,7 @@
     .city-province { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.65); margin-bottom: 0.2rem; }
     .city-name { font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem; }
     .city-tagline { font-size: 0.8rem; color: rgba(255,255,255,0.7); line-height: 1.4; }
-    .city-pill { position: absolute; top: 0.85rem; right: 0.85rem; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.72rem; font-weight: 600; border-radius: 20px; padding: 0.25rem 0.65rem; }
+    .city-pill { position: absolute; top: 0.85rem; right: 0.85rem; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.72rem; font-weight: 600; border-radius: 10px; padding: 0.25rem 0.65rem; }
 
     footer { text-align: center; padding: 1.5rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: auto; }
   </style>
@@ -86,17 +80,17 @@
           <div class="nav-item">
             <a class="nav-link" href="/mapa">Comprar</a>
             <div class="nav-dropdown">
-              <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-              <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-              <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-              <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+              <a href="/mapa">Explorar Mapa</a>
+              <a href="/comprar">Ver Listado</a>
+              <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+              <a href="/comparar">Comparar</a>
             </div>
           </div>
           <div class="nav-item">
             <a class="nav-link" href="/alquilar">Alquilar</a>
             <div class="nav-dropdown">
-              <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-              <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+              <a href="/alquilar">Ver Listado</a>
+              <a href="/mapa?type=alquiler">Explorar Mapa</a>
             </div>
           </div>
           <a class="nav-link" href="/blog">Blog</a>
@@ -217,7 +211,7 @@
       localStorage.setItem('theme', next);
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
   </script>

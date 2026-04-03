@@ -4,21 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Iniciar Sesión — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
   <style>
     :root {
-      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --input-bg: #f5f8fd; --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --shadow: 0 4px 24px rgba(0,56,168,0.13); --error: #CF142B;
+      --toggle-bg: #D8D4CC;
+      --toggle-knob: #FFFFFF;
     }
     [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --input-bg: #00162e; --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --shadow: 0 4px 24px rgba(0,0,0,0.5); --error: #e8374e;
+      --toggle-bg: #3A3630;
+      --toggle-knob: #EDE9E3;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Nav */
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
@@ -27,19 +24,19 @@
 
     /* Page */
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-    .auth-card { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 2.5rem 2.25rem; width: 100%; max-width: 420px; }
+    .auth-card { background: var(--bg-card); border-radius: 10px; box-shadow: var(--shadow-md); padding: 2.5rem 2.25rem; width: 100%; max-width: 420px; }
     .auth-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.35rem; }
     .auth-subtitle { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2rem; }
 
     .field { margin-bottom: 1.1rem; }
     .field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
-    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
     .field input:focus { border-color: var(--accent); }
 
-    .error-msg { font-size: 0.85rem; color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
+    .error-msg { font-size: 0.85rem; color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 4px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
     .error-msg.visible { display: block; }
 
-    .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.25rem; }
+    .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: var(--bg-card); border: none; border-radius: 4px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.25rem; }
     .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
@@ -58,27 +55,27 @@
     .account-options { display: flex; flex-direction: column; gap: 0.5rem; }
     .acc-option {
       display: flex; align-items: center; gap: 0.85rem;
-      padding: 0.75rem 1rem; border-radius: 11px;
+      padding: 0.75rem 1rem; border-radius: 6px;
       border: 1.5px solid var(--border); text-decoration: none;
       transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
     }
-    .acc-option:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); box-shadow: 0 2px 10px rgba(0,56,168,0.10); }
+    .acc-option:hover { border-color: var(--border-strong); background: var(--bg-hover); box-shadow: var(--shadow-sm); }
     .acc-option-icon {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 36px; height: 36px; border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.1rem; flex-shrink: 0;
     }
-    .acc-opt-free  { background: linear-gradient(135deg, #dce8ff, #bfd4ff); }
-    .acc-opt-pro   { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .acc-opt-free  { background: var(--bg-secondary); color: var(--text-secondary); }
+    .acc-opt-pro   { background: var(--bg-secondary); color: var(--text-secondary); }
     .acc-option-body { flex: 1; min-width: 0; }
     .acc-option-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
     .acc-option-sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 0.1rem; }
     .acc-option-badge {
       font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; padding: 2px 7px; border-radius: 20px;
+      letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px;
       flex-shrink: 0; white-space: nowrap;
     }
-    .badge-free { background: rgba(0,56,168,0.1); color: var(--accent); }
+    .badge-free { background: var(--bg-secondary); color: var(--text-secondary); }
     .badge-paid { background: rgba(202,138,4,0.12); color: #92610a; }
     [data-theme="dark"] .badge-paid { color: #fbbf24; background: rgba(251,191,36,0.15); }
     .acc-option-arrow { color: var(--text-muted); font-size: 1rem; flex-shrink: 0; transition: transform 0.18s; }
@@ -87,9 +84,9 @@
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
 
     .twofa-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
-    .twofa-digit { width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; border: 2px solid var(--border,#d1d5db); border-radius: 12px; outline: none; background: var(--bg-input,#fff); color: var(--text,#1a2b40); font-family: 'Courier New', monospace; transition: border-color 0.15s; }
-    .twofa-digit:focus { border-color: var(--accent,#002D62); box-shadow: 0 0 0 3px rgba(0,45,98,0.1); }
-    .twofa-digit.filled { border-color: var(--accent,#002D62); background: rgba(0,45,98,0.03); }
+    .twofa-digit { width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; border: 2px solid var(--border); border-radius: 4px; outline: none; background: var(--bg-card); color: var(--text); font-family: 'Courier New', monospace; transition: border-color 0.15s; }
+    .twofa-digit:focus { border-color: var(--text-secondary); box-shadow: 0 0 0 3px rgba(17,17,16,0.07); }
+    .twofa-digit.filled { border-color: var(--text-secondary); background: var(--bg-secondary); }
   </style>
 </head>
 <body>
@@ -122,7 +119,6 @@
       <!-- 2FA Code Entry -->
       <div id="twoFASection" style="display:none;">
         <div style="text-align:center;margin-bottom:20px;">
-          <div style="font-size:2rem;margin-bottom:8px;">🔐</div>
           <h2 style="margin:0 0 4px;font-size:1.1rem;">Verificación en dos pasos</h2>
           <p style="margin:0;font-size:0.85rem;color:var(--muted,#6b7280);">Ingresa el código de 6 dígitos enviado a tu correo</p>
         </div>
@@ -140,7 +136,7 @@
           <span id="twoFATimer" style="font-size:0.82rem;color:var(--muted,#6b7280);"></span>
         </div>
         <div style="text-align:center;margin-top:8px;">
-          <button type="button" id="resend2FABtn" style="background:none;border:none;color:var(--accent,#002D62);font-weight:600;cursor:pointer;font-size:0.85rem;">Reenviar código</button>
+          <button type="button" id="resend2FABtn" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:0.85rem;">Reenviar código</button>
         </div>
         <div style="text-align:center;margin-top:12px;">
           <button type="button" id="back2FABtn" style="background:none;border:none;color:var(--muted,#6b7280);cursor:pointer;font-size:0.82rem;">← Volver al login</button>
@@ -155,7 +151,9 @@
         <div class="new-account-label">¿No tienes cuenta?</div>
         <div class="account-options">
           <a href="/register-user" class="acc-option">
-            <div class="acc-option-icon acc-opt-free">🏠</div>
+            <div class="acc-option-icon acc-opt-free">
+              <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </div>
             <div class="acc-option-body">
               <div class="acc-option-title">Soy comprador o inquilino</div>
               <div class="acc-option-sub">Busca, guarda favoritos y aplica a propiedades</div>
@@ -164,7 +162,9 @@
             <span class="acc-option-arrow">→</span>
           </a>
           <a href="/register?pro=1" class="acc-option">
-            <div class="acc-option-icon acc-opt-pro">💼</div>
+            <div class="acc-option-icon acc-opt-pro">
+              <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.94 0 13.36 0c-1.34 0-2.38.7-3.36 1.68L9 3 7.98 1.68C7.02.7 5.98 0 4.64 0 2.06 0 0 2.06 0 4.64c0 .48.1.92.18 1.36H0v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7.82-4c.91 0 1.82.74 1.82 1.64 0 .48-.2.92-.51 1.24L9 9.45 5.51 4.88C5.2 4.56 5 4.12 5 3.64 5 2.74 5.91 2 6.82 2c.5 0 1.02.28 1.34.64L9 3.57l.84-.93C10.16 2.28 10.68 2 11.18 2zM20 20H2V8h16v12z"/></svg>
+            </div>
             <div class="acc-option-body">
               <div class="acc-option-title">Soy agente o inmobiliaria</div>
               <div class="acc-option-sub">Publica propiedades y gestiona tu equipo</div>

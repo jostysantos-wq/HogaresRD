@@ -5,33 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Comparar Propiedades — HogaresRD</title>
   <meta name="description" content="Compara propiedades lado a lado: precio, metros cuadrados, habitaciones, ubicacion y amenidades." />
+  <link rel="stylesheet" href="/css/core.css">
+
   <style>
-    :root {
-      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
-      --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
-      --red: #CF142B; --green: #0a7c4f;
-      --border: #d0dcea;
-      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
-      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
-      --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
-      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --nav-bg: rgba(255,255,255,0.96);
-    }
-    [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
-      --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
-      --red: #e8374e; --green: #1db87a;
-      --border: #002268;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --nav-bg: rgba(0,12,36,0.97);
-    }
+    :root { --toggle-bg: #D8D4CC; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #3A3630; --toggle-knob: #EDE9E3; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
 
     /* NAV */
     nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
@@ -49,7 +29,7 @@
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -79,7 +59,7 @@
     .empty-state {
       text-align: center; padding: 5rem 2rem;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 8px;
     }
     .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
     .empty-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
@@ -98,7 +78,7 @@
       gap: 0;
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 8px;
       overflow: hidden;
       box-shadow: var(--shadow-sm);
     }
@@ -229,17 +209,17 @@
         <div class="nav-item">
           <a class="nav-link active" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-            <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-            <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-            <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            <a href="/mapa">Explorar Mapa</a>
+            <a href="/comprar">Ver Listado</a>
+            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+            <a href="/comparar">Comparar</a>
           </div>
         </div>
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-            <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            <a href="/alquilar">Ver Listado</a>
+            <a href="/mapa?type=alquiler">Explorar Mapa</a>
           </div>
         </div>
         <a class="nav-link" href="/blog">Blog</a>
@@ -278,7 +258,7 @@
       try { localStorage.setItem('theme', next); } catch {}
       const label = document.getElementById('themeLabel');
       const knob = document.getElementById('themeKnob');
-      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 

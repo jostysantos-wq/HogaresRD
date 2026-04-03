@@ -4,34 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crear Cuenta de Cliente — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
   <style>
     :root {
-      --bg: #f0f4ff; --bg-card: #ffffff; --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --border: #c4d4e8;
-      --input-bg: #f5f8fd; --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
-      --shadow: 0 4px 24px rgba(0,56,168,0.13); --error: #CF142B;
+      --toggle-bg: #D8D4CC;
+      --toggle-knob: #FFFFFF;
     }
     [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --border: #002268;
-      --input-bg: #00162e; --toggle-bg: #002268; --toggle-knob: #e8f0fb;
-      --shadow: 0 4px 24px rgba(0,0,0,0.5); --error: #e8374e;
+      --toggle-bg: #3A3630;
+      --toggle-knob: #EDE9E3;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
     .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
     .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
 
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-    .auth-card { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 2.5rem 2.25rem; width: 100%; max-width: 440px; }
+    .auth-card { background: var(--bg-card); border-radius: 10px; box-shadow: var(--shadow-md); padding: 2.5rem 2.25rem; width: 100%; max-width: 440px; }
 
     .back-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--text-muted); text-decoration: none; margin-bottom: 1.5rem; transition: color 0.15s; }
     .back-link:hover { color: var(--accent); }
     .back-link svg { width: 14px; height: 14px; fill: currentColor; }
 
-    .account-type-badge { display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(0,56,168,0.09); color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 1rem; }
+    .account-type-badge { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--bg-secondary); color: var(--text-secondary); border-radius: 4px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 1rem; }
     .account-type-badge svg { width: 13px; height: 13px; fill: currentColor; }
 
     .auth-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.35rem; }
@@ -39,14 +36,14 @@
 
     .field { margin-bottom: 1.1rem; }
     .field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.4rem; }
-    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .field input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
     .field input:focus { border-color: var(--accent); }
 
     .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; }
-    .error-msg { font-size: 0.85rem; color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
+    .error-msg { font-size: 0.85rem; color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 4px; padding: 0.65rem 1rem; margin-bottom: 1.1rem; display: none; }
     .error-msg.visible { display: block; }
 
-    .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.25rem; }
+    .btn-primary { width: 100%; padding: 0.85rem; background: var(--accent); color: var(--bg-card); border: none; border-radius: 4px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.25rem; }
     .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 

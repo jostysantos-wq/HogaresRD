@@ -5,40 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Explorar Mapa — HogaresRD</title>
   <meta name="description" content="Explora propiedades en venta y alquiler en el mapa de la República Dominicana." />
+  <link rel="stylesheet" href="/css/core.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <style>
     :root {
-      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
-      --text: #001840; --text-muted: #4d6a8a;
-      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
-      --red: #CF142B; --green: #0a7c4f;
-      --border: #d0dcea;
-      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
-      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
-      --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
-      --nav-bg: rgba(255,255,255,0.97);
-      --topbar-bg: rgba(255,255,255,0.98);
-      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
+      --toggle-bg: #D8D4CC;
+      --toggle-knob: #FFFFFF;
       --topbar-h: 108px;
+      --topbar-bg: rgba(255,255,255,0.98);
     }
     [data-theme="dark"] {
-      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
-      --text: #e8f0fb; --text-muted: #7a9bbf;
-      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
-      --red: #e8374e; --green: #1db87a;
-      --border: #002268;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-      --nav-bg: rgba(0,12,36,0.97);
-      --topbar-bg: rgba(0,18,56,0.98);
-      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
+      --toggle-bg: #3A3630;
+      --toggle-knob: #EDE9E3;
+      --topbar-bg: rgba(14,13,11,0.98);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); }
 
     /* ── NAV ─────────────────────────────────────────────────── */
     nav {
@@ -48,19 +33,19 @@
     }
     .nav-inner { max-width: 100%; margin: 0 auto; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; gap: 1.5rem; }
     .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
-    .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; }
     .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
     .logo-text { font-size: 1.2rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
     .logo-text span { color: var(--accent); }
     .nav-links { display: flex; align-items: center; gap: 0.15rem; flex: 1; }
-    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; padding: 0.35rem 0.7rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
-    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; padding: 0.35rem 0.7rem; border-radius: 4px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--text); background: var(--bg-hover); }
     /* Nav dropdowns */
     .nav-item { position: relative; }
     .nav-dropdown {
       position: absolute; top: 100%; left: 0; min-width: 200px;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-lg);
+      border-radius: 6px; box-shadow: var(--shadow-lg);
       padding: 0.5rem 0; opacity: 0; visibility: hidden;
       transform: translateY(4px);
       transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
@@ -73,12 +58,11 @@
       color: var(--text); text-decoration: none;
       transition: background 0.15s, color 0.15s;
     }
-    .nav-dropdown a:hover { background: var(--accent-light); color: var(--accent); }
-    .nav-dropdown .dd-icon { font-size: 1rem; width: 1.2rem; text-align: center; }
+    .nav-dropdown a:hover { background: var(--bg-hover); color: var(--text); }
     .nav-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.9rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 1rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.9rem; border-radius: 4px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--border-strong); color: var(--text); }
+    .btn-nav-primary { background: var(--accent); color: var(--bg-card); font-size: 0.85rem; font-weight: 600; padding: 0.4rem 1rem; border-radius: 4px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
 
     /* ── TOP SEARCH BAR ───────────────────────────────────────── */
@@ -86,7 +70,7 @@
       position: fixed; top: 56px; left: 0; right: 0; z-index: 1000;
       background: var(--topbar-bg); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      box-shadow: 0 2px 12px rgba(0,56,168,0.10);
+      box-shadow: var(--shadow-sm);
       padding: 0.55rem 1.25rem 0.55rem;
     }
 
@@ -94,17 +78,17 @@
     .topbar-row1 { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.45rem; }
 
     /* Pill tabs */
-    .tt-tabs { display: flex; background: var(--bg-section); border-radius: 10px; padding: 3px; flex-shrink: 0; }
+    .tt-tabs { display: flex; background: var(--bg-secondary); border-radius: 6px; padding: 3px; flex-shrink: 0; }
     .tt-tab {
       padding: 0.32rem 0.85rem; border: none; background: transparent;
       color: var(--text-muted); font-size: 0.82rem; font-weight: 700;
-      border-radius: 8px; cursor: pointer;
+      border-radius: 4px; cursor: pointer;
       transition: background 0.18s, color 0.18s, box-shadow 0.18s;
       white-space: nowrap;
     }
     .tt-tab.active {
-      background: var(--accent); color: #fff;
-      box-shadow: 0 2px 8px rgba(0,56,168,0.25);
+      background: var(--accent); color: var(--bg-card);
+      box-shadow: var(--shadow-sm);
     }
     .tt-tab:hover:not(.active) { color: var(--text); background: var(--border); }
 
@@ -112,17 +96,17 @@
     .topbar-search {
       flex: 1; display: flex; align-items: center; gap: 0.5rem;
       background: var(--bg-card); border: 1.5px solid var(--border);
-      border-radius: 10px; padding: 0 0.75rem; height: 38px;
+      border-radius: 6px; padding: 0 0.75rem; height: 38px;
       transition: border-color 0.2s, box-shadow 0.2s;
       min-width: 0;
     }
-    .topbar-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,56,168,0.12); }
+    .topbar-search:focus-within { border-color: var(--text-secondary); box-shadow: 0 0 0 3px rgba(17,17,16,0.07); }
     .topbar-search svg { width: 16px; height: 16px; fill: var(--text-muted); flex-shrink: 0; }
     .topbar-search input { flex: 1; border: none; background: transparent; color: var(--text); font-size: 0.88rem; outline: none; min-width: 0; }
     .topbar-search input::placeholder { color: var(--text-muted); }
     .topbar-search-btn {
-      background: var(--accent); color: #fff; border: none;
-      border-radius: 7px; padding: 0.3rem 0.85rem;
+      background: var(--accent); color: var(--bg-card); border: none;
+      border-radius: 4px; padding: 0.3rem 0.85rem;
       font-size: 0.8rem; font-weight: 700; cursor: pointer; flex-shrink: 0;
       transition: background 0.18s;
     }
@@ -135,25 +119,24 @@
     /* Home type icon pills */
     .htype-pill {
       display: flex; align-items: center; gap: 0.3rem;
-      padding: 0.3rem 0.75rem; border-radius: 20px;
+      padding: 0.3rem 0.75rem; border-radius: 4px;
       border: 1.5px solid var(--border);
       background: var(--bg-card); color: var(--text-muted);
       font-size: 0.77rem; font-weight: 600; cursor: pointer;
       white-space: nowrap; flex-shrink: 0;
       transition: border-color 0.18s, color 0.18s, background 0.18s, box-shadow 0.18s;
     }
-    .htype-pill .ht-icon { font-size: 0.9rem; }
-    .htype-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .htype-pill:hover { border-color: var(--border-strong); color: var(--text); }
     .htype-pill.active {
-      border-color: var(--accent); color: var(--accent);
-      background: var(--accent-light); font-weight: 700;
-      box-shadow: 0 1px 6px rgba(0,56,168,0.15);
+      border-color: var(--text); color: var(--text);
+      background: var(--bg-hover); font-weight: 700;
+      box-shadow: var(--shadow-sm);
     }
 
     /* Filter selects */
     .tf-select {
       padding: 0.3rem 1.8rem 0.3rem 0.65rem;
-      border: 1.5px solid var(--border); border-radius: 20px;
+      border: 1.5px solid var(--border); border-radius: 4px;
       background: var(--bg-card); color: var(--text);
       font-size: 0.77rem; font-weight: 600; cursor: pointer;
       outline: none; appearance: none; -webkit-appearance: none;
@@ -171,7 +154,7 @@
 
     /* Clear btn */
     .topbar-clear-btn {
-      padding: 0.3rem 0.65rem; border-radius: 20px;
+      padding: 0.3rem 0.65rem; border-radius: 4px;
       border: 1.5px solid var(--border);
       background: none; color: var(--text-muted);
       font-size: 0.75rem; font-weight: 600; cursor: pointer;
@@ -185,7 +168,7 @@
     .save-search-btn {
       margin-left: auto; flex-shrink: 0;
       display: flex; align-items: center; gap: 0.35rem;
-      padding: 0.3rem 0.85rem; border-radius: 20px;
+      padding: 0.3rem 0.85rem; border-radius: 4px;
       border: 1.5px solid var(--border);
       background: var(--bg-card); color: var(--text-muted);
       font-size: 0.77rem; font-weight: 700; cursor: pointer;
@@ -199,7 +182,7 @@
     .saved-searches-wrap { position: relative; flex-shrink: 0; }
     .saved-searches-btn {
       display: flex; align-items: center; gap: 0.3rem;
-      padding: 0.3rem 0.75rem; border-radius: 20px;
+      padding: 0.3rem 0.75rem; border-radius: 4px;
       border: 1.5px solid var(--border);
       background: var(--bg-card); color: var(--text-muted);
       font-size: 0.77rem; font-weight: 700; cursor: pointer;
@@ -218,7 +201,7 @@
     .saved-dropdown {
       position: absolute; top: calc(100% + 8px); right: 0; min-width: 260px;
       background: var(--bg-card); border: 1.5px solid var(--border);
-      border-radius: 12px; box-shadow: var(--shadow-md);
+      border-radius: 6px; box-shadow: var(--shadow-md);
       z-index: 2000; overflow: hidden;
       animation: fadeDown 0.18s ease;
     }
@@ -235,7 +218,7 @@
       border-bottom: 1px solid var(--border);
     }
     .saved-item:last-child { border-bottom: none; }
-    .saved-item:hover { background: var(--bg-section); }
+    .saved-item:hover { background: var(--bg-secondary); }
     .saved-item-icon { font-size: 1.1rem; flex-shrink: 0; }
     .saved-item-info { flex: 1; min-width: 0; }
     .saved-item-label { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -260,7 +243,7 @@
     .map-sidebar {
       position: absolute; top: 0.75rem; left: 0.75rem; bottom: 0.75rem;
       width: 370px; z-index: 800;
-      background: var(--bg-card); border-radius: 14px;
+      background: var(--bg-card); border-radius: 8px;
       border: 1.5px solid var(--border);
       box-shadow: var(--shadow-lg);
       display: flex; flex-direction: column; overflow: hidden;
@@ -279,7 +262,7 @@
     .sidebar-view-count { font-size: 0.72rem; color: var(--text-muted); }
     .sidebar-header-actions { display: flex; align-items: center; gap: 0.4rem; }
     .sidebar-close-btn {
-      background: var(--bg-section); border: none; border-radius: 8px;
+      background: var(--bg-secondary); border: none; border-radius: 4px;
       width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
       cursor: pointer; color: var(--text-muted); transition: color 0.15s, background 0.15s;
     }
@@ -294,7 +277,7 @@
     /* ── LISTING CARDS ────────────────────────────────────────── */
     .map-card {
       display: flex; flex-direction: column; padding: 0;
-      background: var(--bg); border-radius: 12px;
+      background: var(--bg); border-radius: 6px;
       border: 1.5px solid transparent;
       text-decoration: none; color: var(--text); cursor: pointer;
       overflow: hidden;
@@ -307,7 +290,7 @@
     .map-card-img {
       width: 100%; height: 140px; overflow: hidden;
       flex-shrink: 0; position: relative;
-      background: linear-gradient(135deg, #002D62, #004aaa);
+      background: var(--bg-secondary);
       display: flex; align-items: center; justify-content: center;
     }
     .map-card-img img { width: 100%; height: 100%; object-fit: cover; }
@@ -319,13 +302,13 @@
       letter-spacing: 0.04em;
     }
     .map-card-body { padding: 0.65rem 0.75rem; display: flex; flex-direction: column; gap: 0.15rem; }
-    .map-card-price { font-size: 1rem; font-weight: 800; color: var(--accent); }
+    .map-card-price { font-size: 1rem; font-weight: 800; color: var(--text); }
     .map-card-title { font-size: 0.82rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .map-card-loc { font-size: 0.73rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem; }
     .map-card-loc svg { width: 10px; height: 10px; fill: var(--text-muted); flex-shrink: 0; }
     .map-card-specs { display: flex; gap: 0.6rem; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
-    .badge-venta { background: #dce8ff; color: var(--accent); }
-    .badge-alquiler { background: #e6f7ef; color: var(--green); }
+    .badge-venta { background: var(--text); color: var(--bg-card); }
+    .badge-alquiler { background: var(--green); color: #fff; }
 
     /* ── MAP CONTAINER ────────────────────────────────────────── */
     .map-container { flex: 1; position: relative; }
@@ -336,7 +319,7 @@
       position: absolute; top: 0.75rem; left: 0.75rem; z-index: 700;
       display: flex; align-items: center; gap: 0.4rem;
       background: var(--bg-card); border: 1.5px solid var(--border);
-      border-radius: 10px; padding: 0.5rem 0.85rem;
+      border-radius: 6px; padding: 0.5rem 0.85rem;
       font-size: 0.82rem; font-weight: 700; color: var(--text);
       cursor: pointer; box-shadow: var(--shadow-sm);
       transition: border-color 0.2s, color 0.2s, opacity 0.3s;
@@ -349,7 +332,7 @@
     .map-count-badge {
       position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%);
       z-index: 700; background: var(--bg-card);
-      border: 1.5px solid var(--border); border-radius: 20px;
+      border: 1.5px solid var(--border); border-radius: 4px;
       padding: 0.4rem 1rem; font-size: 0.78rem; font-weight: 700;
       color: var(--text-muted); box-shadow: var(--shadow-sm);
       pointer-events: none; white-space: nowrap;
@@ -362,7 +345,7 @@
       position: absolute; top: 0.75rem; right: 3.5rem; z-index: 700;
       display: flex; align-items: center; gap: 0.35rem;
       background: var(--bg-card); border: 1.5px solid var(--border);
-      border-radius: 10px; padding: 0.5rem 0.75rem;
+      border-radius: 6px; padding: 0.5rem 0.75rem;
       font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
       cursor: pointer; box-shadow: var(--shadow-sm);
       transition: border-color 0.2s, color 0.2s;
@@ -373,7 +356,7 @@
     /* View toggle (list/map) */
     .view-toggle {
       position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
-      z-index: 800; display: flex; background: var(--bg-card); border-radius: 50px;
+      z-index: 800; display: flex; background: var(--bg-card); border-radius: 6px;
       box-shadow: var(--shadow-lg); border: 1.5px solid var(--border); overflow: hidden;
     }
     .vt-btn {
@@ -394,19 +377,19 @@
     }
     .price-marker:hover { transform: scale(1.15); z-index: 999 !important; }
     .price-marker.active { background: var(--green, #0a7c4f); transform: scale(1.15); }
-    .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; }
+    .leaflet-popup-content-wrapper { border-radius: 6px !important; box-shadow: var(--shadow-lg) !important; }
     .leaflet-popup-content { margin: 0 !important; padding: 0 !important; min-width: 260px; }
 
     /* ── POPUP ────────────────────────────────────────────────── */
-    .popup-card { font-family: 'Segoe UI', system-ui, sans-serif; }
-    .popup-img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px 12px 0 0; display: block; }
+    .popup-card { font-family: var(--font); }
+    .popup-img { width: 100%; height: 140px; object-fit: cover; border-radius: 6px 6px 0 0; display: block; }
     .popup-body { padding: 0.85rem; }
-    .popup-price { font-size: 1.1rem; font-weight: 800; color: #0038A8; }
+    .popup-price { font-size: 1.1rem; font-weight: 800; color: var(--text); }
     .popup-title { font-size: 0.85rem; font-weight: 600; margin: 0.2rem 0; line-height: 1.3; }
-    .popup-loc { font-size: 0.75rem; color: #4d6a8a; margin-bottom: 0.4rem; }
-    .popup-specs { display: flex; gap: 0.75rem; font-size: 0.72rem; color: #4d6a8a; margin-bottom: 0.6rem; }
-    .popup-btn { display: block; width: 100%; padding: 0.5rem; background: #0038A8; color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; }
-    .popup-btn:hover { background: #002c8a; }
+    .popup-loc { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    .popup-specs { display: flex; gap: 0.75rem; font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 0.6rem; }
+    .popup-btn { display: block; width: 100%; padding: 0.5rem; background: var(--text); color: var(--bg-card); border: none; border-radius: 4px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; }
+    .popup-btn:hover { background: var(--text-secondary); }
 
     /* ── LOADING / EMPTY ──────────────────────────────────────── */
     .sidebar-loading { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.85rem; }
@@ -415,7 +398,7 @@
     /* ── TOAST ────────────────────────────────────────────────── */
     .toast {
       position: fixed; bottom: 6rem; left: 50%; transform: translateX(-50%) translateY(0);
-      background: #1e293b; color: #fff; border-radius: 10px;
+      background: var(--text); color: var(--bg-card); border-radius: 4px;
       padding: 0.65rem 1.25rem; font-size: 0.82rem; font-weight: 600;
       box-shadow: var(--shadow-lg); z-index: 9999;
       display: flex; align-items: center; gap: 0.5rem;
@@ -435,8 +418,8 @@
     @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     .mm-close { align-self: flex-end; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem; }
     .mm-close svg { width: 24px; height: 24px; fill: currentColor; }
-    .mm-link { text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem; padding: 0.85rem 0.75rem; border-radius: 10px; transition: background 0.2s; }
-    .mm-link:hover, .mm-link.active { background: var(--accent-light); color: var(--accent); }
+    .mm-link { text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem; padding: 0.85rem 0.75rem; border-radius: 4px; transition: background 0.2s; }
+    .mm-link:hover, .mm-link.active { background: var(--bg-hover); color: var(--text); }
 
     @media (max-width: 900px) {
       :root { --topbar-h: 116px; }
@@ -448,7 +431,7 @@
       .topbar-row1 { flex-wrap: wrap; }
       .topbar-search { min-width: 100%; order: 3; }
       .tt-tabs { order: 1; }
-      .map-sidebar { left: 0; right: 0; bottom: 0; top: auto; width: 100%; border-radius: 14px 14px 0 0; max-height: 65vh; }
+      .map-sidebar { left: 0; right: 0; bottom: 0; top: auto; width: 100%; border-radius: 6px 6px 0 0; max-height: 65vh; }
       .map-sidebar.hidden { transform: translateY(120%); }
       .show-list-btn { left: 50%; transform: translateX(-50%); top: auto; bottom: 5.5rem; }
     }
@@ -468,17 +451,17 @@
         <div class="nav-item">
           <a class="nav-link active" href="/mapa">Comprar</a>
           <div class="nav-dropdown">
-            <a href="/mapa"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
-            <a href="/comprar"><span class="dd-icon">🏠</span> Ver Listado</a>
-            <a href="/nuevos-proyectos"><span class="dd-icon">🏗️</span> Nuevos Proyectos</a>
-            <a href="/comparar"><span class="dd-icon">⚖️</span> Comparar</a>
+            <a href="/mapa">Explorar Mapa</a>
+            <a href="/comprar">Ver Listado</a>
+            <a href="/nuevos-proyectos">Nuevos Proyectos</a>
+            <a href="/comparar">Comparar</a>
           </div>
         </div>
         <div class="nav-item">
           <a class="nav-link" href="/alquilar">Alquilar</a>
           <div class="nav-dropdown">
-            <a href="/alquilar"><span class="dd-icon">📋</span> Ver Listado</a>
-            <a href="/mapa?type=alquiler"><span class="dd-icon">🗺️</span> Explorar Mapa</a>
+            <a href="/alquilar">Ver Listado</a>
+            <a href="/mapa?type=alquiler">Explorar Mapa</a>
           </div>
         </div>
         <a class="nav-link" href="/blog">Blog</a>
@@ -535,12 +518,12 @@
     <div class="topbar-row2" id="topbarRow2">
 
       <!-- Home type pills -->
-      <button class="htype-pill active" data-value=""><span class="ht-icon">🏘</span> Todos</button>
-      <button class="htype-pill" data-value="casa"><span class="ht-icon">🏠</span> Casa</button>
-      <button class="htype-pill" data-value="apartamento"><span class="ht-icon">🏢</span> Apartamento</button>
-      <button class="htype-pill" data-value="villa"><span class="ht-icon">🏡</span> Villa</button>
-      <button class="htype-pill" data-value="penthouse"><span class="ht-icon">⭐</span> Penthouse</button>
-      <button class="htype-pill" data-value="terreno"><span class="ht-icon">🌿</span> Terreno</button>
+      <button class="htype-pill active" data-value="">Todos</button>
+      <button class="htype-pill" data-value="casa">Casa</button>
+      <button class="htype-pill" data-value="apartamento">Apartamento</button>
+      <button class="htype-pill" data-value="villa">Villa</button>
+      <button class="htype-pill" data-value="penthouse">Penthouse</button>
+      <button class="htype-pill" data-value="terreno">Terreno</button>
 
       <div class="topbar-divider"></div>
 

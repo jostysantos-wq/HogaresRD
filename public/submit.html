@@ -4,45 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Publica Tu Propiedad — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
   <style>
     /* ── Variables ─────────────────────────────────────────── */
     :root {
-      --bg:          #eef3fa;
-      --bg-card:     #ffffff;
-      --text:        #001840;
-      --text-muted:  #4d6a8a;
-      --accent:      #002D62;
-      --accent-hover:#001a45;
-      --accent-red:  #CF142B;
-      --border:      #c4d4e8;
-      --input-bg:    #f5f8fd;
-      --toggle-bg:   #c4d4e8;
-      --toggle-knob: #ffffff;
-      --shadow:      0 4px 24px rgba(0,56,168,0.13);
-      --shadow-card: 0 2px 12px rgba(0,56,168,0.09);
+      --toggle-bg:   #D8D4CC;
+      --toggle-knob: #FFFFFF;
+      --accent-red:  #A52119;
     }
-
     [data-theme="dark"] {
-      --bg:          #00101f;
-      --bg-card:     #001e3c;
-      --text:        #e8f0fb;
-      --text-muted:  #7a9bbf;
-      --accent:      #4a90d9;
-      --accent-hover:#3a7bc8;
-      --accent-red:  #e8374e;
-      --border:      #003060;
-      --input-bg:    #00162e;
-      --toggle-bg:   #003060;
-      --toggle-knob: #e8f0fb;
-      --shadow:      0 4px 24px rgba(0,0,0,0.5);
-      --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+      --toggle-bg:   #3A3630;
+      --toggle-knob: #EDE9E3;
+      --accent-red:  #D4342B;
     }
 
     /* ── Reset ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: var(--font);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -59,7 +39,7 @@
       padding: 1.25rem 2rem;
       border-bottom: 1px solid var(--border);
       background: var(--bg-card);
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-sm);
       transition: background 0.3s, border-color 0.3s;
     }
 
@@ -135,10 +115,10 @@
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 6px;
       padding: 2rem;
       margin-bottom: 1.5rem;
-      box-shadow: var(--shadow-card);
+      box-shadow: var(--shadow);
       transition: background 0.3s, border-color 0.3s;
     }
 
@@ -174,9 +154,9 @@
     }
 
     input, select, textarea {
-      background: var(--input-bg);
+      background: var(--bg-secondary);
       border: 1.5px solid var(--border);
-      border-radius: 10px;
+      border-radius: 4px;
       color: var(--text);
       font-family: inherit;
       font-size: 0.95rem;
@@ -187,14 +167,8 @@
     }
 
     input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0,45,98,0.1);
-    }
-
-    [data-theme="dark"] input:focus,
-    [data-theme="dark"] select:focus,
-    [data-theme="dark"] textarea:focus {
-      box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+      border-color: var(--text-secondary);
+      box-shadow: 0 0 0 3px rgba(17,17,16,0.07);
     }
 
     textarea { resize: vertical; min-height: 110px; }
@@ -229,8 +203,8 @@
       cursor: pointer;
       padding: 0.55rem 0.75rem;
       border: 1.5px solid var(--border);
-      border-radius: 8px;
-      background: var(--input-bg);
+      border-radius: 4px;
+      background: var(--bg-secondary);
       transition: border-color 0.2s, background 0.2s;
       user-select: none;
     }
@@ -257,7 +231,7 @@
 
     .amenity-item:has(input:checked) {
       border-color: var(--accent);
-      background: color-mix(in srgb, var(--accent) 8%, var(--input-bg));
+      background: color-mix(in srgb, var(--accent) 8%, var(--bg-secondary));
     }
 
     /* ── Labeled photo slots ────────────────────────────────── */
@@ -265,10 +239,10 @@
     .photo-slot { display: flex; flex-direction: column; gap: 0.5rem; }
     .photo-slot-header { display: flex; align-items: center; gap: 0.45rem; }
     .slot-num { width: 20px; height: 20px; background: var(--accent); color: #fff; border-radius: 50%; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .slot-label-input { flex: 1; font-size: 0.78rem; border: 1px solid var(--border); border-radius: 6px; padding: 0.28rem 0.5rem; background: var(--input-bg); color: var(--text); min-width: 0; }
+    .slot-label-input { flex: 1; font-size: 0.78rem; border: 1px solid var(--border); border-radius: 6px; padding: 0.28rem 0.5rem; background: var(--bg-secondary); color: var(--text); min-width: 0; }
     .slot-label-input:focus { outline: none; border-color: var(--accent); }
     .slot-required-badge { font-size: 0.65rem; color: #fff; background: var(--accent-red, #cf142b); padding: 0.12rem 0.38rem; border-radius: 4px; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
-    .slot-upload-area { border: 2px dashed var(--border); border-radius: 10px; height: 140px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; position: relative; overflow: hidden; transition: border-color 0.2s; background: var(--input-bg); }
+    .slot-upload-area { border: 2px dashed var(--border); border-radius: 6px; height: 140px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; position: relative; overflow: hidden; transition: border-color 0.2s; background: var(--bg-secondary); }
     .slot-upload-area:hover { border-color: var(--accent); }
     .slot-upload-area.has-image { border-style: solid; border-color: var(--accent); }
     .slot-upload-area.input-error { border-color: var(--accent-red, #cf142b); }
@@ -284,12 +258,12 @@
     /* ── Photo upload ───────────────────────────────────────── */
     .upload-area {
       border: 2px dashed var(--border);
-      border-radius: 12px;
+      border-radius: 6px;
       padding: 2.5rem 1.5rem;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
-      background: var(--input-bg);
+      background: var(--bg-secondary);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -297,7 +271,7 @@
       gap: 0.5rem;
     }
 
-    .upload-area:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--input-bg)); }
+    .upload-area:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--bg-secondary)); }
 
     .upload-area svg { width: 36px; height: 36px; fill: var(--text-muted); }
     .upload-area p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
@@ -325,9 +299,9 @@
 
     .photo-tips-box {
       display: none;
-      background: #dde8f7;
-      border: 1px solid #b0c8e8;
-      border-radius: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
       padding: 1.25rem 1.5rem;
       margin-bottom: 1.5rem;
     }
@@ -360,8 +334,8 @@
 
     .thumbnail-upload {
       border: 2px dashed var(--border);
-      border-radius: 12px;
-      background: var(--input-bg);
+      border-radius: 6px;
+      background: var(--bg-secondary);
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
       position: relative;
@@ -410,7 +384,7 @@
     #thumbnailPreview.visible ~ .thumb-change-hint { display: block; }
 
     /* ── T&C checkbox ───────────────────────────────────────── */
-    .tc-check-wrap { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1.75rem 0 0.3rem; padding: 1rem 1.1rem; background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 10px; }
+    .tc-check-wrap { display: flex; align-items: flex-start; gap: 0.65rem; margin: 1.75rem 0 0.3rem; padding: 1rem 1.1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; }
     .tc-check-wrap input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; margin-top: 2px; }
     .tc-check-wrap input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
     .tc-check-wrap input[type="checkbox"]:disabled ~ .tc-label { opacity: 0.55; cursor: not-allowed; }
@@ -426,23 +400,23 @@
       display: inline-flex;
       align-items: center;
       gap: 0.6rem;
-      background: var(--accent);
-      color: #fff;
+      background: var(--text);
+      color: white;
       border: none;
       font-family: inherit;
       font-size: 1.05rem;
       font-weight: 700;
       padding: 1rem 2.5rem;
-      border-radius: 12px;
+      border-radius: 4px;
       cursor: pointer;
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 14px rgba(0,45,98,0.35);
+      box-shadow: var(--shadow);
     }
 
     .submit-btn:hover {
-      background: var(--accent-hover);
+      background: var(--text-secondary);
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,45,98,0.45);
+      box-shadow: var(--shadow-md);
     }
 
     .submit-btn svg { width: 18px; height: 18px; fill: #fff; }
@@ -458,7 +432,7 @@
       display: none;
       background: #dcfce7;
       border: 1.5px solid #86efac;
-      border-radius: 12px;
+      border-radius: 6px;
       padding: 1.25rem 1.5rem;
       color: #15803d;
       font-weight: 600;
@@ -506,20 +480,20 @@
     .unit-table-header { padding: 0 0 0.4rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
     .unit-table-header span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .unit-table-row { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
-    .unit-table-row input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0.6rem 0.5rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+    .unit-table-row input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0.6rem 0.5rem; border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
     .unit-table-row input:focus { border-color: var(--accent); }
     .remove-unit-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.3rem; border-radius: 6px; transition: color 0.2s, background 0.2s; }
     .remove-unit-btn:hover { color: var(--accent-red); background: rgba(207,20,43,0.08); }
     .remove-unit-btn svg { width: 16px; height: 16px; fill: currentColor; }
-    .add-unit-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.6rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.5rem; }
-    .add-unit-btn:hover { border-color: var(--accent); background: var(--input-bg); }
+    .add-unit-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.6rem 1.25rem; border-radius: 4px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.5rem; }
+    .add-unit-btn:hover { border-color: var(--accent); background: var(--bg-secondary); }
     .add-unit-btn svg { width: 18px; height: 18px; fill: currentColor; }
     .price-from-note { display: none; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
     .price-from-note.visible { display: block; }
 
     /* ── Blueprints ──────────────────────────────────────────── */
-    #blueprintDropZone { border: 2px dashed var(--border); border-radius: 14px; padding: 1.75rem 1.25rem; text-align: center; transition: border-color 0.2s, background 0.2s; background: var(--input-bg); }
-    #blueprintDropZone:hover { border-color: var(--accent); background: var(--accent-light); }
+    #blueprintDropZone { border: 2px dashed var(--border); border-radius: 6px; padding: 1.75rem 1.25rem; text-align: center; transition: border-color 0.2s, background 0.2s; background: var(--bg-secondary); }
+    #blueprintDropZone:hover { border-color: var(--accent); background: var(--bg-hover); }
 
     /* ── Required field indicators & errors ─────────────────── */
     .req { color: var(--accent-red, #cf142b); margin-left: 2px; font-weight: 700; }
@@ -533,37 +507,35 @@
     .tag-group-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent); margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
 
     /* ── Map ─────────────────────────────────────────────────── */
-    #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
+    #locationMap { height: 280px; border-radius: 6px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .map-hint svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
 
     /* ── Mode switcher ───────────────────────────────────────── */
-    .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 0.4rem; }
-    .mode-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.7rem 1rem; border-radius: 10px; border: none; background: none; color: var(--text-muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 6px; padding: 0.4rem; }
+    .mode-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.7rem 1rem; border-radius: 4px; border: none; background: none; color: var(--text-muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .mode-btn svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
     .mode-btn.active { background: var(--accent); color: #fff; }
-    .mode-btn:not(.active):hover { background: var(--input-bg); color: var(--text); }
+    .mode-btn:not(.active):hover { background: var(--bg-secondary); color: var(--text); }
 
     /* ── Claim card ───────────────────────────────────────────── */
     .claim-id-note { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem; }
 
     /* ── Contact notice ──────────────────────────────────────── */
-    .contact-notice { display: none; align-items: flex-start; gap: 0.6rem; background: #dde8f7; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: #001840; }
-    [data-theme="dark"] .contact-notice { background: #002952; color: #e8f0fb; }
-    .contact-notice svg { width: 18px; height: 18px; fill: #002D62; flex-shrink: 0; margin-top: 1px; }
-    [data-theme="dark"] .contact-notice svg { fill: #7ab8f5; }
+    .contact-notice { display: none; align-items: flex-start; gap: 0.6rem; background: var(--bg-secondary); border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--text); }
+    .contact-notice svg { width: 18px; height: 18px; fill: var(--text-secondary); flex-shrink: 0; margin-top: 1px; }
     .contact-notice.visible { display: flex; }
 
     /* ── Agencies ─────────────────────────────────────────────── */
-    .agency-entry { background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem 1rem; margin-bottom: 0.75rem; position: relative; }
+    .agency-entry { background: var(--bg-secondary); border: 1.5px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem 1rem; margin-bottom: 0.75rem; position: relative; }
     .agency-entry .grid-2 { margin-top: 0; }
     .agency-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .agency-num { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
     .remove-agency-btn { background: none; border: none; color: var(--accent-red); cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; transition: background 0.2s; }
     .remove-agency-btn:hover { background: rgba(207,20,43,0.08); }
     .remove-agency-btn svg { width: 15px; height: 15px; fill: currentColor; }
-    .add-agency-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.25rem; }
-    .add-agency-btn:hover { border-color: var(--accent); background: var(--input-bg); }
+    .add-agency-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px dashed var(--border); color: var(--accent); padding: 0.65rem 1.25rem; border-radius: 4px; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; margin-top: 0.25rem; }
+    .add-agency-btn:hover { border-color: var(--accent); background: var(--bg-secondary); }
     .add-agency-btn svg { width: 18px; height: 18px; fill: currentColor; }
     .agencies-empty { font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1rem 0 0.5rem; }
   </style>
@@ -592,7 +564,7 @@
   <!-- FORM -->
   <main>
     <div class="success-msg" id="successMsg">
-      ✅ <span id="successText">¡Propiedad enviada exitosamente! Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.</span>
+      <span id="successText">Propiedad enviada exitosamente. Está pendiente de aprobación. Nos pondremos en contacto contigo pronto.</span>
     </div>
 
     <form id="propertyForm" novalidate>
