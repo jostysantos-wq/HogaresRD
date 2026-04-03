@@ -41,6 +41,12 @@ const { router: newsletterRouter, sendNewsletter } = require('./routes/newslette
 const store = require('./routes/store');
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// ── Trust proxy (behind Nginx/Cloudflare) ─────────────────────
+// Required for correct req.ip, rate limiter, and secure cookies
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 const ADMIN_KEY = process.env.ADMIN_KEY; // enforced present by checkEnv() above
 const ADMIN_EMAIL = 'Jostysantos@gmail.com';
 
