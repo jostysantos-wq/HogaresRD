@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Acceso Restringido</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#eef3fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+
+    .card{background:#fff;border-radius:18px;box-shadow:0 8px 40px rgba(0,45,98,0.13);width:100%;max-width:400px;overflow:hidden;}
+
+    .card-header{background:linear-gradient(135deg,#002D62,#1a5fa8);padding:28px 32px 24px;}
+    .card-header-logo{width:44px;height:44px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+    .card-header-logo svg{width:24px;height:24px;fill:#fff;}
+    .card-header h1{font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:4px;}
+    .card-header p{font-size:0.82rem;color:rgba(255,255,255,0.65);}
+
+    .card-body{padding:28px 32px;}
+
+    .step{display:none;}
+    .step.active{display:block;}
+
+    .field{margin-bottom:1.1rem;}
+    .field label{display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4d6a8a;margin-bottom:.4rem;}
+    .field input{width:100%;padding:.72rem 1rem;border:1.5px solid #d0dcea;border-radius:10px;font-size:.95rem;color:#001840;outline:none;transition:border-color .2s;background:#fff;}
+    .field input:focus{border-color:#002D62;}
+
+    .btn{width:100%;padding:.82rem;background:#002D62;color:#fff;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .2s;margin-top:.25rem;}
+    .btn:hover{background:#001a45;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+
+    .err{color:#dc2626;font-size:.82rem;margin-top:.75rem;min-height:1.2em;text-align:center;}
+
+    /* OTP digits */
+    .otp-row{display:flex;gap:8px;justify-content:center;margin:1.25rem 0;}
+    .otp-digit{width:46px;height:56px;text-align:center;font-size:1.4rem;font-weight:800;border:2px solid #d0dcea;border-radius:10px;outline:none;background:#f8fafd;color:#001840;font-family:monospace;transition:border-color .2s;}
+    .otp-digit:focus{border-color:#002D62;background:#fff;}
+
+    .step2-hint{font-size:.82rem;color:#4d6a8a;text-align:center;margin-bottom:.25rem;}
+    .step2-hint strong{color:#001840;}
+
+    .back-link{display:block;text-align:center;margin-top:1rem;font-size:.82rem;color:#4d6a8a;cursor:pointer;text-decoration:underline;}
+    .back-link:hover{color:#002D62;}
+
+    .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-logo">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </div>
+    <h1>HogaresRD Admin</h1>
+    <p>Panel de Administración — Acceso Restringido</p>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Step 1: credentials -->
+    <div class="step active" id="step1">
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="username" autocomplete="username" placeholder="Usuario administrador" />
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <button class="btn" id="loginBtn" onclick="submitLogin()">Continuar</button>
+      <div class="err" id="err1"></div>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div class="step" id="step2">
+      <p class="step2-hint">Código enviado a <strong id="adminEmailHint">tu correo</strong>. Válido 10 minutos.</p>
+      <div class="otp-row">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="0">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="1">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="2">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="3">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="4">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" data-idx="5">
+      </div>
+      <button class="btn" id="verifyBtn" onclick="submitOTP()" disabled>Verificar código</button>
+      <div class="err" id="err2"></div>
+      <span class="back-link" onclick="goBack()">← Volver al inicio</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // The login path is the current page; derive the API base from it
+  const BASE = location.pathname.replace(/\/login$/, '');
+  let _tempToken = null;
+
+  // ── Step 1 ────────────────────────────────────────────────────
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitLogin();
+  });
+
+  async function submitLogin() {
+    const btn  = document.getElementById('loginBtn');
+    const errEl = document.getElementById('err1');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Verificando...';
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const res  = await fetch(BASE + '/login', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error desconocido');
+
+      _tempToken = data.token;
+      // Show step 2
+      document.getElementById('step1').classList.remove('active');
+      document.getElementById('step2').classList.add('active');
+      document.querySelector('.otp-digit[data-idx="0"]').focus();
+    } catch (e) {
+      errEl.textContent = e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Continuar';
+    }
+  }
+
+  // ── OTP digit inputs ──────────────────────────────────────────
+  document.querySelectorAll('.otp-digit').forEach((el, i, all) => {
+    el.addEventListener('input', () => {
+      // Accept only digits
+      el.value = el.value.replace(/\D/g, '').slice(-1);
+      if (el.value && i < all.length - 1) all[i + 1].focus();
+      updateVerifyBtn();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !el.value && i > 0) {
+        all[i - 1].focus();
+        all[i - 1].value = '';
+        updateVerifyBtn();
+      }
+      if (e.key === 'Enter') submitOTP();
+    });
+    el.addEventListener('paste', e => {
+      e.preventDefault();
+      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+      digits.split('').forEach((d, j) => { if (all[j]) all[j].value = d; });
+      updateVerifyBtn();
+      if (all[digits.length - 1]) all[digits.length - 1].focus();
+    });
+  });
+
+  function updateVerifyBtn() {
+    const full = [...document.querySelectorAll('.otp-digit')].every(d => d.value.length === 1);
+    document.getElementById('verifyBtn').disabled = !full;
+  }
+
+  function getOTP() {
+    return [...document.querySelectorAll('.otp-digit')].map(d => d.value).join('');
+  }
+
+  // ── Step 2 ────────────────────────────────────────────────────
+  async function submitOTP() {
+    const btn   = document.getElementById('verifyBtn');
+    const errEl = document.getElementById('err2');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Verificando...';
+
+    try {
+      const res  = await fetch(BASE + '/verify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ token: _tempToken, otp: getOTP() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error desconocido');
+
+      // Session cookie is now set — redirect to dashboard
+      location.href = BASE;
+    } catch (e) {
+      errEl.textContent = e.message;
+      btn.disabled = false;
+      btn.textContent = 'Verificar código';
+      // Clear digits on error
+      document.querySelectorAll('.otp-digit').forEach(d => d.value = '');
+      document.querySelector('.otp-digit[data-idx="0"]').focus();
+    }
+  }
+
+  function goBack() {
+    _tempToken = null;
+    document.getElementById('err2').textContent = '';
+    document.getElementById('err1').textContent = '';
+    document.querySelectorAll('.otp-digit').forEach(d => d.value = '');
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+    document.getElementById('password').value = '';
+    document.getElementById('password').focus();
+  }
+</script>
+</body>
+</html>

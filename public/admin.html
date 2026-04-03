@@ -10,23 +10,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: #f0f4f9; color: #001840; min-height: 100vh; }
 
-    /* LOGIN */
-    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .login-card { background: #fff; border-radius: 10px; padding: 3rem 2.5rem; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(17,17,16,0.1); text-align: center; }
-    .login-logo { width: 52px; height: 52px; background: #0038A8; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
-    .login-logo svg { width: 28px; height: 28px; fill: #fff; }
-    .login-card h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; }
-    .login-card p { color: #4d6a8a; font-size: 0.9rem; margin-bottom: 2rem; }
-    .login-field { text-align: left; margin-bottom: 1.25rem; }
-    .login-field label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.5rem; }
-    .login-field input { width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #d0dcea; border-radius: 10px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
-    .login-field input:focus { border-color: #0038A8; }
-    .login-btn { width: 100%; background: #0038A8; color: #fff; border: none; padding: 0.9rem; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-    .login-btn:hover { background: #001a45; }
-    .login-error { color: #CF142B; font-size: 0.85rem; margin-top: 0.75rem; display: none; }
-
-    /* DASHBOARD */
-    .dashboard { display: none; }
+    /* DASHBOARD — shown immediately (server guards the page) */
+    .dashboard { display: block; }
     nav { background: #0038A8; padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; }
     .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
     .nav-logo-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
@@ -226,24 +211,7 @@
 </head>
 <body>
 
-  <!-- LOGIN -->
-  <div class="login-wrap" id="loginWrap">
-    <div class="login-card">
-      <div class="login-logo">
-        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-      </div>
-      <h1>Panel de Administración</h1>
-      <p>HogaresRD — Acceso restringido</p>
-      <div class="login-field">
-        <label>Contraseña de Administrador</label>
-        <input type="password" id="adminKey" placeholder="Ingresa tu contraseña" />
-      </div>
-      <button class="login-btn" onclick="login()">Entrar</button>
-      <p class="login-error" id="loginError">Contraseña incorrecta. Intenta de nuevo.</p>
-    </div>
-  </div>
-
-  <!-- DASHBOARD -->
+  <!-- DASHBOARD — access controlled server-side -->
   <div class="dashboard" id="dashboard">
     <nav>
       <div class="nav-logo">
@@ -463,46 +431,29 @@
   </div>
 
   <script>
-    let adminKey = '';
     let allSubmissions = [];
     let currentFilter = 'pending';
     const adminMaps = {};
 
-    function login() {
-      const key = document.getElementById('adminKey').value.trim();
-      if (!key) return;
-      adminKey = key;
-      fetch('/admin/submissions', { headers: { 'x-admin-key': key } })
-        .then(r => {
-          if (!r.ok) throw new Error('Unauthorized');
-          return r.json();
-        })
-        .then(data => {
-          sessionStorage.setItem('adminKey', key);
-          document.getElementById('loginWrap').style.display = 'none';
-          document.getElementById('dashboard').style.display = 'block';
-          allSubmissions = data;
-          renderAll();
-        })
-        .catch(() => {
-          document.getElementById('loginError').style.display = 'block';
-          adminKey = '';
-        });
+    // ADMIN_BASE injected by server when serving this page
+    const ADMIN_BASE = window.ADMIN_BASE || '';
+
+    async function logout() {
+      try { await fetch(ADMIN_BASE + '/logout', { method: 'POST' }); } catch {}
+      location.href = ADMIN_BASE + '/login';
     }
 
-    function logout() {
-      sessionStorage.removeItem('adminKey');
-      adminKey = '';
-      document.getElementById('loginWrap').style.display = 'flex';
-      document.getElementById('dashboard').style.display = 'none';
-      document.getElementById('adminKey').value = '';
-      document.getElementById('loginError').style.display = 'none';
+    // If we somehow get a 401 on any API call, redirect to login
+    function handleUnauth(res) {
+      if (res.status === 401) { location.href = ADMIN_BASE + '/login'; return true; }
+      return false;
     }
 
     function loadSubmissions() {
-      fetch('/admin/submissions', { headers: { 'x-admin-key': adminKey } })
-        .then(r => r.json())
-        .then(data => { allSubmissions = data; renderAll(); });
+      fetch('/admin/submissions')
+        .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+        .then(data => { allSubmissions = data; renderAll(); })
+        .catch(() => {});
     }
 
     function setFilter(filter, btn) {
@@ -727,7 +678,7 @@
     function mergeAgency(id) {
       fetch(`/admin/submissions/${id}/merge-agency`, {
         method: 'POST',
-        headers: { 'x-admin-key': adminKey }
+        headers: {}
       })
       .then(r => r.json())
       .then(data => {
@@ -741,7 +692,7 @@
     function approve(id) {
       fetch(`/admin/submissions/${id}/approve`, {
         method: 'POST',
-        headers: { 'x-admin-key': adminKey }
+        headers: {}
       })
       .then(r => r.json())
       .then(() => {
@@ -754,7 +705,7 @@
     function reject(id) {
       fetch(`/admin/submissions/${id}/reject`, {
         method: 'POST',
-        headers: { 'x-admin-key': adminKey }
+        headers: {}
       })
       .then(r => r.json())
       .then(() => {
@@ -812,7 +763,7 @@
     };
 
     function loadLeads() {
-      fetch('/api/leads', { headers: { 'x-admin-key': adminKey } })
+      fetch('/api/leads')
         .then(r => r.json())
         .then(data => {
           allLeads = data;
@@ -891,7 +842,7 @@
     function updateLeadStatus(id, status) {
       fetch(`/api/leads/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       })
       .then(r => r.json())
@@ -910,7 +861,7 @@
 
     function exportLeads() {
       const qs = currentLeadFilter !== 'all' ? `?status=${currentLeadFilter}` : '';
-      window.location.href = `/api/leads/export${qs}&_key=${encodeURIComponent(adminKey)}`;
+      window.location.href = `/api/leads/export${qs}`;
     }
 
     // ── Ads CRUD ───────────────────────────────────────────────
@@ -918,7 +869,7 @@
 
     function loadAds() {
       document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
-      fetch('/api/ads', { headers: { 'x-admin-key': adminKey } })
+      fetch('/api/ads')
         .then(r => r.json())
         .then(data => { allAds = data; renderAds(data); })
         .catch(() => { document.getElementById('adsList').innerHTML = '<div class="loading">Error al cargar anuncios.</div>'; });
@@ -981,7 +932,7 @@
       }
       fetch('/api/ads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, advertiser, image_url, target_url, start_date: start_date || null, end_date: end_date || null })
       })
       .then(r => r.json())
@@ -1001,7 +952,7 @@
     function toggleAd(id, currentlyActive) {
       fetch(`/api/ads/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !currentlyActive })
       })
       .then(r => r.json())
@@ -1016,7 +967,7 @@
       if (!confirm('¿Seguro que quieres eliminar este anuncio?')) return;
       fetch(`/api/ads/${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': adminKey }
+        headers: {}
       })
       .then(() => {
         allAds = allAds.filter(a => a.id !== id);
@@ -1046,9 +997,7 @@
     };
 
     function loadApps() {
-      fetch('/api/applications?_key=' + encodeURIComponent(adminKey), {
-        headers: { 'x-admin-key': adminKey }
-      })
+      fetch('/api/applications')
       .then(r => {
         if (!r.ok) throw new Error('Not authorized');
         return r.json();
@@ -1136,16 +1085,8 @@
       }).join('');
     }
 
-    // Auto-login if key is in sessionStorage
-    document.getElementById('adminKey').addEventListener('keydown', e => {
-      if (e.key === 'Enter') login();
-    });
-    const savedKey = sessionStorage.getItem('adminKey');
-    if (savedKey) {
-      adminKey = savedKey;
-      document.getElementById('adminKey').value = savedKey;
-      login();
-    }
+    // Load data immediately — server has already verified the session
+    loadSubmissions();
   </script>
 <script src="/js/pixel.js" defer></script>
 </body>

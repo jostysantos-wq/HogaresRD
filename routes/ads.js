@@ -6,14 +6,13 @@ function uuidv4() { return crypto.randomUUID(); }
 
 const router   = express.Router();
 const ADS_FILE = path.join(__dirname, '../data/ads.json');
-const ADMIN_KEY = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
+const { adminSessionAuth } = require('./admin-auth');
 
 // ── helpers ────────────────────────────────────────────────────
 if (!fs.existsSync(ADS_FILE)) fs.writeFileSync(ADS_FILE, '[]');
 
 function readAds()       { return JSON.parse(fs.readFileSync(ADS_FILE, 'utf8')); }
 function writeAds(data)  { fs.writeFileSync(ADS_FILE, JSON.stringify(data, null, 2)); }
-function isAdmin(req)    { return req.headers['x-admin-key'] === ADMIN_KEY; }
 
 // ── GET /api/ads/active  (public — used by the mobile app) ─────
 router.get('/active', (req, res) => {
@@ -28,14 +27,12 @@ router.get('/active', (req, res) => {
 });
 
 // ── GET /api/ads  (admin) ──────────────────────────────────────
-router.get('/', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+router.get('/', adminSessionAuth, (req, res) => {
   res.json(readAds());
 });
 
 // ── POST /api/ads  (admin — create) ───────────────────────────
-router.post('/', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+router.post('/', adminSessionAuth, (req, res) => {
   const { title, advertiser, image_url, target_url, start_date, end_date } = req.body;
   if (!title || !image_url) {
     return res.status(400).json({ error: 'title and image_url are required' });
@@ -60,8 +57,7 @@ router.post('/', (req, res) => {
 });
 
 // ── PUT /api/ads/:id  (admin — update / toggle) ────────────────
-router.put('/:id', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+router.put('/:id', adminSessionAuth, (req, res) => {
   const ads = readAds();
   const idx = ads.findIndex(a => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
@@ -71,8 +67,7 @@ router.put('/:id', (req, res) => {
 });
 
 // ── DELETE /api/ads/:id  (admin) ───────────────────────────────
-router.delete('/:id', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+router.delete('/:id', adminSessionAuth, (req, res) => {
   const ads = readAds();
   const idx = ads.findIndex(a => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });

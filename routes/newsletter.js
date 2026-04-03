@@ -244,10 +244,10 @@ async function sendNewsletter() {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
-// POST /api/newsletter/send — manually trigger (protected by ADMIN_KEY)
-router.post('/send', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (key !== process.env.ADMIN_KEY) return res.status(403).json({ error: 'Forbidden' });
+const { adminSessionAuth } = require('./admin-auth');
+
+// POST /api/newsletter/send — manually trigger (admin session required)
+router.post('/send', adminSessionAuth, async (req, res) => {
 
   try {
     const result = await sendNewsletter();

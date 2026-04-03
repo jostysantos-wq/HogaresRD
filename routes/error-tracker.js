@@ -198,13 +198,9 @@ function getRecentErrors(count = 50) {
 // ── Admin API router ──────────────────────────────────────────────
 const router = express.Router();
 
-router.get('/errors', (req, res) => {
-  // Auth check: x-admin-key header
-  const key = req.headers['x-admin-key'];
-  if (!key || key !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
+const { adminSessionAuth } = require('./admin-auth');
 
+router.get('/errors', adminSessionAuth, (req, res) => {
   const stats = getErrorStats();
   const recentErrors = getRecentErrors(50);
 

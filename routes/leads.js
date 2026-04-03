@@ -5,19 +5,18 @@ const crypto   = require('crypto');
 
 const router     = express.Router();
 const LEADS_FILE = path.join(__dirname, '../data/leads.json');
-const ADMIN_KEY  = process.env.ADMIN_KEY || 'hogaresrd-admin-2026';
+const { adminSessionAuth } = require('./admin-auth');
 
 const VALID_STATUSES = ['pendiente', 'en_proceso', 'comprado', 'no_comprado'];
+
+// All routes in this file require an admin session
+router.use(adminSessionAuth);
 
 // ── helpers ────────────────────────────────────────────────────
 if (!fs.existsSync(LEADS_FILE)) fs.writeFileSync(LEADS_FILE, '[]');
 
 function readLeads()      { return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8')); }
 function writeLeads(data) { fs.writeFileSync(LEADS_FILE, JSON.stringify(data, null, 2)); }
-function isAdmin(req)     {
-  return req.headers['x-admin-key'] === ADMIN_KEY ||
-         req.query._key === ADMIN_KEY;
-}
 
 // ── POST /api/leads  (public — user submits application) ───────
 router.post('/', (req, res) => {
@@ -63,7 +62,7 @@ router.post('/', (req, res) => {
 
 // ── GET /api/leads  (admin) ────────────────────────────────────
 router.get('/', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const { status } = req.query;
   let leads = readLeads();
   if (status && VALID_STATUSES.includes(status)) {
@@ -74,7 +73,7 @@ router.get('/', (req, res) => {
 
 // ── GET /api/leads/export  (admin — CSV download) ──────────────
 router.get('/export', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const { status } = req.query;
   let leads = readLeads();
   if (status && VALID_STATUSES.includes(status)) {
@@ -98,7 +97,7 @@ router.get('/export', (req, res) => {
 
 // ── PUT /api/leads/:id  (admin — update status / notes) ────────
 router.put('/:id', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const leads = readLeads();
   const idx   = leads.findIndex(l => l.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
@@ -117,7 +116,7 @@ router.put('/:id', (req, res) => {
 
 // ── DELETE /api/leads/:id  (admin) ─────────────────────────────
 router.delete('/:id', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const leads = readLeads();
   const idx   = leads.findIndex(l => l.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });

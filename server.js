@@ -267,8 +267,36 @@ app.post('/api/upload/avatar', (req, res, next) => {
   res.status(400).json({ error: err.message });
 });
 
-// ── Admin auth middleware ──────────────────────────────────────
-function adminAuth(req, res, next) {
+// ── Admin auth — session-based (Option C) ─────────────────────
+const {
+  router:           adminAuthRouter,
+  adminSessionAuth,
+  adminSessionPage,
+} = require('./routes/admin-auth');
+
+const ADMIN_PATH = process.env.ADMIN_PATH;
+if (!ADMIN_PATH) {
+  console.error('❌  ADMIN_PATH env var is missing — admin panel disabled');
+}
+
+// Mount admin auth API under the secret path
+if (ADMIN_PATH) {
+  app.use(`/${ADMIN_PATH}`, adminAuthRouter);
+
+  // Dashboard page — session gated (redirect to login if not authenticated)
+  app.get(`/${ADMIN_PATH}`, adminSessionPage, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  });
+
+  // Login page — public (but secret URL)
+  app.get(`/${ADMIN_PATH}/login`, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
+  });
+}
+
+// Legacy key-based check — kept only for internal server-to-server calls (cron, scripts)
+// DO NOT expose this to the browser / admin UI
+function adminKeyAuth(req, res, next) {
   const key = req.headers['x-admin-key'];
   if (key === ADMIN_KEY) return next();
   res.status(401).json({ error: 'No autorizado' });
@@ -420,16 +448,16 @@ app.post('/submit', async (req, res) => {
   res.json({ success: true, id: submission.id });
 });
 
-// ── Admin routes ───────────────────────────────────────────────
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+// ── Admin API routes — protected by session cookie ─────────────
+// /admin is kept as the API base (browser fetch calls go here).
+// The dashboard HTML is served at /${ADMIN_PATH} (secret path, above).
+// Old /admin page route is removed — /admin now returns 404 to scanners.
 
-app.get('/admin/submissions', adminAuth, (req, res) => {
+app.get('/admin/submissions', adminSessionAuth, (req, res) => {
   res.json(store.getAllSubmissions());
 });
 
-app.post('/admin/submissions/:id/approve', adminAuth, (req, res) => {
+app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
   const sub = store.getListingById(req.params.id);
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
   sub.status     = 'approved';
@@ -438,7 +466,7 @@ app.post('/admin/submissions/:id/approve', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/admin/submissions/:id/reject', adminAuth, (req, res) => {
+app.post('/admin/submissions/:id/reject', adminSessionAuth, (req, res) => {
   const sub = store.getListingById(req.params.id);
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
   sub.status     = 'rejected';
@@ -447,8 +475,7 @@ app.post('/admin/submissions/:id/reject', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-// Merge agency claim into target listing
-app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
+app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => {
   const claim = store.getListingById(req.params.id);
   if (!claim) return res.status(404).json({ error: 'Solicitud no encontrada' });
   if (claim.submission_type !== 'agency_claim') return res.status(400).json({ error: 'No es una solicitud de agencia' });
@@ -456,14 +483,12 @@ app.post('/admin/submissions/:id/merge-agency', adminAuth, (req, res) => {
   const target = store.getListingById(claim.claim_listing_id);
   if (!target) return res.status(404).json({ error: `Anuncio #${claim.claim_listing_id} no encontrado` });
 
-  // Merge agencies from claim into target listing
   if (!Array.isArray(target.agencies)) target.agencies = [];
   const newAgencies = Array.isArray(claim.agencies) ? claim.agencies : [];
   target.agencies.push(...newAgencies);
   target.updatedAt = new Date().toISOString();
   store.saveListing(target);
 
-  // Mark claim as approved
   claim.status     = 'approved';
   claim.approvedAt = new Date().toISOString();
   store.saveListing(claim);
