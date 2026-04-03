@@ -1,4 +1,6 @@
 require('dotenv').config();
+// Force IPv4 for all DNS lookups — DigitalOcean droplets can't reach Gmail SMTP over IPv6
+require('dns').setDefaultResultOrder('ipv4first');
 const path       = require('path');
 const fs         = require('fs');
 
