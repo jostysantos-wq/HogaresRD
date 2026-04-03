@@ -115,25 +115,32 @@ router.patch('/profile/buying-power', userAuth, (req, res) => {
   res.json({ success: true, buyingPower: user.buyingPower });
 });
 
-// PATCH /api/user/profile — update mutable profile fields (name, phone)
+// PATCH /api/user/profile — update mutable profile fields
+// NOTE: name is intentionally excluded to preserve listing accountability
 router.patch('/profile', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  const { name, phone } = req.body;
-
-  if (name !== undefined) {
-    const trimmed = (name + '').trim();
-    if (!trimmed) return res.status(400).json({ error: 'El nombre no puede estar vacío' });
-    user.name = trimmed;
-  }
+  const { phone, bio, jobTitle } = req.body;
 
   if (phone !== undefined) {
     user.phone = (phone + '').trim();
   }
+  if (bio !== undefined) {
+    user.bio = (bio + '').trim().slice(0, 300);
+  }
+  if (jobTitle !== undefined && ['broker', 'agency'].includes(user.role)) {
+    user.jobTitle = (jobTitle + '').trim().slice(0, 60);
+  }
 
   store.saveUser(user);
-  res.json({ success: true, user: { id: user.id, name: user.name, phone: user.phone } });
+  res.json({ success: true, user: {
+    id:       user.id,
+    phone:    user.phone,
+    bio:      user.bio,
+    jobTitle: user.jobTitle,
+    avatarUrl: user.avatarUrl,
+  }});
 });
 
 module.exports = router;

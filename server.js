@@ -225,6 +225,48 @@ app.post('/api/upload/blueprints', blueprintUpload.array('blueprints', 5), (req,
   res.status(400).json({ error: err.message });
 });
 
+// ── Avatar upload (multer) ─────────────────────────────────────
+const AVATARS_DIR = path.join(__dirname, 'public', 'uploads', 'avatars');
+if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, AVATARS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const name = `av_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits:  { fileSize: 3 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (/\.(jpe?g|png|webp)$/i.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
+  },
+});
+
+// POST /api/upload/avatar — authenticated, replaces user's profile picture
+app.post('/api/upload/avatar', (req, res, next) => {
+  const { userAuth } = require('./routes/auth');
+  userAuth(req, res, next);
+}, avatarUpload.single('avatar'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se recibió imagen.' });
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Delete old avatar file if it exists
+  if (user.avatarUrl && user.avatarUrl.startsWith('/uploads/avatars/')) {
+    try { fs.unlinkSync(path.join(__dirname, 'public', user.avatarUrl)); } catch {}
+  }
+
+  user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  store.saveUser(user);
+  res.json({ success: true, avatarUrl: user.avatarUrl });
+}, (err, req, res, next) => {
+  res.status(400).json({ error: err.message });
+});
+
 // ── Admin auth middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {
   const key = req.headers['x-admin-key'];

@@ -76,6 +76,9 @@
       ` : ''}
       <hr class="_nav-hr">
       <div class="_nav-section-lbl">Cuenta</div>
+      <a href="/broker#perfil" class="_nav-dd">
+        <span class="_nav-dd-left"><span class="_nav-ic">&#128100;</span> Mi Perfil</span>
+      </a>
       <a href="/subscription" class="_nav-dd">
         <span class="_nav-dd-left"><span class="_nav-ic">&#128179;</span> Suscripci\u00f3n</span>
       </a>
