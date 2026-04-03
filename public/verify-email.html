@@ -131,18 +131,11 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #resendMsg { font-size: 0.85rem; margin-top: 12px; min-height: 20px; }
-    .theme-btn {
-      position: fixed; top: 16px; right: 16px;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 7px 12px;
-      font-size: 0.8rem; cursor: pointer; color: var(--muted);
-    }
+
     @media (max-width: 480px) { .card { padding: 36px 24px; } }
   </style>
 </head>
 <body>
-  <button class="theme-btn" onclick="toggleTheme()">🌙 Tema</button>
-
   <a href="/home" class="logo-link">🏠 HogaresRD</a>
 
   <div class="card" id="card">
