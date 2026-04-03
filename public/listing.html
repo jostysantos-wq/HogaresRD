@@ -1751,6 +1751,35 @@ const tabsHtml = shuffled.map((a, i) =>
         }
       } catch(e) { console.log('Similar listings error:', e); }
 
+      // Save to recently viewed (localStorage, max 20, deduplicated)
+      try {
+        const RV_KEY = 'hogaresrd_recently_viewed';
+        const MAX_RV = 20;
+        const rvList = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+        // Remove if already exists (will re-add at front)
+        const idx = rvList.findIndex(r => r.id === listing.id);
+        if (idx !== -1) rvList.splice(idx, 1);
+        // Add to front with minimal data for quick rendering
+        const firstImg = Array.isArray(listing.images) && listing.images.length
+          ? (typeof listing.images[0] === 'string' ? listing.images[0] : listing.images[0]?.url || '') : '';
+        rvList.unshift({
+          id: listing.id,
+          title: listing.title,
+          price: listing.price,
+          type: listing.type || listing.condition,
+          city: listing.city,
+          province: listing.province,
+          bedrooms: listing.bedrooms,
+          bathrooms: listing.bathrooms,
+          area_const: listing.area_const,
+          image: firstImg,
+          viewedAt: new Date().toISOString(),
+        });
+        // Keep only the most recent MAX_RV
+        if (rvList.length > MAX_RV) rvList.length = MAX_RV;
+        localStorage.setItem(RV_KEY, JSON.stringify(rvList));
+      } catch(e) { /* localStorage may be unavailable */ }
+
       // Record this page view (anonymous, IP rate-limited to 1/hour)
       fetch(`/api/listings/${listingId}/view`, { method: 'POST' })
         .then(r => r.ok ? r.json() : null)

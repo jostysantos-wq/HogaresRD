@@ -279,6 +279,7 @@
     .carousel-arrow:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
     .carousel-arrow svg { width: 18px; height: 18px; fill: currentColor; }
     .badge-views { background: rgba(234,120,0,0.92); color: #fff; }
+    .badge-viewed { background: rgba(100,116,139,0.88); color: #fff; }
     @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
     @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 5rem); } }
 
@@ -501,6 +502,24 @@
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="recoTrack"></div></div>
+    </div>
+  </div>
+
+  <!-- RECENTLY VIEWED CAROUSEL — from localStorage -->
+  <div id="recentlyViewedSection" style="display:none;">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">👁️ Tu historial</div>
+          <h2 class="section-title">Vistos Recientemente</h2>
+        </div>
+        <div class="section-nav">
+          <button class="carousel-arrow" id="rvPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button class="carousel-arrow" id="rvNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        </div>
+      </div>
+      <div class="carousel-viewport"><div class="carousel-track" id="rvTrack"></div></div>
     </div>
   </div>
 
@@ -1106,11 +1125,19 @@
       const loc  = [listing.city, listing.province].filter(Boolean).map(esc).join(', ');
       const bdg  = badge ? `<span class="badge-tag ${badge.cls}">${esc(badge.label)}</span>` : '';
 
+      // Use real image if available, fall back to gradient placeholder
+      const firstImg = Array.isArray(listing.images) && listing.images.length
+        ? (typeof listing.images[0] === 'string' ? listing.images[0] : listing.images[0]?.url || '') : '';
+      const imgContent = firstImg
+        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.style.display='none'" />
+           <svg viewBox="0 0 24 24" style="opacity:0;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`
+        : `<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
+
       const wrap = document.createElement('div');
       wrap.innerHTML = `
         <a class="property-card" href="/listing/${esc(listing.id)}" data-listing-id="${esc(listing.id)}">
-          <div class="card-img prop-${imgIdx}">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <div class="card-img prop-${imgIdx}" style="position:relative;overflow:hidden;">
+            ${imgContent}
             <div class="card-badges">${bdg}</div>
             <button class="card-save${isSaved ? ' saved' : ''}" data-listing-id="${esc(listing.id)}">
               <svg viewBox="0 0 24 24"><path d="${heartD}"/></svg>
@@ -1144,6 +1171,49 @@
         if (_cardObserver) c.observe(_cardObserver);
         document.getElementById('recoSection').style.display = '';
       } catch {}
+    }
+
+    function loadRecentlyViewed() {
+      try {
+        const RV_KEY = 'hogaresrd_recently_viewed';
+        const rvList = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+        if (!rvList.length) return;
+        const c = createCarousel('rvTrack', 'rvPrev', 'rvNext');
+        rvList.forEach(item => {
+          // Build a listing-like object from stored data
+          const listing = {
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            type: item.type,
+            condition: item.type,
+            city: item.city,
+            province: item.province,
+            bedrooms: item.bedrooms,
+            bathrooms: item.bathrooms,
+            area_const: item.area_const,
+            images: item.image ? [item.image] : [],
+          };
+          // Time ago label
+          const ago = timeAgoShort(item.viewedAt);
+          c.add(buildListingCard(listing, { label: ago, cls: 'badge-viewed' }));
+        });
+        if (_cardObserver) c.observe(_cardObserver);
+        document.getElementById('recentlyViewedSection').style.display = '';
+      } catch {}
+    }
+
+    function timeAgoShort(dateStr) {
+      if (!dateStr) return 'Visto';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Ahora';
+      if (mins < 60) return `Hace ${mins}m`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `Hace ${hrs}h`;
+      const days = Math.floor(hrs / 24);
+      if (days < 7) return `Hace ${days}d`;
+      return `Hace ${Math.floor(days / 7)}sem`;
     }
 
     async function loadTrending() {
@@ -1281,6 +1351,7 @@
       }
 
       // Always load public sections after auth resolves
+      loadRecentlyViewed();
       loadTrending();
       loadRecent();
       loadProvinces();
