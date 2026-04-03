@@ -1696,10 +1696,11 @@
         renderLoggedOut(area);
       } else {
         try {
-          const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
-          if (!res.ok) { localStorage.removeItem('hogaresrd_token'); renderLoggedOut(area); }
+          const res = await fetch('/api/auth/me', { credentials: 'include', headers: { 'Authorization': `Bearer ${token}` } });
+          if (!res.ok) { localStorage.removeItem('hogaresrd_token'); localStorage.removeItem('hogaresrd_user'); renderLoggedOut(area); }
           else {
             const user = await res.json();
+            try { localStorage.setItem('hogaresrd_user', JSON.stringify(user)); } catch {}
             renderLoggedIn(area, user);
             _cardObserver = initActivityLogging(token);
             _bpToken = token;

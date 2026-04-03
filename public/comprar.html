@@ -491,45 +491,6 @@
       if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
-
-    // Auth nav
-    (function() {
-      const area = document.getElementById('navAuthArea');
-      let token, user;
-      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
-      if (token && user) {
-        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const firstName = user.name.split(' ')[0];
-        area.innerHTML = `
-          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:6px;text-decoration:none;">Publicar</a>
-          <div style="position:relative;" id="userMenu">
-            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
-              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initials}</div>
-              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
-            </button>
-            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-lg);min-width:180px;z-index:200;">
-              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;"> Mi Perfil</a>
-              <a href="/my-applications" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;"> Mis Aplicaciones</a>
-              <a href="/busquedas-guardadas" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;"> Búsquedas Guardadas</a>
-              <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
-              <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
-                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
-                <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
-              </div>
-              <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
-            </div>
-          </div>`;
-        document.getElementById('userAvatarBtn').addEventListener('click', e => {
-          e.stopPropagation();
-          const dd = document.getElementById('userDropdown');
-          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-        });
-        document.addEventListener('click', () => {
-          const dd = document.getElementById('userDropdown');
-          if (dd) dd.style.display = 'none';
-        });
-      }
-    })();
     async function logout() {
       try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
       ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
@@ -815,5 +776,6 @@
     loadListings(1);
   </script>
 <script src="/js/pixel.js" defer></script>
+  <script src="/js/nav-auth.js"></script>
 </body>
 </html>
