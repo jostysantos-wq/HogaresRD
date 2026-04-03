@@ -2,7 +2,7 @@ const express    = require('express');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 const crypto     = require('crypto');
-const nodemailer = require('nodemailer');
+// nodemailer replaced by central mailer.js (Resend HTTP API)
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { logSec } = require('./security-log');
@@ -47,13 +47,8 @@ const twoFALimiter = rateLimit({
   message: { error: 'Demasiados intentos de verificación. Intenta en 15 minutos.' },
 });
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4, // force IPv4 — DigitalOcean blocks IPv6 SMTP
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
+const { createTransport } = require('./mailer');
+const transporter = createTransport();
 
 function signToken(user) {
   // jti (JWT ID) is a unique identifier per-token, used for revocation (Sprint 3)

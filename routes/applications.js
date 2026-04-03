@@ -3,7 +3,7 @@ const crypto     = require('crypto');
 const path       = require('path');
 const fs         = require('fs');
 const multer     = require('multer');
-const nodemailer = require('nodemailer');
+// nodemailer replaced by central mailer.js (Resend HTTP API)
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { userAuth } = require('./auth');
@@ -33,13 +33,8 @@ const appCreateLimiter = rateLimit({
   },
 });
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
+const { createTransport } = require('./mailer');
+const transporter = createTransport();
 
 // ── Constants ─────────────────────────────────────────────────────
 const uuid = () => crypto.randomUUID();

@@ -1,5 +1,5 @@
 const express      = require('express');
-const nodemailer   = require('nodemailer');
+// nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
 const router       = express.Router();
 
@@ -12,13 +12,8 @@ function clientIp(req) {
     .split(',')[0].trim();
 }
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
+const { createTransport } = require('./mailer');
+const transporter = createTransport();
 
 // GET /api/listings?q=&province=&city=&type=&condition=&propertyType=&priceMin=&priceMax=&bedroomsMin=&tags=&page=&limit=
 router.get('/', (req, res) => {

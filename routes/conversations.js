@@ -1,19 +1,14 @@
 const express      = require('express');
 const router       = express.Router();
-const nodemailer   = require('nodemailer');
+// nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
 const notify       = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 
 const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
+const { createTransport } = require('./mailer');
+const transporter = createTransport();
 
 function _sendMail(to, subject, html) {
   if (!to || !process.env.EMAIL_USER) return;
