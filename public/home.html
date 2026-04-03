@@ -177,7 +177,7 @@
     .properties-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
     .property-card { background: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(26,37,53,0.08); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; cursor: pointer; text-decoration: none; color: inherit; display: block; }
     .property-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,37,53,0.15); border-color: transparent; }
-    .card-img { position: relative; height: 250px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .card-img { position: relative; height: 320px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     .card-img svg { width: 48px; height: 48px; opacity: 0.3; fill: #fff; }
     .prop-1 { background: linear-gradient(135deg, #1a6b9a, #0d4a6e); }
     .prop-2 { background: linear-gradient(135deg, #2d7d5a, #1a5c3e); }
@@ -243,7 +243,7 @@
     .carousel-viewport { overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; overscroll-behavior-x: contain; touch-action: pan-y; }
     .carousel-viewport.dragging { cursor: grabbing; }
     .carousel-track { display: flex; gap: 1.5rem; will-change: transform; }
-    .carousel-track .property-card { flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3); }
+    .carousel-track .property-card { flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 2.2); }
     .section-nav { display: flex; align-items: center; gap: 0.5rem; }
     .carousel-arrow { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--bg-card); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s; flex-shrink: 0; box-shadow: var(--shadow-sm); }
     .carousel-arrow:hover { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(0,106,255,0.3); }
@@ -402,17 +402,17 @@
       font-size: 0.85rem; color: #065f46; display: none;
     }
     [data-theme="dark"] .bp-success-banner { color: #6ee7b7; }
-    @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
-    @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 5rem); } }
+    @media (max-width: 900px) { .carousel-track .property-card { flex: 0 0 calc((100vw - 5.5rem) / 1.3); } }
+    @media (max-width: 560px)  { .carousel-track .property-card { flex: 0 0 calc(100vw - 3rem); } }
 
     /* SKELETON CARDS */
     @keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
     .card-skeleton {
-      flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 3);
+      flex: 0 0 calc((min(100vw, 1280px) - 7rem) / 2.2);
       border-radius: 12px; overflow: hidden;
       background: var(--bg-card); border: 1px solid var(--border);
     }
-    .card-skeleton .sk-img  { height: 250px; }
+    .card-skeleton .sk-img  { height: 320px; }
     .card-skeleton .sk-line { height: 14px; border-radius: 6px; margin: 0 1.25rem 0.75rem; }
     .card-skeleton .sk-line.lg { height: 20px; margin-top: 1.25rem; }
     .card-skeleton .sk-line.sm { width: 60%; }
@@ -421,8 +421,8 @@
       background-size: 600px 100%;
       animation: shimmer 1.4s infinite linear;
     }
-    @media (max-width: 900px) { .card-skeleton { flex: 0 0 calc((100vw - 5.5rem) / 2); } }
-    @media (max-width: 560px)  { .card-skeleton { flex: 0 0 calc(100vw - 5rem); } }
+    @media (max-width: 900px) { .card-skeleton { flex: 0 0 calc((100vw - 5.5rem) / 1.3); } }
+    @media (max-width: 560px)  { .card-skeleton { flex: 0 0 calc(100vw - 3rem); } }
 
     /* RESPONSIVE */
     @media (max-width: 1024px) {
@@ -1234,7 +1234,7 @@
       let cloneN = 0;    // number of clones prepended
 
       function perPage() {
-        return window.innerWidth >= 900 ? 3 : window.innerWidth >= 560 ? 2 : 1;
+        return window.innerWidth >= 900 ? 2 : 1;
       }
       function cardStep() {
         const c = track.firstElementChild;
