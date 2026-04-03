@@ -140,6 +140,16 @@ router.post('/login', async (req, res) => {
 
   // Send OTP email
   const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+
+  // If Resend is not configured, mailer silently no-ops — detect that here
+  // and fall back to console so admin can still log in via server logs.
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(`[admin-auth] ⚠️  RESEND_API_KEY not set — OTP will NOT be emailed.`);
+    console.warn(`[admin-auth] 🔑 EMERGENCY OTP for ${adminEmail} (IP ${ip}): ${otp}`);
+    // Still issue the token so admin can enter the OTP from logs
+    return res.json({ step: 2, token: tempToken });
+  }
+
   try {
     await mailer.sendMail({
       to:      adminEmail,
