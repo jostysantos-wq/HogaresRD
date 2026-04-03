@@ -133,8 +133,15 @@
 
         <div class="section-divider">Información de la Inmobiliaria</div>
         <div class="field">
+          <label>Inmobiliaria *</label>
+          <select id="inmSelect">
+            <option value="">— Cargando inmobiliarias… —</option>
+          </select>
+          <p class="hint">Selecciona tu inmobiliaria, o elige la opción manual si aún no está registrada en HogaresRD.</p>
+        </div>
+        <div class="field" id="inmManualField" style="display:none;">
           <label>Nombre de la inmobiliaria *</label>
-          <input type="text" id="agencyName" placeholder="Ej. Inmobiliaria Elite RD" required />
+          <input type="text" id="agencyName" placeholder="Ej. Inmobiliaria Elite RD" maxlength="120" />
         </div>
         <div class="field">
           <label>Número de licencia MIREX *</label>
@@ -207,6 +214,37 @@
       if (this.value !== '__other__') document.getElementById('jobTitleCustom').value = '';
     });
 
+    // ── Load inmobiliarias dropdown ───────────────────────────────
+    (async function loadInmobiliarias() {
+      const sel = document.getElementById('inmSelect');
+      try {
+        const res  = await fetch('/api/auth/inmobiliarias');
+        const list = res.ok ? await res.json() : [];
+        sel.innerHTML = '<option value="">— Selecciona una inmobiliaria —</option>';
+        list.forEach(inm => {
+          const opt = document.createElement('option');
+          opt.value       = inm.id;
+          opt.textContent = inm.name;
+          sel.appendChild(opt);
+        });
+        const manualOpt = document.createElement('option');
+        manualOpt.value       = '__manual__';
+        manualOpt.textContent = '✏️ No está en la lista — ingresar manualmente';
+        sel.appendChild(manualOpt);
+      } catch {
+        sel.innerHTML = '<option value="">— Selecciona una inmobiliaria —</option><option value="__manual__">✏️ Ingresar manualmente</option>';
+      }
+    })();
+
+    document.getElementById('inmSelect').addEventListener('change', function () {
+      const manualField = document.getElementById('inmManualField');
+      manualField.style.display = this.value === '__manual__' ? '' : 'none';
+      if (this.value !== '__manual__') {
+        const nameEl = document.getElementById('agencyName');
+        if (nameEl) nameEl.value = '';
+      }
+    });
+
     document.getElementById('agencyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -216,15 +254,35 @@
       const name            = document.getElementById('name').value.trim();
       const email           = document.getElementById('email').value.trim();
       const phone           = document.getElementById('phone').value.trim();
-      const agencyName      = document.getElementById('agencyName').value.trim();
       const licenseNumber   = document.getElementById('licenseNumber').value.trim();
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
       const jobTitleSel     = document.getElementById('jobTitle').value;
       const jobTitle        = jobTitleSel === '__other__' ? document.getElementById('jobTitleCustom').value.trim() : jobTitleSel;
 
+      // ── resolve inmobiliaria ──
+      const inmSel        = document.getElementById('inmSelect');
+      const selectedInmId = inmSel.value;
+      let agencyName      = '';
+      let inmobiliariaId  = null;
+
+      if (selectedInmId && selectedInmId !== '__manual__') {
+        inmobiliariaId = selectedInmId;
+        agencyName     = inmSel.options[inmSel.selectedIndex].textContent.trim();
+      } else if (selectedInmId === '__manual__') {
+        agencyName = (document.getElementById('agencyName') || {}).value?.trim() || '';
+      }
+
       if (!name || !email || !phone || !agencyName || !licenseNumber || !password) {
         err.textContent = 'Todos los campos son requeridos.';
+        return err.classList.add('visible');
+      }
+      if (selectedInmId === '__manual__' && !agencyName) {
+        err.textContent = 'Por favor ingresa el nombre de tu inmobiliaria.';
+        return err.classList.add('visible');
+      }
+      if (!selectedInmId) {
+        err.textContent = 'Por favor selecciona tu inmobiliaria.';
         return err.classList.add('visible');
       }
       if (password.length < 8) {
@@ -247,7 +305,7 @@
         const res = await fetch('/api/auth/register/agency', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, agencyName, licenseNumber, password, jobTitle }),
+          body: JSON.stringify({ name, email, phone, agencyName, licenseNumber, password, jobTitle, inmobiliariaId }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');

@@ -63,7 +63,7 @@
         Agente Broker
       </div>
       <h1 class="auth-title">Registro de Agente Broker</h1>
-      <p class="auth-subtitle">Crea tu cuenta individual de agente. Puedes operar de forma independiente o afiliarte a una inmobiliaria desde tu dashboard.</p>
+      <p class="auth-subtitle">Crea tu cuenta individual de agente. Puedes operar de forma independiente o afiliarte a una inmobiliaria al registrarte.</p>
 
       <div class="error-msg" id="errorMsg"></div>
 
@@ -144,6 +144,20 @@
             <label>Confirmar contraseña *</label>
             <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required autocomplete="new-password" />
           </div>
+        </div>
+
+        <div class="section-divider">Afiliación a Inmobiliaria <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7;">(opcional)</span></div>
+        <div class="field" id="inmDropdownField">
+          <label>Inmobiliaria</label>
+          <select id="inmSelect">
+            <option value="">— Cargando inmobiliarias… —</option>
+          </select>
+          <p class="hint">Selecciona la inmobiliaria a la que perteneces, o elige la opción manual si aún no está registrada.</p>
+        </div>
+        <div class="field" id="inmManualField" style="display:none;">
+          <label>Nombre de la inmobiliaria</label>
+          <input type="text" id="inmManualName" placeholder="Ej. Inmobiliaria Elite RD" maxlength="120" />
+          <p class="hint">Ingresa el nombre exacto de tu inmobiliaria.</p>
         </div>
 
         <div class="info-box">
@@ -242,6 +256,34 @@
       if (this.value !== '__other__') document.getElementById('jobTitleCustom').value = '';
     });
 
+    // ── Load inmobiliarias dropdown ───────────────────────────────
+    (async function loadInmobiliarias() {
+      const sel = document.getElementById('inmSelect');
+      try {
+        const res  = await fetch('/api/auth/inmobiliarias');
+        const list = res.ok ? await res.json() : [];
+        sel.innerHTML = '<option value="">— Sin afiliación (independiente) —</option>';
+        list.forEach(inm => {
+          const opt = document.createElement('option');
+          opt.value       = inm.id;
+          opt.textContent = inm.name;
+          sel.appendChild(opt);
+        });
+        const manualOpt = document.createElement('option');
+        manualOpt.value       = '__manual__';
+        manualOpt.textContent = '✏️ No está en la lista — ingresar manualmente';
+        sel.appendChild(manualOpt);
+      } catch {
+        sel.innerHTML = '<option value="">— Sin afiliación (independiente) —</option><option value="__manual__">✏️ Ingresar manualmente</option>';
+      }
+    })();
+
+    document.getElementById('inmSelect').addEventListener('change', function () {
+      const manualField = document.getElementById('inmManualField');
+      manualField.style.display = this.value === '__manual__' ? '' : 'none';
+      if (this.value !== '__manual__') document.getElementById('inmManualName').value = '';
+    });
+
     document.getElementById('brokerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -257,8 +299,29 @@
       const password        = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
 
+      // ── inmobiliaria affiliation ──
+      const inmSel          = document.getElementById('inmSelect');
+      const selectedInmId   = inmSel.value;
+      const selectedInmName = selectedInmId && selectedInmId !== '__manual__'
+        ? inmSel.options[inmSel.selectedIndex].textContent.trim()
+        : '';
+      const manualInmName   = document.getElementById('inmManualName').value.trim();
+
+      let inmobiliariaId   = null;
+      let inmobiliariaName = null;
+      if (selectedInmId && selectedInmId !== '__manual__') {
+        inmobiliariaId   = selectedInmId;
+        inmobiliariaName = selectedInmName;
+      } else if (selectedInmId === '__manual__' && manualInmName) {
+        inmobiliariaName = manualInmName;
+      }
+
       if (!name || !email || !phone || !licenseNumber || !password) {
         err.textContent = 'Todos los campos son requeridos.';
+        return err.classList.add('visible');
+      }
+      if (selectedInmId === '__manual__' && !manualInmName) {
+        err.textContent = 'Por favor ingresa el nombre de tu inmobiliaria o selecciona "Sin afiliación".';
         return err.classList.add('visible');
       }
       function validatePw(p) {
@@ -290,7 +353,7 @@
         const res = await fetch('/api/auth/register/broker', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, licenseNumber, password, jobTitle }),
+          body: JSON.stringify({ name, email, phone, licenseNumber, password, jobTitle, inmobiliariaId, inmobiliariaName }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');

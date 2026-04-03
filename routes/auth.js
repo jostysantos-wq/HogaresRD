@@ -397,10 +397,23 @@ router.post('/register', authLimiter, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Public: list registered inmobiliarias (for registration dropdowns) ────
+router.get('/inmobiliarias', (req, res) => {
+  try {
+    const inms = store.getUsersByRole('inmobiliaria').map(u => ({
+      id:   u.id,
+      name: (u.companyName || u.agencyName || u.name || '').trim(),
+    })).filter(u => u.name).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    res.json(inms);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener inmobiliarias' });
+  }
+});
+
 // ── Register Agency ────────────────────────────────────────────────────────
 router.post('/register/agency', authLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, agencyName, licenseNumber, phone, jobTitle } = req.body;
+    const { name, email, password, agencyName, licenseNumber, phone, jobTitle, inmobiliariaId } = req.body;
 
     if (!name || !email || !password || !agencyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -425,6 +438,8 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       createdAt:       new Date().toISOString(),
       lastLoginAt:     null,
       role:            'agency',
+      inmobiliaria_id:          inmobiliariaId ? inmobiliariaId.trim() : null,
+      inmobiliaria_join_status: inmobiliariaId ? 'requested' : null,
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
@@ -486,7 +501,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 // ── Register Broker ────────────────────────────────────────────────────────
 router.post('/register/broker', authLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, phone, licenseNumber, jobTitle } = req.body;
+    const { name, email, password, phone, licenseNumber, jobTitle, inmobiliariaId, inmobiliariaName } = req.body;
 
     if (!name || !email || !password || !phone || !licenseNumber)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -518,11 +533,11 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
-      inmobiliaria_id:           null,
-      inmobiliaria_name:         null,
-      inmobiliaria_join_status:  null,
-      inmobiliaria_pending_id:   null,
-      inmobiliaria_pending_name: null,
+      inmobiliaria_id:           inmobiliariaId  ? inmobiliariaId.trim()  : null,
+      inmobiliaria_name:         inmobiliariaName ? inmobiliariaName.trim() : null,
+      inmobiliaria_join_status:  inmobiliariaId  ? 'requested' : null,
+      inmobiliaria_pending_id:   inmobiliariaId  ? inmobiliariaId.trim()  : null,
+      inmobiliaria_pending_name: inmobiliariaName ? inmobiliariaName.trim() : null,
       inmobiliaria_joined_at:    null,
     };
 
