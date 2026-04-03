@@ -106,6 +106,10 @@ db.exec(`
     _extra             TEXT DEFAULT '{}'
   );
   CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
+  CREATE INDEX IF NOT EXISTS idx_submissions_type ON submissions(type);
+  CREATE INDEX IF NOT EXISTS idx_submissions_province ON submissions(province);
+  CREATE INDEX IF NOT EXISTS idx_submissions_city ON submissions(city);
+  CREATE INDEX IF NOT EXISTS idx_submissions_condition ON submissions(condition);
 
   CREATE TABLE IF NOT EXISTS applications (
     id                  TEXT PRIMARY KEY,
@@ -228,6 +232,52 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_saved_searches_userId ON saved_searches(userId);
 `);
+
+// ── FTS5 full-text search index ──────────────────────────────────────────
+db.exec(`
+  CREATE VIRTUAL TABLE IF NOT EXISTS listings_fts USING fts5(
+    id UNINDEXED,
+    title,
+    description,
+    city,
+    sector,
+    province,
+    address,
+    content='submissions',
+    content_rowid='rowid',
+    tokenize='unicode61 remove_diacritics 2'
+  );
+`);
+
+// Rebuild FTS index on startup (fast for <50k rows)
+try {
+  db.exec("INSERT INTO listings_fts(listings_fts) VALUES('rebuild')");
+} catch(e) {
+  console.log('[Store] FTS rebuild skipped:', e.message);
+}
+
+// ── In-memory listings cache ────────────────────────────────────────────
+let _listingsCache = null;    // Map<id, hydratedListing>
+let _listingsCacheTs = 0;     // timestamp of last cache build
+const CACHE_TTL = 60 * 1000;  // 1 minute TTL
+
+function _invalidateCache() {
+  _listingsCache = null;
+  _listingsCacheTs = 0;
+}
+
+function _ensureCache() {
+  const now = Date.now();
+  if (_listingsCache && (now - _listingsCacheTs) < CACHE_TTL) return _listingsCache;
+  const rows = db.prepare("SELECT * FROM submissions WHERE status = 'approved'").all();
+  _listingsCache = new Map();
+  for (const row of rows) {
+    const hydrated = hydrateSubmission(row);
+    if (hydrated) _listingsCache.set(hydrated.id, hydrated);
+  }
+  _listingsCacheTs = now;
+  return _listingsCache;
+}
 
 // ── JSON columns per table ────────────────────────────────────────────────
 const USER_JSON_COLS     = ['favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile', '_extra'];
@@ -659,39 +709,103 @@ function appendActivity(event) {
 // ── Listings (submissions) ────────────────────────────────────────────────
 
 function getListings(filters = {}) {
-  let sql = "SELECT * FROM submissions WHERE status = 'approved'";
-  const params = [];
+  // ── Fast path: full-text search with FTS5 ──────────────────
+  if (filters.q) {
+    // Clean the query for FTS5: escape quotes, add prefix matching
+    const raw = String(filters.q).replace(/"/g, '').trim();
+    if (!raw) return getListings({ ...filters, q: undefined });
+
+    // Build FTS query: each word gets prefix matching
+    const terms = raw.split(/\s+/).filter(Boolean).map(t => `"${t}"*`).join(' ');
+    try {
+      const ftsRows = db.prepare(
+        "SELECT id FROM listings_fts WHERE listings_fts MATCH ?"
+      ).all(terms);
+      const matchedIds = new Set(ftsRows.map(r => r.id));
+
+      if (!matchedIds.size) return [];
+
+      // Get from cache and apply remaining filters
+      const cache = _ensureCache();
+      let results = [];
+      for (const id of matchedIds) {
+        const l = cache.get(id);
+        if (l) results.push(l);
+      }
+
+      // Apply the same filters as below (except q)
+      const subFilters = { ...filters };
+      delete subFilters.q;
+      results = _applyInMemoryFilters(results, subFilters);
+      return results;
+    } catch(e) {
+      // FTS query syntax error — fall back to LIKE search
+      console.log('[Store] FTS error, falling back to LIKE:', e.message);
+      const cache = _ensureCache();
+      const q = raw.toLowerCase();
+      let results = [];
+      for (const l of cache.values()) {
+        if ((l.title || '').toLowerCase().includes(q) ||
+            (l.description || '').toLowerCase().includes(q) ||
+            (l.city || '').toLowerCase().includes(q) ||
+            (l.sector || '').toLowerCase().includes(q) ||
+            (l.province || '').toLowerCase().includes(q) ||
+            (l.address || '').toLowerCase().includes(q)) {
+          results.push(l);
+        }
+      }
+      const subFilters = { ...filters };
+      delete subFilters.q;
+      return _applyInMemoryFilters(results, subFilters);
+    }
+  }
+
+  // ── No text search: use cache with in-memory filtering ─────
+  const cache = _ensureCache();
+  let results = Array.from(cache.values());
+  return _applyInMemoryFilters(results, filters);
+}
+
+// Apply structured filters to an array of listings
+function _applyInMemoryFilters(listings, filters) {
+  let results = listings;
 
   if (filters.province) {
-    sql += ' AND province = ?';
-    params.push(filters.province);
+    results = results.filter(l => l.province === filters.province);
   }
   if (filters.city) {
-    sql += ' AND city = ?';
-    params.push(filters.city);
+    results = results.filter(l => l.city === filters.city);
   }
   if (filters.type) {
-    sql += ' AND type = ?';
-    params.push(filters.type);
+    results = results.filter(l => l.type === filters.type);
   }
   if (filters.condition) {
-    sql += ' AND condition = ?';
-    params.push(filters.condition);
+    results = results.filter(l => l.condition === filters.condition);
+  }
+  if (filters.propertyType) {
+    // propertyType maps to the condition field for some types, or tags
+    const pt = filters.propertyType.toLowerCase();
+    results = results.filter(l => {
+      const lType = (l.type || '').toLowerCase();
+      const lCondition = (l.condition || '').toLowerCase();
+      const tags = Array.isArray(l.tags) ? l.tags.map(t => t.toLowerCase()) : [];
+      return lType === pt || lCondition === pt || tags.includes(pt);
+    });
   }
   if (filters.priceMax) {
-    sql += ' AND CAST(price AS REAL) <= ?';
-    params.push(Number(filters.priceMax));
+    const max = Number(filters.priceMax);
+    results = results.filter(l => Number(l.price) <= max);
   }
   if (filters.priceMin) {
-    sql += ' AND CAST(price AS REAL) >= ?';
-    params.push(Number(filters.priceMin));
+    const min = Number(filters.priceMin);
+    results = results.filter(l => Number(l.price) >= min);
   }
   if (filters.bedroomsMin) {
-    sql += ' AND CAST(bedrooms AS REAL) >= ?';
-    params.push(Number(filters.bedroomsMin));
+    const min = Number(filters.bedroomsMin);
+    results = results.filter(l => Number(l.bedrooms) >= min);
   }
 
-  return db.prepare(sql).all(...params).map(hydrateSubmission);
+  return results;
 }
 
 function getAllSubmissions() {
@@ -706,6 +820,24 @@ function saveListing(listing) {
   const row = dehydrateSubmission(listing);
   const { sql, values } = buildUpsert('submissions', row, 'id');
   db.prepare(sql).run(...values);
+  _invalidateCache();
+
+  // Update FTS index for this listing
+  try {
+    const rowid = db.prepare('SELECT rowid FROM submissions WHERE id = ?').get(listing.id);
+    if (rowid) {
+      db.prepare("INSERT INTO listings_fts(listings_fts, rowid, id, title, description, city, sector, province, address) VALUES('delete', ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        rowid.rowid, listing.id, listing.title || '', listing.description || '',
+        listing.city || '', listing.sector || '', listing.province || '', listing.address || ''
+      );
+      db.prepare('INSERT INTO listings_fts(rowid, id, title, description, city, sector, province, address) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run(
+        rowid.rowid, listing.id, listing.title || '', listing.description || '',
+        listing.city || '', listing.sector || '', listing.province || '', listing.address || ''
+      );
+    }
+  } catch(e) {
+    console.log('[Store] FTS update error:', e.message);
+  }
 }
 
 // ── Applications ──────────────────────────────────────────────────────────
@@ -997,7 +1129,7 @@ function deleteSavedSearch(id, userId) {
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
   getActivityByUser, getListingActivity, appendActivity,
-  getListings, getListingById, saveListing,
+  getListings, getListingById, saveListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,

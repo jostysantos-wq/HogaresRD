@@ -17,13 +17,15 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
 
-// GET /api/listings?province=&city=&type=&condition=&priceMin=&priceMax=&bedroomsMin=&tags=&page=&limit=
+// GET /api/listings?q=&province=&city=&type=&condition=&propertyType=&priceMin=&priceMax=&bedroomsMin=&tags=&page=&limit=
 router.get('/', (req, res) => {
   const filters = {
+    q:           req.query.q           || '',
     province:    req.query.province    || '',
     city:        req.query.city        || '',
     type:        req.query.type        || '',
     condition:   req.query.condition   || '',
+    propertyType:req.query.propertyType|| '',
     priceMin:    req.query.priceMin    || '',
     priceMax:    req.query.priceMax    || '',
     bedroomsMin: req.query.bedroomsMin || '',

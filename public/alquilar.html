@@ -447,9 +447,13 @@
       el.innerHTML = html;
     }
 
+    // Capture ?q= from URL (e.g. from homepage search)
+    const _urlQ = new URLSearchParams(window.location.search).get('q') || '';
+
     function getFilters() {
       return {
         type:        'alquiler',
+        q:            _urlQ,
         province:    document.getElementById('fProvince').value,
         bedroomsMin: document.getElementById('fBedrooms').value,
         priceMin:    document.getElementById('fPriceMin').value,

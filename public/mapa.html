@@ -809,6 +809,20 @@
     document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
     showListBtn.addEventListener('click', openSidebar);
 
+    // ── Read URL params (from homepage search or nav links) ──
+    const _urlParams = new URLSearchParams(window.location.search);
+    if (_urlParams.get('type')) {
+      document.getElementById('fType').value = _urlParams.get('type');
+      // Activate the matching tab
+      document.querySelectorAll('.tt-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.type === _urlParams.get('type'));
+      });
+    }
+    if (_urlParams.get('q')) {
+      document.getElementById('topSearchInput').value = _urlParams.get('q');
+      searchQuery = _urlParams.get('q').toLowerCase();
+    }
+
     // ── Load Listings ─────────────────────────────────────────
     async function loadListings() {
       const params = new URLSearchParams({ limit: 200 });
