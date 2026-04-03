@@ -10,8 +10,23 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+      /* Missing variables from old palette — mapped to new design system */
+      --bg-section: #F4F6F9;
+      --surface:    #FFFFFF;
+      --input-bg:   #FFFFFF;
+      --orange:     #F59E0B;
+      --purple:     #7C3AED;
+    }
+    [data-theme="dark"] {
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+      --bg-section: #202D42;
+      --surface:    #1A2235;
+      --input-bg:   #1A2235;
+      --orange:     #FBBF24;
+      --purple:     #A78BFA;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; font-feature-settings: 'cv11', 'ss01'; -webkit-font-smoothing: antialiased; }
 
@@ -114,6 +129,8 @@
     /* ── PAGE SECTIONS ────────────────────────────────────────── */
     .page-section { display: none; }
     .page-section.active { display: block; }
+    /* Mensajes uses flex layout */
+    #page-mensajes.active { display: flex !important; }
 
     /* ── SECTION NAV (internal dashboard tabs) ───────────────── */
     .section-nav { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border-bottom: 1px solid var(--border); }
@@ -1561,7 +1578,7 @@
   </div>
 
   <!-- ═══ PAGE: MENSAJES ═══════════════════════════════════ -->
-  <div class="page-section" id="page-mensajes" style="padding:0;display:none;flex-direction:row;height:calc(100vh - 60px);overflow:hidden;">
+  <div class="page-section" id="page-mensajes" style="padding:0;flex-direction:row;height:calc(100vh - 60px);overflow:hidden;">
 
     <!-- Conversation list -->
     <div id="brkConvPane" style="width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
@@ -3814,7 +3831,11 @@
     document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
     const activeBtn = document.querySelector(`.sidebar-nav-item[data-page="${page}"]`);
     if (activeBtn) activeBtn.classList.add('active');
-    document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+    // Clear both class AND any inline display style from all sections
+    document.querySelectorAll('.page-section').forEach(p => {
+      p.classList.remove('active');
+      p.style.display = '';
+    });
     document.getElementById('page-' + page).classList.add('active');
     document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
     if (page === 'notificaciones') loadNotifications();
@@ -5193,20 +5214,12 @@
   let brkLastTs      = null;
   let brkPollTimer   = null;
 
-  // Fix mensajes page display when activated
-  const origNav = window._navToPage;
-  function ensureMsgPageFlex() {
-    const pg = document.getElementById('page-mensajes');
-    if (pg && pg.classList.contains('active')) {
-      pg.style.display = 'flex';
-      brkLoadList();
-    }
-  }
-  // Hook into page navigation
+  // Hook into page navigation for mensajes polling
   document.querySelectorAll('.sidebar-nav-item[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.dataset.page === 'mensajes') {
-        setTimeout(ensureMsgPageFlex, 50);
+        // Load conversation list when navigating to mensajes
+        setTimeout(brkLoadList, 50);
       } else {
         clearInterval(brkPollTimer);
       }
