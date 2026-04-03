@@ -10,10 +10,10 @@
     "client_phone": "809-555-9999",
     "requested_date": "2026-04-06",
     "requested_time": "09:00",
-    "status": "pending",
+    "status": "confirmed",
     "broker_notes": "",
     "client_notes": "",
     "created_at": "2026-04-02T06:26:43.645Z",
-    "updated_at": "2026-04-02T06:26:43.645Z"
+    "updated_at": "2026-04-02T08:57:10.016Z"
   }
 ]

@@ -13,7 +13,8 @@ const NotificationType = Object.freeze({
   TOUR_UPDATE:        'tour_update',
   PAYMENT_APPROVED:   'payment_approved',
   DOCUMENT_REVIEWED:  'document_reviewed',
-  SECRETARY_ACTION:   'secretary_action',
+  SECRETARY_ACTION:      'secretary_action',
+  SAVED_SEARCH_MATCH:   'saved_search_match',
 });
 
 // Default preferences — all enabled

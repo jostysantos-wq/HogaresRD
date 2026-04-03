@@ -20,11 +20,6 @@
     nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
     .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
     .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
-    .theme-toggle { background: rgba(255,255,255,0.25); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
-    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
-    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
     main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 2.5rem 1rem; }
     .auth-card { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 2.5rem 2.25rem; width: 100%; max-width: 480px; }
     .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 20px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 1rem; }
@@ -65,12 +60,6 @@
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       HogaresRD
     </a>
-    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema">
-      <span class="toggle-icons">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-      </span>
-    </button>
   </nav>
 
   <main>
@@ -193,6 +182,10 @@
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
     redirectIfAuth();
 

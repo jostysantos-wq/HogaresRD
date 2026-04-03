@@ -37,6 +37,7 @@ const nodemailer   = require('nodemailer');
 const multer       = require('multer');
 const cron         = require('node-cron');
 const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
+const { router: savedSearchRouter, checkSavedSearchMatches } = require('./routes/saved-searches');
 
 const store = require('./routes/store');
 const app  = express();
@@ -179,6 +180,7 @@ app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
 app.use('/api/push',              require('./routes/push').router);
+app.use('/api/saved-searches',    savedSearchRouter);
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 app.get('/api/config/meta', (req, res) => {
@@ -243,6 +245,8 @@ app.get('/terminos-publicacion', (req, res) => res.sendFile(path.join(__dirname,
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
 app.get('/alquilar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'alquilar.html')));
+app.get('/comparar',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'comparar.html')));
+app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'busquedas-guardadas.html')));
 app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));
 app.get('/nuevos-proyectos',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'nuevos-proyectos.html')));
 app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
@@ -428,6 +432,14 @@ cron.schedule('0 12 * * *', () => {
   sendNewsletter()
     .then(r => console.log('[Cron] Newsletter done:', r))
     .catch(e => console.error('[Cron] Newsletter error:', e.message));
+}, { timezone: 'America/Santo_Domingo' });
+
+// ── Saved search alerts cron (every 2 hours) ────────────────────────────────
+cron.schedule('0 */2 * * *', () => {
+  console.log('[Cron] Checking saved search matches…');
+  checkSavedSearchMatches()
+    .then(r => console.log('[Cron] Saved search check done:', r))
+    .catch(e => console.error('[Cron] Saved search error:', e.message));
 }, { timezone: 'America/Santo_Domingo' });
 
 // ── Global error handler (keeps all errors as JSON, never HTML) ────────────

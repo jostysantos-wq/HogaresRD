@@ -41,11 +41,6 @@
     .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
     .logo-text { font-size: 1.4rem; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
     .logo-text span { color: var(--accent); }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s, background 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
-    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
-    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1.5rem; }
     .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent-red); color: #fff; font-size: 0.75rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 50px; margin-bottom: 1.75rem; }
@@ -84,12 +79,6 @@
       </div>
       <span class="logo-text">Hogares<span>RD</span></span>
     </a>
-    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar modo oscuro/claro">
-      <span class="toggle-icons">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-      </span>
-    </button>
   </nav>
 
   <main>
@@ -117,15 +106,18 @@
 
   <script>
     const html = document.documentElement;
-    const btn  = document.getElementById('themeToggle');
     function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
     function setSaved(val) { try { localStorage.setItem('theme', val); } catch(e) {} }
     html.setAttribute('data-theme', getSaved());
-    btn.addEventListener('click', () => {
+    function toggleTheme() {
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       setSaved(next);
-    });
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
 
     const LAUNCH_KEY = 'hogaresrd_launch';
     let launch = localStorage.getItem(LAUNCH_KEY);

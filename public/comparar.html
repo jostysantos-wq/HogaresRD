@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comparar Propiedades — HogaresRD</title>
+  <meta name="description" content="Compara propiedades lado a lado: precio, metros cuadrados, habitaciones, ubicacion y amenidades." />
+  <style>
+    :root {
+      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
+      --text: #001840; --text-muted: #4d6a8a;
+      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
+      --red: #CF142B; --green: #0a7c4f;
+      --border: #d0dcea;
+      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
+      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
+      --shadow-lg: 0 8px 40px rgba(0,56,168,0.20);
+      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
+      --nav-bg: rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
+      --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
+      --red: #e8374e; --green: #1db87a;
+      --border: #002268;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
+      --nav-bg: rgba(0,12,36,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+
+    /* PAGE */
+    .page { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+    .page-header { margin-bottom: 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .page-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; }
+    .page-sub { color: var(--text-muted); font-size: 0.92rem; margin-top: 0.3rem; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 5rem 2rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .empty-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .empty-sub { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem; max-width: 400px; margin-left: auto; margin-right: auto; }
+    .empty-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent); color: #fff; padding: 0.65rem 1.5rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem; text-decoration: none; transition: background 0.2s; }
+    .empty-btn:hover { background: var(--accent-hover); }
+
+    /* LOADING */
+    .loading-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
+
+    /* COMPARISON TABLE */
+    .compare-grid {
+      display: grid;
+      gap: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .compare-grid.cols-2 { grid-template-columns: 180px 1fr 1fr; }
+    .compare-grid.cols-3 { grid-template-columns: 180px 1fr 1fr 1fr; }
+
+    .compare-cell {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      display: flex; align-items: center;
+    }
+    .compare-cell:last-child { border-bottom: none; }
+
+    /* Label column */
+    .compare-label-cell {
+      background: var(--bg-section);
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Header row */
+    .compare-header {
+      padding: 0; border-bottom: 1px solid var(--border);
+      flex-direction: column; align-items: stretch;
+    }
+    .compare-header-img {
+      width: 100%; height: 180px;
+      object-fit: cover; display: block;
+      background: linear-gradient(135deg, #002D62, #0050a8);
+    }
+    .compare-header-body { padding: 1rem; }
+    .compare-header-title {
+      font-size: 0.92rem; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+    }
+    .compare-header-price {
+      font-size: 1.15rem; font-weight: 800; color: var(--accent);
+    }
+    .compare-header-price .per { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .compare-header-loc {
+      font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;
+      display: flex; align-items: center; gap: 0.25rem;
+    }
+    .compare-header-loc svg { width: 11px; height: 11px; fill: var(--text-muted); flex-shrink: 0; }
+    .compare-header-actions { margin-top: 0.6rem; display: flex; gap: 0.5rem; }
+    .compare-view-btn {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      color: var(--accent); font-size: 0.8rem; font-weight: 600;
+      text-decoration: none; padding: 0.35rem 0.7rem;
+      border: 1px solid var(--accent); border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .compare-view-btn:hover { background: var(--accent); color: #fff; }
+    .compare-remove-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.78rem; font-weight: 600;
+      padding: 0.35rem 0.7rem; border-radius: 8px; cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .compare-remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* Value cells */
+    .compare-value { font-weight: 600; color: var(--text); }
+    .compare-value.highlight { color: var(--green); font-weight: 700; }
+    .compare-value.na { color: var(--text-muted); font-style: italic; font-weight: 400; }
+
+    /* Amenity pills */
+    .amenity-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .amenity-pill {
+      font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem;
+      border-radius: 50px; background: var(--accent-light);
+      color: var(--accent); white-space: nowrap;
+    }
+    .amenity-pill.missing {
+      background: var(--bg); color: var(--text-muted);
+      text-decoration: line-through; opacity: 0.5;
+    }
+
+    /* Price per m2 highlight */
+    .best-value { position: relative; }
+    .best-value::after {
+      content: 'Mejor valor';
+      font-size: 0.65rem; font-weight: 700; color: var(--green);
+      position: absolute; bottom: -0.2rem; left: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .compare-grid.cols-2, .compare-grid.cols-3 {
+        grid-template-columns: 120px repeat(auto-fit, minmax(0, 1fr));
+      }
+      .compare-cell { padding: 0.65rem 0.75rem; font-size: 0.82rem; }
+      .compare-header-img { height: 130px; }
+      .compare-label-cell { font-size: 0.72rem; }
+    }
+    @media (max-width: 500px) {
+      .page { padding: 1.5rem 1rem; }
+      .compare-grid { overflow-x: auto; display: block; }
+      .compare-grid > div { display: grid; }
+      .compare-grid.cols-2 > div { grid-template-columns: 100px 1fr 1fr; }
+      .compare-grid.cols-3 > div { grid-template-columns: 100px 1fr 1fr 1fr; }
+    }
+
+    /* FOOTER (minimal) */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
+    footer p { font-size: 0.82rem; color: var(--text-muted); }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 768px) { .nav-links { display: none; } }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/">Inicio</a>
+        <a class="nav-link" href="/comprar">Comprar</a>
+        <a class="nav-link" href="/alquilar">Alquilar</a>
+        <a class="nav-link" href="/nuevos-proyectos">Nuevos Proyectos</a>
+        <a class="nav-link" href="/blog">Blog</a>
+      </div>
+      <div class="nav-actions">
+      </div>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="page-header">
+      <div class="breadcrumb"><a href="/">Inicio</a> / <a href="/comprar">Propiedades</a> / Comparar</div>
+      <h1 class="page-title">Comparar Propiedades</h1>
+      <p class="page-sub">Analiza las diferencias lado a lado para tomar la mejor decision.</p>
+    </div>
+    <div id="content">
+      <div class="loading-state"><div class="spinner"></div><p>Cargando propiedades...</p></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 <a href="/">HogaresRD</a> — Bienes raices en la Republica Dominicana</p>
+  </footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Theme
+    const html = document.documentElement;
+    function getSavedTheme() { try { return localStorage.getItem('theme') || 'light'; } catch { return 'light'; } }
+    html.setAttribute('data-theme', getSavedTheme());
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch {}
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function fmtPrice(p) { return '$' + Number(p).toLocaleString(); }
+
+    // Get IDs from URL
+    const params = new URLSearchParams(window.location.search);
+    const ids = (params.get('ids') || '').split(',').filter(Boolean);
+
+    async function loadComparison() {
+      const content = document.getElementById('content');
+
+      if (!ids.length) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No hay propiedades para comparar</div>
+            <div class="empty-sub">Selecciona hasta 3 propiedades desde las paginas de busqueda usando el boton "Comparar" en cada tarjeta.</div>
+            <a href="/comprar" class="empty-btn">Explorar propiedades</a>
+          </div>`;
+        return;
+      }
+
+      // Fetch all listings in parallel
+      try {
+        const results = await Promise.all(
+          ids.map(id => fetch('/api/listings/' + encodeURIComponent(id)).then(r => r.ok ? r.json() : null))
+        );
+        const listings = results.filter(Boolean);
+
+        if (!listings.length) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">😕</div>
+              <div class="empty-title">Propiedades no encontradas</div>
+              <div class="empty-sub">Las propiedades seleccionadas ya no estan disponibles.</div>
+              <a href="/comprar" class="empty-btn">Buscar propiedades</a>
+            </div>`;
+          return;
+        }
+
+        renderComparison(listings);
+      } catch (err) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Error al cargar</div>
+            <div class="empty-sub">No se pudieron cargar las propiedades. Intenta de nuevo.</div>
+            <a href="/comprar" class="empty-btn">Volver a buscar</a>
+          </div>`;
+      }
+    }
+
+    function renderComparison(listings) {
+      const n = listings.length;
+      const content = document.getElementById('content');
+
+      // Collect all amenities across all listings
+      const allAmenities = [...new Set(listings.flatMap(l => l.amenities || []))].sort();
+
+      // Calculate price per m2
+      const pricePerm2 = listings.map(l => {
+        const price = Number(l.price);
+        const area = Number(l.area_const);
+        return (price && area) ? Math.round(price / area) : null;
+      });
+      const bestPPM = pricePerm2.filter(Boolean);
+      const minPPM = bestPPM.length ? Math.min(...bestPPM) : null;
+
+      // Build grid HTML
+      let html = `<div class="compare-grid cols-${n}">`;
+
+      // ── HEADER ROW (images + titles)
+      html += `<div class="compare-cell compare-label-cell compare-header" style="align-items:center;justify-content:center;">
+        <div style="padding:1rem;text-align:center;">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="var(--accent)" style="margin-bottom:0.5rem"><path d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5V3zm4 0v18h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-5z"/></svg>
+          <div style="font-size:0.78rem;">${n} propiedades</div>
+        </div>
+      </div>`;
+      listings.forEach(l => {
+        const rawImg = (l.images && l.images.length) ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0]?.url || '') : '';
+        const imgSrc = esc(rawImg);
+        const loc = [l.sector || l.city, l.province].filter(Boolean).join(', ');
+        const priceHtml = l.type === 'alquiler'
+          ? `${fmtPrice(l.price)} <span class="per">/mes</span>`
+          : fmtPrice(l.price);
+        html += `
+          <div class="compare-cell compare-header">
+            ${imgSrc
+              ? `<img class="compare-header-img" src="${imgSrc}" alt="${esc(l.title)}" onerror="this.style.display='none'" loading="lazy" />`
+              : `<div class="compare-header-img" style="display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="40" height="40" fill="rgba(255,255,255,0.3)"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`
+            }
+            <div class="compare-header-body">
+              <div class="compare-header-price">${priceHtml}</div>
+              <div class="compare-header-title" title="${esc(l.title)}">${esc(l.title)}</div>
+              <div class="compare-header-loc">
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                ${esc(loc)}
+              </div>
+              <div class="compare-header-actions">
+                <a class="compare-view-btn" href="/listing/${esc(l.id)}">Ver detalle</a>
+                <button class="compare-remove-btn" onclick="removeListing('${esc(l.id)}')">Quitar</button>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      // ── DATA ROWS
+      const rows = [
+        { label: 'Tipo', key: l => ({ venta:'En Venta', alquiler:'Alquiler', proyecto:'Proyecto' }[l.type] || l.type) },
+        { label: 'Condicion', key: l => ({ nueva_construccion:'Nueva', usada:'Usada', planos:'En Planos' }[l.condition] || l.condition) },
+        { label: 'Precio', key: l => l.type === 'alquiler' ? fmtPrice(l.price) + '/mes' : fmtPrice(l.price) },
+        { label: 'Area (m2)', key: l => l.area_const ? l.area_const + ' m2' : null },
+        { label: 'Terreno', key: l => l.area_land ? l.area_land + ' m2' : null },
+        { label: 'Precio/m2', key: (l, i) => pricePerm2[i] ? fmtPrice(pricePerm2[i]) + '/m2' : null, highlight: (l, i) => pricePerm2[i] === minPPM && minPPM !== null },
+        { label: 'Habitaciones', key: l => l.bedrooms },
+        { label: 'Banos', key: l => l.bathrooms },
+        { label: 'Parqueos', key: l => l.parking },
+        { label: 'Provincia', key: l => l.province },
+        { label: 'Ciudad', key: l => l.city },
+        { label: 'Sector', key: l => l.sector },
+      ];
+
+      rows.forEach(row => {
+        html += `<div class="compare-cell compare-label-cell">${esc(row.label)}</div>`;
+        listings.forEach((l, i) => {
+          const val = row.key(l, i);
+          const isHighlight = row.highlight && row.highlight(l, i);
+          html += `<div class="compare-cell compare-value${val ? '' : ' na'}${isHighlight ? ' highlight' : ''}">${val ? esc(String(val)) : '—'}</div>`;
+        });
+      });
+
+      // ── AMENITIES ROW
+      if (allAmenities.length) {
+        html += `<div class="compare-cell compare-label-cell">Amenidades</div>`;
+        listings.forEach(l => {
+          const has = new Set(l.amenities || []);
+          html += `<div class="compare-cell"><div class="amenity-pills">`;
+          allAmenities.forEach(a => {
+            html += `<span class="amenity-pill${has.has(a) ? '' : ' missing'}">${esc(a)}</span>`;
+          });
+          html += `</div></div>`;
+        });
+      }
+
+      html += `</div>`;
+
+      // ── Action bar below table
+      html += `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <a href="/comprar" style="color:var(--accent);font-weight:600;font-size:0.9rem;text-decoration:none;display:flex;align-items:center;gap:0.3rem;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--accent)"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            Agregar mas propiedades
+          </a>
+          <button onclick="clearAll()" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:0.5rem 1rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.82rem;">Limpiar comparacion</button>
+        </div>`;
+
+      content.innerHTML = html;
+    }
+
+    function removeListing(id) {
+      const remaining = ids.filter(i => i !== id);
+      // Update localStorage
+      try { localStorage.setItem('hogaresrd_compare', JSON.stringify(remaining)); } catch {}
+      if (remaining.length) {
+        window.location.href = '/comparar?ids=' + remaining.join(',');
+      } else {
+        window.location.href = '/comparar';
+      }
+    }
+
+    function clearAll() {
+      try { localStorage.setItem('hogaresrd_compare', '[]'); } catch {}
+      window.location.href = '/comparar';
+    }
+
+    loadComparison();
+  </script>
+</body>
+</html>

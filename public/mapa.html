@@ -60,9 +60,6 @@
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 1rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 44px; height: 24px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 3px; transition: background 0.3s; flex-shrink: 0; }
-    .theme-toggle::after { content: ''; width: 18px; height: 18px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 3px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(20px); }
 
     /* ── TOP SEARCH BAR ───────────────────────────────────────── */
     .map-topbar {
@@ -456,7 +453,6 @@
         <div id="navAuthArea">
           <a href="/login" class="btn-ghost">Iniciar sesión</a>
         </div>
-        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema"></button>
         <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menú">
           <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
         </button>
@@ -642,11 +638,15 @@
     // ── Theme ─────────────────────────────────────────────────
     const html = document.documentElement;
     html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
-    document.getElementById('themeToggle').addEventListener('click', () => {
+    function toggleTheme() {
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
-    });
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
 
     // ── Auth nav ──────────────────────────────────────────────
     (function() {

@@ -60,6 +60,10 @@ struct BrowseView: View {
     // Detail nav
     @State private var detailListingID: String? = nil
 
+    // Compare
+    @StateObject private var compareManager = CompareManager.shared
+    @State private var showCompare = false
+
     // MARK: - Computed: filtered listings
     private var filteredListings: [Listing] {
         listings.filter { listing in
@@ -190,6 +194,16 @@ struct BrowseView: View {
         )) {
             if let id = detailListingID {
                 NavigationStack { ListingDetailView(id: id) }
+            }
+        }
+        .sheet(isPresented: $showCompare) {
+            ComparisonView(selectedIds: $compareManager.selectedIds)
+        }
+        .overlay(alignment: .bottom) {
+            if !compareManager.selectedIds.isEmpty {
+                compareFloatingBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.35), value: compareManager.selectedIds.count)
             }
         }
     }
@@ -844,6 +858,43 @@ struct BrowseView: View {
         }
         loading = false
     }
+
+    // MARK: - Compare floating bar
+    private var compareFloatingBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "square.split.2x1.fill")
+                .foregroundColor(.white)
+            Text("Comparar (\(compareManager.selectedIds.count)/\(compareManager.maxItems))")
+                .font(.subheadline.bold())
+                .foregroundColor(.white)
+            Spacer()
+            Button {
+                compareManager.clear()
+            } label: {
+                Text("Limpiar")
+                    .font(.caption.bold())
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            Button {
+                showCompare = true
+            } label: {
+                Text("Ver")
+                    .font(.caption.bold())
+                    .foregroundColor(.rdBlue)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Color.rdBlue)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
+        .padding(.horizontal, 16)
+        .padding(.bottom, tabBarHeight + 8)
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -856,7 +907,7 @@ struct ListingRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Large image
-            ZStack(alignment: .topLeading) {
+            ZStack {
                 AsyncImage(url: listing.firstImageURL) { phase in
                     switch phase {
                     case .success(let img):
@@ -872,17 +923,47 @@ struct ListingRow: View {
                 .frame(height: 190)
                 .clipped()
 
-                // Type badge
-                Text(listing.typeLabel)
-                    .font(.system(size: 10, weight: .bold))
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(
-                        listing.type == "venta"    ? Color.rdGreen :
-                        listing.type == "alquiler" ? Color.rdBlue  : Color.rdRed
-                    )
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
-                    .padding(10)
+                // Badges overlay
+                VStack {
+                    HStack {
+                        // Type badge
+                        Text(listing.typeLabel)
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(
+                                listing.type == "venta"    ? Color.rdGreen :
+                                listing.type == "alquiler" ? Color.rdBlue  : Color.rdRed
+                            )
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                        Spacer()
+                    }
+                    Spacer()
+                    HStack {
+                        // Compare button
+                        Button {
+                            let _ = CompareManager.shared.toggle(listing.id)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.split.2x1")
+                                    .font(.system(size: 10))
+                                Text(CompareManager.shared.isSelected(listing.id) ? "Comparando" : "Comparar")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                CompareManager.shared.isSelected(listing.id)
+                                    ? Color.rdBlue
+                                    : Color.black.opacity(0.55)
+                            )
+                            .clipShape(Capsule())
+                        }
+                        Spacer()
+                    }
+                }
+                .padding(10)
             }
 
             // Info block

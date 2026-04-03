@@ -51,11 +51,6 @@
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 4px; transition: background 0.3s; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
-    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
-    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     /* PAGE HEADER */
     .page-header { background: linear-gradient(135deg, #001840 0%, #0a3d00 55%, #145200 100%); padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
@@ -174,12 +169,6 @@
         <div id="navAuthArea">
           <a href="/login" class="btn-ghost">Iniciar sesión</a>
         </div>
-        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
-          <span class="toggle-icons">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-          </span>
-        </button>
       </div>
     </div>
   </nav>
@@ -304,15 +293,20 @@
     </div>
   </footer>
 
+  <script src="/js/compare.js"></script>
   <script>
     // Theme
     const html = document.documentElement;
     html.setAttribute('data-theme', (() => { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } })());
-    document.getElementById('themeToggle').addEventListener('click', () => {
+    function toggleTheme() {
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       try { localStorage.setItem('theme', next); } catch(e) {}
-    });
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
 
     // Auth nav
     (function() {
@@ -332,7 +326,12 @@
             <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;z-index:200;">
               <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
               <a href="/my-applications" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">📋 Mis Aplicaciones</a>
+              <a href="/busquedas-guardadas" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">🔔 Búsquedas Guardadas</a>
               <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
+                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
+                <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
+              </div>
               <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
             </div>
           </div>`;
@@ -370,8 +369,9 @@
     }
 
     function buildCard(l) {
-      const img = Array.isArray(l.images) && l.images.length
-        ? `<img src="${esc(l.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'" />`
+      const firstImg = Array.isArray(l.images) && l.images.length ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0]?.url || '') : '';
+      const img = firstImg
+        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div>`;
 
       const deliveryBadge = l.delivery_date
@@ -391,6 +391,7 @@
               ${stageBadge(l.condition)}
               ${deliveryBadge}
             </div>
+            ${window.HogaresCompare ? window.HogaresCompare.buttonHTML(l.id) : ''}
           </div>
           <div class="card-body">
             <div class="card-price">${formatPrice(l.price)}</div>

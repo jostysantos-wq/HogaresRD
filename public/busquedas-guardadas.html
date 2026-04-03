@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Búsquedas Guardadas — HogaresRD</title>
+  <meta name="description" content="Gestiona tus búsquedas guardadas y recibe alertas cuando aparezcan nuevas propiedades." />
+  <style>
+    :root {
+      --bg: #f0f4f9; --bg-card: #ffffff; --bg-section: #e8eef7;
+      --text: #001840; --text-muted: #4d6a8a;
+      --accent: #0038A8; --accent-hover: #002c8a; --accent-light: #dce8ff;
+      --red: #CF142B; --green: #0a7c4f;
+      --border: #d0dcea;
+      --shadow-sm: 0 2px 8px rgba(0,56,168,0.09);
+      --shadow-md: 0 4px 20px rgba(0,56,168,0.13);
+      --toggle-bg: #b5ccf8; --toggle-knob: #ffffff;
+      --nav-bg: rgba(255,255,255,0.96);
+    }
+    [data-theme="dark"] {
+      --bg: #000c24; --bg-card: #001238; --bg-section: #001428;
+      --text: #e8f0fb; --text-muted: #7a9bbf;
+      --accent: #5599ff; --accent-hover: #4080f0; --accent-light: #001238;
+      --red: #e8374e; --green: #1db87a;
+      --border: #002268;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --toggle-bg: #002268; --toggle-knob: #e8f0fb;
+      --nav-bg: rgba(0,12,36,0.97);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+    /* PAGE */
+    .page { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .page-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; }
+    .page-sub { color: var(--text-muted); font-size: 0.88rem; margin-top: 0.25rem; }
+    .breadcrumb { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+
+    /* LOGIN GATE */
+    .login-gate { text-align: center; padding: 5rem 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; }
+    .login-gate-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .login-gate h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .login-gate p { color: var(--text-muted); margin-bottom: 1.5rem; }
+    .btn-primary { background: var(--accent); color: #fff; border: none; padding: 0.65rem 1.5rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* SEARCH CARDS */
+    .search-list { display: flex; flex-direction: column; gap: 1rem; }
+    .search-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .search-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .search-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .search-name { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .search-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .search-badge { font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; }
+    .badge-count { background: var(--accent-light); color: var(--accent); }
+    .badge-notify-on { background: #e6f7ee; color: var(--green); }
+    .badge-notify-off { background: var(--bg); color: var(--text-muted); }
+    .search-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.85rem; }
+    .filter-pill { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 50px; background: var(--bg-section); color: var(--text-muted); border: 1px solid var(--border); }
+    .search-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .search-btn { padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .search-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .search-btn.danger:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
+    .search-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .search-btn.primary:hover { background: var(--accent-hover); }
+    .search-date { font-size: 0.72rem; color: var(--text-muted); }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 4rem 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .empty-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .empty-sub { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.5rem; max-width: 400px; margin-left: auto; margin-right: auto; }
+
+    /* HOW-TO CARD */
+    .howto { background: var(--accent-light); border: 1px solid var(--accent); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    .howto-title { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+    .howto-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* TOGGLE SWITCH */
+    .toggle-wrap { display: flex; align-items: center; gap: 0.5rem; }
+    .toggle { width: 40px; height: 22px; border-radius: 50px; position: relative; cursor: pointer; transition: background 0.2s; }
+    .toggle.on  { background: var(--green); }
+    .toggle.off { background: var(--border); }
+    .toggle::after { content: ''; width: 16px; height: 16px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .toggle.on::after { transform: translateX(18px); }
+    .toggle-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+
+    /* LOADING */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .loading { text-align: center; padding: 3rem; color: var(--text-muted); }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; z-index: 9999; transition: bottom 0.3s; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+    .toast.visible { bottom: 2rem; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
+    footer p { font-size: 0.82rem; color: var(--text-muted); }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 768px) { .nav-links { display: none; } .page { padding: 1.5rem 1rem; } }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/">Inicio</a>
+        <a class="nav-link" href="/comprar">Comprar</a>
+        <a class="nav-link" href="/alquilar">Alquilar</a>
+        <a class="nav-link active" href="/busquedas-guardadas">Mis Alertas</a>
+      </div>
+      <div class="nav-actions">
+      </div>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div><p style="margin-top:1rem;">Cargando...</p></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 <a href="/">HogaresRD</a> — Bienes raices en la Republica Dominicana</p>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Theme
+    const html = document.documentElement;
+    function gst() { try { return localStorage.getItem('theme') || 'light'; } catch { return 'light'; } }
+    html.setAttribute('data-theme', gst());
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch {}
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('visible');
+      clearTimeout(t._t);
+      t._t = setTimeout(() => t.classList.remove('visible'), 2500);
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    const filterLabels = {
+      type:        v => ({ venta:'En Venta', alquiler:'Alquiler', proyecto:'Proyectos' }[v] || v),
+      condition:   v => ({ nueva_construccion:'Nueva', usada:'Usada', planos:'En Planos' }[v] || v),
+      province:    v => v,
+      city:        v => v,
+      priceMin:    v => `Desde $${Number(v).toLocaleString()}`,
+      priceMax:    v => `Hasta $${Number(v).toLocaleString()}`,
+      bedroomsMin: v => `${v}+ hab.`,
+      tags:        v => v,
+    };
+
+    function renderFilterPills(filters) {
+      return Object.entries(filters)
+        .filter(([k, v]) => v && v !== '')
+        .map(([k, v]) => {
+          const label = filterLabels[k] ? filterLabels[k](v) : `${k}: ${v}`;
+          return `<span class="filter-pill">${esc(label)}</span>`;
+        })
+        .join('');
+    }
+
+    // ── Main ──────────────────────────────────────────────────
+    async function init() {
+      const content = document.getElementById('content');
+
+      if (!isLoggedIn()) {
+        content.innerHTML = `
+          <div class="login-gate">
+            <div class="login-gate-icon">🔔</div>
+            <h2>Inicia sesion para ver tus alertas</h2>
+            <p>Guarda combinaciones de filtros y recibe notificaciones cuando aparezcan nuevas propiedades.</p>
+            <a href="/login?next=/busquedas-guardadas" class="btn-primary">Iniciar sesion</a>
+          </div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/saved-searches', { headers: authHeaders(), credentials: 'include' });
+        if (res.status === 401) {
+          content.innerHTML = `
+            <div class="login-gate">
+              <div class="login-gate-icon">🔒</div>
+              <h2>Sesion expirada</h2>
+              <p>Inicia sesion nuevamente para ver tus busquedas guardadas.</p>
+              <a href="/login?next=/busquedas-guardadas" class="btn-primary">Iniciar sesion</a>
+            </div>`;
+          return;
+        }
+        if (!res.ok) throw new Error('Failed to load');
+        const { searches } = await res.json();
+        renderPage(searches);
+      } catch (err) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Error al cargar</div>
+            <div class="empty-sub">No se pudieron cargar tus busquedas guardadas.</div>
+            <button class="btn-primary" onclick="init()">Reintentar</button>
+          </div>`;
+      }
+    }
+
+    function renderPage(searches) {
+      const content = document.getElementById('content');
+      let html = `
+        <div class="breadcrumb"><a href="/">Inicio</a> / Mis Alertas</div>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Mis Búsquedas Guardadas</h1>
+            <p class="page-sub">Recibe alertas cuando aparezcan propiedades que coincidan con tus criterios.</p>
+          </div>
+        </div>
+
+        <div class="howto">
+          <div class="howto-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--accent)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            ¿Como funciona?
+          </div>
+          <div class="howto-text">
+            Ve a <a href="/comprar" style="color:var(--accent);font-weight:600;">Comprar</a> o <a href="/alquilar" style="color:var(--accent);font-weight:600;">Alquilar</a>, aplica los filtros que desees (provincia, precio, habitaciones, etc.) y usa el boton <strong>"Guardar búsqueda"</strong> que aparece encima de los resultados. Te notificaremos por email y push cuando aparezcan nuevas propiedades.
+          </div>
+        </div>`;
+
+      if (!searches.length) {
+        html += `
+          <div class="empty-state">
+            <div class="empty-icon">🔔</div>
+            <div class="empty-title">No tienes busquedas guardadas</div>
+            <div class="empty-sub">Busca propiedades y guarda tus filtros favoritos para recibir alertas automaticas.</div>
+            <a href="/comprar" class="btn-primary">Buscar propiedades</a>
+          </div>`;
+      } else {
+        html += `<div class="search-list">`;
+        searches.forEach(s => {
+          const pills = renderFilterPills(s.filters);
+          html += `
+            <div class="search-card" id="search-${esc(s.id)}">
+              <div class="search-card-top">
+                <div class="search-name">${esc(s.name)}</div>
+                <div class="toggle-wrap">
+                  <div class="toggle ${s.notify ? 'on' : 'off'}" onclick="toggleNotify('${esc(s.id)}', ${!s.notify})" title="${s.notify ? 'Desactivar alertas' : 'Activar alertas'}"></div>
+                  <span class="toggle-label">${s.notify ? 'Alertas activas' : 'Alertas desactivadas'}</span>
+                </div>
+              </div>
+              <div class="search-meta">
+                <span class="search-badge badge-count">${s.matchCount} propiedad${s.matchCount !== 1 ? 'es' : ''}</span>
+                <span class="search-badge ${s.notify ? 'badge-notify-on' : 'badge-notify-off'}">${s.notify ? '🔔 Notificando' : '🔕 Sin alertas'}</span>
+                <span class="search-date">Creada: ${formatDate(s.createdAt)}</span>
+                ${s.lastNotifiedAt ? `<span class="search-date">Notificacion: ${formatDate(s.lastNotifiedAt)}</span>` : ''}
+              </div>
+              ${pills ? `<div class="search-filters">${pills}</div>` : ''}
+              <div class="search-actions">
+                <a class="search-btn primary" href="/comprar?${buildQueryString(s.filters)}">Ver resultados</a>
+                <button class="search-btn danger" onclick="deleteSearch('${esc(s.id)}')">Eliminar</button>
+              </div>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+
+      content.innerHTML = html;
+    }
+
+    function buildQueryString(filters) {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v && v !== '') params.set(k, v);
+      });
+      return params.toString();
+    }
+
+    async function toggleNotify(id, newValue) {
+      try {
+        const res = await fetch(`/api/saved-searches/${id}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ notify: newValue }),
+        });
+        if (!res.ok) throw new Error();
+        showToast(newValue ? 'Alertas activadas' : 'Alertas desactivadas');
+        init(); // refresh
+      } catch {
+        showToast('Error al actualizar');
+      }
+    }
+
+    async function deleteSearch(id) {
+      if (!confirm('¿Eliminar esta busqueda guardada?')) return;
+      try {
+        const res = await fetch(`/api/saved-searches/${id}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error();
+        showToast('Busqueda eliminada');
+        init();
+      } catch {
+        showToast('Error al eliminar');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

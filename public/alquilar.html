@@ -51,11 +51,6 @@
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
     .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
     .btn-nav-primary:hover { background: var(--accent-hover); }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; display: flex; align-items: center; padding: 0 4px; transition: background 0.3s; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: var(--toggle-knob); border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
-    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
-    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     /* PAGE HEADER */
     .page-header { background: linear-gradient(135deg, #001840 0%, #1a0050 55%, #2d0080 100%); padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
@@ -81,6 +76,14 @@
     .btn-filter:hover { background: var(--accent-hover); }
     .btn-reset { background: none; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
     .btn-reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* SAVE SEARCH */
+    .btn-save-search { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.9rem; border: 1.5px solid var(--green); border-radius: 8px; background: none; color: var(--green); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-save-search:hover { background: var(--green); color: #fff; }
+    .btn-save-search.saved { background: var(--green); color: #fff; pointer-events: none; }
+    .btn-save-search svg { width: 15px; height: 15px; fill: currentColor; }
+    .save-search-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-card); color: var(--text); border: 1px solid var(--green); border-radius: 12px; padding: 0.9rem 1.5rem; font-size: 0.9rem; font-weight: 600; box-shadow: var(--shadow-lg); z-index: 9999; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s; opacity: 0; }
+    .save-search-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     /* RESULTS BAR */
     .results-bar { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -168,12 +171,6 @@
         <div id="navAuthArea">
           <a href="/login" class="btn-ghost">Iniciar sesión</a>
         </div>
-        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
-          <span class="toggle-icons">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-            <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-          </span>
-        </button>
       </div>
     </div>
   </nav>
@@ -230,11 +227,17 @@
   <!-- RESULTS -->
   <div class="results-bar">
     <div class="results-count" id="resultsCount">Cargando...</div>
-    <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <button class="btn-save-search" id="btnSaveSearch" onclick="saveCurrentSearch()" title="Guardar esta búsqueda">
+        <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+        Guardar búsqueda
+      </button>
+      <select class="sort-select" id="sortSelect" onchange="applyFilters()">
       <option value="newest">Más recientes</option>
       <option value="price_asc">Precio: menor a mayor</option>
       <option value="price_desc">Precio: mayor a menor</option>
     </select>
+    </div>
   </div>
 
   <!-- GRID -->
@@ -289,17 +292,21 @@
     </div>
   </footer>
 
+  <script src="/js/compare.js"></script>
   <script>
     // Theme
     const html = document.documentElement;
-    const btn  = document.getElementById('themeToggle');
     function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
     html.setAttribute('data-theme', getSaved());
-    btn.addEventListener('click', () => {
+    function toggleTheme() {
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       try { localStorage.setItem('theme', next); } catch(e) {}
-    });
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
 
     // Auth nav
     (function() {
@@ -319,7 +326,12 @@
             <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;z-index:200;">
               <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
               <a href="/my-applications" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">📋 Mis Aplicaciones</a>
+              <a href="/busquedas-guardadas" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">🔔 Búsquedas Guardadas</a>
               <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">
+              <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
+                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
+                <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
+              </div>
               <button onclick="logout()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
             </div>
           </div>`;
@@ -355,8 +367,9 @@
     }
 
     function buildCard(l) {
-      const img = Array.isArray(l.images) && l.images.length
-        ? `<img src="${esc(l.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'" />`
+      const firstImg = Array.isArray(l.images) && l.images.length ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0]?.url || '') : '';
+      const img = firstImg
+        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       return `
         <a class="prop-card" href="/listing/${esc(l.id)}">
@@ -365,6 +378,7 @@
             <div class="card-badges">
               <span class="badge badge-alquiler">En Alquiler</span>
             </div>
+            ${window.HogaresCompare ? window.HogaresCompare.buttonHTML(l.id) : ''}
           </div>
           <div class="card-body">
             <div class="card-price">${formatPrice(l.price)}</div>
@@ -478,6 +492,71 @@
         sel.appendChild(opt);
       });
     }).catch(() => {});
+
+    // ── Save Search ───────────────────────────────────────────────────
+    async function saveCurrentSearch() {
+      const token = localStorage.getItem('hogaresrd_token');
+      if (!token) {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
+
+      const filters = getFilters();
+      const clean = {};
+      for (const [k, v] of Object.entries(filters)) { if (v) clean[k] = v; }
+
+      const hasFilter = Object.keys(clean).some(k => k !== 'type');
+      if (!hasFilter) {
+        showSaveToast('Aplica al menos un filtro antes de guardar', true);
+        return;
+      }
+
+      const btn = document.getElementById('btnSaveSearch');
+      btn.disabled = true;
+      btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> Guardando...';
+
+      try {
+        const res = await fetch('/api/saved-searches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filters: clean, notify: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showSaveToast(data.error || 'Error al guardar', true);
+          btn.disabled = false;
+          btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> Guardar búsqueda';
+          return;
+        }
+        btn.classList.add('saved');
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Búsqueda guardada';
+        showSaveToast('¡Búsqueda guardada! Te notificaremos cuando haya nuevas propiedades.');
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.disabled = false;
+          btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> Guardar búsqueda';
+        }, 4000);
+      } catch (e) {
+        showSaveToast('Error de conexión. Intenta de nuevo.', true);
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> Guardar búsqueda';
+      }
+    }
+
+    function showSaveToast(msg, isError) {
+      let toast = document.getElementById('saveSearchToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'saveSearchToast';
+        toast.className = 'save-search-toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      if (isError) { toast.style.borderColor = 'var(--red)'; } else { toast.style.borderColor = 'var(--green)'; }
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
 
     loadListings(1);
   </script>

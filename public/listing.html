@@ -41,9 +41,6 @@
     .btn-primary { background: var(--accent); border: none; color: #fff; font-size: 0.88rem; font-weight: 600; padding: 0.48rem 1.1rem; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s; }
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-primary svg { width: 15px; height: 15px; fill: #fff; }
-    .theme-toggle { background: var(--toggle-bg); border: none; border-radius: 50px; width: 48px; height: 26px; cursor: pointer; position: relative; flex-shrink: 0; }
-    .theme-toggle::after { content: ''; width: 18px; height: 18px; background: var(--toggle-knob); border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: transform 0.3s; }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(22px); }
     .user-menu { position: relative; }
     .user-avatar-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1.5px solid var(--border); border-radius: 50px; padding: 0.28rem 0.7rem 0.28rem 0.28rem; cursor: pointer; color: var(--text); }
     .user-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
@@ -59,7 +56,7 @@
     /* ── GALLERY ─────────────────────────────────────────────── */
     .gallery { background: var(--bg-card); border-bottom: 1px solid var(--border); }
     .gallery-inner { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
-    .gallery-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 0.5rem; height: 440px; border-radius: 16px; overflow: hidden; }
+    .gallery-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 0.5rem; height: 440px; border-radius: 16px; overflow: hidden; position: relative; }
     .gallery-main { grid-row: 1 / 3; position: relative; cursor: pointer; }
     .gallery-thumb { position: relative; cursor: pointer; overflow: hidden; }
     .gallery-thumb:hover .gimg { filter: brightness(0.85); }
@@ -73,38 +70,78 @@
     .gimg-icon svg { opacity: 0.2; fill: #fff; }
     .gimg-icon.main svg { width: 80px; height: 80px; }
     .gimg-icon.thumb svg { width: 36px; height: 36px; }
-    .gallery-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem 1.25rem 0.85rem; background: linear-gradient(transparent, rgba(0,0,0,0.55)); color: #fff; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; }
-    .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; }
+    .gallery-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem 1.25rem 0.85rem; background: linear-gradient(transparent, rgba(0,0,0,0.55)); color: #fff; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; pointer-events: none; }
+    .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; transition: background 0.2s; z-index: 2; }
+    .gallery-count:hover { background: rgba(0,0,0,0.75); }
     .gallery-count svg { width: 14px; height: 14px; fill: #fff; }
+    /* "Ver todas" button overlaying bottom-right thumb */
+    .gallery-overlay-btn { position: absolute; inset: 0; background: rgba(0,20,60,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 0.82rem; font-weight: 700; gap: 0.25rem; opacity: 0; transition: opacity 0.25s; z-index: 2; }
+    .gallery-thumb:last-child:hover .gallery-overlay-btn { opacity: 1; }
+    .gallery-overlay-btn svg { width: 22px; height: 22px; fill: #fff; }
+    /* Thumb label tooltip */
+    .gallery-thumb-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 0.5rem 0.6rem 0.35rem; background: linear-gradient(transparent, rgba(0,0,0,0.5)); color: #fff; font-size: 0.68rem; font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+    .gallery-thumb:hover .gallery-thumb-label { opacity: 1; }
 
-    /* ── BLUEPRINTS ──────────────────────────────────────────── */
+    /* ── FULLSCREEN LIGHTBOX ────────────────────────────────── */
+    .lb-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .lb-backdrop.open { opacity: 1; pointer-events: all; }
+    .lb-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; flex-shrink: 0; }
+    .lb-tabs { display: flex; gap: 0.25rem; }
+    .lb-tab { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border: none; font-size: 0.82rem; font-weight: 700; padding: 0.45rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+    .lb-tab:hover { background: rgba(255,255,255,0.18); color: #fff; }
+    .lb-tab.active { background: rgba(255,255,255,0.2); color: #fff; }
+    .lb-tab svg { width: 15px; height: 15px; fill: currentColor; }
+    .lb-tab .lb-tab-count { background: rgba(255,255,255,0.2); font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 50px; }
+    .lb-info { color: rgba(255,255,255,0.6); font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; }
+    .lb-counter { font-variant-numeric: tabular-nums; }
+    .lb-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; padding: 0.4rem; border-radius: 8px; display: flex; transition: color 0.2s, background 0.2s; }
+    .lb-close:hover { color: #fff; background: rgba(255,255,255,0.12); }
+    .lb-close svg { width: 24px; height: 24px; fill: currentColor; }
+    .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; min-height: 0; user-select: none; -webkit-user-select: none; }
+    .lb-stage.zoomed { overflow: auto; }
+    .lb-img-wrap { position: relative; max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+    .lb-img-wrap img { max-width: 90vw; max-height: calc(100vh - 200px); object-fit: contain; border-radius: 4px; pointer-events: none; transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .lb-img-wrap.zoomed img { cursor: grab; max-width: none; max-height: none; }
+    .lb-img-wrap.zoomed.dragging img { cursor: grabbing; transition: none; }
+    .lb-label { text-align: center; color: rgba(255,255,255,0.85); font-size: 0.88rem; font-weight: 600; padding: 0.65rem 1rem 0.35rem; min-height: 1.5rem; }
+    .lb-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; color: #fff; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; z-index: 5; }
+    .lb-arrow:hover { background: rgba(255,255,255,0.22); }
+    .lb-arrow:disabled { opacity: 0.2; cursor: default; }
+    .lb-arrow svg { width: 28px; height: 28px; fill: currentColor; }
+    .lb-arrow.lb-prev { left: 1rem; }
+    .lb-arrow.lb-next { right: 1rem; }
+    .lb-thumbstrip { flex-shrink: 0; padding: 0.5rem 1rem 0.75rem; display: flex; gap: 0.5rem; overflow-x: auto; justify-content: center; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+    .lb-thumbstrip::-webkit-scrollbar { height: 4px; }
+    .lb-thumbstrip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    .lb-thumb { width: 64px; height: 48px; border-radius: 6px; overflow: hidden; cursor: pointer; flex-shrink: 0; border: 2px solid transparent; opacity: 0.5; transition: all 0.2s; }
+    .lb-thumb:hover { opacity: 0.8; }
+    .lb-thumb.active { border-color: #fff; opacity: 1; }
+    .lb-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .lb-thumb.lb-thumb-bp { position: relative; }
+    .lb-thumb.lb-thumb-bp::after { content: ''; position: absolute; inset: 0; background: rgba(0,56,168,0.25); }
+    /* Swipe indicator on mobile */
+    .lb-swipe-hint { display: none; position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.7); font-size: 0.72rem; padding: 0.3rem 0.8rem; border-radius: 50px; animation: lbFadeHint 3s ease forwards; z-index: 5; }
+    @keyframes lbFadeHint { 0%,70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
+    @media (max-width: 768px) {
+      .lb-arrow { width: 36px; height: 36px; }
+      .lb-arrow svg { width: 22px; height: 22px; }
+      .lb-arrow.lb-prev { left: 0.35rem; }
+      .lb-arrow.lb-next { right: 0.35rem; }
+      .lb-swipe-hint { display: block; }
+      .lb-thumb { width: 52px; height: 40px; }
+    }
+
+    /* ── BLUEPRINTS (in-page section) ───────────────────────── */
     .btn-blueprints { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent-light); color: var(--accent); border: 1.5px solid var(--accent); font-size: 0.88rem; font-weight: 700; padding: 0.55rem 1.1rem; border-radius: 10px; cursor: pointer; transition: background 0.2s, color 0.2s; margin-top: 1rem; }
     .btn-blueprints:hover { background: var(--accent); color: #fff; }
     .btn-blueprints svg { width: 17px; height: 17px; fill: currentColor; }
     .blueprint-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
-    .blueprint-thumb { border-radius: 10px; border: 1.5px solid var(--border); overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; aspect-ratio: 4/3; background: var(--bg-card); display: flex; align-items: center; justify-content: center; }
+    .blueprint-thumb { border-radius: 10px; border: 1.5px solid var(--border); overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; aspect-ratio: 4/3; background: var(--bg-card); display: flex; align-items: center; justify-content: center; position: relative; }
     .blueprint-thumb:hover { box-shadow: 0 4px 16px rgba(0,40,120,0.13); }
     .blueprint-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .blueprint-thumb-icon { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.78rem; }
     .blueprint-thumb-icon svg { width: 36px; height: 36px; fill: var(--text-muted); opacity: 0.5; }
-    /* Blueprint modal */
-    .bp-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
-    .bp-modal-backdrop.open { opacity: 1; pointer-events: all; }
-    .bp-modal { background: var(--bg-card); border-radius: 20px; max-width: 860px; width: calc(100% - 2rem); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    .bp-modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0; }
-    .bp-modal-title { font-weight: 700; font-size: 1rem; }
-    .bp-modal-nav { display: flex; align-items: center; gap: 0.5rem; }
-    .bp-nav-btn { background: var(--bg); border: 1.5px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s; }
-    .bp-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .bp-nav-btn svg { width: 18px; height: 18px; fill: currentColor; }
-    .bp-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    .bp-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.3rem; display: flex; }
-    .bp-modal-close svg { width: 22px; height: 22px; fill: currentColor; }
-    .bp-modal-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 1.5rem; min-height: 0; }
-    .bp-modal-body img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; }
-    .bp-modal-body .bp-link-fallback { text-align: center; }
-    .bp-modal-body .bp-link-fallback a { color: var(--accent); font-weight: 600; }
-    .bp-modal-counter { padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.82rem; color: var(--text-muted); flex-shrink: 0; }
+    .blueprint-badge { position: absolute; top: 0.5rem; left: 0.5rem; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* ── PAGE WRAP ───────────────────────────────────────────── */
     .page-wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 2rem 4rem; }
@@ -327,7 +364,7 @@
     @media (max-width: 960px) {
       .listing-layout { grid-template-columns: 1fr; }
       .listing-sidebar { position: static; }
-      .gallery-grid { grid-template-columns: 1fr; grid-template-rows: 280px; height: 280px; }
+      .gallery-grid { grid-template-columns: 1fr; grid-template-rows: 300px; height: 300px; }
       .gallery-thumb { display: none; }
       .gallery-main { grid-row: 1; }
     }
@@ -357,7 +394,6 @@
     </a>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="theme-toggle" id="themeBtn" aria-label="Tema"></button>
       <div id="navAuthArea"></div>
     </div>
   </div>
@@ -384,22 +420,27 @@
   <div class="gallery">
     <div class="gallery-inner">
       <div class="gallery-grid">
-        <div class="gallery-main gimg photo-a" id="galleryMain">
+        <div class="gallery-main gimg photo-a" id="galleryMain" onclick="openLightbox(0)">
           <div class="gimg-icon main"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
           <div class="gallery-label" id="galleryLabel">Vista Exterior</div>
-          <div class="gallery-count"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>5 fotos</div>
+          <div class="gallery-count" onclick="event.stopPropagation();openLightbox(0)"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg><span id="photoCountText">5 fotos</span></div>
         </div>
-        <div class="gallery-thumb gimg photo-b" onclick="switchPhoto('photo-b','Área Social / Lobby')">
+        <div class="gallery-thumb gimg photo-b" id="gThumb1" onclick="openLightbox(1)">
           <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <div class="gallery-thumb-label" id="gThumbLabel1"></div>
         </div>
-        <div class="gallery-thumb gimg photo-c" onclick="switchPhoto('photo-c','Interior — Apartamento Tipo')">
+        <div class="gallery-thumb gimg photo-c" id="gThumb2" onclick="openLightbox(2)">
           <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg></div>
+          <div class="gallery-thumb-label" id="gThumbLabel2"></div>
         </div>
-        <div class="gallery-thumb gimg photo-d" onclick="switchPhoto('photo-d','Piscina Infinity')">
+        <div class="gallery-thumb gimg photo-d" id="gThumb3" onclick="openLightbox(3)">
           <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M22 21c-1.11 0-1.73-.37-2.18-.64-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.15.36-.46.27-1.07.64-2.18.64s-1.73-.37-2.18-.64c-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.16.36-.46.27-1.07.64-2.17.64s-1.73-.37-2.18-.64c-.38-.23-.6-.36-1.15-.36-.56 0-.78.13-1.15.36C4.73 20.63 4.11 21 3 21v-2c.56 0 .78-.13 1.15-.36.46-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.16-.36.46-.27 1.07-.64 2.17-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.15-.36.46-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36v2zm0-4.5c-1.11 0-1.73-.37-2.18-.64-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.15.36-.45.27-1.07.64-2.18.64s-1.73-.37-2.18-.64c-.37-.22-.6-.36-1.15-.36-.56 0-.78.13-1.16.36-.45.27-1.07.64-2.17.64s-1.73-.37-2.18-.64c-.38-.23-.6-.36-1.15-.36-.56 0-.78.13-1.15.36C4.73 16.13 4.11 16.5 3 16.5v-2c.56 0 .78-.13 1.15-.36.45-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.16-.36.45-.27 1.07-.64 2.17-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36.56 0 .78-.13 1.15-.36.45-.27 1.07-.64 2.18-.64s1.73.37 2.18.64c.37.23.59.36 1.15.36v2zM8.67 12l-1.5-1.5C8.04 9.24 9.46 8.5 11 8.5c1.54 0 2.96.74 3.83 1.97L13.33 12c-.57-.76-1.45-1.25-2.33-1.25-.88 0-1.77.49-2.33 1.25z"/></svg></div>
+          <div class="gallery-thumb-label" id="gThumbLabel3"></div>
         </div>
-        <div class="gallery-thumb gimg photo-e" onclick="switchPhoto('photo-e','Rooftop & Vista Panorámica')">
+        <div class="gallery-thumb gimg photo-e" id="gThumb4" onclick="openLightbox(4)">
           <div class="gimg-icon thumb"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div>
+          <div class="gallery-thumb-label" id="gThumbLabel4"></div>
+          <div class="gallery-overlay-btn"><svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>Ver todas</div>
         </div>
       </div>
     </div>
@@ -538,6 +579,10 @@
             <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             Compartir
           </button>
+          <button class="btn-cta-ghost" id="compareDetailBtn" onclick="toggleCompareDetail()" style="margin-top:0.4rem;">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5V3zm4 0v18h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-5z"/></svg>
+            <span id="compareDetailLabel">Comparar</span>
+          </button>
           <button class="btn-tour" id="tourBtn" onclick="openTourModal()" style="display:none">
             <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
             Agendar Visita
@@ -557,20 +602,27 @@
 
 <div class="affiliate-toast" id="affiliateToast">¡Enlace copiado al portapapeles!</div>
 
-<!-- BLUEPRINT MODAL -->
-<div class="bp-modal-backdrop" id="bpModal" onclick="closeBpOnBackdrop(event)">
-  <div class="bp-modal">
-    <div class="bp-modal-header">
-      <span class="bp-modal-title">Planos de la Propiedad</span>
-      <div class="bp-modal-nav">
-        <button class="bp-nav-btn" id="bpPrev" onclick="bpNav(-1)" title="Anterior"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-        <button class="bp-nav-btn" id="bpNext" onclick="bpNav(1)" title="Siguiente"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-      </div>
-      <button class="bp-modal-close" onclick="closeBpModal()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+<!-- FULLSCREEN LIGHTBOX -->
+<div class="lb-backdrop" id="lightbox">
+  <div class="lb-header">
+    <div class="lb-tabs" id="lbTabs"></div>
+    <div class="lb-info">
+      <span class="lb-counter" id="lbCounter"></span>
+      <button class="lb-close" onclick="closeLightbox()" title="Cerrar (Esc)">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
     </div>
-    <div class="bp-modal-body" id="bpModalBody"></div>
-    <div class="bp-modal-counter" id="bpCounter"></div>
   </div>
+  <div class="lb-stage" id="lbStage">
+    <button class="lb-arrow lb-prev" id="lbPrev" onclick="lbNav(-1)"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+    <div class="lb-img-wrap" id="lbImgWrap">
+      <img id="lbImg" src="" alt="" />
+    </div>
+    <button class="lb-arrow lb-next" id="lbNext" onclick="lbNav(1)"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+    <div class="lb-swipe-hint">Desliza para navegar</div>
+  </div>
+  <div class="lb-label" id="lbLabel"></div>
+  <div class="lb-thumbstrip" id="lbThumbs"></div>
 </div>
 
 <!-- AUTH WALL -->
@@ -820,11 +872,15 @@
   // ── Theme ──────────────────────────────────────────────────
   const html = document.documentElement;
   html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
-  document.getElementById('themeBtn').addEventListener('click', () => {
+  function toggleTheme() {
     const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     html.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-  });
+    const label = document.getElementById('themeLabel');
+    const knob = document.getElementById('themeKnob');
+    if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+    if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+  }
 
   // ── Nav auth ───────────────────────────────────────────────
   function renderNav(user) {
@@ -846,6 +902,10 @@
             <a href="/profile" class="dropdown-item">👤 Mi Perfil</a>
             <a href="/favorites" class="dropdown-item">❤️ Mis Favoritos</a>
             <div class="dropdown-divider"></div>
+              <div onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
+                <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
+                <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;"><div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></div>
+              </div>
             <button class="dropdown-item dropdown-logout" onclick="logout()">Cerrar Sesión</button>
           </div>
         </div>`;
@@ -860,54 +920,66 @@
     }
   }
 
-  // ── Gallery ────────────────────────────────────────────────
+  // ── Gallery & Lightbox ──────────────────────────────────────
   const DEFAULT_LABELS = [
     'Vista Exterior', 'Área Social / Lobby',
     'Interior', 'Áreas Comunes', 'Vista Panorámica',
   ];
 
-  // _galleryImages holds the normalised [{url, label}] array after renderListing runs.
-  let _galleryImages = [];
+  let _galleryImages = [];   // [{url, label}]
+  let _bpImages      = [];   // [{url, label}] (normalised blueprints)
+  let _lbMode        = 'photos';  // 'photos' | 'blueprints'
+  let _lbIdx         = 0;
+  let _lbZoomed      = false;
+  let _lbOpen        = false;
 
   function applyGalleryImages(rawImages) {
     // Normalise: seed data uses plain strings, submissions use {url, label}
-    _galleryImages = (rawImages || []).slice(0, 5).map((img, i) =>
+    _galleryImages = (rawImages || []).map((img, i) =>
       typeof img === 'string'
         ? { url: img, label: DEFAULT_LABELS[i] || '' }
         : { url: img.url || '', label: img.label || DEFAULT_LABELS[i] || '' }
-    );
+    ).filter(img => img.url);
 
     const mainEl   = document.getElementById('galleryMain');
     const thumbEls = Array.from(document.querySelectorAll('.gallery-thumb'));
     const allEls   = [mainEl, ...thumbEls];
 
-    _galleryImages.forEach((img, i) => {
+    // Apply first 5 to the grid
+    _galleryImages.slice(0, 5).forEach((img, i) => {
       const el = allEls[i];
       if (!el || !img.url) return;
       el.style.backgroundImage    = `url('${img.url}')`;
       el.style.backgroundSize     = 'cover';
       el.style.backgroundPosition = 'center';
-      // Hide the placeholder icon
       const icon = el.querySelector('.gimg-icon');
       if (icon) icon.style.display = 'none';
 
       if (i === 0) {
         document.getElementById('galleryLabel').textContent = img.label;
-      } else {
-        // Rebind click to switch main to this image
-        const label = img.label;
-        const url   = img.url;
-        el.onclick  = () => switchPhotoUrl(url, label);
+      }
+      // Thumb labels
+      if (i > 0) {
+        const labelEl = document.getElementById(`gThumbLabel${i}`);
+        if (labelEl && img.label) labelEl.textContent = img.label;
       }
     });
 
-    // Update photo count badge
-    if (_galleryImages.length > 0) {
-      document.querySelector('.gallery-count').innerHTML =
-        `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>${_galleryImages.length} foto${_galleryImages.length !== 1 ? 's' : ''}`;
+    // Photo count badge
+    const countEl = document.getElementById('photoCountText');
+    if (countEl && _galleryImages.length > 0) {
+      const n = _galleryImages.length;
+      countEl.textContent = `${n} foto${n !== 1 ? 's' : ''}`;
     }
+
+    // Preload all images for smooth lightbox
+    _galleryImages.forEach(img => {
+      const pre = new Image();
+      pre.src = img.url;
+    });
   }
 
+  // Legacy compat
   function switchPhotoUrl(url, label) {
     const m = document.getElementById('galleryMain');
     m.style.backgroundImage    = `url('${url}')`;
@@ -915,14 +987,269 @@
     m.style.backgroundPosition = 'center';
     document.getElementById('galleryLabel').textContent = label;
   }
-
-  // Legacy: keep switchPhoto in case any inline onclick still references it
   function switchPhoto(cls, label) {
     const img = _galleryImages.find((_, i) =>
       ['photo-a','photo-b','photo-c','photo-d','photo-e'][i] === cls
     );
     if (img) switchPhotoUrl(img.url, label || img.label);
   }
+
+  // ── Lightbox ──────────────────────────────────────────────
+  function getLbItems() {
+    return _lbMode === 'blueprints' ? _bpImages : _galleryImages;
+  }
+
+  function openLightbox(idx, mode) {
+    if (mode) _lbMode = mode;
+    else _lbMode = 'photos';
+    const items = getLbItems();
+    if (!items.length) return;
+    _lbIdx = Math.max(0, Math.min(idx, items.length - 1));
+    _lbOpen = true;
+    _lbZoomed = false;
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderLbTabs();
+    renderLbSlide();
+    renderLbThumbs();
+  }
+
+  function closeLightbox() {
+    _lbOpen = false;
+    _lbZoomed = false;
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function lbNav(dir) {
+    if (_lbZoomed) return;
+    const items = getLbItems();
+    const next = _lbIdx + dir;
+    if (next < 0 || next >= items.length) return;
+    _lbIdx = next;
+    renderLbSlide();
+    updateLbThumbActive();
+  }
+
+  function lbSwitchMode(mode) {
+    if (mode === _lbMode) return;
+    _lbMode = mode;
+    _lbIdx = 0;
+    _lbZoomed = false;
+    renderLbTabs();
+    renderLbSlide();
+    renderLbThumbs();
+  }
+
+  function renderLbTabs() {
+    const tabs = document.getElementById('lbTabs');
+    const hasPhotos = _galleryImages.length > 0;
+    const hasBp = _bpImages.length > 0;
+    if (!hasBp) { tabs.innerHTML = ''; return; }
+
+    tabs.innerHTML = `
+      <button class="lb-tab ${_lbMode === 'photos' ? 'active' : ''}" onclick="lbSwitchMode('photos')">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        Fotos <span class="lb-tab-count">${_galleryImages.length}</span>
+      </button>
+      <button class="lb-tab ${_lbMode === 'blueprints' ? 'active' : ''}" onclick="lbSwitchMode('blueprints')">
+        <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+        Planos <span class="lb-tab-count">${_bpImages.length}</span>
+      </button>`;
+  }
+
+  function renderLbSlide() {
+    const items = getLbItems();
+    const item = items[_lbIdx];
+    if (!item) return;
+
+    const img = document.getElementById('lbImg');
+    const wrap = document.getElementById('lbImgWrap');
+    wrap.classList.remove('zoomed', 'dragging');
+    wrap.style.transform = '';
+
+    // Check if it's an image or an external link (for blueprint PDFs)
+    const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(item.url) || item.url.startsWith('/uploads/') || item.url.includes('imgur') || item.url.includes('i.ibb');
+
+    if (isImage) {
+      img.src = item.url;
+      img.alt = item.label || `${_lbMode === 'blueprints' ? 'Plano' : 'Foto'} ${_lbIdx + 1}`;
+      img.style.display = '';
+      // Remove any fallback content
+      const fallback = wrap.querySelector('.lb-link-fallback');
+      if (fallback) fallback.remove();
+    } else {
+      img.style.display = 'none';
+      let fallback = wrap.querySelector('.lb-link-fallback');
+      if (!fallback) {
+        fallback = document.createElement('div');
+        fallback.className = 'lb-link-fallback';
+        fallback.style.cssText = 'text-align:center;color:rgba(255,255,255,0.7);';
+        wrap.appendChild(fallback);
+      }
+      fallback.innerHTML = `<p style="margin-bottom:1rem;">Este archivo está en un formato externo.</p><a href="${esc(item.url)}" target="_blank" rel="noopener" style="color:#5599ff;font-weight:600;">Abrir en nueva pestaña &rarr;</a>`;
+    }
+
+    document.getElementById('lbLabel').textContent = item.label || '';
+    document.getElementById('lbCounter').textContent = `${_lbIdx + 1} / ${items.length}`;
+    document.getElementById('lbPrev').disabled = _lbIdx === 0;
+    document.getElementById('lbNext').disabled = _lbIdx === items.length - 1;
+
+    // Preload adjacent
+    if (items[_lbIdx + 1]) { const p = new Image(); p.src = items[_lbIdx + 1].url; }
+    if (items[_lbIdx - 1]) { const p = new Image(); p.src = items[_lbIdx - 1].url; }
+  }
+
+  function renderLbThumbs() {
+    const items = getLbItems();
+    const strip = document.getElementById('lbThumbs');
+    if (items.length <= 1) { strip.innerHTML = ''; return; }
+
+    strip.innerHTML = items.map((item, i) => {
+      const isImg = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(item.url) || item.url.startsWith('/uploads/') || item.url.includes('imgur') || item.url.includes('i.ibb');
+      const cls = `lb-thumb${i === _lbIdx ? ' active' : ''}${_lbMode === 'blueprints' ? ' lb-thumb-bp' : ''}`;
+      if (isImg) {
+        return `<div class="${cls}" onclick="lbGoTo(${i})"><img src="${esc(item.url)}" alt="" loading="lazy" /></div>`;
+      }
+      return `<div class="${cls}" onclick="lbGoTo(${i})" style="background:var(--accent-light);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:rgba(255,255,255,0.5);"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg></div>`;
+    }).join('');
+  }
+
+  function updateLbThumbActive() {
+    const thumbs = document.querySelectorAll('.lb-thumb');
+    thumbs.forEach((t, i) => t.classList.toggle('active', i === _lbIdx));
+    // Scroll active thumb into view
+    const active = document.querySelector('.lb-thumb.active');
+    if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    // Update counter & arrows
+    const items = getLbItems();
+    document.getElementById('lbCounter').textContent = `${_lbIdx + 1} / ${items.length}`;
+    document.getElementById('lbLabel').textContent = items[_lbIdx]?.label || '';
+    document.getElementById('lbPrev').disabled = _lbIdx === 0;
+    document.getElementById('lbNext').disabled = _lbIdx === items.length - 1;
+  }
+
+  function lbGoTo(idx) {
+    _lbIdx = idx;
+    _lbZoomed = false;
+    renderLbSlide();
+    updateLbThumbActive();
+  }
+
+  // ── Keyboard navigation ───────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (!_lbOpen) return;
+    if (e.key === 'Escape') { closeLightbox(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { lbNav(-1); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { lbNav(1);  e.preventDefault(); }
+  });
+
+  // ── Touch swipe ───────────────────────────────────────────
+  (function() {
+    const stage = document.getElementById('lbStage');
+    let startX = 0, startY = 0, dx = 0, swiping = false;
+
+    stage.addEventListener('touchstart', e => {
+      if (_lbZoomed) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0;
+      swiping = true;
+    }, { passive: true });
+
+    stage.addEventListener('touchmove', e => {
+      if (!swiping || _lbZoomed) return;
+      dx = e.touches[0].clientX - startX;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      // Only horizontal swipe
+      if (dy > Math.abs(dx)) { swiping = false; return; }
+      const wrap = document.getElementById('lbImgWrap');
+      wrap.style.transition = 'none';
+      wrap.style.transform = `translateX(${dx}px)`;
+      e.preventDefault();
+    }, { passive: false });
+
+    stage.addEventListener('touchend', () => {
+      if (!swiping) return;
+      swiping = false;
+      const wrap = document.getElementById('lbImgWrap');
+      wrap.style.transition = 'transform 0.25s ease';
+      const threshold = 60;
+      if (dx < -threshold) { lbNav(1); }
+      else if (dx > threshold) { lbNav(-1); }
+      wrap.style.transform = '';
+    }, { passive: true });
+  })();
+
+  // ── Double-tap / click to zoom ────────────────────────────
+  (function() {
+    const stage = document.getElementById('lbStage');
+    let lastTap = 0;
+
+    stage.addEventListener('click', e => {
+      if (e.target.closest('.lb-arrow')) return;
+      const now = Date.now();
+      if (now - lastTap < 350) {
+        // Double tap/click — toggle zoom
+        toggleLbZoom(e);
+        lastTap = 0;
+      } else {
+        lastTap = now;
+      }
+    });
+
+    function toggleLbZoom(e) {
+      const wrap = document.getElementById('lbImgWrap');
+      const img = document.getElementById('lbImg');
+      const stageEl = document.getElementById('lbStage');
+      if (_lbZoomed) {
+        _lbZoomed = false;
+        wrap.classList.remove('zoomed');
+        stageEl.classList.remove('zoomed');
+        img.style.transform = '';
+        img.style.width = '';
+        img.style.height = '';
+      } else {
+        _lbZoomed = true;
+        wrap.classList.add('zoomed');
+        stageEl.classList.add('zoomed');
+        img.style.width = Math.min(img.naturalWidth * 2, window.innerWidth * 2) + 'px';
+        img.style.height = 'auto';
+      }
+    }
+
+    // Drag when zoomed
+    let dragging = false, dragStartX, dragStartY, scrollLeft, scrollTop;
+    stage.addEventListener('mousedown', e => {
+      if (!_lbZoomed) return;
+      dragging = true;
+      const wrap = document.getElementById('lbImgWrap');
+      wrap.classList.add('dragging');
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      scrollLeft = stage.scrollLeft;
+      scrollTop = stage.scrollTop;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      stage.scrollLeft = scrollLeft - (e.clientX - dragStartX);
+      stage.scrollTop  = scrollTop  - (e.clientY - dragStartY);
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      const wrap = document.getElementById('lbImgWrap');
+      if (wrap) wrap.classList.remove('dragging');
+    });
+  })();
+
+  // ── Click backdrop to close ───────────────────────────────
+  document.getElementById('lightbox').addEventListener('click', e => {
+    if (e.target === document.getElementById('lightbox') || e.target === document.getElementById('lbStage')) {
+      if (!_lbZoomed) closeLightbox();
+    }
+  });
 
   // ── Helpers ────────────────────────────────────────────────
   function fmt(n) { return '$' + Number(n).toLocaleString('en-US'); }
@@ -1029,37 +1356,13 @@
     if (e.key === 'Escape') { closeAuthWall(); closeInquiry(); closeBpModal(); }
   });
 
-  // ── Blueprint modal ────────────────────────────────────────
-  let _bpUrls = [];
-  let _bpIdx  = 0;
-
+  // ── Blueprint helpers (feed into unified lightbox) ──────────
   function openBpModal(idx) {
-    _bpIdx = idx;
-    document.getElementById('bpModal').classList.add('open');
-    renderBpSlide();
+    openLightbox(idx, 'blueprints');
   }
-  function closeBpModal() {
-    document.getElementById('bpModal').classList.remove('open');
-  }
+  function closeBpModal() { closeLightbox(); }
   function closeBpOnBackdrop(e) {
-    if (e.target === document.getElementById('bpModal')) closeBpModal();
-  }
-  function bpNav(dir) {
-    _bpIdx = Math.max(0, Math.min(_bpUrls.length - 1, _bpIdx + dir));
-    renderBpSlide();
-  }
-  function renderBpSlide() {
-    const url = _bpUrls[_bpIdx];
-    const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url) || url.includes('imgur') || url.includes('i.ibb');
-    const body = document.getElementById('bpModalBody');
-    if (isImage) {
-      body.innerHTML = `<img src="${esc(url)}" alt="Plano ${_bpIdx + 1}" />`;
-    } else {
-      body.innerHTML = `<div class="bp-link-fallback"><p style="margin-bottom:1rem;color:var(--text-muted);">Este plano está en un formato externo.</p><a href="${esc(url)}" target="_blank" rel="noopener">Abrir plano en nueva pestaña →</a></div>`;
-    }
-    document.getElementById('bpCounter').textContent = `Plano ${_bpIdx + 1} de ${_bpUrls.length}`;
-    document.getElementById('bpPrev').disabled = _bpIdx === 0;
-    document.getElementById('bpNext').disabled = _bpIdx === _bpUrls.length - 1;
+    if (e.target === document.getElementById('lightbox')) closeLightbox();
   }
 
   // ── Apply modal ────────────────────────────────────────────
@@ -1252,18 +1555,34 @@
         <div class="builder-desc">${esc(b.description)}</div>`;
     }
 
-    // Blueprints
+    // Blueprints — normalise to [{url, label}] for unified lightbox
     const bps = (l.blueprints || []).filter(Boolean);
-    _bpUrls = bps;
-    if (bps.length) {
+    _bpImages = bps.map((url, i) =>
+      typeof url === 'string'
+        ? { url, label: `Plano ${i + 1}` }
+        : { url: url.url || '', label: url.label || `Plano ${i + 1}` }
+    ).filter(b => b.url);
+
+    if (_bpImages.length) {
       document.getElementById('blueprintsSection').style.display = '';
-      document.getElementById('blueprintGrid').innerHTML = bps.map((url, i) => {
-        const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url) || url.includes('imgur') || url.includes('i.ibb');
+      document.getElementById('blueprintGrid').innerHTML = _bpImages.map((bp, i) => {
+        const isImage = /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(bp.url) || bp.url.startsWith('/uploads/') || bp.url.includes('imgur') || bp.url.includes('i.ibb');
         if (isImage) {
-          return `<div class="blueprint-thumb" onclick="openBpModal(${i})"><img src="${esc(url)}" alt="Plano ${i+1}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'blueprint-thumb-icon\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z\\'/></svg><span>Plano ${i+1}</span></div>'"/></div>`;
+          return `<div class="blueprint-thumb" onclick="openBpModal(${i})">
+            <img src="${esc(bp.url)}" alt="${esc(bp.label)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'blueprint-thumb-icon\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z\\'/></svg><span>${esc(bp.label)}</span></div>'" />
+            <div class="blueprint-badge">Plano</div>
+          </div>`;
         }
-        return `<div class="blueprint-thumb" onclick="openBpModal(${i})"><div class="blueprint-thumb-icon"><svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg><span>Plano ${i+1}</span></div></div>`;
+        return `<div class="blueprint-thumb" onclick="openBpModal(${i})"><div class="blueprint-thumb-icon"><svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg><span>${esc(bp.label)}</span></div></div>`;
       }).join('');
+
+      // Also update photo count badge to show blueprint count
+      const countEl = document.getElementById('photoCountText');
+      if (countEl) {
+        const n = _galleryImages.length;
+        const b = _bpImages.length;
+        countEl.textContent = `${n} foto${n !== 1 ? 's' : ''}${b ? ` · ${b} plano${b !== 1 ? 's' : ''}` : ''}`;
+      }
     }
 
     // Map
@@ -1759,6 +2078,26 @@ const tabsHtml = shuffled.map((a, i) =>
       btn.disabled = false; btn.textContent = 'Enviar mensaje';
     }
   }
+</script>
+<script src="/js/compare.js"></script>
+<script>
+  // Compare button on detail page
+  function toggleCompareDetail() {
+    const id = window.location.pathname.split('/listing/')[1];
+    if (!id || !window.HogaresCompare) return;
+    window.HogaresCompare.toggle(id);
+    updateCompareDetailBtn();
+  }
+  function updateCompareDetailBtn() {
+    const id = window.location.pathname.split('/listing/')[1];
+    if (!id || !window.HogaresCompare) return;
+    const label = document.getElementById('compareDetailLabel');
+    const btn = document.getElementById('compareDetailBtn');
+    if (label) label.textContent = window.HogaresCompare.isIn(id) ? 'Comparando' : 'Comparar';
+    if (btn) btn.style.background = window.HogaresCompare.isIn(id) ? 'var(--accent-light)' : '';
+  }
+  // Update on load
+  setTimeout(updateCompareDetailBtn, 100);
 </script>
 <script src="/js/pixel.js" defer></script>
 </body>

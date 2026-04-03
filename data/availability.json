@@ -1,57 +1,5 @@
 [
   {
-    "id": "avail_fcef6ec34d7c3da8",
-    "broker_id": "usr_inm_demo_001",
-    "day_of_week": 1,
-    "start_time": "09:00",
-    "end_time": "12:00",
-    "slot_duration_min": 30,
-    "max_concurrent": 1,
-    "active": true,
-    "type": "weekly",
-    "created_at": "2026-04-02T05:54:24.541Z",
-    "updated_at": "2026-04-02T05:54:24.541Z"
-  },
-  {
-    "id": "avail_9a3646d6f59315ca",
-    "broker_id": "usr_inm_demo_001",
-    "day_of_week": 1,
-    "start_time": "14:00",
-    "end_time": "17:00",
-    "slot_duration_min": 30,
-    "max_concurrent": 1,
-    "active": true,
-    "type": "weekly",
-    "created_at": "2026-04-02T05:54:24.551Z",
-    "updated_at": "2026-04-02T05:54:24.551Z"
-  },
-  {
-    "id": "avail_b30ab2a06866b0c9",
-    "broker_id": "usr_inm_demo_001",
-    "day_of_week": 2,
-    "start_time": "09:00",
-    "end_time": "12:00",
-    "slot_duration_min": 30,
-    "max_concurrent": 1,
-    "active": true,
-    "type": "weekly",
-    "created_at": "2026-04-02T05:54:24.561Z",
-    "updated_at": "2026-04-02T05:54:24.561Z"
-  },
-  {
-    "id": "avail_f31c6c2de5faec90",
-    "broker_id": "usr_inm_demo_001",
-    "day_of_week": 2,
-    "start_time": "14:00",
-    "end_time": "17:00",
-    "slot_duration_min": 30,
-    "max_concurrent": 1,
-    "active": true,
-    "type": "weekly",
-    "created_at": "2026-04-02T05:54:24.573Z",
-    "updated_at": "2026-04-02T05:54:24.573Z"
-  },
-  {
     "id": "avail_9660155cf11cec11",
     "broker_id": "usr_inm_demo_001",
     "day_of_week": 3,
@@ -284,5 +232,31 @@
     "type": "weekly",
     "created_at": "2026-04-02T08:50:47.378998Z",
     "updated_at": "2026-04-02T08:50:47.378998Z"
+  },
+  {
+    "id": "avail_f6dca6e2817782eb",
+    "broker_id": "usr_inm_demo_001",
+    "day_of_week": 1,
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "slot_duration_min": 30,
+    "max_concurrent": 1,
+    "active": true,
+    "type": "weekly",
+    "created_at": "2026-04-02T09:25:23.688Z",
+    "updated_at": "2026-04-02T09:25:23.688Z"
+  },
+  {
+    "id": "avail_aef693e4e1fa912b",
+    "broker_id": "usr_inm_demo_001",
+    "day_of_week": 2,
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "slot_duration_min": 30,
+    "max_concurrent": 1,
+    "active": true,
+    "type": "weekly",
+    "created_at": "2026-04-02T09:25:23.691Z",
+    "updated_at": "2026-04-02T09:25:23.691Z"
   }
 ]

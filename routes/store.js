@@ -213,6 +213,20 @@ db.exec(`
     ios         TEXT DEFAULT '[]',
     preferences TEXT DEFAULT '{}'
   );
+
+  CREATE TABLE IF NOT EXISTS saved_searches (
+    id              TEXT PRIMARY KEY,
+    userId          TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    filters         TEXT DEFAULT '{}',
+    notify          INTEGER DEFAULT 1,
+    lastMatchIds    TEXT DEFAULT '[]',
+    lastNotifiedAt  TEXT,
+    matchCount      INTEGER DEFAULT 0,
+    createdAt       TEXT,
+    updatedAt       TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_saved_searches_userId ON saved_searches(userId);
 `);
 
 // ── JSON columns per table ────────────────────────────────────────────────
@@ -545,6 +559,12 @@ const stmts = {
   // Push subscriptions
   getAllPush:           db.prepare('SELECT * FROM push_subscriptions'),
   getPushByUser:       db.prepare('SELECT * FROM push_subscriptions WHERE userId = ?'),
+
+  // Saved searches
+  getSavedSearchesByUser: db.prepare('SELECT * FROM saved_searches WHERE userId = ? ORDER BY createdAt DESC'),
+  getSavedSearchById:     db.prepare('SELECT * FROM saved_searches WHERE id = ?'),
+  getAllSavedSearches:     db.prepare('SELECT * FROM saved_searches WHERE notify = 1'),
+  deleteSavedSearch:       db.prepare('DELETE FROM saved_searches WHERE id = ? AND userId = ?'),
 };
 
 // ── Users ─────────────────────────────────────────────────────────────────
@@ -928,6 +948,50 @@ function savePushPreferences(userId, prefs) {
   db.prepare(sql).run(userId, JSON.stringify(current.web), JSON.stringify(current.ios), JSON.stringify(prefs));
 }
 
+// ── Saved Searches ───────────────────────────────────────────────────────
+
+function hydrateSavedSearch(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  obj.filters      = _jsonParse(obj.filters, {});
+  obj.lastMatchIds = _jsonParse(obj.lastMatchIds, []);
+  obj.notify       = !!obj.notify;
+  return obj;
+}
+
+function getSavedSearchesByUser(userId) {
+  return stmts.getSavedSearchesByUser.all(userId).map(hydrateSavedSearch);
+}
+
+function getSavedSearchById(id) {
+  return hydrateSavedSearch(stmts.getSavedSearchById.get(id));
+}
+
+function getAllNotifiableSavedSearches() {
+  return stmts.getAllSavedSearches.all().map(hydrateSavedSearch);
+}
+
+function saveSavedSearch(search) {
+  const row = {
+    id:             search.id,
+    userId:         search.userId,
+    name:           search.name,
+    filters:        _jsonStringify(search.filters),
+    notify:         search.notify ? 1 : 0,
+    lastMatchIds:   _jsonStringify(search.lastMatchIds || []),
+    lastNotifiedAt: search.lastNotifiedAt || null,
+    matchCount:     search.matchCount || 0,
+    createdAt:      search.createdAt || new Date().toISOString(),
+    updatedAt:      new Date().toISOString(),
+  };
+  const { sql, values } = buildUpsert('saved_searches', row, 'id');
+  db.prepare(sql).run(...values);
+}
+
+function deleteSavedSearch(id, userId) {
+  return stmts.deleteSavedSearch.run(id, userId);
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -948,4 +1012,6 @@ module.exports = {
   getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, cleanExpiredTwoFASessions,
   getPushSubscriptions, getPushSubscriptionsByUser, savePushSubscription,
   removePushSubscription, getPushPreferences, savePushPreferences,
+  getSavedSearchesByUser, getSavedSearchById, getAllNotifiableSavedSearches,
+  saveSavedSearch, deleteSavedSearch,
 };

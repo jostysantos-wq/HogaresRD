@@ -29,11 +29,6 @@
     .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
     .nav-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.35rem; transition: color 0.2s; }
     .nav-back:hover { color: #fff; }
-    .theme-toggle { background: rgba(255,255,255,0.25); border: none; border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; display: flex; align-items: center; padding: 0 4px; }
-    .theme-toggle::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; left: 4px; transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); }
-    .toggle-icons { display: flex; justify-content: space-between; width: 100%; pointer-events: none; }
-    .toggle-icons svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     main { flex: 1; max-width: 560px; margin: 0 auto; width: 100%; padding: 2.5rem 1rem; }
 
@@ -109,12 +104,6 @@
     </a>
     <div style="display:flex;align-items:center;gap:1rem;">
       <a href="/broker" class="nav-back">← Volver al panel</a>
-      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema">
-        <span class="toggle-icons">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-13a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm9-5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1z"/></svg>
-          <svg viewBox="0 0 24 24" fill="currentColor" style="color:#94a3b8"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-        </span>
-      </button>
     </div>
   </nav>
 
@@ -136,6 +125,10 @@
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
 
     const STATUS_LABELS = {
