@@ -710,7 +710,7 @@
         const broker = app.broker || app.assigned_broker || {};
 
         card.innerHTML = `
-          <div class="app-card-header" onclick="toggleDetail('${app.id}')">
+          <div class="app-card-header" data-app-id="${esc(String(app.id))}">
             <div class="app-card-info">
               <div class="app-card-title">${esc(listing.title || app.listing_title || 'Propiedad')}</div>
               <div class="app-card-price">${formatPrice(listing.price || app.listing_price || app.price)}</div>
@@ -737,6 +737,12 @@
           <div class="app-detail" id="detail-${app.id}"></div>
         `;
         list.appendChild(card);
+      });
+
+      // Event delegation: handle header clicks via data-app-id (avoids inline onclick XSS)
+      list.addEventListener('click', (e) => {
+        const header = e.target.closest('.app-card-header[data-app-id]');
+        if (header) toggleDetail(header.dataset.appId);
       });
     }
 

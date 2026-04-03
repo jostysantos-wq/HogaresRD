@@ -659,7 +659,11 @@
               <div class="city-card-count">${c.count} propiedad${c.count !== 1 ? 'es' : ''}</div>
             </div>
           </a>`).join('');
-      } catch(e) { /* silent */ }
+      } catch(e) {
+        console.warn('renderOtherCities fetch failed:', e);
+        const grid = document.getElementById('otherCitiesGrid');
+        if (grid) grid.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem;text-align:center;padding:1rem 0;">No se pudieron cargar otras ciudades.</p>';
+      }
     }
 
     // ── Main init ──────────────────────────────────────────────────

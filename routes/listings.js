@@ -151,6 +151,7 @@ router.get('/agencies/:slug', (req, res) => {
   const agencyObj = matched[0].agencies.find(a =>
     a.name && a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === slug
   );
+  if (!agencyObj) return res.status(404).json({ error: 'Agencia no encontrada' });
   const agencyName = agencyObj.name;
 
   // Look up the registered user for this agency to get their refToken

@@ -159,7 +159,19 @@
           credentials: 'include',
         });
         if (res.ok) status = await res.json();
-      } catch(e) {}
+      } catch(e) {
+        document.getElementById('loadingState').style.display = 'none';
+        const content = document.getElementById('mainContent');
+        content.style.display = 'block';
+        content.innerHTML = `
+          <div class="no-sub-card" style="border-color:var(--red);">
+            <div class="no-sub-icon">⚠️</div>
+            <div class="no-sub-title">Error al cargar la suscripción</div>
+            <div class="no-sub-sub">No se pudo conectar con el servidor. Por favor intenta de nuevo.</div>
+            <button class="btn-manage btn-primary-action" style="max-width:200px;margin:0 auto;" onclick="location.reload()">Reintentar</button>
+          </div>`;
+        return;
+      }
 
       document.getElementById('loadingState').style.display = 'none';
       const content = document.getElementById('mainContent');

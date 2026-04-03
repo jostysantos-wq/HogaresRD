@@ -96,10 +96,11 @@
     const slots = [];
     for (let i = 0; i < MAX_COMPARE; i++) {
       if (ids[i]) {
+        const sid = safeId(ids[i]);
         slots.push(`
-          <div class="compare-slot filled" data-id="${ids[i]}">
+          <div class="compare-slot filled" data-id="${sid}">
             <span class="compare-slot-label">Propiedad ${i + 1}</span>
-            <button class="compare-slot-remove" onclick="window.HogaresCompare.toggle('${ids[i]}')" title="Quitar">&times;</button>
+            <button class="compare-slot-remove" onclick="window.HogaresCompare.toggle('${sid}')" title="Quitar">&times;</button>
           </div>`);
       } else {
         slots.push(`<div class="compare-slot empty"><span class="compare-slot-label">+ Agregar</span></div>`);
@@ -220,10 +221,14 @@
     document.head.appendChild(style);
   }
 
+  // ── Helper: sanitize an ID for safe HTML attribute interpolation ──
+  function safeId(id) { return String(id).replace(/['"<>&]/g, ''); }
+
   // ── Helper: build compare button HTML for card overlays ────
   function buttonHTML(listingId) {
     const active = isInCompare(listingId);
-    return `<button class="compare-btn${active ? ' active' : ''}" data-compare-id="${listingId}" onclick="event.preventDefault();event.stopPropagation();window.HogaresCompare.toggle('${listingId}')">
+    const sid = safeId(listingId);
+    return `<button class="compare-btn${active ? ' active' : ''}" data-compare-id="${sid}" onclick="event.preventDefault();event.stopPropagation();window.HogaresCompare.toggle('${sid}')">
       <svg viewBox="0 0 24 24"><path d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5V3zm4 0v18h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-5z"/></svg>
       <span class="compare-label">${active ? 'Comparando' : 'Comparar'}</span>
     </button>`;

@@ -306,8 +306,23 @@
       // Fetch all listings in parallel
       try {
         const results = await Promise.all(
-          ids.map(id => fetch('/api/listings/' + encodeURIComponent(id)).then(r => r.ok ? r.json() : null))
-        );
+          ids.map(id => fetch('/api/listings/' + encodeURIComponent(id))
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null))
+        ).catch(err => {
+          console.error('Error loading comparison listings:', err);
+          return null;
+        });
+        if (!results) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <div class="empty-title">Error al cargar</div>
+              <div class="empty-sub">No se pudieron cargar las propiedades. Intenta de nuevo.</div>
+              <a href="/comprar" class="empty-btn">Volver a buscar</a>
+            </div>`;
+          return;
+        }
         const listings = results.filter(Boolean);
 
         if (!listings.length) {

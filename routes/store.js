@@ -793,11 +793,11 @@ function _applyInMemoryFilters(listings, filters) {
     });
   }
   if (filters.priceMax) {
-    const max = Number(filters.priceMax);
+    const max = parseFloat(filters.priceMax) || 0;
     results = results.filter(l => Number(l.price) <= max);
   }
   if (filters.priceMin) {
-    const min = Number(filters.priceMin);
+    const min = parseFloat(filters.priceMin) || 0;
     results = results.filter(l => Number(l.price) >= min);
   }
   if (filters.bedroomsMin) {

@@ -2001,7 +2001,8 @@ const tabsHtml = shuffled.map((a, i) =>
   function selectTourTime(time) {
     _tourSelectedTime = time;
     document.querySelectorAll('.tour-slot').forEach(el => el.classList.remove('active'));
-    document.querySelector(`.tour-slot[data-time="${time}"]`).classList.add('active');
+    const activeSlot = document.querySelector(`.tour-slot[data-time="${time}"]`);
+    if (activeSlot) activeSlot.classList.add('active');
 
     // Format summary
     const dateObj = new Date(_tourSelectedDate + 'T12:00:00');
@@ -2078,7 +2079,14 @@ const tabsHtml = shuffled.map((a, i) =>
     const btn   = document.getElementById('contactSendBtn');
     if (!text) { msgEl.style.color='#dc2626'; msgEl.textContent='Por favor escribe un mensaje.'; return; }
     btn.disabled = true; btn.textContent = 'Enviando…';
-    const listing = window._listing || {};
+    const listing = window._listing || window._currentListing || {};
+    const resolvedId = listing.id || new URLSearchParams(location.search).get('id');
+    if (!listing || !resolvedId) {
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = 'No se pudo identificar la propiedad. Recarga la página e intenta de nuevo.';
+      btn.disabled = false; btn.textContent = 'Enviar mensaje';
+      return;
+    }
     const image   = listing.images?.[0] || null;
     try {
       const res  = await fetch('/api/conversations', {
@@ -2086,7 +2094,7 @@ const tabsHtml = shuffled.map((a, i) =>
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          propertyId:    listing.id || new URLSearchParams(location.search).get('id'),
+          propertyId:    resolvedId,
           propertyTitle: listing.title || document.title,
           propertyImage: image,
           message:       text,

@@ -143,6 +143,8 @@
   let lastTimestamp = null;
   let pollTimer     = null;
 
+  window.addEventListener('beforeunload', () => { if (pollTimer) clearInterval(pollTimer); });
+
   // ── Load conversation list ────────────────────────────────────────────────
   async function loadConvList() {
     const res  = await fetch('/api/conversations', { credentials: 'include' });

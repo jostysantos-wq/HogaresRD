@@ -502,8 +502,8 @@ router.put('/:id/status', userAuth, (req, res) => {
   const { status, reason } = req.body;
   if (!status) return res.status(400).json({ error: 'status es requerido' });
 
-  const allowed = STATUS_FLOW[app.status] || [];
-  if (!allowed.includes(status))
+  const allowed = STATUS_FLOW[app.status];
+  if (!allowed || !allowed.includes(status))
     return res.status(400).json({ error: `Transición no válida: ${app.status} → ${status}` });
 
   if (status === 'rechazado' && !reason)

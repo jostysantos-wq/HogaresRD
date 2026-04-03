@@ -398,7 +398,9 @@
         start2FATimer(300);
         document.getElementById('twoFATimer').style.color = '';
       } catch (ex) {
-        showError(ex.message);
+        const twoFAErr = document.getElementById('twoFAError');
+        twoFAErr.textContent = ex.message || 'Error al reenviar el código';
+        twoFAErr.classList.add('visible');
       }
       btn.disabled = false;
       btn.textContent = 'Reenviar código';

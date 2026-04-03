@@ -1127,6 +1127,7 @@ router.post('/2fa/confirm-enable', userAuth, (req, res) => {
 
   store.deleteTwoFASession(sessionId);
   const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   user.twoFAEnabled = true;
   user.twoFAMethod = 'email';
   user.twoFAEnabledAt = new Date().toISOString();

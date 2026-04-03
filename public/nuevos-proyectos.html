@@ -484,10 +484,13 @@
       return listings;
     }
 
+    let allListings = [];
+    let _pageDebounceTimer = null;
+
     async function loadListings(page = 1) {
+      allListings = [];
       const filters = getFilters();
       // Build query: if no specific stage filter, fetch both nueva_construccion AND planos
-      let allListings = [];
       let totalCount  = 0;
 
       const grid = document.getElementById('listingsGrid');
@@ -554,7 +557,13 @@
       ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
       loadListings(1);
     }
-    function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function goPage(p) {
+      clearTimeout(_pageDebounceTimer);
+      _pageDebounceTimer = setTimeout(() => {
+        loadListings(p);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 150);
+    }
 
     // Populate constructora and agency dropdowns
     Promise.all([
@@ -575,7 +584,7 @@
         opt.textContent = `${a.name} (${a.count})`;
         aSel.appendChild(opt);
       });
-    }).catch(() => {});
+    }).catch(err => console.warn('Filter data load failed:', err));
 
     loadListings(1);
   </script>

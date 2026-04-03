@@ -47,28 +47,26 @@ function requireAuth() {
 
 // Redirect away from login/register pages if already authenticated.
 // Verifies the session with the server to ensure the JWT cookie is still valid.
-function redirectIfAuth() {
+async function redirectIfAuth() {
   if (!isLoggedIn()) return;
   // Verify cookie is still valid before redirecting
-  fetch('/api/auth/me', { credentials: 'include' })
-    .then(res => {
-      if (res.status === 401) {
-        // Cookie expired or revoked — clear stale localStorage and stay on login
-        _clearLocal();
-        return;
-      }
-      return res.json();
-    })
-    .then(user => {
-      if (!user) return;
-      const role = user?.role;
-      if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') {
-        window.location.href = '/broker';
-      } else {
-        window.location.href = '/home';
-      }
-    })
-    .catch(() => { /* network error — stay on login page */ });
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    if (res.status === 401) {
+      // Cookie expired or revoked — clear stale localStorage and stay on login
+      _clearLocal();
+      return;
+    }
+    if (!res.ok) return;
+    const user = await res.json();
+    if (!user) return;
+    const role = user?.role;
+    if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') {
+      window.location.href = '/broker';
+    } else {
+      window.location.href = '/home';
+    }
+  } catch { /* network error — stay on login page */ }
 }
 
 // ── Idle session timeout (pro roles only) ────────────────────────────────────
