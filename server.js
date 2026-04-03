@@ -40,6 +40,9 @@ const { router: newsletterRouter, sendNewsletter } = require('./routes/newslette
 const { router: savedSearchRouter, checkSavedSearchMatches } = require('./routes/saved-searches');
 
 const store = require('./routes/store');
+const errorTracker = require('./routes/error-tracker');
+errorTracker.initProcessHandlers();
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -160,6 +163,7 @@ app.use(cookieParser());
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
+app.use(errorTracker.requestTimer);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -442,13 +446,19 @@ cron.schedule('0 */2 * * *', () => {
     .catch(e => console.error('[Cron] Saved search error:', e.message));
 }, { timezone: 'America/Santo_Domingo' });
 
-// ── Global error handler (keeps all errors as JSON, never HTML) ────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Error interno del servidor' });
-});
+// ── Admin error tracking endpoint ─────────────────────────────────
+app.use('/api/admin', errorTracker.router);
 
-app.listen(PORT, () => {
-  console.log(`HogaresRD running at http://localhost:${PORT}`);
-});
+// ── 404 handler for unmatched API routes ──────────────────────────
+app.use('/api/*', errorTracker.notFoundHandler);
+
+// ── Global error handler ──────────────────────────────────────────
+app.use(errorTracker.errorHandler);
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`HogaresRD running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
