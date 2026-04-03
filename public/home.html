@@ -53,6 +53,9 @@
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
     .btn-ghost { background: none; border: 1.5px solid var(--border-strong); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.15rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    /* Dominican flag red — Iniciar Sesión nav button */
+    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
     .btn-primary { background: var(--accent); border: 1px solid var(--accent); color: #fff; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
     .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,106,255,0.3); }
     .btn-primary svg { width: 16px; height: 16px; fill: #fff; }
@@ -76,11 +79,11 @@
     .card-save.saved svg { fill: var(--red); }
 
     /* HERO */
-    .hero { position: relative; min-height: 680px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(150deg, #001229 0%, #002D62 45%, #0047A8 80%, #005FCC 100%); }
+    .hero { position: relative; min-height: 440px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(150deg, #001229 0%, #002D62 45%, #0047A8 80%, #005FCC 100%); }
     .hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='1' fill='%23ffffff' opacity='0.035'/%3E%3C/svg%3E"); }
-    .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, rgba(255,255,255,0.06) 0%, transparent 100%); pointer-events: none; }
+    .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(255,255,255,0.06) 0%, transparent 100%); pointer-events: none; }
     .hero-overlay { position: absolute; inset: 0; background: radial-gradient(ellipse at 75% 40%, rgba(0,100,200,0.25) 0%, transparent 65%); pointer-events: none; }
-    .hero-content { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; padding: 5.5rem 2rem 4.5rem; width: 100%; text-align: center; }
+    .hero-content { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; padding: 3rem 2rem 3rem; width: 100%; text-align: center; }
     .hero-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.35rem 1rem; border-radius: 50px; margin-bottom: 1.75rem; }
     .hero-badge svg { width: 11px; height: 11px; fill: #fff; }
     .hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.75rem); font-weight: 900; color: #fff; line-height: 1.1; letter-spacing: -0.04em; margin-bottom: 1.1rem; }
@@ -485,7 +488,6 @@
         <a class="nav-link" href="/blog">Blog</a>
         <a class="nav-link" href="/about">Nosotros</a>
       </div>
-      </div>
       <div class="nav-actions">
         <div id="navAuthArea"></div>
       </div>
@@ -525,36 +527,28 @@
         </div>
       </div>
 
-      <!-- Hero stats -->
-      <div class="hero-stats">
-        <div class="hero-stat"><span class="hero-stat-num" id="hStatProps">12,000+</span><span class="hero-stat-label">Propiedades</span></div>
-        <div class="hero-stat-div"></div>
-        <div class="hero-stat"><span class="hero-stat-num">500+</span><span class="hero-stat-label">Agentes</span></div>
-        <div class="hero-stat-div"></div>
-        <div class="hero-stat"><span class="hero-stat-num">18</span><span class="hero-stat-label">Provincias</span></div>
-      </div>
     </div>
   </section>
 
-  <!-- STATS -->
-  <div class="stats-bar">
-    <div class="stats-inner">
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
-        <div><div class="stat-number">12,400+</div><div class="stat-label">Propiedades activas</div></div>
+  <!-- TRENDING CAROUSEL — top 8 most viewed this week — shown first so visitors see homes immediately -->
+  <div id="trendingSection">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Esta Semana</div>
+          <h2 class="section-title">Lo Más Visto</h2>
+        </div>
+        <div class="section-nav">
+          <button class="carousel-arrow" id="trendPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button class="carousel-arrow" id="trendNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
-        <div><div class="stat-number">32</div><div class="stat-label">Ciudades y provincias</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
-        <div><div class="stat-number">8,200+</div><div class="stat-label">Usuarios registrados</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
-        <div><div class="stat-number">$2.1B+</div><div class="stat-label">En propiedades listadas</div></div>
-      </div>
+      <div class="carousel-viewport"><div class="carousel-track" id="trendTrack">
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
+      </div></div>
     </div>
   </div>
 
@@ -762,28 +756,6 @@
         </div>
       </div>
       <div class="carousel-viewport"><div class="carousel-track" id="rvTrack"></div></div>
-    </div>
-  </div>
-
-  <!-- TRENDING CAROUSEL — top 8 most viewed this week -->
-  <div id="trendingSection">
-    <div class="section">
-      <div class="section-header">
-        <div>
-          <div class="section-label">Esta Semana</div>
-          <h2 class="section-title">Lo Más Visto</h2>
-        </div>
-        <div class="section-nav">
-          <button class="carousel-arrow" id="trendPrev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-          <button class="carousel-arrow" id="trendNext"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
-          <a href="/comprar" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
-        </div>
-      </div>
-      <div class="carousel-viewport"><div class="carousel-track" id="trendTrack">
-        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
-        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
-        <div class="card-skeleton"><div class="sk-img"></div><div class="sk-line lg"></div><div class="sk-line"></div><div class="sk-line sm"></div></div>
-      </div></div>
     </div>
   </div>
 
@@ -1164,7 +1136,7 @@
     let _cardObserver  = null;
 
     function renderLoggedOut(el) {
-      el.innerHTML = `<a href="/login" class="btn-ghost">Iniciar sesión</a>`;
+      el.innerHTML = `<a href="/login" class="btn-login">Iniciar sesión</a>`;
     }
 
     function renderLoggedIn(el, user) {
