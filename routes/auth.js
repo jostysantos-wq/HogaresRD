@@ -438,8 +438,12 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       createdAt:       new Date().toISOString(),
       lastLoginAt:     null,
       role:            'agency',
-      inmobiliaria_id:          inmobiliariaId ? inmobiliariaId.trim() : null,
-      inmobiliaria_join_status: inmobiliariaId ? 'requested' : null,
+      // inmobiliaria_id is NEVER set at registration — only after the inmobiliaria approves
+      inmobiliaria_id:           null,
+      inmobiliaria_join_status:  inmobiliariaId ? 'pending' : null,
+      inmobiliaria_pending_id:   inmobiliariaId ? inmobiliariaId.trim() : null,
+      inmobiliaria_pending_name: inmobiliariaId ? agencyName.trim() : null,
+      inmobiliaria_joined_at:    null,
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
@@ -452,6 +456,45 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 
     const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
+
+    // ── If agent selected a registered inmobiliaria, add a join_request to their record ──
+    if (inmobiliariaId) {
+      try {
+        const inm = store.getUserById(inmobiliariaId.trim());
+        if (inm && inm.role === 'inmobiliaria') {
+          if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
+          inm.join_requests.push({
+            id:             `jr_${Date.now()}`,
+            broker_id:      user.id,
+            broker_name:    user.name,
+            broker_email:   user.email,
+            broker_license: user.licenseNumber || '',
+            broker_phone:   user.phone || '',
+            requested_at:   new Date().toISOString(),
+            status:         'pending',
+          });
+          store.saveUser(inm);
+          transporter.sendMail({
+            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            to:      inm.email,
+            subject: `Nueva solicitud de afiliación — ${user.name}`,
+            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+              <div style="background:#002D62;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
+                <h2 style="margin:0;font-size:1.1rem;">Nueva Solicitud de Afiliación</h2>
+              </div>
+              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
+                <p>El agente <strong>${user.name}</strong> (${user.email}) solicitó afiliarse a <strong>${inm.companyName || inm.name}</strong> al crear su cuenta.</p>
+                ${user.licenseNumber ? `<p>Licencia: <strong>${user.licenseNumber}</strong></p>` : ''}
+                <p>Ingresa a tu dashboard para aprobar o rechazar la solicitud.</p>
+                <a href="${BASE_URL}/broker#team-requests" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Solicitudes →</a>
+              </div>
+            </div>`,
+          }).catch(e => console.error('Inm notify email error:', e.message));
+        }
+      } catch (e) {
+        console.error('Join request creation error:', e.message);
+      }
+    }
 
     transporter.sendMail({
       from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
@@ -533,16 +576,57 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
-      inmobiliaria_id:           inmobiliariaId  ? inmobiliariaId.trim()  : null,
-      inmobiliaria_name:         inmobiliariaName ? inmobiliariaName.trim() : null,
-      inmobiliaria_join_status:  inmobiliariaId  ? 'requested' : null,
-      inmobiliaria_pending_id:   inmobiliariaId  ? inmobiliariaId.trim()  : null,
-      inmobiliaria_pending_name: inmobiliariaName ? inmobiliariaName.trim() : null,
+      // inmobiliaria_id is NEVER set at registration — only after the inmobiliaria approves
+      inmobiliaria_id:           null,
+      inmobiliaria_name:         inmobiliariaId ? null : (inmobiliariaName ? inmobiliariaName.trim() : null),
+      inmobiliaria_join_status:  inmobiliariaId ? 'pending' : null,
+      inmobiliaria_pending_id:   inmobiliariaId ? inmobiliariaId.trim()   : null,
+      inmobiliaria_pending_name: inmobiliariaId ? (inmobiliariaName || '').trim() : null,
       inmobiliaria_joined_at:    null,
     };
 
     const verifyRawToken = attachVerifyToken(user);
     store.saveUser(user);
+
+    // ── If agent selected a registered inmobiliaria, add a join_request to their record ──
+    if (inmobiliariaId) {
+      try {
+        const inm = store.getUserById(inmobiliariaId.trim());
+        if (inm && inm.role === 'inmobiliaria') {
+          if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
+          inm.join_requests.push({
+            id:             `jr_${Date.now()}`,
+            broker_id:      user.id,
+            broker_name:    user.name,
+            broker_email:   user.email,
+            broker_license: user.licenseNumber || '',
+            broker_phone:   user.phone || '',
+            requested_at:   new Date().toISOString(),
+            status:         'pending',
+          });
+          store.saveUser(inm);
+          // Notify the inmobiliaria of the pending request
+          transporter.sendMail({
+            from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+            to:      inm.email,
+            subject: `Nueva solicitud de afiliación — ${user.name}`,
+            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+              <div style="background:#002D62;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
+                <h2 style="margin:0;font-size:1.1rem;">Nueva Solicitud de Afiliación</h2>
+              </div>
+              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
+                <p>El agente <strong>${user.name}</strong> (${user.email}) solicitó afiliarse a <strong>${inm.companyName || inm.name}</strong> al crear su cuenta.</p>
+                ${user.licenseNumber ? `<p>Licencia: <strong>${user.licenseNumber}</strong></p>` : ''}
+                <p>Ingresa a tu dashboard para aprobar o rechazar la solicitud.</p>
+                <a href="${BASE_URL}/broker#team-requests" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Solicitudes →</a>
+              </div>
+            </div>`,
+          }).catch(e => console.error('Inm notify email error:', e.message));
+        }
+      } catch (e) {
+        console.error('Join request creation error:', e.message);
+      }
+    }
 
     transporter.sendMail({
       from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
