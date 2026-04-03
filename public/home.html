@@ -733,7 +733,7 @@
 
         <div class="bp-footer">
           <button class="bp-btn-primary" onclick="bpToStep2()">Continuar →</button>
-          <button class="bp-btn-skip" onclick="saveBuyingPower(true)">Solo guardar el presupuesto</button>
+          <button class="bp-btn-skip" id="bpSkipBtn" onclick="saveBuyingPower(true)">Solo guardar el presupuesto</button>
         </div>
       </div>
 
@@ -1460,9 +1460,10 @@
         if (_cardObserver) c.observe(_cardObserver);
         // Update section title when buying power is active
         if (hasBP) {
-          const fmt = n => '$' + Math.round(n/1000000*10)/10 + 'M';
-          document.querySelector('#recoSection .section-label').textContent = '💰 Tu presupuesto';
-          document.querySelector('#recoSection .section-title').textContent = 'Dentro de Tu Alcance';
+          const sl = document.querySelector('#recoSection .section-label');
+          const st = document.querySelector('#recoSection .section-title');
+          if (sl) sl.textContent = '💰 Tu presupuesto';
+          if (st) st.textContent = 'Dentro de Tu Alcance';
         }
         document.getElementById('recoSection').style.display = '';
       } catch {}
@@ -1662,21 +1663,37 @@
     // ══════════════════════════════════════════════════════════════
     // Buying Power Calculator
     // ══════════════════════════════════════════════════════════════
-    let _bpToken  = null;
-    let _bpType   = 'venta';
-    let _bpBeds   = 0;
+    let _bpToken     = null;
+    let _bpType      = 'venta';
+    let _bpBeds      = 0;
+    let _bpCloseTimer = null;
 
     function openBPModal() {
+      // Cancel any pending auto-close from a previous save
+      if (_bpCloseTimer) { clearTimeout(_bpCloseTimer); _bpCloseTimer = null; }
+      // Always reset to Step 1 in a clean state
+      document.getElementById('bpStep1').classList.remove('hidden');
+      document.getElementById('bpStep2').classList.add('hidden');
+      document.getElementById('bpDot1').className = 'bp-prog-step active';
+      document.getElementById('bpLine1').className = 'bp-prog-line';
+      document.getElementById('bpDot2').className = 'bp-prog-step';
+      document.getElementById('bpSuccessBanner').style.display = 'none';
+      document.getElementById('bpResultCard').style.display = 'none';
       document.getElementById('bpOverlay').classList.add('open');
       document.body.style.overflow = 'hidden';
     }
     function closeBPModal() {
+      if (_bpCloseTimer) { clearTimeout(_bpCloseTimer); _bpCloseTimer = null; }
       document.getElementById('bpOverlay').classList.remove('open');
       document.body.style.overflow = '';
     }
-    // Close on backdrop click
+    // Close on backdrop click or Escape key
     document.getElementById('bpOverlay').addEventListener('click', e => {
       if (e.target === document.getElementById('bpOverlay')) closeBPModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('bpOverlay').classList.contains('open'))
+        closeBPModal();
     });
 
     function setBPType(val) {
@@ -1684,6 +1701,9 @@
       document.querySelectorAll('#bpTypeGroup .bp-toggle').forEach(b =>
         b.classList.toggle('active', b.dataset.val === val)
       );
+      // Update slider labels for context (rental = monthly rent, purchase = total price)
+      const hint = document.querySelector('#bpSliderHint');
+      if (hint) hint.textContent = val === 'alquiler' ? 'Alquiler mensual máximo' : 'Precio de compra máximo';
     }
     function setBPBeds(val) {
       _bpBeds = val;
@@ -1696,31 +1716,43 @@
       document.getElementById('bpSlider').value = Math.min(v, 50000000);
     }
     function syncBudget() {
-      const v = parseFloat(document.getElementById('bpSlider').value) || 0;
-      document.getElementById('bpBudget').value = v || '';
+      const v = parseFloat(document.getElementById('bpSlider').value);
+      // Only set value if slider is above 0 to avoid clearing a typed entry
+      if (v > 0) document.getElementById('bpBudget').value = v;
     }
 
     function bpToStep2() {
+      // Validate budget before advancing
+      const budget = parseFloat(document.getElementById('bpBudget').value) || 0;
+      if (!budget) {
+        const inp = document.getElementById('bpBudget');
+        inp.focus();
+        inp.style.borderColor = 'var(--red)';
+        inp.placeholder = 'Ingresa tu presupuesto para continuar';
+        setTimeout(() => { inp.style.borderColor = ''; inp.placeholder = '5,000,000'; }, 2000);
+        return;
+      }
       document.getElementById('bpStep1').classList.add('hidden');
       document.getElementById('bpStep2').classList.remove('hidden');
-      document.getElementById('bpDot1').classList.remove('active'); document.getElementById('bpDot1').classList.add('done');
-      document.getElementById('bpLine1').classList.add('done');
-      document.getElementById('bpDot2').classList.add('active');
+      document.getElementById('bpDot1').className = 'bp-prog-step done';
+      document.getElementById('bpLine1').className = 'bp-prog-line done';
+      document.getElementById('bpDot2').className = 'bp-prog-step active';
       updateBPResult();
     }
     function bpToStep1() {
       document.getElementById('bpStep2').classList.add('hidden');
       document.getElementById('bpStep1').classList.remove('hidden');
-      document.getElementById('bpDot1').classList.remove('done'); document.getElementById('bpDot1').classList.add('active');
-      document.getElementById('bpLine1').classList.remove('done');
-      document.getElementById('bpDot2').classList.remove('active');
+      document.getElementById('bpDot1').className = 'bp-prog-step active';
+      document.getElementById('bpLine1').className = 'bp-prog-line';
+      document.getElementById('bpDot2').className = 'bp-prog-step';
     }
 
     function fmtDOP(n) {
-      if (!n) return '$0';
-      if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
-      if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
-      if (n >= 1e3) return '$' + Math.round(n/1000) + 'K';
+      if (!n || isNaN(n)) return '$0';
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+      if (abs >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+      if (abs >= 1e3) return '$' + Math.round(n/1000) + 'K';
       return '$' + Math.round(n).toLocaleString('es-DO');
     }
 
@@ -1731,63 +1763,99 @@
       const down   = parseFloat(document.getElementById('bpDown').value)   || 0;
 
       if (!income) {
-        // No income info — use budget directly
         return { maxPrice: budget, method: 'budget', budget, down, income: 0, debts: 0,
                  monthlyPayment: 0, loanAmt: 0 };
       }
 
-      // Dominican Republic mortgage: ~10% APR, 25-year term
-      const RATE = 0.10 / 12;
-      const N    = 25 * 12;
       const monthlyIncome = income / 12;
 
-      // 28% gross income rule (housing payment ≤ 28% monthly income)
+      // Rental affordability: different formula from mortgage
+      if (_bpType === 'alquiler') {
+        const maxRent30 = monthlyIncome * 0.30;       // 30% gross income rule for rentals
+        const maxRent43 = Math.max(0, monthlyIncome * 0.43 - debts); // DTI rule
+        if (maxRent43 <= 0) {
+          return { maxPrice: budget || 0, method: 'dti_exceeded', budget, down, income, debts,
+                   monthlyPayment: 0, loanAmt: 0, isRental: true };
+        }
+        const maxRent  = Math.min(maxRent30, maxRent43);
+        const maxPrice = budget > 0 ? Math.min(budget, maxRent) : maxRent;
+        return { maxPrice: Math.round(maxPrice), method: 'calculated', budget, down: 0, income, debts,
+                 monthlyPayment: Math.round(maxRent), loanAmt: 0, isRental: true };
+      }
+
+      // Purchase: Dominican Republic mortgage ~10% APR, 25-year term
+      const RATE = 0.10 / 12;
+      const N    = 25 * 12;
       const maxPay28 = monthlyIncome * 0.28;
-      // 43% DTI rule (all debts ≤ 43% monthly income)
       const maxPay43 = Math.max(0, monthlyIncome * 0.43 - debts);
+
+      if (maxPay43 <= 0) {
+        return { maxPrice: budget || 0, method: 'dti_exceeded', budget, down, income, debts,
+                 monthlyPayment: 0, loanAmt: 0, isRental: false };
+      }
+
       const maxPayment = Math.min(maxPay28, maxPay43);
-
-      // Loan amount from payment: PV = PMT × (1 − (1+r)^−n) / r
-      const loanAmt   = maxPayment * ((1 - Math.pow(1 + RATE, -N)) / RATE);
-      const calcPrice = Math.round(loanAmt + down);
-
-      // If budget also provided, use whichever is lower (more conservative)
-      const maxPrice = budget > 0 ? Math.min(budget, calcPrice) : calcPrice;
+      const loanAmt    = maxPayment * ((1 - Math.pow(1 + RATE, -N)) / RATE);
+      const calcPrice  = Math.round(loanAmt + down);
+      const maxPrice   = budget > 0 ? Math.min(budget, calcPrice) : calcPrice;
 
       return { maxPrice, method: 'calculated', budget, down, income, debts,
-               monthlyPayment: maxPayment, loanAmt };
+               monthlyPayment: Math.round(maxPayment), loanAmt: Math.round(loanAmt), isRental: false };
     }
 
     function updateBPResult() {
       const r = calcBP();
       const card = document.getElementById('bpResultCard');
 
+      if (r.method === 'dti_exceeded') {
+        card.style.display = '';
+        document.getElementById('bpResultAmt').textContent = '⚠️ DTI alto';
+        document.getElementById('bpResultSub').textContent =
+          'Tus deudas superan el 43% de tus ingresos. Los bancos generalmente no aprueban préstamos en este rango. Considera reducir tus deudas primero.';
+        document.getElementById('bpResultBreakdown').innerHTML = '';
+        return;
+      }
+
       if (!r.maxPrice) { card.style.display = 'none'; return; }
       card.style.display = '';
-
       document.getElementById('bpResultAmt').textContent = fmtDOP(r.maxPrice);
 
       if (r.method === 'calculated') {
-        document.getElementById('bpResultSub').textContent =
-          `Cuota mensual estimada: ${fmtDOP(r.monthlyPayment)} · Préstamo: ${fmtDOP(r.loanAmt)}`;
-        document.getElementById('bpResultBreakdown').innerHTML = `
-          <div class="bp-breakdown-item"><strong>${fmtDOP(r.income/12)}</strong>Ingreso/mes</div>
-          <div class="bp-breakdown-item"><strong>${fmtDOP(r.debts)}</strong>Deudas/mes</div>
-          <div class="bp-breakdown-item"><strong>${fmtDOP(r.down)}</strong>Inicial</div>
-          <div class="bp-breakdown-item"><strong>10% APR · 25 años</strong>Condiciones est.</div>
-        `;
+        if (r.isRental) {
+          document.getElementById('bpResultSub').textContent = 'Alquiler mensual máximo recomendado';
+          document.getElementById('bpResultBreakdown').innerHTML = `
+            <div class="bp-breakdown-item"><strong>${fmtDOP(monthlyInc(r))}</strong>Ingreso/mes</div>
+            <div class="bp-breakdown-item"><strong>30%</strong>Regla de alquiler</div>
+            ${r.debts > 0 ? `<div class="bp-breakdown-item"><strong>${fmtDOP(r.debts)}</strong>Deudas/mes</div>` : ''}
+          `;
+        } else {
+          document.getElementById('bpResultSub').textContent =
+            `Cuota mensual estimada: ${fmtDOP(r.monthlyPayment)} · Préstamo: ${fmtDOP(r.loanAmt)}`;
+          document.getElementById('bpResultBreakdown').innerHTML = `
+            <div class="bp-breakdown-item"><strong>${fmtDOP(monthlyInc(r))}</strong>Ingreso/mes</div>
+            <div class="bp-breakdown-item"><strong>${fmtDOP(r.debts)}</strong>Deudas/mes</div>
+            <div class="bp-breakdown-item"><strong>${fmtDOP(r.down)}</strong>Inicial</div>
+            <div class="bp-breakdown-item"><strong>10% APR · 25 años</strong>Condiciones est.</div>
+          `;
+        }
       } else {
-        document.getElementById('bpResultSub').textContent = 'Basado en tu presupuesto declarado';
+        document.getElementById('bpResultSub').textContent = r.isRental
+          ? 'Basado en tu presupuesto de alquiler declarado'
+          : 'Basado en tu presupuesto declarado';
         document.getElementById('bpResultBreakdown').innerHTML = '';
       }
     }
+    function monthlyInc(r) { return r.income ? Math.round(r.income / 12) : 0; }
 
     async function saveBuyingPower(budgetOnly) {
       if (!_bpToken) { closeBPModal(); return; }
 
       const budget = parseFloat(document.getElementById('bpBudget').value) || 0;
-      if (!budget && budgetOnly) {
-        document.getElementById('bpBudget').focus(); return;
+      if (!budget) {
+        const inp = document.getElementById('bpBudget');
+        inp.focus(); inp.style.borderColor = 'var(--red)';
+        setTimeout(() => { inp.style.borderColor = ''; }, 2000);
+        return;
       }
 
       let payload;
@@ -1795,6 +1863,7 @@
         payload = { budget, propertyType: _bpType, bedrooms: _bpBeds, calculatedMaxPrice: budget };
       } else {
         const r = calcBP();
+        if (r.method === 'dti_exceeded') { updateBPResult(); return; }
         if (!r.maxPrice) { updateBPResult(); return; }
         payload = {
           budget:             r.budget,
@@ -1807,7 +1876,11 @@
         };
       }
 
-      const btn = document.getElementById('bpSaveBtn') || document.querySelector('.bp-btn-primary');
+      // Use the correct button for the current step
+      const btn = budgetOnly
+        ? document.getElementById('bpSkipBtn')
+        : document.getElementById('bpSaveBtn');
+      const origText = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
 
       try {
@@ -1816,20 +1889,32 @@
           headers: { 'Authorization': `Bearer ${_bpToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('Error guardando');
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(res.status === 401 ? 'sesión' : (body.error || 'Error guardando'));
+        }
 
-        // Show success banner, refresh reco section
+        // Show success, always go back to step 1, then auto-close
+        bpToStep1();
         document.getElementById('bpSuccessBanner').style.display = 'block';
-        if (!budgetOnly) bpToStep1();
-
-        // Hide CTA, update reco section label
         document.getElementById('bpCTASection').style.display = 'none';
-        document.querySelector('#recoSection .section-label').textContent = '💰 Tu presupuesto';
-        document.querySelector('#recoSection .section-title').textContent = 'Dentro de Tu Alcance';
 
-        // Reload recommendations with new profile
+        // Update reco section titles (null-safe)
+        const sl = document.querySelector('#recoSection .section-label');
+        const st = document.querySelector('#recoSection .section-title');
+        if (sl) sl.textContent = '💰 Tu presupuesto';
+        if (st) st.textContent = 'Dentro de Tu Alcance';
+
+        // Reload recommendations: clone prev/next buttons first to avoid
+        // stacking event listeners from a second createCarousel call
         const track = document.getElementById('recoTrack');
-        if (track) track.innerHTML = '';
+        if (track) {
+          track.innerHTML = '';
+          ['recoPrev','recoNext'].forEach(id => {
+            const old = document.getElementById(id);
+            if (old) old.replaceWith(old.cloneNode(true));
+          });
+        }
         const recoRes = await fetch('/api/user/recommendations', {
           headers: { 'Authorization': `Bearer ${_bpToken}` }
         });
@@ -1842,11 +1927,14 @@
           }
         }
 
-        setTimeout(closeBPModal, 1800);
+        _bpCloseTimer = setTimeout(closeBPModal, 2000);
       } catch(e) {
-        alert('No se pudo guardar. Inténtalo de nuevo.');
+        const msg = e.message === 'sesión'
+          ? 'Tu sesión expiró. Por favor recarga la página.'
+          : (e.message || 'No se pudo guardar. Inténtalo de nuevo.');
+        alert(msg);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = budgetOnly ? 'Solo guardar el presupuesto' : 'Guardar y ver recomendaciones'; }
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
       }
     }
   </script>
