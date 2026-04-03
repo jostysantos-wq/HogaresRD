@@ -93,12 +93,14 @@
     .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .user-first-name { font-size: 0.88rem; font-weight: 600; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .user-avatar-btn svg { width: 16px; height: 16px; fill: var(--text-muted); }
-    .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 40px rgba(17,17,16,0.10); min-width: 180px; overflow: hidden; z-index: 200; display: none; }
+    .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 40px rgba(17,17,16,0.14); min-width: 210px; overflow: hidden; z-index: 200; display: none; }
     .user-dropdown.open { display: block; }
-    .dropdown-item { display: block; width: 100%; padding: 0.7rem 1.1rem; font-size: 0.9rem; color: var(--text); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.15s; }
+    .dropdown-item { display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.6rem 1.1rem; font-size: 0.875rem; color: var(--text); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.15s; }
     .dropdown-item:hover { background: var(--accent-light); color: var(--accent); }
+    .dropdown-item-ic { font-size: 1rem; width: 1.25rem; text-align: center; flex-shrink: 0; }
+    .dropdown-section-lbl { padding: 0.55rem 1.1rem 0.2rem; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); opacity: 0.7; }
     .dropdown-divider { border: none; border-top: 1px solid var(--border); margin: 0.25rem 0; }
-    .dropdown-logout { color: var(--red) !important; }
+    .dropdown-logout { color: #CF142B !important; }
     .card-save.saved svg { fill: var(--red); }
 
     /* HERO */
@@ -1216,36 +1218,72 @@
 
     function renderLoggedIn(el, user) {
       _userFavorites = new Set(user.favorites || []);
-      const initials   = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-      const firstName  = user.name.split(' ')[0];
+      const initials  = (user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const firstName = (user.name || 'Usuario').split(' ')[0];
+      const isPro     = ['agency','broker','inmobiliaria','secretary'].includes(user.role);
+      const isInm     = user.role === 'inmobiliaria';
+      const dark      = document.documentElement.getAttribute('data-theme') === 'dark';
+
+      const proMenuItems = `
+        <div class="dropdown-section-lbl">Panel Profesional</div>
+        <a href="/broker" class="dropdown-item"><span class="dropdown-item-ic">&#9783;</span> Dashboard</a>
+        <a href="/broker#mensajes" class="dropdown-item"><span class="dropdown-item-ic">&#128172;</span> Mensajes</a>
+        <a href="/broker#tour-requests" class="dropdown-item"><span class="dropdown-item-ic">&#128197;</span> Solicitudes de Tour</a>
+        <a href="/broker#availability" class="dropdown-item"><span class="dropdown-item-ic">&#128336;</span> Disponibilidad</a>
+        <a href="/broker#chat-ia" class="dropdown-item"><span class="dropdown-item-ic">&#129302;</span> Chat IA</a>
+        ${isInm ? `
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-section-lbl">Equipo</div>
+        <a href="/broker#team-members" class="dropdown-item"><span class="dropdown-item-ic">&#128101;</span> Miembros</a>
+        <a href="/broker#team-requests" class="dropdown-item"><span class="dropdown-item-ic">&#128203;</span> Solicitudes</a>
+        <a href="/broker#team-performance" class="dropdown-item"><span class="dropdown-item-ic">&#128200;</span> Rendimiento</a>
+        ` : ''}
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-section-lbl">Cuenta</div>
+        <a href="/subscription" class="dropdown-item"><span class="dropdown-item-ic">&#128179;</span> Suscripci&oacute;n</a>
+        <a href="/broker#contrasena" class="dropdown-item"><span class="dropdown-item-ic">&#128273;</span> Contrase&ntilde;a y 2FA</a>`;
+
+      const userMenuItems = `
+        <div class="dropdown-section-lbl">Mi Cuenta</div>
+        <a href="/profile" class="dropdown-item"><span class="dropdown-item-ic">&#128100;</span> Mi Perfil</a>
+        <a href="/favorites" class="dropdown-item"><span class="dropdown-item-ic">&#10084;&#65039;</span> Mis Favoritos</a>
+        <a href="/my-applications" class="dropdown-item"><span class="dropdown-item-ic">&#128203;</span> Mis Aplicaciones</a>
+        <a href="/busquedas-guardadas" class="dropdown-item"><span class="dropdown-item-ic">&#128276;</span> B&uacute;squedas Guardadas</a>
+        <a href="/mensajes" class="dropdown-item"><span class="dropdown-item-ic">&#128172;</span> Mensajes</a>`;
+
       el.innerHTML = `
-        <a href="/submit" class="btn-primary">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Publicar
-        </a>
+        ${isPro ? `<a href="/submit" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Publicar</a>` : ''}
         <div class="user-menu" id="userMenu">
           <button class="user-avatar-btn" id="userAvatarBtn">
             <div class="user-avatar">${initials}</div>
             <span class="user-first-name">${firstName}</span>
             <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
           </button>
-          <div class="user-dropdown" id="userDropdown">
-            <a href="/profile" class="dropdown-item">👤 Mi Perfil</a>
-            <a href="/favorites" class="dropdown-item">❤️ Mis Favoritos</a>
-            <a href="/my-applications" class="dropdown-item">📋 Mis Aplicaciones</a>
-            <a href="/busquedas-guardadas" class="dropdown-item">🔔 Búsquedas Guardadas</a>
-            <a href="/submit" class="dropdown-item">➕ Publicar Propiedad</a>
+          <div class="user-dropdown" id="userDropdown" style="min-width:${isPro ? '230px' : '210px'}">
+            ${isPro ? proMenuItems : userMenuItems}
             <div class="dropdown-divider"></div>
-            <div class="dropdown-item" onclick="event.stopPropagation();toggleTheme()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
-              <span id="themeLabel">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}</span>
-              <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;transition:background 0.3s;">
-                <div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${document.documentElement.getAttribute('data-theme') === 'dark' ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+            <div class="dropdown-item" onclick="event.stopPropagation();toggleTheme();_syncThemeDd();" style="justify-content:space-between;cursor:pointer;">
+              <span style="display:flex;align-items:center;gap:0.55rem;"><span class="dropdown-item-ic" id="themeDdIc">${dark ? '&#9728;&#65039;' : '&#127769;'}</span><span id="themeDdLbl">${dark ? 'Modo Claro' : 'Modo Oscuro'}</span></span>
+              <div style="width:36px;height:20px;border-radius:50px;background:var(--toggle-bg);position:relative;flex-shrink:0;">
+                <div id="themeKnob" style="width:16px;height:16px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:2px;left:${dark ? '18px' : '2px'};transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
               </div>
             </div>
-            <button class="dropdown-item dropdown-logout" onclick="logout()">Cerrar Sesión</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item dropdown-logout" onclick="logout()"><span class="dropdown-item-ic">&#128682;</span> Cerrar Sesi&oacute;n</button>
           </div>
         </div>`;
-      document.getElementById('userAvatarBtn').addEventListener('click', (e) => {
+
+      function _syncThemeDd() {
+        const d = document.documentElement.getAttribute('data-theme') === 'dark';
+        const ic = document.getElementById('themeDdIc');
+        const lb = document.getElementById('themeDdLbl');
+        const kn = document.getElementById('themeKnob');
+        if (ic) ic.innerHTML = d ? '&#9728;&#65039;' : '&#127769;';
+        if (lb) lb.textContent = d ? 'Modo Claro' : 'Modo Oscuro';
+        if (kn) kn.style.left = d ? '18px' : '2px';
+      }
+
+      document.getElementById('userAvatarBtn').addEventListener('click', e => {
         e.stopPropagation();
         document.getElementById('userDropdown').classList.toggle('open');
       });
@@ -1271,13 +1309,12 @@
     }
 
     async function toggleFavorite(btn, listingId) {
-      const token = localStorage.getItem('hogaresrd_token');
-      if (!token) { window.location.href = '/login?next=/home'; return; }
+      if (!localStorage.getItem('hogaresrd_user')) { window.location.href = '/login?next=/home'; return; }
       const isSaved = _userFavorites.has(listingId);
       try {
         const res = await fetch(`/api/user/favorites/${listingId}`, {
-          method:  isSaved ? 'DELETE' : 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          method: isSaved ? 'DELETE' : 'POST',
+          credentials: 'include',
         });
         if (!res.ok) return;
         const data = await res.json();
