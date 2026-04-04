@@ -102,12 +102,20 @@ struct ListingDetailView: View {
                                 }
                             }
                             Spacer()
+                            // Heart + fav count
                             Button {
                                 saved.toggle(l.id)
                             } label: {
-                                Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
-                                    .font(.title2)
-                                    .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
+                                VStack(spacing: 2) {
+                                    Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
+                                        .font(.title2)
+                                        .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
+                                    if let fc = l.favoriteCount, fc > 0 {
+                                        Text("\(fc + (saved.isSaved(l.id) && fc == 0 ? 1 : 0))")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                         }
 
@@ -122,6 +130,19 @@ struct ListingDetailView: View {
                             if let addr = l.address, !addr.isEmpty {
                                 Label(addr, systemImage: "map")
                                     .foregroundStyle(.secondary).font(.caption)
+                            }
+                            // View count
+                            HStack(spacing: 12) {
+                                if let views = l.views, views > 0 {
+                                    Label("\(views) vista\(views == 1 ? "" : "s")", systemImage: "eye")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                if let fc = l.favoriteCount, fc > 0 {
+                                    Label("\(fc) favorito\(fc == 1 ? "" : "s")", systemImage: "heart")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
                         }
 
@@ -292,7 +313,7 @@ struct ListingDetailView: View {
             }
 
             // Share button
-            Button { } label: {
+            Button { shareListing(l) } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
@@ -960,6 +981,16 @@ struct ListingDetailView: View {
         loading = true
         listing = try? await APIService.shared.getListing(id: id)
         loading = false
+    }
+
+    private func shareListing(_ l: Listing) {
+        let url = "https://hogaresrd.com/listing/\(l.id)"
+        let text = "\(l.title) – \(l.priceFormatted)\n\(url)"
+        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(av, animated: true)
+        }
     }
 }
 

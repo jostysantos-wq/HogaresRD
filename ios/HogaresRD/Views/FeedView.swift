@@ -301,16 +301,11 @@ struct ReelCard: View {
     @State private var doubleTapHeart = false
     @State private var localFavCount: Int = 0
 
-    /// Binding shim so ScrollView can track the current page as Int?
-    private var imageIndexBinding: Binding<Int?> {
-        Binding(get: { imageIndex }, set: { imageIndex = $0 ?? 0 })
-    }
-
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
 
-                // ── Horizontal image carousel ─────────────────────────
+                // ── Image carousel (TabView — locks horizontal swipe to images only) ──
                 let urls = listing.allImageURLs
                 if urls.isEmpty {
                     ZStack {
@@ -321,38 +316,33 @@ struct ReelCard: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 0) {
-                            ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .success(let img):
-                                        img.resizable().aspectRatio(contentMode: .fill)
-                                    default:
-                                        ZStack {
-                                            Color(red: 0.1, green: 0.1, blue: 0.15)
-                                            VStack(spacing: 10) {
-                                                Image(systemName: "house.fill")
-                                                    .font(.system(size: 56))
-                                                    .foregroundStyle(.white.opacity(0.2))
-                                                if case .empty = phase {
-                                                    ProgressView().tint(.white.opacity(0.4))
-                                                }
+                    TabView(selection: $imageIndex) {
+                        ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let img):
+                                    img.resizable().aspectRatio(contentMode: .fill)
+                                default:
+                                    ZStack {
+                                        Color(red: 0.1, green: 0.1, blue: 0.15)
+                                        VStack(spacing: 10) {
+                                            Image(systemName: "house.fill")
+                                                .font(.system(size: 56))
+                                                .foregroundStyle(.white.opacity(0.2))
+                                            if case .empty = phase {
+                                                ProgressView().tint(.white.opacity(0.4))
                                             }
                                         }
                                     }
                                 }
-                                .frame(width: geo.size.width, height: geo.size.height)
-                                .clipped()
-                                .id(i)
                             }
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                            .tag(i)
                         }
-                        .scrollTargetLayout()
                     }
-                    .scrollTargetBehavior(.paging)
-                    .scrollPosition(id: imageIndexBinding)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
                 }
 
                 // ── Gradient scrim ────────────────────────────
@@ -427,11 +417,51 @@ struct ReelCard: View {
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+
+                            // View count
+                            if let views = listing.views, views > 0 {
+                                VStack(spacing: 2) {
+                                    Image(systemName: "eye.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .shadow(color: .black.opacity(0.5), radius: 4)
+                                    Text(views >= 1000 ? String(format: "%.1fk", Double(views) / 1000) : "\(views)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .shadow(color: .black.opacity(0.5), radius: 2)
+                                }
+                                .frame(width: 48)
+                            }
                         }
                         .padding(.top, 48)
                         .padding(.trailing, 4)
                     }
                     Spacer()
+                }
+
+                // ── Image dot indicators ─────────────────────────────
+                if listing.images.count > 1 {
+                    VStack {
+                        Spacer()
+                        HStack(spacing: 5) {
+                            ForEach(0..<min(listing.images.count, 8), id: \.self) { i in
+                                Circle()
+                                    .fill(i == imageIndex ? .white : .white.opacity(0.4))
+                                    .frame(width: i == imageIndex ? 7 : 5, height: i == imageIndex ? 7 : 5)
+                                    .animation(.easeInOut(duration: 0.15), value: imageIndex)
+                            }
+                            if listing.images.count > 8 {
+                                Text("+\(listing.images.count - 8)")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 5)
+                        .background(.black.opacity(0.3))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 96)
+                    }
+                    .allowsHitTesting(false)
                 }
 
                 // ── Text overlay (tappable → detail) ─────────────────
