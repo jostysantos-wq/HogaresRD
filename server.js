@@ -569,6 +569,16 @@ app.get('/admin/tours', adminSessionAuth, (req, res) => {
   res.json(store.getTours());
 });
 
+// ── Featured listings (public) ───────────────────────────────────────────────
+app.get('/api/listings/featured', (req, res) => {
+  const featured = store.getAllSubmissions().filter(s =>
+    s.status === 'approved' &&
+    s.submission_type !== 'agency_claim' &&
+    s._extra && s._extra.featured
+  );
+  res.json({ listings: featured });
+});
+
 // ── Catalogue / Listings admin ───────────────────────────────────────────────
 // Returns all submissions (all statuses) as a compact catalogue for the admin.
 app.get('/admin/catalogue', adminSessionAuth, (req, res) => {

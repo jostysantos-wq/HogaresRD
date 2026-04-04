@@ -39,6 +39,14 @@ export default function RootLayout() {
                 headerBackTitle: 'Volver',
               }}
             />
+            <Stack.Screen
+              name="mensajes"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(tabs)/favoritos"
+              options={{ headerShown: false }}
+            />
           </Stack>
         </SafeAreaProvider>
       </View>

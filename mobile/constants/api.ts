@@ -1,12 +1,16 @@
-// Change this to your deployed server URL for production.
-// For local testing: use your Mac's local IP (e.g. http://192.168.1.X:3000)
-// so your iPhone on the same Wi-Fi can reach the backend.
-export const API_BASE = 'http://192.168.1.175:3000/api';
+// API base URL — switches between dev (local) and production automatically.
+// __DEV__ is true when running in Expo Go / dev builds, false in production builds.
+const DEV_IP = '192.168.1.175'; // Change this to your Mac's local IP for dev
+
+export const API_BASE = __DEV__
+  ? `http://${DEV_IP}:3000/api`
+  : 'https://hogaresrd.com/api';
 
 export const endpoints = {
   // Listings
   listings:      `${API_BASE}/listings`,
   trending:      `${API_BASE}/listings/trending`,
+  featured:      `${API_BASE}/listings/featured`,
   agencies:      `${API_BASE}/listings/agencies`,
   constructoras: `${API_BASE}/listings/constructoras`,
   listing:       (id: string)   => `${API_BASE}/listings/${id}`,
@@ -22,6 +26,7 @@ export const endpoints = {
   // User
   profile:      `${API_BASE}/user/profile`,
   applications: `${API_BASE}/applications/my`,
+  application:  (id: string) => `${API_BASE}/applications/${id}`,
 
   // Conversations (chat)
   conversations:    `${API_BASE}/conversations`,

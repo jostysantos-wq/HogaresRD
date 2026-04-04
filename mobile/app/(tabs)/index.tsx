@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '@/constants/theme';
 import { endpoints } from '@/constants/api';
 import type { Listing } from '@/hooks/useListings';
+import { useAuth } from '@/hooks/useAuth';
 import LogoMark from '@/components/LogoMark';
 
 const { width } = Dimensions.get('window');
@@ -102,7 +103,9 @@ const qlStyles = StyleSheet.create({
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [trending, setTrending] = useState<Listing[]>([]);
+  const { user } = useAuth();
+  const [trending,  setTrending]  = useState<Listing[]>([]);
+  const [featured,  setFeatured]  = useState<Listing[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
 
   useEffect(() => {
@@ -111,6 +114,11 @@ export default function HomeScreen() {
       .then(d => setTrending(d.listings || []))
       .catch(() => {})
       .finally(() => setLoadingTrending(false));
+
+    fetch(endpoints.featured)
+      .then(r => r.json())
+      .then(d => setFeatured(d.listings || []))
+      .catch(() => {});
   }, []);
 
   return (
@@ -165,6 +173,46 @@ export default function HomeScreen() {
           />
         )}
       </View>
+
+      {/* Admin quick-access (only visible to admin users) */}
+      {user?.role === 'admin' && (
+        <View style={[styles.section, { paddingHorizontal: 16 }]}>
+          <TouchableOpacity
+            style={styles.adminCard}
+            activeOpacity={0.85}
+            onPress={() => router.push('/cuenta')}
+          >
+            <View style={styles.adminIconWrap}>
+              <Ionicons name="shield-checkmark" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.adminTitle}>Panel de Administración</Text>
+              <Text style={styles.adminSub}>Gestionar propiedades, usuarios y anuncios</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Destacadas */}
+      {featured.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>⭐ Destacadas</Text>
+            <TouchableOpacity onPress={() => router.push('/comprar')}>
+              <Text style={styles.seeAll}>Ver todo</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={featured}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 4 }}
+            renderItem={({ item }) => <TrendingCard listing={item} />}
+          />
+        </View>
+      )}
 
       {/* Category cards */}
       <View style={[styles.section, { paddingHorizontal: 16, gap: 12 }]}>
@@ -233,4 +281,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentLight, alignItems: 'center', justifyContent: 'center',
   },
   catLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  adminCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    padding: 16,
+    ...shadow.md,
+  },
+  adminIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  adminTitle: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 2 },
+  adminSub:   { fontSize: 12, color: 'rgba(255,255,255,0.65)' },
 });

@@ -15,14 +15,37 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.hogaresrd.app"
+      "bundleIdentifier": "com.hogaresrd.app",
+      "buildNumber": "1",
+      "usesNonExemptEncryption": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "192.168.1.175": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#002D62"
       },
-      "package": "com.hogaresrd.app"
+      "package": "com.hogaresrd.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +57,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "privacyPolicyUrl": "https://hogaresrd.com/terminos",
+      "eas": {
+        "projectId": "hogares-rd"
+      }
     }
   }
 }

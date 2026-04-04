@@ -147,6 +147,20 @@ export default function CuentaScreen() {
         />
       </View>
 
+      {/* Admin section — only for admin role */}
+      {user.role === 'admin' && (
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="shield-checkmark-outline"
+            label="Panel de Admin (Web)"
+            onPress={() => {
+              const { Linking } = require('react-native');
+              Linking.openURL('https://hogaresrd.com/214de22e9b0921be9dd66e26a645be4b4106');
+            }}
+          />
+        </View>
+      )}
+
       {/* Danger zone */}
       <View style={styles.menuCard}>
         <MenuItem
