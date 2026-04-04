@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="pageTitle">Artículo — HogaresRD</title>
+  <meta name="description" id="pageDesc" content="Blog de bienes raíces en la República Dominicana." />
+  <link rel="stylesheet" href="/css/core.css">
+  <style>
+    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #a81022; transform: translateY(-1px); }
+
+    /* BREADCRUMB */
+    .breadcrumb { max-width: 820px; margin: 2rem auto 0; padding: 0 2rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb-sep { color: var(--text-muted); opacity: 0.5; }
+
+    /* LOADING / ERROR */
+    .state-box { max-width: 820px; margin: 4rem auto; padding: 0 2rem; text-align: center; }
+    .state-box h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text); }
+    .state-box p { color: var(--text-muted); margin-bottom: 1.5rem; }
+    .btn-back { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent); color: #fff; text-decoration: none; padding: 0.65rem 1.5rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; transition: background 0.2s; }
+    .btn-back:hover { background: var(--accent-hover); }
+
+    /* ARTICLE HEADER */
+    .post-header { max-width: 820px; margin: 1.5rem auto 0; padding: 0 2rem; }
+    .post-category-badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 50px; margin-bottom: 1.1rem; }
+    .post-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 900; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 1rem; color: var(--text); }
+    .post-excerpt { font-size: 1.1rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+    .post-meta-bar { display: flex; align-items: center; gap: 1rem; font-size: 0.83rem; color: var(--text-muted); padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .author-chip { display: flex; align-items: center; gap: 0.5rem; }
+    .author-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .meta-dot { opacity: 0.4; }
+
+    /* COVER IMAGE */
+    .post-cover { max-width: 820px; margin: 2rem auto; padding: 0 2rem; }
+    .post-cover img { width: 100%; height: auto; max-height: 480px; object-fit: cover; border-radius: 16px; display: block; }
+
+    /* ARTICLE CONTENT */
+    .post-content { max-width: 820px; margin: 0 auto; padding: 0 2rem 3rem; }
+    .post-body { font-size: 1rem; line-height: 1.85; color: var(--text); }
+    .post-body h1 { font-size: 1.75rem; font-weight: 800; margin: 2.5rem 0 1rem; letter-spacing: -0.3px; color: var(--text); }
+    .post-body h2 { font-size: 1.4rem; font-weight: 800; margin: 2rem 0 0.85rem; padding-left: 0.85rem; border-left: 3px solid var(--accent); color: var(--text); }
+    .post-body h3 { font-size: 1.15rem; font-weight: 700; margin: 1.75rem 0 0.75rem; color: var(--text); }
+    .post-body p { margin-bottom: 1.35rem; }
+    .post-body a { color: var(--accent); text-decoration: underline; }
+    .post-body ul, .post-body ol { margin: 0.75rem 0 1.35rem 1.75rem; }
+    .post-body li { margin-bottom: 0.5rem; color: var(--text); }
+    .post-body img { max-width: 100%; border-radius: 10px; margin: 1.5rem 0; display: block; }
+    .post-body blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.75rem 1.25rem; background: var(--accent-light); border-radius: 0 10px 10px 0; font-style: italic; color: var(--text-muted); }
+    .post-body strong { color: var(--text); font-weight: 700; }
+    .post-body hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    /* SHARE BAR */
+    .share-bar { max-width: 820px; margin: 0 auto; padding: 1.5rem 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .share-label { font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .share-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: none; color: var(--text); transition: all 0.2s; text-decoration: none; }
+    .share-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .share-btn.wa { background: #25D366; border-color: #25D366; color: #fff; }
+    .share-btn.wa:hover { background: #1abe5a; border-color: #1abe5a; }
+
+    /* BACK LINK */
+    .back-link-wrap { max-width: 820px; margin: 2rem auto 4rem; padding: 0 2rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .back-link:hover { text-decoration: underline; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); }
+    .footer-inner { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin-top: 0.75rem; max-width: 260px; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-col a { text-decoration: none; font-size: 0.9rem; color: var(--text-muted); transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
+    @media (max-width: 768px) { .footer-inner { grid-template-columns: 1fr 1fr; } .footer-brand { grid-column: 1 / -1; } }
+    @media (max-width: 500px) { .footer-inner { grid-template-columns: 1fr; } .nav-links { display: none; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="/home" class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/home">Inicio</a>
+        <a class="nav-link" href="/comprar">Comprar</a>
+        <a class="nav-link" href="/alquilar">Alquilar</a>
+        <a class="nav-link" href="/submit">Vender</a>
+        <a class="nav-link active" href="/blog">Blog</a>
+        <a class="nav-link" href="/about">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-login">Iniciar sesión</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div id="appRoot">
+    <div class="state-box">
+      <p style="color:var(--text-muted);font-size:0.9rem;">Cargando artículo…</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma más fácil de encontrar, explorar y publicar propiedades en la República Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/comprar">Comprar</a></li>
+          <li><a href="/alquilar">Alquilar</a></li>
+          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/ciudad/santo-domingo">Santo Domingo</a></li>
+          <li><a href="/ciudad/punta-cana">Punta Cana</a></li>
+          <li><a href="/ciudad/santiago">Santiago</a></li>
+          <li><a href="/ciudad/puerto-plata">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/blog" style="color:var(--accent)">Blog</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/terminos">Términos de Uso</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p>Hecho con ♥ para la República Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    const CAT_LABELS = {
+      guia: 'Guías para compradores', mercado: 'Mercado inmobiliario',
+      inversion: 'Inversión', alquiler: 'Alquiler', ciudad: 'Ciudades',
+      agentes: 'Para agentes', general: 'General'
+    };
+
+    function fmtDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function initials(name) {
+      return (name || 'HR').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    }
+
+    function slugFromPath() {
+      // Path is /blog/some-slug
+      const parts = window.location.pathname.split('/');
+      return parts[parts.length - 1] || '';
+    }
+
+    async function loadPost() {
+      const slug = slugFromPath();
+      if (!slug) { showError('Artículo no encontrado', 'La URL no contiene un identificador de artículo válido.'); return; }
+
+      try {
+        const r = await fetch(`/api/blog/posts/${encodeURIComponent(slug)}`);
+        if (!r.ok) { showError('Artículo no encontrado', 'Este artículo no existe o ha sido removido.'); return; }
+        const { post } = await r.json();
+        renderPost(post);
+      } catch(e) {
+        showError('Error de conexión', 'No se pudo cargar el artículo. Por favor intenta de nuevo.');
+      }
+    }
+
+    function renderPost(post) {
+      document.title = `${post.title} — Blog HogaresRD`;
+      document.getElementById('pageDesc').content = post.excerpt || post.title;
+      const catLabel = CAT_LABELS[post.category] || post.category;
+
+      document.getElementById('appRoot').innerHTML = `
+        <div class="breadcrumb">
+          <a href="/home">Inicio</a>
+          <span class="breadcrumb-sep">›</span>
+          <a href="/blog">Blog</a>
+          <span class="breadcrumb-sep">›</span>
+          <span style="color:var(--text-muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(post.title)}</span>
+        </div>
+
+        <div class="post-header">
+          <span class="post-category-badge">${escHtml(catLabel)}</span>
+          <h1 class="post-title">${escHtml(post.title)}</h1>
+          ${post.excerpt ? `<p class="post-excerpt">${escHtml(post.excerpt)}</p>` : ''}
+          <div class="post-meta-bar">
+            <div class="author-chip">
+              <div class="author-avatar">${initials(post.author)}</div>
+              <span style="font-weight:600;">${escHtml(post.author)}</span>
+            </div>
+            <span class="meta-dot">·</span>
+            <span>${post.read_time} min de lectura</span>
+            ${post.published_at ? `<span class="meta-dot">·</span><span>${fmtDate(post.published_at)}</span>` : ''}
+            ${post.views > 0 ? `<span class="meta-dot">·</span><span>${post.views.toLocaleString()} lecturas</span>` : ''}
+          </div>
+        </div>
+
+        ${post.cover_image ? `
+        <div class="post-cover">
+          <img src="${escAttr(post.cover_image)}" alt="${escAttr(post.title)}" loading="eager" onerror="this.style.display='none'"/>
+        </div>` : ''}
+
+        <div class="post-content">
+          <div class="post-body">${post.content || '<p>Contenido no disponible.</p>'}</div>
+        </div>
+
+        <div class="share-bar">
+          <span class="share-label">Compartir</span>
+          <button class="share-btn" onclick="copyLink()">🔗 Copiar enlace</button>
+          <a class="share-btn wa" href="https://wa.me/?text=${encodeURIComponent(post.title + ' — ' + window.location.href)}" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+
+        <div class="back-link-wrap">
+          <a href="/blog" class="back-link">← Volver al Blog</a>
+        </div>
+      `;
+    }
+
+    function showError(title, msg) {
+      document.getElementById('appRoot').innerHTML = `
+        <div class="state-box">
+          <h2>${escHtml(title)}</h2>
+          <p>${escHtml(msg)}</p>
+          <a href="/blog" class="btn-back">← Volver al Blog</a>
+        </div>`;
+    }
+
+    function copyLink() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = document.querySelector('.share-btn');
+        if (btn) { btn.textContent = '✅ Enlace copiado'; setTimeout(() => { btn.textContent = '🔗 Copiar enlace'; }, 2000); }
+      }).catch(() => {});
+    }
+
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(s) {
+      return String(s || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // Theme
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
+    // Auth nav
+    (function() {
+      const area = document.getElementById('navAuthArea');
+      let token, user;
+      try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
+      if (token && user) {
+        const initls = user.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+        const firstName = user.name.split(' ')[0];
+        area.innerHTML = `
+          <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
+          <div style="position:relative;" id="userMenu">
+            <button id="userAvatarBtn" style="display:flex;align-items:center;gap:0.5rem;background:none;border:1.5px solid var(--border);border-radius:50px;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;color:var(--text);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${initls}</div>
+              <span style="font-size:0.88rem;font-weight:600;">${firstName}</span>
+            </button>
+            <div id="userDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:180px;overflow:hidden;z-index:200;">
+              <a href="/profile" style="display:block;padding:0.7rem 1.1rem;font-size:0.9rem;color:var(--text);text-decoration:none;">👤 Mi Perfil</a>
+              <button onclick="(function(){['hogaresrd_token','hogaresrd_user','token'].forEach(k=>localStorage.removeItem(k));window.location.href='/home';})()" style="display:block;width:100%;padding:0.7rem 1.1rem;font-size:0.9rem;color:#CF142B;background:none;border:none;cursor:pointer;text-align:left;">Cerrar Sesión</button>
+            </div>
+          </div>`;
+        document.getElementById('userAvatarBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          const dd = document.getElementById('userDropdown');
+          dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', () => { const dd = document.getElementById('userDropdown'); if (dd) dd.style.display = 'none'; });
+      }
+    })();
+
+    loadPost();
+  </script>
+  <script src="/js/pixel.js" defer></script>
+  <script src="/js/nav-auth.js"></script>
+</body>
+</html>

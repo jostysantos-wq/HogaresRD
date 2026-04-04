@@ -343,6 +343,7 @@ app.get('/ciudad/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/contacto',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'contacto.html')));
 app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos.html')));
 app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
+app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'post.html')));
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
@@ -631,6 +632,128 @@ app.post('/admin/catalogue/:id/unpublish', adminSessionAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Public Blog API ──────────────────────────────────────────────────────────
+app.get('/api/blog/posts', (req, res) => {
+  const posts = store.getBlogPosts('published').map(p => ({
+    id: p.id, slug: p.slug, title: p.title, excerpt: p.excerpt,
+    category: p.category, cover_image: p.cover_image, author: p.author,
+    read_time: p.read_time, featured: p.featured, views: p.views,
+    published_at: p.published_at,
+  }));
+  res.json({ posts });
+});
+
+app.get('/api/blog/posts/:slug', (req, res) => {
+  const post = store.getBlogPostBySlug(req.params.slug);
+  if (!post || post.status !== 'published') return res.status(404).json({ error: 'Not found' });
+  store.incrementBlogViews(req.params.slug);
+  res.json({ post });
+});
+
+// ── Public Page Content API ───────────────────────────────────────────────────
+app.get('/api/page-content/:page', (req, res) => {
+  const all = store.getAllPageContent().filter(s => s.page === req.params.page);
+  const result = {};
+  all.forEach(s => { result[s.section] = s.data; });
+  res.json(result);
+});
+
+// ── Admin Blog API ───────────────────────────────────────────────────────────
+app.get('/admin/blog/posts', adminSessionAuth, (req, res) => {
+  res.json(store.getBlogPosts());
+});
+
+app.post('/admin/blog/posts', adminSessionAuth, (req, res) => {
+  const { v4: uuidv4 } = require('uuid');
+  const body = req.body;
+  if (!body.title) return res.status(400).json({ error: 'title required' });
+
+  // Auto-generate slug from title if not provided
+  let slug = body.slug || body.title
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+
+  // Ensure unique slug
+  let base = slug, n = 1;
+  while (store.getBlogPostBySlug(slug)) { slug = `${base}-${n++}`; }
+
+  const post = {
+    id:          body.id || uuidv4(),
+    slug,
+    title:       body.title,
+    excerpt:     body.excerpt || '',
+    content:     body.content || '',
+    category:    body.category || 'general',
+    cover_image: body.cover_image || '',
+    author:      body.author || 'Equipo HogaresRD',
+    read_time:   parseInt(body.read_time) || 5,
+    featured:    !!body.featured,
+    status:      body.status || 'draft',
+    published_at:body.status === 'published' ? new Date().toISOString() : null,
+    created_at:  new Date().toISOString(),
+  };
+  store.saveBlogPost(post);
+  res.json({ success: true, post });
+});
+
+app.put('/admin/blog/posts/:id', adminSessionAuth, (req, res) => {
+  const existing = store.getBlogPostById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  const body = req.body;
+
+  // Handle slug change — check uniqueness
+  let slug = body.slug || existing.slug;
+  if (slug !== existing.slug) {
+    let base = slug, n = 1;
+    const other = store.getBlogPostBySlug(slug);
+    while (other && other.id !== existing.id) { slug = `${base}-${n++}`; }
+  }
+
+  const wasPublished = existing.status === 'published';
+  const isPublishing = body.status === 'published' && !wasPublished;
+
+  const post = {
+    ...existing,
+    slug,
+    title:       body.title       !== undefined ? body.title       : existing.title,
+    excerpt:     body.excerpt     !== undefined ? body.excerpt     : existing.excerpt,
+    content:     body.content     !== undefined ? body.content     : existing.content,
+    category:    body.category    !== undefined ? body.category    : existing.category,
+    cover_image: body.cover_image !== undefined ? body.cover_image : existing.cover_image,
+    author:      body.author      !== undefined ? body.author      : existing.author,
+    read_time:   body.read_time   !== undefined ? parseInt(body.read_time) : existing.read_time,
+    featured:    body.featured    !== undefined ? !!body.featured  : existing.featured,
+    status:      body.status      || existing.status,
+    published_at: isPublishing ? new Date().toISOString() : existing.published_at,
+  };
+  store.saveBlogPost(post);
+  res.json({ success: true, post });
+});
+
+app.delete('/admin/blog/posts/:id', adminSessionAuth, (req, res) => {
+  const existing = store.getBlogPostById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  store.deleteBlogPost(req.params.id);
+  res.json({ success: true });
+});
+
+// ── Admin Page Content API ───────────────────────────────────────────────────
+app.get('/admin/page-content', adminSessionAuth, (req, res) => {
+  res.json(store.getAllPageContent());
+});
+
+app.post('/admin/page-content', adminSessionAuth, (req, res) => {
+  const { v4: uuidv4 } = require('uuid');
+  const { page, section, data } = req.body;
+  if (!page || !section) return res.status(400).json({ error: 'page and section required' });
+  const id = `${page}_${section}`;
+  store.savePageSection(id, page, section, data || {});
+  res.json({ success: true });
+});
+
 // ── Unsubscribe ────────────────────────────────────────────────
 app.get('/unsubscribe', (req, res) => {
   const token = req.query.token || '';
@@ -668,6 +791,27 @@ app.use('/api/*', errorTracker.notFoundHandler);
 
 // ── Global error handler ──────────────────────────────────────────
 app.use(errorTracker.errorHandler);
+
+// ── Blog seed (runs once on first boot if no posts exist) ──────────────────
+(function seedBlogIfEmpty() {
+  try {
+    if (store.getBlogPosts().length > 0) return;
+    const { v4: uuidv4 } = require('uuid');
+    const seed = [
+      { slug:'como-comprar-primera-propiedad-rd', title:'Cómo comprar tu primera propiedad en República Dominicana: guía paso a paso', excerpt:'Desde la búsqueda inicial hasta la firma del contrato, te explicamos todo lo que debes saber para comprar tu primera casa o apartamento en RD sin complicaciones.', content:'<p>Comprar una propiedad por primera vez puede ser una de las decisiones más importantes de tu vida. En HogaresRD queremos acompañarte en ese proceso con información clara y práctica.</p><h2>1. Define tu presupuesto</h2><p>Antes de buscar cualquier propiedad, es fundamental conocer cuánto puedes invertir. Considera el precio de compra, los costos de cierre (aproximadamente un 3-5% del valor), el seguro de título, y los gastos de mantenimiento mensual.</p><h2>2. Explora el mercado</h2><p>Utiliza plataformas como HogaresRD para comparar propiedades en diferentes zonas, tipos y rangos de precio.</p><h2>3. Verifica la documentación</h2><p>Solicita el certificado de título y verifica que el vendedor sea el propietario legítimo en el Registro de Títulos. Un abogado inmobiliario puede ayudarte en este proceso.</p>', category:'guia', cover_image:'https://picsum.photos/seed/blogfeatured/800/600', read_time:15, featured:true, published_at:'2026-03-15T10:00:00.000Z' },
+      { slug:'mercado-lujo-punta-cana-2026', title:'El mercado de lujo en Punta Cana sigue creciendo: ¿qué está pasando?', excerpt:'Los precios en el corredor turístico del Este no dejan de subir. Analizamos los factores detrás del boom y qué significa para compradores e inversores.', content:'<p>El corredor turístico del Este dominicano, y en particular Punta Cana, sigue siendo uno de los mercados inmobiliarios más dinámicos del Caribe en 2026.</p><h2>Factores que impulsan el crecimiento</h2><p>El turismo récord de los últimos años ha generado una demanda sostenida de propiedades de lujo, tanto para uso propio como para inversión con renta.</p>', category:'mercado', cover_image:'https://picsum.photos/seed/blog1/600/400', read_time:8, featured:false, published_at:'2026-03-10T10:00:00.000Z' },
+      { slug:'5-razones-invertir-bienes-raices-rd', title:'5 razones para invertir en bienes raíces en RD ahora mismo', excerpt:'Tipo de cambio favorable, crecimiento turístico sostenido y alta demanda de alquileres. República Dominicana se posiciona como uno de los mercados más atractivos del Caribe.', content:'<p>Si estás pensando en dónde poner tu dinero a trabajar, República Dominicana merece estar en tu lista.</p><h2>1. Economía en crecimiento</h2><p>RD ha mantenido un crecimiento del PIB por encima del promedio latinoamericano durante la última década.</p><h2>2. Ley CONFOTUR</h2><p>Ofrece exenciones fiscales de hasta 20 años para desarrollos turísticos aprobados.</p>', category:'inversion', cover_image:'https://picsum.photos/seed/blog2/600/400', read_time:6, featured:false, published_at:'2026-02-20T10:00:00.000Z' },
+      { slug:'alquilar-o-comprar-como-decidir', title:'¿Alquilar o comprar? Cómo decidir según tu situación financiera', excerpt:'No siempre comprar es la mejor opción. Te damos las claves para evaluar qué te conviene más.', content:'<p>Esta es una de las preguntas más frecuentes que recibimos en HogaresRD.</p><h2>Cuándo tiene sentido comprar</h2><p>Si tienes estabilidad laboral y financiera y planeas quedarte al menos 5 años, comprar suele ser la opción más beneficiosa a largo plazo.</p><h2>Cuándo es mejor alquilar</h2><p>Si estás en etapa de transición o tu flujo de caja es ajustado, alquilar te da flexibilidad sin comprometer tu liquidez.</p>', category:'alquiler', cover_image:'https://picsum.photos/seed/blog3/600/400', read_time:7, featured:false, published_at:'2026-02-10T10:00:00.000Z' },
+      { slug:'santo-domingo-vs-santiago-2026', title:'Santo Domingo vs. Santiago: ¿en qué ciudad vivir mejor en 2026?', excerpt:'Calidad de vida, costo de vivienda, acceso a servicios y oportunidades laborales. Comparamos las dos ciudades más grandes de RD.', content:'<p>Si tienes que elegir entre la capital y la Ciudad Corazón, esta guía te ayudará.</p><h2>Santo Domingo</h2><p>La capital ofrece la mayor concentración de empleos formales y universidades. Los precios son los más altos del país.</p><h2>Santiago</h2><p>Los precios son entre un 20-35% más bajos que en la capital, con excelente calidad de vida y una economía industrial robusta.</p>', category:'ciudad', cover_image:'https://picsum.photos/seed/blog4/600/400', read_time:10, featured:false, published_at:'2026-01-25T10:00:00.000Z' },
+      { slug:'revisar-contrato-compraventa-rd', title:'Todo lo que debes revisar antes de firmar un contrato de compraventa', excerpt:'El contrato es el momento más importante de la transacción. Conoce las cláusulas clave y cómo protegerte legalmente.', content:'<p>Firmar un contrato de compraventa es uno de los momentos más importantes en la adquisición de una propiedad.</p><h2>Verificación del título</h2><p>Confirma que el certificado de título no tenga hipotecas ni gravámenes. Esto se verifica en el Registro de Títulos.</p><h2>Precio y forma de pago</h2><p>El contrato debe especificar el precio total, las cuotas, la forma de pago y las penalidades por incumplimiento.</p>', category:'guia', cover_image:'https://picsum.photos/seed/blog5/600/400', read_time:9, featured:false, published_at:'2026-01-15T10:00:00.000Z' },
+      { slug:'portafolio-inmobiliario-agentes-rd', title:'Cómo crear un portafolio inmobiliario que genere confianza y cierre más ventas', excerpt:'Tu portafolio digital es tu carta de presentación. Aprende a mostrar tus propiedades de manera profesional.', content:'<p>En un mercado cada vez más digital, tu presencia online como agente puede ser la diferencia entre cerrar o perder una venta.</p><h2>Fotografías profesionales</h2><p>Invierte en fotografía profesional. La primera impresión es la foto.</p><h2>Descripciones que venden</h2><p>Evita las descripciones genéricas. Resalta características únicas y el vecindario.</p><h2>Responde rápido</h2><p>Los compradores evalúan múltiples opciones. Responder en menos de 2 horas aumenta las probabilidades de concretar una cita.</p>', category:'agentes', cover_image:'https://picsum.photos/seed/blog6/600/400', read_time:5, featured:false, published_at:'2026-01-05T10:00:00.000Z' },
+    ];
+    seed.forEach(p => store.saveBlogPost({ ...p, id: uuidv4(), author: 'Equipo HogaresRD', status: 'published', views: 0 }));
+    console.log('[Blog] Seeded', seed.length, 'initial blog posts');
+  } catch(e) {
+    console.error('[Blog] Seed error:', e.message);
+  }
+})();
 
 if (require.main === module) {
   app.listen(PORT, () => {

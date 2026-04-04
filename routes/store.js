@@ -231,6 +231,35 @@ db.exec(`
     updatedAt       TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_saved_searches_userId ON saved_searches(userId);
+
+  CREATE TABLE IF NOT EXISTS blog_posts (
+    id          TEXT PRIMARY KEY,
+    slug        TEXT UNIQUE,
+    title       TEXT,
+    excerpt     TEXT,
+    content     TEXT,
+    category    TEXT DEFAULT 'general',
+    cover_image TEXT,
+    author      TEXT DEFAULT 'Equipo HogaresRD',
+    read_time   INTEGER DEFAULT 5,
+    featured    INTEGER DEFAULT 0,
+    status      TEXT DEFAULT 'draft',
+    views       INTEGER DEFAULT 0,
+    published_at TEXT,
+    created_at  TEXT,
+    updated_at  TEXT,
+    _extra      TEXT DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_blog_status ON blog_posts(status);
+  CREATE INDEX IF NOT EXISTS idx_blog_slug   ON blog_posts(slug);
+
+  CREATE TABLE IF NOT EXISTS page_content (
+    id      TEXT PRIMARY KEY,
+    page    TEXT NOT NULL,
+    section TEXT NOT NULL,
+    data    TEXT DEFAULT '{}'
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_page_content_uniq ON page_content(page, section);
 `);
 
 // ── FTS5 full-text search index ──────────────────────────────────────────
@@ -1124,6 +1153,80 @@ function deleteSavedSearch(id, userId) {
   return stmts.deleteSavedSearch.run(id, userId);
 }
 
+// ── Blog Posts ────────────────────────────────────────────────────────────────
+
+function hydrateBlogPost(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  obj.featured = !!obj.featured;
+  obj._extra   = _jsonParse(obj._extra, {});
+  return obj;
+}
+
+function getBlogPosts(status) {
+  const rows = status
+    ? db.prepare('SELECT * FROM blog_posts WHERE status = ? ORDER BY published_at DESC, created_at DESC').all(status)
+    : db.prepare('SELECT * FROM blog_posts ORDER BY published_at DESC, created_at DESC').all();
+  return rows.map(hydrateBlogPost);
+}
+
+function getBlogPostById(id) {
+  return hydrateBlogPost(db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id));
+}
+
+function getBlogPostBySlug(slug) {
+  return hydrateBlogPost(db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug));
+}
+
+function saveBlogPost(post) {
+  const row = {
+    id:          post.id,
+    slug:        post.slug,
+    title:       post.title       || '',
+    excerpt:     post.excerpt     || '',
+    content:     post.content     || '',
+    category:    post.category    || 'general',
+    cover_image: post.cover_image || '',
+    author:      post.author      || 'Equipo HogaresRD',
+    read_time:   post.read_time   || 5,
+    featured:    post.featured    ? 1 : 0,
+    status:      post.status      || 'draft',
+    views:       post.views       || 0,
+    published_at:post.published_at || null,
+    created_at:  post.created_at  || new Date().toISOString(),
+    updated_at:  new Date().toISOString(),
+    _extra:      _jsonStringify(post._extra || {}),
+  };
+  const { sql, values } = buildUpsert('blog_posts', row, 'id');
+  db.prepare(sql).run(...values);
+}
+
+function deleteBlogPost(id) {
+  db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
+}
+
+function incrementBlogViews(slug) {
+  db.prepare('UPDATE blog_posts SET views = views + 1 WHERE slug = ?').run(slug);
+}
+
+// ── Page Content ──────────────────────────────────────────────────────────────
+
+function getAllPageContent() {
+  return db.prepare('SELECT * FROM page_content').all()
+    .map(r => ({ ...r, data: _jsonParse(r.data, {}) }));
+}
+
+function getPageSection(page, section) {
+  const row = db.prepare('SELECT * FROM page_content WHERE page = ? AND section = ?').get(page, section);
+  return row ? { ...row, data: _jsonParse(row.data, {}) } : null;
+}
+
+function savePageSection(id, page, section, data) {
+  db.prepare(`INSERT INTO page_content (id, page, section, data) VALUES (?, ?, ?, ?)
+    ON CONFLICT(page, section) DO UPDATE SET data = excluded.data, id = excluded.id`)
+    .run(id, page, section, _jsonStringify(data));
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1146,4 +1249,6 @@ module.exports = {
   removePushSubscription, getPushPreferences, savePushPreferences,
   getSavedSearchesByUser, getSavedSearchById, getAllNotifiableSavedSearches,
   saveSavedSearch, deleteSavedSearch,
+  getBlogPosts, getBlogPostById, getBlogPostBySlug, saveBlogPost, deleteBlogPost, incrementBlogViews,
+  getAllPageContent, getPageSection, savePageSection,
 };

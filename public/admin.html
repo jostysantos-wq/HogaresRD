@@ -398,6 +398,64 @@
     .cat-status-approved { background: #d1f5e3; color: #0a7c4f; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
     .cat-status-pending  { background: #fff3cd; color: #856404; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
     .cat-status-rejected { background: #ffe0e3; color: #a81022; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
+    /* ── Blog CMS styles ── */
+    .blog-status-badge { display:inline-flex;align-items:center;gap:0.3rem;font-size:0.72rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:50px; }
+    .blog-status-badge.published { background:rgba(16,185,129,0.12);color:#059669; }
+    .blog-status-badge.draft { background:rgba(245,158,11,0.12);color:#d97706; }
+    /* ── Blog editor modal ── */
+    .blog-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:1.5rem; }
+    .blog-modal-overlay.open { display:flex; }
+    .blog-modal { background:var(--bg-card);border-radius:16px;width:100%;max-width:1100px;display:flex;flex-direction:column;max-height:calc(100vh - 3rem);overflow:hidden; }
+    .blog-modal-head { display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0; }
+    .blog-modal-head h3 { font-size:1rem;font-weight:800;color:var(--text); }
+    .blog-modal-close { background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);line-height:1;padding:0.25rem; }
+    .blog-modal-body { display:flex;flex:1;overflow:hidden; }
+    .blog-editor-main { flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border); }
+    .blog-title-input { width:100%;border:none;border-bottom:1px solid var(--border);padding:1rem 1.25rem;font-size:1.35rem;font-weight:800;background:transparent;color:var(--text);outline:none; }
+    .blog-title-input::placeholder { color:var(--text-muted);font-weight:400; }
+    /* Rich Text Editor */
+    .rte-wrap { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+    .rte-toolbar { display:flex;flex-wrap:wrap;gap:0.2rem;padding:0.6rem 1rem;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0; }
+    .rte-btn { background:none;border:1px solid transparent;border-radius:5px;padding:0.25rem 0.5rem;cursor:pointer;color:var(--text);font-size:0.82rem;font-weight:600;transition:all 0.15s;min-width:28px;display:flex;align-items:center;justify-content:center; }
+    .rte-btn:hover { background:var(--accent-light);border-color:var(--accent);color:var(--accent); }
+    .rte-btn.active { background:var(--accent-light);border-color:var(--accent);color:var(--accent); }
+    .rte-sep { width:1px;background:var(--border);margin:0 0.2rem;align-self:stretch; }
+    .rte-content { flex:1;padding:1rem 1.25rem;overflow-y:auto;outline:none;font-size:0.95rem;line-height:1.8;color:var(--text); }
+    .rte-content h2 { font-size:1.3rem;font-weight:800;margin:1.5rem 0 0.75rem;padding-left:0.75rem;border-left:3px solid var(--accent);color:var(--text); }
+    .rte-content h3 { font-size:1.1rem;font-weight:700;margin:1.25rem 0 0.6rem;color:var(--text); }
+    .rte-content p { margin-bottom:1rem; }
+    .rte-content ul, .rte-content ol { margin:0.5rem 0 1rem 1.5rem; }
+    .rte-content li { margin-bottom:0.3rem; }
+    .rte-content a { color:var(--accent); }
+    .rte-content img { max-width:100%;border-radius:8px;margin:0.75rem 0; }
+    .rte-content blockquote { border-left:3px solid var(--accent);padding:0.5rem 1rem;margin:1rem 0;background:var(--accent-light);border-radius:0 8px 8px 0;font-style:italic;color:var(--text-muted); }
+    .rte-source { flex:1;padding:1rem 1.25rem;border:none;background:var(--bg);color:var(--text);font-family:monospace;font-size:0.83rem;resize:none;outline:none; }
+    /* Editor sidebar */
+    .blog-editor-side { width:280px;flex-shrink:0;overflow-y:auto;padding:1.25rem; }
+    .editor-field { margin-bottom:1.25rem; }
+    .editor-field label { display:block;font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.4rem; }
+    .editor-field input, .editor-field select, .editor-field textarea { width:100%;border:1.5px solid var(--border);border-radius:8px;padding:0.55rem 0.75rem;font-size:0.88rem;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s; }
+    .editor-field input:focus, .editor-field select:focus, .editor-field textarea:focus { border-color:var(--accent); }
+    .editor-field textarea { resize:vertical;min-height:80px; }
+    .cover-preview { width:100%;height:120px;border-radius:8px;object-fit:cover;margin-top:0.5rem;background:var(--bg);display:none; }
+    .editor-toggle { display:flex;align-items:center;justify-content:space-between; }
+    .toggle-switch { position:relative;width:40px;height:22px;cursor:pointer; }
+    .toggle-switch input { opacity:0;width:0;height:0; }
+    .toggle-switch .slider { position:absolute;inset:0;background:var(--toggle-bg);border-radius:50px;transition:background 0.2s; }
+    .toggle-switch input:checked + .slider { background:var(--accent); }
+    .toggle-switch .slider::after { content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+    .toggle-switch input:checked + .slider::after { left:21px; }
+    .blog-modal-foot { display:flex;align-items:center;justify-content:flex-end;gap:0.75rem;padding:1rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0; }
+    /* Page content cards */
+    .page-card { background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:1.25rem; }
+    .page-card h4 { font-size:0.88rem;font-weight:800;color:var(--text);margin-bottom:0.25rem; }
+    .page-card p { font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem; }
+    .page-field { margin-bottom:0.85rem; }
+    .page-field label { display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.3rem; }
+    .page-field input, .page-field textarea { width:100%;border:1.5px solid var(--border);border-radius:8px;padding:0.5rem 0.7rem;font-size:0.85rem;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s;resize:vertical; }
+    .page-field input:focus, .page-field textarea:focus { border-color:var(--accent); }
+    .page-card-saved { display:none;font-size:0.8rem;color:#059669;font-weight:600;margin-right:auto; }
+
     .cat-featured-star { color: #f59e0b; font-size: 1rem; cursor: pointer; transition: transform .15s; line-height: 1; }
     .cat-featured-star:hover { transform: scale(1.25); }
     .cat-featured-star.off { color: #c4d4e8; }
@@ -562,6 +620,20 @@
         <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
         <span class="nav-item-label">Tours</span>
         <span class="nav-tooltip">Tours</span>
+      </button>
+
+      <div class="sb-section-label">CONTENIDO</div>
+
+      <button class="nav-item" data-page="blog" onclick="showPage('blog', this)">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        <span class="nav-item-label">Blog / CMS</span>
+        <span class="nav-tooltip">Blog</span>
+      </button>
+
+      <button class="nav-item" data-page="paginas" onclick="showPage('paginas', this)">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span class="nav-item-label">Páginas</span>
+        <span class="nav-tooltip">Páginas</span>
       </button>
 
       <div class="sb-section-label">SISTEMA</div>
@@ -1047,9 +1119,133 @@
         </div>
       </div>
 
+      <!-- ── BLOG / CMS ──────────────────────────────────────────────────── -->
+      <div class="page-section" id="page-blog">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="filter-btn active" id="blogTab-all" onclick="setBlogTab('all',this)">Todos</button>
+            <button class="filter-btn" id="blogTab-published" onclick="setBlogTab('published',this)">Publicados</button>
+            <button class="filter-btn" id="blogTab-draft" onclick="setBlogTab('draft',this)">Borradores</button>
+          </div>
+          <button class="btn-primary" onclick="openPostEditor(null)" style="display:flex;align-items:center;gap:0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Nuevo Artículo
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="cat-table" id="blogTable">
+            <thead><tr>
+              <th style="width:56px"></th>
+              <th>Título</th>
+              <th style="width:130px">Categoría</th>
+              <th style="width:100px">Estado</th>
+              <th style="width:60px">Vistas</th>
+              <th style="width:130px">Fecha</th>
+              <th style="width:100px">Acciones</th>
+            </tr></thead>
+            <tbody id="blogTbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PÁGINAS ─────────────────────────────────────────────── -->
+      <div class="page-section" id="page-paginas">
+        <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:1.5rem;">Edita el contenido de secciones clave de las páginas del sitio. Los cambios se aplican en tiempo real.</p>
+        <div id="pagesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;">
+          <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;">Cargando secciones…</div>
+        </div>
+      </div>
+
     </div><!-- /content-area -->
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
+
+  <!-- Blog Post Editor Modal -->
+  <div class="blog-modal-overlay" id="blogModalOverlay">
+    <div class="blog-modal">
+      <div class="blog-modal-head">
+        <h3 id="blogModalTitle">Nuevo Artículo</h3>
+        <button class="blog-modal-close" onclick="closePostEditor()">×</button>
+      </div>
+      <div class="blog-modal-body">
+        <div class="blog-editor-main">
+          <input type="text" class="blog-title-input" id="editorTitle" placeholder="Título del artículo…" />
+          <div class="rte-wrap">
+            <div class="rte-toolbar" id="rteToolbar">
+              <button class="rte-btn" onclick="rteCmd('bold')" title="Negrita"><b>B</b></button>
+              <button class="rte-btn" onclick="rteCmd('italic')" title="Itálica"><i>I</i></button>
+              <button class="rte-btn" onclick="rteCmd('underline')" title="Subrayado"><u>U</u></button>
+              <div class="rte-sep"></div>
+              <button class="rte-btn" onclick="rteBlock('h2')">H2</button>
+              <button class="rte-btn" onclick="rteBlock('h3')">H3</button>
+              <button class="rte-btn" onclick="rteBlock('p')" title="Párrafo">¶</button>
+              <button class="rte-btn" onclick="rteBlock('blockquote')" title="Cita">❝</button>
+              <div class="rte-sep"></div>
+              <button class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="Lista">• Lista</button>
+              <button class="rte-btn" onclick="rteCmd('insertOrderedList')" title="Lista numerada">1. Lista</button>
+              <div class="rte-sep"></div>
+              <button class="rte-btn" onclick="rteLink()" title="Enlace">🔗</button>
+              <button class="rte-btn" onclick="rteImage()" title="Imagen URL">🖼</button>
+              <div class="rte-sep"></div>
+              <button class="rte-btn" id="rteSourceBtn" onclick="toggleRteSource()" title="Editar HTML">⌨ HTML</button>
+            </div>
+            <div class="rte-content" id="rteContent" contenteditable="true" spellcheck="true"></div>
+            <textarea class="rte-source" id="rteSource" style="display:none;" placeholder="Pega o escribe el HTML del artículo…"></textarea>
+          </div>
+        </div>
+        <div class="blog-editor-side">
+          <div class="editor-field">
+            <label>Extracto</label>
+            <textarea id="editorExcerpt" placeholder="Resumen breve del artículo (150–200 caracteres)…"></textarea>
+          </div>
+          <div class="editor-field">
+            <label>Categoría</label>
+            <select id="editorCategory">
+              <option value="guia">Guías para compradores</option>
+              <option value="mercado">Mercado inmobiliario</option>
+              <option value="inversion">Inversión</option>
+              <option value="alquiler">Alquiler</option>
+              <option value="ciudad">Ciudades</option>
+              <option value="agentes">Para agentes</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div class="editor-field">
+            <label>Imagen de portada (URL)</label>
+            <input type="url" id="editorCover" placeholder="https://…" oninput="previewCover(this.value)" />
+            <img id="coverPreview" class="cover-preview" alt="Preview" />
+          </div>
+          <div class="editor-field">
+            <label>Autor</label>
+            <input type="text" id="editorAuthor" value="Equipo HogaresRD" />
+          </div>
+          <div class="editor-field">
+            <label>Tiempo de lectura (minutos)</label>
+            <input type="number" id="editorReadTime" value="5" min="1" max="60" />
+          </div>
+          <div class="editor-field">
+            <label>Slug (URL)</label>
+            <input type="text" id="editorSlug" placeholder="auto-generado desde el título" />
+          </div>
+          <div class="editor-field">
+            <div class="editor-toggle">
+              <label style="margin:0;">Artículo destacado</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="editorFeatured" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="blog-modal-foot">
+        <span id="blogSaveMsg" style="display:none;font-size:0.82rem;color:#059669;font-weight:600;margin-right:auto;"></span>
+        <button class="btn-secondary" onclick="closePostEditor()">Cancelar</button>
+        <button class="btn-secondary" onclick="savePost('draft')">Guardar borrador</button>
+        <button class="btn-primary" onclick="savePost('published')">Publicar</button>
+      </div>
+    </div>
+  </div>
 
 <script>
   let allSubmissions = [];
@@ -1085,6 +1281,8 @@
     newsletter:   'Newsletter',
     tours:        'Tours',
     errores:      'Registro de Errores',
+    blog:         'Blog / CMS',
+    paginas:      'Editor de Páginas',
   };
 
   let currentPage = 'dashboard';
@@ -1109,6 +1307,8 @@
     else if (page === 'newsletter')  { loadNewsletter(); }
     else if (page === 'tours')       { loadTours(); }
     else if (page === 'errores')     { loadErrors(); }
+    else if (page === 'blog')        { loadBlogPosts(); }
+    else if (page === 'paginas')     { loadPageContent(); }
   }
 
   function refreshCurrent() {
@@ -1965,6 +2165,331 @@
   // ── Init ──────────────────────────────────────────────────────
   // Load submissions data immediately for the stats on dashboard
   loadSubmissions();
+
+  // ── Blog CMS ─────────────────────────────────────────────────────────────
+  const BLOG_CAT_LABELS = {
+    guia:'Guías', mercado:'Mercado', inversion:'Inversión', alquiler:'Alquiler',
+    ciudad:'Ciudades', agentes:'Agentes', general:'General'
+  };
+
+  let allBlogPosts = [];
+  let blogTabFilter = 'all';
+  let editingPostId = null;
+  let rteSourceMode = false;
+
+  function setBlogTab(tab, btn) {
+    blogTabFilter = tab;
+    document.querySelectorAll('[id^="blogTab-"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderBlogTable(allBlogPosts);
+  }
+
+  async function loadBlogPosts() {
+    document.getElementById('blogTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>';
+    try {
+      const r = await fetch('/admin/blog/posts');
+      if (handleUnauth(r)) return;
+      allBlogPosts = await r.json();
+      renderBlogTable(allBlogPosts);
+    } catch(e) {
+      document.getElementById('blogTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Error cargando posts.</td></tr>';
+    }
+  }
+
+  function renderBlogTable(posts) {
+    const filtered = blogTabFilter === 'all' ? posts : posts.filter(p => p.status === blogTabFilter);
+    const tbody = document.getElementById('blogTbody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">No hay artículos${blogTabFilter !== 'all' ? ' en esta categoría' : ''}.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(p => {
+      const thumb = p.cover_image ? `<img src="${escAdm(p.cover_image)}" style="width:44px;height:36px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" />` : `<div style="width:44px;height:36px;border-radius:6px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted);">Sin img</div>`;
+      const status = p.status === 'published'
+        ? '<span class="blog-status-badge published">● Publicado</span>'
+        : '<span class="blog-status-badge draft">● Borrador</span>';
+      const cat = BLOG_CAT_LABELS[p.category] || p.category;
+      const date = p.published_at ? new Date(p.published_at).toLocaleDateString('es-DO',{day:'numeric',month:'short',year:'numeric'}) : (p.created_at ? new Date(p.created_at).toLocaleDateString('es-DO',{day:'numeric',month:'short'}) + ' (creado)' : '—');
+      const featStar = p.featured ? '⭐' : '';
+      return `<tr>
+        <td style="padding:0.5rem 0.75rem;">${thumb}</td>
+        <td style="padding:0.5rem 0.75rem;max-width:280px;">
+          <div style="font-weight:700;font-size:0.85rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${featStar} ${escAdm(p.title)}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">/blog/${escAdm(p.slug)}</div>
+        </td>
+        <td style="padding:0.5rem 0.75rem;"><span style="font-size:0.78rem;color:var(--text-muted);">${escAdm(cat)}</span></td>
+        <td style="padding:0.5rem 0.75rem;">${status}</td>
+        <td style="padding:0.5rem 0.75rem;text-align:right;font-size:0.82rem;color:var(--text-muted);">${(p.views||0).toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem;font-size:0.78rem;color:var(--text-muted);">${date}</td>
+        <td style="padding:0.5rem 0.75rem;">
+          <div style="display:flex;gap:0.35rem;">
+            <button onclick="openPostEditor('${escAdm(p.id)}')" class="btn-icon" title="Editar" style="padding:0.3rem 0.6rem;font-size:0.8rem;">✏️</button>
+            <a href="/blog/${encodeURIComponent(p.slug)}" target="_blank" class="btn-icon" title="Ver" style="padding:0.3rem 0.6rem;font-size:0.8rem;text-decoration:none;">👁</a>
+            <button onclick="deletePost('${escAdm(p.id)}','${escAdm(p.title)}')" class="btn-icon" title="Eliminar" style="padding:0.3rem 0.6rem;font-size:0.8rem;color:#CF142B;">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function escAdm(s) { return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function openPostEditor(postId) {
+    editingPostId = postId;
+    const modal = document.getElementById('blogModalOverlay');
+    const post = postId ? allBlogPosts.find(p => p.id === postId) : null;
+
+    document.getElementById('blogModalTitle').textContent = post ? 'Editar Artículo' : 'Nuevo Artículo';
+    document.getElementById('editorTitle').value = post ? post.title : '';
+    document.getElementById('editorExcerpt').value = post ? (post.excerpt || '') : '';
+    document.getElementById('editorCategory').value = post ? (post.category || 'general') : 'general';
+    document.getElementById('editorCover').value = post ? (post.cover_image || '') : '';
+    document.getElementById('editorAuthor').value = post ? (post.author || 'Equipo HogaresRD') : 'Equipo HogaresRD';
+    document.getElementById('editorReadTime').value = post ? (post.read_time || 5) : 5;
+    document.getElementById('editorSlug').value = post ? (post.slug || '') : '';
+    document.getElementById('editorFeatured').checked = post ? !!post.featured : false;
+    document.getElementById('blogSaveMsg').style.display = 'none';
+
+    // Set cover preview
+    previewCover(post ? post.cover_image : '');
+
+    // Set RTE content
+    rteSourceMode = false;
+    document.getElementById('rteContent').style.display = '';
+    document.getElementById('rteSource').style.display = 'none';
+    document.getElementById('rteSourceBtn').classList.remove('active');
+    document.getElementById('rteContent').innerHTML = post ? (post.content || '') : '';
+
+    // Auto-generate slug from title
+    document.getElementById('editorTitle').addEventListener('input', autoSlug, { once: false });
+
+    modal.classList.add('open');
+  }
+
+  function autoSlug() {
+    const slugEl = document.getElementById('editorSlug');
+    if (slugEl.dataset.manual === '1') return;
+    const title = document.getElementById('editorTitle').value;
+    slugEl.value = title.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const slugEl = document.getElementById('editorSlug');
+    if (slugEl) slugEl.addEventListener('input', () => { slugEl.dataset.manual = '1'; });
+  });
+
+  function closePostEditor() {
+    document.getElementById('blogModalOverlay').classList.remove('open');
+    editingPostId = null;
+    document.getElementById('editorSlug').dataset.manual = '';
+    document.getElementById('editorTitle').removeEventListener('input', autoSlug);
+  }
+
+  function previewCover(url) {
+    const img = document.getElementById('coverPreview');
+    if (url && url.startsWith('http')) {
+      img.src = url;
+      img.style.display = 'block';
+      img.onerror = () => { img.style.display = 'none'; };
+    } else {
+      img.style.display = 'none';
+    }
+  }
+
+  // Rich Text Editor commands
+  function rteCmd(cmd) {
+    document.getElementById('rteContent').focus();
+    document.execCommand(cmd, false, null);
+  }
+
+  function rteBlock(tag) {
+    document.getElementById('rteContent').focus();
+    document.execCommand('formatBlock', false, tag);
+  }
+
+  function rteLink() {
+    const url = prompt('URL del enlace:');
+    if (!url) return;
+    document.getElementById('rteContent').focus();
+    document.execCommand('createLink', false, url);
+  }
+
+  function rteImage() {
+    const url = prompt('URL de la imagen:');
+    if (!url) return;
+    document.getElementById('rteContent').focus();
+    document.execCommand('insertImage', false, url);
+  }
+
+  function toggleRteSource() {
+    const content = document.getElementById('rteContent');
+    const source  = document.getElementById('rteSource');
+    const btn     = document.getElementById('rteSourceBtn');
+    if (!rteSourceMode) {
+      source.value = content.innerHTML;
+      content.style.display = 'none';
+      source.style.display = '';
+      btn.classList.add('active');
+      rteSourceMode = true;
+    } else {
+      content.innerHTML = source.value;
+      source.style.display = 'none';
+      content.style.display = '';
+      btn.classList.remove('active');
+      rteSourceMode = false;
+    }
+  }
+
+  function getRteContent() {
+    if (rteSourceMode) return document.getElementById('rteSource').value;
+    return document.getElementById('rteContent').innerHTML;
+  }
+
+  async function savePost(status) {
+    const title = document.getElementById('editorTitle').value.trim();
+    if (!title) { alert('El título es requerido.'); return; }
+
+    const payload = {
+      title,
+      excerpt:     document.getElementById('editorExcerpt').value.trim(),
+      content:     getRteContent(),
+      category:    document.getElementById('editorCategory').value,
+      cover_image: document.getElementById('editorCover').value.trim(),
+      author:      document.getElementById('editorAuthor').value.trim() || 'Equipo HogaresRD',
+      read_time:   parseInt(document.getElementById('editorReadTime').value) || 5,
+      slug:        document.getElementById('editorSlug').value.trim() || '',
+      featured:    document.getElementById('editorFeatured').checked,
+      status,
+    };
+
+    const url    = editingPostId ? `/admin/blog/posts/${editingPostId}` : '/admin/blog/posts';
+    const method = editingPostId ? 'PUT' : 'POST';
+
+    try {
+      const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error();
+      const msg = document.getElementById('blogSaveMsg');
+      msg.textContent = status === 'published' ? '✅ Artículo publicado' : '✅ Borrador guardado';
+      msg.style.display = '';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+      if (!editingPostId) {
+        const { post } = await r.json();
+        editingPostId = post.id;
+        document.getElementById('blogModalTitle').textContent = 'Editar Artículo';
+        document.getElementById('editorSlug').value = post.slug;
+      }
+      await loadBlogPosts();
+    } catch(e) {
+      alert('Error guardando el artículo. Intenta de nuevo.');
+    }
+  }
+
+  async function deletePost(id, title) {
+    if (!confirm(`¿Eliminar el artículo "${title}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      const r = await fetch(`/admin/blog/posts/${id}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error();
+      await loadBlogPosts();
+    } catch(e) { alert('Error eliminando el artículo.'); }
+  }
+
+  // ── Page Content Editor ───────────────────────────────────────────────────
+  const PAGE_SECTIONS_DEF = [
+    {
+      page: 'home', section: 'hero', label: 'Inicio — Héroe',
+      desc: 'Título y subtítulo de la sección principal de la página de inicio.',
+      fields: [
+        { key: 'title',    label: 'Título principal',  type: 'input',    placeholder: 'Encuentra tu hogar ideal en República Dominicana' },
+        { key: 'subtitle', label: 'Subtítulo',         type: 'textarea', placeholder: 'Explora miles de propiedades…' },
+      ]
+    },
+    {
+      page: 'blog', section: 'hero', label: 'Blog — Héroe',
+      desc: 'Título y subtítulo del hero de la sección de blog.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Todo sobre bienes raíces en República Dominicana' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Guías prácticas, consejos de expertos…' },
+      ]
+    },
+    {
+      page: 'home', section: 'cta', label: 'Inicio — Llamada a acción',
+      desc: 'Texto del banner de llamada a acción en la página principal.',
+      fields: [
+        { key: 'title',      label: 'Título del banner', type: 'input',    placeholder: '¿Listo para encontrar tu próximo hogar?' },
+        { key: 'buttonText', label: 'Texto del botón',   type: 'input',    placeholder: 'Ver propiedades' },
+      ]
+    },
+    {
+      page: 'home', section: 'seo', label: 'Inicio — SEO',
+      desc: 'Meta descripción y título SEO de la página de inicio.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título (SEO)',       type: 'input',    placeholder: 'HogaresRD — Bienes raíces en República Dominicana' },
+        { key: 'metaDesc',  label: 'Meta descripción (SEO)',  type: 'textarea', placeholder: 'Encuentra tu propiedad ideal…' },
+      ]
+    },
+  ];
+
+  let pageContentData = {};
+
+  async function loadPageContent() {
+    try {
+      const r = await fetch('/admin/page-content');
+      if (handleUnauth(r)) return;
+      const rows = await r.json();
+      pageContentData = {};
+      rows.forEach(row => { pageContentData[`${row.page}_${row.section}`] = row.data; });
+      renderPageCards();
+    } catch(e) {
+      document.getElementById('pagesGrid').innerHTML = '<p style="color:var(--text-muted);">Error cargando contenido de páginas.</p>';
+    }
+  }
+
+  function renderPageCards() {
+    const grid = document.getElementById('pagesGrid');
+    grid.innerHTML = PAGE_SECTIONS_DEF.map(def => {
+      const saved = pageContentData[`${def.page}_${def.section}`] || {};
+      const fieldsHtml = def.fields.map(f => `
+        <div class="page-field">
+          <label>${escAdm(f.label)}</label>
+          ${f.type === 'textarea'
+            ? `<textarea id="pf_${def.page}_${def.section}_${f.key}" placeholder="${escAdm(f.placeholder)}" rows="3">${escAdm(saved[f.key] || '')}</textarea>`
+            : `<input type="text" id="pf_${def.page}_${def.section}_${f.key}" placeholder="${escAdm(f.placeholder)}" value="${escAdm(saved[f.key] || '')}" />`
+          }
+        </div>`).join('');
+      return `
+        <div class="page-card">
+          <h4>${escAdm(def.label)}</h4>
+          <p>${escAdm(def.desc)}</p>
+          ${fieldsHtml}
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.5rem;">
+            <span class="page-card-saved" id="pcs_${def.page}_${def.section}">✅ Guardado</span>
+            <button class="btn-primary" style="margin-left:auto;" onclick="savePageSection('${def.page}','${def.section}')">Guardar</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function savePageSection(page, section) {
+    const def = PAGE_SECTIONS_DEF.find(d => d.page === page && d.section === section);
+    if (!def) return;
+    const data = {};
+    def.fields.forEach(f => {
+      const el = document.getElementById(`pf_${page}_${section}_${f.key}`);
+      if (el) data[f.key] = el.value.trim();
+    });
+    try {
+      const r = await fetch('/admin/page-content', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ page, section, data })
+      });
+      if (!r.ok) throw new Error();
+      const msg = document.getElementById(`pcs_${page}_${section}`);
+      msg.style.display = '';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+      pageContentData[`${page}_${section}`] = data;
+    } catch(e) { alert('Error guardando. Intenta de nuevo.'); }
+  }
 </script>
 <script src="/js/pixel.js" defer></script>
 </body>
