@@ -49,6 +49,7 @@ function createTransport() {
         to:      toArray,
         subject: opts.subject,
         html:    opts.html,
+        headers: opts.headers || {},
       }).then(result => {
         if (result.error) {
           throw Object.assign(new Error(result.error.message || 'Resend error'), result.error);

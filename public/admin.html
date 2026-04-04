@@ -5,298 +5,555 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HogaresRD — Panel de Administración</title>
   <link rel="stylesheet" href="/css/core.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: #f0f4f9; color: #001840; min-height: 100vh; }
 
-    /* DASHBOARD — shown immediately (server guards the page) */
-    .dashboard { display: block; }
-    nav { background: #0038A8; padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; }
-    .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
-    .nav-logo-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-    .nav-logo-icon svg { width: 18px; height: 18px; fill: #fff; }
-    .nav-logo span { color: #fff; font-weight: 800; font-size: 1.1rem; }
-    .nav-logo em { color: #7ab8f5; font-style: normal; }
-    .nav-badge { background: rgba(207,20,43,0.9); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; letter-spacing: 1px; text-transform: uppercase; }
-    .nav-right { display: flex; align-items: center; gap: 1rem; }
-    .nav-right span { color: rgba(255,255,255,0.7); font-size: 0.85rem; }
-    .logout-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: background 0.2s; }
-    .logout-btn:hover { background: rgba(255,255,255,0.2); }
+    :root {
+      --sidebar-w: 224px;
+      --sidebar-col-w: 56px;
+      --topbar-h: 56px;
+      --sb-bg: #1C2B3A;
+      --sb-border: rgba(255,255,255,0.07);
+      --sb-hover: rgba(255,255,255,0.06);
+      --sb-active: rgba(255,255,255,0.13);
+      --accent: #0038A8;
+      --success: #0a7c4f;
+      --danger: #CF142B;
+      --warning: #c07c1a;
+      --purple: #4a2d9c;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
 
-    .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
+    body { font-family: var(--font); background: #f0f4f9; color: #001840; min-height: 100vh; overflow: hidden; }
 
-    /* STATS */
-    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
-    .stat-card { background: #fff; border-radius: 14px; padding: 1.5rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); }
+    /* ── APP SHELL ─────────────────────────────────────────────── */
+    .app-shell { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── SIDEBAR ────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sb-bg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      transition: width 0.22s ease;
+      overflow: hidden;
+      position: relative;
+      z-index: 100;
+    }
+    .sidebar.collapsed { width: var(--sidebar-col-w); }
+
+    .sb-header {
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--sb-border);
+      flex-shrink: 0;
+      gap: 8px;
+    }
+    .sb-logo-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: rgba(0,56,168,0.7);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sb-logo-icon svg { width: 16px; height: 16px; fill: #fff; }
+    .sb-logo-text {
+      color: #fff; font-weight: 800; font-size: 0.95rem;
+      white-space: nowrap; overflow: hidden;
+      transition: opacity 0.15s, width 0.22s;
+    }
+    .sb-logo-text em { color: #7ab8f5; font-style: normal; }
+    .sb-badge {
+      background: rgba(207,20,43,0.85); color: #fff;
+      font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.45rem;
+      border-radius: 50px; letter-spacing: 1px; text-transform: uppercase;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .collapse-btn {
+      margin-left: auto; flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.4); padding: 4px;
+      border-radius: 5px; display: flex; align-items: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .collapse-btn:hover { color: #fff; background: var(--sb-hover); }
+    .collapse-btn svg { width: 18px; height: 18px; fill: currentColor; transition: transform 0.22s; }
+    .sidebar.collapsed .collapse-btn svg { transform: rotate(180deg); }
+    .sidebar.collapsed .sb-logo-text,
+    .sidebar.collapsed .sb-badge { opacity: 0; width: 0; pointer-events: none; }
+
+    /* Nav */
+    .sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 0; }
+    .sb-nav::-webkit-scrollbar { width: 3px; }
+    .sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+    .sb-section-label {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: rgba(255,255,255,0.3);
+      padding: 14px 16px 5px;
+      white-space: nowrap; overflow: hidden;
+      transition: opacity 0.15s;
+    }
+    .sidebar.collapsed .sb-section-label { opacity: 0; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 0 10px; height: 40px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.6); font-family: var(--font);
+      font-size: 0.875rem; font-weight: 500;
+      border-radius: 8px; margin: 1px 8px; width: calc(100% - 16px);
+      transition: background 0.15s, color 0.15s;
+      position: relative; text-align: left;
+    }
+    .nav-item:hover  { background: var(--sb-hover); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: var(--sb-active); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .nav-item-label { white-space: nowrap; overflow: hidden; transition: opacity 0.15s, width 0.22s; }
+    .sidebar.collapsed .nav-item-label { opacity: 0; width: 0; }
+    .nav-pill {
+      margin-left: auto; background: var(--danger);
+      color: #fff; font-size: 0.62rem; font-weight: 800;
+      padding: 0.1rem 0.45rem; border-radius: 50px;
+      flex-shrink: 0; min-width: 18px; text-align: center;
+    }
+    .sidebar.collapsed .nav-pill { display: none; }
+
+    /* Footer */
+    .sb-footer {
+      border-top: 1px solid var(--sb-border);
+      padding: 12px 10px;
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .sb-avatar {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: rgba(0,56,168,0.6);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.75rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .sb-user-info { overflow: hidden; flex: 1; }
+    .sb-user-name { color: #fff; font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-user-role { color: rgba(255,255,255,0.4); font-size: 0.72rem; white-space: nowrap; }
+    .sb-logout {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.35); padding: 4px;
+      border-radius: 5px; display: flex; align-items: center;
+      transition: color 0.15s;
+    }
+    .sb-logout:hover { color: var(--danger); }
+    .sb-logout svg { width: 16px; height: 16px; fill: currentColor; }
+    .sidebar.collapsed .sb-user-info,
+    .sidebar.collapsed .sb-logout { opacity: 0; pointer-events: none; width: 0; }
+
+    /* ── MAIN AREA ──────────────────────────────────────────────── */
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    .topbar {
+      height: var(--topbar-h); background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center;
+      padding: 0 1.5rem; gap: 1rem; flex-shrink: 0;
+    }
+    .topbar-title { font-size: 1rem; font-weight: 700; color: #001840; flex: 1; }
+    .topbar-refresh {
+      background: none; border: 1.5px solid #d0dcea; color: #4d6a8a;
+      padding: 0.4rem 0.9rem; border-radius: 50px; font-size: 0.82rem;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .topbar-refresh:hover { border-color: var(--accent); color: var(--accent); }
+    .topbar-refresh svg { width: 14px; height: 14px; fill: currentColor; }
+
+    .content-area { flex: 1; overflow-y: auto; padding: 1.75rem 2rem; }
+
+    /* Page sections */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* ── STATS ──────────────────────────────────────────────────── */
+    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #fff; border-radius: 14px; padding: 1.4rem 1.25rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); }
     .stat-card .num { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 0.3rem; }
-    .stat-card .lbl { font-size: 0.82rem; color: #4d6a8a; font-weight: 500; }
-    .stat-pending  .num { color: #c07c1a; }
-    .stat-approved .num { color: #0a7c4f; }
-    .stat-rejected .num { color: #CF142B; }
-    .stat-total    .num { color: #0038A8; }
+    .stat-card .lbl { font-size: 0.8rem; color: #4d6a8a; font-weight: 500; }
+    .stat-pending  .num { color: var(--warning); }
+    .stat-approved .num { color: var(--success); }
+    .stat-rejected .num { color: var(--danger); }
+    .stat-total    .num { color: var(--accent); }
 
-    /* FILTERS */
-    .filters { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .filter-btn { background: #fff; border: 1.5px solid #d0dcea; color: #4d6a8a; padding: 0.45rem 1.1rem; border-radius: 50px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .filter-btn.active, .filter-btn:hover { border-color: #0038A8; color: #0038A8; background: #e8f0fb; }
-    .filter-btn.active { background: #0038A8; color: #fff; border-color: #0038A8; }
-    .refresh-btn { margin-left: auto; background: none; border: 1.5px solid #d0dcea; color: #4d6a8a; padding: 0.45rem 1rem; border-radius: 50px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
-    .refresh-btn:hover { border-color: #0038A8; color: #0038A8; }
-    .refresh-btn svg { width: 14px; height: 14px; fill: currentColor; }
+    /* ── SECTION HEADER ─────────────────────────────────────────── */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+    .section-header h2 { font-size: 1rem; font-weight: 700; color: #001840; }
 
-    /* CARDS */
+    /* ── FILTERS ────────────────────────────────────────────────── */
+    .filters { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .filter-btn { background: #fff; border: 1.5px solid #d0dcea; color: #4d6a8a; padding: 0.4rem 1rem; border-radius: 50px; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); background: #e8f0fb; }
+
+    /* ── SUBMISSION CARDS ───────────────────────────────────────── */
     .submissions-list { display: flex; flex-direction: column; gap: 1rem; }
     .sub-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); overflow: hidden; }
-    .sub-card-header { padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #f0f4f9; }
+    .sub-card-header { padding: 1.1rem 1.4rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #f0f4f9; }
     .sub-title-row { flex: 1; }
-    .sub-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.3rem; }
-    .sub-meta { font-size: 0.82rem; color: #4d6a8a; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .sub-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .sub-meta { font-size: 0.8rem; color: #4d6a8a; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
     .sub-meta svg { width: 12px; height: 12px; fill: #4d6a8a; }
     .sub-meta span { display: flex; align-items: center; gap: 0.3rem; }
-    .status-badge { font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 50px; white-space: nowrap; flex-shrink: 0; }
+    .status-badge { font-size: 0.7rem; font-weight: 700; padding: 0.28rem 0.7rem; border-radius: 50px; white-space: nowrap; flex-shrink: 0; }
     .status-pending  { background: #fff3cd; color: #856404; }
     .status-approved { background: #d1f5e3; color: #0a7c4f; }
     .status-rejected { background: #ffe0e3; color: #a81022; }
 
-    .sub-card-body { padding: 1.25rem 1.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .sub-field label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; display: block; margin-bottom: 0.25rem; }
-    .sub-field span { font-size: 0.9rem; font-weight: 500; }
-    .sub-price { font-weight: 800; color: #0038A8; font-size: 1rem; }
-
-    .sub-desc { padding: 0 1.5rem 1rem; font-size: 0.88rem; color: #4d6a8a; line-height: 1.6; }
-    .sub-desc strong { color: #001840; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem; }
-
-    .sub-amenities { padding: 0 1.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .amenity-tag { background: #e8f0fb; color: #0038A8; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 50px; }
-
-    .sub-card-footer { padding: 1rem 1.5rem; background: #f8fafd; border-top: 1px solid #f0f4f9; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-    .contact-info { font-size: 0.85rem; color: #4d6a8a; }
+    .sub-card-body { padding: 1.1rem 1.4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+    .sub-field label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; display: block; margin-bottom: 0.2rem; }
+    .sub-field span { font-size: 0.875rem; font-weight: 500; }
+    .sub-price { font-weight: 800; color: var(--accent); font-size: 0.95rem; }
+    .sub-desc { padding: 0 1.4rem 0.9rem; font-size: 0.85rem; color: #4d6a8a; line-height: 1.6; }
+    .sub-desc strong { color: #001840; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.2rem; }
+    .sub-amenities { padding: 0 1.4rem 0.9rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .amenity-tag { background: #e8f0fb; color: var(--accent); font-size: 0.73rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 50px; }
+    .sub-card-footer { padding: 0.9rem 1.4rem; background: #f8fafd; border-top: 1px solid #f0f4f9; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .contact-info { font-size: 0.82rem; color: #4d6a8a; }
     .contact-info strong { color: #001840; display: block; margin-bottom: 0.1rem; }
-    .card-actions { display: flex; gap: 0.75rem; }
-    .btn-approve { background: #0a7c4f; border: none; color: #fff; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+    .card-actions { display: flex; gap: 0.6rem; }
+    .btn-approve { background: var(--success); border: none; color: #fff; padding: 0.55rem 1.2rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
     .btn-approve:hover { background: #086040; transform: translateY(-1px); }
-    .btn-approve svg { width: 16px; height: 16px; fill: #fff; }
-    .btn-reject { background: #fff; border: 1.5px solid #CF142B; color: #CF142B; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
-    .btn-reject:hover { background: #CF142B; color: #fff; transform: translateY(-1px); }
-    .btn-reject svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-approve svg { width: 15px; height: 15px; fill: #fff; }
+    .btn-reject { background: #fff; border: 1.5px solid var(--danger); color: var(--danger); padding: 0.55rem 1.2rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-reject:hover { background: var(--danger); color: #fff; transform: translateY(-1px); }
+    .btn-reject svg { width: 15px; height: 15px; fill: currentColor; }
     .btn-disabled { opacity: 0.4; pointer-events: none; }
 
     .empty-state { text-align: center; padding: 4rem 2rem; color: #4d6a8a; }
     .empty-state svg { width: 48px; height: 48px; fill: #c4d4e8; margin-bottom: 1rem; }
-    .empty-state h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #001840; }
-
+    .empty-state h3 { font-size: 1.05rem; margin-bottom: 0.5rem; color: #001840; }
     .loading { text-align: center; padding: 3rem; color: #4d6a8a; }
 
     /* AGENCIES */
-    .sub-agencies { padding: 0 1.5rem 1rem; }
-    .sub-agencies-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.5rem; }
+    .sub-agencies { padding: 0 1.4rem 0.9rem; }
+    .sub-agencies-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.5rem; }
     .agency-cards { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .agency-card { background: #e8f0fb; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.82rem; }
-    .agency-card strong { display: block; color: #0038A8; font-size: 0.85rem; }
-    .agency-card span { color: #4d6a8a; display: block; font-size: 0.78rem; }
+    .agency-card { background: #e8f0fb; border-radius: 8px; padding: 0.45rem 0.7rem; font-size: 0.8rem; }
+    .agency-card strong { display: block; color: var(--accent); font-size: 0.82rem; }
+    .agency-card span { color: #4d6a8a; display: block; font-size: 0.75rem; }
 
     /* UNIT TYPES */
-    .unit-types-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 0.4rem; }
-    .unit-types-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; padding: 0.3rem 0.5rem; border-bottom: 1px solid #e8eef7; }
-    .unit-types-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #f0f4f9; color: #001840; }
+    .unit-types-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.4rem; }
+    .unit-types-table th { text-align: left; font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; padding: 0.28rem 0.5rem; border-bottom: 1px solid #e8eef7; }
+    .unit-types-table td { padding: 0.42rem 0.5rem; border-bottom: 1px solid #f0f4f9; color: #001840; }
     .unit-types-table tr:last-child td { border-bottom: none; }
-    .unit-types-table .price-col { font-weight: 700; color: #0038A8; }
-    .unit-types-table .avail-col { font-weight: 700; color: #0a7c4f; }
-    .sub-unit-types { padding: 0 1.5rem 1rem; }
-    .sub-unit-types-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
+    .unit-types-table .price-col { font-weight: 700; color: var(--accent); }
+    .unit-types-table .avail-col { font-weight: 700; color: var(--success); }
+    .sub-unit-types { padding: 0 1.4rem 0.9rem; }
+    .sub-unit-types-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
 
     /* CLAIM CARD */
-    .claim-card-body { padding: 1.25rem 1.5rem; }
-    .claim-target { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.88rem; margin-bottom: 1rem; }
+    .claim-card-body { padding: 1.1rem 1.4rem; }
+    .claim-target { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; margin-bottom: 0.9rem; }
     .claim-target strong { color: #856404; }
-    .btn-merge { background: #4a2d9c; border: none; color: #fff; padding: 0.6rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-merge { background: var(--purple); border: none; color: #fff; padding: 0.55rem 1.2rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
     .btn-merge:hover { background: #3a1e82; transform: translateY(-1px); }
-    .btn-merge svg { width: 16px; height: 16px; fill: #fff; }
+    .btn-merge svg { width: 15px; height: 15px; fill: #fff; }
 
     /* MINI MAP */
-    .sub-map-wrap { padding: 0 1.5rem 1rem; }
-    .sub-map-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
-    .admin-map { height: 180px; border-radius: 10px; border: 1px solid #d0dcea; }
+    .sub-map-wrap { padding: 0 1.4rem 0.9rem; }
+    .sub-map-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
+    .admin-map { height: 170px; border-radius: 10px; border: 1px solid #d0dcea; }
 
-    /* SUB-FILTERS row (below main tabs) */
-    .sub-filters { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-
-    /* LEADS PANEL */
-    .leads-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
-    .lead-stat { background: #fff; border-radius: 6px; padding: 1.25rem; border: 1px solid #d0dcea; text-align: center; }
-    .lead-stat .num { font-size: 1.8rem; font-weight: 900; line-height: 1; margin-bottom: 0.2rem; }
-    .lead-stat .lbl { font-size: 0.78rem; color: #4d6a8a; font-weight: 500; }
-    .leads-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .leads-toolbar .filter-btn { font-size: 0.82rem; }
-    .leads-toolbar .filter-btn.status-pendiente  { border-color: #c07c1a; color: #c07c1a; }
-    .leads-toolbar .filter-btn.status-pendiente.active  { background: #c07c1a; color: #fff; }
-    .leads-toolbar .filter-btn.status-en_proceso { border-color: #0038A8; color: #0038A8; }
-    .leads-toolbar .filter-btn.status-en_proceso.active { background: #0038A8; color: #fff; }
-    .leads-toolbar .filter-btn.status-comprado   { border-color: #0a7c4f; color: #0a7c4f; }
-    .leads-toolbar .filter-btn.status-comprado.active   { background: #0a7c4f; color: #fff; }
-    .leads-toolbar .filter-btn.status-no_comprado{ border-color: #CF142B; color: #CF142B; }
-    .leads-toolbar .filter-btn.status-no_comprado.active{ background: #CF142B; color: #fff; }
-    .export-btn { margin-left: auto; background: none; border: 1.5px solid #0a7c4f; color: #0a7c4f; padding: 0.45rem 1rem; border-radius: 50px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
-    .export-btn:hover { background: #0a7c4f; color: #fff; }
+    /* ── LEADS ──────────────────────────────────────────────────── */
+    .leads-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .lead-stat { background: #fff; border-radius: 10px; padding: 1.1rem; border: 1px solid #d0dcea; text-align: center; }
+    .lead-stat .num { font-size: 1.75rem; font-weight: 900; line-height: 1; margin-bottom: 0.2rem; }
+    .lead-stat .lbl { font-size: 0.75rem; color: #4d6a8a; font-weight: 500; }
+    .leads-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+    .leads-toolbar .filter-btn { font-size: 0.8rem; }
+    .leads-toolbar .filter-btn.status-pendiente.active  { background: var(--warning); border-color: var(--warning); }
+    .leads-toolbar .filter-btn.status-en_proceso.active { background: var(--accent); border-color: var(--accent); }
+    .leads-toolbar .filter-btn.status-comprado.active   { background: var(--success); border-color: var(--success); }
+    .leads-toolbar .filter-btn.status-no_comprado.active{ background: var(--danger); border-color: var(--danger); }
+    .export-btn { margin-left: auto; background: none; border: 1.5px solid var(--success); color: var(--success); padding: 0.4rem 0.9rem; border-radius: 50px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+    .export-btn:hover { background: var(--success); color: #fff; }
 
     .leads-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
-    .leads-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .leads-table th { background: #f0f4f9; padding: 0.7rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
-    .leads-table td { padding: 0.85rem 1rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; }
+    .leads-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .leads-table th { background: #f0f4f9; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
+    .leads-table td { padding: 0.8rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; }
     .leads-table tr:last-child td { border-bottom: none; }
     .leads-table tr:hover td { background: #f8fafd; }
     .lead-name { font-weight: 700; color: #001840; }
-    .lead-contact { font-size: 0.78rem; color: #4d6a8a; margin-top: 0.2rem; }
+    .lead-contact { font-size: 0.75rem; color: #4d6a8a; margin-top: 0.2rem; }
     .lead-listing { font-weight: 600; color: #001840; max-width: 200px; }
-    .lead-listing small { display: block; font-weight: 400; color: #7a93b0; font-size: 0.75rem; }
-    .lead-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-    .badge-pendiente   { background: #fef3e2; color: #c07c1a; }
-    .badge-en_proceso  { background: #e8f0fb; color: #0038A8; }
-    .badge-comprado    { background: #dcf5e9; color: #0a7c4f; }
-    .badge-no_comprado { background: #fde8eb; color: #CF142B; }
-    .lead-actions { display: flex; flex-direction: column; gap: 0.4rem; min-width: 140px; }
-    .lead-status-select { width: 100%; padding: 0.35rem 0.6rem; border: 1.5px solid #d0dcea; border-radius: 7px; font-size: 0.78rem; font-weight: 600; background: #f8fafd; color: #001840; cursor: pointer; }
-    .leads-empty { padding: 3rem; text-align: center; color: #7a93b0; font-size: 0.9rem; }
+    .lead-listing small { display: block; font-weight: 400; color: #7a93b0; font-size: 0.73rem; }
+    .lead-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    .badge-pendiente   { background: #fef3e2; color: var(--warning); }
+    .badge-en_proceso  { background: #e8f0fb; color: var(--accent); }
+    .badge-comprado    { background: #dcf5e9; color: var(--success); }
+    .badge-no_comprado { background: #fde8eb; color: var(--danger); }
+    .lead-actions { display: flex; flex-direction: column; gap: 0.4rem; min-width: 130px; }
+    .lead-status-select { width: 100%; padding: 0.32rem 0.55rem; border: 1.5px solid #d0dcea; border-radius: 7px; font-size: 0.75rem; font-weight: 600; background: #f8fafd; color: #001840; cursor: pointer; }
+    .leads-empty { padding: 2.5rem; text-align: center; color: #7a93b0; font-size: 0.88rem; }
 
-    /* ADS PANEL */
-    .ads-form-card { background: #fff; border-radius: 14px; padding: 1.75rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); margin-bottom: 2rem; }
-    .ads-form-title { font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem; color: #001840; }
-    .ads-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
-    .ads-field { display: flex; flex-direction: column; gap: 0.4rem; }
+    /* ── ADS ────────────────────────────────────────────────────── */
+    .ads-form-card { background: #fff; border-radius: 14px; padding: 1.5rem; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); margin-bottom: 1.75rem; }
+    .ads-form-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 1.1rem; color: #001840; }
+    .ads-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 1.1rem; }
+    .ads-field { display: flex; flex-direction: column; gap: 0.35rem; }
     .ads-field-full { grid-column: 1 / -1; }
-    .ads-field label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; }
-    .ads-field input { padding: 0.7rem 0.9rem; border: 1.5px solid #d0dcea; border-radius: 9px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-    .ads-field input:focus { border-color: #0038A8; }
-    .ads-create-btn { background: #0038A8; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 9px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .ads-field label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; }
+    .ads-field input { padding: 0.65rem 0.85rem; border: 1.5px solid #d0dcea; border-radius: 9px; font-size: 0.875rem; outline: none; transition: border-color 0.2s; }
+    .ads-field input:focus { border-color: var(--accent); }
+    .ads-create-btn { background: var(--accent); color: #fff; border: none; padding: 0.7rem 1.4rem; border-radius: 9px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
     .ads-create-btn:hover { background: #001a45; }
-    .ads-msg { margin-top: 0.75rem; font-size: 0.875rem; font-weight: 600; min-height: 1.2rem; }
-    .ads-msg.ok  { color: #0a7c4f; }
-    .ads-msg.err { color: #CF142B; }
+    .ads-msg { margin-top: 0.7rem; font-size: 0.84rem; font-weight: 600; min-height: 1.2rem; }
+    .ads-msg.ok  { color: var(--success); }
+    .ads-msg.err { color: var(--danger); }
 
-    .ads-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+    .ads-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.1rem; }
     .ad-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; box-shadow: 0 2px 8px rgba(17,17,16,0.04); display: flex; flex-direction: column; }
-    .ad-card-img { width: 100%; height: 160px; object-fit: cover; background: #e8eef7; display: block; }
-    .ad-card-img-placeholder { width: 100%; height: 160px; background: #e8eef7; display: flex; align-items: center; justify-content: center; color: #a0b4cc; font-size: 0.8rem; }
-    .ad-card-body { padding: 1rem 1.1rem; flex: 1; }
-    .ad-card-title { font-size: 0.95rem; font-weight: 800; color: #001840; margin-bottom: 0.25rem; }
-    .ad-card-advertiser { font-size: 0.8rem; color: #4d6a8a; margin-bottom: 0.6rem; }
-    .ad-card-stats { display: flex; gap: 1rem; font-size: 0.78rem; color: #4d6a8a; margin-bottom: 0.5rem; }
-    .ad-card-stats span { display: flex; align-items: center; gap: 0.3rem; }
-    .ad-card-dates { font-size: 0.75rem; color: #7a93b0; }
-    .ad-card-footer { padding: 0.75rem 1.1rem; border-top: 1px solid #f0f4f9; display: flex; align-items: center; gap: 0.6rem; }
-    .ad-toggle { flex: 1; padding: 0.5rem 0.8rem; border-radius: 7px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
-    .ad-toggle.active  { background: #dcf5e9; color: #0a7c4f; }
+    .ad-card-img { width: 100%; height: 150px; object-fit: cover; background: #e8eef7; display: block; }
+    .ad-card-img-placeholder { width: 100%; height: 150px; background: #e8eef7; display: flex; align-items: center; justify-content: center; color: #a0b4cc; font-size: 0.8rem; }
+    .ad-card-body { padding: 0.9rem 1rem; flex: 1; }
+    .ad-card-title { font-size: 0.92rem; font-weight: 800; color: #001840; margin-bottom: 0.2rem; }
+    .ad-card-advertiser { font-size: 0.78rem; color: #4d6a8a; margin-bottom: 0.5rem; }
+    .ad-card-stats { display: flex; gap: 1rem; font-size: 0.75rem; color: #4d6a8a; margin-bottom: 0.4rem; }
+    .ad-card-dates { font-size: 0.72rem; color: #7a93b0; }
+    .ad-card-footer { padding: 0.7rem 1rem; border-top: 1px solid #f0f4f9; display: flex; align-items: center; gap: 0.5rem; }
+    .ad-toggle { flex: 1; padding: 0.45rem 0.75rem; border-radius: 7px; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+    .ad-toggle.active   { background: #dcf5e9; color: var(--success); }
     .ad-toggle.inactive { background: #f0f4f9; color: #4d6a8a; }
-    .ad-toggle.active:hover  { background: #0a7c4f; color: #fff; }
-    .ad-toggle.inactive:hover { background: #0038A8; color: #fff; }
-    .ad-delete { padding: 0.5rem 0.8rem; border-radius: 7px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: #fde8eb; color: #CF142B; transition: all 0.2s; }
-    .ad-delete:hover { background: #CF142B; color: #fff; }
-    .ad-badge-active   { display: inline-block; background: #dcf5e9; color: #0a7c4f; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .ad-badge-inactive { display: inline-block; background: #f0f4f9; color: #7a93b0; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .ads-empty { grid-column: 1/-1; text-align: center; padding: 3rem; color: #7a93b0; font-size: 0.9rem; }
+    .ad-toggle.active:hover   { background: var(--success); color: #fff; }
+    .ad-toggle.inactive:hover { background: var(--accent); color: #fff; }
+    .ad-delete { padding: 0.45rem 0.75rem; border-radius: 7px; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer; background: #fde8eb; color: var(--danger); transition: all 0.2s; }
+    .ad-delete:hover { background: var(--danger); color: #fff; }
+    .ad-badge-active   { display: inline-block; background: #dcf5e9; color: var(--success); font-size: 0.67rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ad-badge-inactive { display: inline-block; background: #f0f4f9; color: #7a93b0; font-size: 0.67rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ads-empty { grid-column: 1/-1; text-align: center; padding: 2.5rem; color: #7a93b0; }
 
-    /* APPS TABLE overrides */
-    .leads-table td a:hover { text-decoration: underline; }
+    /* ── ERROR LOG ───────────────────────────────────────────────── */
+    .error-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .error-stat { background: #fff; border-radius: 10px; padding: 1.1rem; border: 1px solid #d0dcea; text-align: center; }
+    .error-stat .num { font-size: 1.75rem; font-weight: 900; color: var(--danger); }
+    .error-stat .lbl { font-size: 0.75rem; color: #4d6a8a; }
+    .error-log-table { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
+    .error-log-table table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .error-log-table th { background: #f0f4f9; padding: 0.6rem 0.9rem; text-align: left; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; }
+    .error-log-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; font-family: monospace; font-size: 0.75rem; }
+    .error-log-table tr:last-child td { border-bottom: none; }
+    .elog-fatal   { color: #fff; background: var(--danger); padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; }
+    .elog-error   { color: var(--danger); font-weight: 700; }
+    .elog-warn    { color: var(--warning); font-weight: 700; }
 
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       .stats-row { grid-template-columns: repeat(3, 1fr); }
       .sub-card-body { grid-template-columns: repeat(2, 1fr); }
       .sub-card-footer { flex-direction: column; align-items: flex-start; }
       .ads-form-grid { grid-template-columns: 1fr; }
+      .sidebar { position: absolute; }
     }
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
-  <!-- DASHBOARD — access controlled server-side -->
-  <div class="dashboard" id="dashboard">
-    <nav>
-      <div class="nav-logo">
-        <div class="nav-logo-icon">
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        </div>
-        <span>Hogares<em>RD</em></span>
-        <span class="nav-badge">Admin</span>
+<div class="app-shell">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </div>
-      <div class="nav-right">
-        <span>Panel de Aprobación</span>
-        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
-      </div>
+      <span class="sb-logo-text">Hogares<em>RD</em></span>
+      <span class="sb-badge">Admin</span>
+      <button class="collapse-btn" onclick="toggleSidebar()" title="Colapsar">
+        <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+      </button>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section-label">PRINCIPAL</div>
+
+      <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span class="nav-item-label">Dashboard</span>
+      </button>
+
+      <button class="nav-item" data-page="propiedades" onclick="showPage('propiedades', this)">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span class="nav-item-label">Propiedades</span>
+        <span class="nav-pill" id="pendingPill" style="display:none;"></span>
+      </button>
+
+      <button class="nav-item" data-page="leads" onclick="showPage('leads', this)">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span class="nav-item-label">Leads</span>
+      </button>
+
+      <button class="nav-item" data-page="anuncios" onclick="showPage('anuncios', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+        <span class="nav-item-label">Anuncios</span>
+      </button>
+
+      <button class="nav-item" data-page="aplicaciones" onclick="showPage('aplicaciones', this)">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span class="nav-item-label">Aplicaciones</span>
+      </button>
+
+      <div class="sb-section-label">SISTEMA</div>
+
+      <button class="nav-item" data-page="errores" onclick="showPage('errores', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span class="nav-item-label">Registro de Errores</span>
+      </button>
     </nav>
 
-    <div class="main">
-      <div class="stats-row">
-        <div class="stat-card stat-pending">
-          <div class="num" id="statPending">—</div>
-          <div class="lbl">Pendientes</div>
-        </div>
-        <div class="stat-card stat-approved">
-          <div class="num" id="statApproved">—</div>
-          <div class="lbl">Aprobadas</div>
-        </div>
-        <div class="stat-card stat-rejected">
-          <div class="num" id="statRejected">—</div>
-          <div class="lbl">Rechazadas</div>
-        </div>
-        <div class="stat-card stat-total">
-          <div class="num" id="statTotal">—</div>
-          <div class="lbl">Total</div>
-        </div>
-        <div class="stat-card" style="border-top: 3px solid #4a2d9c;">
-          <div class="num" id="statClaims" style="color:#4a2d9c;">—</div>
-          <div class="lbl">Solicitudes Agencia</div>
-        </div>
+    <div class="sb-footer">
+      <div class="sb-avatar">A</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name">Administrador</div>
+        <div class="sb-user-role">hogaresrd_admin</div>
       </div>
+      <button class="sb-logout" onclick="logout()" title="Cerrar sesión">
+        <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      </button>
+    </div>
+  </aside>
 
-      <div class="filters">
-        <button class="filter-btn active" id="tabSubmissions" onclick="showTab('submissions', this)">Propiedades</button>
-        <button class="filter-btn" id="tabLeads" onclick="showTab('leads', this)">Leads</button>
-        <button class="filter-btn" id="tabAds" onclick="showTab('ads', this)">Anuncios</button>
-        <button class="filter-btn" id="tabApps" onclick="showTab('apps', this)">Aplicaciones</button>
-        <button class="refresh-btn" onclick="refreshCurrent()">
-          <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-          Actualizar
-        </button>
-      </div>
+  <!-- ── MAIN AREA ──────────────────────────────────────────── -->
+  <div class="main-area">
 
-      <!-- Submissions sub-filters (visible on Propiedades tab) -->
-      <div class="sub-filters" id="subFilters">
-        <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
-        <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
-        <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
-        <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes de Agencia</button>
-        <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
-      </div>
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="font-size:0.85rem;color:#4d6a8a;font-weight:600;" id="pageTitle">Dashboard</div>
+      <div style="flex:1;"></div>
+      <button class="topbar-refresh" onclick="refreshCurrent()">
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        Actualizar
+      </button>
+    </div>
 
-      <div class="submissions-list" id="submissionsList">
-        <div class="loading">Cargando propiedades...</div>
-      </div>
+    <div class="content-area">
 
-      <!-- ── Leads Panel ─────────────────────────────────────── -->
-      <div id="leadsPanel" style="display:none;">
+      <!-- ── DASHBOARD PAGE ─────────────────────────────────── -->
+      <div class="page-section active" id="page-dashboard">
 
-        <div class="leads-stats">
-          <div class="lead-stat" style="border-top:3px solid #c07c1a;">
-            <div class="num" id="lsTotal" style="color:#c07c1a;">—</div>
+        <div class="stats-row">
+          <div class="stat-card stat-pending">
+            <div class="num" id="statPending">—</div>
             <div class="lbl">Pendientes</div>
           </div>
-          <div class="lead-stat" style="border-top:3px solid #0038A8;">
-            <div class="num" id="lsEnProceso" style="color:#0038A8;">—</div>
+          <div class="stat-card stat-approved">
+            <div class="num" id="statApproved">—</div>
+            <div class="lbl">Aprobadas</div>
+          </div>
+          <div class="stat-card stat-rejected">
+            <div class="num" id="statRejected">—</div>
+            <div class="lbl">Rechazadas</div>
+          </div>
+          <div class="stat-card stat-total">
+            <div class="num" id="statTotal">—</div>
+            <div class="lbl">Total Propiedades</div>
+          </div>
+          <div class="stat-card" style="border-top:3px solid var(--purple);">
+            <div class="num" id="statClaims" style="color:var(--purple);">—</div>
+            <div class="lbl">Solicitudes Agencia</div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+          <div onclick="showPage('propiedades', document.querySelector('[data-page=propiedades]'))"
+               style="background:#fff;border-radius:14px;padding:1.4rem;border:1px solid #d0dcea;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:1rem;"
+               onmouseenter="this.style.borderColor='#0038A8'" onmouseleave="this.style.borderColor='#d0dcea'">
+            <div style="width:42px;height:42px;background:#e8f0fb;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#0038A8"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Propiedades</div>
+              <div style="font-size:0.75rem;color:#4d6a8a;">Aprobar / Rechazar</div>
+            </div>
+          </div>
+          <div onclick="showPage('leads', document.querySelector('[data-page=leads]'))"
+               style="background:#fff;border-radius:14px;padding:1.4rem;border:1px solid #d0dcea;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:1rem;"
+               onmouseenter="this.style.borderColor='#0038A8'" onmouseleave="this.style.borderColor='#d0dcea'">
+            <div style="width:42px;height:42px;background:#e8f0fb;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#0038A8"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Leads</div>
+              <div style="font-size:0.75rem;color:#4d6a8a;">Gestionar contactos</div>
+            </div>
+          </div>
+          <div onclick="showPage('anuncios', document.querySelector('[data-page=anuncios]'))"
+               style="background:#fff;border-radius:14px;padding:1.4rem;border:1px solid #d0dcea;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:1rem;"
+               onmouseenter="this.style.borderColor='#0038A8'" onmouseleave="this.style.borderColor='#d0dcea'">
+            <div style="width:42px;height:42px;background:#e8f0fb;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#0038A8"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Anuncios</div>
+              <div style="font-size:0.75rem;color:#4d6a8a;">Crear y activar</div>
+            </div>
+          </div>
+          <div onclick="showPage('errores', document.querySelector('[data-page=errores]'))"
+               style="background:#fff;border-radius:14px;padding:1.4rem;border:1px solid #d0dcea;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:1rem;"
+               onmouseenter="this.style.borderColor='#CF142B'" onmouseleave="this.style.borderColor='#d0dcea'">
+            <div style="width:42px;height:42px;background:#fde8eb;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#CF142B"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Errores</div>
+              <div style="font-size:0.75rem;color:#4d6a8a;">Logs del sistema</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── PROPIEDADES PAGE ───────────────────────────────── -->
+      <div class="page-section" id="page-propiedades">
+        <div class="section-header">
+          <h2>Propiedades Enviadas</h2>
+          <div class="filters" id="subFilters">
+            <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
+            <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
+            <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
+            <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes Agencia</button>
+            <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
+          </div>
+        </div>
+        <div class="submissions-list" id="submissionsList">
+          <div class="loading">Cargando propiedades...</div>
+        </div>
+      </div>
+
+      <!-- ── LEADS PAGE ────────────────────────────────────── -->
+      <div class="page-section" id="page-leads">
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid var(--warning);">
+            <div class="num" id="lsTotal" style="color:var(--warning);">—</div>
+            <div class="lbl">Pendientes</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--accent);">
+            <div class="num" id="lsEnProceso" style="color:var(--accent);">—</div>
             <div class="lbl">En Proceso</div>
           </div>
-          <div class="lead-stat" style="border-top:3px solid #0a7c4f;">
-            <div class="num" id="lsComprado" style="color:#0a7c4f;">—</div>
+          <div class="lead-stat" style="border-top:3px solid var(--success);">
+            <div class="num" id="lsComprado" style="color:var(--success);">—</div>
             <div class="lbl">Comprados</div>
           </div>
-          <div class="lead-stat" style="border-top:3px solid #CF142B;">
-            <div class="num" id="lsNoProceso" style="color:#CF142B;">—</div>
+          <div class="lead-stat" style="border-top:3px solid var(--danger);">
+            <div class="num" id="lsNoProceso" style="color:var(--danger);">—</div>
             <div class="lbl">No Comprado</div>
           </div>
         </div>
-
         <div class="leads-toolbar">
           <button class="filter-btn active" onclick="filterLeads('all', this)">Todos</button>
           <button class="filter-btn status-pendiente"  onclick="filterLeads('pendiente', this)">Pendientes</button>
@@ -304,24 +561,17 @@
           <button class="filter-btn status-comprado"   onclick="filterLeads('comprado', this)">Comprados</button>
           <button class="filter-btn status-no_comprado" onclick="filterLeads('no_comprado', this)">No Comprado</button>
           <button class="export-btn" onclick="exportLeads()">
-            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
             Exportar CSV
           </button>
         </div>
-
         <div class="leads-table-wrap">
           <table class="leads-table">
             <thead>
               <tr>
-                <th>Contacto</th>
-                <th>Propiedad</th>
-                <th>Intención</th>
-                <th>Financiamiento</th>
-                <th>Presupuesto</th>
-                <th>Plazo</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
+                <th>Contacto</th><th>Propiedad</th><th>Intención</th>
+                <th>Financiamiento</th><th>Presupuesto</th><th>Plazo</th>
+                <th>Estado</th><th>Fecha</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="leadsTableBody">
@@ -329,66 +579,10 @@
             </tbody>
           </table>
         </div>
-
       </div>
 
-      <!-- ── Aplicaciones Panel ─────────────────────────────── -->
-      <div id="appsPanel" style="display:none;">
-        <div class="leads-stats">
-          <div class="lead-stat" style="border-top:3px solid #0038A8;">
-            <div class="num" id="appTotal" style="color:#0038A8;">—</div>
-            <div class="lbl">Total</div>
-          </div>
-          <div class="lead-stat" style="border-top:3px solid #c07c1a;">
-            <div class="num" id="appPending" style="color:#c07c1a;">—</div>
-            <div class="lbl">En Proceso</div>
-          </div>
-          <div class="lead-stat" style="border-top:3px solid #0a7c4f;">
-            <div class="num" id="appApproved" style="color:#0a7c4f;">—</div>
-            <div class="lbl">Aprobadas</div>
-          </div>
-          <div class="lead-stat" style="border-top:3px solid #CF142B;">
-            <div class="num" id="appRejected" style="color:#CF142B;">—</div>
-            <div class="lbl">Rechazadas</div>
-          </div>
-        </div>
-
-        <div class="leads-toolbar" id="appsToolbar">
-          <button class="filter-btn active" onclick="filterApps('all', this)">Todas</button>
-          <button class="filter-btn" onclick="filterApps('aplicado', this)">Aplicadas</button>
-          <button class="filter-btn" onclick="filterApps('en_revision', this)">En Revisión</button>
-          <button class="filter-btn" onclick="filterApps('documentos', this)">Documentos</button>
-          <button class="filter-btn" onclick="filterApps('en_aprobacion', this)">En Aprobación</button>
-          <button class="filter-btn" onclick="filterApps('aprobado', this)">Aprobadas</button>
-          <button class="filter-btn" onclick="filterApps('completado', this)">Completadas</button>
-          <button class="filter-btn" onclick="filterApps('rechazado', this)">Rechazadas</button>
-        </div>
-
-        <div class="leads-table-wrap">
-          <table class="leads-table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Propiedad</th>
-                <th>Broker</th>
-                <th>Estado</th>
-                <th>Documentos</th>
-                <th>Pago</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="appsTableBody">
-              <tr><td colspan="8" class="leads-empty">Cargando aplicaciones...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ── Anuncios Panel ───────────────────────────────────── -->
-      <div id="adsPanel" style="display:none;">
-
-        <!-- Create Ad Form -->
+      <!-- ── ANUNCIOS PAGE ─────────────────────────────────── -->
+      <div class="page-section" id="page-anuncios">
         <div class="ads-form-card">
           <h3 class="ads-form-title">Crear Nuevo Anuncio</h3>
           <div class="ads-form-grid">
@@ -401,7 +595,7 @@
               <input type="text" id="adAdvertiser" placeholder="ej. Banco Popular">
             </div>
             <div class="ads-field ads-field-full">
-              <label>URL de Imagen * <span style="font-weight:400;color:#7a93b0;">(debe ser accesible públicamente)</span></label>
+              <label>URL de Imagen * <span style="font-weight:400;color:#7a93b0;">(accesible públicamente)</span></label>
               <input type="url" id="adImageUrl" placeholder="https://...">
             </div>
             <div class="ads-field ads-field-full">
@@ -420,231 +614,247 @@
           <button class="ads-create-btn" onclick="createAd()">+ Crear Anuncio</button>
           <div class="ads-msg" id="adMsg"></div>
         </div>
-
-        <!-- Ads List -->
         <div class="ads-list" id="adsList">
           <div class="loading">Cargando anuncios...</div>
         </div>
-
       </div>
-    </div>
-  </div>
 
-  <script>
-    let allSubmissions = [];
-    let currentFilter = 'pending';
-    const adminMaps = {};
+      <!-- ── APLICACIONES PAGE ─────────────────────────────── -->
+      <div class="page-section" id="page-aplicaciones">
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid var(--accent);">
+            <div class="num" id="appTotal" style="color:var(--accent);">—</div>
+            <div class="lbl">Total</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--warning);">
+            <div class="num" id="appPending" style="color:var(--warning);">—</div>
+            <div class="lbl">En Proceso</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--success);">
+            <div class="num" id="appApproved" style="color:var(--success);">—</div>
+            <div class="lbl">Aprobadas</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--danger);">
+            <div class="num" id="appRejected" style="color:var(--danger);">—</div>
+            <div class="lbl">Rechazadas</div>
+          </div>
+        </div>
+        <div class="leads-toolbar" id="appsToolbar">
+          <button class="filter-btn active" onclick="filterApps('all', this)">Todas</button>
+          <button class="filter-btn" onclick="filterApps('aplicado', this)">Aplicadas</button>
+          <button class="filter-btn" onclick="filterApps('en_revision', this)">En Revisión</button>
+          <button class="filter-btn" onclick="filterApps('documentos', this)">Documentos</button>
+          <button class="filter-btn" onclick="filterApps('en_aprobacion', this)">En Aprobación</button>
+          <button class="filter-btn" onclick="filterApps('aprobado', this)">Aprobadas</button>
+          <button class="filter-btn" onclick="filterApps('completado', this)">Completadas</button>
+          <button class="filter-btn" onclick="filterApps('rechazado', this)">Rechazadas</button>
+        </div>
+        <div class="leads-table-wrap">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Cliente</th><th>Propiedad</th><th>Broker</th>
+                <th>Estado</th><th>Documentos</th><th>Pago</th>
+                <th>Fecha</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="appsTableBody">
+              <tr><td colspan="8" class="leads-empty">Cargando aplicaciones...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    // ADMIN_BASE injected by server when serving this page
-    const ADMIN_BASE = window.ADMIN_BASE || '';
+      <!-- ── ERRORES PAGE ──────────────────────────────────── -->
+      <div class="page-section" id="page-errores">
+        <div class="error-grid">
+          <div class="error-stat">
+            <div class="num" id="errTotal">—</div>
+            <div class="lbl">Errores 24h</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--warning);" id="errUptime">—</div>
+            <div class="lbl">Uptime (hrs)</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--accent);" id="errMem">—</div>
+            <div class="lbl">Memoria (MB)</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--success);" id="errRoutes">—</div>
+            <div class="lbl">Rutas con errores</div>
+          </div>
+        </div>
+        <div class="error-log-table">
+          <table>
+            <thead>
+              <tr><th>Nivel</th><th>Tipo</th><th>Método</th><th>URL</th><th>Status</th><th>Mensaje</th><th>Fecha</th></tr>
+            </thead>
+            <tbody id="errorTableBody">
+              <tr><td colspan="7" class="leads-empty">Cargando errores...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    async function logout() {
-      try { await fetch(ADMIN_BASE + '/logout', { method: 'POST' }); } catch {}
-      location.href = ADMIN_BASE + '/login';
+    </div><!-- /content-area -->
+  </div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<script>
+  let allSubmissions = [];
+  let currentFilter = 'pending';
+  const adminMaps = {};
+
+  // ADMIN_BASE injected by server when serving this page
+  const ADMIN_BASE = window.ADMIN_BASE || '';
+
+  // ── Sidebar ─────────────────────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  // ── Auth ─────────────────────────────────────────────────────
+  async function logout() {
+    try { await fetch(ADMIN_BASE + '/logout', { method: 'POST' }); } catch {}
+    location.href = ADMIN_BASE + '/login';
+  }
+  function handleUnauth(res) {
+    if (res.status === 401) { location.href = ADMIN_BASE + '/login'; return true; }
+    return false;
+  }
+
+  // ── Page routing ─────────────────────────────────────────────
+  const PAGE_TITLES = {
+    dashboard:    'Dashboard',
+    propiedades:  'Propiedades',
+    leads:        'Leads',
+    anuncios:     'Anuncios',
+    aplicaciones: 'Aplicaciones',
+    errores:      'Registro de Errores',
+  };
+
+  let currentPage = 'dashboard';
+
+  function showPage(page, btn) {
+    currentPage = page;
+    // Hide all sections
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    // Update sidebar active state
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // Update topbar title
+    document.getElementById('pageTitle').textContent = PAGE_TITLES[page] || page;
+    // Load data
+    if (page === 'propiedades') { loadSubmissions(); }
+    else if (page === 'leads')       { loadLeads(); }
+    else if (page === 'anuncios')    { loadAds(); }
+    else if (page === 'aplicaciones'){ loadApps(); }
+    else if (page === 'errores')     { loadErrors(); }
+  }
+
+  function refreshCurrent() {
+    showPage(currentPage, document.querySelector(`[data-page="${currentPage}"]`));
+  }
+
+  // ── Submissions ──────────────────────────────────────────────
+  function loadSubmissions() {
+    document.getElementById('submissionsList').innerHTML = '<div class="loading">Cargando propiedades...</div>';
+    fetch('/admin/submissions')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => { allSubmissions = data; renderAll(); })
+      .catch(() => {});
+  }
+
+  function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('#subFilters .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderList();
+  }
+
+  function renderAll() {
+    const props    = allSubmissions.filter(s => s.submission_type !== 'agency_claim');
+    const claims   = allSubmissions.filter(s => s.submission_type === 'agency_claim');
+    const pending  = props.filter(s => s.status === 'pending').length;
+    const approved = props.filter(s => s.status === 'approved').length;
+    const rejected = props.filter(s => s.status === 'rejected').length;
+    const claimPending = claims.filter(s => s.status === 'pending').length;
+
+    document.getElementById('statPending').textContent  = pending;
+    document.getElementById('statApproved').textContent = approved;
+    document.getElementById('statRejected').textContent = rejected;
+    document.getElementById('statTotal').textContent    = props.length;
+    document.getElementById('statClaims').textContent   = claimPending;
+
+    // Show badge on sidebar pill
+    const pill = document.getElementById('pendingPill');
+    if (pending > 0) { pill.textContent = pending; pill.style.display = ''; }
+    else { pill.style.display = 'none'; }
+
+    renderList();
+  }
+
+  function renderList() {
+    const list = document.getElementById('submissionsList');
+    const filtered = currentFilter === 'all'
+      ? allSubmissions
+      : currentFilter === 'agency_claim'
+        ? allSubmissions.filter(s => s.submission_type === 'agency_claim')
+        : allSubmissions.filter(s => s.status === currentFilter && s.submission_type !== 'agency_claim');
+
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <h3>No hay propiedades aquí</h3>
+          <p>No se encontraron propiedades con el filtro seleccionado.</p>
+        </div>`;
+      return;
     }
 
-    // If we somehow get a 401 on any API call, redirect to login
-    function handleUnauth(res) {
-      if (res.status === 401) { location.href = ADMIN_BASE + '/login'; return true; }
-      return false;
-    }
-
-    function loadSubmissions() {
-      fetch('/admin/submissions')
-        .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
-        .then(data => { allSubmissions = data; renderAll(); })
-        .catch(() => {});
-    }
-
-    function setFilter(filter, btn) {
-      currentFilter = filter;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderList();
-    }
-
-    function renderAll() {
-      const props     = allSubmissions.filter(s => s.submission_type !== 'agency_claim');
-      const claims    = allSubmissions.filter(s => s.submission_type === 'agency_claim');
-      const pending   = props.filter(s => s.status === 'pending').length;
-      const approved  = props.filter(s => s.status === 'approved').length;
-      const rejected  = props.filter(s => s.status === 'rejected').length;
-      const claimPending = claims.filter(s => s.status === 'pending').length;
-      document.getElementById('statPending').textContent  = pending;
-      document.getElementById('statApproved').textContent = approved;
-      document.getElementById('statRejected').textContent = rejected;
-      document.getElementById('statTotal').textContent    = props.length;
-      document.getElementById('statClaims').textContent   = claimPending;
-      renderList();
-    }
-
-    function renderList() {
-      const list = document.getElementById('submissionsList');
-      const filtered = currentFilter === 'all'
-        ? allSubmissions
-        : currentFilter === 'agency_claim'
-          ? allSubmissions.filter(s => s.submission_type === 'agency_claim')
-          : allSubmissions.filter(s => s.status === currentFilter && s.submission_type !== 'agency_claim');
-
-      if (filtered.length === 0) {
-        list.innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            <h3>No hay propiedades aquí</h3>
-            <p>No se encontraron propiedades con el filtro seleccionado.</p>
-          </div>`;
-        return;
-      }
-
-      const rendered = filtered.slice().reverse();
-      list.innerHTML = rendered.map(s => {
-        // ── Agency claim card ──────────────────────────────────
-        if (s.submission_type === 'agency_claim') {
-          const agencies = Array.isArray(s.agencies) ? s.agencies : [];
-          const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
-          const isPending = s.status === 'pending';
-          const statusLabel = { pending: 'Pendiente', approved: 'Agregada', rejected: 'Rechazada' }[s.status] || s.status;
-          return `
-            <div class="sub-card" id="card-${s.id}" style="border-left: 4px solid #4a2d9c;">
-              <div class="sub-card-header">
-                <div class="sub-title-row">
-                  <div class="sub-title">Solicitud de Agencia</div>
-                  <div class="sub-meta">
-                    <span>Para anuncio ID: <strong style="font-family:monospace;">${s.claim_listing_id || '—'}</strong></span>
-                    <span>${date}</span>
-                  </div>
-                </div>
-                <span class="status-badge status-${s.status}">${statusLabel}</span>
-              </div>
-              <div class="claim-card-body">
-                ${agencies.length > 0 ? `
-                  <div class="sub-agencies-label" style="margin-bottom:0.5rem;">Agencias a Agregar</div>
-                  <div class="agency-cards" style="margin-bottom:1rem;">
-                    ${agencies.map(a => `
-                      <div class="agency-card">
-                        <strong>${a.name || '—'}</strong>
-                        ${a.agent ? `<span>${a.agent}</span>` : ''}
-                        ${a.phone ? `<span>${a.phone}</span>` : ''}
-                        ${a.email ? `<span>${a.email}</span>` : ''}
-                      </div>`).join('')}
-                  </div>` : '<p style="color:#4d6a8a;font-size:0.85rem;">Sin agencias incluidas.</p>'}
-              </div>
-              <div class="sub-card-footer">
-                <div class="contact-info">
-                  <strong>${s.name}</strong>
-                  ${s.email} &nbsp;·&nbsp; ${s.phone}
-                </div>
-                <div class="card-actions">
-                  <button class="btn-merge ${isPending ? '' : 'btn-disabled'}" onclick="mergeAgency('${s.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                    Agregar al Anuncio
-                  </button>
-                  <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                    Rechazar
-                  </button>
-                </div>
-              </div>
-            </div>`;
-        }
-
-        // ── Regular property card ──────────────────────────────
-        const amenities = Array.isArray(s.amenities)
-          ? s.amenities
-          : (s.amenities ? s.amenities.split(',') : []);
-        const amenityTags = amenities.map(a =>
-          `<span class="amenity-tag">${a.trim()}</span>`
-        ).join('');
+    const rendered = filtered.slice().reverse();
+    list.innerHTML = rendered.map(s => {
+      if (s.submission_type === 'agency_claim') {
+        const agencies = Array.isArray(s.agencies) ? s.agencies : [];
         const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
         const isPending = s.status === 'pending';
-        const statusLabel = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada' }[s.status];
-
-        const agencies = Array.isArray(s.agencies) ? s.agencies : [];
-        const agencyHTML = agencies.length > 0
-          ? `<div class="sub-agencies">
-               <div class="sub-agencies-label">Agencias Asociadas</div>
-               <div class="agency-cards">
-                 ${agencies.map(a => `
-                   <div class="agency-card">
-                     <strong>${a.name || '—'}</strong>
-                     ${a.agent ? `<span>${a.agent}</span>` : ''}
-                     ${a.phone ? `<span>${a.phone}</span>` : ''}
-                     ${a.email ? `<span>${a.email}</span>` : ''}
-                   </div>`).join('')}
-               </div>
-             </div>`
-          : '';
-
-        const mapHTML = (s.lat && s.lng)
-          ? `<div class="sub-map-wrap">
-               <div class="sub-map-label">Ubicación en el Mapa</div>
-               <div class="admin-map" id="amap-${s.id}"></div>
-             </div>`
-          : '';
-
+        const statusLabel = { pending: 'Pendiente', approved: 'Agregada', rejected: 'Rechazada' }[s.status] || s.status;
         return `
-          <div class="sub-card" id="card-${s.id}">
+          <div class="sub-card" id="card-${s.id}" style="border-left:4px solid var(--purple);">
             <div class="sub-card-header">
               <div class="sub-title-row">
-                <div class="sub-title">${s.title}</div>
+                <div class="sub-title">Solicitud de Agencia</div>
                 <div class="sub-meta">
-                  <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${s.city}, ${s.province}</span>
-                  <span>${s.type}</span>
+                  <span>Para anuncio ID: <strong style="font-family:monospace;">${s.claim_listing_id || '—'}</strong></span>
                   <span>${date}</span>
-                  <span style="font-family:monospace;font-size:0.75rem;color:#8aaac8;">ID: ${s.id}</span>
                 </div>
               </div>
               <span class="status-badge status-${s.status}">${statusLabel}</span>
             </div>
-            <div class="sub-card-body">
-              <div class="sub-field"><label>Precio</label><span class="sub-price">$${Number(s.price).toLocaleString()}</span></div>
-              <div class="sub-field"><label>Habitaciones</label><span>${s.bedrooms || '—'} hab. · ${s.bathrooms || '—'} baños</span></div>
-              <div class="sub-field"><label>Área</label><span>${s.area_const ? s.area_const + ' m² const.' : '—'}</span></div>
-              <div class="sub-field"><label>Condición</label><span>${s.condition || '—'}</span></div>
-              <div class="sub-field"><label>Parqueos</label><span>${s.parking || '—'}</span></div>
-              <div class="sub-field"><label>Sector</label><span>${s.sector || '—'}</span></div>
+            <div class="claim-card-body">
+              ${agencies.length > 0 ? `
+                <div class="sub-agencies-label" style="margin-bottom:0.5rem;">Agencias a Agregar</div>
+                <div class="agency-cards" style="margin-bottom:1rem;">
+                  ${agencies.map(a => `
+                    <div class="agency-card">
+                      <strong>${a.name || '—'}</strong>
+                      ${a.agent ? `<span>${a.agent}</span>` : ''}
+                      ${a.phone ? `<span>${a.phone}</span>` : ''}
+                      ${a.email ? `<span>${a.email}</span>` : ''}
+                    </div>`).join('')}
+                </div>` : '<p style="color:#4d6a8a;font-size:0.85rem;">Sin agencias incluidas.</p>'}
             </div>
-            ${s.construction_company || s.units_available ? `
-              <div class="sub-card-body" style="border-top:1px solid #f0f4f9;background:#fafcff;">
-                ${s.construction_company ? `<div class="sub-field"><label>Constructora</label><span>${s.construction_company}</span></div>` : ''}
-                ${s.units_total ? `<div class="sub-field"><label>Unidades Totales</label><span>${s.units_total}</span></div>` : ''}
-                ${s.units_available ? `<div class="sub-field"><label>Disponibles</label><span style="font-weight:700;color:#0a7c4f;">${s.units_available}</span></div>` : ''}
-                ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${s.project_stage}</span></div>` : ''}
-                ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${s.delivery_date}</span></div>` : ''}
-              </div>` : ''}
-            ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
-            ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
-            ${(() => {
-              const units = Array.isArray(s.unit_types) ? s.unit_types : [];
-              if (!units.length) return '';
-              return `<div class="sub-unit-types">
-                <div class="sub-unit-types-label">Tipos de Unidades</div>
-                <table class="unit-types-table">
-                  <thead><tr>
-                    <th>Tipo</th><th>Hab.</th><th>Baños</th><th>m²</th><th>Precio</th><th>Disponibles</th>
-                  </tr></thead>
-                  <tbody>${units.map(u => `<tr>
-                    <td>${u.name || '—'}</td>
-                    <td>${u.bedrooms || '—'}</td>
-                    <td>${u.bathrooms || '—'}</td>
-                    <td>${u.area ? u.area + ' m²' : '—'}</td>
-                    <td class="price-col">${u.price ? '$' + Number(u.price).toLocaleString() : '—'}</td>
-                    <td class="avail-col">${u.available || '0'}</td>
-                  </tr>`).join('')}</tbody>
-                </table>
-              </div>`;
-            })()}
-            ${agencyHTML}
-            ${mapHTML}
             <div class="sub-card-footer">
               <div class="contact-info">
                 <strong>${s.name}</strong>
-                ${s.email} &nbsp;·&nbsp; ${s.phone} &nbsp;·&nbsp; ${s.role || ''}
+                ${s.email} &nbsp;·&nbsp; ${s.phone}
               </div>
               <div class="card-actions">
-                <button class="btn-approve ${isPending ? '' : 'btn-disabled'}" onclick="approve('${s.id}')">
+                <button class="btn-merge ${isPending ? '' : 'btn-disabled'}" onclick="mergeAgency('${s.id}')">
                   <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                  Aprobar
+                  Agregar al Anuncio
                 </button>
                 <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
                   <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -653,33 +863,118 @@
               </div>
             </div>
           </div>`;
-      }).join('');
+      }
 
-      // Initialize mini-maps for submissions with coordinates
-      rendered.forEach(s => {
-        if (!s.lat || !s.lng) return;
-        const mapId = `amap-${s.id}`;
-        if (adminMaps[s.id]) {
-          adminMaps[s.id].remove();
-          delete adminMaps[s.id];
-        }
-        const el = document.getElementById(mapId);
-        if (!el) return;
-        const m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
-          .setView([parseFloat(s.lat), parseFloat(s.lng)], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap', maxZoom: 18
-        }).addTo(m);
-        L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
-        adminMaps[s.id] = m;
-      });
-    }
+      const amenities = Array.isArray(s.amenities) ? s.amenities : (s.amenities ? s.amenities.split(',') : []);
+      const amenityTags = amenities.map(a => `<span class="amenity-tag">${a.trim()}</span>`).join('');
+      const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+      const isPending = s.status === 'pending';
+      const statusLabel = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada' }[s.status];
+      const agencies = Array.isArray(s.agencies) ? s.agencies : [];
+      const agencyHTML = agencies.length > 0
+        ? `<div class="sub-agencies">
+             <div class="sub-agencies-label">Agencias Asociadas</div>
+             <div class="agency-cards">
+               ${agencies.map(a => `
+                 <div class="agency-card">
+                   <strong>${a.name || '—'}</strong>
+                   ${a.agent ? `<span>${a.agent}</span>` : ''}
+                   ${a.phone ? `<span>${a.phone}</span>` : ''}
+                   ${a.email ? `<span>${a.email}</span>` : ''}
+                 </div>`).join('')}
+             </div>
+           </div>` : '';
+      const mapHTML = (s.lat && s.lng)
+        ? `<div class="sub-map-wrap">
+             <div class="sub-map-label">Ubicación en el Mapa</div>
+             <div class="admin-map" id="amap-${s.id}"></div>
+           </div>` : '';
 
-    function mergeAgency(id) {
-      fetch(`/admin/submissions/${id}/merge-agency`, {
-        method: 'POST',
-        headers: {}
-      })
+      return `
+        <div class="sub-card" id="card-${s.id}">
+          <div class="sub-card-header">
+            <div class="sub-title-row">
+              <div class="sub-title">${s.title}</div>
+              <div class="sub-meta">
+                <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${s.city}, ${s.province}</span>
+                <span>${s.type}</span>
+                <span>${date}</span>
+                <span style="font-family:monospace;font-size:0.72rem;color:#8aaac8;">ID: ${s.id}</span>
+              </div>
+            </div>
+            <span class="status-badge status-${s.status}">${statusLabel}</span>
+          </div>
+          <div class="sub-card-body">
+            <div class="sub-field"><label>Precio</label><span class="sub-price">$${Number(s.price).toLocaleString()}</span></div>
+            <div class="sub-field"><label>Habitaciones</label><span>${s.bedrooms || '—'} hab. · ${s.bathrooms || '—'} baños</span></div>
+            <div class="sub-field"><label>Área</label><span>${s.area_const ? s.area_const + ' m² const.' : '—'}</span></div>
+            <div class="sub-field"><label>Condición</label><span>${s.condition || '—'}</span></div>
+            <div class="sub-field"><label>Parqueos</label><span>${s.parking || '—'}</span></div>
+            <div class="sub-field"><label>Sector</label><span>${s.sector || '—'}</span></div>
+          </div>
+          ${s.construction_company || s.units_available ? `
+            <div class="sub-card-body" style="border-top:1px solid #f0f4f9;background:#fafcff;">
+              ${s.construction_company ? `<div class="sub-field"><label>Constructora</label><span>${s.construction_company}</span></div>` : ''}
+              ${s.units_total ? `<div class="sub-field"><label>Unidades Totales</label><span>${s.units_total}</span></div>` : ''}
+              ${s.units_available ? `<div class="sub-field"><label>Disponibles</label><span style="font-weight:700;color:var(--success);">${s.units_available}</span></div>` : ''}
+              ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${s.project_stage}</span></div>` : ''}
+              ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${s.delivery_date}</span></div>` : ''}
+            </div>` : ''}
+          ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
+          ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
+          ${(() => {
+            const units = Array.isArray(s.unit_types) ? s.unit_types : [];
+            if (!units.length) return '';
+            return `<div class="sub-unit-types">
+              <div class="sub-unit-types-label">Tipos de Unidades</div>
+              <table class="unit-types-table">
+                <thead><tr><th>Tipo</th><th>Hab.</th><th>Baños</th><th>m²</th><th>Precio</th><th>Disponibles</th></tr></thead>
+                <tbody>${units.map(u => `<tr>
+                  <td>${u.name||'—'}</td><td>${u.bedrooms||'—'}</td><td>${u.bathrooms||'—'}</td>
+                  <td>${u.area?u.area+' m²':'—'}</td>
+                  <td class="price-col">${u.price?'$'+Number(u.price).toLocaleString():'—'}</td>
+                  <td class="avail-col">${u.available||'0'}</td>
+                </tr>`).join('')}</tbody>
+              </table>
+            </div>`;
+          })()}
+          ${agencyHTML}
+          ${mapHTML}
+          <div class="sub-card-footer">
+            <div class="contact-info">
+              <strong>${s.name}</strong>
+              ${s.email} &nbsp;·&nbsp; ${s.phone} &nbsp;·&nbsp; ${s.role || ''}
+            </div>
+            <div class="card-actions">
+              <button class="btn-approve ${isPending ? '' : 'btn-disabled'}" onclick="approve('${s.id}')">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                Aprobar
+              </button>
+              <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    rendered.forEach(s => {
+      if (!s.lat || !s.lng) return;
+      const mapId = `amap-${s.id}`;
+      if (adminMaps[s.id]) { adminMaps[s.id].remove(); delete adminMaps[s.id]; }
+      const el = document.getElementById(mapId);
+      if (!el) return;
+      const m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
+        .setView([parseFloat(s.lat), parseFloat(s.lng)], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(m);
+      L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
+      adminMaps[s.id] = m;
+    });
+  }
+
+  function mergeAgency(id) {
+    fetch(`/admin/submissions/${id}/merge-agency`, { method: 'POST', headers: {} })
       .then(r => r.json())
       .then(data => {
         if (data.error) { alert('Error: ' + data.error); return; }
@@ -687,407 +982,248 @@
         if (sub) sub.status = 'approved';
         renderAll();
       });
-    }
-
-    function approve(id) {
-      fetch(`/admin/submissions/${id}/approve`, {
-        method: 'POST',
-        headers: {}
-      })
+  }
+  function approve(id) {
+    fetch(`/admin/submissions/${id}/approve`, { method: 'POST', headers: {} })
       .then(r => r.json())
       .then(() => {
         const sub = allSubmissions.find(s => s.id === id);
         if (sub) sub.status = 'approved';
         renderAll();
       });
-    }
-
-    function reject(id) {
-      fetch(`/admin/submissions/${id}/reject`, {
-        method: 'POST',
-        headers: {}
-      })
+  }
+  function reject(id) {
+    fetch(`/admin/submissions/${id}/reject`, { method: 'POST', headers: {} })
       .then(r => r.json())
       .then(() => {
         const sub = allSubmissions.find(s => s.id === id);
         if (sub) sub.status = 'rejected';
         renderAll();
       });
-    }
+  }
 
-    // ── Tab switching ──────────────────────────────────────────
-    let currentTab = 'submissions';
+  // ── Leads ─────────────────────────────────────────────────────
+  let allLeads = [], currentLeadFilter = 'all';
+  const STATUS_LABELS = { pendiente: 'Pendiente', en_proceso: 'En Proceso', comprado: 'Comprado', no_comprado: 'No Comprado' };
 
-    function showTab(tab, btn) {
-      currentTab = tab;
-      document.querySelectorAll('#tabSubmissions, #tabLeads, #tabAds, #tabApps').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      document.getElementById('subFilters').style.display      = 'none';
-      document.getElementById('submissionsList').style.display = 'none';
-      document.getElementById('leadsPanel').style.display      = 'none';
-      document.getElementById('adsPanel').style.display        = 'none';
-      document.getElementById('appsPanel').style.display       = 'none';
-
-      if (tab === 'submissions') {
-        document.getElementById('subFilters').style.display      = 'flex';
-        document.getElementById('submissionsList').style.display = 'block';
-      } else if (tab === 'leads') {
-        document.getElementById('leadsPanel').style.display      = 'block';
-        loadLeads();
-      } else if (tab === 'apps') {
-        document.getElementById('appsPanel').style.display       = 'block';
-        loadApps();
-      } else {
-        document.getElementById('adsPanel').style.display        = 'block';
-        loadAds();
-      }
-    }
-
-    function refreshCurrent() {
-      if      (currentTab === 'submissions') loadSubmissions();
-      else if (currentTab === 'leads')       loadLeads();
-      else if (currentTab === 'apps')        loadApps();
-      else                                   loadAds();
-    }
-
-    // ── Leads ─────────────────────────────────────────────────
-    let allLeads = [];
-    let currentLeadFilter = 'all';
-
-    const STATUS_LABELS = {
-      pendiente:   'Pendiente',
-      en_proceso:  'En Proceso',
-      comprado:    'Comprado',
-      no_comprado: 'No Comprado'
-    };
-
-    function loadLeads() {
-      fetch('/api/leads')
-        .then(r => r.json())
-        .then(data => {
-          allLeads = data;
-          updateLeadStats(data);
-          renderLeads(currentLeadFilter === 'all' ? data : data.filter(l => l.status === currentLeadFilter));
-        })
-        .catch(() => {
-          document.getElementById('leadsTableBody').innerHTML =
-            '<tr><td colspan="8" class="leads-empty">Error al cargar leads.</td></tr>';
-        });
-    }
-
-    function updateLeadStats(leads) {
-      document.getElementById('lsTotal').textContent     = leads.filter(l => l.status === 'pendiente').length;
-      document.getElementById('lsEnProceso').textContent = leads.filter(l => l.status === 'en_proceso').length;
-      document.getElementById('lsComprado').textContent  = leads.filter(l => l.status === 'comprado').length;
-      document.getElementById('lsNoProceso').textContent = leads.filter(l => l.status === 'no_comprado').length;
-    }
-
-    function filterLeads(status, btn) {
-      currentLeadFilter = status;
-      document.querySelectorAll('.leads-toolbar .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const filtered = status === 'all' ? allLeads : allLeads.filter(l => l.status === status);
-      renderLeads(filtered);
-    }
-
-    function renderLeads(leads) {
-      const tbody = document.getElementById('leadsTableBody');
-      if (!leads.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="leads-empty">No hay leads en esta categoría.</td></tr>';
-        return;
-      }
-      const financingMap = { efectivo: 'Efectivo', banco: 'Bancario', desarrollador: 'Desarrollador', vendedor: 'Vendedor' };
-      const contactMap   = { whatsapp: '📱 WhatsApp', llamada: '📞 Llamada', email: '✉️ Email' };
-      tbody.innerHTML = leads.map(l => {
-        const date    = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
-        const agStr   = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
-        const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
-        return `
-          <tr id="lead-row-${l.id}">
-            <td>
-              <div class="lead-name">${l.name}</div>
-              <div class="lead-contact">📞 ${l.phone}</div>
-              ${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}
-              <div class="lead-contact" style="font-size:0.72rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div>
-            </td>
-            <td>
-              <div class="lead-listing">${l.listing_title || '—'}
-                <small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${l.listing_type || ''}</small>
-                <small>${agStr}</small>
-              </div>
-            </td>
-            <td>${intentMap[l.intent] || l.intent || '—'}</td>
-            <td>
-              <div>${financingMap[l.financing] || l.financing || '—'}</div>
-              ${l.pre_approved ? '<div style="font-size:0.72rem;color:#0a7c4f;font-weight:600;">✓ Pre-aprobado</div>' : ''}
-            </td>
-            <td>${l.budget ? '$' + l.budget : '—'}</td>
-            <td>${l.timeline || '—'}</td>
-            <td><span class="lead-badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
-            <td style="white-space:nowrap;font-size:0.78rem;color:#7a93b0;">${date}</td>
-            <td>
-              <div class="lead-actions">
-                <select class="lead-status-select" onchange="updateLeadStatus('${l.id}', this.value)">
-                  ${['pendiente','en_proceso','comprado','no_comprado'].map(s =>
-                    `<option value="${s}" ${l.status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`
-                  ).join('')}
-                </select>
-              </div>
-            </td>
-          </tr>`;
-      }).join('');
-    }
-
-    function updateLeadStatus(id, status) {
-      fetch(`/api/leads/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      })
-      .then(r => r.json())
-      .then(updated => {
+  function loadLeads() {
+    fetch('/api/leads').then(r => r.json()).then(data => {
+      allLeads = data;
+      updateLeadStats(data);
+      renderLeads(currentLeadFilter === 'all' ? data : data.filter(l => l.status === currentLeadFilter));
+    }).catch(() => {
+      document.getElementById('leadsTableBody').innerHTML = '<tr><td colspan="9" class="leads-empty">Error al cargar leads.</td></tr>';
+    });
+  }
+  function updateLeadStats(leads) {
+    document.getElementById('lsTotal').textContent     = leads.filter(l => l.status === 'pendiente').length;
+    document.getElementById('lsEnProceso').textContent = leads.filter(l => l.status === 'en_proceso').length;
+    document.getElementById('lsComprado').textContent  = leads.filter(l => l.status === 'comprado').length;
+    document.getElementById('lsNoProceso').textContent = leads.filter(l => l.status === 'no_comprado').length;
+  }
+  function filterLeads(status, btn) {
+    currentLeadFilter = status;
+    document.querySelectorAll('.leads-toolbar .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderLeads(status === 'all' ? allLeads : allLeads.filter(l => l.status === status));
+  }
+  function renderLeads(leads) {
+    const tbody = document.getElementById('leadsTableBody');
+    if (!leads.length) { tbody.innerHTML = '<tr><td colspan="9" class="leads-empty">No hay leads en esta categoría.</td></tr>'; return; }
+    const financingMap = { efectivo: 'Efectivo', banco: 'Bancario', desarrollador: 'Desarrollador', vendedor: 'Vendedor' };
+    const contactMap   = { whatsapp: '📱 WhatsApp', llamada: '📞 Llamada', email: '✉️ Email' };
+    tbody.innerHTML = leads.map(l => {
+      const date = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
+      const agStr = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
+      const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
+      return `
+        <tr id="lead-row-${l.id}">
+          <td><div class="lead-name">${l.name}</div><div class="lead-contact">📞 ${l.phone}</div>${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}<div class="lead-contact" style="font-size:0.7rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div></td>
+          <td><div class="lead-listing">${l.listing_title || '—'}<small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${l.listing_type || ''}</small><small>${agStr}</small></div></td>
+          <td>${intentMap[l.intent] || l.intent || '—'}</td>
+          <td><div>${financingMap[l.financing] || l.financing || '—'}</div>${l.pre_approved ? '<div style="font-size:0.7rem;color:var(--success);font-weight:600;">✓ Pre-aprobado</div>' : ''}</td>
+          <td>${l.budget ? '$' + l.budget : '—'}</td>
+          <td>${l.timeline || '—'}</td>
+          <td><span class="lead-badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
+          <td style="white-space:nowrap;font-size:0.75rem;color:#7a93b0;">${date}</td>
+          <td><div class="lead-actions"><select class="lead-status-select" onchange="updateLeadStatus('${l.id}', this.value)">${['pendiente','en_proceso','comprado','no_comprado'].map(s => `<option value="${s}" ${l.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></div></td>
+        </tr>`;
+    }).join('');
+  }
+  function updateLeadStatus(id, status) {
+    fetch(`/api/leads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+      .then(r => r.json()).then(updated => {
         const idx = allLeads.findIndex(l => l.id === id);
         if (idx !== -1) allLeads[idx] = updated;
         updateLeadStats(allLeads);
-        // Refresh the badge in the row without full re-render
         const row = document.getElementById(`lead-row-${id}`);
-        if (row) {
-          const badge = row.querySelector('.lead-badge');
-          if (badge) { badge.className = `lead-badge badge-${status}`; badge.textContent = STATUS_LABELS[status]; }
-        }
+        if (row) { const b = row.querySelector('.lead-badge'); if (b) { b.className = `lead-badge badge-${status}`; b.textContent = STATUS_LABELS[status]; } }
       });
-    }
+  }
+  function exportLeads() {
+    const qs = currentLeadFilter !== 'all' ? `?status=${currentLeadFilter}` : '';
+    window.location.href = `/api/leads/export${qs}`;
+  }
 
-    function exportLeads() {
-      const qs = currentLeadFilter !== 'all' ? `?status=${currentLeadFilter}` : '';
-      window.location.href = `/api/leads/export${qs}`;
-    }
-
-    // ── Ads CRUD ───────────────────────────────────────────────
-    let allAds = [];
-
-    function loadAds() {
-      document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
-      fetch('/api/ads')
-        .then(r => r.json())
-        .then(data => { allAds = data; renderAds(data); })
-        .catch(() => { document.getElementById('adsList').innerHTML = '<div class="loading">Error al cargar anuncios.</div>'; });
-    }
-
-    function renderAds(ads) {
-      const el = document.getElementById('adsList');
-      if (!ads.length) {
-        el.innerHTML = '<div class="ads-empty">No hay anuncios aún. Crea el primero arriba.</div>';
-        return;
-      }
-      el.innerHTML = ads.map(ad => {
-        const imgHtml = ad.image_url
-          ? `<img class="ad-card-img" src="${ad.image_url}" alt="${ad.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-            + `<div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
-          : `<div class="ad-card-img-placeholder">Sin imagen</div>`;
-        const badge = ad.is_active
-          ? `<span class="ad-badge-active">Activo</span>`
-          : `<span class="ad-badge-inactive">Inactivo</span>`;
-        const dateStr = [ad.start_date, ad.end_date].filter(Boolean).join(' → ') || 'Sin fechas límite';
-        return `
-          <div class="ad-card" id="adcard-${ad.id}">
-            ${imgHtml}
-            <div class="ad-card-body">
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
-                <div class="ad-card-title">${ad.title}</div>
-                ${badge}
-              </div>
-              ${ad.advertiser ? `<div class="ad-card-advertiser">${ad.advertiser}</div>` : ''}
-              <div class="ad-card-stats">
-                <span>${ad.impressions || 0} impresiones</span>
-                <span>${ad.clicks || 0} clics</span>
-              </div>
-              <div class="ad-card-dates">${dateStr}</div>
+  // ── Ads ───────────────────────────────────────────────────────
+  let allAds = [];
+  function loadAds() {
+    document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
+    fetch('/api/ads').then(r => r.json()).then(data => { allAds = data; renderAds(data); }).catch(() => {});
+  }
+  function renderAds(ads) {
+    const el = document.getElementById('adsList');
+    if (!ads.length) { el.innerHTML = '<div class="ads-empty">No hay anuncios aún. Crea el primero arriba.</div>'; return; }
+    el.innerHTML = ads.map(ad => {
+      const imgHtml = ad.image_url
+        ? `<img class="ad-card-img" src="${ad.image_url}" alt="${ad.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
+        : `<div class="ad-card-img-placeholder">Sin imagen</div>`;
+      const badge = ad.is_active ? `<span class="ad-badge-active">Activo</span>` : `<span class="ad-badge-inactive">Inactivo</span>`;
+      const dateStr = [ad.start_date, ad.end_date].filter(Boolean).join(' → ') || 'Sin fechas límite';
+      return `
+        <div class="ad-card" id="adcard-${ad.id}">
+          ${imgHtml}
+          <div class="ad-card-body">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <div class="ad-card-title">${ad.title}</div>${badge}
             </div>
-            <div class="ad-card-footer">
-              <button class="ad-toggle ${ad.is_active ? 'active' : 'inactive'}"
-                      onclick="toggleAd('${ad.id}', ${ad.is_active})">
-                ${ad.is_active ? '✓ Activo — Desactivar' : '○ Inactivo — Activar'}
-              </button>
-              <button class="ad-delete" onclick="deleteAd('${ad.id}')">Eliminar</button>
-            </div>
-          </div>`;
-      }).join('');
-    }
-
-    function createAd() {
-      const title      = document.getElementById('adTitle').value.trim();
-      const advertiser = document.getElementById('adAdvertiser').value.trim();
-      const image_url  = document.getElementById('adImageUrl').value.trim();
-      const target_url = document.getElementById('adTargetUrl').value.trim();
-      const start_date = document.getElementById('adStartDate').value;
-      const end_date   = document.getElementById('adEndDate').value;
-      const msg        = document.getElementById('adMsg');
-
-      if (!title || !image_url) {
-        msg.textContent = 'Título e imagen son obligatorios.';
-        msg.className = 'ads-msg err';
-        return;
-      }
-      fetch('/api/ads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, advertiser, image_url, target_url, start_date: start_date || null, end_date: end_date || null })
-      })
-      .then(r => r.json())
-      .then(ad => {
+            ${ad.advertiser ? `<div class="ad-card-advertiser">${ad.advertiser}</div>` : ''}
+            <div class="ad-card-stats"><span>${ad.impressions || 0} impresiones</span><span>${ad.clicks || 0} clics</span></div>
+            <div class="ad-card-dates">${dateStr}</div>
+          </div>
+          <div class="ad-card-footer">
+            <button class="ad-toggle ${ad.is_active ? 'active' : 'inactive'}" onclick="toggleAd('${ad.id}', ${ad.is_active})">${ad.is_active ? '✓ Activo — Desactivar' : '○ Inactivo — Activar'}</button>
+            <button class="ad-delete" onclick="deleteAd('${ad.id}')">Eliminar</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  function createAd() {
+    const title = document.getElementById('adTitle').value.trim();
+    const advertiser = document.getElementById('adAdvertiser').value.trim();
+    const image_url = document.getElementById('adImageUrl').value.trim();
+    const target_url = document.getElementById('adTargetUrl').value.trim();
+    const start_date = document.getElementById('adStartDate').value;
+    const end_date = document.getElementById('adEndDate').value;
+    const msg = document.getElementById('adMsg');
+    if (!title || !image_url) { msg.textContent = 'Título e imagen son obligatorios.'; msg.className = 'ads-msg err'; return; }
+    fetch('/api/ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, advertiser, image_url, target_url, start_date: start_date || null, end_date: end_date || null }) })
+      .then(r => r.json()).then(ad => {
         if (ad.error) throw new Error(ad.error);
-        msg.textContent = '¡Anuncio creado! Actívalo cuando estés listo.';
-        msg.className = 'ads-msg ok';
-        ['adTitle','adAdvertiser','adImageUrl','adTargetUrl','adStartDate','adEndDate']
-          .forEach(id => document.getElementById(id).value = '');
-        allAds.unshift(ad);
-        renderAds(allAds);
+        msg.textContent = '¡Anuncio creado! Actívalo cuando estés listo.'; msg.className = 'ads-msg ok';
+        ['adTitle','adAdvertiser','adImageUrl','adTargetUrl','adStartDate','adEndDate'].forEach(id => document.getElementById(id).value = '');
+        allAds.unshift(ad); renderAds(allAds);
         setTimeout(() => { msg.textContent = ''; }, 4000);
-      })
-      .catch(e => { msg.textContent = 'Error: ' + e.message; msg.className = 'ads-msg err'; });
-    }
+      }).catch(e => { msg.textContent = 'Error: ' + e.message; msg.className = 'ads-msg err'; });
+  }
+  function toggleAd(id, currentlyActive) {
+    fetch(`/api/ads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentlyActive }) })
+      .then(r => r.json()).then(updated => { const idx = allAds.findIndex(a => a.id === id); if (idx !== -1) allAds[idx] = updated; renderAds(allAds); });
+  }
+  function deleteAd(id) {
+    if (!confirm('¿Seguro que quieres eliminar este anuncio?')) return;
+    fetch(`/api/ads/${id}`, { method: 'DELETE', headers: {} }).then(() => { allAds = allAds.filter(a => a.id !== id); renderAds(allAds); });
+  }
 
-    function toggleAd(id, currentlyActive) {
-      fetch(`/api/ads/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !currentlyActive })
-      })
-      .then(r => r.json())
-      .then(updated => {
-        const idx = allAds.findIndex(a => a.id === id);
-        if (idx !== -1) allAds[idx] = updated;
-        renderAds(allAds);
-      });
-    }
+  // ── Applications ─────────────────────────────────────────────
+  let allApps = [], currentAppFilter = 'all';
+  const APP_STATUS_LABELS = {
+    aplicado: 'Aplicado', en_revision: 'En Revisión', documentos_requeridos: 'Docs Requeridos',
+    documentos_enviados: 'Docs Enviados', documentos_insuficientes: 'Docs Insuficientes',
+    en_aprobacion: 'En Aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
+    pendiente_pago: 'Pendiente Pago', pago_enviado: 'Pago Enviado', pago_aprobado: 'Pago Aprobado',
+    completado: 'Completado', rechazado: 'Rechazado',
+  };
+  const APP_STATUS_COLORS = {
+    aplicado: '#0038A8', en_revision: '#0038A8',
+    documentos_requeridos: '#c07c1a', documentos_enviados: '#c07c1a', documentos_insuficientes: '#c07c1a',
+    en_aprobacion: '#4a2d9c', reservado: '#4a2d9c',
+    aprobado: '#0a7c4f', pago_aprobado: '#0a7c4f', completado: '#0a7c4f',
+    pendiente_pago: '#0038A8', pago_enviado: '#0038A8', rechazado: '#CF142B',
+  };
+  function loadApps() {
+    fetch('/api/applications').then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => {
+      allApps = data; updateAppStats(data);
+      renderApps(currentAppFilter === 'all' ? data : filterAppList(data, currentAppFilter));
+    }).catch(() => {
+      document.getElementById('appsTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Error al cargar aplicaciones.</td></tr>';
+    });
+  }
+  function updateAppStats(apps) {
+    document.getElementById('appTotal').textContent    = apps.length;
+    document.getElementById('appPending').textContent  = apps.filter(a => !['completado','rechazado','aprobado','pago_aprobado'].includes(a.status)).length;
+    document.getElementById('appApproved').textContent = apps.filter(a => ['aprobado','pago_aprobado','completado'].includes(a.status)).length;
+    document.getElementById('appRejected').textContent = apps.filter(a => a.status === 'rechazado').length;
+  }
+  function filterAppList(apps, filter) {
+    if (filter === 'all') return apps;
+    if (filter === 'documentos') return apps.filter(a => a.status.startsWith('documento'));
+    return apps.filter(a => a.status === filter);
+  }
+  function filterApps(filter, btn) {
+    currentAppFilter = filter;
+    document.querySelectorAll('#appsToolbar .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderApps(filterAppList(allApps, filter));
+  }
+  function renderApps(apps) {
+    const tbody = document.getElementById('appsTableBody');
+    if (!apps.length) { tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay aplicaciones.</td></tr>'; return; }
+    tbody.innerHTML = apps.map(a => {
+      const date = new Date(a.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
+      const color = APP_STATUS_COLORS[a.status] || '#4d6a8a';
+      const docsReq = (a.documents_requested || []).length;
+      const docsUp  = (a.documents_uploaded || []).length;
+      const payStatus = a.payment?.verification_status || 'none';
+      const payLabel  = { none:'—', pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[payStatus] || '—';
+      const payColor  = { pending:'#c07c1a', approved:'#0a7c4f', rejected:'#CF142B' }[payStatus] || '#4d6a8a';
+      return `
+        <tr>
+          <td><div class="lead-name">${a.client?.name || '—'}</div><div class="lead-contact">📞 ${a.client?.phone || '—'}</div>${a.client?.email ? `<div class="lead-contact">✉️ ${a.client.email}</div>` : ''}</td>
+          <td><div class="lead-listing">${a.listing_title || '—'}<small>${a.listing_price ? '$' + Number(a.listing_price).toLocaleString() : ''}</small></div></td>
+          <td><div style="font-weight:600;font-size:0.83rem;">${a.broker?.name || 'Sin asignar'}</div><div style="font-size:0.73rem;color:#7a93b0;">${a.broker?.agency_name || ''}</div></td>
+          <td><span class="lead-badge" style="background:${color}15;color:${color};">${APP_STATUS_LABELS[a.status] || a.status}</span></td>
+          <td style="font-size:0.8rem;"><div>${docsReq} solicitados</div><div style="color:var(--success);font-weight:600;">${docsUp} subidos</div></td>
+          <td><span style="font-size:0.8rem;font-weight:600;color:${payColor};">${payLabel}</span></td>
+          <td style="white-space:nowrap;font-size:0.75rem;color:#7a93b0;">${date}</td>
+          <td><a href="/broker" style="font-size:0.8rem;color:var(--accent);font-weight:600;text-decoration:none;">Ver →</a></td>
+        </tr>`;
+    }).join('');
+  }
 
-    function deleteAd(id) {
-      if (!confirm('¿Seguro que quieres eliminar este anuncio?')) return;
-      fetch(`/api/ads/${id}`, {
-        method: 'DELETE',
-        headers: {}
-      })
-      .then(() => {
-        allAds = allAds.filter(a => a.id !== id);
-        renderAds(allAds);
-      });
-    }
-
-    // ── Applications ─────────────────────────────────────────
-    let allApps = [];
-    let currentAppFilter = 'all';
-
-    const APP_STATUS_LABELS = {
-      aplicado: 'Aplicado', en_revision: 'En Revisión', documentos_requeridos: 'Docs Requeridos',
-      documentos_enviados: 'Docs Enviados', documentos_insuficientes: 'Docs Insuficientes',
-      en_aprobacion: 'En Aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
-      pendiente_pago: 'Pendiente Pago', pago_enviado: 'Pago Enviado', pago_aprobado: 'Pago Aprobado',
-      completado: 'Completado', rechazado: 'Rechazado',
-    };
-
-    const APP_STATUS_COLORS = {
-      aplicado: '#0038A8', en_revision: '#0038A8',
-      documentos_requeridos: '#c07c1a', documentos_enviados: '#c07c1a', documentos_insuficientes: '#c07c1a',
-      en_aprobacion: '#4a2d9c', reservado: '#4a2d9c',
-      aprobado: '#0a7c4f', pago_aprobado: '#0a7c4f', completado: '#0a7c4f',
-      pendiente_pago: '#0038A8', pago_enviado: '#0038A8',
-      rechazado: '#CF142B',
-    };
-
-    function loadApps() {
-      fetch('/api/applications')
-      .then(r => {
-        if (!r.ok) throw new Error('Not authorized');
-        return r.json();
-      })
-      .then(data => {
-        allApps = data;
-        updateAppStats(data);
-        renderApps(currentAppFilter === 'all' ? data : filterAppList(data, currentAppFilter));
-      })
-      .catch(() => {
-        document.getElementById('appsTableBody').innerHTML =
-          '<tr><td colspan="8" class="leads-empty">Error al cargar aplicaciones. Asegúrate de tener permisos de admin.</td></tr>';
-      });
-    }
-
-    function updateAppStats(apps) {
-      document.getElementById('appTotal').textContent    = apps.length;
-      const inProcess = apps.filter(a => !['completado','rechazado','aprobado','pago_aprobado'].includes(a.status));
-      document.getElementById('appPending').textContent  = inProcess.length;
-      document.getElementById('appApproved').textContent = apps.filter(a => ['aprobado','pago_aprobado','completado'].includes(a.status)).length;
-      document.getElementById('appRejected').textContent = apps.filter(a => a.status === 'rechazado').length;
-    }
-
-    function filterAppList(apps, filter) {
-      if (filter === 'all') return apps;
-      if (filter === 'documentos') return apps.filter(a => a.status.startsWith('documento'));
-      return apps.filter(a => a.status === filter);
-    }
-
-    function filterApps(filter, btn) {
-      currentAppFilter = filter;
-      document.querySelectorAll('#appsToolbar .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderApps(filterAppList(allApps, filter));
-    }
-
-    function renderApps(apps) {
-      const tbody = document.getElementById('appsTableBody');
-      if (!apps.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay aplicaciones en esta categoría.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = apps.map(a => {
-        const date = new Date(a.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
-        const color = APP_STATUS_COLORS[a.status] || '#4d6a8a';
-        const docsReq = (a.documents_requested || []).length;
-        const docsUp  = (a.documents_uploaded || []).length;
-        const payStatus = a.payment?.verification_status || 'none';
-        const payLabel  = { none:'—', pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[payStatus] || '—';
-        const payColor  = { pending:'#c07c1a', approved:'#0a7c4f', rejected:'#CF142B' }[payStatus] || '#4d6a8a';
+  // ── Error Logs ────────────────────────────────────────────────
+  function loadErrors() {
+    fetch('/api/admin/errors').then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); }).then(data => {
+      document.getElementById('errTotal').textContent  = data.totalErrors24h || 0;
+      document.getElementById('errUptime').textContent = data.uptime ? Math.round(data.uptime / 3600) : '—';
+      document.getElementById('errMem').textContent    = data.memory ? Math.round(data.memory.heapUsed / 1024 / 1024) : '—';
+      document.getElementById('errRoutes').textContent = data.errorsByRoute ? Object.keys(data.errorsByRoute).length : 0;
+      const tbody = document.getElementById('errorTableBody');
+      const errors = data.recentErrors || [];
+      if (!errors.length) { tbody.innerHTML = '<tr><td colspan="7" class="leads-empty">No hay errores registrados.</td></tr>'; return; }
+      tbody.innerHTML = errors.map(e => {
+        const levelClass = e.level === 'fatal' ? 'elog-fatal' : e.level === 'error' ? 'elog-error' : 'elog-warn';
+        const date = e.timestamp ? new Date(e.timestamp).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
         return `
           <tr>
-            <td>
-              <div class="lead-name">${a.client?.name || '—'}</div>
-              <div class="lead-contact">📞 ${a.client?.phone || '—'}</div>
-              ${a.client?.email ? `<div class="lead-contact">✉️ ${a.client.email}</div>` : ''}
-            </td>
-            <td>
-              <div class="lead-listing">${a.listing_title || '—'}
-                <small>${a.listing_price ? '$' + Number(a.listing_price).toLocaleString() : ''}</small>
-              </div>
-            </td>
-            <td>
-              <div style="font-weight:600;font-size:0.85rem;">${a.broker?.name || 'Sin asignar'}</div>
-              <div style="font-size:0.75rem;color:#7a93b0;">${a.broker?.agency_name || ''}</div>
-            </td>
-            <td>
-              <span class="lead-badge" style="background:${color}15;color:${color};">
-                ${APP_STATUS_LABELS[a.status] || a.status}
-              </span>
-              ${a.status === 'rechazado' && a.status_reason ? `<div style="font-size:0.72rem;color:#CF142B;margin-top:0.3rem;">${a.status_reason}</div>` : ''}
-            </td>
-            <td style="font-size:0.82rem;">
-              <div>${docsReq} solicitados</div>
-              <div style="color:#0a7c4f;font-weight:600;">${docsUp} subidos</div>
-            </td>
-            <td>
-              <span style="font-size:0.82rem;font-weight:600;color:${payColor};">${payLabel}</span>
-            </td>
-            <td style="white-space:nowrap;font-size:0.78rem;color:#7a93b0;">${date}</td>
-            <td>
-              <a href="/broker" style="font-size:0.82rem;color:#0038A8;font-weight:600;text-decoration:none;">Ver detalle →</a>
-            </td>
+            <td><span class="${levelClass}">${e.level || '—'}</span></td>
+            <td>${e.type || '—'}</td>
+            <td>${e.method || '—'}</td>
+            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.url || '—'}</td>
+            <td>${e.statusCode || '—'}</td>
+            <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4d6a8a;">${e.message || '—'}</td>
+            <td style="white-space:nowrap;">${date}</td>
           </tr>`;
       }).join('');
-    }
+    }).catch(() => {
+      document.getElementById('errorTableBody').innerHTML = '<tr><td colspan="7" class="leads-empty">Error al cargar el registro.</td></tr>';
+    });
+  }
 
-    // Load data immediately — server has already verified the session
-    loadSubmissions();
-  </script>
+  // ── Init ──────────────────────────────────────────────────────
+  // Load submissions data immediately for the stats on dashboard
+  loadSubmissions();
+</script>
 <script src="/js/pixel.js" defer></script>
 </body>
 </html>

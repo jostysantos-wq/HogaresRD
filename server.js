@@ -406,35 +406,52 @@ app.post('/submit', async (req, res) => {
       ? submission.amenities.join(', ')
       : submission.amenities;
 
+    const adminPanelUrl = `${process.env.BASE_URL || 'https://hogaresrd.com'}/${process.env.ADMIN_PATH || 'admin'}`;
     await transporter.sendMail({
-      from:    `"HogaresRD" <${process.env.EMAIL_USER}>`,
+      from:    `"HogaresRD Admin" <${process.env.EMAIL_USER}>`,
       to:      ADMIN_EMAIL,
       subject: isClaim
-        ? `🏢 Solicitud de agencia para anuncio #${submission.claim_listing_id}`
-        : `🏠 Nueva propiedad para aprobar: ${submission.title}`,
+        ? `🔴 [IMPORTANTE] Solicitud de agencia — Anuncio #${submission.claim_listing_id}`
+        : `🔴 [ACCIÓN REQUERIDA] Nueva propiedad para aprobar: ${submission.title}`,
+      headers: {
+        'X-Priority':        '1',
+        'X-MSMail-Priority': 'High',
+        'Importance':        'High',
+      },
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
+          <div style="background:#CF142B;padding:10px 32px;text-align:center;">
+            <span style="color:#fff;font-size:0.78rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">⚑ Acción Requerida — Prioridad Alta</span>
+          </div>
           <div style="background:#002D62;padding:24px 32px;">
-            <h2 style="color:#fff;margin:0;font-size:1.3rem;">🏠 Nueva Propiedad para Aprobar</h2>
+            <h2 style="color:#fff;margin:0;font-size:1.3rem;">${isClaim ? '🏢 Solicitud de Agencia' : '🏠 Nueva Propiedad para Aprobar'}</h2>
             <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:0.9rem;">HogaresRD — Panel de Administración</p>
           </div>
           <div style="padding:28px 32px;background:#fff;">
             <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+              ${isClaim ? `
+              <tr><td style="padding:8px 0;color:#4d6a8a;width:40%;">Tipo</td><td style="padding:8px 0;font-weight:600;">Solicitud de Agencia</td></tr>
+              <tr><td style="padding:8px 0;color:#4d6a8a;">Anuncio ID</td><td style="padding:8px 0;font-family:monospace;font-weight:600;">${submission.claim_listing_id}</td></tr>
+              ` : `
               <tr><td style="padding:8px 0;color:#4d6a8a;width:40%;">Título</td><td style="padding:8px 0;font-weight:600;">${submission.title}</td></tr>
               <tr><td style="padding:8px 0;color:#4d6a8a;">Tipo</td><td style="padding:8px 0;">${submission.type}</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Precio</td><td style="padding:8px 0;font-weight:600;color:#002D62;">$${Number(submission.price).toLocaleString()}</td></tr>
+              <tr><td style="padding:8px 0;color:#4d6a8a;">Precio</td><td style="padding:8px 0;font-weight:700;color:#002D62;font-size:1rem;">$${Number(submission.price).toLocaleString()}</td></tr>
               <tr><td style="padding:8px 0;color:#4d6a8a;">Ubicación</td><td style="padding:8px 0;">${submission.city}, ${submission.province}</td></tr>
               <tr><td style="padding:8px 0;color:#4d6a8a;">Habitaciones</td><td style="padding:8px 0;">${submission.bedrooms} hab. · ${submission.bathrooms} baños</td></tr>
               <tr><td style="padding:8px 0;color:#4d6a8a;">Amenidades</td><td style="padding:8px 0;">${amenitiesList || '—'}</td></tr>
-              <tr style="border-top:1px solid #e8eef7;"><td style="padding:12px 0;color:#4d6a8a;">Contacto</td><td style="padding:12px 0;"><strong>${submission.name}</strong><br>${submission.email}<br>${submission.phone}</td></tr>
+              `}
+              <tr style="border-top:1px solid #e8eef7;">
+                <td style="padding:12px 0;color:#4d6a8a;">Contacto</td>
+                <td style="padding:12px 0;"><strong>${submission.name}</strong><br>${submission.email}<br>${submission.phone}</td>
+              </tr>
             </table>
-            <div style="margin-top:24px;">
-              <a href="http://localhost:${PORT}/admin" style="background:#002D62;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
-                Ir al Panel de Aprobación →
+            <div style="margin-top:24px;text-align:center;">
+              <a href="${adminPanelUrl}" style="background:#CF142B;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;font-size:1rem;">
+                Revisar y Aprobar Ahora →
               </a>
             </div>
           </div>
-          <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;">
+          <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;text-align:center;">
             Enviado el ${new Date(submission.submittedAt).toLocaleString('es-DO')} · ID: ${submission.id}
           </div>
         </div>
