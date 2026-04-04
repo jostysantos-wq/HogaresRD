@@ -35,15 +35,16 @@ struct Listing: Decodable, Identifiable, Equatable {
     let tags:        [String]?
     let agencies:    [Agency]?
     let status:      String?
-    let views:       Int?
-    let submittedAt: String?
-    let approvedAt:  String?
+    let views:         Int?
+    let favoriteCount: Int?
+    let submittedAt:   String?
+    let approvedAt:    String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, type, condition, description, price,
              area_const, area_land, bedrooms, bathrooms, parking,
              province, city, sector, address, images, amenities,
-             tags, agencies, status, views, submittedAt, approvedAt,
+             tags, agencies, status, views, favoriteCount, submittedAt, approvedAt,
              project_stage, delivery_date, floors, units_available,
              units_total, unit_types, construction_company, blueprints,
              lat, lng
@@ -70,6 +71,7 @@ struct Listing: Decodable, Identifiable, Equatable {
         submittedAt          = try? c.decode(String.self, forKey: .submittedAt)
         approvedAt           = try? c.decode(String.self, forKey: .approvedAt)
         views                = try? c.decode(Int.self,    forKey: .views)
+        favoriteCount        = try? c.decode(Int.self,    forKey: .favoriteCount)
         floors               = try? c.decode(Int.self,    forKey: .floors)
         units_available      = try? c.decode(Int.self,    forKey: .units_available)
         units_total          = try? c.decode(Int.self,    forKey: .units_total)

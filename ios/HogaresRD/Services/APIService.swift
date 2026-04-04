@@ -901,6 +901,26 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Favorites
+
+    func addFavorite(listingId: String) async throws {
+        guard let t = token else { return }
+        let url = URL(string: "\(apiBase)/api/user/favorites/\(listingId)")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        _ = try? await URLSession.shared.data(for: req)
+    }
+
+    func removeFavorite(listingId: String) async throws {
+        guard let t = token else { return }
+        let url = URL(string: "\(apiBase)/api/user/favorites/\(listingId)")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        _ = try? await URLSession.shared.data(for: req)
+    }
+
     func changePassword(current: String, newPassword: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         let url = URL(string: "\(apiBase)/api/auth/change-password")!
@@ -949,13 +969,16 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al subir la foto (HTTP \(http.statusCode))")
         }
-        let result = try JSONDecoder().decode([String: String].self, from: data)
-        guard let avatarUrl = result["avatarUrl"] else { throw APIError.server("Respuesta inesperada") }
+        // Server returns { "success": true, "avatarUrl": "..." } — mixed types
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let avatarUrl = json["avatarUrl"] as? String else {
+            throw APIError.server("Respuesta inesperada")
+        }
 
         // Update local user with new avatar
-        if var user = currentUser {
-            let updatedData = try JSONEncoder().encode(user)
-            if var dict = try JSONSerialization.jsonObject(with: updatedData) as? [String: Any] {
+        if let user = currentUser {
+            let userData = try JSONEncoder().encode(user)
+            if var dict = try JSONSerialization.jsonObject(with: userData) as? [String: Any] {
                 dict["avatarUrl"] = avatarUrl
                 let newData = try JSONSerialization.data(withJSONObject: dict)
                 let updatedUser = try decoder.decode(User.self, from: newData)

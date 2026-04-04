@@ -3,6 +3,27 @@ const express      = require('express');
 const store        = require('./store');
 const router       = express.Router();
 
+// Cache favorite counts (refreshed every 60s to avoid scanning all users per request)
+let _favCache = {};
+let _favCacheAt = 0;
+function getFavoriteCounts() {
+  if (Date.now() - _favCacheAt < 60_000) return _favCache;
+  const counts = {};
+  store.getUsers().forEach(u => {
+    if (Array.isArray(u.favorites)) {
+      u.favorites.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+    }
+  });
+  _favCache = counts;
+  _favCacheAt = Date.now();
+  return counts;
+}
+
+function attachFavCounts(listings) {
+  const counts = getFavoriteCounts();
+  return listings.map(l => ({ ...l, favoriteCount: counts[l.id] || 0 }));
+}
+
 // ── Public view-counter rate limiter ────────────────────────────────────────
 // One view increment per IP per listing per hour (no auth required).
 const _viewSeen       = new Map(); // key: `${ip}::${listingId}` → last-seen ms
@@ -72,7 +93,7 @@ router.get('/', (req, res) => {
   const total = listings.length;
   const items = listings.slice((page - 1) * limit, page * limit);
 
-  res.json({ listings: items, total, page, limit, pages: Math.ceil(total / limit) });
+  res.json({ listings: attachFavCounts(items), total, page, limit, pages: Math.ceil(total / limit) });
 });
 
 // GET /api/listings/trending — top 8 by combined score: total public views + recent auth views (3×)
@@ -94,7 +115,7 @@ router.get('/trending', (req, res) => {
     .sort((a, b) => b._score - a._score)
     .slice(0, 8);
 
-  res.json({ listings });
+  res.json({ listings: attachFavCounts(listings) });
 });
 
 // GET /api/listings/agent/:refToken — public: resolve affiliate token to agent name/agency
@@ -162,7 +183,7 @@ router.get('/agencies/:slug', (req, res) => {
   const total = matched.length;
   const items = matched.slice((page - 1) * limit, page * limit);
 
-  res.json({ name: agencyName, slug, refToken, listings: items, total, page, limit, pages: Math.ceil(total / limit) });
+  res.json({ name: agencyName, slug, refToken, listings: attachFavCounts(items), total, page, limit, pages: Math.ceil(total / limit) });
 });
 
 // GET /api/listings/:id

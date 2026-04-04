@@ -14,8 +14,18 @@ class SavedStore: ObservableObject {
     func isSaved(_ id: String) -> Bool { savedIDs.contains(id) }
 
     func toggle(_ id: String) {
-        if savedIDs.contains(id) { savedIDs.remove(id) }
-        else                     { savedIDs.insert(id) }
+        let wasAdding = !savedIDs.contains(id)
+        if wasAdding { savedIDs.insert(id) }
+        else         { savedIDs.remove(id) }
         UserDefaults.standard.set(Array(savedIDs), forKey: "saved_listing_ids")
+
+        // Sync with server in background (fire-and-forget)
+        Task.detached {
+            if wasAdding {
+                try? await APIService.shared.addFavorite(listingId: id)
+            } else {
+                try? await APIService.shared.removeFavorite(listingId: id)
+            }
+        }
     }
 }

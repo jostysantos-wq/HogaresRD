@@ -180,7 +180,7 @@ struct ProfileTabView: View {
 
     private func loggedInHeader(_ user: User) -> some View {
         HStack(spacing: 14) {
-            AvatarView(user: user, size: 56, editable: false, color: avatarColor(user))
+            AvatarView(user: user, size: 56, editable: true, color: avatarColor(user))
                 .environmentObject(api)
             VStack(alignment: .leading, spacing: 3) {
                 Text(user.name)

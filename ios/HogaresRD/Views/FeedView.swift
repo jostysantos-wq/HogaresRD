@@ -299,6 +299,7 @@ struct ReelCard: View {
     @State private var imageIndex = 0
     @State private var heartScale: CGFloat = 1.0
     @State private var doubleTapHeart = false
+    @State private var localFavCount: Int = 0
 
     /// Binding shim so ScrollView can track the current page as Int?
     private var imageIndexBinding: Binding<Int?> {
@@ -390,19 +391,29 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Heart button
+                            // Heart button + count
                             Button {
                                 toggleSave()
                             } label: {
-                                Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
-                                    .shadow(color: .black.opacity(0.5), radius: 4)
-                                    .scaleEffect(heartScale)
-                                    .frame(width: 48, height: 48)
-                                    .contentShape(Rectangle())
+                                VStack(spacing: 2) {
+                                    Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
+                                        .shadow(color: .black.opacity(0.5), radius: 4)
+                                        .scaleEffect(heartScale)
+                                    if localFavCount > 0 {
+                                        Text("\(localFavCount)")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.white)
+                                            .shadow(color: .black.opacity(0.5), radius: 2)
+                                    }
+                                }
+                                .frame(width: 48)
+                                .frame(minHeight: 48)
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .onAppear { localFavCount = listing.favoriteCount ?? 0 }
 
                             // Share button
                             Button {
@@ -526,10 +537,14 @@ struct ReelCard: View {
     private func toggleSave() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
+
+        let wasSaved = saved.isSaved(listing.id)
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
             heartScale = 1.3
         }
         saved.toggle(listing.id)
+        localFavCount += wasSaved ? -1 : 1
+        if localFavCount < 0 { localFavCount = 0 }
         onSaveTap()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -539,15 +554,22 @@ struct ReelCard: View {
     }
 
     private func doubleTapLike() {
-        guard !saved.isSaved(listing.id) else { return }
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
-        saved.toggle(listing.id)
-        onSaveTap()
+
+        // Always show the heart animation
         withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
             doubleTapHeart = true
             heartScale = 1.3
         }
+
+        // Only count the like if not already saved
+        if !saved.isSaved(listing.id) {
+            saved.toggle(listing.id)
+            localFavCount += 1
+            onSaveTap()
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             withAnimation(.easeOut(duration: 0.3)) {
                 doubleTapHeart = false
