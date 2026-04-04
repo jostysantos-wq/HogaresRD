@@ -569,6 +569,57 @@ app.get('/admin/tours', adminSessionAuth, (req, res) => {
   res.json(store.getTours());
 });
 
+// ── Catalogue / Listings admin ───────────────────────────────────────────────
+// Returns all submissions (all statuses) as a compact catalogue for the admin.
+app.get('/admin/catalogue', adminSessionAuth, (req, res) => {
+  const subs = store.getAllSubmissions()
+    .filter(s => s.submission_type !== 'agency_claim')
+    .map(s => ({
+      id:          s.id,
+      title:       s.title,
+      type:        s.type,
+      condition:   s.condition,
+      price:       s.price,
+      province:    s.province,
+      city:        s.city,
+      sector:      s.sector,
+      bedrooms:    s.bedrooms,
+      bathrooms:   s.bathrooms,
+      status:      s.status,
+      views:       s.views || 0,
+      submittedAt: s.submittedAt,
+      approvedAt:  s.approvedAt,
+      name:        s.name,
+      email:       s.email,
+      images:      Array.isArray(s.images) ? s.images.slice(0, 1) : [],
+      featured:    !!(s._extra && s._extra.featured),
+    }));
+  res.json(subs);
+});
+
+// Toggle featured flag on a listing
+app.post('/admin/catalogue/:id/feature', adminSessionAuth, (req, res) => {
+  const sub = store.getListingById(req.params.id);
+  if (!sub) return res.status(404).json({ error: 'Anuncio no encontrado' });
+  if (!sub._extra || typeof sub._extra !== 'object') sub._extra = {};
+  sub._extra.featured = !sub._extra.featured;
+  sub.updatedAt = new Date().toISOString();
+  store.saveListing(sub);
+  res.json({ success: true, featured: sub._extra.featured });
+});
+
+// Unpublish — move approved listing back to pending for re-review
+app.post('/admin/catalogue/:id/unpublish', adminSessionAuth, (req, res) => {
+  const sub = store.getListingById(req.params.id);
+  if (!sub) return res.status(404).json({ error: 'Anuncio no encontrado' });
+  sub.status      = 'pending';
+  sub.approvedAt  = null;
+  sub.updatedAt   = new Date().toISOString();
+  store.saveListing(sub);
+  console.log(`[admin] Unpublished listing ${sub.id} (${sub.title})`);
+  res.json({ success: true });
+});
+
 // ── Unsubscribe ────────────────────────────────────────────────
 app.get('/unsubscribe', (req, res) => {
   const token = req.query.token || '';

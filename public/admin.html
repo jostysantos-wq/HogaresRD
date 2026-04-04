@@ -374,6 +374,43 @@
     .error-log-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; font-family: monospace; font-size: 0.75rem; }
     .error-log-table tr:last-child td { border-bottom: none; }
 
+    /* ── CATALOGUE / LISTINGS TABLE ─────────────────────────── */
+    .cat-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .cat-search { flex: 1; min-width: 200px; max-width: 320px; padding: 0.45rem 0.9rem 0.45rem 2.2rem; border: 1.5px solid #d0dcea; border-radius: 8px; font-size: 0.87rem; outline: none; transition: border-color .2s; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234d6a8a'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat 0.6rem center / 14px; }
+    .cat-search:focus { border-color: var(--accent); }
+    .cat-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
+    .cat-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .cat-table th { background: #f0f4f9; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
+    .cat-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: middle; }
+    .cat-table tr:last-child td { border-bottom: none; }
+    .cat-table tr:hover td { background: #f8fafd; }
+    .cat-thumb { width: 52px; height: 40px; object-fit: cover; border-radius: 6px; background: #e8eef7; display: block; flex-shrink: 0; }
+    .cat-thumb-placeholder { width: 52px; height: 40px; border-radius: 6px; background: #e8eef7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .cat-thumb-placeholder svg { width: 18px; height: 18px; fill: #b0c4d8; }
+    .cat-title-cell { display: flex; align-items: center; gap: 0.65rem; }
+    .cat-title-info strong { display: block; font-weight: 600; font-size: 0.875rem; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-title-info span { color: #4d6a8a; font-size: 0.75rem; }
+    .cat-type-badge { font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.4px; }
+    .cat-venta    { background: #e8f5ee; color: #0a7c4f; }
+    .cat-alquiler { background: #e8f0fb; color: #0038A8; }
+    .cat-proyecto { background: #f3eefe; color: #4a2d9c; }
+    .cat-venta-alquiler { background: #fff3cd; color: #856404; }
+    .cat-status-approved { background: #d1f5e3; color: #0a7c4f; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
+    .cat-status-pending  { background: #fff3cd; color: #856404; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
+    .cat-status-rejected { background: #ffe0e3; color: #a81022; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; }
+    .cat-featured-star { color: #f59e0b; font-size: 1rem; cursor: pointer; transition: transform .15s; line-height: 1; }
+    .cat-featured-star:hover { transform: scale(1.25); }
+    .cat-featured-star.off { color: #c4d4e8; }
+    .cat-actions { display: flex; gap: 0.4rem; align-items: center; }
+    .btn-cat { border: none; border-radius: 6px; font-size: 0.72rem; font-weight: 700; padding: 0.32rem 0.65rem; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-cat-view    { background: #e8f0fb; color: #0038A8; }
+    .btn-cat-view:hover { background: #c7d9f5; }
+    .btn-cat-unpub   { background: #fff3cd; color: #856404; }
+    .btn-cat-unpub:hover { background: #fde68a; }
+    .btn-cat-unpub:disabled { opacity: .4; cursor: not-allowed; }
+    .cat-views { font-size: 0.8rem; color: #4d6a8a; display: flex; align-items: center; gap: 3px; }
+    .cat-views svg { width: 12px; height: 12px; fill: #4d6a8a; }
+
     /* ── USERS TABLE ─────────────────────────────────────────── */
     .users-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
     .users-search { flex: 1; min-width: 180px; max-width: 280px; padding: 0.45rem 0.9rem; border: 1.5px solid #d0dcea; border-radius: 8px; font-size: 0.87rem; outline: none; transition: border-color .2s; }
@@ -497,6 +534,12 @@
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         <span class="nav-item-label">Aplicaciones</span>
         <span class="nav-tooltip">Aplicaciones</span>
+      </button>
+
+      <button class="nav-item" data-page="catalogo" onclick="showPage('catalogo', this)">
+        <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+        <span class="nav-item-label">Catálogo</span>
+        <span class="nav-tooltip">Catálogo</span>
       </button>
 
       <div class="sb-section-label">USUARIOS</div>
@@ -781,6 +824,66 @@
         </div>
       </div>
 
+      <!-- ── CATÁLOGO PAGE ────────────────────────────────── -->
+      <div class="page-section" id="page-catalogo">
+
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid var(--accent);">
+            <div class="num" id="catTotal" style="color:var(--accent);">—</div>
+            <div class="lbl">Total Anuncios</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--success);">
+            <div class="num" id="catApproved" style="color:var(--success);">—</div>
+            <div class="lbl">Publicados</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--warning);">
+            <div class="num" id="catPending" style="color:var(--warning);">—</div>
+            <div class="lbl">Pendientes</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #f59e0b;">
+            <div class="num" id="catFeatured" style="color:#f59e0b;">—</div>
+            <div class="lbl">Destacados</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--purple);">
+            <div class="num" id="catViews" style="color:var(--purple);">—</div>
+            <div class="lbl">Vistas Totales</div>
+          </div>
+        </div>
+
+        <div class="cat-toolbar">
+          <input class="cat-search" type="text" id="catSearch" placeholder="Buscar título, ciudad, sector..." oninput="filterCatalogue()">
+          <button class="filter-btn active" data-cat-type="all" onclick="setCatType('all', this)">Todos</button>
+          <button class="filter-btn" data-cat-type="venta" onclick="setCatType('venta', this)">Venta</button>
+          <button class="filter-btn" data-cat-type="alquiler" onclick="setCatType('alquiler', this)">Alquiler</button>
+          <button class="filter-btn" data-cat-type="proyecto_nuevo" onclick="setCatType('proyecto_nuevo', this)">Proyectos</button>
+          <button class="filter-btn" data-cat-status="approved" onclick="setCatStatus('approved', this)" style="margin-left:0.5rem;">Publicados</button>
+          <button class="filter-btn" data-cat-status="pending"  onclick="setCatStatus('pending', this)">Pendientes</button>
+          <button class="filter-btn" data-cat-status="featured" onclick="setCatStatus('featured', this)">⭐ Destacados</button>
+        </div>
+
+        <div class="cat-table-wrap">
+          <table class="cat-table">
+            <thead>
+              <tr>
+                <th style="width:52px;"></th>
+                <th>Título / Ubicación</th>
+                <th>Tipo</th>
+                <th>Precio</th>
+                <th>Hab. / Baños</th>
+                <th>Estado</th>
+                <th>Vistas</th>
+                <th>Fecha</th>
+                <th>Contacto</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="catTableBody">
+              <tr><td colspan="10" class="leads-empty">Cargando catálogo...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ── USUARIOS PAGE ────────────────────────────────── -->
       <div class="page-section" id="page-usuarios">
         <div class="leads-stats" id="userStatsRow">
@@ -1001,6 +1104,7 @@
     else if (page === 'leads')       { loadLeads(); }
     else if (page === 'anuncios')    { loadAds(); }
     else if (page === 'aplicaciones'){ loadApps(); }
+    else if (page === 'catalogo')    { loadCatalogue(); }
     else if (page === 'usuarios')    { loadUsers(); }
     else if (page === 'newsletter')  { loadNewsletter(); }
     else if (page === 'tours')       { loadTours(); }
@@ -1681,6 +1785,181 @@
         <td style="font-size:0.75rem;color:#4d6a8a;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${notes}">${notes || '—'}</td>
       </tr>`;
     }).join('');
+  }
+
+  // ── Catalogue ─────────────────────────────────────────────────
+  let allCatalogue = [], catTypeFilter = 'all', catStatusFilter = 'all';
+
+  const PAGE_TITLES_EXT = Object.assign(PAGE_TITLES, { catalogo: 'Catálogo de Anuncios' });
+
+  function loadCatalogue() {
+    document.getElementById('catTableBody').innerHTML =
+      '<tr><td colspan="10" class="leads-empty">Cargando catálogo...</td></tr>';
+    fetch('/admin/catalogue')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => {
+        allCatalogue = data;
+        const totalViews = data.reduce((s, l) => s + (l.views || 0), 0);
+        document.getElementById('catTotal').textContent    = data.length;
+        document.getElementById('catApproved').textContent = data.filter(l => l.status === 'approved').length;
+        document.getElementById('catPending').textContent  = data.filter(l => l.status === 'pending').length;
+        document.getElementById('catFeatured').textContent = data.filter(l => l.featured).length;
+        document.getElementById('catViews').textContent    = totalViews.toLocaleString();
+        renderCatalogue(data);
+      })
+      .catch(() => {});
+  }
+
+  function setCatType(type, btn) {
+    catTypeFilter = type;
+    document.querySelectorAll('[data-cat-type]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterCatalogue();
+  }
+
+  function setCatStatus(status, btn) {
+    catStatusFilter = catStatusFilter === status ? 'all' : status;
+    document.querySelectorAll('[data-cat-status]').forEach(b => b.classList.remove('active'));
+    if (catStatusFilter !== 'all') btn.classList.add('active');
+    filterCatalogue();
+  }
+
+  function filterCatalogue() {
+    const q = (document.getElementById('catSearch').value || '').toLowerCase();
+    let filtered = allCatalogue;
+
+    // Type filter
+    if (catTypeFilter === 'proyecto_nuevo') {
+      filtered = filtered.filter(l => l.condition === 'proyecto_nuevo' || l.condition === 'planos' || l.condition === 'construccion');
+    } else if (catTypeFilter !== 'all') {
+      filtered = filtered.filter(l => l.type === catTypeFilter);
+    }
+
+    // Status filter
+    if (catStatusFilter === 'featured') {
+      filtered = filtered.filter(l => l.featured);
+    } else if (catStatusFilter !== 'all') {
+      filtered = filtered.filter(l => l.status === catStatusFilter);
+    }
+
+    // Text search
+    if (q) filtered = filtered.filter(l =>
+      (l.title    || '').toLowerCase().includes(q) ||
+      (l.city     || '').toLowerCase().includes(q) ||
+      (l.sector   || '').toLowerCase().includes(q) ||
+      (l.province || '').toLowerCase().includes(q) ||
+      (l.name     || '').toLowerCase().includes(q)
+    );
+
+    renderCatalogue(filtered);
+  }
+
+  function renderCatalogue(listings) {
+    const tbody = document.getElementById('catTableBody');
+    if (!listings.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="leads-empty">No se encontraron anuncios.</td></tr>';
+      return;
+    }
+
+    const typeClass = { venta:'cat-venta', alquiler:'cat-alquiler', venta_alquiler:'cat-venta-alquiler' };
+    const typeLabel = { venta:'Venta', alquiler:'Alquiler', venta_alquiler:'Venta/Alquiler' };
+    const statusMap = { approved: ['cat-status-approved','Publicado'], pending: ['cat-status-pending','Pendiente'], rejected: ['cat-status-rejected','Rechazado'] };
+
+    tbody.innerHTML = listings.slice().sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).map(l => {
+      const thumb = (l.images && l.images[0])
+        ? `<img class="cat-thumb" src="${l.images[0]}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+           <div class="cat-thumb-placeholder" style="display:none;"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`
+        : `<div class="cat-thumb-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
+
+      const isProyecto = ['proyecto_nuevo','planos','construccion'].includes(l.condition);
+      const tClass = isProyecto ? 'cat-proyecto' : (typeClass[l.type] || 'cat-venta');
+      const tLabel = isProyecto ? 'Proyecto' : (typeLabel[l.type] || l.type || '—');
+
+      const [sCls, sLabel] = statusMap[l.status] || ['cat-status-pending', l.status];
+      const price  = l.price ? '$' + Number(l.price).toLocaleString() : '—';
+      const rooms  = [l.bedrooms ? l.bedrooms + ' hab.' : '', l.bathrooms ? l.bathrooms + ' baños' : ''].filter(Boolean).join(' · ') || '—';
+      const date   = l.approvedAt
+        ? new Date(l.approvedAt).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' })
+        : new Date(l.submittedAt).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
+      const starClass = l.featured ? 'cat-featured-star' : 'cat-featured-star off';
+      const starTitle = l.featured ? 'Quitar destacado' : 'Marcar como destacado';
+      const isApproved = l.status === 'approved';
+
+      return `<tr id="crow-${l.id}">
+        <td style="padding:0.5rem 0.9rem;">
+          <div style="display:flex;">${thumb}</div>
+        </td>
+        <td>
+          <div class="cat-title-cell">
+            <div class="cat-title-info">
+              <strong title="${l.title || ''}">${l.title || '(sin título)'}</strong>
+              <span>📍 ${[l.sector, l.city].filter(Boolean).join(', ') || l.province || '—'}</span>
+            </div>
+          </div>
+        </td>
+        <td><span class="cat-type-badge ${tClass}">${tLabel}</span></td>
+        <td style="font-weight:700;color:var(--accent);white-space:nowrap;">${price}</td>
+        <td style="font-size:0.8rem;color:#4d6a8a;white-space:nowrap;">${rooms}</td>
+        <td><span class="${sCls}">${sLabel}</span></td>
+        <td>
+          <div class="cat-views">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            ${(l.views || 0).toLocaleString()}
+          </div>
+        </td>
+        <td style="font-size:0.78rem;color:#4d6a8a;white-space:nowrap;">${date}</td>
+        <td>
+          <div style="font-size:0.8rem;">
+            <div style="font-weight:600;">${l.name || '—'}</div>
+            <div style="color:#4d6a8a;font-size:0.72rem;">${l.email || ''}</div>
+          </div>
+        </td>
+        <td>
+          <div class="cat-actions">
+            <span class="${starClass}" title="${starTitle}" onclick="toggleFeature('${l.id}', this)">★</span>
+            ${isApproved ? `<a href="/listing/${l.id}" target="_blank" class="btn-cat btn-cat-view">Ver</a>` : ''}
+            <button class="btn-cat btn-cat-unpub" ${!isApproved ? 'disabled' : ''} onclick="unpublish('${l.id}', this)" title="Mover de vuelta a Pendiente">Despublicar</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function toggleFeature(id, el) {
+    fetch(`/admin/catalogue/${id}/feature`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); return; }
+        const item = allCatalogue.find(l => l.id === id);
+        if (item) item.featured = data.featured;
+        el.className = data.featured ? 'cat-featured-star' : 'cat-featured-star off';
+        el.title     = data.featured ? 'Quitar destacado' : 'Marcar como destacado';
+        // Update featured count
+        document.getElementById('catFeatured').textContent = allCatalogue.filter(l => l.featured).length;
+      })
+      .catch(() => alert('Error de conexión'));
+  }
+
+  function unpublish(id, btn) {
+    if (!confirm('¿Mover este anuncio de vuelta a Pendiente? Saldrá del catálogo público hasta que sea aprobado de nuevo.')) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    fetch(`/admin/catalogue/${id}/unpublish`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); btn.disabled = false; btn.textContent = 'Despublicar'; return; }
+        const item = allCatalogue.find(l => l.id === id);
+        if (item) item.status = 'pending';
+        renderCatalogue(allCatalogue.filter(l => {
+          if (catTypeFilter === 'proyecto_nuevo') return ['proyecto_nuevo','planos','construccion'].includes(l.condition);
+          if (catTypeFilter !== 'all') return l.type === catTypeFilter;
+          return true;
+        }));
+        // Refresh stats
+        document.getElementById('catApproved').textContent = allCatalogue.filter(l => l.status === 'approved').length;
+        document.getElementById('catPending').textContent  = allCatalogue.filter(l => l.status === 'pending').length;
+      })
+      .catch(() => { alert('Error de conexión'); btn.disabled = false; btn.textContent = 'Despublicar'; });
   }
 
   // ── Init ──────────────────────────────────────────────────────
