@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Términos y Condiciones de Usuario — HogaresRD</title>
+  <title>Términos y Condiciones de Uso — Cuenta de Usuario — HogaresRD</title>
   <link rel="stylesheet" href="/css/core.css">
-
   <style>
     :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
     [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
@@ -20,11 +19,20 @@
     .doc-title { font-size: 1.75rem; font-weight: 900; color: var(--text); margin-bottom: 0.4rem; }
     .doc-date { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
     h2 { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 2.25rem 0 0.75rem; padding-left: 0.9rem; border-left: 3px solid var(--accent); }
+    h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 1.5rem 0 0.5rem; }
     p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.75; margin-bottom: 0.85rem; }
-    ul { margin: 0.5rem 0 0.85rem 1.5rem; }
-    ul li { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 0.35rem; }
+    ul, ol { margin: 0.5rem 0 0.85rem 1.5rem; }
+    ul li, ol li { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 0.35rem; }
     .highlight-box { background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
     .highlight-box strong { color: var(--accent); }
+    .warning-box { background: color-mix(in srgb, #CF142B 6%, transparent); border: 1px solid color-mix(in srgb, #CF142B 25%, transparent); border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
+    .warning-box strong { color: #CF142B; }
+    .toc { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+    .toc-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .toc ol { margin: 0 0 0 1.25rem; }
+    .toc ol li { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 0.28rem; line-height: 1.5; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
     @media (max-width: 640px) { .doc { padding: 2rem 1.5rem; } }
   </style>
@@ -36,84 +44,369 @@
       HogaresRD
     </a>
   </nav>
-
   <main>
     <div class="doc">
-      <div class="doc-badge">Cuenta de Usuario</div>
-      <h1 class="doc-title">Términos y Condiciones de Uso</h1>
-      <p class="doc-date">Última actualización: 28 de marzo de 2026 &nbsp;·&nbsp; Versión 1.0</p>
 
-      <div class="highlight-box">
-        Al crear una cuenta en HogaresRD, confirmas que has leído, entendido y aceptas quedar vinculado por estos Términos y Condiciones, así como por nuestra <strong>Política de Privacidad</strong>. Si no estás de acuerdo, no debes registrarte.
+      <div class="doc-badge">Cuenta de Usuario</div>
+      <div class="doc-title">Términos y Condiciones de Uso &mdash; Cuenta de Usuario</div>
+      <div class="doc-date">Versión 1.0 &mdash; Vigente a partir del 3 de abril de 2026 &mdash; República Dominicana</div>
+
+      <div class="toc">
+        <div class="toc-title">Tabla de Contenido</div>
+        <ol>
+          <li><a href="#s1">Descripción del Servicio y Naturaleza de la Plataforma</a></li>
+          <li><a href="#s2">Partes del Contrato</a></li>
+          <li><a href="#s3">Elegibilidad, Registro y Seguridad de Cuenta</a></li>
+          <li><a href="#s4">Uso Aceptable de la Plataforma</a></li>
+          <li><a href="#s5">Funcionalidades de la Cuenta de Usuario</a></li>
+          <li><a href="#s6">Sistema de Consultas e Inquiries a Propiedades</a></li>
+          <li><a href="#s7">Proceso de Solicitud de Propiedad (Aplicaciones)</a></li>
+          <li><a href="#s8">Programación y Asistencia a Tours de Propiedades</a></li>
+          <li><a href="#s9">Comunicación con Agentes a través de Mensajería</a></li>
+          <li><a href="#s10">Newsletter, Correos de Alerta y Notificaciones Push</a></li>
+          <li><a href="#s11">Aplicación Móvil (iOS y Android)</a></li>
+          <li><a href="#s12">Privacidad y Tratamiento de Datos Personales</a></li>
+          <li><a href="#s13">Cookies y Tecnologías de Rastreo</a></li>
+          <li><a href="#s14">Contenido de Terceros y Exactitud de los Anuncios</a></li>
+          <li><a href="#s15">Pagos y Suscripciones</a></li>
+          <li><a href="#s16">Limitación de Responsabilidad y Exclusión de Garantías</a></li>
+          <li><a href="#s17">Propiedad Intelectual</a></li>
+          <li><a href="#s18">Suspensión, Cancelación y Eliminación de Cuenta</a></li>
+          <li><a href="#s19">Modificaciones al Servicio y a estos Términos</a></li>
+          <li><a href="#s20">Ley Aplicable, Jurisdicción y Disposiciones Generales</a></li>
+        </ol>
       </div>
 
-      <h2>1. Descripción del Servicio</h2>
-      <p>HogaresRD es una plataforma digital de bienes raíces que permite a usuarios en la República Dominicana explorar, guardar y consultar propiedades en venta y alquiler. Las cuentas de usuario gratuitas tienen acceso a recomendaciones personalizadas, guardado de favoritas, historial de búsqueda y notificaciones de nuevas propiedades.</p>
-      <p>HogaresRD actúa como intermediario de información y <strong>no participa directamente en ninguna transacción inmobiliaria</strong>. La plataforma no es una inmobiliaria, no representa a vendedores ni a compradores, y no garantiza la disponibilidad o exactitud de ninguna propiedad listada.</p>
+      <div class="highlight-box">
+        <strong>Lea atentamente este documento antes de crear una cuenta o utilizar la plataforma HogaresRD.</strong> Al registrarse o continuar utilizando cualquier funcionalidad de HogaresRD, usted declara haber leído, comprendido y aceptado la totalidad de estos Términos y Condiciones. Si no está de acuerdo con alguna disposición, debe abstenerse de utilizar la plataforma.
+      </div>
 
-      <h2>2. Elegibilidad y Registro</h2>
-      <p>Para crear una cuenta debes tener al menos 18 años de edad y estar legalmente habilitado para celebrar contratos en la República Dominicana o en tu país de residencia.</p>
+      <h2 id="s1">1. Descripción del Servicio y Naturaleza de la Plataforma</h2>
+      <p>HogaresRD es una plataforma digital de intermediación inmobiliaria que opera como un mercado en línea (marketplace) para la publicación, búsqueda y consulta de propiedades inmobiliarias en la República Dominicana. La plataforma conecta a usuarios interesados en comprar, alquilar o conocer proyectos inmobiliarios con agentes (brokers) y empresas inmobiliarias (inmobiliarias) debidamente registrados en el sistema.</p>
+      <p>HogaresRD actúa exclusivamente como intermediario tecnológico de información. <strong>HogaresRD no es una inmobiliaria, no ejerce actividad inmobiliaria propia, no representa a ninguna de las partes en transacciones inmobiliarias, y no participa directa ni indirectamente en ninguna negociación, oferta, contrapropuesta, cierre de contrato, transferencia de titularidad, traspaso de posesión ni operación financiera relacionada con los inmuebles publicados en la plataforma.</strong></p>
+      <p>La responsabilidad de la veracidad, precisión, legalidad y actualidad de cada anuncio recae exclusivamente en el agente o inmobiliaria que lo publica. HogaresRD no garantiza que los inmuebles listados estén disponibles, que los precios sean definitivos, que las descripciones sean completas, ni que los agentes listados sean accesibles en todo momento.</p>
+      <p>El servicio comprende tanto el sitio web accesible desde navegadores de escritorio y dispositivos móviles, como las aplicaciones nativas para iOS y Android distribuidas a través de la App Store de Apple y Google Play Store, respectivamente.</p>
+
+      <h2 id="s2">2. Partes del Contrato</h2>
+      <p>El presente contrato se celebra entre:</p>
       <ul>
-        <li>Debes proporcionar información veraz, completa y actualizada al registrarte.</li>
-        <li>Eres responsable de mantener la confidencialidad de tu contraseña.</li>
-        <li>Cualquier actividad realizada bajo tu cuenta es tu responsabilidad.</li>
-        <li>Debes notificarnos de inmediato ante cualquier uso no autorizado de tu cuenta.</li>
-        <li>No puedes crear una cuenta en nombre de otra persona sin su autorización expresa.</li>
+        <li><strong>HogaresRD</strong> (en adelante "la Plataforma", "HogaresRD" o "nosotros"), persona jurídica debidamente constituida conforme a las leyes de la República Dominicana, con domicilio en el Distrito Nacional, República Dominicana, y correo electrónico de contacto: legal@hogaresrd.com.</li>
+        <li><strong>El Usuario</strong> (en adelante "usted", "el Usuario" o "la Parte Usuaria"), persona natural mayor de edad que crea una cuenta de usuario regular en la plataforma o que accede a los servicios disponibles sin registro previo, en la medida en que tales servicios requieran aceptación de estos términos.</li>
+      </ul>
+      <p>Estos Términos y Condiciones constituyen un contrato legalmente vinculante entre las partes conforme a la Ley No. 126-02 sobre Comercio Electrónico, Firmas Digitales y Documentos Digitales de la República Dominicana, que reconoce la validez jurídica de los acuerdos celebrados por medios electrónicos.</p>
+      <p>Al marcar la casilla de aceptación durante el registro o al hacer uso continuado de la plataforma después de la publicación de una versión actualizada de estos términos, el Usuario manifiesta su consentimiento expreso e inequívoco con las condiciones aquí establecidas, produciendo los mismos efectos legales que una firma autógrafa conforme al artículo 7 de la Ley No. 126-02.</p>
+
+      <h2 id="s3">3. Elegibilidad, Registro y Seguridad de Cuenta</h2>
+      <h3>3.1 Elegibilidad</h3>
+      <p>Para crear una cuenta de usuario en HogaresRD, usted debe:</p>
+      <ul>
+        <li>Ser una persona natural con capacidad legal plena, es decir, mayor de dieciocho (18) años de edad.</li>
+        <li>No haber sido previamente suspendido o expulsado de la plataforma por violaciones a estos Términos u otros acuerdos con HogaresRD.</li>
+        <li>Actuar en nombre propio; el registro a nombre de terceros sin autorización fehaciente está expresamente prohibido.</li>
+        <li>Residir en o tener interés legítimo en el mercado inmobiliario de la República Dominicana.</li>
       </ul>
 
-      <h2>3. Uso Aceptable de la Plataforma</h2>
-      <p>Las cuentas de usuario estándar son para uso personal, no comercial. Al usar HogaresRD, aceptas no:</p>
+      <h3>3.2 Información de Registro</h3>
+      <p>Durante el proceso de registro, el Usuario deberá proporcionar nombre completo, dirección de correo electrónico válida, número de teléfono y cualquier otra información que la plataforma requiera en el momento del registro. El Usuario garantiza que toda la información proporcionada es verídica, exacta, actualizada y completa. HogaresRD se reserva el derecho de rechazar o cancelar cuentas creadas con información falsa o incompleta.</p>
+
+      <h3>3.3 Seguridad de la Cuenta</h3>
+      <p>El Usuario es el único responsable de mantener la confidencialidad de sus credenciales de acceso (correo electrónico y contraseña) y de todas las actividades que ocurran bajo su cuenta. El Usuario debe:</p>
       <ul>
-        <li>Usar la plataforma para fines ilegales, fraudulentos o que causen daño a terceros.</li>
-        <li>Intentar acceder a áreas restringidas del sistema o a datos de otros usuarios.</li>
-        <li>Automatizar el acceso a la plataforma mediante scripts, bots o herramientas similares.</li>
-        <li>Publicar reseñas, comentarios o consultas con contenido falso, difamatorio u ofensivo.</li>
-        <li>Usar la plataforma para contactar a agentes con fines distintos a consultas inmobiliarias legítimas.</li>
-        <li>Revender, sublicenciar o explotar comercialmente cualquier contenido de la plataforma.</li>
+        <li>Utilizar una contraseña robusta, con un mínimo de ocho (8) caracteres, combinando letras, números y caracteres especiales.</li>
+        <li>No compartir sus credenciales con ninguna persona bajo ninguna circunstancia.</li>
+        <li>Notificar de inmediato a HogaresRD a través de soporte@hogaresrd.com ante cualquier acceso no autorizado sospechado o confirmado.</li>
+        <li>Cerrar sesión al finalizar cada uso en dispositivos compartidos o públicos.</li>
+      </ul>
+      <p>HogaresRD no será responsable por pérdidas o daños ocasionados por el incumplimiento de estas obligaciones de seguridad. Si HogaresRD detecta actividad sospechosa, podrá suspender preventivamente la cuenta y notificar al Usuario para verificación de identidad.</p>
+
+      <h3>3.4 Prohibición de Suplantación de Identidad</h3>
+      <p>Queda estrictamente prohibido crear cuentas haciéndose pasar por otra persona, empresa, entidad pública o cualquier figura pública. La suplantación de identidad constituye una violación grave de estos Términos y puede dar lugar a la cancelación inmediata de la cuenta, así como a las acciones legales correspondientes bajo el Código Penal Dominicano.</p>
+
+      <h2 id="s4">4. Uso Aceptable de la Plataforma</h2>
+      <p>La cuenta de usuario estándar está habilitada para uso personal y no comercial. El Usuario se compromete a utilizar la plataforma únicamente para sus finalidades legítimas como potencial comprador, arrendatario o interesado en propiedades inmobiliarias. En consecuencia, quedan expresamente prohibidas las siguientes conductas:</p>
+      <ul>
+        <li><strong>Extracción automatizada de datos (scraping):</strong> El uso de robots, arañas web (spiders), herramientas de scraping, scripts automatizados u otros mecanismos para extraer, recopilar o indexar el contenido de la plataforma sin autorización escrita previa de HogaresRD.</li>
+        <li><strong>Uso comercial no autorizado:</strong> Utilizar la plataforma o sus datos para fines comerciales propios, incluyendo la creación de servicios competidores, la reventa de información de listados, o el uso del directorio de agentes para contacto comercial masivo.</li>
+        <li><strong>Acoso a agentes e inmobiliarias:</strong> Dirigir comunicaciones hostigadoras, amenazantes, discriminatorias o inapropiadas a agentes, personal de inmobiliarias u otros usuarios de la plataforma.</li>
+        <li><strong>Consultas falsas o fraudulentas:</strong> Enviar formularios de consulta con información falsa, con la intención de ocupar tiempo de agentes sin intención real de transacción, o con propósitos de investigación competitiva.</li>
+        <li><strong>Manipulación del sistema:</strong> Intentar obtener acceso no autorizado a partes restringidas de la plataforma, explotar vulnerabilidades técnicas, o interferir con el funcionamiento normal del servicio.</li>
+        <li><strong>Actividad ilícita:</strong> Utilizar la plataforma para cualquier actividad que contravenga las leyes dominicanas o internacionales, incluyendo lavado de activos, fraude inmobiliario, o cualquier otra actividad delictiva.</li>
+        <li><strong>Creación múltiple de cuentas:</strong> Un mismo Usuario no puede mantener múltiples cuentas de usuario activas simultáneamente para el mismo propósito.</li>
+      </ul>
+      <p>HogaresRD se reserva el derecho de monitorear el uso de la plataforma para detectar conductas prohibidas y de adoptar las medidas correctivas necesarias, incluyendo la suspensión o cancelación de cuentas y la remisión a las autoridades competentes.</p>
+
+      <h2 id="s5">5. Funcionalidades de la Cuenta de Usuario</h2>
+      <p>Una cuenta de usuario registrado en HogaresRD otorga acceso a las siguientes funcionalidades, sujetas a disponibilidad técnica y a las condiciones establecidas en estos Términos:</p>
+      <h3>5.1 Favoritos y Propiedades Guardadas</h3>
+      <p>El Usuario puede marcar propiedades como "favoritas" para consultarlas posteriormente. En la aplicación móvil, los favoritos se almacenan localmente en el dispositivo del Usuario mediante el mecanismo de almacenamiento local del sistema operativo. HogaresRD no garantiza la persistencia de los favoritos entre reinstalaciones de la app, cambios de dispositivo o borrado de datos del dispositivo. En la versión web, los favoritos pueden sincronizarse con la cuenta si el Usuario está autenticado.</p>
+      <h3>5.2 Búsquedas Guardadas y Alertas</h3>
+      <p>El Usuario puede guardar criterios de búsqueda (ubicación, tipo de propiedad, rango de precio, número de habitaciones, etc.) y configurar alertas de notificación. Cuando se publique un nuevo listado que coincida con los criterios guardados y haya sido aprobado por el equipo de HogaresRD, el sistema enviará automáticamente una notificación al correo electrónico registrado del Usuario. La frecuencia y el formato de estas alertas pueden modificarse en la configuración de la cuenta.</p>
+      <h3>5.3 Notificaciones Push</h3>
+      <p>La aplicación móvil puede enviar notificaciones push al dispositivo del Usuario relacionadas con actualizaciones de sus aplicaciones de propiedad, respuestas a consultas, confirmaciones de tours y nuevas propiedades que coincidan con búsquedas guardadas. El Usuario puede gestionar los permisos de notificaciones push a través de la configuración de su dispositivo en cualquier momento.</p>
+      <h3>5.4 Comparación de Propiedades</h3>
+      <p>El Usuario puede seleccionar múltiples propiedades para visualizarlas comparativamente según sus características principales. Esta función es exclusivamente informativa y no constituye una oferta o recomendación de parte de HogaresRD.</p>
+      <h3>5.5 Acceso a Contenido Editorial</h3>
+      <p>El Usuario registrado puede acceder al blog de HogaresRD, guías de mercado, informes del sector inmobiliario dominicano, artículos sobre procesos de compraventa y arrendamiento, y otro contenido educativo publicado por la plataforma. Este contenido es de carácter informativo general y no constituye asesoramiento legal, financiero o inmobiliario profesional.</p>
+      <h3>5.6 Historial de Actividad</h3>
+      <p>El perfil del Usuario registrado muestra un historial de sus consultas enviadas, aplicaciones en curso, tours programados y búsquedas recientes, facilitando el seguimiento de su proceso de búsqueda inmobiliaria.</p>
+
+      <h2 id="s6">6. Sistema de Consultas e Inquiries a Propiedades</h2>
+      <p>La plataforma HogaresRD provee formularios de consulta (inquiries) que permiten al Usuario expresar su interés en una propiedad y solicitar información adicional o contacto con el agente responsable del listado.</p>
+      <h3>6.1 Datos Compartidos con Agentes</h3>
+      <p>Al enviar un formulario de consulta, el Usuario consiente expresamente en que su información de contacto —incluyendo nombre completo, número de teléfono, correo electrónico y el mensaje incluido en la consulta— sea transmitida al agente inmobiliario y/o a la inmobiliaria asociados al listado consultado. Esta transmisión es necesaria para que el agente pueda responder a la solicitud del Usuario.</p>
+      <div class="highlight-box">
+        <strong>Consentimiento de contacto:</strong> Al enviar una consulta, el Usuario autoriza expresamente al agente receptor a contactarle por los medios de comunicación provistos (correo electrónico, llamada telefónica, mensajes de texto o WhatsApp) para atender su solicitud. Este consentimiento es específico al listado consultado y al agente correspondiente.
+      </div>
+      <h3>6.2 Limitaciones de Responsabilidad en Consultas</h3>
+      <p>HogaresRD no garantiza que los agentes respondan a las consultas en un plazo determinado, ni que la información que proporcionen los agentes sea completa o actualizada. HogaresRD no interviene en las comunicaciones entre el Usuario y el agente una vez transmitida la consulta, salvo en casos de reporte de conducta inapropiada.</p>
+      <h3>6.3 Uso Apropiado del Sistema de Consultas</h3>
+      <p>El sistema de consultas debe utilizarse exclusivamente para expresar un interés genuino en una propiedad. El envío de consultas masivas, repetitivas, fraudulentas, sin intención real de contacto, o con datos de contacto falsos constituye una violación de estos Términos y puede resultar en la suspensión de la cuenta.</p>
+
+      <h2 id="s7">7. Proceso de Solicitud de Propiedad (Aplicaciones)</h2>
+      <p>HogaresRD ofrece un sistema formalizado de solicitud de propiedad, denominado "Aplicaciones", que permite al Usuario iniciar un proceso estructurado de interés en la compra o arrendamiento de un inmueble específico.</p>
+      <h3>7.1 Etapas del Proceso de Aplicación</h3>
+      <p>Una vez enviada la solicitud formal, la aplicación transita por las siguientes etapas gestionadas desde el dashboard del agente o la inmobiliaria:</p>
+      <ol>
+        <li><strong>Aplicado (aplicado):</strong> La solicitud ha sido enviada y recibida por el agente.</li>
+        <li><strong>En Revisión (en_revision):</strong> El agente está evaluando la solicitud y el perfil del aplicante.</li>
+        <li><strong>Documentos Requeridos (documentos_requeridos):</strong> El agente solicita al Usuario la carga de documentos específicos (cédula de identidad, comprobante de ingresos, carta de empleo, estados de cuenta, etc.) a través de la plataforma.</li>
+        <li><strong>En Aprobación (en_aprobacion):</strong> La documentación ha sido recibida y está siendo evaluada por el agente y/o la inmobiliaria.</li>
+        <li><strong>Aprobado (aprobado):</strong> La solicitud ha sido aceptada por el agente. Esto no constituye un contrato de compraventa ni de arrendamiento; las partes deberán formalizar el acuerdo mediante los instrumentos legales correspondientes.</li>
+        <li><strong>Rechazado (rechazado):</strong> La solicitud no fue aceptada. HogaresRD no interviene en la decisión del agente ni de la inmobiliaria respecto a la aceptación o rechazo de aplicaciones.</li>
+      </ol>
+      <h3>7.2 Naturaleza de la Facilitación</h3>
+      <p>HogaresRD actúa únicamente como facilitador tecnológico del proceso de aplicación. La plataforma no garantiza la aprobación de ninguna solicitud, no interviene en los criterios de evaluación del agente, y no es responsable de los tiempos de respuesta, la calidad del proceso o las decisiones adoptadas por el agente o la inmobiliaria.</p>
+      <h3>7.3 Carga de Documentos</h3>
+      <p>El Usuario puede cargar documentos en los formatos y tamaños permitidos por la plataforma (PDF, JPG, PNG, hasta 10 MB por archivo). El Usuario garantiza que los documentos cargados son auténticos, no han sido alterados y pertenecen a la persona identificada en la solicitud. La carga de documentos falsos o alterados constituye fraude y será reportada a las autoridades competentes.</p>
+      <h3>7.4 Compartición de Datos en Aplicaciones</h3>
+      <p>Todos los datos e información proporcionados durante el proceso de aplicación —incluyendo documentos personales, información financiera y de empleo— serán accesibles al agente a cargo y a la inmobiliaria asociada al listado. El Usuario consiente esta compartición como condición necesaria para el procesamiento de su solicitud. HogaresRD aplica medidas técnicas de seguridad para proteger estos datos durante su transmisión y almacenamiento.</p>
+
+      <h2 id="s8">8. Programación y Asistencia a Tours de Propiedades</h2>
+      <p>HogaresRD permite a los usuarios programar visitas a propiedades de su interés a través del sistema integrado de tours, en modalidad virtual (videollamada) o presencial (en el inmueble).</p>
+      <h3>8.1 Proceso de Agendamiento</h3>
+      <p>El Usuario selecciona un horario disponible en el calendario del agente, publicado en la plataforma por el propio agente. La confirmación del tour se realiza mediante notificación en la plataforma y correo electrónico. Los datos del tour (fecha, hora, modalidad y datos de contacto del agente) quedan registrados en el historial del Usuario.</p>
+      <h3>8.2 Obligaciones del Usuario</h3>
+      <ul>
+        <li>Presentarse puntualmente en la fecha y hora confirmadas, o conectarse en el enlace de videollamada provisto.</li>
+        <li>Cancelar o reprogramar con un mínimo de veinticuatro (24) horas de anticipación a través de la plataforma, en caso de no poder asistir.</li>
+        <li>Informar cualquier inconveniente de forma inmediata al agente a través del sistema de mensajería de la plataforma.</li>
+        <li>Abstenerse de conductas inapropiadas durante visitas presenciales a propiedades ajenas.</li>
+      </ul>
+      <h3>8.3 Facultades del Agente</h3>
+      <p>El agente tiene la facultad de declinar la realización de un tour, reprogramarlo por causas justificadas, o cancelarlo ante comportamiento inapropiado por parte del Usuario. HogaresRD no garantiza que ningún tour específico se lleve a cabo y no será responsable por cancelaciones o reprogramaciones realizadas por el agente.</p>
+      <h3>8.4 Tours Virtuales</h3>
+      <p>Para los tours virtuales, el Usuario debe contar con un dispositivo compatible y una conexión a internet estable. HogaresRD no es responsable por interrupciones técnicas durante los tours virtuales atribuibles a la conexión del Usuario o al proveedor de servicios de videollamada utilizado.</p>
+
+      <h2 id="s9">9. Comunicación con Agentes a través de Mensajería</h2>
+      <p>HogaresRD incorpora un sistema de mensajería directa en tiempo real que permite al Usuario comunicarse con agentes e inmobiliarias en el contexto de propiedades específicas.</p>
+      <h3>9.1 Uso Apropiado del Sistema de Mensajería</h3>
+      <p>El sistema de mensajería debe utilizarse exclusivamente para comunicaciones relacionadas con procesos inmobiliarios legítimos —consultas de propiedades, coordinación de tours, seguimiento de aplicaciones y trámites relacionados—. El Usuario se compromete a mantener un trato respetuoso, profesional y cortés en todas sus comunicaciones.</p>
+      <h3>9.2 Conductas Prohibidas en Mensajería</h3>
+      <ul>
+        <li>Enviar mensajes de naturaleza comercial no relacionada con la búsqueda inmobiliaria (spam).</li>
+        <li>Acosar, amenazar, insultar o discriminar a agentes u otros usuarios.</li>
+        <li>Compartir contenido ilegal, obsceno, difamatorio o que viole derechos de terceros.</li>
+        <li>Intentar obtener información personal del agente más allá de lo necesario para la transacción inmobiliaria.</li>
+        <li>Solicitar al agente que realice transacciones fuera de la plataforma con el propósito de evadir el sistema.</li>
+      </ul>
+      <h3>9.3 Revisión y Monitoreo</h3>
+      <p>HogaresRD puede revisar el contenido de los mensajes intercambiados en la plataforma cuando sea necesario para investigar reportes de conducta inapropiada, cumplir con requerimientos legales o garantizar la seguridad de los usuarios. Esta revisión se realiza conforme a lo dispuesto en la Sección 12 de estos Términos y la política de privacidad de la plataforma.</p>
+      <h3>9.4 Retención de Mensajes</h3>
+      <p>Los mensajes intercambiados a través de la plataforma son almacenados durante el período que el Usuario y el agente mantengan sus cuentas activas, y hasta noventa (90) días adicionales después del cierre de cualquiera de las cuentas participantes en la conversación, salvo que una investigación activa requiera retención por un período mayor.</p>
+
+      <h2 id="s10">10. Newsletter, Correos de Alerta y Notificaciones Push</h2>
+      <h3>10.1 Newsletter</h3>
+      <p>Al registrarse en HogaresRD, el Usuario puede suscribirse al newsletter de la plataforma, que incluye contenido editorial sobre el mercado inmobiliario dominicano, nuevos proyectos destacados, guías de compra y arrendamiento, y actualizaciones de la plataforma. La suscripción al newsletter es voluntaria y puede cancelarse en cualquier momento mediante el enlace de cancelación incluido en cada correo o desde la configuración de la cuenta.</p>
+      <h3>10.2 Alertas de Búsquedas Guardadas</h3>
+      <p>El sistema enviará automáticamente correos de alerta al Usuario cuando se publiquen nuevas propiedades que coincidan con los criterios de sus búsquedas guardadas y que hayan superado el proceso de aprobación de HogaresRD. El Usuario puede desactivar estas alertas o modificar su frecuencia desde la configuración de sus búsquedas guardadas. HogaresRD no garantiza la recepción ininterrumpida de estas alertas ni la exhaustividad de la coincidencia de resultados.</p>
+      <h3>10.3 Notificaciones Push</h3>
+      <p>Las notificaciones push requieren la autorización expresa del Usuario a través del sistema de permisos del dispositivo (iOS o Android). El Usuario puede revocar este permiso en cualquier momento desde la configuración del sistema operativo de su dispositivo. HogaresRD no tiene acceso directo a los permisos de notificaciones del dispositivo y no puede enviar notificaciones si el Usuario los ha desactivado.</p>
+      <h3>10.4 Comunicaciones Transaccionales</h3>
+      <p>Independientemente de las preferencias de comunicación del Usuario, HogaresRD podrá enviar correos electrónicos de carácter transaccional (confirmaciones de registro, restablecimiento de contraseña, actualizaciones de aplicaciones, confirmaciones de tours) que son esenciales para el funcionamiento de la cuenta y no pueden desactivarse sin eliminar la cuenta.</p>
+
+      <h2 id="s11">11. Aplicación Móvil (iOS y Android)</h2>
+      <h3>11.1 Descarga y Distribución</h3>
+      <p>La aplicación móvil de HogaresRD está disponible para descarga en la App Store de Apple (para dispositivos iOS) y en Google Play Store (para dispositivos Android). La descarga y el uso de la aplicación están sujetos, además de a estos Términos, a los términos de servicio y políticas de privacidad de Apple Inc. y Google LLC, respectivamente. En caso de conflicto entre estos Términos y los términos del distribuidor de la tienda de aplicaciones, los términos del distribuidor prevalecerán únicamente respecto a la relación entre el Usuario y dicho distribuidor.</p>
+      <h3>11.2 Requisitos de Sistema</h3>
+      <p>El uso óptimo de la aplicación móvil de HogaresRD requiere:</p>
+      <ul>
+        <li>iOS versión 16.0 o superior para dispositivos Apple.</li>
+        <li>Android versión 10.0 (API level 29) o superior para dispositivos Android.</li>
+        <li>Conexión activa a internet (WiFi o datos móviles) para la mayoría de las funcionalidades.</li>
+        <li>Espacio de almacenamiento disponible mínimo de 150 MB.</li>
+      </ul>
+      <p>HogaresRD no garantiza el funcionamiento correcto de la aplicación en dispositivos que no cumplan los requisitos mínimos o en sistemas operativos modificados (jailbreak/root).</p>
+      <h3>11.3 Funcionalidades Offline y Almacenamiento Local</h3>
+      <p>La aplicación móvil almacena ciertos datos localmente en el dispositivo del Usuario, incluyendo los listados marcados como favoritos. Estos datos locales pueden perderse en caso de desinstalación de la aplicación, borrado de datos del dispositivo, fallo del dispositivo o reemplazo del mismo. HogaresRD no es responsable por la pérdida de datos almacenados localmente en el dispositivo del Usuario. La mayoría de las funcionalidades principales requieren conexión activa a internet.</p>
+      <h3>11.4 Actualizaciones de la Aplicación</h3>
+      <p>HogaresRD puede publicar actualizaciones de la aplicación que incluyan nuevas funcionalidades, correcciones de errores o mejoras de seguridad. Se recomienda encarecidamente mantener la aplicación actualizada a la versión más reciente disponible. Ciertas versiones antiguas de la aplicación pueden dejar de ser compatibles con los servidores de HogaresRD sin previo aviso en caso de cambios de infraestructura significativos.</p>
+      <h3>11.5 Permisos del Dispositivo</h3>
+      <p>La aplicación puede solicitar permisos del dispositivo como acceso a la cámara (para subir fotos de documentos), ubicación (para búsquedas por proximidad), notificaciones push y acceso al almacenamiento. Estos permisos son opcionales y la denegación de alguno de ellos puede limitar ciertas funcionalidades de la aplicación, pero no impedirá el uso general de la misma.</p>
+
+      <h2 id="s12">12. Privacidad y Tratamiento de Datos Personales (Ley No. 172-13)</h2>
+      <p>El tratamiento de datos personales en HogaresRD se rige por la Ley No. 172-13 sobre Protección de Datos Personales de la República Dominicana. HogaresRD actúa como responsable del tratamiento de los datos personales de sus usuarios.</p>
+      <h3>12.1 Datos Recopilados</h3>
+      <p>HogaresRD recopila los siguientes tipos de datos personales:</p>
+      <ul>
+        <li><strong>Datos de registro:</strong> Nombre completo, correo electrónico, número de teléfono, contraseña (almacenada en formato cifrado).</li>
+        <li><strong>Datos de perfil:</strong> Foto de perfil (opcional), preferencias de búsqueda, configuración de notificaciones.</li>
+        <li><strong>Datos de uso:</strong> Propiedades visitadas, búsquedas realizadas, consultas enviadas, aplicaciones presentadas, tours programados.</li>
+        <li><strong>Datos de comunicaciones:</strong> Contenido de mensajes intercambiados a través del sistema de mensajería de la plataforma.</li>
+        <li><strong>Datos del dispositivo:</strong> Tipo de dispositivo, sistema operativo, identificador de dispositivo, dirección IP, información del navegador.</li>
+        <li><strong>Datos de aplicaciones:</strong> Documentos cargados durante procesos de aplicación a propiedades.</li>
+      </ul>
+      <h3>12.2 Finalidades del Tratamiento y Base Legal</h3>
+      <p>Los datos personales del Usuario son tratados para las siguientes finalidades:</p>
+      <ul>
+        <li><strong>Ejecución del contrato (Art. 9, Ley 172-13):</strong> Gestión de la cuenta, prestación de los servicios contratados, procesamiento de consultas y aplicaciones, comunicaciones transaccionales.</li>
+        <li><strong>Interés legítimo:</strong> Prevención de fraude, seguridad de la plataforma, mejora de los servicios, análisis de uso agregado y anónimo.</li>
+        <li><strong>Consentimiento:</strong> Envío de newsletter, alertas de búsqueda, notificaciones push de marketing.</li>
+      </ul>
+      <h3>12.3 Compartición con Terceros</h3>
+      <p>HogaresRD únicamente comparte los datos del Usuario con:</p>
+      <ul>
+        <li>Agentes e inmobiliarias: exclusivamente los datos de contacto del Usuario cuando este envía una consulta, aplicación o mensaje a un agente específico. Esta compartición es necesaria para la prestación del servicio.</li>
+        <li>Proveedores de servicios tecnológicos: empresas de infraestructura cloud, servicios de correo electrónico transaccional, procesadores de pagos (Stripe), bajo contratos de tratamiento de datos que garantizan niveles adecuados de protección.</li>
+        <li>Autoridades competentes: cuando sea requerido por ley, orden judicial o requerimiento de autoridad competente de la República Dominicana.</li>
+      </ul>
+      <p>HogaresRD no vende datos personales de usuarios a terceros bajo ninguna circunstancia.</p>
+      <h3>12.4 Retención de Datos</h3>
+      <p>Los datos personales se conservan durante la vigencia de la cuenta del Usuario y por un período adicional de dos (2) años tras la eliminación de la cuenta, salvo que la ley exija un período mayor o que existan obligaciones contractuales pendientes. Los datos de aplicaciones con documentos personales sensibles se eliminan en un plazo de noventa (90) días tras la conclusión definitiva del proceso de aplicación.</p>
+      <h3>12.5 Derechos del Titular</h3>
+      <p>El Usuario tiene los siguientes derechos respecto a sus datos personales, ejercibles mediante solicitud escrita a privacidad@hogaresrd.com:</p>
+      <ul>
+        <li><strong>Acceso:</strong> Conocer qué datos personales son tratados y obtener una copia.</li>
+        <li><strong>Rectificación:</strong> Solicitar la corrección de datos inexactos o incompletos.</li>
+        <li><strong>Cancelación/Eliminación:</strong> Solicitar la supresión de sus datos, sujeto a las obligaciones legales de retención.</li>
+        <li><strong>Oposición:</strong> Oponerse al tratamiento para finalidades de marketing directo.</li>
+        <li><strong>Portabilidad:</strong> Recibir sus datos en formato estructurado y de uso común.</li>
+      </ul>
+      <p>HogaresRD responderá a todas las solicitudes en un plazo máximo de quince (15) días hábiles conforme a la Ley No. 172-13.</p>
+
+      <h2 id="s13">13. Cookies y Tecnologías de Rastreo</h2>
+      <p>El sitio web de HogaresRD utiliza cookies y tecnologías similares para garantizar el correcto funcionamiento de la plataforma y mejorar la experiencia del usuario.</p>
+      <h3>13.1 Tipos de Cookies Utilizadas</h3>
+      <ul>
+        <li><strong>Cookies de sesión (estrictamente necesarias):</strong> Mantienen la sesión autenticada del Usuario durante su navegación. Son temporales y se eliminan al cerrar el navegador. No pueden desactivarse sin impedir el uso de la plataforma.</li>
+        <li><strong>Cookies de preferencias:</strong> Almacenan las preferencias del Usuario (tema oscuro/claro, filtros de búsqueda frecuentes, idioma). Persisten entre sesiones.</li>
+        <li><strong>Cookies analíticas (anónimas):</strong> Recopilan datos agregados y anónimos sobre el comportamiento de navegación (páginas visitadas, duración de la sesión, errores técnicos) para mejorar la plataforma. No identifican a usuarios individuales.</li>
+      </ul>
+      <h3>13.2 Lo que HogaresRD NO Hace con Cookies</h3>
+      <p>HogaresRD no utiliza cookies de publicidad comportamental de terceros, no comparte datos de cookies con redes publicitarias, y no realiza seguimiento entre sitios web (cross-site tracking) de sus usuarios.</p>
+      <h3>13.3 Gestión de Cookies</h3>
+      <p>El Usuario puede gestionar o eliminar las cookies desde la configuración de su navegador web. La desactivación de las cookies estrictamente necesarias puede impedir el acceso a las funcionalidades autenticadas de la plataforma. La desactivación de cookies analíticas no afectará la experiencia funcional del Usuario.</p>
+
+      <h2 id="s14">14. Contenido de Terceros y Exactitud de los Anuncios</h2>
+      <p>Todo el contenido de los anuncios de propiedades publicados en HogaresRD —incluyendo descripciones, precios, fotografías, planos, especificaciones técnicas, información de ubicación y cualquier otro dato del listado— es generado y publicado directamente por los agentes inmobiliarios e inmobiliarias registrados en la plataforma, no por HogaresRD.</p>
+      <div class="warning-box">
+        <strong>Importante:</strong> HogaresRD no verifica de forma independiente la exactitud, veracidad, legalidad, disponibilidad ni situación registral de ninguna propiedad publicada en la plataforma. La existencia de un listado en HogaresRD no constituye una garantía de ningún tipo sobre el inmueble. El Usuario debe realizar su propia diligencia debida antes de tomar cualquier decisión de inversión.
+      </div>
+      <p>Si bien HogaresRD implementa un proceso de revisión y aprobación de nuevos listados antes de su publicación, dicho proceso tiene como objetivo verificar el cumplimiento de los estándares de contenido de la plataforma y no constituye una auditoría legal, técnica ni financiera del inmueble.</p>
+      <h3>14.1 Recomendaciones para el Usuario</h3>
+      <p>Antes de realizar cualquier transacción inmobiliaria, HogaresRD recomienda expresamente al Usuario:</p>
+      <ul>
+        <li>Contratar los servicios de un <strong>notario público</strong> habilitado en la República Dominicana para verificar la titularidad y situación registral del inmueble en el Registro de Títulos correspondiente.</li>
+        <li>Verificar que el vendedor o arrendador tiene plena capacidad y facultad legal para disponer del inmueble.</li>
+        <li>Obtener asesoramiento legal independiente de un abogado especializado en derecho inmobiliario dominicano.</li>
+        <li>Verificar la situación fiscal y de deudas del inmueble ante la DGII y el Ayuntamiento correspondiente.</li>
+        <li>Comprobar de forma presencial la existencia y el estado real del inmueble antes de formalizar cualquier acuerdo.</li>
+      </ul>
+      <h3>14.2 Reporte de Contenido Inapropiado</h3>
+      <p>Si el Usuario identifica un anuncio que considera falso, engañoso, ilegal o inapropiado, puede reportarlo a través del botón de denuncia disponible en cada listado o escribiendo a reporte@hogaresrd.com. HogaresRD investigará el reporte y tomará las acciones que considere pertinentes.</p>
+
+      <h2 id="s15">15. Pagos y Suscripciones (Para Funciones Premium Futuras)</h2>
+      <p>La cuenta de usuario estándar de HogaresRD es completamente gratuita en su versión actual. El acceso a la búsqueda de propiedades, el envío de consultas, el sistema de aplicaciones, la programación de tours y el sistema de mensajería no tienen costo para los usuarios.</p>
+      <h3>15.1 Funciones Premium Futuras</h3>
+      <p>HogaresRD se reserva el derecho de introducir funciones premium o suscripciones de pago para usuarios en el futuro. En caso de que se introduzcan tales funciones, HogaresRD notificará a los usuarios registrados con al menos quince (15) días de anticipación, detallando las características y el precio de las nuevas funcionalidades. Las funciones actualmente gratuitas no podrán convertirse en funciones de pago sin dicha notificación previa.</p>
+      <h3>15.2 Procesamiento de Pagos</h3>
+      <p>Si en el futuro se implementan pagos para usuarios, estos serán procesados a través de Stripe, Inc., proveedor de servicios de pago certificado bajo el estándar PCI DSS. HogaresRD no almacena directamente datos de tarjetas de crédito o débito de los usuarios. El procesamiento de pagos está sujeto a los Términos de Servicio de Stripe disponibles en stripe.com/legal.</p>
+      <h3>15.3 Moneda y Precios</h3>
+      <p>Los precios de cualquier servicio de pago serán expresados en Pesos Dominicanos (DOP) o Dólares Estadounidenses (USD) según se indique en el momento de la transacción. En caso de discrepancia, prevalecerá el precio en la moneda indicada en la pantalla de pago.</p>
+      <h3>15.4 Política de Reembolsos</h3>
+      <p>Salvo que la ley dominicana establezca lo contrario, los pagos por funciones digitales activadas y utilizadas no son reembolsables. HogaresRD evaluará solicitudes de reembolso caso por caso en situaciones de error técnico demostrable atribuible a la plataforma.</p>
+
+      <h2 id="s16">16. Limitación de Responsabilidad y Exclusión de Garantías</h2>
+      <h3>16.1 Servicio "Tal Como Está"</h3>
+      <p>La plataforma HogaresRD se proporciona "tal como está" (as is) y "según disponibilidad", sin garantías de ningún tipo, expresas o implícitas, incluyendo pero no limitándose a garantías de comerciabilidad, idoneidad para un propósito particular, disponibilidad ininterrumpida, ausencia de errores, exactitud de la información o no infracción de derechos de terceros.</p>
+      <h3>16.2 Disponibilidad del Servicio</h3>
+      <p>HogaresRD no garantiza que la plataforma esté disponible de forma continua e ininterrumpida. El servicio puede estar sujeto a interrupciones por mantenimiento programado, fallas técnicas, actualizaciones de seguridad, causas de fuerza mayor o problemas de terceros proveedores de infraestructura. HogaresRD realizará esfuerzos razonables para minimizar las interrupciones y notificar los mantenimientos programados con anticipación.</p>
+      <h3>16.3 Exclusión de Responsabilidad por Decisiones Inmobiliarias</h3>
+      <p>HogaresRD no será responsable, en ningún caso, por pérdidas económicas, daños directos, indirectos, incidentales, especiales, consecuentes o punitivos derivados de:</p>
+      <ul>
+        <li>Decisiones de compra, arrendamiento o inversión inmobiliaria tomadas con base en la información contenida en la plataforma.</li>
+        <li>Inexactitud, desactualización o incompletitud de los anuncios de propiedades publicados por agentes o inmobiliarias.</li>
+        <li>Conducta, omisión o incumplimiento de los agentes, inmobiliarias u otros usuarios de la plataforma.</li>
+        <li>Interrupciones del servicio o pérdida de datos.</li>
+        <li>Acceso no autorizado a la cuenta del Usuario por causas imputables al propio Usuario.</li>
+      </ul>
+      <h3>16.4 Límite Agregado de Responsabilidad</h3>
+      <p>En cualquier caso en que HogaresRD sea considerado responsable por alguna causa relacionada con el uso de la plataforma, la responsabilidad agregada máxima de HogaresRD hacia el Usuario no excederá la cantidad de <strong>cinco mil pesos dominicanos (DOP 5,000.00)</strong> o el equivalente en la moneda aplicable, salvo en casos de dolo o culpa grave debidamente comprobados.</p>
+
+      <h2 id="s17">17. Propiedad Intelectual</h2>
+      <h3>17.1 Propiedad de HogaresRD</h3>
+      <p>Todos los elementos de la plataforma HogaresRD —incluyendo pero no limitándose a la marca, el logo, el diseño visual, la arquitectura de la plataforma, el código fuente, las bases de datos, los algoritmos, el contenido editorial, las guías de mercado, los artículos del blog y cualquier otro material creado por HogaresRD— son propiedad exclusiva de HogaresRD y están protegidos por las leyes de propiedad intelectual de la República Dominicana y los tratados internacionales de los que la República Dominicana es parte.</p>
+      <h3>17.2 Licencia Limitada al Usuario</h3>
+      <p>HogaresRD otorga al Usuario una licencia personal, no exclusiva, no transferible, revocable y limitada para acceder y utilizar la plataforma exclusivamente para los fines previstos en estos Términos. Esta licencia no incluye el derecho a reproducir, distribuir, modificar, crear obras derivadas, transmitir públicamente, exhibir ni explotar comercialmente ningún elemento de la plataforma.</p>
+      <h3>17.3 Prohibición de Extracción de Datos</h3>
+      <p>Queda expresamente prohibido el uso de técnicas de scraping, data mining, crawling, o cualquier otro método automatizado para extraer datos de la plataforma. La información de listados, precios, datos de agentes y cualquier otro contenido de la plataforma no puede ser reproducida, compilada, redistribuida ni utilizada para construir bases de datos, servicios competidores o productos derivados sin autorización escrita de HogaresRD.</p>
+      <h3>17.4 Marcas de Terceros</h3>
+      <p>Las marcas comerciales de terceros mencionadas en la plataforma (Apple, Google, Stripe, etc.) son propiedad de sus respectivos dueños. Su mención en la plataforma no implica ninguna afiliación, patrocinio o aval de estos terceros respecto a HogaresRD.</p>
+
+      <h2 id="s18">18. Suspensión, Cancelación y Eliminación de Cuenta</h2>
+      <h3>18.1 Cancelación por Parte del Usuario</h3>
+      <p>El Usuario puede eliminar su cuenta en cualquier momento a través de la sección "Configuración de cuenta" en la plataforma o solicitándolo por escrito a soporte@hogaresrd.com. Tras la solicitud de eliminación, la cuenta será desactivada de inmediato y los datos personales serán tratados conforme a la política de retención descrita en la Sección 12.4 de estos Términos.</p>
+      <h3>18.2 Suspensión y Cancelación por HogaresRD</h3>
+      <p>HogaresRD se reserva el derecho de suspender o cancelar unilateralmente la cuenta del Usuario, con o sin previo aviso, en caso de:</p>
+      <ul>
+        <li>Violación de cualquier disposición de estos Términos y Condiciones.</li>
+        <li>Uso fraudulento de la plataforma o suplantación de identidad.</li>
+        <li>Actividad que suponga un riesgo para la seguridad de otros usuarios.</li>
+        <li>Requerimiento de autoridad judicial o administrativa competente.</li>
+        <li>Inactividad prolongada de la cuenta (superior a veinticuatro meses sin acceso).</li>
+        <li>Utilización de la plataforma para actividades ilegales.</li>
+      </ul>
+      <p>Para violaciones no graves, HogaresRD intentará notificar al Usuario con anticipación razonable y otorgar un período de corrección antes de proceder con la suspensión definitiva.</p>
+      <h3>18.3 Efectos de la Cancelación</h3>
+      <p>Tras la cancelación de la cuenta, el Usuario perderá acceso a todas las funcionalidades de la plataforma, incluyendo el historial de consultas, aplicaciones y mensajes. Los datos personales serán gestionados conforme a la política de privacidad y retención de HogaresRD. Las aplicaciones de propiedad en curso pueden no continuar siendo procesadas sin la cuenta activa del Usuario.</p>
+
+      <h2 id="s19">19. Modificaciones al Servicio y a estos Términos</h2>
+      <h3>19.1 Modificaciones al Servicio</h3>
+      <p>HogaresRD puede modificar, ampliar, reducir o discontinuar cualquier funcionalidad de la plataforma en cualquier momento. Para modificaciones materiales que afecten significativamente la experiencia del Usuario, HogaresRD realizará sus mejores esfuerzos para comunicar los cambios con anticipación razonable a través de la plataforma o por correo electrónico.</p>
+      <h3>19.2 Modificaciones a los Términos</h3>
+      <p>HogaresRD puede actualizar estos Términos y Condiciones en cualquier momento. Ante modificaciones materiales —aquellas que afecten los derechos u obligaciones fundamentales del Usuario—, HogaresRD notificará a los usuarios registrados con al menos <strong>quince (15) días calendarios de anticipación</strong>, ya sea mediante correo electrónico a la dirección registrada, mediante un aviso destacado en la plataforma, o mediante ambos medios.</p>
+      <p>La versión actualizada de los Términos será publicada en la plataforma con la fecha de entrada en vigencia claramente indicada. El uso continuado de la plataforma después de la fecha de vigencia de los términos actualizados constituirá la aceptación tácita de los mismos por parte del Usuario.</p>
+      <h3>19.3 Rechazo de Modificaciones</h3>
+      <p>Si el Usuario no está de acuerdo con los cambios introducidos, tiene derecho a cancelar su cuenta antes de la fecha de entrada en vigencia de los nuevos términos. El ejercicio de este derecho no genera ninguna obligación de pago adicional para el Usuario.</p>
+
+      <h2 id="s20">20. Ley Aplicable, Jurisdicción y Disposiciones Generales</h2>
+      <h3>20.1 Ley Aplicable</h3>
+      <p>Estos Términos y Condiciones, así como cualquier controversia que surja de su interpretación, validez, ejecución o incumplimiento, se rigen e interpretan de conformidad con las leyes de la República Dominicana, incluyendo pero no limitándose al Código Civil Dominicano, la Ley No. 126-02 sobre Comercio Electrónico, la Ley No. 172-13 sobre Protección de Datos Personales, y las reglamentaciones del Ministerio de Industria, Comercio y Mipymes.</p>
+      <h3>20.2 Jurisdicción</h3>
+      <p>Para la resolución de cualquier controversia que no pueda resolverse de forma amigable entre las partes, el Usuario y HogaresRD se someten expresamente a la jurisdicción exclusiva de los Tribunales del Distrito Nacional de la República Dominicana, renunciando a cualquier otro fuero que pudiera corresponderles por razón de su domicilio o cualquier otra causa.</p>
+      <h3>20.3 Resolución Amigable</h3>
+      <p>Antes de iniciar cualquier acción legal, las partes se comprometen a intentar resolver la controversia de forma directa y amigable. El Usuario puede contactar a HogaresRD en soporte@hogaresrd.com para iniciar este proceso.</p>
+      <h3>20.4 Divisibilidad</h3>
+      <p>Si alguna disposición de estos Términos fuera declarada inválida, nula o inaplicable por cualquier tribunal competente, dicha disposición se considerará separada del resto del acuerdo, el cual continuará en plena vigencia y efecto. Las partes acuerdan reemplazar la disposición inválida por una nueva que refleje lo más fielmente posible la intención económica y jurídica original.</p>
+      <h3>20.5 Acuerdo Completo</h3>
+      <p>Estos Términos y Condiciones, junto con la Política de Privacidad de HogaresRD y cualquier acuerdo específico celebrado por escrito entre las partes, constituyen el acuerdo completo entre el Usuario y HogaresRD respecto al objeto aquí tratado, sustituyendo cualquier acuerdo, comunicación o negociación anterior.</p>
+      <h3>20.6 No Renuncia</h3>
+      <p>El hecho de que HogaresRD no ejerza o no haga cumplir algún derecho o disposición de estos Términos no constituirá una renuncia a dicho derecho o disposición. Cualquier renuncia a derechos bajo estos Términos deberá constar por escrito y estar firmada por un representante autorizado de HogaresRD.</p>
+      <h3>20.7 Contacto</h3>
+      <p>Para cualquier consulta sobre estos Términos, el Usuario puede contactar a HogaresRD a través de:</p>
+      <ul>
+        <li>Correo electrónico general: soporte@hogaresrd.com</li>
+        <li>Correo electrónico legal: legal@hogaresrd.com</li>
+        <li>Correo electrónico de privacidad: privacidad@hogaresrd.com</li>
+        <li>Sitio web: www.hogaresrd.com</li>
       </ul>
 
-      <h2>4. Privacidad y Tratamiento de Datos Personales</h2>
-      <p>HogaresRD trata tus datos personales conforme a la <strong>Ley No. 172-13 de Protección de Datos Personales de la República Dominicana</strong>. Al registrarte, aceptas que recopilemos y usemos:</p>
-      <ul>
-        <li><strong>Nombre y correo electrónico:</strong> para gestionar tu cuenta y enviarte comunicaciones del servicio.</li>
-        <li><strong>Historial de búsqueda y favoritos:</strong> para personalizar tus recomendaciones de propiedades.</li>
-        <li><strong>Datos de contacto en formularios de consulta:</strong> para transmitirlos a las inmobiliarias o agentes relevantes. Al enviar una consulta sobre una propiedad, consientes que tu nombre, teléfono y correo sean compartidos con el agente o agencia afiliada a esa propiedad.</li>
-      </ul>
-      <p>No vendemos, arrendamos ni compartimos tu información con terceros con fines publicitarios fuera de la plataforma. Puedes solicitar la eliminación de tu cuenta y datos personales escribiendo a <strong>privacidad@hogaresrd.com</strong>.</p>
-
-      <h2>5. Comunicaciones de Marketing</h2>
-      <p>Si optas por recibir comunicaciones de marketing durante el registro, podremos enviarte correos con propiedades destacadas, novedades del mercado inmobiliario dominicano y ofertas especiales. Puedes cancelar tu suscripción en cualquier momento haciendo clic en el enlace de "cancelar suscripción" incluido en cualquiera de nuestros correos.</p>
-
-      <h2>6. Contenido de Terceros y Limitación de Responsabilidad</h2>
-      <p>El contenido de los anuncios de propiedades (fotos, descripciones, precios) es publicado y administrado por inmobiliarias y agentes registrados, no por HogaresRD. La plataforma <strong>no garantiza la veracidad, exactitud, disponibilidad ni legalidad</strong> de ningún anuncio.</p>
-      <p>HogaresRD no será responsable por pérdidas económicas, daños o perjuicios derivados de:</p>
-      <ul>
-        <li>Información incorrecta o desactualizada en los anuncios.</li>
-        <li>Transacciones realizadas entre usuarios y agentes/propietarios.</li>
-        <li>Incumplimiento de acuerdos entre compradores, vendedores o agentes.</li>
-        <li>Pérdida de datos o interrupciones del servicio por causas fuera de nuestro control.</li>
-      </ul>
-
-      <h2>7. Propiedad Intelectual</h2>
-      <p>El nombre "HogaresRD", su logotipo, diseño y arquitectura de la plataforma son propiedad de HogaresRD. Queda prohibida su reproducción, modificación o uso comercial sin autorización escrita. El contenido publicado por los anunciantes permanece bajo la titularidad de sus respectivos autores.</p>
-
-      <h2>8. Modificación y Terminación</h2>
-      <p>Nos reservamos el derecho de modificar estos términos con previo aviso a través del correo electrónico registrado. El uso continuado de la plataforma tras la notificación constituye aceptación de los nuevos términos.</p>
-      <p>Podemos suspender o cancelar tu cuenta si detectamos un uso que viole estos términos, actividades fraudulentas, o por solicitud tuya. Ante cualquier cancelación, tus datos serán eliminados conforme a nuestra política de privacidad.</p>
-
-      <h2>9. Ley Aplicable y Jurisdicción</h2>
-      <p>Estos términos se rigen por las leyes de la <strong>República Dominicana</strong>. Cualquier controversia derivada del uso de la plataforma será sometida a la jurisdicción de los tribunales competentes del Distrito Nacional, Santo Domingo.</p>
-
-      <h2>10. Contacto</h2>
-      <p>Para preguntas sobre estos términos, escríbenos a <strong>legal@hogaresrd.com</strong>.</p>
     </div>
   </main>
-
   <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
   <script>
     const html = document.documentElement;
     html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
   </script>
-<script src="/js/pixel.js" defer></script>
+  <script src="/js/pixel.js" defer></script>
 </body>
 </html>

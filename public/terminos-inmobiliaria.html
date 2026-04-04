@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Términos y Condiciones Corporativos — Inmobiliaria — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
+  <style>
+    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    main { flex: 1; display: flex; justify-content: center; padding: 3rem 1rem; }
+    .doc { background: var(--bg-card); border-radius: 18px; box-shadow: var(--shadow); padding: 3rem 3.5rem; width: 100%; max-width: 760px; }
+    .doc-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 10px; padding: 0.3rem 0.8rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 1.1rem; }
+    .doc-title { font-size: 1.75rem; font-weight: 900; color: var(--text); margin-bottom: 0.4rem; }
+    .doc-date { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+    h2 { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 2.25rem 0 0.75rem; padding-left: 0.9rem; border-left: 3px solid var(--accent); }
+    h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 1.5rem 0 0.5rem; }
+    p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.75; margin-bottom: 0.85rem; }
+    ul, ol { margin: 0.5rem 0 0.85rem 1.5rem; }
+    ul li, ol li { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 0.35rem; }
+    .highlight-box { background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
+    .highlight-box strong { color: var(--accent); }
+    .warning-box { background: color-mix(in srgb, #CF142B 6%, transparent); border: 1px solid color-mix(in srgb, #CF142B 25%, transparent); border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
+    .warning-box strong { color: #CF142B; }
+    .toc { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+    .toc-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .toc ol { margin: 0 0 0 1.25rem; }
+    .toc ol li { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 0.28rem; line-height: 1.5; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+    @media (max-width: 640px) { .doc { padding: 2rem 1.5rem; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/home" class="nav-logo">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      HogaresRD
+    </a>
+  </nav>
+  <main>
+    <div class="doc">
+
+      <div class="doc-badge">Cuenta Corporativa de Inmobiliaria</div>
+      <div class="doc-title">Términos y Condiciones Corporativos &mdash; Inmobiliaria</div>
+      <div class="doc-date">Versión 1.0 &mdash; Vigente a partir del 3 de abril de 2026 &mdash; República Dominicana</div>
+
+      <div class="toc">
+        <div class="toc-title">Tabla de Contenido</div>
+        <ol>
+          <li><a href="#s1">Naturaleza del Acuerdo Corporativo</a></li>
+          <li><a href="#s2">Partes del Contrato</a></li>
+          <li><a href="#s3">Requisitos de Constitución Legal y Registro Corporativo</a></li>
+          <li><a href="#s4">Registro de Cuenta Corporativa y Onboarding</a></li>
+          <li><a href="#s5">Estructura de Cuenta: Administrador, Agentes y Secretarias</a></li>
+          <li><a href="#s6">Gestión y Supervisión de Agentes Afiliados</a></li>
+          <li><a href="#s7">Responsabilidad Solidaria por Conducta de Miembros</a></li>
+          <li><a href="#s8">Dashboard Corporativo y Herramientas de Gestión</a></li>
+          <li><a href="#s9">Gestión del Portfolio de Propiedades</a></li>
+          <li><a href="#s10">Distribución de Leads a Agentes</a></li>
+          <li><a href="#s11">Gestión de Aplicaciones y Pipeline de Ventas</a></li>
+          <li><a href="#s12">Perfil Público Corporativo y Marca</a></li>
+          <li><a href="#s13">Suscripción Corporativa, Planes Premium y Facturación</a></li>
+          <li><a href="#s14">Anuncios Patrocinados y Posicionamiento Destacado</a></li>
+          <li><a href="#s15">Acceso a Datos, Reportes y Analíticas</a></li>
+          <li><a href="#s16">Contenido Corporativo, Fotografías y Material de Marketing</a></li>
+          <li><a href="#s17">Privacidad y Tratamiento de Datos de Clientes</a></li>
+          <li><a href="#s18">Conducta Corporativa Obligatoria y Prohibida</a></li>
+          <li><a href="#s19">Confidencialidad e Información Comercial Sensible</a></li>
+          <li><a href="#s20">Nivel de Servicio y Disponibilidad</a></li>
+          <li><a href="#s21">Suspensión y Cancelación de Cuenta Corporativa</a></li>
+          <li><a href="#s22">Efectos de la Terminación y Transición</a></li>
+          <li><a href="#s23">Limitación de Responsabilidad de HogaresRD</a></li>
+          <li><a href="#s24">Indemnización Corporativa, Ley Aplicable y Jurisdicción</a></li>
+        </ol>
+      </div>
+
+      <div class="highlight-box">
+        <strong>Acuerdo Corporativo Vinculante:</strong> Estos Términos y Condiciones Corporativos constituyen un contrato legalmente vinculante entre HogaresRD y la empresa inmobiliaria registrada. Al crear o mantener una cuenta corporativa, el representante legal declara tener facultades suficientes para obligar a la empresa y acepta estos términos en nombre de la misma. Estos términos se aplican de forma complementaria y prevalente sobre los Términos de Uso General en materias corporativas.
+      </div>
+
+      <h2 id="s1">1. Naturaleza del Acuerdo Corporativo</h2>
+      <p>El presente documento establece los Términos y Condiciones Corporativos aplicables a todas las empresas inmobiliarias (en adelante "Inmobiliarias") que acceden a los servicios de HogaresRD a través de una cuenta corporativa. Este acuerdo tiene naturaleza comercial y está destinado a personas jurídicas legalmente constituidas en la República Dominicana que ejercen actividades inmobiliarias.</p>
+      <p>Estos Términos Corporativos se aplican de forma <strong>complementaria y prevalente</strong> respecto a los Términos y Condiciones de Uso General de HogaresRD en todas las materias relacionadas con la operación corporativa. En lo no previsto por estos Términos Corporativos, se aplicarán los Términos de Uso General y los Términos Profesionales para Agentes en lo que sea pertinente.</p>
+      <p>El representante legal de la Inmobiliaria que acepte estos Términos lo hace en su nombre y en nombre de la entidad que representa, y garantiza personalmente el cumplimiento de las obligaciones corporativas aquí establecidas, actuando como fiador solidario frente a HogaresRD en caso de incumplimiento de obligaciones económicas de la Inmobiliaria. Esta garantía personal no es renunciable y subsiste por la duración del presente acuerdo y hasta la extinción de todas las obligaciones derivadas del mismo.</p>
+
+      <h2 id="s2">2. Partes del Contrato</h2>
+      <p>El presente acuerdo se celebra entre:</p>
+      <ul>
+        <li><strong>HogaresRD</strong> (en adelante "HogaresRD", "la Plataforma" o "nosotros"), persona jurídica debidamente constituida conforme a las leyes de la República Dominicana, con domicilio en el Distrito Nacional, República Dominicana, y correo electrónico legal: legal@hogaresrd.com.</li>
+        <li><strong>La Inmobiliaria</strong> (en adelante "la Inmobiliaria", "la Empresa" o "usted"), persona jurídica —sociedad comercial, empresa de responsabilidad limitada, empresa individual de responsabilidad limitada u otra forma societaria admitida por la ley dominicana— debidamente constituida y registrada ante las autoridades competentes de la República Dominicana, que ejerce actividades de intermediación, promoción o gestión inmobiliaria, y que suscribe este acuerdo a través de su representante legal con facultades suficientes para obligarla.</li>
+      </ul>
+      <p>La Inmobiliaria acepta que la suscripción de estos Términos por parte de su representante legal a través de los mecanismos digitales de la plataforma produce plenos efectos jurídicos conforme a la Ley No. 126-02 sobre Comercio Electrónico, Firmas Digitales y Documentos Digitales de la República Dominicana.</p>
+
+      <h2 id="s3">3. Requisitos de Constitución Legal y Registro Corporativo</h2>
+      <p>Para registrar y mantener activa una cuenta corporativa en HogaresRD, la Inmobiliaria debe cumplir y mantener vigentes los siguientes requisitos:</p>
+      <h3>3.1 Documentación Corporativa Mínima</h3>
+      <ul>
+        <li><strong>Registro Nacional del Contribuyente (RNC):</strong> La Inmobiliaria debe estar registrada ante la Dirección General de Impuestos Internos (DGII) con un RNC activo y en situación fiscal regular.</li>
+        <li><strong>Acta constitutiva y estatutos:</strong> Documentos de constitución de la sociedad debidamente registrados ante la Cámara de Comercio y Producción correspondiente.</li>
+        <li><strong>Identificación del representante legal:</strong> Cédula de identidad y electoral vigente o pasaporte del representante legal con facultades para obligar a la empresa.</li>
+        <li><strong>Constancia de registro mercantil vigente:</strong> Matrícula mercantil o constancia equivalente de la Cámara de Comercio y Producción correspondiente.</li>
+      </ul>
+      <h3>3.2 Registro en el Sector Inmobiliario</h3>
+      <p>Si existieren registros o habilitaciones específicas exigidas por la ley dominicana para el ejercicio de actividades inmobiliarias por parte de personas jurídicas, la Inmobiliaria declara y garantiza estar debidamente registrada y habilitada conforme a dichas exigencias. La pérdida de cualquier habilitación legal requerida debe ser notificada a HogaresRD en un plazo máximo de cuarenta y ocho (48) horas.</p>
+      <h3>3.3 Situación Fiscal</h3>
+      <p>La Inmobiliaria debe mantener una situación fiscal regular ante la DGII durante toda la vigencia de su cuenta corporativa. HogaresRD puede solicitar la presentación de una constancia de cumplimiento fiscal actualizada en cualquier momento del ciclo de facturación.</p>
+
+      <h2 id="s4">4. Registro de Cuenta Corporativa y Onboarding</h2>
+      <h3>4.1 Creación del Perfil Corporativo</h3>
+      <p>El proceso de registro de la cuenta corporativa requiere la provisión de: nombre legal completo de la empresa, RNC, nombre comercial (si aplica), descripción de la empresa, logotipo en alta resolución, información de contacto corporativa (teléfono, correo electrónico, dirección física), área geográfica de operación, y nombre y datos de contacto del representante legal o administrador de la cuenta.</p>
+      <h3>4.2 Proceso de Aprobación por HogaresRD</h3>
+      <p>Todas las solicitudes de cuenta corporativa están sujetas a un proceso de revisión y aprobación por parte del equipo de HogaresRD. Durante este proceso, HogaresRD puede solicitar documentación adicional para verificar la existencia legal de la empresa, la identidad del representante legal y la legitimidad de las actividades declaradas. HogaresRD no está obligado a aprobar ninguna solicitud y puede rechazarla sin necesidad de expresar motivos.</p>
+      <h3>4.3 Estado Provisional vs. Verificado</h3>
+      <p>Las cuentas corporativas aprobadas con documentación completa recibirán el estado "Verificado" y tendrán acceso a la totalidad de las funcionalidades corporativas. Las cuentas en proceso de verificación pueden operar en estado "Provisional" con funcionalidades limitadas hasta completar el proceso de verificación.</p>
+      <h3>4.4 Perfil Público</h3>
+      <p>El perfil corporativo verificado de la Inmobiliaria será visible al público en la plataforma, mostrando la descripción de la empresa, logo, datos de contacto, listados activos bajo la marca, y agentes afiliados que hayan autorizado su visibilidad pública.</p>
+
+      <h2 id="s5">5. Estructura de Cuenta: Administrador, Agentes y Secretarias</h2>
+      <h3>5.1 Administrador de Cuenta</h3>
+      <p>La cuenta corporativa tiene un usuario administrador principal, que es el representante legal o la persona designada por él, quien tiene acceso completo a todas las funcionalidades de la cuenta corporativa, incluyendo la gestión de agentes afiliados, la facturación y la configuración del perfil.</p>
+      <h3>5.2 Niveles de Acceso</h3>
+      <p>La cuenta corporativa permite la creación de subcuentas con diferentes niveles de permiso:</p>
+      <ul>
+        <li><strong>Administrador:</strong> Acceso completo. Puede invitar/remover agentes y secretarias, gestionar el perfil corporativo, acceder a facturación, ver todos los listados, leads y aplicaciones del equipo.</li>
+        <li><strong>Agente Afiliado:</strong> Puede crear y gestionar sus propios listados bajo la marca corporativa, gestionar sus leads y aplicaciones, y acceder a las herramientas de CRM individuales. No tiene acceso a la facturación corporativa ni a la información de otros agentes.</li>
+        <li><strong>Secretaria:</strong> Rol administrativo que permite el acceso a las funciones de gestión y seguimiento de leads, aplicaciones y tours de todos los agentes del equipo, sin capacidad de crear o editar listados ni acceder a información de facturación.</li>
+      </ul>
+      <h3>5.3 Responsabilidad del Administrador</h3>
+      <p>El administrador de la cuenta corporativa es responsable de todas las acciones realizadas desde las subcuentas de agentes y secretarias vinculadas a la cuenta corporativa. La Inmobiliaria responde solidariamente por la conducta de todos los usuarios que operen bajo su cuenta corporativa, incluyendo agentes y secretarias.</p>
+      <h3>5.4 Gestión de Subcuentas</h3>
+      <p>El administrador puede revocar el acceso de cualquier agente o secretaria a la cuenta corporativa en cualquier momento. La revocación de acceso no afecta retroactivamente los listados, leads o aplicaciones gestionados por dicho usuario durante el período de afiliación activa.</p>
+
+      <h2 id="s6">6. Gestión y Supervisión de Agentes Afiliados</h2>
+      <h3>6.1 Mecanismos de Afiliación</h3>
+      <p>La Inmobiliaria puede incorporar agentes a su cuenta corporativa mediante dos mecanismos:</p>
+      <ul>
+        <li><strong>Invitación directa:</strong> El administrador envía una invitación al correo electrónico del agente, quien debe aceptarla para quedar afiliado.</li>
+        <li><strong>Solicitud del agente:</strong> Un agente registrado en HogaresRD puede enviar una solicitud de afiliación a la Inmobiliaria, que el administrador puede aceptar o rechazar.</li>
+      </ul>
+      <h3>6.2 Visibilidad de la Inmobiliaria sobre Agentes</h3>
+      <p>La cuenta corporativa tiene acceso de lectura a los listados, leads, aplicaciones y métricas de actividad de todos los agentes afiliados, en el contexto de la actividad realizada bajo la marca corporativa. Este acceso es necesario para la gestión corporativa y para cumplir con las responsabilidades de supervisión establecidas en la Sección 7 de estos Términos.</p>
+      <h3>6.3 Proceso de Desafiliación</h3>
+      <p>Un agente puede solicitar su desafiliación de la Inmobiliaria en cualquier momento a través de la plataforma. La Inmobiliaria puede también remover a un agente de su cuenta corporativa en cualquier momento. La desafiliación tiene efectos prospectivos; los listados, leads y aplicaciones creados durante la afiliación mantienen su atribución histórica a la Inmobiliaria en los registros de la plataforma.</p>
+      <h3>6.4 Atribución de Listados</h3>
+      <p>Los listados creados por un agente mientras está afiliado a la Inmobiliaria son atribuidos conjuntamente al agente y a la Inmobiliaria, y aparecen en el portfolio corporativo de la empresa en la plataforma.</p>
+
+      <h2 id="s7">7. Responsabilidad Solidaria por Conducta de Miembros</h2>
+      <p>La Inmobiliaria es <strong>solidariamente responsable</strong> con sus agentes afiliados por la conducta profesional de dichos agentes en el marco de su actividad en la plataforma HogaresRD, incluyendo pero no limitándose a la veracidad de los listados publicados, el trato dado a los clientes, y el cumplimiento de las obligaciones de protección de datos personales.</p>
+      <div class="warning-box">
+        <strong>Obligación de Supervisión:</strong> La Inmobiliaria no puede alegar desconocimiento de la conducta de sus agentes afiliados como eximente de responsabilidad ante HogaresRD o ante terceros, si dicha conducta ocurrió en el contexto de la actividad desarrollada bajo la cuenta corporativa de la Inmobiliaria.
+      </div>
+      <h3>7.1 Obligación de Capacitación y Cumplimiento</h3>
+      <p>La Inmobiliaria se compromete a instruir a todos sus agentes afiliados sobre las obligaciones establecidas en los Términos y Condiciones Profesionales para Agentes de HogaresRD, y a implementar mecanismos internos para verificar su cumplimiento.</p>
+      <h3>7.2 Notificación Obligatoria de Inconducta</h3>
+      <p>Si la Inmobiliaria toma conocimiento de una conducta de uno de sus agentes afiliados que pudiera constituir una violación de los Términos de HogaresRD, una infracción legal, o un perjuicio a usuarios de la plataforma, tiene la obligación de notificarlo a HogaresRD en un plazo máximo de <strong>veinticuatro (24) horas</strong> desde que tome conocimiento, escribiendo a legal@hogaresrd.com.</p>
+
+      <h2 id="s8">8. Dashboard Corporativo y Herramientas de Gestión</h2>
+      <p>La cuenta corporativa de HogaresRD provee acceso a un dashboard ejecutivo con herramientas diseñadas para la gestión integral de la operación inmobiliaria de la empresa. Las funcionalidades disponibles incluyen:</p>
+      <h3>8.1 Visión General del Portfolio</h3>
+      <p>Panel consolidado con todos los listados activos, pausados e históricos publicados bajo la marca corporativa, con indicadores de rendimiento por listado (visualizaciones, consultas recibidas, aplicaciones activas).</p>
+      <h3>8.2 Gestión del Equipo de Agentes</h3>
+      <p>Herramientas para invitar, gestionar y remover agentes afiliados; visualizar el rendimiento individual de cada agente (listados activos, leads gestionados, tasa de conversión); y reasignar leads entre agentes del equipo.</p>
+      <h3>8.3 Pipeline Agregado de Leads</h3>
+      <p>Vista consolidada de todos los leads recibidos por la empresa, con filtros por agente, propiedad, estado y período de tiempo. Herramientas de análisis de la tasa de conversión del pipeline.</p>
+      <h3>8.4 Gestión de Aplicaciones</h3>
+      <p>Acceso a todas las aplicaciones de propiedad activas e históricas en el portfolio corporativo, con capacidad de asignación de agentes responsables y seguimiento del estado de cada aplicación.</p>
+      <h3>8.5 Herramientas de Reporte</h3>
+      <p>Generación de reportes sobre rendimiento de listados, volumen de leads, estadísticas de tours y métricas de conversión, exportables para uso interno de la empresa.</p>
+      <h3>8.6 Gestión del Perfil Corporativo</h3>
+      <p>Edición del perfil público de la empresa, incluyendo descripción, logo, datos de contacto, áreas de especialización y proyectos destacados.</p>
+
+      <h2 id="s9">9. Gestión del Portfolio de Propiedades</h2>
+      <h3>9.1 Publicación de Listados</h3>
+      <p>La Inmobiliaria puede publicar listados directamente desde la cuenta corporativa o a través de sus agentes afiliados. Todos los listados, independientemente de quien los cree, están sujetos al proceso de revisión y aprobación de HogaresRD antes de su publicación pública.</p>
+      <h3>9.2 Estándares de Contenido</h3>
+      <p>La Inmobiliaria es responsable de garantizar que todos los listados publicados bajo su cuenta corporativa cumplan con los estándares de calidad y veracidad de la plataforma, incluyendo información precisa de precios, características, disponibilidad y fotografías representativas. El incumplimiento de estos estándares en cualquier listado del portfolio será imputable a la Inmobiliaria como responsable corporativa.</p>
+      <h3>9.3 Herramientas de Gestión Masiva</h3>
+      <p>La cuenta corporativa puede ofrecer herramientas de gestión masiva de listados, incluyendo actualización en lote de precios, pausado de múltiples listados o herramientas de importación. El uso de estas herramientas no exime a la Inmobiliaria de su responsabilidad por la exactitud del contenido importado o actualizado masivamente.</p>
+      <h3>9.4 Listados Destacados</h3>
+      <p>La Inmobiliaria puede solicitar el posicionamiento destacado de listados específicos conforme a los mecanismos y tarifas de la plataforma. Los listados destacados deben cumplir con los mismos estándares de veracidad que los listados ordinarios.</p>
+
+      <h2 id="s10">10. Distribución de Leads a Agentes</h2>
+      <h3>10.1 Enrutamiento de Leads</h3>
+      <p>Los leads generados a través de listados del portfolio corporativo serán enrutados al agente específicamente vinculado al listado. El administrador corporativo tiene la capacidad de reasignar leads entre agentes del equipo a través del CRM corporativo.</p>
+      <h3>10.2 Responsabilidad sobre los Leads</h3>
+      <p>La Inmobiliaria es responsable de garantizar que todos los leads recibidos sean gestionados de manera oportuna y profesional por el agente asignado. HogaresRD puede reducir la visibilidad de los listados de una Inmobiliaria con tasas de respuesta a leads consistentemente bajas.</p>
+      <h3>10.3 Obligaciones de Privacidad en el CRM Corporativo</h3>
+      <p>El acceso del administrador corporativo a los datos de leads de todos sus agentes implica el tratamiento de datos personales de usuarios de la plataforma. La Inmobiliaria, en su condición de responsable del tratamiento de dichos datos, debe garantizar que el acceso a la información de clientes esté restringido al personal estrictamente necesario y que se implementen controles de acceso adecuados.</p>
+
+      <h2 id="s11">11. Gestión de Aplicaciones y Pipeline de Ventas</h2>
+      <h3>11.1 Visibilidad Corporativa</h3>
+      <p>La Inmobiliaria tiene visibilidad completa sobre todas las aplicaciones de propiedad presentadas a inmuebles de su portfolio, incluyendo el estado actual de cada aplicación, la documentación cargada por los aplicantes y el historial de comunicaciones a través de la plataforma.</p>
+      <h3>11.2 Asignación de Responsables</h3>
+      <p>El administrador corporativo puede asignar o reasignar agentes responsables de la gestión de cada aplicación activa. Una vez asignado, el agente responsable tiene la obligación de gestionar la aplicación diligentemente conforme a los Términos Profesionales para Agentes.</p>
+      <h3>11.3 Estándares de Comunicación</h3>
+      <p>La Inmobiliaria debe garantizar que los aplicantes reciban comunicaciones claras, oportunas y respetuosas sobre el estado de sus solicitudes, incluyendo notificaciones de cambio de estado, solicitudes de documentos adicionales, y comunicaciones de aprobación o rechazo. Las comunicaciones de rechazo deben ser entregadas con tacto y no deben incluir motivos discriminatorios.</p>
+      <h3>11.4 Retención de Documentos de Aplicación</h3>
+      <p>La Inmobiliaria solo puede retener copias de documentos cargados por aplicantes durante el período estrictamente necesario para el proceso de evaluación. Una vez concluido el proceso, los documentos deben ser eliminados de cualquier sistema externo a la plataforma, salvo que la ley exija su conservación por razones específicas.</p>
+
+      <h2 id="s12">12. Perfil Público Corporativo y Marca</h2>
+      <h3>12.1 Exactitud del Perfil</h3>
+      <p>La Inmobiliaria debe mantener en todo momento un perfil corporativo veraz, actualizado y completo. Esto incluye la información de contacto, la descripción de la empresa, el logo y cualquier otro dato público.</p>
+      <h3>12.2 Prohibiciones en el Perfil Corporativo</h3>
+      <p>Queda estrictamente prohibido incluir en el perfil corporativo de la Inmobiliaria:</p>
+      <ul>
+        <li>Afirmaciones falsas sobre el tamaño de la empresa, número de empleados o volumen de transacciones.</li>
+        <li>Años de experiencia o de operación incorrectos.</li>
+        <li>Menciones a premios, certificaciones o afiliaciones que no hayan sido obtenidos o que no estén vigentes.</li>
+        <li>Logotipos o marcas de terceras organizaciones sin autorización expresa.</li>
+        <li>Afirmaciones sobre la "exclusividad" de listados que no sean genuinamente exclusivos.</li>
+      </ul>
+      <h3>12.3 Uso de la Marca HogaresRD</h3>
+      <p>HogaresRD puede utilizar el nombre y logo de la Inmobiliaria en materiales de marketing, redes sociales y comunicaciones de la plataforma para destacar a las empresas asociadas, salvo instrucción en contrario comunicada por escrito por la Inmobiliaria. La Inmobiliaria autoriza expresamente este uso al aceptar estos Términos.</p>
+
+      <h2 id="s13">13. Suscripción Corporativa, Planes Premium y Facturación</h2>
+      <h3>13.1 Planes Corporativos</h3>
+      <p>HogaresRD ofrece planes de suscripción corporativa con diferentes niveles de funcionalidades, incluyendo variaciones en: número máximo de listados activos permitidos, número de plazas de agentes incluidas, acceso a funcionalidades de análisis avanzado, posicionamiento preferencial de listados, y acceso a herramientas de marketing integradas. Los detalles de los planes disponibles y sus precios estarán publicados en la sección de planes corporativos de la plataforma.</p>
+      <h3>13.2 Facturación y Ciclo de Pago</h3>
+      <p>La facturación de la suscripción corporativa se realiza de forma mensual o anual según el plan seleccionado, con cargo automático al método de pago registrado en la plataforma. HogaresRD emitirá la factura fiscal correspondiente conforme a los requerimientos de la DGII y a los datos del RNC registrado en la cuenta corporativa.</p>
+      <h3>13.3 Procesamiento de Pagos</h3>
+      <p>Los pagos se procesan a través de Stripe, Inc. La Inmobiliaria autoriza a HogaresRD a cargar automáticamente el importe de la suscripción al método de pago registrado en las fechas de vencimiento correspondientes. HogaresRD no almacena directamente datos de tarjetas de crédito o débito; su tratamiento está a cargo exclusivo de Stripe conforme al estándar PCI DSS.</p>
+      <h3>13.4 Obligaciones Fiscales de la Inmobiliaria</h3>
+      <p>La Inmobiliaria es la única responsable del cumplimiento de sus obligaciones fiscales ante la DGII y demás autoridades tributarias, incluyendo la declaración y pago de impuestos derivados de su actividad comercial. HogaresRD actuará como agente de retención únicamente en los casos en que la ley dominicana así lo exija expresamente.</p>
+      <h3>13.5 Cambios en Precios con 30 Días de Anticipación</h3>
+      <p>HogaresRD se compromete a notificar cualquier modificación en los precios de los planes corporativos con un mínimo de <strong>treinta (30) días calendarios de anticipación</strong> antes de su entrada en vigencia, mediante correo electrónico al administrador de la cuenta y aviso en la plataforma. La Inmobiliaria que no acepte los nuevos precios puede cancelar su suscripción antes de la fecha de vigencia del cambio sin penalización.</p>
+      <h3>13.6 Cancelación Corporativa</h3>
+      <p>La Inmobiliaria puede cancelar su suscripción corporativa en cualquier momento desde la sección de facturación de su dashboard. La cancelación tendrá efecto al final del período de facturación vigente. No se realizarán reembolsos por períodos parciales, salvo en los casos de error de cobro atribuible a HogaresRD o cuando la ley dominicana establezca lo contrario.</p>
+      <h3>13.7 Pagos Fallidos</h3>
+      <p>Ante el fallo en el cobro automático, HogaresRD realizará hasta tres (3) intentos adicionales en un período de diez (10) días. Si el cobro continúa fallando, los listados corporativos podrán ser ocultados y las funcionalidades premium suspendidas hasta la regularización del pago, sin que ello genere responsabilidad alguna de HogaresRD.</p>
+
+      <h2 id="s14">14. Anuncios Patrocinados y Posicionamiento Destacado</h2>
+      <h3>14.1 Disponibilidad</h3>
+      <p>HogaresRD puede ofrecer a la Inmobiliaria la posibilidad de adquirir posicionamiento preferencial para sus listados dentro de los resultados de búsqueda de la plataforma, así como espacios publicitarios en páginas estratégicas del sitio y la aplicación.</p>
+      <h3>14.2 Estándares de Contenido Publicitario</h3>
+      <p>Todo el contenido de los anuncios patrocinados o listados con posicionamiento destacado debe cumplir con los mismos estándares de veracidad exigidos para los listados ordinarios. Adicionalmente, el contenido publicitario no puede:</p>
+      <ul>
+        <li>Contener afirmaciones engañosas sobre características del inmueble o condiciones de la oferta.</li>
+        <li>Utilizar lenguaje o imágenes discriminatorias.</li>
+        <li>Hacer referencia a condiciones de financiamiento específicas sin las debidas advertencias legales.</li>
+        <li>Publicitar propiedades no autorizadas para venta o arrendamiento.</li>
+      </ul>
+      <h3>14.3 Pago y Cancelación de Publicidad</h3>
+      <p>Los pagos por anuncios patrocinados son separados de la suscripción corporativa y no son reembolsables una vez que el anuncio ha sido publicado, salvo en casos de error técnico imputable a HogaresRD o de contenido rechazado por incumplimiento de los estándares de la plataforma.</p>
+
+      <h2 id="s15">15. Acceso a Datos, Reportes y Analíticas</h2>
+      <h3>15.1 Datos Proporcionados</h3>
+      <p>La plataforma proporciona a la Inmobiliaria acceso a analíticas sobre el rendimiento de sus listados, incluyendo número de visualizaciones, consultas recibidas, tasa de conversión de leads a aplicaciones, estadísticas de tours y comparativas de rendimiento entre agentes del equipo.</p>
+      <h3>15.2 Uso Permitido de los Datos Analíticos</h3>
+      <p>Los datos y reportes provistos por HogaresRD son para uso interno de la Inmobiliaria exclusivamente, con el fin de optimizar su operación comercial y la gestión de su portfolio en la plataforma. La Inmobiliaria no puede:</p>
+      <ul>
+        <li>Vender, licenciar o transferir datos analíticos de la plataforma a terceros.</li>
+        <li>Utilizar los datos para construir servicios competidores de HogaresRD.</li>
+        <li>Publicar datos de la plataforma en medios públicos sin autorización escrita de HogaresRD.</li>
+        <li>Utilizar datos de la plataforma para elaborar estudios de mercado destinados a terceros competidores.</li>
+      </ul>
+      <h3>15.3 Exactitud de los Datos</h3>
+      <p>HogaresRD realizará esfuerzos razonables para garantizar la exactitud de los datos analíticos provistos. No obstante, estos datos son estimaciones derivadas de los sistemas de la plataforma y pueden contener imprecisiones. HogaresRD no garantiza su exactitud y no será responsable por decisiones de negocio tomadas con base exclusiva en dichos datos.</p>
+
+      <h2 id="s16">16. Contenido Corporativo, Fotografías y Material de Marketing</h2>
+      <h3>16.1 Garantía de Derechos</h3>
+      <p>Al cargar fotografías, videos, logotipos, planos u otro material en la plataforma, la Inmobiliaria declara y garantiza ser titular de los derechos de propiedad intelectual sobre dicho material o contar con las licencias necesarias para su publicación en internet y para sub-licenciarlo a HogaresRD.</p>
+      <h3>16.2 Licencia a HogaresRD</h3>
+      <p>La Inmobiliaria otorga a HogaresRD una licencia no exclusiva, royalty-free, mundial y sub-licenciable para reproducir, distribuir, mostrar públicamente y utilizar el contenido cargado en el contexto de la operación y promoción de la plataforma, por el tiempo que dicho contenido permanezca en la plataforma y por un período de seis (6) meses adicionales para uso en materiales de marketing ya elaborados.</p>
+      <h3>16.3 Representación Honesta del Inmueble</h3>
+      <p>Todo el material visual publicado debe representar fielmente el estado actual de los inmuebles listados. Queda prohibido el uso de imágenes generadas por inteligencia artificial que presenten un inmueble ficticio o en un estado inexistente, así como el uso de técnicas de edición o staging virtual que oculten defectos estructurales, funcionales o estéticos relevantes del inmueble.</p>
+      <h3>16.4 Estándares para Planos y Documentos Técnicos</h3>
+      <p>Los planos y documentos técnicos de proyectos y propiedades deben ser elaborados o certificados por profesionales habilitados conforme a la ley dominicana. La Inmobiliaria garantiza que los planos publicados corresponden fielmente al inmueble listado y que tiene autorización para su divulgación.</p>
+
+      <h2 id="s17">17. Privacidad y Tratamiento de Datos de Clientes (Ley No. 172-13)</h2>
+      <h3>17.1 Roles en el Tratamiento</h3>
+      <p>En el contexto del tratamiento de datos personales de los usuarios de la plataforma que son transmitidos a la Inmobiliaria a través de los mecanismos de leads, aplicaciones y mensajería:</p>
+      <ul>
+        <li>HogaresRD actúa como <strong>responsable del tratamiento</strong> respecto a los datos recopilados directamente por la plataforma.</li>
+        <li>La Inmobiliaria actúa como <strong>corresponsable del tratamiento</strong> o <strong>encargada del tratamiento</strong> —según la naturaleza específica del flujo de datos— respecto a los datos de clientes que procesa para gestionar leads, aplicaciones y comunicaciones derivadas de su actividad en la plataforma.</li>
+      </ul>
+      <h3>17.2 Obligaciones de la Inmobiliaria como Procesadora de Datos</h3>
+      <p>La Inmobiliaria se compromete a:</p>
+      <ul>
+        <li>Tratar los datos personales de clientes obtenidos a través de la plataforma conforme a la Ley No. 172-13, utilizándolos únicamente para las finalidades establecidas en estos Términos.</li>
+        <li>Implementar medidas técnicas y organizativas apropiadas para garantizar la seguridad de los datos personales de clientes, incluyendo controles de acceso, cifrado de datos en tránsito y en reposo, y protocolos de gestión de incidentes de seguridad.</li>
+        <li>Prohibir expresamente a su personal el acceso no autorizado a datos de clientes o el uso de dichos datos para fines distintos a los aquí establecidos.</li>
+        <li>No transferir datos de clientes a terceros fuera de los supuestos expresamente autorizados por estos Términos.</li>
+        <li>Notificar a HogaresRD cualquier brecha de seguridad que afecte datos de clientes de la plataforma en un plazo máximo de <strong>cuarenta y ocho (48) horas</strong> desde su detección.</li>
+        <li>Cooperar con HogaresRD en la atención de solicitudes de derechos (acceso, rectificación, cancelación, oposición) de los titulares de datos.</li>
+      </ul>
+      <h3>17.3 Datos de Facturación ante la DGII</h3>
+      <p>Los datos fiscales de la Inmobiliaria (RNC, nombre legal, datos de facturación) serán utilizados exclusivamente para los fines de facturación de la suscripción y el cumplimiento de las obligaciones fiscales de HogaresRD ante la DGII. HogaresRD no utilizará la información fiscal de la Inmobiliaria para otras finalidades.</p>
+      <h3>17.4 Derechos de los Titulares</h3>
+      <p>La Inmobiliaria se compromete a remitir a HogaresRD (privacidad@hogaresrd.com) cualquier solicitud de ejercicio de derechos que reciba directamente de usuarios de la plataforma, en un plazo máximo de cuarenta y ocho (48) horas desde su recepción.</p>
+
+      <h2 id="s18">18. Conducta Corporativa Obligatoria y Prohibida</h2>
+      <p>Adicionalmente a las obligaciones establecidas en los Términos Profesionales para Agentes —aplicables a todos los miembros del equipo—, la Inmobiliaria como entidad corporativa tiene las siguientes prohibiciones específicas:</p>
+      <ul>
+        <li><strong>Listados fantasma masivos:</strong> La publicación sistemática de propiedades que no están genuinamente disponibles para su venta o arrendamiento, con el propósito de incrementar artificialmente la presencia de la empresa en la plataforma.</li>
+        <li><strong>Manipulación de precios de mercado:</strong> Coordinar con otras empresas la publicación de precios artificialmente inflados o deflados con propósitos anticompetitivos.</li>
+        <li><strong>Prácticas discriminatorias:</strong> Establecer políticas internas o instrucciones a agentes que impliquen discriminación en la selección de clientes o en las condiciones de oferta de propiedades.</li>
+        <li><strong>Credenciales corporativas falsas:</strong> Presentar en el perfil corporativo información falsa sobre la empresa, sus credenciales, afiliaciones, premios o historial.</li>
+        <li><strong>Explotación de datos de la plataforma:</strong> Utilizar datos o listados de la plataforma para construir servicios o productos competidores directos de HogaresRD.</li>
+        <li><strong>Captación indebida de agentes:</strong> Utilizar el sistema de mensajería, el directorio de agentes o cualquier otra funcionalidad de la plataforma con el propósito principal de reclutar agentes afiliados a otras inmobiliarias.</li>
+        <li><strong>Múltiples cuentas corporativas:</strong> Crear o mantener más de una cuenta corporativa activa en la plataforma para la misma entidad legal o para entidades relacionadas bajo el mismo control, sin autorización expresa de HogaresRD.</li>
+        <li><strong>Manipulación del sistema de reseñas:</strong> Generar, organizar o coordinar reseñas o valoraciones falsas sobre la empresa, sus agentes o sobre competidores en la plataforma.</li>
+      </ul>
+
+      <h2 id="s19">19. Confidencialidad e Información Comercial Sensible</h2>
+      <h3>19.1 Definición de Información Confidencial</h3>
+      <p>A los efectos de estos Términos, se considera "Información Confidencial" toda información técnica, comercial, financiera, estratégica o de negocio que una parte divulgue a la otra en el contexto de la relación establecida por estos Términos, y que haya sido identificada como confidencial o que por su naturaleza deba razonablemente considerarse como tal.</p>
+      <h3>19.2 Obligaciones de Confidencialidad</h3>
+      <p>Cada parte se compromete a:</p>
+      <ul>
+        <li>Mantener en estricta confidencialidad la Información Confidencial de la otra parte.</li>
+        <li>No divulgar la Información Confidencial a terceros sin el consentimiento previo y por escrito de la parte divulgante.</li>
+        <li>Utilizar la Información Confidencial exclusivamente para los fines previstos en estos Términos.</li>
+        <li>Adoptar medidas de seguridad razonables para proteger la Información Confidencial de accesos no autorizados.</li>
+      </ul>
+      <h3>19.3 Excepciones a la Confidencialidad</h3>
+      <p>Las obligaciones de confidencialidad no aplican a información que: (i) era de dominio público antes de su divulgación; (ii) pase a ser de dominio público sin culpa de la parte receptora; (iii) haya sido desarrollada independientemente por la parte receptora; o (iv) deba ser divulgada por mandato legal o judicial, en cuyo caso la parte obligada notificará a la otra con la mayor anticipación posible.</p>
+      <h3>19.4 Vigencia de la Obligación</h3>
+      <p>Las obligaciones de confidencialidad aquí establecidas sobreviven a la terminación de estos Términos por un período de <strong>tres (3) años</strong> contados desde la fecha de terminación efectiva del acuerdo.</p>
+
+      <h2 id="s20">20. Nivel de Servicio y Disponibilidad</h2>
+      <h3>20.1 Compromiso de Disponibilidad</h3>
+      <p>HogaresRD se compromete a realizar sus mejores esfuerzos para mantener la plataforma operativa y disponible para los usuarios de cuentas corporativas el mayor tiempo posible, aspirando a un nivel de disponibilidad del <strong>99% mensual</strong>, excluyendo los períodos de mantenimiento programado y eventos de fuerza mayor.</p>
+      <h3>20.2 Mantenimiento Programado</h3>
+      <p>HogaresRD notificará las ventanas de mantenimiento programado con al menos <strong>veinticuatro (24) horas de anticipación</strong> a través de un aviso en la plataforma y/o por correo electrónico al administrador de la cuenta corporativa. Los mantenimientos programados serán realizados, en la medida de lo posible, en horarios de baja demanda.</p>
+      <h3>20.3 Fuerza Mayor</h3>
+      <p>HogaresRD no será responsable por interrupciones del servicio causadas por eventos fuera de su control razonable, incluyendo pero no limitándose a: fallos de infraestructura de terceros proveedores, desastres naturales, conflictos armados, actos de gobierno, ataques informáticos de gran escala, o interrupciones generalizadas de internet.</p>
+      <h3>20.4 Remedios por Incumplimiento del SLA</h3>
+      <p>En caso de que HogaresRD no alcance el nivel de disponibilidad comprometido en un mes determinado por causas imputables a HogaresRD, el único remedio disponible para la Inmobiliaria será la aplicación de un crédito de servicio proporcional a aplicar en el siguiente período de facturación. La Inmobiliaria renuncia expresamente a cualquier otra reclamación por daños derivados del incumplimiento del nivel de servicio.</p>
+
+      <h2 id="s21">21. Suspensión y Cancelación de Cuenta Corporativa</h2>
+      <h3>21.1 Causas de Suspensión o Cancelación</h3>
+      <p>HogaresRD puede suspender temporal o definitivamente la cuenta corporativa de la Inmobiliaria en los siguientes supuestos:</p>
+      <ul>
+        <li>Fraude demostrado o actividad que suponga un riesgo material para la plataforma o sus usuarios.</li>
+        <li>Brecha de datos o incidente de seguridad grave imputable a la Inmobiliaria.</li>
+        <li>Acumulación significativa de denuncias formales de usuarios no resueltas.</li>
+        <li>Violación grave o reiterada de estos Términos Corporativos o de los estándares de la plataforma.</li>
+        <li>Pérdida de los requisitos legales de constitución o habilitación corporativa.</li>
+        <li>Incumplimiento de obligaciones de pago de la suscripción, superado el período de gracia.</li>
+        <li>Requerimiento de autoridad judicial, fiscal o administrativa competente.</li>
+      </ul>
+      <h3>21.2 Período de Subsanación</h3>
+      <p>Para infracciones no graves (incumplimientos de estándares de contenido, retrasos en actualización de información, pagos tardíos), HogaresRD notificará a la Inmobiliaria por escrito otorgando un período de <strong>treinta (30) días calendarios</strong> para subsanar el incumplimiento antes de proceder a la suspensión. Para infracciones graves (fraude, brechas de datos, conducta discriminatoria deliberada), la suspensión puede ser inmediata sin período de subsanación previo.</p>
+      <h3>21.3 Efectos sobre Sub-cuentas y Listados</h3>
+      <p>La suspensión o cancelación de la cuenta corporativa conlleva la suspensión o cancelación simultánea de todas las subcuentas de agentes y secretarias vinculadas a la empresa, así como la ocultación o eliminación de todos los listados del portfolio corporativo.</p>
+      <h3>21.4 Período de Gracia para Exportación de Datos</h3>
+      <p>Tras la cancelación de la cuenta corporativa, la Inmobiliaria dispondrá de un período de <strong>quince (15) días calendarios</strong> para solicitar la exportación de sus datos de negocio propios (listados, métricas propias, información de contacto de la empresa) antes de que sean eliminados de los sistemas de HogaresRD. Este período de exportación no se aplica a datos personales de clientes de la plataforma.</p>
+
+      <h2 id="s22">22. Efectos de la Terminación y Transición</h2>
+      <h3>22.1 Desactivación del Portfolio</h3>
+      <p>Tras la terminación de la cuenta corporativa, todos los listados del portfolio serán desactivados y removidos de la vista pública de la plataforma. HogaresRD no garantiza la conservación de los listados inactivos por más de noventa (90) días tras la terminación.</p>
+      <h3>22.2 Retención y Eliminación de Datos</h3>
+      <p>Los datos de la cuenta corporativa —incluyendo listados, leads, aplicaciones e historial de mensajería— serán retenidos por HogaresRD durante el período establecido en su política de retención de datos (generalmente dos años) antes de su eliminación definitiva, salvo que la ley exija un período mayor o que existan litigios o investigaciones activas que requieran su conservación.</p>
+      <h3>22.3 Transición de Agentes Afiliados</h3>
+      <p>Tras la terminación de la cuenta corporativa, los agentes que estaban afiliados a la Inmobiliaria quedan automáticamente desafiliados. Estos agentes conservan sus cuentas profesionales individuales en HogaresRD y pueden operar de forma independiente. HogaresRD notificará a los agentes afectados sobre la terminación de la cuenta corporativa.</p>
+      <h3>22.4 Obligaciones que Sobreviven la Terminación</h3>
+      <p>Las obligaciones relativas a la confidencialidad, el tratamiento de datos personales, la indemnización, la ley aplicable y cualquier obligación económica pendiente sobreviven a la terminación de estos Términos Corporativos.</p>
+
+      <h2 id="s23">23. Limitación de Responsabilidad de HogaresRD</h2>
+      <p>HogaresRD provee una plataforma tecnológica de intermediación y no actúa como parte en ninguna transacción inmobiliaria. En consecuencia, la responsabilidad de HogaresRD está expresamente limitada de la siguiente manera:</p>
+      <ul>
+        <li>HogaresRD no garantiza ningún volumen de leads, transacciones, aplicaciones ni ingresos a la Inmobiliaria como resultado de su presencia en la plataforma.</li>
+        <li>HogaresRD no garantiza el éxito comercial de la Inmobiliaria ni la efectividad de las herramientas de marketing provistas.</li>
+        <li>HogaresRD no es responsable por el resultado de ninguna transacción de compraventa, arrendamiento u otro acuerdo inmobiliario.</li>
+        <li>HogaresRD no garantiza la solvencia, identidad verificada ni seriedad de los usuarios que interactúen con la Inmobiliaria a través de la plataforma.</li>
+        <li>HogaresRD no es responsable por la conducta de agentes afiliados a la Inmobiliaria que actúen fuera del ámbito de la plataforma.</li>
+        <li>HogaresRD no será responsable por daños indirectos, lucro cesante, pérdida de oportunidades de negocio u otros daños consecuentes derivados del uso o de la imposibilidad de uso de la plataforma.</li>
+      </ul>
+      <p>La responsabilidad agregada máxima de HogaresRD hacia la Inmobiliaria, por cualquier causa relacionada con el uso de la plataforma, no excederá el equivalente al monto total pagado por la Inmobiliaria a HogaresRD en concepto de suscripción corporativa durante los tres (3) meses inmediatamente anteriores al evento que da origen a la reclamación. Esta limitación no aplica a los casos de dolo o culpa grave debidamente comprobados ante los tribunales competentes.</p>
+
+      <h2 id="s24">24. Indemnización Corporativa, Ley Aplicable y Jurisdicción</h2>
+      <h3>24.1 Indemnización por parte de la Inmobiliaria</h3>
+      <p>La Inmobiliaria se compromete a defender, indemnizar y mantener indemne a HogaresRD, sus directivos, empleados, socios y representantes frente a cualquier reclamación, demanda, acción legal, pérdida, daño, multa, sanción, penalización o gasto (incluyendo honorarios razonables de abogados) que surja de o esté relacionada con:</p>
+      <ul>
+        <li>El contenido publicado por la Inmobiliaria o sus agentes afiliados en la plataforma.</li>
+        <li>La conducta profesional de la Inmobiliaria, sus directivos, empleados, agentes o secretarias en el uso de la plataforma o en relación con clientes captados a través de ella.</li>
+        <li>La violación de estos Términos Corporativos, de los Términos Profesionales para Agentes, o de cualquier ley aplicable.</li>
+        <li>El tratamiento indebido de datos personales de clientes por parte de la Inmobiliaria o su personal.</li>
+        <li>Brechas de seguridad imputables a la Inmobiliaria que afecten datos de usuarios de la plataforma.</li>
+        <li>Reclamaciones de terceros —incluyendo propietarios, compradores, arrendatarios u otros agentes— por conductas de la Inmobiliaria o sus agentes afiliados.</li>
+        <li>Infracción de derechos de propiedad intelectual sobre material cargado por la Inmobiliaria en la plataforma.</li>
+      </ul>
+      <h3>24.2 Ley Aplicable</h3>
+      <p>Estos Términos y Condiciones Corporativos y cualquier controversia derivada de su interpretación, validez, ejecución o incumplimiento se rigen en su totalidad por las leyes de la República Dominicana, incluyendo el Código Civil Dominicano, la Ley No. 126-02 sobre Comercio Electrónico, la Ley No. 172-13 sobre Protección de Datos Personales, y las reglamentaciones del Ministerio de Industria, Comercio y Mipymes.</p>
+      <h3>24.3 Negociación Amigable</h3>
+      <p>Ante cualquier controversia derivada de estos Términos, las partes se comprometen a buscar una solución amigable y directa en primera instancia. La Inmobiliaria debe dirigir su reclamación por escrito a legal@hogaresrd.com. HogaresRD dispondrá de un plazo de <strong>treinta (30) días calendarios</strong> para responder con una propuesta de resolución.</p>
+      <h3>24.4 Arbitraje</h3>
+      <p>Si la controversia no se resuelve amigablemente en el plazo establecido, cualquiera de las partes podrá someterla a arbitraje conforme al reglamento de un centro de arbitraje de reconocida solvencia en la República Dominicana acordado mutuamente, o en su defecto, ante los Tribunales del Distrito Nacional.</p>
+      <h3>24.5 Jurisdicción Subsidiaria</h3>
+      <p>Para controversias que no sean sometidas a arbitraje, ambas partes se someten expresamente a la jurisdicción de los Tribunales del Distrito Nacional de la República Dominicana, renunciando a cualquier otro fuero que pudiera corresponderles.</p>
+      <h3>24.6 Notificaciones Legales</h3>
+      <p>Toda comunicación de carácter legal o formal relacionada con estos Términos debe realizarse por escrito y dirigirse a: <strong>legal@hogaresrd.com</strong> (para HogaresRD) o al correo electrónico del representante legal registrado en la cuenta corporativa (para la Inmobiliaria). Las notificaciones se considerarán recibidas en el día hábil siguiente a su envío por correo electrónico, siempre que no se reciba notificación de rebote.</p>
+      <h3>24.7 Acuerdo Completo</h3>
+      <p>Estos Términos Corporativos, junto con los Términos de Uso General de HogaresRD, los Términos Profesionales para Agentes (en lo aplicable a los agentes afiliados), la Política de Privacidad de HogaresRD y cualquier acuerdo específico suscrito por escrito entre las partes, constituyen el acuerdo completo entre la Inmobiliaria y HogaresRD respecto al objeto aquí tratado, sustituyendo cualquier negociación, representación o acuerdo anterior, oral o escrito.</p>
+
+    </div>
+  </main>
+  <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
+  <script>
+    const html = document.documentElement;
+    html.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+  </script>
+  <script src="/js/pixel.js" defer></script>
+</body>
+</html>

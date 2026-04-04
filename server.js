@@ -327,6 +327,7 @@ app.get('/forgot-password',      (req, res) => res.sendFile(path.join(__dirname,
 app.get('/terminos-usuario',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-usuario.html')));
 app.get('/terminos-agente',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-agente.html')));
 app.get('/terminos-publicacion', (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-publicacion.html')));
+app.get('/terminos-inmobiliaria',(req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-inmobiliaria.html')));
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
 app.get('/alquilar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'alquilar.html')));
