@@ -356,6 +356,11 @@ struct ProfileTabView: View {
                 Label("Mis aplicaciones", systemImage: "doc.text.fill")
             }
             NavigationLink {
+                ChatIAView().environmentObject(api)
+            } label: {
+                Label("Asistente IA", systemImage: "brain.head.profile.fill")
+            }
+            NavigationLink {
                 ConnectorsView()
             } label: {
                 Label("Conectores", systemImage: "link")

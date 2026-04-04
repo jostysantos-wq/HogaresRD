@@ -6,18 +6,32 @@ struct ConversationThreadView: View {
     let conversation: Conversation
     @EnvironmentObject var api: APIService
 
+    @Environment(\.dismiss) var dismiss
     @State private var messages:       [ConvMessage] = []
     @State private var input:          String = ""
     @State private var sending:        Bool   = false
     @State private var lastTimestamp:  String?
 
     private var myId: String { api.currentUser?.id ?? "" }
+    private var myRole: String { api.currentUser?.role ?? "user" }
+
+    /// Determine if a message is "mine" based on senderId AND senderRole.
+    /// If the same user sent messages as both "client" and "broker" (testing),
+    /// use senderRole to distinguish sides: client role = left, broker role = right for agents.
+    private func isMyMessage(_ msg: ConvMessage) -> Bool {
+        // Different user → simple check
+        if msg.senderId != myId { return false }
+        // Same user but different roles → match by role
+        let iAmBroker = ["agency", "broker", "inmobiliaria"].contains(myRole)
+        if iAmBroker {
+            return msg.senderRole != "client"
+        } else {
+            return msg.senderRole == "client"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Header ──────────────────────────────────────────────
-            threadHeader
-
             // ── Message list ────────────────────────────────────────
             ScrollViewReader { proxy in
                 ScrollView {
@@ -36,7 +50,7 @@ struct ConversationThreadView: View {
                             ForEach(group.messages) { msg in
                                 MessageBubble(
                                     msg: msg,
-                                    isMe: msg.senderId == myId,
+                                    isMe: isMyMessage(msg),
                                     showSender: shouldShowSender(msg, in: group.messages)
                                 )
                                 .id(msg.id)
@@ -77,7 +91,20 @@ struct ConversationThreadView: View {
             .padding(.vertical, 10)
             .background(Color(.systemBackground))
         }
-        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 1) {
+                    Text(conversation.propertyTitle)
+                        .font(.subheadline).bold()
+                        .lineLimit(1)
+                    Text(conversation.brokerName ?? conversation.clientName)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
         .task {
             await loadMessages()
             await markRead()
@@ -85,53 +112,6 @@ struct ConversationThreadView: View {
                 try? await Task.sleep(for: .seconds(5))
                 await pollNew()
             }
-        }
-    }
-
-    // MARK: - Header
-
-    private var threadHeader: some View {
-        HStack(spacing: 12) {
-            Button {
-                // Go back — handled by NavigationStack
-                if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let nav = scene.windows.first?.rootViewController as? UINavigationController {
-                    nav.popViewController(animated: true)
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Color.rdBlue)
-            }
-
-            // Property info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(conversation.propertyTitle)
-                    .font(.subheadline).bold()
-                    .lineLimit(1)
-                if let broker = conversation.brokerName {
-                    Text(broker)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(conversation.clientName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            // Online indicator (decorative)
-            Circle()
-                .fill(Color.green)
-                .frame(width: 8, height: 8)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(.systemBackground))
-        .overlay(alignment: .bottom) {
-            Divider()
         }
     }
 
@@ -144,7 +124,6 @@ struct ConversationThreadView: View {
     }
 
     private var groupedMessages: [MessageGroup] {
-        let fmt = ISO8601DateFormatter()
         let dayFmt = DateFormatter()
         dayFmt.locale = Locale(identifier: "es_DO")
 
@@ -153,7 +132,7 @@ struct ConversationThreadView: View {
 
         for msg in messages {
             let dateKey: String
-            if let d = fmt.date(from: msg.timestamp) {
+            if let d = parseISO(msg.timestamp) {
                 dayFmt.dateFormat = "yyyy-MM-dd"
                 dateKey = dayFmt.string(from: d)
             } else {
@@ -187,10 +166,11 @@ struct ConversationThreadView: View {
         }
     }
 
-    /// Only show sender name if it's a different sender than the previous message
+    /// Only show sender name if the role changes from the previous message
     private func shouldShowSender(_ msg: ConvMessage, in group: [ConvMessage]) -> Bool {
         guard let idx = group.firstIndex(where: { $0.id == msg.id }), idx > 0 else { return true }
-        return group[idx - 1].senderId != msg.senderId
+        let prev = group[idx - 1]
+        return prev.senderRole != msg.senderRole || prev.senderId != msg.senderId
     }
 
     // MARK: - Helpers
@@ -309,13 +289,22 @@ struct MessageBubble: View {
     }
 
     private var timeString: String {
-        let fmt = ISO8601DateFormatter()
-        guard let date = fmt.date(from: msg.timestamp) else { return "" }
+        guard let date = parseISO(msg.timestamp) else { return "" }
         let df = DateFormatter()
         df.dateFormat = "h:mm a"
         df.locale = Locale(identifier: "es_DO")
         return df.string(from: date)
     }
+}
+
+// MARK: - ISO 8601 parser (handles with and without fractional seconds)
+
+private func parseISO(_ s: String) -> Date? {
+    let fmt = ISO8601DateFormatter()
+    fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = fmt.date(from: s) { return d }
+    fmt.formatOptions = [.withInternetDateTime]
+    return fmt.date(from: s)
 }
 
 // MARK: - Chat Bubble Shape (tail on one side)

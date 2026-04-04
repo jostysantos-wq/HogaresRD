@@ -10,14 +10,27 @@ struct ChatIAView: View {
     @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var inputFocused: Bool
 
-    private let suggestions = [
-        "¿Cómo puedo cerrar más ventas?",
-        "Ayúdame a manejar una objeción de precio",
-        "¿Qué documentos necesito para una aplicación?",
-        "Analiza mi pipeline de ventas",
-        "Consejos para el mercado de Santo Domingo",
-        "¿Cómo negociar con un comprador indeciso?"
-    ]
+    private var suggestions: [String] {
+        let role = api.currentUser?.role ?? "user"
+        if ["agency", "broker", "inmobiliaria"].contains(role) {
+            return [
+                "Como publico una propiedad?",
+                "Como gestiono mi pipeline de aplicaciones?",
+                "Consejos para el mercado de Santo Domingo",
+                "Que documentos necesito para una aplicacion?",
+                "Como veo las estadisticas de mis propiedades?",
+                "Como agendo visitas con clientes?"
+            ]
+        }
+        return [
+            "Como busco propiedades en la app?",
+            "Como guardo propiedades que me gustan?",
+            "Como contacto a un agente?",
+            "Como agendo una visita a una propiedad?",
+            "Que necesito para aplicar a una propiedad?",
+            "Como funciona la calculadora de hipoteca?"
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -111,14 +124,14 @@ struct ChatIAView: View {
             }
 
             VStack(spacing: 6) {
-                Text("Asistente IA")
+                Text("Asistente HogaresRD")
                     .font(.title3).bold()
                 Text("Powered by Claude")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Text("Tu asistente especializado en bienes raíces para el mercado dominicano. Pregúntame sobre estrategias de venta, gestión de clientes, documentación y más.")
+            Text("Preguntame como usar la app, buscar propiedades, publicar listados, gestionar aplicaciones, o cualquier duda sobre bienes raices en Republica Dominicana.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -177,6 +190,7 @@ struct ChatIAView: View {
             var context: [String: Any] = [:]
             if let user = api.currentUser {
                 context["brokerName"] = user.name
+                context["userRole"] = user.role
             }
 
             do {

@@ -381,29 +381,27 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Heart button + count
+                            // Save button + count
                             Button {
                                 toggleSave()
                             } label: {
-                                VStack(spacing: 2) {
+                                VStack(spacing: 3) {
                                     Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
                                         .font(.system(size: 24, weight: .semibold))
                                         .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
                                         .shadow(color: .black.opacity(0.5), radius: 4)
                                         .scaleEffect(heartScale)
-                                    if localFavCount > 0 {
-                                        Text("\(localFavCount)")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.white)
-                                            .shadow(color: .black.opacity(0.5), radius: 2)
-                                    }
+                                    Text(localFavCount > 0 ? "\(localFavCount)" : "Guardar")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .shadow(color: .black.opacity(0.5), radius: 2)
                                 }
-                                .frame(width: 48)
+                                .frame(width: 56)
                                 .frame(minHeight: 48)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                            .onAppear { localFavCount = listing.favoriteCount ?? 0 }
+                            .onAppear { localFavCount = (listing.favoriteCount ?? 0) + (saved.isSaved(listing.id) ? 1 : 0) }
 
                             // Share button
                             Button {

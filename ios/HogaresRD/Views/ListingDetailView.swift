@@ -102,16 +102,19 @@ struct ListingDetailView: View {
                                 }
                             }
                             Spacer()
-                            // Heart + fav count
+                            // Heart + saved count
                             Button {
+                                let impact = UIImpactFeedbackGenerator(style: .medium)
+                                impact.impactOccurred()
                                 saved.toggle(l.id)
                             } label: {
                                 VStack(spacing: 2) {
                                     Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
                                         .font(.title2)
                                         .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
-                                    if let fc = l.favoriteCount, fc > 0 {
-                                        Text("\(fc + (saved.isSaved(l.id) && fc == 0 ? 1 : 0))")
+                                    let count = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
+                                    if count > 0 {
+                                        Text("\(count)")
                                             .font(.system(size: 11, weight: .bold))
                                             .foregroundStyle(.secondary)
                                     }
@@ -131,15 +134,16 @@ struct ListingDetailView: View {
                                 Label(addr, systemImage: "map")
                                     .foregroundStyle(.secondary).font(.caption)
                             }
-                            // View count
+                            // Stats row
                             HStack(spacing: 12) {
                                 if let views = l.views, views > 0 {
                                     Label("\(views) vista\(views == 1 ? "" : "s")", systemImage: "eye")
                                         .font(.caption)
                                         .foregroundStyle(.tertiary)
                                 }
-                                if let fc = l.favoriteCount, fc > 0 {
-                                    Label("\(fc) favorito\(fc == 1 ? "" : "s")", systemImage: "heart")
+                                let savedCount = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
+                                if savedCount > 0 {
+                                    Label("\(savedCount) guardado\(savedCount == 1 ? "" : "s")", systemImage: "heart")
                                         .font(.caption)
                                         .foregroundStyle(.tertiary)
                                 }
