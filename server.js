@@ -194,6 +194,7 @@ app.use('/api/conversations', require('./routes/auth').userAuth, require('./rout
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
+app.use('/api/paid-ads',          require('./routes/paid-ads'));
 app.use('/api/push',              require('./routes/push').router);
 app.use('/api/saved-searches',    savedSearchRouter);
 

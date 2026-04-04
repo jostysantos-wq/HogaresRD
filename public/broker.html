@@ -140,6 +140,96 @@
 
     /* ── SECTION NAV (internal dashboard tabs) ───────────────── */
     .section-nav { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border-bottom: 1px solid var(--border); }
+    /* ── Paid Ads Section ─────────────────────────────────────── */
+    .ads-connect-card { background: linear-gradient(135deg, #001230 0%, #0038A8 60%, #0055d0 100%); border-radius: 14px; padding: 2rem; color: #fff; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .ads-connect-icon { width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ads-connect-icon svg { width: 30px; height: 30px; fill: #fff; }
+    .ads-connect-info { flex: 1; min-width: 0; }
+    .ads-connect-info h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .ads-connect-info p { font-size: 0.85rem; opacity: 0.8; line-height: 1.5; margin: 0; }
+    .ads-connect-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .btn-fb-connect { display: inline-flex; align-items: center; gap: 0.5rem; background: #1877F2; color: #fff; border: none; border-radius: 10px; padding: 0.65rem 1.25rem; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn-fb-connect:hover { background: #1565c0; }
+    .btn-fb-connect svg { width: 18px; height: 18px; fill: #fff; }
+    .ads-setup-hint { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+    .ads-setup-hint h4 { font-size: 0.88rem; font-weight: 800; color: var(--text); margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+    .ads-setup-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    .ads-setup-steps li { font-size: 0.83rem; color: var(--text-muted); display: flex; align-items: flex-start; gap: 0.6rem; line-height: 1.5; }
+    .ads-setup-steps li::before { content: attr(data-n); display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+    .ads-setup-steps a { color: var(--accent); }
+    .ads-status-bar { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .ads-status-dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+    .ads-status-dot.inactive { background: #94a3b8; box-shadow: none; }
+    .ads-status-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .ads-status-sub { font-size: 0.78rem; color: var(--text-muted); }
+    .ads-acct-select { background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 0.4rem 0.65rem; font-size: 0.82rem; color: var(--text); cursor: pointer; }
+    .btn-ads-disconnect { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .btn-ads-disconnect:hover { border-color: #CF142B; color: #CF142B; }
+    .ads-campaigns-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem; }
+    .ads-campaigns-header h3 { font-size: 0.92rem; font-weight: 800; color: var(--text); }
+    .ads-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .ads-table th { text-align: left; padding: 0.5rem 0.75rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .ads-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+    .ads-table tr:last-child td { border-bottom: none; }
+    .ads-status-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; }
+    .ads-status-pill.active { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .ads-status-pill.paused { background: rgba(245,158,11,0.12); color: #d97706; }
+    .ads-status-pill.deleted { background: rgba(239,68,68,0.1); color: #dc2626; }
+    .ads-stat-num { font-weight: 700; color: var(--text); }
+    .ads-actions-cell { display: flex; gap: 0.4rem; }
+    /* Campaign Wizard Modal */
+    .wizard-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; display: none; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
+    .wizard-overlay.open { display: flex; }
+    .wizard-modal { background: var(--bg-card); border-radius: 18px; width: 100%; max-width: 680px; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.3); }
+    .wizard-head { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .wizard-head h3 { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .wizard-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0.25rem; }
+    .wizard-steps { display: flex; gap: 0; padding: 0 1.5rem; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+    .wizard-steps::-webkit-scrollbar { display: none; }
+    .wizard-step-dot { display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 0; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; padding-right: 1.5rem; }
+    .wizard-step-dot.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .wizard-step-dot.done { color: #22c55e; }
+    .wizard-step-num { width: 22px; height: 22px; border-radius: 50%; border: 2px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; flex-shrink: 0; }
+    .wizard-step-dot.done .wizard-step-num { background: #22c55e; border-color: #22c55e; color: #fff; }
+    .wizard-step-dot.active .wizard-step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .wizard-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .wizard-panel { display: none; }
+    .wizard-panel.active { display: block; }
+    .wizard-field { margin-bottom: 1.1rem; }
+    .wizard-field label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 0.4rem; }
+    .wizard-field input, .wizard-field select, .wizard-field textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.88rem; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.2s; font-family: inherit; }
+    .wizard-field input:focus, .wizard-field select:focus, .wizard-field textarea:focus { border-color: var(--accent); }
+    .wizard-field textarea { resize: vertical; min-height: 72px; }
+    .wizard-char-count { font-size: 0.72rem; color: var(--text-muted); text-align: right; margin-top: 0.2rem; }
+    .wizard-char-count.warn { color: #d97706; }
+    .wizard-char-count.over { color: #dc2626; }
+    .listing-option-thumb { width: 44px; height: 34px; object-fit: cover; border-radius: 5px; vertical-align: middle; margin-right: 0.5rem; }
+    /* Ad Preview */
+    .fb-ad-preview { border: 1px solid #ddd; border-radius: 10px; overflow: hidden; max-width: 360px; margin: 1rem auto 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .fb-ad-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; }
+    .fb-ad-avatar { width: 38px; height: 38px; background: #0038A8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
+    .fb-ad-page { font-size: 0.82rem; font-weight: 700; color: #050505; line-height: 1.2; }
+    .fb-ad-sponsored { font-size: 0.72rem; color: #65676b; }
+    .fb-ad-text { padding: 0 1rem 0.75rem; font-size: 0.88rem; color: #050505; line-height: 1.4; }
+    .fb-ad-image { width: 100%; aspect-ratio: 1.91/1; object-fit: cover; background: #e4e6eb; display: flex; align-items: center; justify-content: center; color: #65676b; font-size: 0.82rem; }
+    .fb-ad-image img { width: 100%; height: 100%; object-fit: cover; }
+    .fb-ad-link-strip { padding: 0.75rem 1rem; background: #f0f2f5; border-top: 1px solid #e4e6eb; display: flex; align-items: center; justify-content: space-between; }
+    .fb-ad-link-info { font-size: 0.75rem; color: #65676b; text-transform: uppercase; letter-spacing: 0.3px; }
+    .fb-ad-link-title { font-size: 0.88rem; font-weight: 700; color: #050505; margin-top: 0.1rem; }
+    .fb-ad-cta-btn { background: #e4e6eb; border: none; border-radius: 6px; padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 700; color: #050505; cursor: default; white-space: nowrap; }
+    /* Targeting presets */
+    .targeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem; }
+    .targeting-card { border: 2px solid var(--border); border-radius: 10px; padding: 0.85rem; cursor: pointer; transition: all 0.15s; }
+    .targeting-card:hover { border-color: var(--accent); }
+    .targeting-card.selected { border-color: var(--accent); background: var(--accent-light); }
+    .targeting-card h5 { font-size: 0.83rem; font-weight: 700; color: var(--text); margin-bottom: 0.2rem; }
+    .targeting-card p { font-size: 0.75rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+    .budget-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    .wizard-foot { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 0.75rem; }
+    .wizard-foot-msg { font-size: 0.82rem; color: var(--text-muted); flex: 1; }
+    .wizard-foot-msg.error { color: #dc2626; }
+    .wizard-foot-msg.success { color: #16a34a; font-weight: 600; }
+
     .section-nav-btn { display: inline-flex; align-items: center; gap: 0.35rem; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--text-muted); font-size: 0.83rem; font-weight: 500; padding: 0.65rem 1.1rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; font-family: inherit; }
     .section-nav-btn svg { width: 14px; height: 14px; fill: currentColor; opacity: 0.7; }
     .section-nav-btn:hover { color: var(--text); }
@@ -1146,6 +1236,10 @@
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       Mis Propiedades
     </button>
+    <button class="section-nav-btn" data-section="publicidad">
+      <svg viewBox="0 0 24 24"><path d="M3 18h12v-2H3v2zm0-5h12v-2H3v2zm0-7v2h12V6H3zm13 9.15V6.85L21.03 12 16 15.15z"/></svg>
+      Publicidad
+    </button>
   </div>
 
   <!-- Affiliation Banner (broker role only, shown/hidden by JS) -->
@@ -1400,6 +1494,253 @@
     <div class="la-detail-modal">
       <button class="la-detail-close" onclick="closeLADetail()">&times;</button>
       <div id="laDetailContent"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- Section: Publicidad Pagada                                  -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-pane" id="section-publicidad">
+
+    <!-- Not configured state -->
+    <div id="adsSetupCard" style="display:none;">
+      <div class="ads-setup-hint">
+        <h4>⚙️ Configuración requerida para anuncios pagados</h4>
+        <ol class="ads-setup-steps">
+          <li data-n="1">Ve a <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> y crea una aplicación de tipo <strong>Business</strong>.</li>
+          <li data-n="2">Añade el producto <strong>Marketing API</strong> a tu app y solicita acceso estándar.</li>
+          <li data-n="3">Copia el <strong>App ID</strong> y <strong>App Secret</strong> y añádelos al archivo <code>.env</code> del servidor (<code>FB_APP_ID</code> / <code>FB_APP_SECRET</code>).</li>
+          <li data-n="4">Añade la URL de retorno en Facebook Login → Settings: <code>https://hogaresrd.com/api/paid-ads/meta/callback</code></li>
+          <li data-n="5">Reinicia el servidor. El botón de conexión aparecerá automáticamente.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Not connected state -->
+    <div id="adsNotConnected" style="display:none;">
+      <div class="ads-connect-card" style="margin-bottom:1.5rem;">
+        <div class="ads-connect-icon">
+          <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </div>
+        <div class="ads-connect-info">
+          <h3>Facebook & Instagram Ads</h3>
+          <p>Crea anuncios pagados que llegan a miles de compradores potenciales en RD e inversores internacionales. Configura presupuesto, audiencia y lanza campañas directamente desde aquí.</p>
+        </div>
+        <div class="ads-connect-actions">
+          <button class="btn-fb-connect" onclick="connectFacebookAds()">
+            <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Conectar Facebook Ads
+          </button>
+        </div>
+      </div>
+      <div style="background:var(--accent-light);border-radius:10px;padding:1rem 1.25rem;font-size:0.83rem;color:var(--text-muted);">
+        💡 Necesitas una cuenta de <strong>Meta Business Manager</strong> con un método de pago configurado. Los anuncios se cobran directamente por Meta según tu presupuesto.
+      </div>
+    </div>
+
+    <!-- Connected state -->
+    <div id="adsConnected" style="display:none;">
+      <!-- Status bar -->
+      <div class="ads-status-bar">
+        <div class="ads-status-dot" id="adsStatusDot"></div>
+        <div>
+          <div class="ads-status-name" id="adsStatusName">Facebook Ads</div>
+          <div class="ads-status-sub" id="adsStatusSub">Conectado</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:0.2rem;">Cuenta de anuncios</label>
+            <select class="ads-acct-select" id="adsAccountSelect" onchange="selectAdAccount(this.value)"></select>
+          </div>
+          <button class="btn-primary" onclick="openCampaignWizard()" style="display:flex;align-items:center;gap:0.4rem;white-space:nowrap;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Nueva Campaña
+          </button>
+          <button class="btn-ads-disconnect" onclick="disconnectFacebookAds()">Desconectar</button>
+        </div>
+      </div>
+
+      <!-- Campaigns table -->
+      <div class="ads-campaigns-header">
+        <h3>Campañas activas</h3>
+        <button class="btn-secondary" style="font-size:0.78rem;padding:0.4rem 0.85rem;" onclick="loadAdsCampaigns()">↻ Actualizar stats</button>
+      </div>
+      <div class="table-wrap">
+        <table class="ads-table">
+          <thead><tr>
+            <th>Propiedad</th>
+            <th style="width:90px">Estado</th>
+            <th style="width:80px">Alcance</th>
+            <th style="width:70px">Clics</th>
+            <th style="width:80px">CTR</th>
+            <th style="width:80px">Gasto</th>
+            <th style="width:100px">Acciones</th>
+          </tr></thead>
+          <tbody id="adsCampaignsTbody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando campañas…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.75rem;">📊 Las estadísticas se actualizan en tiempo real desde la API de Meta. Los costos se facturan directamente por Facebook.</p>
+    </div>
+
+  </div><!-- /section-publicidad -->
+
+  <!-- Campaign Creation Wizard Modal -->
+  <div class="wizard-overlay" id="campaignWizardOverlay">
+    <div class="wizard-modal">
+      <div class="wizard-head">
+        <h3>Nueva Campaña de Anuncios</h3>
+        <button class="wizard-close" onclick="closeCampaignWizard()">×</button>
+      </div>
+      <div class="wizard-steps">
+        <div class="wizard-step-dot active" data-step="1" onclick="goWizardStep(1)"><div class="wizard-step-num">1</div> Propiedad</div>
+        <div class="wizard-step-dot" data-step="2" onclick="goWizardStep(2)"><div class="wizard-step-num">2</div> Anuncio</div>
+        <div class="wizard-step-dot" data-step="3" onclick="goWizardStep(3)"><div class="wizard-step-num">3</div> Audiencia y Presupuesto</div>
+        <div class="wizard-step-dot" data-step="4" onclick="goWizardStep(4)"><div class="wizard-step-num">4</div> Revisión</div>
+      </div>
+      <div class="wizard-body">
+
+        <!-- Step 1: Select listing -->
+        <div class="wizard-panel active" id="wizStep1">
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Selecciona la propiedad que quieres promocionar con anuncios pagados.</p>
+          <div class="wizard-field">
+            <label>Propiedad</label>
+            <select id="wizListingSelect" onchange="onWizListingChange(this.value)">
+              <option value="">— Selecciona una propiedad —</option>
+            </select>
+          </div>
+          <div id="wizListingPreview" style="display:none;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-top:0.75rem;">
+            <img id="wizListingImg" src="" alt="" style="width:100%;height:160px;object-fit:cover;display:none;" />
+            <div style="padding:0.85rem;">
+              <div style="font-weight:800;font-size:0.92rem;color:var(--text);" id="wizListingTitle"></div>
+              <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;" id="wizListingMeta"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Ad creative -->
+        <div class="wizard-panel" id="wizStep2">
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Personaliza el texto de tu anuncio. Los límites son los de Meta.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+            <div>
+              <div class="wizard-field">
+                <label>Titular del anuncio <span style="opacity:0.5;">(máx. 40 caracteres)</span></label>
+                <input type="text" id="wizHeadline" maxlength="40" placeholder="Casa en Piantini - $280,000" oninput="updateAdPreview();updateCharCount('wizHeadline',40,'wizHeadlineCount')" />
+                <div class="wizard-char-count" id="wizHeadlineCount">0/40</div>
+              </div>
+              <div class="wizard-field">
+                <label>Texto principal <span style="opacity:0.5;">(máx. 125 caracteres)</span></label>
+                <textarea id="wizPrimaryText" maxlength="125" rows="3" placeholder="Casa en venta en Piantini. 3 habitaciones, 2 baños, área: 180m²." oninput="updateAdPreview();updateCharCount('wizPrimaryText',125,'wizPrimaryTextCount')"></textarea>
+                <div class="wizard-char-count" id="wizPrimaryTextCount">0/125</div>
+              </div>
+              <div class="wizard-field">
+                <label>Botón de llamada a acción</label>
+                <select id="wizCta" onchange="updateAdPreview()">
+                  <option value="LEARN_MORE">Más información</option>
+                  <option value="GET_QUOTE">Obtener cotización</option>
+                  <option value="CONTACT_US">Contáctanos</option>
+                  <option value="SHOP_NOW">Ver ahora</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.5rem;display:block;">Vista previa del anuncio</label>
+              <div class="fb-ad-preview">
+                <div class="fb-ad-header">
+                  <div class="fb-ad-avatar">HR</div>
+                  <div>
+                    <div class="fb-ad-page">HogaresRD</div>
+                    <div class="fb-ad-sponsored">Patrocinado · <svg width="10" height="10" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+                  </div>
+                </div>
+                <div class="fb-ad-text" id="previewText">El texto del anuncio aparecerá aquí.</div>
+                <div class="fb-ad-image" id="previewImg">
+                  <span>Imagen de la propiedad</span>
+                </div>
+                <div class="fb-ad-link-strip">
+                  <div>
+                    <div class="fb-ad-link-info">hogaresrd.com</div>
+                    <div class="fb-ad-link-title" id="previewTitle">Título del anuncio</div>
+                  </div>
+                  <button class="fb-ad-cta-btn" id="previewCta">Más info</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Audience & Budget -->
+        <div class="wizard-panel" id="wizStep3">
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Define a quién llegará tu anuncio y cuánto quieres gastar.</p>
+          <div class="wizard-field">
+            <label>Audiencia objetivo</label>
+            <div class="targeting-grid">
+              <div class="targeting-card selected" data-preset="locals" onclick="selectTargeting('locals')">
+                <h5>🇩🇴 Compradores Locales</h5>
+                <p>República Dominicana · Edad 25–60 · Ideal para propiedades residenciales</p>
+              </div>
+              <div class="targeting-card" data-preset="international" onclick="selectTargeting('international')">
+                <h5>🌎 Inversores Internacionales</h5>
+                <p>EE.UU., Canadá, Europa · Edad 30–65 · Ideal para inversión y diáspora</p>
+              </div>
+              <div class="targeting-card" data-preset="tourist" onclick="selectTargeting('tourist')">
+                <h5>🏖 Zonas Turísticas</h5>
+                <p>Punta Cana, La Romana · Compradores de segunda vivienda y turistas</p>
+              </div>
+              <div class="targeting-card" data-preset="custom" onclick="selectTargeting('custom')">
+                <h5>✏️ Personalizado</h5>
+                <p>Define manualmente el rango de edad (República Dominicana)</p>
+              </div>
+            </div>
+          </div>
+          <div id="customAgeRange" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+              <div class="wizard-field"><label>Edad mínima</label><input type="number" id="wizAgeMin" value="25" min="18" max="65" /></div>
+              <div class="wizard-field"><label>Edad máxima</label><input type="number" id="wizAgeMax" value="65" min="18" max="65" /></div>
+            </div>
+          </div>
+          <div class="wizard-field">
+            <label>Presupuesto</label>
+            <div class="budget-row">
+              <div>
+                <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Tipo</label>
+                <select id="wizBudgetType">
+                  <option value="DAILY">Diario</option>
+                  <option value="LIFETIME">Total campaña</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Monto (USD)</label>
+                <input type="number" id="wizBudgetUsd" value="10" min="5" max="500" step="1" placeholder="10" />
+              </div>
+              <div>
+                <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Duración (días)</label>
+                <select id="wizDuration">
+                  <option value="3">3 días</option>
+                  <option value="7" selected>7 días</option>
+                  <option value="14">14 días</option>
+                  <option value="30">30 días</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="wizBudgetSummary" style="background:var(--accent-light);border-radius:8px;padding:0.75rem 1rem;font-size:0.83rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+        </div>
+
+        <!-- Step 4: Review -->
+        <div class="wizard-panel" id="wizStep4">
+          <div id="wizReviewContent"></div>
+        </div>
+
+      </div>
+      <div class="wizard-foot">
+        <span class="wizard-foot-msg" id="wizMsg"></span>
+        <div style="display:flex;gap:0.65rem;">
+          <button class="btn-secondary" id="wizBtnBack" onclick="wizardBack()" style="display:none;">← Atrás</button>
+          <button class="btn-primary" id="wizBtnNext" onclick="wizardNext()">Siguiente →</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4081,7 +4422,18 @@
     if (section === 'auditoria') loadAudit();
     if (section === 'contabilidad' && !accountingLoaded) loadAccounting();
     if (section === 'mis-propiedades' && !listingAnalyticsLoaded) loadListingAnalytics();
+    if (section === 'publicidad') loadPublicidadSection();
   }
+
+  // Handle Facebook OAuth callback
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('fb_ads') === 'connected') {
+      setTimeout(() => {
+        document.querySelector('.section-nav-btn[data-section="publicidad"]')?.click();
+      }, 500);
+    }
+  })();
 
   // ── Sidebar collapse & mobile ───────────────────────────────
   document.getElementById('sidebarCollapseBtn').onclick = () => {
@@ -5490,6 +5842,372 @@
     link.href = canvas.toDataURL('image/png');
     link.click();
   };
+
+  // ══════════════════════════════════════════════════════════════
+  // ── Paid Ads (Meta Marketing API) ────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+
+  const CTA_LABELS = { LEARN_MORE:'Más información', GET_QUOTE:'Obtener cotización', CONTACT_US:'Contáctanos', SHOP_NOW:'Ver ahora' };
+  let wizCurrentStep = 1;
+  let wizSelectedPreset = 'locals';
+  let wizListingsCache = [];
+
+  async function loadPublicidadSection() {
+    // Check if FB App is configured server-side
+    try {
+      const cfg = await API('/api/paid-ads/meta/configured');
+      if (!cfg.configured) {
+        document.getElementById('adsSetupCard').style.display = '';
+        document.getElementById('adsNotConnected').style.display = 'none';
+        document.getElementById('adsConnected').style.display = 'none';
+        return;
+      }
+    } catch(e) { /* server might not have route yet */ }
+
+    // Check connection status
+    try {
+      const status = await API('/api/paid-ads/meta/status');
+      if (!status.connected) {
+        document.getElementById('adsSetupCard').style.display = 'none';
+        document.getElementById('adsNotConnected').style.display = '';
+        document.getElementById('adsConnected').style.display = 'none';
+      } else {
+        document.getElementById('adsSetupCard').style.display = 'none';
+        document.getElementById('adsNotConnected').style.display = 'none';
+        document.getElementById('adsConnected').style.display = '';
+        renderAdsConnectedState(status);
+        loadAdsCampaigns();
+      }
+    } catch(e) {
+      document.getElementById('adsSetupCard').style.display = 'none';
+      document.getElementById('adsNotConnected').style.display = '';
+      document.getElementById('adsConnected').style.display = 'none';
+    }
+  }
+
+  function renderAdsConnectedState(status) {
+    document.getElementById('adsStatusName').textContent = status.fb_user_name || 'Facebook Ads';
+    document.getElementById('adsStatusSub').textContent = 'Conectado · ' + new Date(status.connected_at).toLocaleDateString('es-DO');
+
+    const sel = document.getElementById('adsAccountSelect');
+    sel.innerHTML = (status.ad_accounts || []).map(a =>
+      `<option value="${a.id}" ${a.id === status.selected_account ? 'selected' : ''}>${a.name || a.id}</option>`
+    ).join('') || '<option value="">Sin cuentas</option>';
+  }
+
+  async function loadAdsCampaigns() {
+    const tbody = document.getElementById('adsCampaignsTbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Actualizando…</td></tr>';
+    try {
+      const data = await API('/api/paid-ads/meta/campaigns');
+      const campaigns = data.campaigns || [];
+      if (!campaigns.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">No tienes campañas activas. Crea una con el botón "Nueva Campaña".</td></tr>';
+        return;
+      }
+      tbody.innerHTML = campaigns.map(c => {
+        const statusCls = c.status === 'ACTIVE' ? 'active' : c.status === 'PAUSED' ? 'paused' : 'deleted';
+        const statusLabel = { ACTIVE: '● Activo', PAUSED: '⏸ Pausado', DELETED: '✕ Eliminado' }[c.status] || c.status;
+        const endDate = c.end_at ? new Date(c.end_at).toLocaleDateString('es-DO', {day:'numeric',month:'short'}) : '—';
+        const toggleLabel = c.status === 'ACTIVE' ? 'Pausar' : 'Reanudar';
+        return `<tr>
+          <td>
+            <div style="font-weight:700;font-size:0.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.listing_title||'—')}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">${c.budget_type === 'DAILY' ? '$'+c.budget_usd+'/día' : '$'+c.budget_usd+' total'} · ${esc(c.duration_days+'d')} · hasta ${endDate}</div>
+          </td>
+          <td><span class="ads-status-pill ${statusCls}">${statusLabel}</span></td>
+          <td class="ads-stat-num">${(c.reach||0).toLocaleString()}</td>
+          <td class="ads-stat-num">${(c.clicks||0).toLocaleString()}</td>
+          <td class="ads-stat-num">${c.ctr||'0.00'}%</td>
+          <td class="ads-stat-num">$${c.spend_usd||'0.00'}</td>
+          <td>
+            <div class="ads-actions-cell">
+              <button class="btn-icon" style="font-size:0.75rem;padding:0.3rem 0.55rem;" onclick="toggleCampaign('${esc(c.campaign_id)}',this)" title="${toggleLabel}">${c.status === 'ACTIVE' ? '⏸' : '▶'}</button>
+              <button class="btn-icon" style="font-size:0.75rem;padding:0.3rem 0.55rem;color:#CF142B;" onclick="deleteCampaign('${esc(c.campaign_id)}',this)" title="Eliminar">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Error cargando campañas: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  async function connectFacebookAds() {
+    try {
+      const data = await API('/api/paid-ads/meta/auth-url');
+      if (data.error) return alert(data.error);
+      window.open(data.url, '_blank', 'width=600,height=700,scrollbars=yes');
+      // Poll for connection
+      const check = setInterval(async () => {
+        try {
+          const status = await API('/api/paid-ads/meta/status');
+          if (status.connected) {
+            clearInterval(check);
+            loadPublicidadSection();
+          }
+        } catch(e) {}
+      }, 3000);
+      setTimeout(() => clearInterval(check), 5 * 60 * 1000); // stop after 5 min
+    } catch(e) { alert('Error obteniendo URL de autorización: ' + e.message); }
+  }
+
+  async function disconnectFacebookAds() {
+    if (!confirm('¿Desconectar tu cuenta de Facebook Ads? Las campañas activas continuarán en Meta, pero no podrás gestionarlas desde aquí.')) return;
+    await API('/api/paid-ads/meta/disconnect', 'POST');
+    loadPublicidadSection();
+  }
+
+  async function selectAdAccount(accountId) {
+    await API('/api/paid-ads/meta/select-account', 'POST', { account_id: accountId });
+  }
+
+  async function toggleCampaign(campaignId, btn) {
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await API(`/api/paid-ads/meta/campaigns/${campaignId}/toggle-status`, 'POST');
+      await loadAdsCampaigns();
+    } catch(e) { alert('Error: ' + e.message); btn.disabled = false; }
+  }
+
+  async function deleteCampaign(campaignId, btn) {
+    if (!confirm('¿Eliminar esta campaña? Se archivará en Meta y no puede recuperarse.')) return;
+    btn.disabled = true;
+    try {
+      await API(`/api/paid-ads/meta/campaigns/${campaignId}`, 'DELETE');
+      await loadAdsCampaigns();
+    } catch(e) { alert('Error: ' + e.message); btn.disabled = false; }
+  }
+
+  // ── Campaign Wizard ────────────────────────────────────────────
+
+  async function openCampaignWizard() {
+    wizCurrentStep = 1;
+    wizSelectedPreset = 'locals';
+    document.getElementById('campaignWizardOverlay').classList.add('open');
+    goWizardStep(1);
+    // Load listings into dropdown
+    try {
+      const d = await API('/api/broker/listings-summary');
+      wizListingsCache = d.listings || [];
+      const sel = document.getElementById('wizListingSelect');
+      sel.innerHTML = '<option value="">— Selecciona una propiedad —</option>' +
+        wizListingsCache.map(l => `<option value="${l.id}">${l.title} · $${Number(l.price).toLocaleString('en-US')}</option>`).join('');
+    } catch(e) {
+      // Fallback: load from listing analytics data
+      if (typeof laListingsData !== 'undefined' && laListingsData?.length) {
+        wizListingsCache = laListingsData;
+        const sel = document.getElementById('wizListingSelect');
+        sel.innerHTML = '<option value="">— Selecciona una propiedad —</option>' +
+          laListingsData.map(l => `<option value="${l.id}">${l.title} · $${Number(l.price).toLocaleString('en-US')}</option>`).join('');
+      }
+    }
+    updateBudgetSummary();
+  }
+
+  function closeCampaignWizard() {
+    document.getElementById('campaignWizardOverlay').classList.remove('open');
+    document.getElementById('wizMsg').textContent = '';
+  }
+
+  function goWizardStep(step) {
+    wizCurrentStep = step;
+    document.querySelectorAll('.wizard-panel').forEach((p, i) => {
+      p.classList.toggle('active', i + 1 === step);
+    });
+    document.querySelectorAll('.wizard-step-dot').forEach(d => {
+      const s = parseInt(d.dataset.step);
+      d.classList.toggle('active', s === step);
+      d.classList.toggle('done', s < step);
+    });
+    document.getElementById('wizBtnBack').style.display = step > 1 ? '' : 'none';
+    document.getElementById('wizBtnNext').textContent = step === 4 ? '🚀 Lanzar campaña' : 'Siguiente →';
+    document.getElementById('wizMsg').textContent = '';
+    if (step === 4) buildReview();
+  }
+
+  function wizardBack() { if (wizCurrentStep > 1) goWizardStep(wizCurrentStep - 1); }
+
+  function wizardNext() {
+    if (wizCurrentStep === 1) {
+      if (!document.getElementById('wizListingSelect').value) {
+        setWizMsg('Selecciona una propiedad para continuar.', 'error'); return;
+      }
+    }
+    if (wizCurrentStep === 4) { launchCampaign(); return; }
+    goWizardStep(wizCurrentStep + 1);
+  }
+
+  function setWizMsg(msg, type = '') {
+    const el = document.getElementById('wizMsg');
+    el.textContent = msg;
+    el.className = 'wizard-foot-msg' + (type ? ' ' + type : '');
+  }
+
+  function onWizListingChange(listingId) {
+    const listing = wizListingsCache.find(l => l.id === listingId);
+    const preview = document.getElementById('wizListingPreview');
+    if (!listing) { preview.style.display = 'none'; return; }
+
+    preview.style.display = '';
+    const img = document.getElementById('wizListingImg');
+    const imgSrc = listing.image || (listing.images && listing.images[0]);
+    if (imgSrc) { img.src = imgSrc; img.style.display = 'block'; } else { img.style.display = 'none'; }
+    document.getElementById('wizListingTitle').textContent = listing.title || '';
+    document.getElementById('wizListingMeta').textContent =
+      [listing.city, listing.province, '$' + Number(listing.price).toLocaleString('en-US')].filter(Boolean).join(' · ');
+
+    // Pre-fill creative fields
+    const price = '$' + Number(listing.price).toLocaleString('en-US');
+    const city  = listing.city || '';
+    document.getElementById('wizHeadline').value = `${listing.type === 'apartamento' ? 'Apto' : 'Casa'} en ${city} - ${price}`.slice(0, 40);
+    const beds  = listing.bedrooms  ? listing.bedrooms  + ' hab.' : '';
+    const baths = listing.bathrooms ? listing.bathrooms + ' baños' : '';
+    document.getElementById('wizPrimaryText').value = `${listing.title}. ${[beds, baths].filter(Boolean).join(', ')}. ${city}, RD.`.slice(0, 125);
+    updateAdPreview();
+    updateCharCount('wizHeadline', 40, 'wizHeadlineCount');
+    updateCharCount('wizPrimaryText', 125, 'wizPrimaryTextCount');
+  }
+
+  function updateAdPreview() {
+    const listingId = document.getElementById('wizListingSelect').value;
+    const listing   = wizListingsCache.find(l => l.id === listingId);
+    const headline  = document.getElementById('wizHeadline').value || 'Título del anuncio';
+    const text      = document.getElementById('wizPrimaryText').value || 'Texto del anuncio.';
+    const ctaKey    = document.getElementById('wizCta').value || 'LEARN_MORE';
+
+    document.getElementById('previewText').textContent = text;
+    document.getElementById('previewTitle').textContent = headline;
+    document.getElementById('previewCta').textContent = CTA_LABELS[ctaKey] || 'Más información';
+
+    const previewImg = document.getElementById('previewImg');
+    const imgSrc = listing?.image || (listing?.images && listing.images[0]);
+    if (imgSrc) {
+      previewImg.innerHTML = `<img src="${imgSrc}" alt="" onerror="this.parentNode.innerHTML='<span>Imagen de la propiedad</span>'" />`;
+    } else {
+      previewImg.innerHTML = '<span>Imagen de la propiedad</span>';
+    }
+  }
+
+  function updateCharCount(inputId, max, countId) {
+    const el  = document.getElementById(inputId);
+    const cnt = document.getElementById(countId);
+    if (!el || !cnt) return;
+    const len = el.value.length;
+    cnt.textContent = `${len}/${max}`;
+    cnt.className = 'wizard-char-count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
+  }
+
+  function selectTargeting(preset) {
+    wizSelectedPreset = preset;
+    document.querySelectorAll('.targeting-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.preset === preset);
+    });
+    document.getElementById('customAgeRange').style.display = preset === 'custom' ? '' : 'none';
+  }
+
+  function updateBudgetSummary() {
+    const type     = document.getElementById('wizBudgetType')?.value;
+    const amount   = parseFloat(document.getElementById('wizBudgetUsd')?.value) || 0;
+    const duration = parseInt(document.getElementById('wizDuration')?.value) || 7;
+    const total    = type === 'DAILY' ? amount * duration : amount;
+    const el = document.getElementById('wizBudgetSummary');
+    if (el) el.textContent = `💰 Gasto estimado total: $${total.toFixed(2)} USD en ${duration} días${type === 'DAILY' ? ` ($${amount}/día)` : ''}.`;
+  }
+
+  // Wire up budget inputs to summary
+  document.addEventListener('DOMContentLoaded', () => {
+    ['wizBudgetType','wizBudgetUsd','wizDuration'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', updateBudgetSummary);
+    });
+  });
+
+  function buildReview() {
+    const listingId = document.getElementById('wizListingSelect').value;
+    const listing   = wizListingsCache.find(l => l.id === listingId);
+    const preset    = wizSelectedPreset;
+    const presetLabels = { locals:'🇩🇴 Compradores Locales (RD)', international:'🌎 Inversores Internacionales', tourist:'🏖 Zonas Turísticas', custom:'✏️ Personalizado (RD)' };
+    const budgetType = document.getElementById('wizBudgetType').value;
+    const budgetUsd  = document.getElementById('wizBudgetUsd').value;
+    const duration   = document.getElementById('wizDuration').value;
+    const total      = budgetType === 'DAILY' ? (parseFloat(budgetUsd) * parseInt(duration)).toFixed(2) : parseFloat(budgetUsd).toFixed(2);
+    const headline   = document.getElementById('wizHeadline').value;
+    const text       = document.getElementById('wizPrimaryText').value;
+
+    document.getElementById('wizReviewContent').innerHTML = `
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:0.3rem;">Propiedad</div>
+          <div style="font-weight:800;color:var(--text);">${esc(listing?.title || '—')}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">${esc(listing?.city || '')}${listing?.province ? ', ' + listing.province : ''}</div>
+        </div>
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:0.3rem;">Anuncio</div>
+          <div style="font-weight:700;color:var(--text);margin-bottom:0.25rem;">${esc(headline)}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">${esc(text)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border);">
+          <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:0.3rem;">Audiencia</div>
+            <div style="font-size:0.83rem;font-weight:600;color:var(--text);">${presetLabels[preset]}</div>
+          </div>
+          <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:0.3rem;">Presupuesto</div>
+            <div style="font-size:0.83rem;font-weight:600;color:var(--text);">$${budgetUsd} ${budgetType === 'DAILY' ? 'USD/día' : 'USD total'}</div>
+          </div>
+          <div style="padding:1rem 1.25rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:0.3rem;">Duración</div>
+            <div style="font-size:0.83rem;font-weight:600;color:var(--text);">${duration} días</div>
+          </div>
+        </div>
+        <div style="padding:1rem 1.25rem;background:var(--accent-light);">
+          <div style="font-size:0.85rem;color:var(--text);">💰 Gasto total estimado: <strong>$${total} USD</strong> — facturado directamente por Meta a tu método de pago.</div>
+        </div>
+      </div>`;
+  }
+
+  async function launchCampaign() {
+    const btn = document.getElementById('wizBtnNext');
+    btn.disabled = true; btn.textContent = 'Lanzando…';
+
+    const listingId    = document.getElementById('wizListingSelect').value;
+    const headline     = document.getElementById('wizHeadline').value.trim();
+    const primaryText  = document.getElementById('wizPrimaryText').value.trim();
+    const ctaType      = document.getElementById('wizCta').value;
+    const budgetType   = document.getElementById('wizBudgetType').value;
+    const budgetUsd    = document.getElementById('wizBudgetUsd').value;
+    const durationDays = document.getElementById('wizDuration').value;
+    const ageMin       = document.getElementById('wizAgeMin')?.value || 25;
+    const ageMax       = document.getElementById('wizAgeMax')?.value || 65;
+
+    try {
+      const result = await API('/api/paid-ads/meta/campaigns', 'POST', {
+        listing_id:        listingId,
+        headline,
+        primary_text:      primaryText,
+        cta_type:          ctaType,
+        budget_type:       budgetType,
+        budget_usd:        budgetUsd,
+        duration_days:     durationDays,
+        targeting_preset:  wizSelectedPreset,
+        age_min:           ageMin,
+        age_max:           ageMax,
+      });
+
+      if (result.error) throw new Error(result.error);
+
+      setWizMsg('✅ ¡Campaña creada y activa en Meta!', 'success');
+      btn.disabled = false; btn.textContent = '🚀 Lanzar campaña';
+      setTimeout(() => {
+        closeCampaignWizard();
+        loadAdsCampaigns();
+      }, 2000);
+    } catch(e) {
+      setWizMsg('Error: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = '🚀 Lanzar campaña';
+    }
+  }
 
   window.openLADetail = async function(id) {
     const overlay = document.getElementById('laDetailOverlay');
