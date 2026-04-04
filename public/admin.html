@@ -78,18 +78,28 @@
     .collapse-btn {
       margin-left: auto; flex-shrink: 0;
       background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.4); padding: 4px;
-      border-radius: 5px; display: flex; align-items: center;
+      color: rgba(255,255,255,0.55); padding: 6px;
+      border-radius: 6px; display: flex; align-items: center;
       transition: color 0.15s, background 0.15s;
     }
-    .collapse-btn:hover { color: #fff; background: var(--sb-hover); }
+    .collapse-btn:hover { color: #fff; background: rgba(255,255,255,0.12); }
     .collapse-btn svg { width: 18px; height: 18px; fill: currentColor; transition: transform 0.22s; }
     .sidebar.collapsed .collapse-btn svg { transform: rotate(180deg); }
     .sidebar.collapsed .sb-logo-text,
-    .sidebar.collapsed .sb-badge { opacity: 0; width: 0; pointer-events: none; }
+    .sidebar.collapsed .sb-badge { opacity: 0; width: 0; pointer-events: none; overflow: hidden; }
 
-    /* Nav */
-    .sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 0; }
+    /* Collapsed header: hide the logo icon so only the toggle button shows centered */
+    .sidebar.collapsed .sb-header { padding: 0; justify-content: center; }
+    .sidebar.collapsed .sb-logo-icon { display: none; }
+    .sidebar.collapsed .collapse-btn { margin-left: 0; }
+
+    /* Nav — reset any core.css nav overrides */
+    .sb-nav {
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 0;
+      background: transparent !important;
+      border: none !important;
+      position: static !important;
+    }
     .sb-nav::-webkit-scrollbar { width: 3px; }
     .sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
 
@@ -150,8 +160,24 @@
     }
     .sb-logout:hover { color: var(--danger); }
     .sb-logout svg { width: 16px; height: 16px; fill: currentColor; }
-    .sidebar.collapsed .sb-user-info,
-    .sidebar.collapsed .sb-logout { opacity: 0; pointer-events: none; width: 0; }
+    .sidebar.collapsed .sb-user-info { opacity: 0; pointer-events: none; width: 0; overflow: hidden; }
+    /* Keep logout visible in collapsed state — centered */
+    .sidebar.collapsed .sb-footer { justify-content: center; padding: 12px 0; }
+    .sidebar.collapsed .sb-avatar { display: none; }
+    .sidebar.collapsed .sb-logout { opacity: 1; pointer-events: auto; width: auto; color: rgba(255,255,255,0.45); }
+
+    /* Tooltips for nav items when collapsed */
+    .nav-item { position: relative; }
+    .nav-item .nav-tooltip {
+      display: none;
+      position: absolute; left: calc(var(--sidebar-col-w) - 4px); top: 50%;
+      transform: translateY(-50%);
+      background: #0f1e2e; color: #fff; font-size: 0.8rem; font-weight: 600;
+      padding: 0.35rem 0.75rem; border-radius: 7px; white-space: nowrap;
+      pointer-events: none; z-index: 200;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+    .sidebar.collapsed .nav-item:hover .nav-tooltip { display: block; }
 
     /* ── MAIN AREA ──────────────────────────────────────────────── */
     .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -383,27 +409,32 @@
       <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span class="nav-item-label">Dashboard</span>
+        <span class="nav-tooltip">Dashboard</span>
       </button>
 
       <button class="nav-item" data-page="propiedades" onclick="showPage('propiedades', this)">
         <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
         <span class="nav-item-label">Propiedades</span>
         <span class="nav-pill" id="pendingPill" style="display:none;"></span>
+        <span class="nav-tooltip">Propiedades</span>
       </button>
 
       <button class="nav-item" data-page="leads" onclick="showPage('leads', this)">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         <span class="nav-item-label">Leads</span>
+        <span class="nav-tooltip">Leads</span>
       </button>
 
       <button class="nav-item" data-page="anuncios" onclick="showPage('anuncios', this)">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
         <span class="nav-item-label">Anuncios</span>
+        <span class="nav-tooltip">Anuncios</span>
       </button>
 
       <button class="nav-item" data-page="aplicaciones" onclick="showPage('aplicaciones', this)">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         <span class="nav-item-label">Aplicaciones</span>
+        <span class="nav-tooltip">Aplicaciones</span>
       </button>
 
       <div class="sb-section-label">SISTEMA</div>
@@ -411,6 +442,7 @@
       <button class="nav-item" data-page="errores" onclick="showPage('errores', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         <span class="nav-item-label">Registro de Errores</span>
+        <span class="nav-tooltip">Errores</span>
       </button>
     </nav>
 
