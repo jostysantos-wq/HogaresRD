@@ -123,71 +123,12 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Credenciales incorrectas' });
   }
 
-  // Generate OTP + temp token
-  const otp       = String(crypto.randomInt(100000, 999999));
-  const tempToken = crypto.randomBytes(32).toString('hex');
-
-  _otpStore.set(tempToken, {
-    otp,
-    expiresAt: Date.now() + OTP_TTL,
-    attempts:  0,
-  });
-
-  // Purge expired OTPs (housekeeping)
-  for (const [k, v] of _otpStore) {
-    if (Date.now() > v.expiresAt) _otpStore.delete(k);
-  }
-
-  // Send OTP email
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-
-  // If Resend is not configured, mailer silently no-ops — detect that here
-  // and fall back to console so admin can still log in via server logs.
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(`[admin-auth] ⚠️  RESEND_API_KEY not set — OTP will NOT be emailed.`);
-    console.warn(`[admin-auth] 🔑 EMERGENCY OTP for ${adminEmail} (IP ${ip}): ${otp}`);
-    // Still issue the token so admin can enter the OTP from logs
-    return res.json({ step: 2, token: tempToken });
-  }
-
-  try {
-    await mailer.sendMail({
-      to:      adminEmail,
-      subject: '🔐 HogaresRD Admin — Código de acceso',
-      html: `
-        <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-        <body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
-        <tr><td align="center">
-        <table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-          <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
-            <div style="font-size:1.1rem;font-weight:800;color:#fff;">🔐 Código de Acceso Admin</div>
-            <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:4px;">HogaresRD — Panel de Administración</div>
-          </td></tr>
-          <tr><td style="padding:28px 32px;">
-            <p style="margin:0 0 20px;font-size:0.92rem;color:#1a2b40;">Ingresa este código en el portal de administración. Expira en <strong>10 minutos</strong>.</p>
-            <div style="background:#f0f6ff;border:2px solid #002D62;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-              <div style="font-size:2.8rem;font-weight:900;letter-spacing:10px;color:#002D62;font-family:monospace;">${otp}</div>
-            </div>
-            <p style="margin:0;font-size:0.78rem;color:#9ab0c8;line-height:1.6;">
-              Si no solicitaste este código, alguien tiene tus credenciales. Cambia tu contraseña inmediatamente.<br/>
-              IP de origen registrada: <strong>${ip}</strong>
-            </p>
-          </td></tr>
-        </table>
-        </td></tr></table>
-        </body></html>
-      `,
-    });
-    console.log(`[admin-auth] OTP sent to ${adminEmail} for IP ${ip}`);
-  } catch (e) {
-    console.error(`[admin-auth] OTP email failed:`, e.message);
-    // Fail hard — don't let anyone in if email can't be sent
-    _otpStore.delete(tempToken);
-    return res.status(500).json({ error: 'No se pudo enviar el código. Revisa la configuración de correo.' });
-  }
-
-  res.json({ step: 2, token: tempToken });
+  // OTP step temporarily disabled — re-enable once email (Resend/SMTP) is confirmed working.
+  // TODO: restore OTP flow after DigitalOcean unblocks SMTP ports.
+  issueSessionCookie(res);
+  _loginAttempts.delete(ip);
+  console.log(`[admin-auth] Successful admin login (password-only mode) from ${ip}`);
+  res.json({ success: true });
 });
 
 // ── Step 2: POST /verify ──────────────────────────────────────────────────────

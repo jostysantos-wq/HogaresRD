@@ -122,6 +122,11 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error desconocido');
 
+      // OTP disabled temporarily — server issues session directly on password success
+      if (data.success) {
+        location.href = BASE;
+        return;
+      }
       _tempToken = data.token;
       // Show step 2
       document.getElementById('step1').classList.remove('active');
