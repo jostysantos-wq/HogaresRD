@@ -513,6 +513,62 @@ app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => 
   res.json({ success: true, targetId: target.id });
 });
 
+// ── Users admin ────────────────────────────────────────────────────────────
+app.get('/admin/users', adminSessionAuth, (req, res) => {
+  const users = store.getUsers().map(u => {
+    // Strip sensitive fields before sending to admin UI
+    const { passwordHash, password, biometricTokenHash, refToken, ...safe } = u;
+    return safe;
+  });
+  res.json(users);
+});
+
+app.post('/admin/users/:id/lock', adminSessionAuth, (req, res) => {
+  const user = store.getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  user.lockedUntil    = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  user.loginAttempts  = 10;
+  store.saveUser(user);
+  console.log(`[admin] Locked user ${user.email}`);
+  res.json({ success: true });
+});
+
+app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
+  const user = store.getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  user.lockedUntil   = null;
+  user.loginAttempts = 0;
+  store.saveUser(user);
+  console.log(`[admin] Unlocked user ${user.email}`);
+  res.json({ success: true });
+});
+
+// ── Newsletter admin ────────────────────────────────────────────────────────
+app.get('/admin/newsletter', adminSessionAuth, (req, res) => {
+  const users = store.getUsers();
+  res.json({
+    total:       users.length,
+    subscribers: users.filter(u => u.marketingOptIn).length,
+    verified:    users.filter(u => u.emailVerified).length,
+    brokers:     users.filter(u => u.role === 'broker' || u.role === 'inmobiliaria').length,
+  });
+});
+
+app.post('/admin/newsletter/send', adminSessionAuth, async (req, res) => {
+  try {
+    const result = await sendNewsletter();
+    console.log('[admin] Newsletter manually triggered by admin');
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Tours admin ─────────────────────────────────────────────────────────────
+app.get('/admin/tours', adminSessionAuth, (req, res) => {
+  res.json(store.getTours());
+});
+
 // ── Unsubscribe ────────────────────────────────────────────────
 app.get('/unsubscribe', (req, res) => {
   const token = req.query.token || '';

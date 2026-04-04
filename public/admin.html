@@ -373,6 +373,68 @@
     .error-log-table th { background: #f0f4f9; padding: 0.6rem 0.9rem; text-align: left; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; }
     .error-log-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: top; font-family: monospace; font-size: 0.75rem; }
     .error-log-table tr:last-child td { border-bottom: none; }
+
+    /* ── USERS TABLE ─────────────────────────────────────────── */
+    .users-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .users-search { flex: 1; min-width: 180px; max-width: 280px; padding: 0.45rem 0.9rem; border: 1.5px solid #d0dcea; border-radius: 8px; font-size: 0.87rem; outline: none; transition: border-color .2s; }
+    .users-search:focus { border-color: var(--accent); }
+    .users-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
+    .users-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .users-table th { background: #f0f4f9; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
+    .users-table td { padding: 0.75rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: middle; }
+    .users-table tr:last-child td { border-bottom: none; }
+    .users-table tr:hover td { background: #f8fafd; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .user-name-cell { display: flex; align-items: center; gap: 0.6rem; }
+    .user-name-info strong { display: block; font-weight: 600; font-size: 0.875rem; }
+    .user-name-info span  { color: #4d6a8a; font-size: 0.75rem; }
+    .role-badge { font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 50px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
+    .role-broker       { background: #e8f0fb; color: #0038A8; }
+    .role-client       { background: #e8f5ee; color: #0a7c4f; }
+    .role-inmobiliaria { background: #f3eefe; color: #4a2d9c; }
+    .role-secretary    { background: #fff3cd; color: #856404; }
+    .role-admin        { background: #ffe0e3; color: #a81022; }
+    .role-other        { background: #f0f4f9; color: #4d6a8a; }
+    .verified-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; }
+    .verified-chip.yes { color: var(--success); }
+    .verified-chip.no  { color: #4d6a8a; }
+    .locked-badge { background: #ffe0e3; color: var(--danger); font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 50px; }
+    .btn-lock   { background: #fff3cd; border: none; color: #856404; padding: 0.35rem 0.7rem; border-radius: 7px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .15s; }
+    .btn-lock:hover   { background: #fde68a; }
+    .btn-unlock { background: #d1f5e3; border: none; color: #0a7c4f; padding: 0.35rem 0.7rem; border-radius: 7px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .15s; }
+    .btn-unlock:hover { background: #a7f0cc; }
+
+    /* ── NEWSLETTER PAGE ──────────────────────────────────────── */
+    .nl-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .nl-stat { background: #fff; border-radius: 14px; padding: 1.3rem 1.25rem; border: 1px solid #d0dcea; }
+    .nl-stat .num { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--accent); }
+    .nl-stat .lbl { font-size: 0.8rem; color: #4d6a8a; }
+    .nl-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; padding: 1.5rem; margin-bottom: 1rem; }
+    .nl-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .nl-card p  { font-size: 0.85rem; color: #4d6a8a; line-height: 1.6; margin-bottom: 1rem; }
+    .nl-send-btn { background: var(--accent); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background .2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .nl-send-btn:hover { background: #001a45; }
+    .nl-send-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .nl-send-btn svg { width: 16px; height: 16px; fill: currentColor; }
+    .nl-result { margin-top: 0.75rem; font-size: 0.85rem; min-height: 1.2em; }
+    .nl-result.ok  { color: var(--success); font-weight: 600; }
+    .nl-result.err { color: var(--danger); }
+    .nl-info { background: #f0f4f9; border-radius: 10px; padding: 1rem 1.25rem; font-size: 0.82rem; color: #4d6a8a; line-height: 1.7; }
+    .nl-info strong { color: #001840; }
+
+    /* ── TOURS TABLE ──────────────────────────────────────────── */
+    .tours-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
+    .tours-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .tours-table th { background: #f0f4f9; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
+    .tours-table td { padding: 0.75rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: middle; }
+    .tours-table tr:last-child td { border-bottom: none; }
+    .tours-table tr:hover td { background: #f8fafd; }
+    .tour-status { font-size: 0.68rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; white-space: nowrap; text-transform: uppercase; }
+    .tour-pending    { background: #fff3cd; color: #856404; }
+    .tour-confirmed  { background: #d1f5e3; color: #0a7c4f; }
+    .tour-completed  { background: #e8f0fb; color: #0038A8; }
+    .tour-cancelled  { background: #ffe0e3; color: #a81022; }
+    .tour-rescheduled { background: #f3eefe; color: #4a2d9c; }
     .elog-fatal   { color: #fff; background: var(--danger); padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; }
     .elog-error   { color: var(--danger); font-weight: 700; }
     .elog-warn    { color: var(--warning); font-weight: 700; }
@@ -435,6 +497,28 @@
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         <span class="nav-item-label">Aplicaciones</span>
         <span class="nav-tooltip">Aplicaciones</span>
+      </button>
+
+      <div class="sb-section-label">USUARIOS</div>
+
+      <button class="nav-item" data-page="usuarios" onclick="showPage('usuarios', this)">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span class="nav-item-label">Usuarios</span>
+        <span class="nav-tooltip">Usuarios</span>
+      </button>
+
+      <div class="sb-section-label">COMUNICACIONES</div>
+
+      <button class="nav-item" data-page="newsletter" onclick="showPage('newsletter', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        <span class="nav-item-label">Newsletter</span>
+        <span class="nav-tooltip">Newsletter</span>
+      </button>
+
+      <button class="nav-item" data-page="tours" onclick="showPage('tours', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span class="nav-item-label">Tours</span>
+        <span class="nav-tooltip">Tours</span>
       </button>
 
       <div class="sb-section-label">SISTEMA</div>
@@ -697,6 +781,137 @@
         </div>
       </div>
 
+      <!-- ── USUARIOS PAGE ────────────────────────────────── -->
+      <div class="page-section" id="page-usuarios">
+        <div class="leads-stats" id="userStatsRow">
+          <div class="lead-stat" style="border-top:3px solid var(--accent);">
+            <div class="num" id="usTotal" style="color:var(--accent);">—</div>
+            <div class="lbl">Total Usuarios</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid #0038A8;">
+            <div class="num" id="usBrokers" style="color:#0038A8;">—</div>
+            <div class="lbl">Brokers</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--success);">
+            <div class="num" id="usClients" style="color:var(--success);">—</div>
+            <div class="lbl">Clientes</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--purple);">
+            <div class="num" id="usInmob" style="color:var(--purple);">—</div>
+            <div class="lbl">Inmobiliarias</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--danger);">
+            <div class="num" id="usLocked" style="color:var(--danger);">—</div>
+            <div class="lbl">Bloqueados</div>
+          </div>
+        </div>
+        <div class="users-toolbar">
+          <input class="users-search" type="text" id="usersSearch" placeholder="Buscar por nombre o email..." oninput="filterUsers()">
+          <button class="filter-btn active" data-role="all" onclick="setUserRole('all', this)">Todos</button>
+          <button class="filter-btn" data-role="broker" onclick="setUserRole('broker', this)">Brokers</button>
+          <button class="filter-btn" data-role="client" onclick="setUserRole('client', this)">Clientes</button>
+          <button class="filter-btn" data-role="inmobiliaria" onclick="setUserRole('inmobiliaria', this)">Inmobiliarias</button>
+          <button class="filter-btn" data-role="secretary" onclick="setUserRole('secretary', this)">Secretarias</button>
+          <button class="filter-btn" data-role="locked" onclick="setUserRole('locked', this)">Bloqueados</button>
+        </div>
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Usuario</th><th>Rol</th><th>Registrado</th>
+                <th>Verificado</th><th>Suscripción</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="7" class="leads-empty">Cargando usuarios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── NEWSLETTER PAGE ──────────────────────────────── -->
+      <div class="page-section" id="page-newsletter">
+        <div class="nl-stats">
+          <div class="nl-stat">
+            <div class="num" id="nlTotal">—</div>
+            <div class="lbl">Total Usuarios Registrados</div>
+          </div>
+          <div class="nl-stat">
+            <div class="num" id="nlSubscribers" style="color:var(--success);">—</div>
+            <div class="lbl">Suscritos al Newsletter</div>
+          </div>
+          <div class="nl-stat">
+            <div class="num" id="nlVerified" style="color:var(--warning);">—</div>
+            <div class="lbl">Emails Verificados</div>
+          </div>
+          <div class="nl-stat">
+            <div class="num" id="nlBrokers" style="color:var(--purple);">—</div>
+            <div class="lbl">Brokers / Inmobiliarias</div>
+          </div>
+        </div>
+
+        <div class="nl-card">
+          <h3>Enviar Newsletter Ahora</h3>
+          <p>Envía el newsletter diario a todos los usuarios suscritos de forma manual. El contenido incluye las propiedades más vistas, las más recientes, y estadísticas del mercado.</p>
+          <button class="nl-send-btn" id="nlSendBtn" onclick="sendNewsletter()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            Enviar Newsletter
+          </button>
+          <div class="nl-result" id="nlResult"></div>
+        </div>
+
+        <div class="nl-info">
+          <strong>Envío automático:</strong> El newsletter se envía automáticamente todos los días a las <strong>8:00 AM</strong> (hora Santo Domingo) a todos los usuarios con la opción de marketing activada.<br>
+          <strong>Nota:</strong> El envío manual utiliza los mismos criterios que el envío automático. Se requiere que <code>RESEND_API_KEY</code> esté configurado.
+        </div>
+      </div>
+
+      <!-- ── TOURS PAGE ────────────────────────────────────── -->
+      <div class="page-section" id="page-tours">
+        <div class="leads-stats">
+          <div class="lead-stat" style="border-top:3px solid var(--accent);">
+            <div class="num" id="tourTotal" style="color:var(--accent);">—</div>
+            <div class="lbl">Total Tours</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--warning);">
+            <div class="num" id="tourPending" style="color:var(--warning);">—</div>
+            <div class="lbl">Pendientes</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--success);">
+            <div class="num" id="tourConfirmed" style="color:var(--success);">—</div>
+            <div class="lbl">Confirmados</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--purple);">
+            <div class="num" id="tourCompleted" style="color:var(--purple);">—</div>
+            <div class="lbl">Completados</div>
+          </div>
+          <div class="lead-stat" style="border-top:3px solid var(--danger);">
+            <div class="num" id="tourCancelled" style="color:var(--danger);">—</div>
+            <div class="lbl">Cancelados</div>
+          </div>
+        </div>
+        <div class="leads-toolbar" id="toursToolbar">
+          <button class="filter-btn active" onclick="filterTours('all', this)">Todos</button>
+          <button class="filter-btn" onclick="filterTours('pending', this)">Pendientes</button>
+          <button class="filter-btn" onclick="filterTours('confirmed', this)">Confirmados</button>
+          <button class="filter-btn" onclick="filterTours('completed', this)">Completados</button>
+          <button class="filter-btn" onclick="filterTours('cancelled', this)">Cancelados</button>
+        </div>
+        <div class="tours-table-wrap">
+          <table class="tours-table">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Propiedad</th><th>Cliente</th>
+                <th>Broker</th><th>Tipo</th><th>Estado</th><th>Notas</th>
+              </tr>
+            </thead>
+            <tbody id="toursTableBody">
+              <tr><td colspan="7" class="leads-empty">Cargando tours...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ── ERRORES PAGE ──────────────────────────────────── -->
       <div class="page-section" id="page-errores">
         <div class="error-grid">
@@ -763,6 +978,9 @@
     leads:        'Leads',
     anuncios:     'Anuncios',
     aplicaciones: 'Aplicaciones',
+    usuarios:     'Usuarios',
+    newsletter:   'Newsletter',
+    tours:        'Tours',
     errores:      'Registro de Errores',
   };
 
@@ -779,10 +997,13 @@
     // Update topbar title
     document.getElementById('pageTitle').textContent = PAGE_TITLES[page] || page;
     // Load data
-    if (page === 'propiedades') { loadSubmissions(); }
+    if (page === 'propiedades')  { loadSubmissions(); }
     else if (page === 'leads')       { loadLeads(); }
     else if (page === 'anuncios')    { loadAds(); }
     else if (page === 'aplicaciones'){ loadApps(); }
+    else if (page === 'usuarios')    { loadUsers(); }
+    else if (page === 'newsletter')  { loadNewsletter(); }
+    else if (page === 'tours')       { loadTours(); }
     else if (page === 'errores')     { loadErrors(); }
   }
 
@@ -1250,6 +1471,216 @@
     }).catch(() => {
       document.getElementById('errorTableBody').innerHTML = '<tr><td colspan="7" class="leads-empty">Error al cargar el registro.</td></tr>';
     });
+  }
+
+  // ── Users ─────────────────────────────────────────────────────
+  let allUsers = [], currentUserRole = 'all';
+
+  function loadUsers() {
+    document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="7" class="leads-empty">Cargando usuarios...</td></tr>';
+    fetch('/admin/users')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => {
+        allUsers = data;
+        const now = Date.now();
+        const locked = data.filter(u => u.lockedUntil && new Date(u.lockedUntil).getTime() > now).length;
+        document.getElementById('usTotal').textContent   = data.length;
+        document.getElementById('usBrokers').textContent = data.filter(u => u.role === 'broker').length;
+        document.getElementById('usClients').textContent = data.filter(u => u.role === 'client').length;
+        document.getElementById('usInmob').textContent   = data.filter(u => u.role === 'inmobiliaria').length;
+        document.getElementById('usLocked').textContent  = locked;
+        renderUsers(data);
+      })
+      .catch(() => {});
+  }
+
+  function setUserRole(role, btn) {
+    currentUserRole = role;
+    document.querySelectorAll('.users-toolbar .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterUsers();
+  }
+
+  function filterUsers() {
+    const q   = (document.getElementById('usersSearch').value || '').toLowerCase();
+    const now = Date.now();
+    let filtered = allUsers;
+    if (currentUserRole === 'locked') {
+      filtered = filtered.filter(u => u.lockedUntil && new Date(u.lockedUntil).getTime() > now);
+    } else if (currentUserRole !== 'all') {
+      filtered = filtered.filter(u => u.role === currentUserRole);
+    }
+    if (q) filtered = filtered.filter(u =>
+      (u.name  || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q)
+    );
+    renderUsers(filtered);
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="leads-empty">No se encontraron usuarios.</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    const roleClass = { broker: 'role-broker', client: 'role-client', inmobiliaria: 'role-inmobiliaria', secretary: 'role-secretary', admin: 'role-admin' };
+    const roleLabel = { broker: 'Broker', client: 'Cliente', inmobiliaria: 'Inmobiliaria', secretary: 'Secretaria', admin: 'Admin' };
+
+    tbody.innerHTML = users.map(u => {
+      const initials   = (u.name || u.email || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      const isLocked   = u.lockedUntil && new Date(u.lockedUntil).getTime() > now;
+      const roleKey    = u.role || 'other';
+      const rClass     = roleClass[roleKey] || 'role-other';
+      const rLabel     = roleLabel[roleKey] || roleKey;
+      const joinDate   = u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+      const sub        = u.subscription ? JSON.parse(typeof u.subscription === 'string' ? u.subscription : JSON.stringify(u.subscription)) : null;
+      const subLabel   = sub && sub.plan ? sub.plan : '—';
+      const subStyle   = sub && sub.plan ? 'color:var(--success);font-weight:600;' : 'color:#4d6a8a;';
+
+      const avatarColor = ['#0038A8','#0a7c4f','#4a2d9c','#c07c1a','#CF142B'][u.id.charCodeAt(0) % 5];
+
+      return `<tr id="urow-${u.id}">
+        <td>
+          <div class="user-name-cell">
+            <div class="user-avatar" style="background:${avatarColor};">${initials}</div>
+            <div class="user-name-info">
+              <strong>${u.name || '(sin nombre)'}</strong>
+              <span>${u.email || '—'}</span>
+            </div>
+          </div>
+        </td>
+        <td><span class="role-badge ${rClass}">${rLabel}</span></td>
+        <td style="font-size:0.8rem;color:#4d6a8a;">${joinDate}</td>
+        <td>
+          ${u.emailVerified
+            ? '<span class="verified-chip yes"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Verificado</span>'
+            : '<span class="verified-chip no">No verificado</span>'}
+        </td>
+        <td style="${subStyle}">${subLabel}</td>
+        <td>${isLocked ? '<span class="locked-badge">🔒 Bloqueado</span>' : '<span style="color:#4d6a8a;font-size:0.78rem;">Activo</span>'}</td>
+        <td>
+          ${isLocked
+            ? `<button class="btn-unlock" onclick="toggleLockUser('${u.id}', 'unlock')">Desbloquear</button>`
+            : `<button class="btn-lock"   onclick="toggleLockUser('${u.id}', 'lock')">Bloquear</button>`}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function toggleLockUser(id, action) {
+    const label = action === 'lock' ? 'bloquear' : 'desbloquear';
+    if (!confirm(`¿Seguro que quieres ${label} este usuario?`)) return;
+    fetch(`/admin/users/${id}/${action}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); return; }
+        loadUsers(); // reload to reflect change
+      })
+      .catch(() => alert('Error de conexión'));
+  }
+
+  // ── Newsletter ─────────────────────────────────────────────────
+  function loadNewsletter() {
+    fetch('/admin/newsletter')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => {
+        document.getElementById('nlTotal').textContent       = data.total       || 0;
+        document.getElementById('nlSubscribers').textContent = data.subscribers || 0;
+        document.getElementById('nlVerified').textContent    = data.verified    || 0;
+        document.getElementById('nlBrokers').textContent     = data.brokers     || 0;
+      })
+      .catch(() => {});
+  }
+
+  function sendNewsletter() {
+    const btn    = document.getElementById('nlSendBtn');
+    const result = document.getElementById('nlResult');
+    if (!confirm('¿Enviar el newsletter ahora a todos los suscriptores?')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader" style="border-color:rgba(255,255,255,.4);border-top-color:#fff;width:14px;height:14px;"></span> Enviando...';
+    result.textContent = '';
+    result.className   = 'nl-result';
+
+    fetch('/admin/newsletter/send', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        result.textContent = '✓ Newsletter enviado exitosamente.';
+        result.className   = 'nl-result ok';
+      })
+      .catch(e => {
+        result.textContent = '✗ Error: ' + e.message;
+        result.className   = 'nl-result err';
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Newsletter';
+      });
+  }
+
+  // ── Tours ──────────────────────────────────────────────────────
+  let allTours = [], currentTourFilter = 'all';
+
+  function loadTours() {
+    document.getElementById('toursTableBody').innerHTML = '<tr><td colspan="7" class="leads-empty">Cargando tours...</td></tr>';
+    fetch('/admin/tours')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => {
+        allTours = data;
+        document.getElementById('tourTotal').textContent     = data.length;
+        document.getElementById('tourPending').textContent   = data.filter(t => t.status === 'pending').length;
+        document.getElementById('tourConfirmed').textContent = data.filter(t => t.status === 'confirmed').length;
+        document.getElementById('tourCompleted').textContent = data.filter(t => t.status === 'completed').length;
+        document.getElementById('tourCancelled').textContent = data.filter(t => t.status === 'cancelled').length;
+        renderTours(data);
+      })
+      .catch(() => {});
+  }
+
+  function filterTours(status, btn) {
+    currentTourFilter = status;
+    document.querySelectorAll('#toursToolbar .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTours(status === 'all' ? allTours : allTours.filter(t => t.status === status));
+  }
+
+  function renderTours(tours) {
+    const tbody = document.getElementById('toursTableBody');
+    if (!tours.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="leads-empty">No hay tours en esta categoría.</td></tr>';
+      return;
+    }
+    const statusClass = { pending:'tour-pending', confirmed:'tour-confirmed', completed:'tour-completed', cancelled:'tour-cancelled', rescheduled:'tour-rescheduled' };
+    const statusLabel = { pending:'Pendiente', confirmed:'Confirmado', completed:'Completado', cancelled:'Cancelado', rescheduled:'Reprogramado' };
+
+    tbody.innerHTML = tours.slice().sort((a, b) => new Date(b.requested_date || b.created_at) - new Date(a.requested_date || a.created_at)).map(t => {
+      const date = t.requested_date
+        ? new Date(t.requested_date).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' })
+        : '—';
+      const time     = t.requested_time || '';
+      const sc       = statusClass[t.status] || 'tour-pending';
+      const sl       = statusLabel[t.status] || t.status;
+      const title    = t.listing_title || `Anuncio #${(t.listing_id || '').slice(-6)}`;
+      const clientN  = t.client_name  || '—';
+      const clientE  = t.client_email || '';
+      const brokerN  = t.broker_name  || (t.broker_id ? `ID …${t.broker_id.slice(-6)}` : '—');
+      const tourType = t.tour_type === 'virtual' ? '💻 Virtual' : t.tour_type === 'presencial' ? '🚗 Presencial' : t.tour_type || '—';
+      const notes    = (t.broker_notes || t.client_notes || '').slice(0, 60);
+
+      return `<tr>
+        <td style="white-space:nowrap;font-size:0.8rem;">${date}${time ? '<br><span style="color:#4d6a8a;">'+time+'</span>' : ''}</td>
+        <td style="font-size:0.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${title}">${title}</td>
+        <td>
+          <div style="font-size:0.82rem;font-weight:600;">${clientN}</div>
+          ${clientE ? `<div style="font-size:0.75rem;color:#4d6a8a;">${clientE}</div>` : ''}
+        </td>
+        <td style="font-size:0.82rem;">${brokerN}</td>
+        <td style="font-size:0.8rem;">${tourType}</td>
+        <td><span class="tour-status ${sc}">${sl}</span></td>
+        <td style="font-size:0.75rem;color:#4d6a8a;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${notes}">${notes || '—'}</td>
+      </tr>`;
+    }).join('');
   }
 
   // ── Init ──────────────────────────────────────────────────────
