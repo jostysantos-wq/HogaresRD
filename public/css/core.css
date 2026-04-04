@@ -159,8 +159,8 @@ nav {
 }
 
 .logo-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   background: var(--accent);
   border-radius: var(--radius-md);
   display: flex;
@@ -168,7 +168,7 @@ nav {
   justify-content: center;
 }
 
-.logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+.logo-icon svg { width: 24px; height: 24px; }
 
 .nav-links {
   display: flex;

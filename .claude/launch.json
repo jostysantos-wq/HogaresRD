@@ -4,8 +4,8 @@
   "configurations": [
     {
       "name": "HogaresRD Dev Server",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeArgs": ["server.js"],
       "port": 3000
     },
     {

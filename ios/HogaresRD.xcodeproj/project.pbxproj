@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		PRIVACY0000000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */; };
+		COMPARE0000000000000002 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = COMPARE0000000000000001 /* ComparisonView.swift */; };
 		B1F4E7A900000002 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F4E7A900000001 /* NotificationsView.swift */; };
 		AA11000000000000000000C1 /* HogaresRDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B1 /* HogaresRDApp.swift */; };
 		AA11000000000000000000C2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B2 /* ContentView.swift */; };
@@ -87,6 +89,9 @@
 		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
 		AA66000000000000000000B1 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AA77000000000000000000B1 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		COMPARE0000000000000001 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
+		ENTITLE0000000000000001 /* HogaresRD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HogaresRD.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +122,8 @@
 				AA11000000000000000000A4 /* Services */,
 				AA11000000000000000000A5 /* Views */,
 				AA11000000000000000000BC /* Assets.xcassets */,
+			PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */,
+			ENTITLE0000000000000001 /* HogaresRD.entitlements */,
 			);
 			path = HogaresRD;
 			sourceTree = "<group>";
@@ -181,6 +188,7 @@
 				AA990000000000000000000000D3 /* TourBookingSheet.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */,
 				D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */,
+			COMPARE0000000000000001 /* ComparisonView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -222,10 +230,11 @@
 			};
 			buildConfigurationList = AA11000000000000000000F5 /* Build configuration list for PBXProject "HogaresRD" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = es;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				es,
 				Base,
 			);
 			mainGroup = AA11000000000000000000A0;
@@ -244,6 +253,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA11000000000000000000CC /* Assets.xcassets in Resources */,
+				PRIVACY0000000000000002 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +301,7 @@
 				AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */,
 				F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */,
+			COMPARE0000000000000002 /* ComparisonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,15 +435,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HogaresRD/HogaresRD.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
-				INFOPLIST_KEY_NSAppTransportSecurity = "<dict><key>NSAllowsArbitraryLoads</key><true/></dict>";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD uses your location to show properties near you.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -456,6 +467,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HogaresRD/HogaresRD.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -463,7 +475,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD uses your location to show properties near you.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
