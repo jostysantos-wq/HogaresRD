@@ -280,4 +280,142 @@ router.get('/listing/:id', (req, res) => {
   }
 });
 
+// ── GET /listing/:id/promo — generates platform-specific promo content ────────
+router.get('/listing/:id/promo', (req, res) => {
+  try {
+    const user    = req.brokerUser;
+    const listing = store.getListingById(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+    // Verify ownership (listing must belong to the caller)
+    const myListings = getMyListings(user);
+    if (!myListings.find(l => l.id === listing.id)) {
+      return res.status(403).json({ error: 'No tienes acceso a esta propiedad' });
+    }
+
+    const url       = `https://hogaresrd.com/listing/${listing.id}`;
+    const price     = Number(listing.price).toLocaleString('en-US');
+    const TYPE_MAP  = { casa:'Casa', apartamento:'Apartamento', villa:'Villa', penthouse:'Penthouse', solar:'Solar/Terreno', local:'Local Comercial', oficina:'Oficina' };
+    const COND_MAP  = { venta:'en venta', alquiler:'en alquiler' };
+    const typeLabel = TYPE_MAP[listing.type]   || listing.type  || 'Propiedad';
+    const condLabel = COND_MAP[listing.condition] || listing.condition || '';
+    const location  = [listing.sector, listing.city, listing.province].filter(Boolean).join(', ');
+    const beds      = listing.bedrooms  ? `${listing.bedrooms} habitaciones`  : '';
+    const baths     = listing.bathrooms ? `${listing.bathrooms} baños`        : '';
+    const area      = listing.area_const ? `${listing.area_const}m²`          : '';
+    const desc      = (listing.description || '').replace(/\n+/g, ' ').trim().slice(0, 180);
+    const shortDesc = (listing.description || '').replace(/\n+/g, ' ').trim().slice(0, 100);
+
+    // Slug-safe city/type for hashtags
+    const toTag = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'').replace(/[^a-zA-Z0-9]/g,'');
+    const cityTag = toTag(listing.city);
+    const typeTag = toTag(typeLabel);
+
+    const details = [beds, baths, area].filter(Boolean).join(' · ');
+
+    const content = {
+      facebook: `🏠 ${typeLabel} ${condLabel} en ${listing.sector || listing.city}, ${listing.province || 'RD'}
+
+${listing.title}
+
+💰 Precio: $${price}
+${details ? `🏡 ${details}` : ''}
+📍 ${location}
+${desc ? `\n${desc}\n` : ''}
+¿Te interesa? Agenda un tour gratuito:
+👉 ${url}
+
+#BienesRaicesRD #HogaresRD #${cityTag}RD #${typeTag}EnVenta #PropiedadesRD #InmobiliariaRD`,
+
+      instagram: `✨ ${typeLabel} ${condLabel} disponible ✨
+
+📌 ${listing.title}
+📍 ${listing.city || ''}, República Dominicana
+💰 $${price}
+${details ? `🏡 ${details}` : ''}
+${shortDesc ? `\n${shortDesc}\n` : ''}
+🔗 Link en bio para más info y tour gratuito
+
+#BienesRaicesRD #${typeTag}EnVenta #HogaresRD #${cityTag}RD #PropiedadesRD #InmobiliariasRD #${typeTag}RD #CasasRD #InversionRD #RealEstateDR #RepublicaDominicana`,
+
+      whatsapp: `Hola 👋, quería compartir esta propiedad disponible en HogaresRD:
+
+🏡 *${listing.title}*
+💰 *$${price}*
+📍 ${location}
+${details ? `🏠 ${details}` : ''}
+${shortDesc ? `\n${shortDesc}\n` : ''}
+Ver detalles completos y agendar tour:
+🔗 ${url}`,
+
+      linkedin: `🏠 Oportunidad inmobiliaria en ${listing.city || 'RD'}, República Dominicana
+
+${listing.title}
+
+💰 Precio: $${price}
+📍 ${location}
+${details ? `📋 ${details}` : ''}
+${desc ? `\n${desc}\n` : ''}
+Una excelente oportunidad en uno de los mercados inmobiliarios más dinámicos del Caribe. HogaresRD facilita todo el proceso con herramientas digitales y agentes certificados.
+
+🔗 ${url}
+
+#BienesRaices #RepublicaDominicana #InversionInmobiliaria #HogaresRD #${cityTag}RD #PropiedadesRD`,
+
+      google_business: `🏠 Nueva propiedad: ${listing.title}
+
+${desc || ''}
+
+✅ Tipo: ${typeLabel} ${condLabel}
+💰 Precio: $${price}
+${listing.bedrooms  ? `🛏 Habitaciones: ${listing.bedrooms}` : ''}
+${listing.bathrooms ? `🚿 Baños: ${listing.bathrooms}`       : ''}
+${listing.area_const ? `📐 Área: ${listing.area_const}m²`   : ''}
+📍 ${location}
+
+Agenda una visita hoy en hogaresrd.com ↗`,
+
+      google_ads: {
+        headlines: [
+          `${typeLabel} en ${(listing.city||'RD').slice(0,15)} - $${price}`.slice(0, 30),
+          `${typeLabel} ${condLabel} en RD`.slice(0, 30),
+          `${listing.bedrooms ? listing.bedrooms+' Hab · ' : ''}${listing.bathrooms ? listing.bathrooms+' Baños' : ''}`.trim().slice(0, 30) || `${typeLabel} en ${listing.province||'RD'}`.slice(0,30),
+          `Agenda Tour Gratuito Hoy`,
+          `Propiedades Verificadas RD`,
+          `Bienes Raíces en RD`,
+          `Encuentra tu Hogar Ideal`,
+          `Ver Fotos y Detalles`,
+        ].map(h => h.trim().slice(0, 30)),
+        descriptions: [
+          `${listing.title}. ${details} en ${location}. Precio $${price}. Más info en HogaresRD.`.slice(0, 90),
+          `Encuentra tu propiedad ideal en República Dominicana. Agentes certificados y tour virtual disponible.`.slice(0, 90),
+        ],
+        finalUrl: url,
+      },
+    };
+
+    res.json({
+      listing: {
+        id:         listing.id,
+        title:      listing.title,
+        price:      listing.price,
+        typeLabel,
+        condLabel,
+        bedrooms:   listing.bedrooms,
+        bathrooms:  listing.bathrooms,
+        area_const: listing.area_const,
+        city:       listing.city,
+        province:   listing.province,
+        sector:     listing.sector,
+        images:     listing.images || [],
+      },
+      url,
+      content,
+    });
+  } catch(err) {
+    console.error('Promo content error:', err);
+    res.status(500).json({ error: 'Error generando contenido' });
+  }
+});
+
 module.exports = router;

@@ -543,6 +543,62 @@
     .la-sort-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
     .la-sort-row label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
     .la-sort-row select { padding: 0.4rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem; background: var(--bg-card); color: var(--text); font-family: inherit; }
+    /* ── Social Promo Modal ──────────────────────────────────── */
+    .promo-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:1rem;overflow-y:auto; }
+    .promo-overlay.open { display:flex; }
+    .promo-modal { background:var(--bg-card);border-radius:18px;width:100%;max-width:680px;display:flex;flex-direction:column;max-height:90vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.25); }
+    .promo-head { display:flex;align-items:center;gap:0.75rem;padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);flex-shrink:0; }
+    .promo-listing-thumb { width:52px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0; }
+    .promo-listing-thumb-ph { width:52px;height:40px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted); }
+    .promo-head-info { flex:1;min-width:0; }
+    .promo-head-title { font-size:0.88rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .promo-head-sub { font-size:0.75rem;color:var(--text-muted); }
+    .promo-close { background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);padding:0.25rem;line-height:1; }
+    .promo-tabs { display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);flex-shrink:0; }
+    .promo-tabs::-webkit-scrollbar { display:none; }
+    .promo-tab { display:flex;flex-direction:column;align-items:center;gap:0.25rem;padding:0.75rem 1rem;cursor:pointer;border:none;background:none;font-size:0.72rem;font-weight:700;color:var(--text-muted);white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.15s;min-width:72px; }
+    .promo-tab svg { width:22px;height:22px; }
+    .promo-tab:hover { color:var(--accent); }
+    .promo-tab.active { color:var(--accent);border-bottom-color:var(--accent); }
+    .promo-body { flex:1;overflow-y:auto;padding:1.25rem; }
+    .promo-panel { display:none; }
+    .promo-panel.active { display:block; }
+    .promo-copy-wrap { position:relative;margin-bottom:1rem; }
+    .promo-copy-text { width:100%;border:1.5px solid var(--border);border-radius:10px;padding:0.85rem;font-size:0.85rem;line-height:1.65;background:var(--bg);color:var(--text);resize:vertical;min-height:160px;font-family:inherit; }
+    .promo-copy-btn { position:absolute;top:0.6rem;right:0.6rem;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:0.3rem 0.7rem;font-size:0.75rem;font-weight:700;cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:0.3rem; }
+    .promo-copy-btn:hover { background:var(--accent-hover); }
+    .promo-copy-btn.copied { background:#059669; }
+    .promo-share-row { display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:1.25rem; }
+    .promo-share-btn { display:inline-flex;align-items:center;gap:0.45rem;padding:0.55rem 1rem;border-radius:10px;font-size:0.83rem;font-weight:700;cursor:pointer;border:none;text-decoration:none;transition:all 0.15s; }
+    .promo-share-btn:hover { filter:brightness(0.92); }
+    .promo-share-btn.fb  { background:#1877F2;color:#fff; }
+    .promo-share-btn.wa  { background:#25D366;color:#fff; }
+    .promo-share-btn.li  { background:#0A66C2;color:#fff; }
+    .promo-share-btn.tw  { background:#000;color:#fff; }
+    .promo-share-btn.gb  { background:#34A853;color:#fff; }
+    .promo-share-btn.copy { background:var(--bg);color:var(--text);border:1.5px solid var(--border); }
+    .promo-tip { font-size:0.78rem;color:var(--text-muted);background:var(--accent-light);border:1px solid var(--accent-light);border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:1rem;line-height:1.5; }
+    .promo-section-label { font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);margin-bottom:0.5rem; }
+    /* Google Ads table */
+    .gads-table { width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:1rem; }
+    .gads-table th { text-align:left;padding:0.4rem 0.6rem;font-size:0.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1px solid var(--border); }
+    .gads-table td { padding:0.4rem 0.6rem;vertical-align:top;border-bottom:1px solid var(--border);color:var(--text); }
+    .gads-table td:first-child { color:var(--text-muted);font-size:0.75rem;width:80px; }
+    .gads-char-ok { color:#059669;font-weight:700;font-size:0.72rem; }
+    .gads-char-warn { color:#d97706;font-weight:700;font-size:0.72rem; }
+    /* Canvas / Promo Image */
+    .promo-canvas-wrap { display:flex;flex-direction:column;align-items:center;gap:0.85rem; }
+    .promo-canvas-size-row { display:flex;gap:0.5rem;margin-bottom:0.25rem; }
+    .promo-size-btn { background:none;border:1.5px solid var(--border);border-radius:8px;padding:0.3rem 0.8rem;font-size:0.78rem;font-weight:600;cursor:pointer;color:var(--text);transition:all 0.15s; }
+    .promo-size-btn.active { background:var(--accent);border-color:var(--accent);color:#fff; }
+    #promoCanvas { border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);max-width:100%;display:block; }
+    .promo-dl-btn { display:inline-flex;align-items:center;gap:0.5rem;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0.6rem 1.25rem;font-size:0.85rem;font-weight:700;cursor:pointer;transition:background 0.15s; }
+    .promo-dl-btn:hover { background:var(--accent-hover); }
+    /* Promote button on listing card */
+    .la-promo-btn { display:flex;align-items:center;gap:0.3rem;background:none;border:1.5px solid var(--border);border-radius:7px;padding:0.3rem 0.6rem;font-size:0.73rem;font-weight:700;cursor:pointer;color:var(--text-muted);transition:all 0.15s; }
+    .la-promo-btn:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-light); }
+    .la-card-actions { display:flex;gap:0.5rem;padding:0.5rem 0.75rem 0.75rem;border-top:1px solid var(--border);margin-top:auto; }
+
     .la-listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
     .la-listing-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
     .la-listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-1px); }
@@ -1293,6 +1349,49 @@
     </div>
     <div id="laListingsGrid" class="la-listings-grid">
       <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Social Media Promo Modal -->
+  <div class="promo-overlay" id="promoOverlay">
+    <div class="promo-modal">
+      <div class="promo-head">
+        <div class="promo-listing-thumb-ph" id="promoThumb">🏠</div>
+        <div class="promo-head-info">
+          <div class="promo-head-title" id="promoTitle">Propiedad</div>
+          <div class="promo-head-sub" id="promoSub">Generando contenido…</div>
+        </div>
+        <button class="promo-close" onclick="closePromoModal()">×</button>
+      </div>
+      <div class="promo-tabs" id="promoTabs">
+        <button class="promo-tab active" data-platform="facebook" onclick="setPromoTab('facebook',this)">
+          <svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Facebook
+        </button>
+        <button class="promo-tab" data-platform="instagram" onclick="setPromoTab('instagram',this)">
+          <svg viewBox="0 0 24 24" fill="url(#igGrad)"><defs><linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#F58529"/><stop offset="50%" stop-color="#DD2A7B"/><stop offset="100%" stop-color="#8134AF"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          Instagram
+        </button>
+        <button class="promo-tab" data-platform="whatsapp" onclick="setPromoTab('whatsapp',this)">
+          <svg viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp
+        </button>
+        <button class="promo-tab" data-platform="linkedin" onclick="setPromoTab('linkedin',this)">
+          <svg viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </button>
+        <button class="promo-tab" data-platform="google" onclick="setPromoTab('google',this)">
+          <svg viewBox="0 0 24 24" fill="#4285F4"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google
+        </button>
+        <button class="promo-tab" data-platform="imagen" onclick="setPromoTab('imagen',this)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          Imagen
+        </button>
+      </div>
+      <div class="promo-body" id="promoBody">
+        <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando contenido promocional…</div>
+      </div>
     </div>
   </div>
 
@@ -5022,9 +5121,375 @@
           <span class="la-card-price">$${Number(l.price).toLocaleString('en-US')}</span>
           <span class="la-card-days">${l.days_on_market}d en mercado</span>
         </div>
+        <div class="la-card-actions" onclick="event.stopPropagation()">
+          <button class="la-promo-btn" onclick="openPromoModal('${l.id}','${esc(l.title)}','${esc(l.image||'')}','${esc(l.city||'')}','${l.price||0}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+            Promocionar
+          </button>
+          <a href="/listing/${l.id}" target="_blank" class="la-promo-btn" style="text-decoration:none;" onclick="event.stopPropagation()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            Ver
+          </a>
+        </div>
       </div>
     `).join('');
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ── Social Media Promo Modal ─────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+
+  let promoData = null;
+  let promoCurrentPlatform = 'facebook';
+  let promoCanvasSize = 'square';
+
+  window.openPromoModal = async function(id, title, image, city, price) {
+    promoCurrentPlatform = 'facebook';
+    const overlay = document.getElementById('promoOverlay');
+    const body    = document.getElementById('promoBody');
+    const headTitle = document.getElementById('promoTitle');
+    const headSub   = document.getElementById('promoSub');
+    const thumb     = document.getElementById('promoThumb');
+
+    headTitle.textContent = title || 'Propiedad';
+    headSub.textContent   = city ? `${city} · $${Number(price).toLocaleString('en-US')}` : '';
+
+    if (image) {
+      const img = document.createElement('img');
+      img.src = image; img.alt = ''; img.className = 'promo-listing-thumb';
+      thumb.replaceWith(img);
+    }
+
+    // Reset tabs
+    document.querySelectorAll('.promo-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.promo-tab[data-platform="facebook"]').classList.add('active');
+
+    body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);"><div class="spinner" style="margin:0 auto"></div></div>';
+    overlay.classList.add('open');
+
+    try {
+      const token = localStorage.getItem('hogaresrd_token');
+      const r = await fetch(`/api/listing-analytics/listing/${id}/promo`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!r.ok) throw new Error(await r.text());
+      promoData = await r.json();
+      renderPromoPanel('facebook');
+    } catch(e) {
+      body.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:2rem;">Error cargando contenido: ${e.message}</p>`;
+    }
+  };
+
+  window.closePromoModal = function() {
+    document.getElementById('promoOverlay').classList.remove('open');
+    // Restore thumb placeholder
+    const img = document.querySelector('#promoOverlay .promo-listing-thumb');
+    if (img) {
+      const ph = document.createElement('div');
+      ph.id = 'promoThumb'; ph.className = 'promo-listing-thumb-ph'; ph.textContent = '🏠';
+      img.replaceWith(ph);
+    }
+    promoData = null;
+  };
+
+  window.setPromoTab = function(platform, btn) {
+    promoCurrentPlatform = platform;
+    document.querySelectorAll('.promo-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderPromoPanel(platform);
+  };
+
+  function renderPromoPanel(platform) {
+    if (!promoData) return;
+    const body = document.getElementById('promoBody');
+    const c = promoData.content;
+    const url = promoData.url;
+    const l = promoData.listing;
+
+    const copyBlock = (text, id) => `
+      <div class="promo-copy-wrap">
+        <textarea class="promo-copy-text" id="${id}" readonly>${text}</textarea>
+        <button class="promo-copy-btn" id="cpbtn_${id}" onclick="promoCopy('${id}','cpbtn_${id}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          Copiar
+        </button>
+      </div>`;
+
+    if (platform === 'facebook') {
+      const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+      body.innerHTML = `
+        <p class="promo-section-label">Texto para tu publicación</p>
+        ${copyBlock(c.facebook, 'pf_fb')}
+        <p class="promo-tip">💡 Copia el texto, luego haz clic en "Compartir en Facebook". El texto no se transfiere automáticamente — pégalo en tu publicación.</p>
+        <div class="promo-share-row">
+          <a href="${fbUrl}" target="_blank" rel="noopener" class="promo-share-btn fb">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Compartir en Facebook
+          </a>
+          <button class="promo-share-btn copy" onclick="promoCopy('pf_fb','cpbtn_pf_fb')">📋 Copiar texto</button>
+        </div>`;
+
+    } else if (platform === 'instagram') {
+      body.innerHTML = `
+        <p class="promo-section-label">Caption para Instagram</p>
+        ${copyBlock(c.instagram, 'pf_ig')}
+        <p class="promo-tip">📸 Instagram no permite compartir directamente desde el web. Copia el caption, ve a la pestaña <strong>Imagen</strong> para descargar la imagen promocional, y publícalos desde la app de Instagram.</p>
+        <div class="promo-share-row">
+          <button class="promo-share-btn" style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);color:#fff;" onclick="setPromoTab('imagen',document.querySelector('[data-platform=imagen]'))">🖼 Crear imagen promo</button>
+          <button class="promo-share-btn copy" onclick="promoCopy('pf_ig','cpbtn_pf_ig')">📋 Copiar caption</button>
+        </div>`;
+
+    } else if (platform === 'whatsapp') {
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(c.whatsapp)}`;
+      const waBizUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(c.whatsapp)}`;
+      body.innerHTML = `
+        <p class="promo-section-label">Mensaje para WhatsApp</p>
+        ${copyBlock(c.whatsapp, 'pf_wa')}
+        <p class="promo-tip">💬 Comparte directamente con clientes o en grupos de WhatsApp. El texto irá pre-rellenado.</p>
+        <div class="promo-share-row">
+          <a href="${waUrl}" target="_blank" rel="noopener" class="promo-share-btn wa">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Enviar por WhatsApp
+          </a>
+          <button class="promo-share-btn copy" onclick="promoCopy('pf_wa','cpbtn_pf_wa')">📋 Copiar mensaje</button>
+        </div>`;
+
+    } else if (platform === 'linkedin') {
+      const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+      body.innerHTML = `
+        <p class="promo-section-label">Publicación para LinkedIn</p>
+        ${copyBlock(c.linkedin, 'pf_li')}
+        <p class="promo-tip">💼 Copia el texto y comparte el enlace en LinkedIn. Ideal para captar compradores e inversores profesionales.</p>
+        <div class="promo-share-row">
+          <a href="${liUrl}" target="_blank" rel="noopener" class="promo-share-btn li">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            Compartir en LinkedIn
+          </a>
+          <button class="promo-share-btn copy" onclick="promoCopy('pf_li','cpbtn_pf_li')">📋 Copiar texto</button>
+        </div>`;
+
+    } else if (platform === 'google') {
+      const ads = c.google_ads;
+      const gbUrl = 'https://business.google.com/';
+      const headRows = ads.headlines.map((h,i) => {
+        const len = h.length;
+        const badge = len > 30 ? `<span class="gads-char-warn">${len}/30 ⚠️</span>` : `<span class="gads-char-ok">${len}/30</span>`;
+        return `<tr><td>Título ${i+1}</td><td>${h}</td><td>${badge}</td></tr>`;
+      }).join('');
+      const descRows = ads.descriptions.map((d,i) => {
+        const len = d.length;
+        const badge = len > 90 ? `<span class="gads-char-warn">${len}/90 ⚠️</span>` : `<span class="gads-char-ok">${len}/90</span>`;
+        return `<tr><td>Desc. ${i+1}</td><td>${d}</td><td>${badge}</td></tr>`;
+      }).join('');
+      body.innerHTML = `
+        <p class="promo-section-label">Google Business Profile — Publicación</p>
+        ${copyBlock(c.google_business, 'pf_gb')}
+        <div class="promo-share-row" style="margin-bottom:1.25rem;">
+          <a href="${gbUrl}" target="_blank" rel="noopener" class="promo-share-btn gb">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Abrir Google Business
+          </a>
+          <button class="promo-share-btn copy" onclick="promoCopy('pf_gb','cpbtn_pf_gb')">📋 Copiar texto</button>
+        </div>
+        <p class="promo-section-label">Google Ads — Anuncio de Búsqueda Responsivo</p>
+        <p class="promo-tip">📊 Copia estos títulos y descripciones directamente en tu campaña de Google Ads. Todos cumplen con los límites de caracteres.</p>
+        <table class="gads-table">
+          <thead><tr><th>Campo</th><th>Texto</th><th>Chars</th></tr></thead>
+          <tbody>${headRows}${descRows}</tbody>
+        </table>
+        <div class="promo-share-row">
+          <a href="https://ads.google.com/home/" target="_blank" rel="noopener" class="promo-share-btn" style="background:#4285F4;color:#fff;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c1.67.96 3.81.4 4.79-1.25L12 15.27l-4.03-2.33-4.79 8.28c-.97 1.65-.42 3.78 1.25 4.74zm17.64-16.5c0-2.73-1.12-5.2-2.93-6.99L12 7.61l4.03 2.33 2.27-3.93c.33.6.52 1.28.52 2.25zm-18.64 0c0-1.77.38-3.44 1.05-4.94L12 15.27 7.97 12.94 1.18 7.26C1.18 7.26.18 8.77.18 9.48c0 2.73 1.12 5.2 2.93 6.99L12 15.27 7.97 12.94z"/></svg>
+            Abrir Google Ads
+          </a>
+        </div>`;
+
+    } else if (platform === 'imagen') {
+      body.innerHTML = `
+        <p class="promo-section-label">Imagen promocional para redes sociales</p>
+        <p class="promo-tip">🎨 Genera una imagen de tu propiedad lista para publicar en Instagram, Facebook Stories o cualquier otra red. Descárgala y publícala directamente.</p>
+        <div class="promo-canvas-wrap">
+          <div class="promo-canvas-size-row">
+            <button class="promo-size-btn active" id="promoSzSq" onclick="setPromoCanvasSize('square')">Square 1:1 (Feed)</button>
+            <button class="promo-size-btn" id="promoSzSt" onclick="setPromoCanvasSize('story')">Story 9:16</button>
+          </div>
+          <canvas id="promoCanvas" width="540" height="540"></canvas>
+          <button class="promo-dl-btn" onclick="downloadPromoCanvas()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Descargar imagen
+          </button>
+        </div>`;
+      setTimeout(() => drawPromoCanvas(), 50);
+    }
+  }
+
+  window.promoCopy = function(textareaId, btnId) {
+    const ta = document.getElementById(textareaId);
+    const btn = document.getElementById(btnId);
+    if (!ta) return;
+    navigator.clipboard.writeText(ta.value).then(() => {
+      if (btn) { btn.classList.add('copied'); btn.innerHTML = '✅ Copiado'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copiar'; }, 2000); }
+    }).catch(() => { ta.select(); document.execCommand('copy'); });
+  };
+
+  function setPromoCanvasSize(size) {
+    promoCanvasSize = size;
+    document.getElementById('promoSzSq').classList.toggle('active', size === 'square');
+    document.getElementById('promoSzSt').classList.toggle('active', size === 'story');
+    const c = document.getElementById('promoCanvas');
+    if (size === 'square') { c.width = 540; c.height = 540; }
+    else                   { c.width = 405; c.height = 720; }
+    drawPromoCanvas();
+  }
+
+  function drawPromoCanvas() {
+    const canvas = document.getElementById('promoCanvas');
+    if (!canvas || !promoData) return;
+    const ctx  = canvas.getContext('2d');
+    const w    = canvas.width;
+    const h    = canvas.height;
+    const l    = promoData.listing;
+
+    // Background gradient (brand blue)
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#001230');
+    grad.addColorStop(0.55, '#0038A8');
+    grad.addColorStop(1, '#0055d0');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Try loading property image as background
+    const imgSrc = l.images && l.images[0];
+    if (imgSrc) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        // Draw image covering canvas
+        const scale = Math.max(w / img.width, h / img.height);
+        const iw = img.width * scale;
+        const ih = img.height * scale;
+        const ix = (w - iw) / 2;
+        const iy = (h - ih) / 2;
+        ctx.drawImage(img, ix, iy, iw, ih);
+        // Dark overlay
+        const ov = ctx.createLinearGradient(0, 0, 0, h);
+        ov.addColorStop(0, 'rgba(0,0,0,0.35)');
+        ov.addColorStop(0.5, 'rgba(0,0,0,0.2)');
+        ov.addColorStop(1, 'rgba(0,0,0,0.82)');
+        ctx.fillStyle = ov;
+        ctx.fillRect(0, 0, w, h);
+        drawPromoText(ctx, w, h, l);
+      };
+      img.onerror = () => { drawPromoText(ctx, w, h, l); };
+      img.src = imgSrc;
+    } else {
+      drawPromoText(ctx, w, h, l);
+    }
+  }
+
+  function drawPromoText(ctx, w, h, l) {
+    const price = '$' + Number(l.price).toLocaleString('en-US');
+    const location = [l.sector, l.city].filter(Boolean).join(', ');
+    const details = [l.bedrooms ? l.bedrooms + ' hab.' : '', l.bathrooms ? l.bathrooms + ' baños' : '', l.area_const ? l.area_const + 'm²' : ''].filter(Boolean).join('  ·  ');
+
+    // Top badge
+    ctx.fillStyle = 'rgba(207,20,43,0.9)';
+    const badgeText = (l.typeLabel || 'Propiedad') + ' ' + (l.condLabel || '');
+    ctx.font = `bold ${Math.round(w*0.033)}px Inter, sans-serif`;
+    const bw = ctx.measureText(badgeText).width + w*0.05;
+    const bh = w * 0.065;
+    const bx = w * 0.06;
+    const by = w * 0.06;
+    roundRect(ctx, bx, by, bw, bh, 6);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(w*0.033)}px Inter, sans-serif`;
+    ctx.fillText(badgeText, bx + w*0.025, by + bh*0.68);
+
+    // Bottom content area
+    const bottomH = h * 0.38;
+    const bottomGrad = ctx.createLinearGradient(0, h - bottomH, 0, h);
+    bottomGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    bottomGrad.addColorStop(0.3, 'rgba(0,0,0,0.7)');
+    bottomGrad.addColorStop(1, 'rgba(0,0,0,0.92)');
+    ctx.fillStyle = bottomGrad;
+    ctx.fillRect(0, h - bottomH, w, bottomH);
+
+    const pad = w * 0.06;
+
+    // Price
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${Math.round(w*0.085)}px Inter, sans-serif`;
+    ctx.fillText(price, pad, h - bottomH * 0.68);
+
+    // Title (word-wrapped)
+    ctx.font = `600 ${Math.round(w*0.038)}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    const maxW = w - pad * 2;
+    const words = (l.title || '').split(' ');
+    let line = '';
+    let lineY = h - bottomH * 0.47;
+    const lineH = w * 0.048;
+    let linesDrawn = 0;
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, pad, lineY);
+        line = word; lineY += lineH; linesDrawn++;
+        if (linesDrawn >= 2) { if (words.indexOf(word) < words.length - 1) { ctx.fillText(line + '…', pad, lineY); } break; }
+      } else { line = test; }
+    }
+    if (linesDrawn < 2 && line) ctx.fillText(line, pad, lineY);
+
+    // Details
+    if (details) {
+      ctx.font = `500 ${Math.round(w*0.032)}px Inter, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillText(details, pad, h - bottomH * 0.22);
+    }
+
+    // Location
+    if (location) {
+      ctx.font = `500 ${Math.round(w*0.028)}px Inter, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillText('📍 ' + location, pad, h - bottomH * 0.09);
+    }
+
+    // HogaresRD logo bottom-right
+    ctx.font = `900 ${Math.round(w*0.038)}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    const logoText = 'HogaresRD';
+    const logoW = ctx.measureText(logoText).width;
+    ctx.fillText(logoText, w - pad - logoW, h - w * 0.035);
+
+    // Accent line under logo
+    ctx.fillStyle = '#CF142B';
+    ctx.fillRect(w - pad - logoW, h - w * 0.022, logoW, 2);
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  window.downloadPromoCanvas = function() {
+    const canvas = document.getElementById('promoCanvas');
+    if (!canvas) return;
+    const title = (promoData?.listing?.title || 'propiedad').toLowerCase().replace(/\s+/g,'-').slice(0,40);
+    const link = document.createElement('a');
+    link.download = `hogaresrd-promo-${title}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
 
   window.openLADetail = async function(id) {
     const overlay = document.getElementById('laDetailOverlay');
