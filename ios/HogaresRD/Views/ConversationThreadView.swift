@@ -15,27 +15,46 @@ struct ConversationThreadView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Message list ─────────────────────────────────────────────
+            // ── Header ──────────────────────────────────────────────
+            threadHeader
+
+            // ── Message list ────────────────────────────────────────
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 6) {
-                        ForEach(messages) { msg in
-                            MessageBubble(msg: msg, isMe: msg.senderId == myId)
+                    LazyVStack(spacing: 0) {
+                        // Date-grouped messages
+                        ForEach(groupedMessages, id: \.date) { group in
+                            // Date separator
+                            Text(group.dateLabel)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 14).padding(.vertical, 5)
+                                .background(Color(.systemGray6))
+                                .clipShape(Capsule())
+                                .padding(.vertical, 10)
+
+                            ForEach(group.messages) { msg in
+                                MessageBubble(
+                                    msg: msg,
+                                    isMe: msg.senderId == myId,
+                                    showSender: shouldShowSender(msg, in: group.messages)
+                                )
                                 .id(msg.id)
+                            }
                         }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                 }
                 .onChange(of: messages.count) { _, _ in scrollToBottom(proxy) }
-                .onAppear                      { scrollToBottom(proxy) }
+                .onAppear { scrollToBottom(proxy) }
             }
 
             Divider()
 
-            // ── Input bar ────────────────────────────────────────────────
+            // ── Input bar ───────────────────────────────────────────
             HStack(spacing: 10) {
-                TextField("Escribe un mensaje…", text: $input, axis: .vertical)
+                TextField("Escribe un mensaje...", text: $input, axis: .vertical)
                     .lineLimit(1...4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -58,17 +77,120 @@ struct ConversationThreadView: View {
             .padding(.vertical, 10)
             .background(Color(.systemBackground))
         }
-        .navigationTitle(conversation.propertyTitle)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .task {
             await loadMessages()
             await markRead()
-            // Long-polling loop — cancelled automatically when view disappears
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 await pollNew()
             }
         }
+    }
+
+    // MARK: - Header
+
+    private var threadHeader: some View {
+        HStack(spacing: 12) {
+            Button {
+                // Go back — handled by NavigationStack
+                if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let nav = scene.windows.first?.rootViewController as? UINavigationController {
+                    nav.popViewController(animated: true)
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.rdBlue)
+            }
+
+            // Property info
+            VStack(alignment: .leading, spacing: 2) {
+                Text(conversation.propertyTitle)
+                    .font(.subheadline).bold()
+                    .lineLimit(1)
+                if let broker = conversation.brokerName {
+                    Text(broker)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(conversation.clientName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            // Online indicator (decorative)
+            Circle()
+                .fill(Color.green)
+                .frame(width: 8, height: 8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+
+    // MARK: - Date Grouping
+
+    private struct MessageGroup {
+        let date: String
+        let dateLabel: String
+        let messages: [ConvMessage]
+    }
+
+    private var groupedMessages: [MessageGroup] {
+        let fmt = ISO8601DateFormatter()
+        let dayFmt = DateFormatter()
+        dayFmt.locale = Locale(identifier: "es_DO")
+
+        var groups: [String: [ConvMessage]] = [:]
+        var order: [String] = []
+
+        for msg in messages {
+            let dateKey: String
+            if let d = fmt.date(from: msg.timestamp) {
+                dayFmt.dateFormat = "yyyy-MM-dd"
+                dateKey = dayFmt.string(from: d)
+            } else {
+                dateKey = "unknown"
+            }
+            if groups[dateKey] == nil { order.append(dateKey) }
+            groups[dateKey, default: []].append(msg)
+        }
+
+        return order.compactMap { key in
+            guard let msgs = groups[key] else { return nil }
+            let label: String
+            if key == "unknown" {
+                label = ""
+            } else {
+                dayFmt.dateFormat = "yyyy-MM-dd"
+                if let d = dayFmt.date(from: key) {
+                    if Calendar.current.isDateInToday(d) {
+                        label = "Hoy"
+                    } else if Calendar.current.isDateInYesterday(d) {
+                        label = "Ayer"
+                    } else {
+                        dayFmt.dateFormat = "d 'de' MMMM, yyyy"
+                        label = dayFmt.string(from: d)
+                    }
+                } else {
+                    label = key
+                }
+            }
+            return MessageGroup(date: key, dateLabel: label, messages: msgs)
+        }
+    }
+
+    /// Only show sender name if it's a different sender than the previous message
+    private func shouldShowSender(_ msg: ConvMessage, in group: [ConvMessage]) -> Bool {
+        guard let idx = group.firstIndex(where: { $0.id == msg.id }), idx > 0 else { return true }
+        return group[idx - 1].senderId != msg.senderId
     }
 
     // MARK: - Helpers
@@ -95,7 +217,6 @@ struct ConversationThreadView: View {
         guard let conv = try? await api.getConversation(id: conversation.id, since: lastTimestamp) else { return }
         let fresh = conv.messages ?? []
         guard !fresh.isEmpty else { return }
-        // Append only truly new messages (avoid duplicates)
         let existingIDs = Set(messages.map { $0.id })
         let toAdd = fresh.filter { !existingIDs.contains($0.id) }
         if !toAdd.isEmpty {
@@ -121,51 +242,114 @@ struct ConversationThreadView: View {
     }
 }
 
-// MARK: - Bubble
+// MARK: - Message Bubble
 
 struct MessageBubble: View {
-    let msg:  ConvMessage
-    let isMe: Bool
+    let msg:        ConvMessage
+    let isMe:       Bool
+    var showSender: Bool = true
 
     var body: some View {
         HStack(alignment: .bottom) {
             if isMe { Spacer(minLength: 60) }
 
-            VStack(alignment: isMe ? .trailing : .leading, spacing: 3) {
-                if !isMe {
-                    Text(msg.senderName)
-                        .font(.caption2).bold()
-                        .foregroundStyle(Color.rdBlue)
-                        .padding(.leading, 4)
+            VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
+                // Sender name + role badge (only for other party, and only when sender changes)
+                if !isMe && showSender {
+                    HStack(spacing: 6) {
+                        Text(msg.senderName)
+                            .font(.caption2).bold()
+                            .foregroundStyle(roleColor)
+                        Text(roleLabel)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(roleColor)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(roleColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .padding(.leading, 6)
+                    .padding(.top, showSender ? 6 : 0)
                 }
 
-                Text(msg.text)
-                    .font(.subheadline)
-                    .padding(.horizontal, 13).padding(.vertical, 9)
-                    .background(isMe ? Color.rdBlue : Color(.systemGray5))
-                    .foregroundStyle(isMe ? .white : .primary)
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 18)
-                    )
+                // Bubble
+                HStack(alignment: .bottom, spacing: 6) {
+                    Text(msg.text)
+                        .font(.subheadline)
+                        .foregroundStyle(isMe ? .white : .primary)
 
-                Text(timeLabel(msg.timestamp))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4)
+                    Text(timeString)
+                        .font(.system(size: 9))
+                        .foregroundStyle(isMe ? .white.opacity(0.6) : .secondary)
+                }
+                .padding(.horizontal, 13)
+                .padding(.vertical, 9)
+                .background(isMe ? Color.rdBlue : Color(.systemGray6))
+                .clipShape(ChatBubbleShape(isMe: isMe))
             }
 
             if !isMe { Spacer(minLength: 60) }
         }
+        .padding(.vertical, showSender ? 2 : 1)
     }
 
-    private func timeLabel(_ iso: String) -> String {
-        let fmt = ISO8601DateFormatter()
-        guard let date = fmt.date(from: iso) else { return "" }
-        if Calendar.current.isDateInToday(date) {
-            let f = DateFormatter(); f.dateFormat = "h:mm a"
-            return f.string(from: date)
+    private var roleColor: Color {
+        switch msg.senderRole {
+        case "broker":  return Color.rdBlue
+        case "client":  return Color.rdGreen
+        default:        return .secondary
         }
-        let f = DateFormatter(); f.dateFormat = "MMM d"
-        return f.string(from: date)
+    }
+
+    private var roleLabel: String {
+        switch msg.senderRole {
+        case "broker":  return "Agente"
+        case "client":  return "Cliente"
+        default:        return msg.senderRole
+        }
+    }
+
+    private var timeString: String {
+        let fmt = ISO8601DateFormatter()
+        guard let date = fmt.date(from: msg.timestamp) else { return "" }
+        let df = DateFormatter()
+        df.dateFormat = "h:mm a"
+        df.locale = Locale(identifier: "es_DO")
+        return df.string(from: date)
+    }
+}
+
+// MARK: - Chat Bubble Shape (tail on one side)
+
+struct ChatBubbleShape: Shape {
+    let isMe: Bool
+    private let cornerRadius: CGFloat = 16
+    private let tailSize: CGFloat = 6
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        if isMe {
+            // Rounded rect with small tail on bottom-right
+            path.addRoundedRect(
+                in: CGRect(x: rect.minX, y: rect.minY, width: rect.width - tailSize, height: rect.height),
+                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
+            )
+            // Tail
+            path.move(to: CGPoint(x: rect.maxX - tailSize, y: rect.maxY - 8))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX - tailSize - 4, y: rect.maxY))
+        } else {
+            // Rounded rect with small tail on bottom-left
+            path.addRoundedRect(
+                in: CGRect(x: rect.minX + tailSize, y: rect.minY, width: rect.width - tailSize, height: rect.height),
+                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
+            )
+            // Tail
+            path.move(to: CGPoint(x: rect.minX + tailSize, y: rect.maxY - 8))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + tailSize + 4, y: rect.maxY))
+        }
+
+        return path
     }
 }

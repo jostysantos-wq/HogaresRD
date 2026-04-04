@@ -31,9 +31,9 @@ struct ConversationsView: View {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 60))
                         .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin mensajes aún")
+                    Text("Sin mensajes aun")
                         .font(.title2).bold()
-                    Text("Cuando contactes a un agente sobre una propiedad, la conversación aparecerá aquí.")
+                    Text("Cuando contactes a un agente sobre una propiedad, la conversacion aparecera aqui.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -57,10 +57,10 @@ struct ConversationsView: View {
     }
 
     private func load() async {
-        loading = true; errorMsg = nil
+        if conversations.isEmpty { loading = true }
+        errorMsg = nil
         do {
             conversations = try await api.getConversations()
-            // Sort newest first
             conversations.sort { $0.updatedAt > $1.updatedAt }
         } catch {
             errorMsg = error.localizedDescription
@@ -75,18 +75,40 @@ struct ConversationRow: View {
     let conv: Conversation
     let myId: String
 
-    private var unread: Int { conv.unreadClient ?? 0 }
+    private var unread: Int {
+        // Show unread based on role
+        let isClient = conv.clientId == myId
+        return isClient ? (conv.unreadClient ?? 0) : (conv.unreadBroker ?? 0)
+    }
+
+    private var otherName: String {
+        let isClient = conv.clientId == myId
+        if isClient {
+            return conv.brokerName ?? "Agente pendiente"
+        } else {
+            return conv.clientName
+        }
+    }
+
+    private var otherRole: String {
+        let isClient = conv.clientId == myId
+        return isClient ? "Agente" : "Cliente"
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
             ZStack {
                 Circle()
-                    .fill(Color.rdBlue.opacity(0.12))
+                    .fill(conv.clientId == myId
+                          ? Color.rdBlue.opacity(0.12)
+                          : Color.rdGreen.opacity(0.12))
                     .frame(width: 50, height: 50)
-                Image(systemName: "building.2.fill")
+                Image(systemName: conv.clientId == myId
+                      ? "person.fill"
+                      : "building.2.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(Color.rdBlue)
+                    .foregroundStyle(conv.clientId == myId ? Color.rdBlue : Color.rdGreen)
             }
             .overlay(alignment: .topTrailing) {
                 if unread > 0 {
@@ -103,22 +125,30 @@ struct ConversationRow: View {
             // Info
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(conv.propertyTitle)
+                    Text(otherName)
                         .font(.subheadline).bold()
                         .lineLimit(1)
+                    Text(otherRole)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(conv.clientId == myId ? Color.rdBlue : Color.rdGreen)
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background((conv.clientId == myId ? Color.rdBlue : Color.rdGreen).opacity(0.1))
+                        .clipShape(Capsule())
                     Spacer()
                     Text(timeLabel(conv.updatedAt))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(unread > 0 ? Color.rdBlue : .secondary)
                 }
-                Text(conv.lastMessage ?? "Sin mensajes")
+                Text(conv.propertyTitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.rdBlue)
                     .lineLimit(1)
-                if let broker = conv.brokerName {
-                    Label(broker, systemImage: "person.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdBlue)
+                if let last = conv.lastMessage, !last.isEmpty {
+                    Text(last)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fontWeight(unread > 0 ? .semibold : .regular)
                 }
             }
         }
@@ -128,9 +158,22 @@ struct ConversationRow: View {
     private func timeLabel(_ iso: String) -> String {
         let fmt = ISO8601DateFormatter()
         guard let date = fmt.date(from: iso) else { return "" }
-        let d = Int(Date().timeIntervalSince(date) / 86400)
-        if d == 0 { return "Hoy" }
-        if d == 1 { return "Ayer" }
-        return "\(d)d"
+        if Calendar.current.isDateInToday(date) {
+            let df = DateFormatter()
+            df.dateFormat = "h:mm a"
+            df.locale = Locale(identifier: "es_DO")
+            return df.string(from: date)
+        }
+        if Calendar.current.isDateInYesterday(date) { return "Ayer" }
+        let d = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
+        if d < 7 {
+            let df = DateFormatter()
+            df.dateFormat = "EEEE"
+            df.locale = Locale(identifier: "es_DO")
+            return df.string(from: date).capitalized
+        }
+        let df = DateFormatter()
+        df.dateFormat = "d/M/yy"
+        return df.string(from: date)
     }
 }
