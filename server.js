@@ -240,10 +240,13 @@ const avatarStorage = multer.diskStorage({
 });
 const avatarUpload = multer({
   storage: avatarStorage,
-  limits:  { fileSize: 3 * 1024 * 1024, files: 1 },
+  limits:  { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
-    if (/\.(jpe?g|png|webp)$/i.test(path.extname(file.originalname))) return cb(null, true);
-    cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
+    // Accept any image MIME type — the client (iOS/web) handles format conversion
+    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+    // Also accept by extension as fallback
+    if (/\.(jpe?g|png|webp|heic|heif|gif|bmp|tiff?)$/i.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Solo se permiten archivos de imagen'));
   },
 });
 
@@ -252,6 +255,7 @@ app.post('/api/upload/avatar', (req, res, next) => {
   const { userAuth } = require('./routes/auth');
   userAuth(req, res, next);
 }, avatarUpload.single('avatar'), (req, res) => {
+  console.log('[avatar] Upload received:', req.file ? { name: req.file.originalname, mime: req.file.mimetype, size: req.file.size } : 'NO FILE');
   if (!req.file) return res.status(400).json({ error: 'No se recibió imagen.' });
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -263,8 +267,10 @@ app.post('/api/upload/avatar', (req, res, next) => {
 
   user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
   store.saveUser(user);
+  console.log('[avatar] Saved:', user.avatarUrl);
   res.json({ success: true, avatarUrl: user.avatarUrl });
 }, (err, req, res, next) => {
+  console.error('[avatar] Upload error:', err.message);
   res.status(400).json({ error: err.message });
 });
 

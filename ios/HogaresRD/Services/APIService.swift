@@ -563,7 +563,12 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error cargando conversaciones")
+        }
         return try decoder.decode([Conversation].self, from: data)
     }
 
@@ -575,7 +580,12 @@ class APIService: ObservableObject {
         }
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error cargando conversacion")
+        }
         return try decoder.decode(Conversation.self, from: data)
     }
 
@@ -906,6 +916,54 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al cambiar la contraseña")
         }
+    }
+
+    // MARK: - Avatar Upload
+
+    func uploadAvatar(imageData: Data) async throws -> String {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/upload/avatar")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+
+        let boundary = "----AvatarUpload\(Int(Date().timeIntervalSince1970))"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        // Part header
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(Data("Content-Disposition: form-data; name=\"avatar\"; filename=\"avatar.jpg\"\r\n".utf8))
+        body.append(Data("Content-Type: image/jpeg\r\n".utf8))
+        body.append(Data("\r\n".utf8))
+        // File content
+        body.append(imageData)
+        // Closing boundary
+        body.append(Data("\r\n".utf8))
+        body.append(Data("--\(boundary)--\r\n".utf8))
+
+        // Use upload(for:from:) instead of httpBody — handles large payloads better
+        let (data, resp) = try await URLSession.shared.upload(for: req, from: body)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al subir la foto (HTTP \(http.statusCode))")
+        }
+        let result = try JSONDecoder().decode([String: String].self, from: data)
+        guard let avatarUrl = result["avatarUrl"] else { throw APIError.server("Respuesta inesperada") }
+
+        // Update local user with new avatar
+        if var user = currentUser {
+            let updatedData = try JSONEncoder().encode(user)
+            if var dict = try JSONSerialization.jsonObject(with: updatedData) as? [String: Any] {
+                dict["avatarUrl"] = avatarUrl
+                let newData = try JSONSerialization.data(withJSONObject: dict)
+                let updatedUser = try decoder.decode(User.self, from: newData)
+                await persist(user: updatedUser, token: t)
+            }
+        }
+
+        return avatarUrl
     }
 
     // MARK: - Push Notifications

@@ -10,8 +10,16 @@ struct User: Codable {
     let marketingOptIn: Bool?
     let twoFAEnabled: Bool?
     let twoFAMethod: String?
+    let avatarUrl: String?
 
     var firstName: String { name.components(separatedBy: " ").first ?? name }
+
+    /// Full URL to the avatar image, or nil if not set.
+    var avatarImageURL: URL? {
+        guard let path = avatarUrl, !path.isEmpty else { return nil }
+        if path.hasPrefix("http") { return URL(string: path) }
+        return URL(string: "\(APIService.baseURL)\(path)")
+    }
     var initials: String {
         name.components(separatedBy: " ")
             .prefix(2)

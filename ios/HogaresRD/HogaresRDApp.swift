@@ -47,10 +47,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 struct HogaresRDApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    @StateObject private var api   = APIService.shared
-    @StateObject private var saved = SavedStore.shared
+    @StateObject private var api         = APIService.shared
+    @StateObject private var saved       = SavedStore.shared
     @StateObject private var pushService = PushNotificationService.shared
+    @StateObject private var lockManager = AppLockManager.shared
     @AppStorage("appColorScheme") private var schemePref: String = "system"
+    @Environment(\.scenePhase) private var scenePhase
 
     private var preferredScheme: ColorScheme? {
         switch schemePref {
@@ -60,13 +62,43 @@ struct HogaresRDApp: App {
         }
     }
 
+    @State private var showSplash = true
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(api)
-                .environmentObject(saved)
-                .environmentObject(pushService)
-                .preferredColorScheme(preferredScheme)
+            ZStack {
+                ContentView()
+                    .environmentObject(api)
+                    .environmentObject(saved)
+                    .environmentObject(pushService)
+                    .environmentObject(lockManager)
+                    .preferredColorScheme(preferredScheme)
+
+                // Lock screen overlay
+                if lockManager.isLocked, api.currentUser != nil {
+                    LockScreenView()
+                        .environmentObject(api)
+                        .environmentObject(lockManager)
+                        .transition(.opacity)
+                        .zIndex(999)
+                }
+
+                // Splash screen — shown on launch
+                if showSplash {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1000)
+                }
+            }
+            .animation(.easeInOut(duration: 0.4), value: showSplash)
+            .animation(.easeInOut(duration: 0.25), value: lockManager.isLocked)
+            .onChange(of: scenePhase) { _, newPhase in
+                lockManager.handleScenePhase(newPhase, isLoggedIn: api.currentUser != nil)
+            }
+            .task {
+                try? await Task.sleep(for: .seconds(2.2))
+                showSplash = false
+            }
         }
     }
 }

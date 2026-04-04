@@ -2,7 +2,9 @@ import React, {
   createContext, useContext, useEffect, useState, useCallback,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE } from '@/constants/api';
+import { SECURE_KEYS } from './useBiometric';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -15,32 +17,52 @@ export interface AuthUser {
 }
 
 interface AuthContextType {
-  user:        AuthUser | null;
-  token:       string | null;
-  loading:     boolean;
-  login:       (email: string, password: string) => Promise<void>;
-  register:    (name: string, email: string, password: string, phone?: string) => Promise<void>;
-  logout:      () => Promise<void>;
+  user:               AuthUser | null;
+  token:              string | null;
+  loading:            boolean;
+  /** True after first successful email/password login this session (for enrollment prompt). */
+  justLoggedIn:       boolean;
+  clearJustLoggedIn:  () => void;
+  login:              (email: string, password: string) => Promise<void>;
+  loginWithBiometric: (bioToken: string, bioUser: AuthUser) => Promise<void>;
+  register:           (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  logout:             () => Promise<void>;
   /** Returns headers for authenticated API calls. */
-  authHeaders: () => Record<string, string>;
+  authHeaders:        () => Record<string, string>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = 'hogaresrd_token';
+const TOKEN_KEY = SECURE_KEYS.token;
+const LEGACY_KEY = 'hogaresrd_token'; // AsyncStorage key for migration
 
 // ── Provider ──────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user,    setUser]    = useState<AuthUser | null>(null);
-  const [token,   setToken]   = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user,          setUser]          = useState<AuthUser | null>(null);
+  const [token,         setToken]         = useState<string | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [justLoggedIn,  setJustLoggedIn]  = useState(false);
 
-  // Restore saved session on mount
+  const clearJustLoggedIn = useCallback(() => setJustLoggedIn(false), []);
+
+  // Restore saved session on mount (with AsyncStorage → SecureStore migration)
   useEffect(() => {
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem(TOKEN_KEY);
+        // Try SecureStore first
+        let saved = await SecureStore.getItemAsync(TOKEN_KEY);
+
+        // Migrate from AsyncStorage if needed
+        if (!saved) {
+          const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+          if (legacy) {
+            saved = legacy;
+            await SecureStore.setItemAsync(TOKEN_KEY, legacy);
+            await AsyncStorage.removeItem(LEGACY_KEY);
+          }
+        }
+
         if (saved) {
           const res = await fetch(`${API_BASE}/auth/me`, {
             headers: { Authorization: `Bearer ${saved}` },
@@ -50,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(saved);
             setUser(u);
           } else {
-            await AsyncStorage.removeItem(TOKEN_KEY);
+            await SecureStore.deleteItemAsync(TOKEN_KEY);
           }
         }
       } catch {}
@@ -66,9 +88,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-    await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    await SecureStore.setItemAsync(TOKEN_KEY, data.token);
     setToken(data.token);
     setUser(data.user);
+    setJustLoggedIn(true);
+  }, []);
+
+  // Accept biometric login result (token + user already obtained by useBiometric)
+  const loginWithBiometric = useCallback(async (bioToken: string, bioUser: AuthUser) => {
+    await SecureStore.setItemAsync(TOKEN_KEY, bioToken);
+    setToken(bioToken);
+    setUser(bioUser);
   }, []);
 
   const register = useCallback(async (
@@ -94,9 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch {}
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
     setToken(null);
     setUser(null);
+    setJustLoggedIn(false);
   }, [token]);
 
   const authHeaders = useCallback((): Record<string, string> => {
@@ -106,7 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, authHeaders }}>
+    <AuthContext.Provider value={{
+      user, token, loading, justLoggedIn, clearJustLoggedIn,
+      login, loginWithBiometric, register, logout, authHeaders,
+    }}>
       {children}
     </AuthContext.Provider>
   );

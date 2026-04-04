@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Switch,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { useBiometric } from '@/hooks/useBiometric';
+import { useAppLock } from '@/hooks/useAppLock';
+import BiometricEnrollSheet from '@/components/BiometricEnrollSheet';
 
 const ROLE_LABELS: Record<string, string> = {
   user:          'Cliente',
@@ -25,6 +28,8 @@ const ROLE_COLORS: Record<string, string> = {
   admin:         colors.danger,
 };
 
+const TIMEOUT_OPTIONS = [1, 2, 5, 10, 15];
+
 function MenuItem({
   icon, label, onPress, danger = false,
 }: {
@@ -41,10 +46,45 @@ function MenuItem({
   );
 }
 
+function ToggleRow({
+  icon, label, value, onValueChange, disabled = false,
+}: {
+  icon: string; label: string; value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean;
+}) {
+  return (
+    <View style={[styles.menuItem, disabled && { opacity: 0.5 }]}>
+      <View style={styles.menuIcon}>
+        <Ionicons name={icon as any} size={20} color={colors.primary} />
+      </View>
+      <Text style={styles.menuLabel}>{label}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        trackColor={{ false: colors.border, true: colors.accent }}
+        thumbColor="#fff"
+      />
+    </View>
+  );
+}
+
 export default function CuentaScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const { user, token, loading, justLoggedIn, clearJustLoggedIn, logout } = useAuth();
+  const bio = useBiometric();
+  const lock = useAppLock();
+
+  const [showEnroll, setShowEnroll] = useState(false);
+  const [bioSwitching, setBioSwitching] = useState(false);
+
+  // Show enrollment prompt after first email/password login
+  useEffect(() => {
+    if (justLoggedIn && bio.isAvailable && !bio.isEnabled && !bio.wasDismissed && !bio.loading) {
+      const timer = setTimeout(() => setShowEnroll(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [justLoggedIn, bio.isAvailable, bio.isEnabled, bio.wasDismissed, bio.loading]);
 
   if (loading) {
     return (
@@ -63,7 +103,7 @@ export default function CuentaScreen() {
         </View>
         <Text style={styles.guestTitle}>Tu cuenta</Text>
         <Text style={styles.guestSub}>
-          Inicia sesión para guardar favoritos, hacer seguimiento de aplicaciones y chatear con agentes.
+          Inicia sesion para guardar favoritos, hacer seguimiento de aplicaciones y chatear con agentes.
         </Text>
 
         <TouchableOpacity
@@ -71,7 +111,7 @@ export default function CuentaScreen() {
           onPress={() => router.push('/auth/login')}
           activeOpacity={0.85}
         >
-          <Text style={styles.loginBtnText}>Iniciar sesión</Text>
+          <Text style={styles.loginBtnText}>Iniciar sesion</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -91,12 +131,12 @@ export default function CuentaScreen() {
 
   function confirmLogout() {
     Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro que quieres cerrar sesión?',
+      'Cerrar sesion',
+      'Estas seguro que quieres cerrar sesion?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Cerrar sesión',
+          text: 'Cerrar sesion',
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -106,71 +146,166 @@ export default function CuentaScreen() {
     );
   }
 
+  async function handleBioToggle(enabled: boolean) {
+    if (!token) return;
+    setBioSwitching(true);
+    try {
+      if (enabled) {
+        await bio.enable(token);
+      } else {
+        Alert.alert(
+          `Desactivar ${bio.biometricType || 'biometrico'}`,
+          'Tendras que usar tu contrasena para iniciar sesion.',
+          [
+            { text: 'Cancelar', style: 'cancel', onPress: () => setBioSwitching(false) },
+            {
+              text: 'Desactivar',
+              style: 'destructive',
+              onPress: async () => {
+                await bio.disable(token);
+                await lock.setLockEnabled(false);
+                setBioSwitching(false);
+              },
+            },
+          ],
+        );
+        return;
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo cambiar la configuracion');
+    }
+    setBioSwitching(false);
+  }
+
+  function handleTimeoutPress() {
+    const buttons: { text: string; onPress?: () => void }[] = TIMEOUT_OPTIONS.map(min => ({
+      text: `${min} min${min > 1 ? 'utos' : 'uto'}`,
+      onPress: () => { lock.setIdleTimeout(min); },
+    }));
+    buttons.push({ text: 'Cancelar' });
+
+    Alert.alert(
+      'Tiempo de bloqueo',
+      'Bloquear la app despues de:',
+      buttons,
+    );
+  }
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Profile header */}
-      <View style={[styles.profileHeader, { paddingTop: insets.top + 24 }]}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user.name.charAt(0).toUpperCase()}
-          </Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile header */}
+        <View style={[styles.profileHeader, { paddingTop: insets.top + 24 }]}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
+          <View style={[styles.rolePill, { backgroundColor: roleColor + '22' }]}>
+            <Text style={[styles.rolePillText, { color: roleColor }]}>{roleLabel}</Text>
+          </View>
         </View>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
-        <View style={[styles.rolePill, { backgroundColor: roleColor + '22' }]}>
-          <Text style={[styles.rolePillText, { color: roleColor }]}>{roleLabel}</Text>
-        </View>
-      </View>
 
-      {/* Menu items */}
-      <View style={styles.menuCard}>
-        <MenuItem
-          icon="document-text-outline"
-          label="Mis Aplicaciones"
-          onPress={() => router.push('/mis-aplicaciones')}
-        />
-        <View style={styles.menuDivider} />
-        <MenuItem
-          icon="chatbubbles-outline"
-          label="Mensajes"
-          onPress={() => router.push('/mensajes')}
-        />
-        <View style={styles.menuDivider} />
-        <MenuItem
-          icon="heart-outline"
-          label="Propiedades guardadas"
-          onPress={() => router.push('/favoritos')}
-        />
-      </View>
-
-      {/* Admin section — only for admin role */}
-      {user.role === 'admin' && (
+        {/* Menu items */}
         <View style={styles.menuCard}>
           <MenuItem
-            icon="shield-checkmark-outline"
-            label="Panel de Admin (Web)"
-            onPress={() => {
-              const { Linking } = require('react-native');
-              Linking.openURL('https://hogaresrd.com/214de22e9b0921be9dd66e26a645be4b4106');
-            }}
+            icon="document-text-outline"
+            label="Mis Aplicaciones"
+            onPress={() => router.push('/mis-aplicaciones')}
+          />
+          <View style={styles.menuDivider} />
+          <MenuItem
+            icon="chatbubbles-outline"
+            label="Mensajes"
+            onPress={() => router.push('/mensajes')}
+          />
+          <View style={styles.menuDivider} />
+          <MenuItem
+            icon="heart-outline"
+            label="Propiedades guardadas"
+            onPress={() => router.push('/favoritos')}
           />
         </View>
-      )}
 
-      {/* Danger zone */}
-      <View style={styles.menuCard}>
-        <MenuItem
-          icon="log-out-outline"
-          label="Cerrar sesión"
-          onPress={confirmLogout}
-          danger
-        />
-      </View>
-    </ScrollView>
+        {/* Security section — only when biometric hardware is available */}
+        {bio.isAvailable && (
+          <View style={styles.menuCard}>
+            <View style={styles.sectionLabel}>
+              <Ionicons name="shield-checkmark-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.sectionLabelText}>SEGURIDAD</Text>
+            </View>
+
+            <ToggleRow
+              icon="finger-print-outline"
+              label={bio.biometricType || 'Biometrico'}
+              value={bio.isEnabled}
+              onValueChange={handleBioToggle}
+              disabled={bioSwitching}
+            />
+            <View style={styles.menuDivider} />
+            <ToggleRow
+              icon="timer-outline"
+              label="Bloqueo automatico"
+              value={lock.lockEnabled}
+              onValueChange={(v) => lock.setLockEnabled(v)}
+              disabled={!bio.isEnabled}
+            />
+            {lock.lockEnabled && bio.isEnabled && (
+              <>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity style={styles.menuItem} onPress={handleTimeoutPress}>
+                  <View style={styles.menuIcon}>
+                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                  </View>
+                  <Text style={styles.menuLabel}>Tiempo de inactividad</Text>
+                  <Text style={styles.timeoutValue}>{lock.idleTimeoutMinutes} min</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Admin section — only for admin role */}
+        {user.role === 'admin' && (
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon="shield-checkmark-outline"
+              label="Panel de Admin (Web)"
+              onPress={() => {
+                const { Linking } = require('react-native');
+                Linking.openURL('https://hogaresrd.com/214de22e9b0921be9dd66e26a645be4b4106');
+              }}
+            />
+          </View>
+        )}
+
+        {/* Danger zone */}
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="log-out-outline"
+            label="Cerrar sesion"
+            onPress={confirmLogout}
+            danger
+          />
+        </View>
+      </ScrollView>
+
+      {/* Biometric enrollment prompt */}
+      <BiometricEnrollSheet
+        visible={showEnroll}
+        onClose={() => {
+          setShowEnroll(false);
+          clearJustLoggedIn();
+        }}
+      />
+    </>
   );
 }
 
@@ -258,6 +393,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadow.sm,
   },
+  sectionLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  sectionLabelText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 1,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -277,4 +426,10 @@ const styles = StyleSheet.create({
   menuLabel:      { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
   menuLabelDanger:{ color: colors.danger },
   menuDivider:    { height: 1, backgroundColor: colors.border, marginLeft: 64 },
+  timeoutValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.accent,
+    marginRight: 4,
+  },
 });

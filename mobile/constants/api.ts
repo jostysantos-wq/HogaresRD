@@ -23,6 +23,11 @@ export const endpoints = {
   logout:   `${API_BASE}/auth/logout`,
   me:       `${API_BASE}/auth/me`,
 
+  // Biometric
+  biometricRegister: `${API_BASE}/auth/biometric/register`,
+  biometricLogin:    `${API_BASE}/auth/biometric/login`,
+  biometricRevoke:   `${API_BASE}/auth/biometric/revoke`,
+
   // User
   profile:      `${API_BASE}/user/profile`,
   applications: `${API_BASE}/applications/my`,

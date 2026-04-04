@@ -180,17 +180,8 @@ struct ProfileTabView: View {
 
     private func loggedInHeader(_ user: User) -> some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [avatarColor(user), avatarColor(user).opacity(0.7)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 56, height: 56)
-                Text(user.initials)
-                    .font(.title3).bold()
-                    .foregroundStyle(.white)
-            }
+            AvatarView(user: user, size: 56, editable: false, color: avatarColor(user))
+                .environmentObject(api)
             VStack(alignment: .leading, spacing: 3) {
                 Text(user.name)
                     .font(.headline)

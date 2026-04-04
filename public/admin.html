@@ -1524,7 +1524,7 @@
       if (!el) return;
       const m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
         .setView([parseFloat(s.lat), parseFloat(s.lng)], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(m);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18 }).addTo(m);
       L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
       adminMaps[s.id] = m;
     });

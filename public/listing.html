@@ -1587,7 +1587,7 @@
       const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
       window._listingMap = L.map('listingMap', { zoomControl: true }).setView([lat, lng], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19
       }).addTo(window._listingMap);
       L.marker([lat, lng]).addTo(window._listingMap).bindPopup(`<strong>${esc(l.title)}</strong><br>${esc(l.address||'')}`, { maxWidth: 220 }).openPopup();
     }

@@ -232,13 +232,13 @@ struct TeamMembersTab: View {
             }
             .padding(.vertical)
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await load(initial: true) }
+        .refreshable { await load(initial: false) }
         .sheet(isPresented: $showDetail) {
             if let broker = selectedBroker {
                 BrokerDetailSheet(broker: broker, onRemove: {
                     showDetail = false
-                    Task { await load() }
+                    Task { await load(initial: false) }
                 })
                 .environmentObject(api)
             }
@@ -257,9 +257,11 @@ struct TeamMembersTab: View {
         }
     }
 
-    private func load() async {
-        loading = true
-        team = try? await api.getTeamBrokers()
+    private func load(initial: Bool = true) async {
+        if initial { loading = true }
+        if let result = try? await api.getTeamBrokers() {
+            team = result
+        }
         loading = false
     }
 
@@ -317,10 +319,10 @@ struct BrokerCard: View {
     private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                // Avatar — tap to open detail
-                Button(action: onTap) {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    // Avatar
                     ZStack {
                         Circle()
                             .fill(purpleColor)
@@ -329,52 +331,53 @@ struct BrokerCard: View {
                             .font(.caption).bold()
                             .foregroundStyle(.white)
                     }
-                }
-                .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(broker.name)
-                        .font(.caption).bold()
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if let jt = broker.jobTitle, !jt.isEmpty {
-                        Text(jt)
-                            .font(.system(size: 10))
-                            .foregroundStyle(purpleColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(broker.name)
+                            .font(.caption).bold()
+                            .foregroundStyle(.primary)
                             .lineLimit(1)
-                    }
-                }
-
-                Spacer()
-
-                // Remove button
-                if let onRemove {
-                    Button {
-                        onRemove()
-                    } label: {
-                        if isRemoving {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                                .frame(width: 24, height: 24)
-                        } else {
-                            Image(systemName: "person.badge.minus")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.red.opacity(0.7))
-                                .frame(width: 24, height: 24)
+                        if let jt = broker.jobTitle, !jt.isEmpty {
+                            Text(jt)
+                                .font(.system(size: 10))
+                                .foregroundStyle(purpleColor)
+                                .lineLimit(1)
                         }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(isRemoving)
-                }
-            }
 
-            // Tap the card body to open detail
-            Button(action: onTap) {
+                    Spacer()
+
+                    // Remove button
+                    if let onRemove {
+                        Button {
+                            onRemove()
+                        } label: {
+                            if isRemoving {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 24, height: 24)
+                            } else {
+                                Image(systemName: "person.badge.minus")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.red.opacity(0.7))
+                                    .frame(width: 24, height: 24)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isRemoving)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Label(broker.email, systemImage: "envelope")
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                    if let phone = broker.phone, !phone.isEmpty {
+                        Label(phone, systemImage: "phone")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
                     if let lic = broker.licenseNumber, !lic.isEmpty {
                         Label("Lic. \(lic)", systemImage: "creditcard")
                             .font(.system(size: 9))
@@ -383,22 +386,30 @@ struct BrokerCard: View {
                 }
 
                 HStack {
-                    Spacer()
                     Text("\(broker.appCount) app\(broker.appCount == 1 ? "" : "s")")
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(purpleColor.opacity(0.1))
                         .foregroundStyle(purpleColor)
                         .clipShape(Capsule())
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Text("Ver detalles")
+                            .font(.system(size: 10))
+                            .foregroundStyle(purpleColor)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(purpleColor)
+                    }
                 }
             }
-            .buttonStyle(.plain)
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .opacity(isRemoving ? 0.5 : 1)
+            .animation(.easeInOut(duration: 0.2), value: isRemoving)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .opacity(isRemoving ? 0.5 : 1)
-        .animation(.easeInOut(duration: 0.2), value: isRemoving)
+        .buttonStyle(.plain)
     }
 }
 
@@ -715,12 +726,12 @@ struct TeamRequestsTab: View {
             }
             .padding(.vertical)
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await load(initial: true) }
+        .refreshable { await load(initial: false) }
     }
 
-    private func load() async {
-        loading = true
+    private func load(initial: Bool = true) async {
+        if initial { loading = true }
         if let team = try? await api.getTeamBrokers() {
             requests = team.pendingRequests
         }
@@ -879,12 +890,12 @@ struct TeamPerformanceTab: View {
             }
             .padding(.vertical)
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await load(initial: true) }
+        .refreshable { await load(initial: false) }
     }
 
-    private func load() async {
-        loading = true
+    private func load(initial: Bool = true) async {
+        if initial { loading = true }
         if let team = try? await api.getTeamBrokers() {
             brokers = team.brokers
         }
@@ -1147,8 +1158,8 @@ struct TeamSecretariesTab: View {
             .padding(.vertical)
         }
         .background(Color(.systemGroupedBackground))
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await load(initial: true) }
+        .refreshable { await load(initial: false) }
         .alert("Remover Secretaria", isPresented: $showRemoveAlert) {
             Button("Cancelar", role: .cancel) { secToRemove = nil }
             Button("Remover", role: .destructive) {
@@ -1163,8 +1174,8 @@ struct TeamSecretariesTab: View {
         }
     }
 
-    private func load() async {
-        loading = true
+    private func load(initial: Bool = true) async {
+        if initial { loading = true }
         secretaries = (try? await api.getSecretaries()) ?? []
         loading = false
     }

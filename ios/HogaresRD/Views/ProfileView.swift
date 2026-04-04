@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var api:   APIService
@@ -22,15 +23,8 @@ struct ProfileView: View {
             // Avatar header
             Section {
                 HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(colors: [Color.rdBlue, Color.rdBlue.opacity(0.7)],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 64, height: 64)
-                        Text(user.initials)
-                            .font(.title2).bold()
-                            .foregroundStyle(.white)
-                    }
+                    AvatarView(user: user, size: 64, editable: true)
+                        .environmentObject(api)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(user.name)
                             .font(.title3).bold()
@@ -377,7 +371,11 @@ struct TwoFactorSettingsView: View {
     @State private var biometricEnabled = false
     @State private var biometricLoading = false
 
+    // Auto-lock
+    @ObservedObject private var lockManager = AppLockManager.shared
+
     private let bio = BiometricService.shared
+    private let timeoutOptions = [1, 2, 5, 10, 15]
 
     var body: some View {
         List {
@@ -437,9 +435,9 @@ struct TwoFactorSettingsView: View {
                                 .font(.title2)
                                 .foregroundStyle(Color.rdBlue)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Iniciar sesión con \(bio.biometricLabel)")
+                                Text("Iniciar sesion con \(bio.biometricLabel)")
                                     .font(.subheadline)
-                                Text("Usa tu rostro o huella para acceder rápidamente")
+                                Text("Usa tu rostro o huella para acceder rapidamente")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -452,6 +450,27 @@ struct TwoFactorSettingsView: View {
                                     set: { newVal in Task { await toggleBiometric(newVal) } }
                                 ))
                                 .labelsHidden()
+                            }
+                        }
+                    }
+
+                    Section("Bloqueo automatico") {
+                        Toggle(isOn: $lockManager.lockEnabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Bloquear al salir")
+                                    .font(.subheadline)
+                                Text("Requiere \(bio.biometricLabel) al volver a la app")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .disabled(!biometricEnabled)
+
+                        if lockManager.lockEnabled {
+                            Picker("Tiempo de inactividad", selection: $lockManager.idleTimeoutMinutes) {
+                                ForEach(timeoutOptions, id: \.self) { min in
+                                    Text("\(min) min\(min > 1 ? "utos" : "uto")").tag(min)
+                                }
                             }
                         }
                     }
@@ -939,43 +958,206 @@ struct DeviceSession: Identifiable {
     ]
 }
 
-// MARK: - Agency Dashboard
+// MARK: - Agency Dashboard (My Portfolio with analytics)
 struct AgencyDashboardView: View {
     @EnvironmentObject var api: APIService
+    @State private var listings: [ListingAnalyticsItem] = []
+    @State private var summary: ListingAnalyticsSummary?
+    @State private var loading = true
+    @State private var selectedListing: ListingAnalyticsItem?
+    @State private var showSubmit = false
 
     var body: some View {
-        List {
-            if let user = api.currentUser, let agencyName = user.agencyName {
-                Section {
-                    let slug = agencyName.lowercased()
-                        .replacingOccurrences(of: " ", with: "-")
-                        .filter { ($0 >= "a" && $0 <= "z") || ($0 >= "0" && $0 <= "9") || $0 == "-" }
-                    NavigationLink {
-                        AgencyPortfolioView(slug: String(slug))
+        ScrollView {
+            VStack(spacing: 16) {
+                // ── Summary stats ─────────────────────────────
+                if let s = summary {
+                    HStack(spacing: 10) {
+                        PortfolioStatPill(icon: "house.fill", value: "\(s.totalListings)", label: "Publicadas", color: .rdBlue)
+                        PortfolioStatPill(icon: "eye.fill", value: formatCompact(s.totalViews), label: "Vistas", color: .rdGreen)
+                        PortfolioStatPill(icon: "heart.fill", value: "\(s.totalFavorites)", label: "Favoritos", color: .rdRed)
+                    }
+                    .padding(.horizontal)
+                }
+
+                // ── Actions ───────────────────────────────────
+                HStack(spacing: 10) {
+                    Button {
+                        showSubmit = true
                     } label: {
-                        Label("Ver mis propiedades publicadas", systemImage: "house.fill")
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.caption)
+                            Text("Publicar propiedad")
+                                .font(.caption).bold()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.rdBlue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+
+                    Link(destination: URL(string: "https://hogaresrd.com/submit")!) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "safari.fill")
+                                .font(.caption)
+                            Text("Publicar en web")
+                                .font(.caption).bold()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(.secondarySystemFill))
+                        .foregroundStyle(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
-            }
+                .padding(.horizontal)
 
-            Section("Publicar") {
-                NavigationLink {
-                    // Reuse SubmitListingView from HomeView
-                    Text("Submit") // placeholder — SubmitListingView is modal-only
-                } label: {
-                    Label("Publicar nueva propiedad", systemImage: "plus.circle.fill")
-                }
-                Link(destination: URL(string: "https://hogaresrd.com/submit")!) {
-                    Label("Publicar en el sitio web", systemImage: "safari.fill")
-                }
-            }
+                Divider().padding(.horizontal)
 
-            Section("Ayuda") {
-                Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
-                    Label("Contactar soporte", systemImage: "message.fill")
+                // ── Listings grid ─────────────────────────────
+                if loading {
+                    VStack(spacing: 14) {
+                        ProgressView()
+                        Text("Cargando propiedades...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+                } else if listings.isEmpty {
+                    VStack(spacing: 14) {
+                        Image(systemName: "house.slash")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color(.tertiaryLabel))
+                        Text("Sin propiedades publicadas")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text("Publica tu primera propiedad para verla aqui con sus estadisticas.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                    .padding(.horizontal, 32)
+                } else {
+                    LazyVStack(spacing: 12) {
+                        ForEach(listings) { listing in
+                            MyListingCard(listing: listing)
+                                .onTapGesture { selectedListing = listing }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
             }
+            .padding(.vertical)
         }
         .navigationTitle("Mi Portafolio")
+        .task { await load(initial: true) }
+        .refreshable { await load(initial: false) }
+        .sheet(item: $selectedListing) { listing in
+            ListingAnalyticsDetailView(listingId: listing.id)
+                .environmentObject(api)
+        }
+        .sheet(isPresented: $showSubmit) {
+            SubmitListingView().environmentObject(api)
+        }
+    }
+
+    private func load(initial: Bool = true) async {
+        if initial { loading = true }
+        do {
+            async let s = api.getListingAnalyticsSummary()
+            async let l = api.getListingAnalyticsList(sort: "views")
+            summary = try await s
+            listings = try await l
+        } catch {
+            print("Portfolio load error: \(error)")
+        }
+        loading = false
+    }
+
+    private func formatCompact(_ n: Int) -> String {
+        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
+        if n >= 1_000 { return String(format: "%.1fk", Double(n) / 1_000) }
+        return "\(n)"
+    }
+}
+
+// MARK: - My Listing Card (portfolio item with stats)
+
+struct MyListingCard: View {
+    let listing: ListingAnalyticsItem
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Image
+            if let img = listing.image, let url = URL(string: img) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        Rectangle().fill(Color(.tertiarySystemFill))
+                            .overlay(Image(systemName: "photo")
+                                .font(.title2)
+                                .foregroundStyle(Color(.quaternaryLabel)))
+                    }
+                }
+                .frame(height: 160)
+                .clipped()
+            }
+
+            VStack(spacing: 10) {
+                // Title & location
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(listing.title)
+                            .font(.subheadline).bold()
+                            .lineLimit(1)
+                        Spacer()
+                        Image(systemName: "chart.bar.xaxis")
+                            .font(.caption)
+                            .foregroundStyle(Color.rdBlue)
+                            .padding(5)
+                            .background(Color.rdBlue.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.circle")
+                            .font(.system(size: 10))
+                        Text("\(listing.city), \(listing.province)")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+
+                // Stats row
+                HStack(spacing: 0) {
+                    StatPill(value: "\(listing.views)", label: "Vistas", color: .rdBlue)
+                    StatPill(value: "\(listing.tours)", label: "Tours", color: .green)
+                    StatPill(value: "\(listing.favorites)", label: "Favs", color: .red)
+                    StatPill(value: "\(listing.conversion)%", label: "Conv.", color: .purple)
+                }
+
+                // Footer
+                HStack {
+                    Text(listing.priceFormatted)
+                        .font(.subheadline).bold()
+                        .foregroundStyle(Color.rdGreen)
+                    Spacer()
+                    Text("\(listing.daysOnMarket)d en mercado")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(12)
+        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
     }
 }

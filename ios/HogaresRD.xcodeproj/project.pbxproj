@@ -19,6 +19,10 @@
 		AA11000000000000000000C4 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B4 /* User.swift */; };
 		AA11000000000000000000C5 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B5 /* APIService.swift */; };
 		B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */; };
+		APPLOCK000000000000000002 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPLOCK000000000000000001 /* AppLockManager.swift */; };
+		LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCKSCR000000000000000001 /* LockScreenView.swift */; };
+		SPLASH0000000000000000B2 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPLASH0000000000000000B1 /* SplashView.swift */; };
+		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
 		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
@@ -60,6 +64,10 @@
 		AA11000000000000000000B4 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B5 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
+		APPLOCK000000000000000001 /* AppLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockManager.swift; sourceTree = "<group>"; };
+		LOCKSCR000000000000000001 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
+		SPLASH0000000000000000B1 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		AVATAR0000000000000000B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
@@ -156,6 +164,7 @@
 			children = (
 				AA11000000000000000000B5 /* APIService.swift */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */,
+				APPLOCK000000000000000001 /* AppLockManager.swift */,
 				AA77000000000000000000B1 /* LocationManager.swift */,
 				A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */,
 			);
@@ -174,6 +183,9 @@
 				AA550000000000000000000000C3 /* BrokerDashboardView.swift */,
 				AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */,
 				AA11000000000000000000BB /* ProfileView.swift */,
+				LOCKSCR000000000000000001 /* LockScreenView.swift */,
+				SPLASH0000000000000000B1 /* SplashView.swift */,
+				AVATAR0000000000000000B1 /* AvatarView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
 					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
@@ -271,6 +283,10 @@
 				AA11000000000000000000C4 /* User.swift in Sources */,
 				AA11000000000000000000C5 /* APIService.swift in Sources */,
 				B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */,
+				APPLOCK000000000000000002 /* AppLockManager.swift in Sources */,
+				LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */,
+				SPLASH0000000000000000B2 /* SplashView.swift in Sources */,
+				AVATAR0000000000000000B2 /* AvatarView.swift in Sources */,
 				A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */,
 				AA11000000000000000000C6 /* HomeView.swift in Sources */,
 				AA11000000000000000000C7 /* BrowseView.swift in Sources */,
