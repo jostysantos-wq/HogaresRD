@@ -767,7 +767,13 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        req.timeoutInterval = 10
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error cargando equipo")
+        }
         return try decoder.decode(TeamResponse.self, from: data)
     }
 
@@ -775,7 +781,13 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/details")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        req.timeoutInterval = 10
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error cargando detalles del agente")
+        }
         return try decoder.decode(BrokerDetail.self, from: data)
     }
 

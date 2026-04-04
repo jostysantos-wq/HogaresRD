@@ -110,7 +110,6 @@ struct TeamMembersTab: View {
     @State private var loading = true
     @State private var searchText = ""
     @State private var selectedBroker: TeamBroker?
-    @State private var showDetail = false
     @State private var copiedLink = false
     @State private var brokerToRemove: TeamBroker?
     @State private var showRemoveAlert = false
@@ -218,7 +217,6 @@ struct TeamMembersTab: View {
                                 isRemoving: removingId == broker.id,
                                 onTap: {
                                     selectedBroker = broker
-                                    showDetail = true
                                 },
                                 onRemove: {
                                     brokerToRemove = broker
@@ -234,14 +232,12 @@ struct TeamMembersTab: View {
         }
         .task { await load(initial: true) }
         .refreshable { await load(initial: false) }
-        .sheet(isPresented: $showDetail) {
-            if let broker = selectedBroker {
-                BrokerDetailSheet(broker: broker, onRemove: {
-                    showDetail = false
-                    Task { await load(initial: false) }
-                })
-                .environmentObject(api)
-            }
+        .sheet(item: $selectedBroker) { broker in
+            BrokerDetailSheet(broker: broker, onRemove: {
+                selectedBroker = nil
+                Task { await load(initial: false) }
+            })
+            .environmentObject(api)
         }
         .alert("Desvincular Agente", isPresented: $showRemoveAlert) {
             Button("Cancelar", role: .cancel) { brokerToRemove = nil }
@@ -425,6 +421,7 @@ struct BrokerDetailSheet: View {
 
     @State private var detail: BrokerDetail?
     @State private var loading = true
+    @State private var errorMsg: String?
     @State private var notes = ""
     @State private var savingNotes = false
     @State private var notesSaved = false
@@ -438,8 +435,30 @@ struct BrokerDetailSheet: View {
         NavigationStack {
             ScrollView {
                 if loading {
-                    ProgressView().padding(.top, 60)
-                } else if let d = detail {
+                    VStack(spacing: 14) {
+                        ProgressView()
+                        Text("Cargando detalles...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 60)
+                } else if let err = errorMsg {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text(err)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await loadDetail() } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(purpleColor)
+                    }
+                    .padding(.top, 40)
+                    .padding(.horizontal, 32)
+                } else {
+                    let d = detail ?? BrokerDetail.fallback(from: broker)
                     VStack(spacing: 20) {
                         // Header
                         HStack(spacing: 14) {
@@ -457,7 +476,7 @@ struct BrokerDetailSheet: View {
                                 Text(d.email)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                if let phone = d.phone {
+                                if let phone = d.phone, !phone.isEmpty {
                                     Text(phone)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -653,8 +672,13 @@ struct BrokerDetailSheet: View {
 
     private func loadDetail() async {
         loading = true
-        detail = try? await api.getBrokerDetail(brokerId: broker.id)
-        notes = detail?.notes ?? ""
+        errorMsg = nil
+        do {
+            detail = try await api.getBrokerDetail(brokerId: broker.id)
+            notes = detail?.notes ?? ""
+        } catch {
+            errorMsg = error.localizedDescription
+        }
         loading = false
     }
 

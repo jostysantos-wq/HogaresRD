@@ -54,6 +54,7 @@ struct ConversationsView: View {
         .navigationTitle("Mis Mensajes")
         .task { await load() }
         .refreshable { await load() }
+        .onAppear { Task { await load() } }
     }
 
     private func load() async {

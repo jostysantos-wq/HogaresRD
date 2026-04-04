@@ -11,6 +11,7 @@ struct User: Codable {
     let twoFAEnabled: Bool?
     let twoFAMethod: String?
     let avatarUrl: String?
+    let refToken: String?
 
     var firstName: String { name.components(separatedBy: " ").first ?? name }
 

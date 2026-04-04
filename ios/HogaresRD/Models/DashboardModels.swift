@@ -485,6 +485,27 @@ struct BrokerDetail: Decodable {
         notes         = try? c.decode(String.self, forKey: .notes)
         recentApps    = (try? c.decode([BrokerApp].self, forKey: .recentApps)) ?? []
     }
+
+    /// Create a basic detail from the TeamBroker card data (used as fallback when API fails)
+    static func fallback(from b: TeamBroker) -> BrokerDetail {
+        BrokerDetail(
+            id: b.id, name: b.name, email: b.email, phone: b.phone,
+            licenseNumber: b.licenseNumber, role: nil, jobTitle: b.jobTitle,
+            joinedAt: b.joinedAt, emailVerified: b.emailVerified,
+            appCount: b.appCount, notes: nil, recentApps: []
+        )
+    }
+
+    init(id: String, name: String, email: String, phone: String?,
+         licenseNumber: String?, role: String?, jobTitle: String?,
+         joinedAt: String?, emailVerified: Bool?, appCount: Int,
+         notes: String?, recentApps: [BrokerApp]) {
+        self.id = id; self.name = name; self.email = email
+        self.phone = phone; self.licenseNumber = licenseNumber
+        self.role = role; self.jobTitle = jobTitle; self.joinedAt = joinedAt
+        self.emailVerified = emailVerified; self.appCount = appCount
+        self.notes = notes; self.recentApps = recentApps
+    }
 }
 
 struct BrokerApp: Decodable, Identifiable {

@@ -1046,8 +1046,12 @@ struct AgencyDashboardView: View {
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(listings) { listing in
-                            MyListingCard(listing: listing)
-                                .onTapGesture { selectedListing = listing }
+                            MyListingCard(
+                                listing: listing,
+                                refToken: api.currentUser?.refToken,
+                                onShare: { url in shareURL(url, title: listing.title, price: listing.priceFormatted) }
+                            )
+                            .onTapGesture { selectedListing = listing }
                         }
                     }
                     .padding(.horizontal)
@@ -1085,12 +1089,25 @@ struct AgencyDashboardView: View {
         if n >= 1_000 { return String(format: "%.1fk", Double(n) / 1_000) }
         return "\(n)"
     }
+
+    private func shareURL(_ url: String, title: String, price: String) {
+        let text = "\(title) – \(price)\n\(url)"
+        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(av, animated: true)
+        }
+    }
 }
 
 // MARK: - My Listing Card (portfolio item with stats)
 
 struct MyListingCard: View {
     let listing: ListingAnalyticsItem
+    var refToken: String?
+    var onShare: ((String) -> Void)?
+
+    @State private var copied = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1152,6 +1169,57 @@ struct MyListingCard: View {
                     Text("\(listing.daysOnMarket)d en mercado")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                }
+
+                // Affiliate link buttons
+                if let ref = refToken, !ref.isEmpty {
+                    HStack(spacing: 8) {
+                        // Copy link
+                        Button {
+                            let url = "https://hogaresrd.com/listing/\(listing.id)?ref=\(ref)"
+                            UIPasteboard.general.string = url
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+                            copied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: copied ? "checkmark" : "link")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text(copied ? "Copiado" : "Copiar enlace")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(copied ? Color.rdGreen.opacity(0.12) : Color.rdBlue.opacity(0.08))
+                            .foregroundStyle(copied ? Color.rdGreen : Color.rdBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(copied ? Color.rdGreen.opacity(0.3) : Color.rdBlue.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        // Share
+                        Button {
+                            let url = "https://hogaresrd.com/listing/\(listing.id)?ref=\(ref)"
+                            onShare?(url)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("Compartir")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
             .padding(12)

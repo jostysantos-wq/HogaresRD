@@ -988,7 +988,15 @@ struct ListingDetailView: View {
     }
 
     private func shareListing(_ l: Listing) {
-        let url = "https://hogaresrd.com/listing/\(l.id)"
+        var url = "https://hogaresrd.com/listing/\(l.id)"
+        // Append affiliate refToken if agent is affiliated to this listing
+        if let ref = APIService.shared.currentUser?.refToken,
+           let userRole = APIService.shared.currentUser?.role,
+           ["agency", "broker", "inmobiliaria"].contains(userRole),
+           let agencies = l.agencies,
+           agencies.contains(where: { $0.userId == APIService.shared.currentUser?.id }) {
+            url += "?ref=\(ref)"
+        }
         let text = "\(l.title) – \(l.priceFormatted)\n\(url)"
         let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
