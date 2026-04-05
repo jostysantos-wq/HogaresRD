@@ -459,7 +459,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
     if (inmobiliariaId) {
       try {
         const inm = store.getUserById(inmobiliariaId.trim());
-        if (inm && inm.role === 'inmobiliaria') {
+        if (inm && (inm.role === 'inmobiliaria' || inm.role === 'constructora')) {
           if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
           inm.join_requests.push({
             id:             `jr_${Date.now()}`,
@@ -590,7 +590,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
     if (inmobiliariaId) {
       try {
         const inm = store.getUserById(inmobiliariaId.trim());
-        if (inm && inm.role === 'inmobiliaria') {
+        if (inm && (inm.role === 'inmobiliaria' || inm.role === 'constructora')) {
           if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
           inm.join_requests.push({
             id:             `jr_${Date.now()}`,
@@ -798,6 +798,53 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
     } catch (notifyErr) {
       console.error('Agent notify scan error:', notifyErr.message);
     }
+  } catch (err) { next(err); }
+});
+
+// ── Register: constructora ────────────────────────────────────────────────
+router.post('/register/constructora', authLimiter, async (req, res, next) => {
+  try {
+    const { name, email, password, companyName, licenseNumber, phone, yearsExperience, projectsCompleted } = req.body;
+
+    if (!name || !email || !password || !companyName || !phone)
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: pwError });
+    if (store.getUserByEmail(email))
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const refToken     = crypto.randomBytes(8).toString('hex');
+
+    const user = {
+      id:              `usr_${Date.now()}`,
+      email:           email.toLowerCase().trim(),
+      passwordHash,
+      name:            name.trim(),
+      phone:           phone.trim(),
+      companyName:     companyName.trim(),
+      licenseNumber:   (licenseNumber || '').trim(),
+      refToken,
+      createdAt:       new Date().toISOString(),
+      lastLoginAt:     null,
+      role:            'constructora',
+      favorites:       [],
+      resetToken:      null,
+      resetTokenExpiry: null,
+      marketingOptIn:  true,
+      subscriptionStatus: 'trial',
+      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      stripeCustomerId:    null,
+      stripeSubscriptionId: null,
+      join_requests:   [],
+      yearsExperience: parseInt(yearsExperience) || 0,
+      projectsCompleted: parseInt(projectsCompleted) || 0,
+    };
+
+    const verifyRawToken = attachVerifyToken(user);
+    store.saveUser(user);
+    sendVerificationEmail(user, verifyRawToken);
+    res.status(201).json({ success: true, user: safeUser(user) });
   } catch (err) { next(err); }
 });
 
@@ -1137,7 +1184,7 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
     let inmobiliaria = null;
     let invite = null;
     for (const u of users) {
-      if (u.role === 'inmobiliaria' && Array.isArray(u.secretary_invites)) {
+      if ((u.role === 'inmobiliaria' || u.role === 'constructora') && Array.isArray(u.secretary_invites)) {
         const inv = u.secretary_invites.find(i => i.token === inviteToken && i.status === 'pending');
         if (inv) { inmobiliaria = u; invite = inv; break; }
       }

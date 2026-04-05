@@ -22,7 +22,7 @@ struct ConversationThreadView: View {
         // Different user → simple check
         if msg.senderId != myId { return false }
         // Same user but different roles → match by role
-        let iAmBroker = ["agency", "broker", "inmobiliaria"].contains(myRole)
+        let iAmBroker = ["agency", "broker", "inmobiliaria", "constructora"].contains(myRole)
         if iAmBroker {
             return msg.senderRole != "client"
         } else {

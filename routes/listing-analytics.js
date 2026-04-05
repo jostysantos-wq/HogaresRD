@@ -8,7 +8,7 @@ const router = express.Router();
 // ── Auth: broker / agency / inmobiliaria only ───────────────────
 router.use(userAuth, (req, res, next) => {
   const user = store.getUserById(req.user.sub);
-  const allowed = ['agency', 'broker', 'inmobiliaria'];
+  const allowed = ['agency', 'broker', 'inmobiliaria', 'constructora'];
   if (!user || !allowed.includes(user.role)) {
     logSec('role_violation', req, {
       userId:       req.user.sub,
@@ -26,7 +26,7 @@ router.use(userAuth, (req, res, next) => {
 /** Get all approved listings belonging to this user (by agency user_id) */
 function getMyListings(user) {
   const allListings = store.getListings(); // already filtered to approved
-  if (user.role === 'inmobiliaria') {
+  if (['inmobiliaria', 'constructora'].includes(user.role)) {
     // Get all brokers under this inmobiliaria
     const teamIds = new Set(
       store.getUsersByInmobiliaria(user.id).map(b => b.id)
@@ -215,7 +215,7 @@ router.get('/listing/:id', (req, res) => {
 
     // Verify ownership
     const user = req.brokerUser;
-    const isOwner = user.role === 'inmobiliaria'
+    const isOwner = ['inmobiliaria', 'constructora'].includes(user.role)
       ? (() => {
           const teamIds = new Set(store.getUsersByInmobiliaria(user.id).map(b => b.id));
           teamIds.add(user.id);

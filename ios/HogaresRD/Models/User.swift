@@ -29,8 +29,9 @@ struct User: Codable {
             .joined()
             .uppercased()
     }
-    var isAgency: Bool { role == "agency" || role == "broker" || role == "inmobiliaria" || role == "secretary" }
-    var isInmobiliaria: Bool { role == "inmobiliaria" }
+    var isAgency: Bool { role == "agency" || role == "broker" || role == "inmobiliaria" || role == "constructora" || role == "secretary" }
+    var isInmobiliaria: Bool { role == "inmobiliaria" || role == "constructora" }
+    var isConstructora: Bool { role == "constructora" }
     var isBroker: Bool { role == "broker" || role == "agency" }
     var isSecretary: Bool { role == "secretary" }
 }

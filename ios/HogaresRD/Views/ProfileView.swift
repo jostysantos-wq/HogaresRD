@@ -31,7 +31,11 @@ struct ProfileView: View {
                         Text(user.email)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        if user.isInmobiliaria {
+                        if user.isConstructora {
+                            Label("Constructora", systemImage: "hammer.fill")
+                                .font(.caption2).bold()
+                                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
+                        } else if user.isInmobiliaria {
                             Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
                                 .font(.caption2).bold()
                                 .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))

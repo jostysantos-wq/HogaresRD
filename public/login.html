@@ -247,7 +247,7 @@
         let next = params.get('next');
         if (!next) {
           // Pro roles go through /subscribe first — it auto-redirects to /broker if already subscribed
-          if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') next = '/subscribe';
+          if (['agency','broker','inmobiliaria','constructora'].includes(role)) next = '/subscribe';
           else next = '/home';
         }
         window.location.href = next;
@@ -367,7 +367,7 @@
         const params = new URLSearchParams(window.location.search);
         let next = params.get('next');
         if (!next) {
-          if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') next = '/subscribe';
+          if (['agency','broker','inmobiliaria','constructora'].includes(role)) next = '/subscribe';
           else next = '/home';
         }
         window.location.href = next;

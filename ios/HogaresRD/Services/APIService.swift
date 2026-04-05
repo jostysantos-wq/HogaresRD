@@ -225,7 +225,31 @@ class APIService: ObservableObject {
         }
         let result = try await login(email: email, password: password)
         if case .success(let user) = result { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesion.")
+    }
+
+    func registerConstructora(name: String, email: String, password: String,
+                              phone: String, companyName: String,
+                              yearsExperience: String) async throws -> User {
+        let url = URL(string: "\(apiBase)/api/auth/register/constructora")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "name": name, "email": email, "password": password,
+            "phone": phone, "companyName": companyName,
+            "yearsExperience": yearsExperience
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al crear la cuenta de constructora")
+        }
+        let loginResult = try await login(email: email, password: password)
+        if case .success(let user) = loginResult { return user }
+        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesion.")
     }
 
     func logout() {

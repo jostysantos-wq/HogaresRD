@@ -1027,7 +1027,7 @@ struct ListingDetailView: View {
         // Append affiliate refToken if agent is affiliated to this listing
         if let ref = APIService.shared.currentUser?.refToken,
            let userRole = APIService.shared.currentUser?.role,
-           ["agency", "broker", "inmobiliaria"].contains(userRole),
+           ["agency", "broker", "inmobiliaria", "constructora"].contains(userRole),
            let agencies = l.agencies,
            agencies.contains(where: { $0.userId == APIService.shared.currentUser?.id }) {
             url += "?ref=\(ref)"

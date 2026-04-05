@@ -5,7 +5,7 @@ const { userAuth } = require('./auth');
 
 const router = express.Router();
 
-const PRO_ROLES = ['agency', 'broker', 'inmobiliaria'];
+const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 
 function uid() { return 'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -15,7 +15,7 @@ function isAffiliated(user, listing) {
   // Direct match
   if (listing.agencies.some(a => a.user_id === user.id)) return true;
   // Inmobiliaria match — check if any of the listing's agents are under this inmobiliaria
-  if (user.role === 'inmobiliaria') {
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') {
     const teamIds = new Set(store.getUsersByInmobiliaria(user.id).map(b => b.id));
     teamIds.add(user.id);
     return listing.agencies.some(a => a.user_id && teamIds.has(a.user_id));

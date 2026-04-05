@@ -12,7 +12,7 @@ struct ChatIAView: View {
 
     private var suggestions: [String] {
         let role = api.currentUser?.role ?? "user"
-        if ["agency", "broker", "inmobiliaria"].contains(role) {
+        if ["agency", "broker", "inmobiliaria", "constructora"].contains(role) {
             return [
                 "Como publico una propiedad?",
                 "Como gestiono mi pipeline de aplicaciones?",

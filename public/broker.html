@@ -2442,7 +2442,7 @@
     const stored = localStorage.getItem('hogaresrd_user');
     if (stored) {
       const userObj = JSON.parse(stored);
-      if (['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
+      if (['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'].includes(userObj.role)) {
         currentUser = userObj;
       }
     }
@@ -2453,7 +2453,7 @@
       const r = await fetch('/api/auth/me', { credentials: 'include' });
       if (r.ok) {
         const userObj = await r.json();
-        if (['agency', 'broker', 'inmobiliaria', 'secretary'].includes(userObj.role)) {
+        if (['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'].includes(userObj.role)) {
           try { localStorage.setItem('hogaresrd_user', JSON.stringify(userObj)); } catch {}
           currentUser = userObj;
         }
@@ -2464,7 +2464,7 @@
   if (!currentUser) { location.href = '/login'; return; }
 
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
-  const isInmobiliariaRole = currentUser.role === 'inmobiliaria';
+  const isInmobiliariaRole = currentUser.role === 'inmobiliaria' || currentUser.role === 'constructora';
   const isSecretaryRole = currentUser.role === 'secretary';
 
   // ── Full user data (affiliation fields, etc.) ───────────────
@@ -2714,7 +2714,7 @@
   };
 
   // ── Role-aware UI setup ────────────────────────────────────
-  const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria', secretary: 'Secretaria' };
+  const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria', constructora: 'Constructora', secretary: 'Secretaria' };
   document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
 
   if (isInmobiliariaRole) {

@@ -1217,7 +1217,7 @@
       _userFavorites = new Set(user.favorites || []);
       const initials  = (user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
       const firstName = (user.name || 'Usuario').split(' ')[0];
-      const isPro     = ['agency','broker','inmobiliaria','secretary'].includes(user.role);
+      const isPro     = ['agency','broker','inmobiliaria','constructora','secretary'].includes(user.role);
       const isInm     = user.role === 'inmobiliaria';
       const dark      = document.documentElement.getAttribute('data-theme') === 'dark';
 

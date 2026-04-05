@@ -8,7 +8,7 @@ const router = express.Router();
 // All endpoints require logged-in broker / agency (compat) / inmobiliaria
 router.use(userAuth, (req, res, next) => {
   const user = store.getUserById(req.user.sub);
-  const allowed = ['agency', 'broker', 'inmobiliaria', 'secretary'];
+  const allowed = ['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'];
   if (!user || !allowed.includes(user.role)) {
     logSec('role_violation', req, {
       userId:       req.user.sub,
@@ -26,7 +26,7 @@ router.use(userAuth, (req, res, next) => {
 //   inmobiliaria → all apps whose broker was affiliated at the time
 //   broker / agency → only their own apps
 function brokerApps(user) {
-  if (user.role === 'inmobiliaria')
+  if (user.role === 'inmobiliaria' || user.role === 'constructora')
     return store.getApplicationsByInmobiliaria(user.id);
   if (user.role === 'secretary')
     return store.getApplicationsByInmobiliaria(user.inmobiliaria_id);

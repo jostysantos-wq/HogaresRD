@@ -245,7 +245,11 @@ struct ProfileTabView: View {
 
     @ViewBuilder
     private func roleBadge(_ user: User) -> some View {
-        if user.isInmobiliaria {
+        if user.isConstructora {
+            Label("Constructora", systemImage: "hammer.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
+        } else if user.isInmobiliaria {
             Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
                 .font(.caption2).bold()
                 .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
@@ -265,6 +269,7 @@ struct ProfileTabView: View {
     }
 
     private func avatarColor(_ user: User) -> Color {
+        if user.isConstructora { return Color(red: 0.7, green: 0.35, blue: 0.04) }
         if user.isInmobiliaria { return Color(red: 0.4, green: 0.1, blue: 0.6) }
         if user.isAgency { return Color.rdBlue }
         return Color.rdGreen

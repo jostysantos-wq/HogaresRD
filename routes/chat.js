@@ -30,6 +30,7 @@ TIPOS DE CUENTA:
 1. CLIENTE (gratis): Busca propiedades, guarda favoritos, aplica a hogares, agenda visitas, chatea con agentes.
 2. AGENTE BROKER (plan mensual): Publica propiedades, gestiona aplicaciones y pipeline de ventas, dashboard con analiticas, chat IA, visitas agendadas, disponibilidad de horario.
 3. INMOBILIARIA (plan mensual): Todo lo del broker + gestionar equipo de agentes, aprobar/rechazar solicitudes de afiliacion, ver rendimiento del equipo, secretarias.
+4. CONSTRUCTORA (plan mensual): Mismas funciones que inmobiliaria pero enfocada en desarrolladores y construccion. Gestion de inventario de unidades, proyectos en construccion, entregas, vinculacion de agentes de venta.
 
 FUNCIONES DE LA APP iOS:
 - Feed: Desliza propiedades como reel (tipo TikTok/Instagram). Desliza izquierda/derecha para ver fotos. Doble tap para guardar. Corazon + contador de guardados.

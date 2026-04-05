@@ -17,6 +17,7 @@ const ROLE_LABELS: Record<string, string> = {
   broker:        'Agente',
   agency:        'Agencia',
   inmobiliaria:  'Inmobiliaria',
+  constructora:  'Constructora',
   admin:         'Administrador',
 };
 
@@ -25,6 +26,7 @@ const ROLE_COLORS: Record<string, string> = {
   broker:        '#7C3AED',
   agency:        '#B45309',
   inmobiliaria:  '#065F46',
+  constructora:  '#B34D04',
   admin:         colors.danger,
 };
 

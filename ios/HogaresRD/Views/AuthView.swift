@@ -7,7 +7,7 @@ struct AuthView: View {
     @Environment(\.dismiss) var dismiss
 
     enum Mode: Identifiable {
-        case login, pickRole, registerUser, registerBroker, registerInmobiliaria
+        case login, pickRole, registerUser, registerBroker, registerInmobiliaria, registerConstructora
         var id: String {
             switch self {
             case .login: return "login"
@@ -15,6 +15,7 @@ struct AuthView: View {
             case .registerUser: return "registerUser"
             case .registerBroker: return "registerBroker"
             case .registerInmobiliaria: return "registerInmobiliaria"
+            case .registerConstructora: return "registerConstructora"
             }
         }
     }
@@ -74,7 +75,8 @@ struct AuthView: View {
                         RolePickerView(
                             onPickUser: { mode = .registerUser },
                             onPickBroker: { mode = .registerBroker },
-                            onPickInmobiliaria: { mode = .registerInmobiliaria }
+                            onPickInmobiliaria: { mode = .registerInmobiliaria },
+                            onPickConstructora: { mode = .registerConstructora }
                         )
 
                     case .registerUser:
@@ -91,6 +93,12 @@ struct AuthView: View {
 
                     case .registerInmobiliaria:
                         InmobiliariaRegisterForm(
+                            onSuccess: { dismiss() },
+                            onBack: { mode = .pickRole }
+                        )
+
+                    case .registerConstructora:
+                        ConstructoraRegisterForm(
                             onSuccess: { dismiss() },
                             onBack: { mode = .pickRole }
                         )
@@ -114,6 +122,7 @@ struct RolePickerView: View {
     var onPickUser: () -> Void
     var onPickBroker: () -> Void
     var onPickInmobiliaria: () -> Void
+    var onPickConstructora: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 14) {
@@ -149,6 +158,16 @@ struct RolePickerView: View {
                 badge: "Plan mensual",
                 color: Color(red: 0.55, green: 0.27, blue: 0.68),
                 action: onPickInmobiliaria
+            )
+
+            // Constructora card
+            RoleCard(
+                icon: "hammer.fill",
+                title: "Constructora",
+                subtitle: "Publica proyectos, gestiona inventario de unidades, vincula agentes y controla entregas.",
+                badge: "Plan mensual",
+                color: Color(red: 0.7, green: 0.35, blue: 0.04),
+                action: onPickConstructora
             )
 
             Text("Podrás cambiar tu tipo de cuenta más adelante desde ajustes.")
@@ -778,6 +797,104 @@ struct InmobiliariaRegisterForm: View {
             _ = try await api.registerInmobiliaria(
                 name: name, email: email, password: password,
                 phone: phone, companyName: companyName, licenseNumber: licenseNumber
+            )
+            onSuccess()
+        } catch { self.error = error.localizedDescription }
+        loading = false
+    }
+}
+
+// MARK: - Constructora Register Form
+
+struct ConstructoraRegisterForm: View {
+    var onSuccess: () -> Void
+    var onBack: () -> Void
+    @EnvironmentObject var api: APIService
+
+    @State private var name = ""
+    @State private var email = ""
+    @State private var phone = ""
+    @State private var companyName = ""
+    @State private var yearsExperience = ""
+    @State private var password = ""
+    @State private var confirm = ""
+    @State private var termsAccepted = false
+    @State private var loading = false
+    @State private var error: String?
+
+    private let orangeColor = Color(red: 0.7, green: 0.35, blue: 0.04)
+
+    var canSubmit: Bool {
+        !name.isEmpty && !email.isEmpty && !phone.isEmpty &&
+        !companyName.isEmpty && !password.isEmpty &&
+        PasswordStrength.isValid(password) && password == confirm && termsAccepted
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            BackToRoleButton(action: onBack)
+
+            RoleBadge(icon: "hammer.fill", title: "Constructora", color: orangeColor)
+
+            Text("Registra tu empresa constructora para publicar proyectos, gestionar inventario de unidades y vincular agentes de venta.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            SectionDivider(title: "Datos de la Empresa")
+
+            FloatingField(label: "Nombre de la constructora *", text: $companyName)
+            FloatingField(label: "Nombre del responsable *", text: $name)
+            FloatingField(label: "Correo electronico *", text: $email)
+                .keyboardType(.emailAddress)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            FloatingField(label: "Telefono *", text: $phone)
+                .keyboardType(.phonePad)
+            FloatingField(label: "Anos de experiencia", text: $yearsExperience)
+                .keyboardType(.numberPad)
+
+            SectionDivider(title: "Contrasena")
+
+            FloatingField(label: "Contrasena *", text: $password, isSecure: true)
+            PasswordStrengthView(password: password)
+            FloatingField(label: "Confirmar contrasena *", text: $confirm, isSecure: true)
+
+            Toggle(isOn: $termsAccepted) {
+                Text("He leido y acepto los ")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                + Text("Terminos y Condiciones")
+                    .font(.caption)
+                    .foregroundStyle(Color.rdBlue)
+                    .underline()
+                + Text(" de HogaresRD para constructoras.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .tint(Color.rdBlue)
+            .padding(.horizontal, 4)
+
+            if let err = error { ErrorBanner(message: err) }
+
+            ActionButton(label: "Registrar Constructora", color: orangeColor,
+                         loading: loading, disabled: !canSubmit) {
+                Task { await registerConstructora() }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 32)
+    }
+
+    private func registerConstructora() async {
+        guard password == confirm else { error = "Las contrasenas no coinciden."; return }
+        guard PasswordStrength.isValid(password) else { error = "La contrasena no cumple los requisitos."; return }
+        loading = true; error = nil
+        do {
+            _ = try await api.registerConstructora(
+                name: name, email: email, password: password,
+                phone: phone, companyName: companyName,
+                yearsExperience: yearsExperience
             )
             onSuccess()
         } catch { self.error = error.localizedDescription }

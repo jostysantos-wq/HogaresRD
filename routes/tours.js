@@ -8,7 +8,7 @@ const { notify: pushNotify } = require('./push');
 const uid = () => 'tour_' + crypto.randomBytes(8).toString('hex');
 const slotUid = () => 'avail_' + crypto.randomBytes(8).toString('hex');
 
-const BROKER_ROLES = ['agency', 'broker', 'inmobiliaria', 'secretary'];
+const BROKER_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers

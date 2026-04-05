@@ -29,8 +29,8 @@ function brokerAuth(req, res, next) {
 
 function inmobiliariaAuth(req, res, next) {
   const user = store.getUserById(req.user.sub);
-  if (!user || user.role !== 'inmobiliaria')
-    return res.status(403).json({ error: 'Solo inmobiliarias pueden realizar esta acción' });
+  if (!user || (user.role !== 'inmobiliaria' && user.role !== 'constructora'))
+    return res.status(403).json({ error: 'Solo inmobiliarias o constructoras pueden realizar esta accion' });
   req.inmobiliariaUser = user;
   next();
 }

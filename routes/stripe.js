@@ -42,7 +42,7 @@ function requireStripe(req, res, next) {
 // ── Price ID by role ──────────────────────────────────────────────────────
 function priceForRole(role) {
   if (role === 'agency' || role === 'broker') return BROKER_PRICE_ID;
-  if (role === 'inmobiliaria')                return INM_PRICE_ID;
+  if (role === 'inmobiliaria' || role === 'constructora') return INM_PRICE_ID;
   return null;
 }
 
@@ -117,7 +117,7 @@ router.get('/status', requireAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  const isPro = ['agency', 'broker', 'inmobiliaria'].includes(user.role);
+  const isPro = ['agency', 'broker', 'inmobiliaria', 'constructora'].includes(user.role);
   if (!isPro) return res.json({ required: false });
 
   const status      = user.subscriptionStatus || 'none';
@@ -132,7 +132,7 @@ router.get('/status', requireAuth, (req, res) => {
     status:       trialExpired ? 'expired' : status,
     trialEndsAt,
     isActive:     isActive && !trialExpired,
-    planName:     user.role === 'inmobiliaria' ? 'Inmobiliaria ($25/mes)' : 'Agente ($10/mes)',
+    planName:     (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
     hasPaymentMethod: !!user.stripeCustomerId,
   });
 });

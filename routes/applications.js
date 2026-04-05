@@ -432,7 +432,7 @@ router.get('/', userAuth, (req, res) => {
   let apps;
   if (user.role === 'admin') {
     apps = store.getApplications();
-  } else if (user.role === 'inmobiliaria') {
+  } else if (user.role === 'inmobiliaria' || user.role === 'constructora') {
     apps = store.getApplicationsByInmobiliaria(user.id);
   } else if (user.role === 'secretary') {
     apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
@@ -470,7 +470,7 @@ router.get('/:id', userAuth, (req, res) => {
 
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
-  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
@@ -491,7 +491,7 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
-  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const admin = isAdmin(req) || user?.role === 'admin';
   if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
@@ -1085,7 +1085,7 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
   const user = store.getUserById(req.user.sub);
-  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isBrokerOwner  = app.broker.user_id === req.user.sub;
   const admin          = isAdmin(req) || user?.role === 'admin';
@@ -1199,7 +1199,7 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
   const user = store.getUserById(req.user.sub);
-  const isInmobiliaria = user?.role === 'inmobiliaria' && app.inmobiliaria_id === user.id;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isBrokerOwner  = app.broker.user_id === req.user.sub;
   const admin          = isAdmin(req) || user?.role === 'admin';

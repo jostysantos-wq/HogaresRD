@@ -18,7 +18,7 @@ function _sendMail(to, subject, html) {
   }).catch(err => console.error('[conv-mail]', err.message));
 }
 
-const PRO_ROLES = ['agency', 'broker', 'inmobiliaria'];
+const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 
 // ── Auth helpers ──────────────────────────────────────────────────────────
 function getUser(req) { return req.user || null; }
