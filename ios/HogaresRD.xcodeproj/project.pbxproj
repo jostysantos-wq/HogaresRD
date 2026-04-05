@@ -28,6 +28,7 @@
 		SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000B1 /* SavedSearch.swift */; };
 		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
 		ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCAMPS00000000000000B1 /* AdCampaignsView.swift */; };
+		LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */; };
 		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
@@ -78,6 +79,7 @@
 		SSEARCH000000000000000B1 /* SavedSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearch.swift; sourceTree = "<group>"; };
 		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
 		ADCAMPS00000000000000B1 /* AdCampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCampaignsView.swift; sourceTree = "<group>"; };
+		LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchCompleter.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
@@ -178,6 +180,7 @@
 				APPLOCK000000000000000001 /* AppLockManager.swift */,
 				AA77000000000000000000B1 /* LocationManager.swift */,
 				A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */,
+				LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -307,6 +310,7 @@
 				SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */,
 				SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */,
 				ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */,
+				LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */,
 				A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */,
 				AA11000000000000000000C6 /* HomeView.swift in Sources */,
 				AA11000000000000000000C7 /* BrowseView.swift in Sources */,

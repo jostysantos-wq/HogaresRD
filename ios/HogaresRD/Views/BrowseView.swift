@@ -1408,14 +1408,17 @@ struct SearchPageView: View {
     @State private var query: String = ""
     @FocusState private var fieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var completer = LocationSearchCompleter()
+    @State private var resolvingMapItem = false
 
-    private var suggestions: [LocationSuggestion] {
+    /// Local (static) matches from our curated DR list — fast, instant.
+    private var localSuggestions: [LocationSuggestion] {
         let q = query.lowercased().trimmingCharacters(in: .whitespaces)
         if q.isEmpty { return [] }
         return drLocationData.filter {
             $0.name.lowercased().contains(q) ||
             $0.province.lowercased().contains(q)
-        }.prefix(15).map { $0 }
+        }.prefix(6).map { $0 }
     }
 
     private var popularLocations: [LocationSuggestion] {
@@ -1448,6 +1451,41 @@ struct SearchPageView: View {
         onSelect()
     }
 
+    /// Resolve an Apple-Maps suggestion to coordinates + center the map.
+    /// Uses MKLocalSearch, same engine Apple Maps uses.
+    private func selectCompletion(_ completion: MKLocalSearchCompletion) {
+        resolvingMapItem = true
+        Task {
+            guard let item = await completer.resolve(completion) else {
+                await MainActor.run { resolvingMapItem = false }
+                return
+            }
+            let coord = item.placemark.coordinate
+            // Choose a zoom that roughly matches the result granularity:
+            // specific pin → tight (2km), town/sector → medium (5km),
+            // city/province → wide (15km).
+            let zoom: Double
+            let subtitle = completion.subtitle.lowercased()
+            if completion.title.count < 25 && !subtitle.contains("provincia") {
+                zoom = 5_000
+            } else if subtitle.isEmpty {
+                zoom = 2_500
+            } else {
+                zoom = 12_000
+            }
+            await MainActor.run {
+                searchText = completion.title
+                filterProvince = nil // Apple Maps results may cross provinces
+                targetZoom = zoom
+                targetCoordinate = coord
+                searchCenter = coord
+                searchRadius = Self.radiusForZoom(zoom)
+                resolvingMapItem = false
+                onSelect()
+            }
+        }
+    }
+
     private func clearSearch() {
         searchText = ""
         filterProvince = nil
@@ -1468,9 +1506,14 @@ struct SearchPageView: View {
                         .focused($fieldFocused)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.words)
+                        .onChange(of: query) { _, newVal in
+                            completer.updateQuery(newVal)
+                        }
                         .onSubmit {
-                            if let first = suggestions.first {
+                            if let first = localSuggestions.first {
                                 select(first)
+                            } else if let first = completer.results.first {
+                                selectCompletion(first)
                             }
                         }
                     if !query.isEmpty {
@@ -1492,20 +1535,33 @@ struct SearchPageView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         if !query.isEmpty {
-                            // Search results
-                            if suggestions.isEmpty {
+                            // 1. Local curated matches (fast, instant)
+                            if !localSuggestions.isEmpty {
+                                ForEach(localSuggestions) { s in
+                                    suggestionRow(s)
+                                }
+                                Divider().padding(.leading, 68).padding(.top, 4)
+                            }
+                            // 2. Apple Maps live results (same engine as Apple Maps —
+                            //    finds any town/barrio/POI in DR, e.g. "Lucerna")
+                            if completer.isSearching && completer.results.isEmpty {
+                                HStack(spacing: 8) {
+                                    ProgressView().scaleEffect(0.7)
+                                    Text("Buscando en Apple Maps…")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 20)
+                            } else if completer.results.isEmpty && localSuggestions.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "magnifyingglass")
-                                        .font(.title)
-                                        .foregroundStyle(.tertiary)
+                                        .font(.title).foregroundStyle(.tertiary)
                                     Text("No se encontraron resultados")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
+                                        .font(.subheadline).foregroundStyle(.secondary)
                                 }
                                 .padding(.top, 60)
                             } else {
-                                ForEach(suggestions) { s in
-                                    suggestionRow(s)
+                                ForEach(completer.results, id: \.self) { r in
+                                    appleSuggestionRow(r)
                                 }
                             }
                         } else {
@@ -1580,7 +1636,46 @@ struct SearchPageView: View {
         }
     }
 
-    // MARK: - Row
+    // MARK: - Rows
+
+    /// Row for an Apple Maps completion result.
+    private func appleSuggestionRow(_ r: MKLocalSearchCompletion) -> some View {
+        Button {
+            selectCompletion(r)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.rdGreen.opacity(0.1)).frame(width: 40, height: 40)
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.rdGreen)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(r.title)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if !r.subtitle.isEmpty {
+                        Text(r.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                if resolvingMapItem {
+                    ProgressView().scaleEffect(0.6)
+                } else {
+                    Image(systemName: "arrow.up.right.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+    }
 
     private func suggestionRow(_ suggestion: LocationSuggestion) -> some View {
         Button {
