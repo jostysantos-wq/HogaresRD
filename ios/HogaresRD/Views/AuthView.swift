@@ -26,6 +26,20 @@ struct AuthView: View {
         _mode = State(initialValue: initialMode)
     }
 
+    @ViewBuilder
+    private func modeTab(title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline).bold()
+                .foregroundStyle(isActive ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isActive ? Color.rdBlue : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -52,13 +66,20 @@ struct AuthView: View {
                         .padding(.vertical, 36)
                     }
 
-                    // Mode picker (login / register toggle)
+                    // Custom mode toggle — replaces segmented Picker because
+                    // SwiftUI's Picker was briefly flipping to .pickRole on
+                    // first render, opening the wrong tab.
                     if mode == .login || mode == .pickRole {
-                        Picker("Modo", selection: $mode) {
-                            Text("Iniciar sesión").tag(Mode.login)
-                            Text("Crear cuenta").tag(Mode.pickRole)
+                        HStack(spacing: 0) {
+                            modeTab(title: "Iniciar sesión", isActive: mode == .login) {
+                                withAnimation(.easeInOut(duration: 0.18)) { mode = .login }
+                            }
+                            modeTab(title: "Crear cuenta", isActive: mode == .pickRole) {
+                                withAnimation(.easeInOut(duration: 0.18)) { mode = .pickRole }
+                            }
                         }
-                        .pickerStyle(.segmented)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                         .padding()
                     }
 
@@ -246,6 +267,7 @@ struct LoginForm: View {
     @State private var twoFACode = ""
     @State private var twoFALoading = false
     @State private var twoFAError: String?
+    @State private var showForgot = false
 
     private let bio = BiometricService.shared
 
@@ -264,6 +286,17 @@ struct LoginForm: View {
                              disabled: email.isEmpty || password.isEmpty) {
                     Task { await login() }
                 }
+
+                // Forgot password link
+                Button {
+                    showForgot = true
+                } label: {
+                    Text("¿Olvidaste tu contraseña?")
+                        .font(.caption).bold()
+                        .foregroundStyle(Color.rdBlue)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
 
                 // Biometric login button
                 if bio.isAvailable, let savedEmail = bio.savedBiometricEmail(),
@@ -336,6 +369,9 @@ struct LoginForm: View {
         }
         .padding(.horizontal)
         .padding(.bottom, 32)
+        .sheet(isPresented: $showForgot) {
+            ForgotPasswordSheet(prefillEmail: email).environmentObject(api)
+        }
     }
 
     private func login() async {
@@ -396,6 +432,126 @@ struct LoginForm: View {
         } catch {
             twoFAError = error.localizedDescription
         }
+    }
+}
+
+// MARK: - Forgot Password Sheet
+
+struct ForgotPasswordSheet: View {
+    let prefillEmail: String
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+    @State private var email: String = ""
+    @State private var loading = false
+    @State private var sent = false
+    @State private var errorMsg: String?
+
+    init(prefillEmail: String) {
+        self.prefillEmail = prefillEmail
+        _email = State(initialValue: prefillEmail)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle().fill(Color.rdBlue.opacity(0.1))
+                            .frame(width: 72, height: 72)
+                        Image(systemName: sent ? "envelope.badge.fill" : "key.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                    .padding(.top, 24)
+
+                    if sent {
+                        Text("Revisa tu correo")
+                            .font(.title2).bold()
+                        Text("Si ese correo está registrado, te enviamos un enlace para restablecer tu contraseña. El enlace expira en 1 hora.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Entendido")
+                                .font(.subheadline).bold()
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.rdBlue)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 8)
+                    } else {
+                        Text("Restablecer contraseña")
+                            .font(.title2).bold()
+                        Text("Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+
+                        FloatingField(label: "Correo electrónico", text: $email)
+                            .keyboardType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+
+                        if let err = errorMsg {
+                            HStack {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(Color.rdRed)
+                                Text(err).font(.caption).foregroundStyle(Color.rdRed)
+                            }
+                        }
+
+                        Button {
+                            Task { await submit() }
+                        } label: {
+                            HStack {
+                                if loading { ProgressView().tint(.white) }
+                                Text(loading ? "Enviando…" : "Enviar enlace")
+                                    .font(.subheadline).bold()
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(email.isEmpty || loading ? Color(.systemGray4) : Color.rdBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(email.isEmpty || loading)
+                        .padding(.top, 8)
+                    }
+
+                    Spacer(minLength: 16)
+                }
+                .padding(.horizontal, 24)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    @MainActor
+    private func submit() async {
+        loading = true
+        errorMsg = nil
+        do {
+            try await api.forgotPassword(email: email.trimmingCharacters(in: .whitespaces))
+            sent = true
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        loading = false
     }
 }
 
@@ -1015,11 +1171,10 @@ struct FloatingField: View {
     var isSecure = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color(.tertiaryLabel))
-                .kerning(0.5)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color(.label))
             Group {
                 if isSecure {
                     SecureField("", text: $text)
@@ -1027,6 +1182,7 @@ struct FloatingField: View {
                     TextField("", text: $text)
                 }
             }
+            .font(.system(size: 15))
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(Color(.secondarySystemBackground))

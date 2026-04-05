@@ -114,6 +114,21 @@ class APIService: ObservableObject {
 
     // MARK: - Auth
 
+    /// Request a password-reset email. Server always returns 200 regardless
+    /// of whether the email exists (to avoid leaking which addresses are
+    /// registered). So this method is fire-and-forget from the user's POV.
+    func forgotPassword(email: String) async throws {
+        let url = URL(string: "\(apiBase)/api/auth/forgot-password")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(["email": email])
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 500 {
+            throw APIError.server("No se pudo enviar el correo. Intenta más tarde.")
+        }
+    }
+
     func login(email: String, password: String) async throws -> LoginResult {
         let url = URL(string: "\(apiBase)/api/auth/login")!
         var req = URLRequest(url: url)
