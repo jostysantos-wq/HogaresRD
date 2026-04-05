@@ -913,6 +913,88 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Inventory
+
+    struct InventoryResponse: Decodable {
+        let inventory: [UnitInventoryItem]
+        let summary: InventorySummary
+    }
+    struct InventorySummary: Decodable {
+        let total: Int
+        let available: Int
+        let reserved: Int
+        let sold: Int
+    }
+
+    func getInventory(listingId: String) async throws -> InventoryResponse {
+        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try decoder.decode(InventoryResponse.self, from: data)
+    }
+
+    func addInventoryUnit(listingId: String, label: String, type: String, floor: String = "") async throws -> UnitInventoryItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["label": label, "type": type, "floor": floor])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error agregando unidad")
+        }
+        let result = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let unitData = try JSONSerialization.data(withJSONObject: result?["unit"] ?? [:])
+        return try decoder.decode(UnitInventoryItem.self, from: unitData)
+    }
+
+    func deleteInventoryUnit(listingId: String, unitId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error eliminando unidad")
+        }
+    }
+
+    func assignUnit(listingId: String, unitId: String, applicationId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)/assign")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["applicationId": applicationId])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error asignando unidad")
+        }
+    }
+
+    func releaseUnit(listingId: String, unitId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)/release")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error liberando unidad")
+        }
+    }
+
     // MARK: - Favorites
 
     func addFavorite(listingId: String) async throws {

@@ -102,6 +102,7 @@ db.exec(`
     blueprints         TEXT DEFAULT '[]',
     tags               TEXT DEFAULT '[]',
     unit_types         TEXT DEFAULT '[]',
+    unit_inventory     TEXT DEFAULT '[]',
     construction_company TEXT,
     _extra             TEXT DEFAULT '{}'
   );
@@ -141,6 +142,7 @@ db.exec(`
     documents_uploaded  TEXT DEFAULT '[]',
     tours               TEXT DEFAULT '[]',
     timeline_events     TEXT DEFAULT '[]',
+    assigned_unit       TEXT,
     _extra              TEXT DEFAULT '{}'
   );
   CREATE INDEX IF NOT EXISTS idx_applications_broker_id ON applications(broker_id);
@@ -321,17 +323,17 @@ const USER_KNOWN_COLS    = [
   'favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile',
 ];
 
-const SUBMISSION_JSON_COLS  = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'construction_company', '_extra'];
+const SUBMISSION_JSON_COLS  = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'unit_inventory', 'construction_company', '_extra'];
 const SUBMISSION_KNOWN_COLS = [
   'id', 'title', 'type', 'condition', 'description', 'price', 'area_const', 'area_land',
   'bedrooms', 'bathrooms', 'parking', 'province', 'city', 'sector', 'address', 'lat', 'lng',
   'name', 'email', 'phone', 'role', 'status', 'submittedAt', 'approvedAt', 'rejectedAt',
   'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'project_stage',
   'delivery_date', 'submission_type', 'claim_listing_id',
-  'amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'construction_company',
+  'amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'unit_inventory', 'construction_company',
 ];
 
-const APP_JSON_COLS  = ['client', 'broker', 'payment', 'payment_plan', 'documents_requested', 'documents_uploaded', 'tours', 'timeline_events', '_extra'];
+const APP_JSON_COLS  = ['client', 'broker', 'payment', 'payment_plan', 'documents_requested', 'documents_uploaded', 'tours', 'timeline_events', 'assigned_unit', '_extra'];
 const APP_BOOL_COLS  = ['pre_approved'];
 const APP_KNOWN_COLS = [
   'id', 'listing_id', 'listing_title', 'listing_price', 'listing_type', 'status',
@@ -339,7 +341,7 @@ const APP_KNOWN_COLS = [
   'pre_approved', 'budget', 'timeline', 'intent', 'contact_method', 'notes',
   'broker_id', 'client_name', 'client_email', 'client_phone',
   'client', 'broker', 'payment', 'payment_plan', 'documents_requested',
-  'documents_uploaded', 'tours', 'timeline_events',
+  'documents_uploaded', 'tours', 'timeline_events', 'assigned_unit',
 ];
 
 const AVAIL_JSON_COLS  = ['_extra'];
@@ -417,7 +419,7 @@ function hydrateSubmission(row) {
   const obj = { ...row };
   for (const col of SUBMISSION_JSON_COLS) {
     if (col === '_extra') continue;
-    const fallback = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types'].includes(col) ? [] : null;
+    const fallback = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'unit_inventory'].includes(col) ? [] : null;
     obj[col] = _jsonParse(obj[col], fallback);
   }
   const extra = _jsonParse(obj._extra, {});

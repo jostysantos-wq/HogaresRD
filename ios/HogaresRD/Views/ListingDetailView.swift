@@ -9,7 +9,6 @@ struct ListingDetailView: View {
     @State private var loading         = true
     @State private var imageIndex      = 0
     @State private var blueprintIndex  = 0
-    @State private var showContact      = false
     @State private var showApply        = false
     @State private var showContactAgent = false
     @State private var showFullGallery  = false
@@ -34,9 +33,6 @@ struct ListingDetailView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(isPresented: $showContact) {
-            if let l = listing { ContactSheet(listing: l) }
-        }
         .sheet(isPresented: $showApply) {
             if let l = listing { LeadApplicationView(listing: l) }
         }
@@ -213,6 +209,45 @@ struct ListingDetailView: View {
                             unitTypesSection(units)
                         }
 
+                        // ── Live Inventory ─────────────────────────
+                        if let inv = l.unitInventory, !inv.isEmpty {
+                            let availableUnits = Array(inv.filter { $0.status == "available" }.prefix(6))
+                            let totalAvailable = inv.filter { $0.status == "available" }.count
+
+                            sectionBlock("Disponibilidad en Tiempo Real") {
+                                InventoryBadgeView(units: inv)
+
+                                VStack(spacing: 6) {
+                                    ForEach(availableUnits) { unit in
+                                        HStack(spacing: 8) {
+                                            Circle().fill(Color.rdGreen).frame(width: 8, height: 8)
+                                            Text(unit.label)
+                                                .font(.caption).bold()
+                                            if let type = unit.type, !type.isEmpty {
+                                                Text(type)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Text("Disponible")
+                                                .font(.caption2)
+                                                .foregroundStyle(Color.rdGreen)
+                                        }
+                                    }
+                                    if totalAvailable > 6 {
+                                        Text("+ \(totalAvailable - 6) unidades mas disponibles")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding(.top, 4)
+                                    }
+                                }
+                                .padding(10)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                        }
+
                         // ── Blueprints ─────────────────────────────
                         if let bps = l.blueprints, !bps.isEmpty {
                             blueprintsSection(bps, l: l)
@@ -383,8 +418,8 @@ struct ListingDetailView: View {
                 }
             }
 
-            Button { showContact = true } label: {
-                Label("Consulta", systemImage: "phone.fill")
+            Button { showContactAgent = true } label: {
+                Label("Consultar", systemImage: "bubble.left.fill")
                     .font(.caption).bold()
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity)
@@ -393,8 +428,8 @@ struct ListingDetailView: View {
                     .foregroundStyle(Color.rdBlue)
             }
 
-            Button { showContactAgent = true } label: {
-                Label("Chat", systemImage: "bubble.left.fill")
+            Button { showApply = true } label: {
+                Label("Aplicar", systemImage: "doc.text.fill")
                     .font(.caption).bold()
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity)

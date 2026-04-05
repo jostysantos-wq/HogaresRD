@@ -35,10 +35,11 @@ struct Listing: Decodable, Identifiable, Equatable {
     let tags:        [String]?
     let agencies:    [Agency]?
     let status:      String?
-    let views:         Int?
-    let favoriteCount: Int?
-    let submittedAt:   String?
-    let approvedAt:    String?
+    let views:          Int?
+    let favoriteCount:  Int?
+    let unitInventory:  [UnitInventoryItem]?
+    let submittedAt:    String?
+    let approvedAt:     String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, type, condition, description, price,
@@ -48,6 +49,7 @@ struct Listing: Decodable, Identifiable, Equatable {
              project_stage, delivery_date, floors, units_available,
              units_total, unit_types, construction_company, blueprints,
              lat, lng
+        case unitInventory = "unit_inventory"
     }
 
     init(from decoder: Decoder) throws {
@@ -72,6 +74,7 @@ struct Listing: Decodable, Identifiable, Equatable {
         approvedAt           = try? c.decode(String.self, forKey: .approvedAt)
         views                = try? c.decode(Int.self,    forKey: .views)
         favoriteCount        = try? c.decode(Int.self,    forKey: .favoriteCount)
+        unitInventory        = (try? c.decode([Safe<UnitInventoryItem>].self, forKey: .unitInventory))?.compactMap { $0.value } ?? []
         floors               = try? c.decode(Int.self,    forKey: .floors)
         units_available      = try? c.decode(Int.self,    forKey: .units_available)
         units_total          = try? c.decode(Int.self,    forKey: .units_total)
@@ -155,6 +158,35 @@ struct ListingUnit: Codable {
         let f = NumberFormatter()
         f.numberStyle = .currency; f.currencyCode = "USD"; f.maximumFractionDigits = 0
         return f.string(from: NSNumber(value: n))
+    }
+}
+
+struct UnitInventoryItem: Codable, Identifiable {
+    let id:            String
+    let label:         String
+    let type:          String?
+    let floor:         String?
+    let notes:         String?
+    let status:        String   // "available", "reserved", "sold"
+    let applicationId: String?
+    let clientName:    String?
+
+    var statusColor: String {
+        switch status {
+        case "available": return "green"
+        case "reserved":  return "orange"
+        case "sold":      return "red"
+        default:          return "gray"
+        }
+    }
+
+    var statusLabel: String {
+        switch status {
+        case "available": return "Disponible"
+        case "reserved":  return "Reservada"
+        case "sold":      return "Vendida"
+        default:          return status
+        }
     }
 }
 

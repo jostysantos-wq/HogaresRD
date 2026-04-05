@@ -518,6 +518,34 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   store.saveApplication(app);
 
+  // ── Auto-update unit inventory on status change ────────────────
+  if (app.assigned_unit?.unitId && app.listing_id) {
+    try {
+      const listing = store.getListingById(app.listing_id);
+      if (listing && Array.isArray(listing.unit_inventory)) {
+        const unit = listing.unit_inventory.find(u => u.id === app.assigned_unit.unitId);
+        if (unit) {
+          if (status === 'completado') {
+            unit.status = 'sold';
+          } else if (status === 'rechazado') {
+            unit.status = 'available';
+            unit.applicationId = null;
+            unit.clientName = null;
+            // Clear assigned unit from application
+            app.assigned_unit = null;
+            store.saveApplication(app);
+          } else if (['reservado', 'aprobado'].includes(status)) {
+            unit.status = 'reserved';
+            unit.applicationId = app.id;
+            unit.clientName = app.client_name || app.client?.name || '';
+          }
+          listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
+          store.saveListing(listing);
+        }
+      }
+    } catch (e) { console.error('[inventory] Auto-update error:', e.message); }
+  }
+
   // Notify client via email
   if (app.client.email) {
     const email = statusEmail(app, oldStatus, status, reason);

@@ -965,6 +965,7 @@ struct AgencyDashboardView: View {
     @State private var summary: ListingAnalyticsSummary?
     @State private var loading = true
     @State private var selectedListing: ListingAnalyticsItem?
+    @State private var inventoryListing: ListingAnalyticsItem?
     @State private var showSubmit = false
 
     var body: some View {
@@ -1049,7 +1050,8 @@ struct AgencyDashboardView: View {
                             MyListingCard(
                                 listing: listing,
                                 refToken: api.currentUser?.refToken,
-                                onShare: { url in shareURL(url, title: listing.title, price: listing.priceFormatted) }
+                                onShare: { url in shareURL(url, title: listing.title, price: listing.priceFormatted) },
+                                onInventory: { inventoryListing = listing }
                             )
                             .onTapGesture { selectedListing = listing }
                         }
@@ -1068,6 +1070,12 @@ struct AgencyDashboardView: View {
         }
         .sheet(isPresented: $showSubmit) {
             SubmitListingView().environmentObject(api)
+        }
+        .sheet(item: $inventoryListing) { listing in
+            NavigationStack {
+                InventoryManagementView(listingId: listing.id, listingTitle: listing.title)
+                    .environmentObject(api)
+            }
         }
     }
 
@@ -1106,6 +1114,7 @@ struct MyListingCard: View {
     let listing: ListingAnalyticsItem
     var refToken: String?
     var onShare: ((String) -> Void)?
+    var onInventory: (() -> Void)?
 
     @State private var copied = false
 
@@ -1166,7 +1175,25 @@ struct MyListingCard: View {
                         .font(.subheadline).bold()
                         .foregroundStyle(Color.rdGreen)
                     Spacer()
-                    Text("\(listing.daysOnMarket)d en mercado")
+                    // Inventory button
+                    if let onInventory {
+                        Button {
+                            onInventory()
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "building.2")
+                                    .font(.system(size: 9))
+                                Text("Inventario")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .foregroundStyle(Color.rdBlue)
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(Color.rdBlue.opacity(0.08))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Text("\(listing.daysOnMarket)d")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
