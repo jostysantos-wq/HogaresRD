@@ -365,7 +365,13 @@ struct ConversationThreadView: View {
     }
 
     private func markRead() async {
-        try? await api.markConversationRead(id: conversation.id)
+        // Detach so the request survives view dismissal. Otherwise swiping
+        // back too quickly cancels the request and the badge stays set.
+        let id = conversation.id
+        let api = self.api
+        Task.detached {
+            try? await api.markConversationRead(id: id)
+        }
     }
 
     private func send() async {

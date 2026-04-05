@@ -7,6 +7,7 @@ struct ConversationsView: View {
     @State private var conversations: [Conversation] = []
     @State private var loading = true
     @State private var errorMsg: String?
+    @State private var locallyRead: Set<String> = []
 
     var body: some View {
         Group {
@@ -44,8 +45,18 @@ struct ConversationsView: View {
                     NavigationLink {
                         ConversationThreadView(conversation: conv)
                             .environmentObject(api)
+                            .onAppear {
+                                // Clear the badge the moment the thread opens —
+                                // markRead is sent server-side by the thread, but
+                                // we zero locally so the list badge clears instantly.
+                                locallyRead.insert(conv.id)
+                            }
                     } label: {
-                        ConversationRow(conv: conv, myId: api.currentUser?.id ?? "")
+                        ConversationRow(
+                            conv: conv,
+                            myId: api.currentUser?.id ?? "",
+                            readOverride: locallyRead.contains(conv.id)
+                        )
                     }
                 }
                 .listStyle(.plain)
@@ -75,8 +86,10 @@ struct ConversationsView: View {
 struct ConversationRow: View {
     let conv: Conversation
     let myId: String
+    var readOverride: Bool = false
 
     private var unread: Int {
+        if readOverride { return 0 }
         // Show unread based on role
         let isClient = conv.clientId == myId
         return isClient ? (conv.unreadClient ?? 0) : (conv.unreadBroker ?? 0)
