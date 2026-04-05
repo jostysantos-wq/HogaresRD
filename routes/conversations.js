@@ -163,6 +163,16 @@ router.get('/:id', requireLogin, (req, res) => {
     ? conv.messages.filter(m => new Date(m.timestamp) > since)
     : conv.messages;
 
+  // Auto-mark-read on INITIAL load (no ?since= = user just opened the thread).
+  // This is more reliable than client-side markRead calls which can get
+  // killed when the app backgrounds before the request completes.
+  if (!since) {
+    let dirty = false;
+    if (isBroker && conv.unreadBroker) { conv.unreadBroker = 0; dirty = true; }
+    if (isClient && conv.unreadClient) { conv.unreadClient = 0; dirty = true; }
+    if (dirty) store.saveConversation(conv);
+  }
+
   res.json({ ...conv, messages });
 });
 
