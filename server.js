@@ -44,7 +44,7 @@ if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 const express      = require('express');
 const cookieParser = require('cookie-parser');
 const helmet       = require('helmet');
-const nodemailer   = require('nodemailer');
+// nodemailer replaced by centralized mailer.js (Resend HTTP API)
 const multer       = require('multer');
 const cron         = require('node-cron');
 const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
@@ -78,14 +78,9 @@ const ADMIN_EMAIL = 'Jostysantos@gmail.com';
   });
 })();
 
-// ── Email transporter ──────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// ── Email transporter (uses Resend via mailer.js) ─────────────
+const { createTransport: _createMailTransport } = require('./routes/mailer');
+const transporter = _createMailTransport();
 
 // ── Photo upload (multer) ──────────────────────────────────────
 const PHOTOS_DIR = path.join(__dirname, 'public', 'uploads', 'photos');
