@@ -6,7 +6,7 @@ struct AuthView: View {
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) var dismiss
 
-    enum Mode: Identifiable {
+    enum Mode: Identifiable, Hashable {
         case login, pickRole, registerUser, registerBroker, registerInmobiliaria, registerConstructora
         var id: String {
             switch self {
@@ -20,11 +20,9 @@ struct AuthView: View {
         }
     }
 
-    var initialMode: Mode = .login
-    @State private var mode: Mode = .login
+    @State private var mode: Mode
 
     init(initialMode: Mode = .login) {
-        self.initialMode = initialMode
         _mode = State(initialValue: initialMode)
     }
 
@@ -56,12 +54,9 @@ struct AuthView: View {
 
                     // Mode picker (login / register toggle)
                     if mode == .login || mode == .pickRole {
-                        Picker("Modo", selection: Binding(
-                            get: { mode == .login ? 0 : 1 },
-                            set: { mode = $0 == 0 ? .login : .pickRole }
-                        )) {
-                            Text("Iniciar sesión").tag(0)
-                            Text("Crear cuenta").tag(1)
+                        Picker("Modo", selection: $mode) {
+                            Text("Iniciar sesión").tag(Mode.login)
+                            Text("Crear cuenta").tag(Mode.pickRole)
                         }
                         .pickerStyle(.segmented)
                         .padding()

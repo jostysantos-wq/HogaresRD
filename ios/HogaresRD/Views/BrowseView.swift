@@ -53,8 +53,9 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // Bottom sheet
-    @State private var sheetExpanded  = false
+    // Bottom sheet — 3-state snap: collapsed (grab bar only), half, full
+    enum SheetPos { case collapsed, half, full }
+    @State private var sheetPos: SheetPos = .half
     @GestureState private var dragOffset: CGFloat = 0
 
     // Detail nav
@@ -158,11 +159,6 @@ struct BrowseView: View {
                 .padding(.top, 56)
                 .padding(.horizontal, 16)
 
-                // Expanded list — sits right below search bar
-                if sheetExpanded {
-                    expandedListOverlay
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -244,14 +240,14 @@ struct BrowseView: View {
                         .padding(.trailing, 16)
                 }
             }
-            .padding(.bottom, sheetExpanded ? 0 : grabBarHeight + tabBarHeight + 12)
-            .opacity(sheetExpanded ? 0 : 1)
+            .padding(.bottom, (sheetPos == .full ? 0 : currentSheetHeight) + tabBarHeight + 12)
+            .opacity(sheetPos == .full ? 0 : 1)
 
-            bottomSheet
+            unifiedBottomSheet
         }
         .onTapGesture {
             // Tap on empty map area dismisses callout
-            if selectedListing != nil && !sheetExpanded {
+            if selectedListing != nil && sheetPos != .full {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
             }
         }
@@ -363,94 +359,133 @@ struct BrowseView: View {
         .ignoresSafeArea()
     }
 
-    // MARK: - Bottom sheet
+    // MARK: - Bottom sheet (3-state: collapsed / half / full)
     private var grabBarHeight: CGFloat { 56 }
-    // Expand almost to top — leave room for status bar + search bar (~110pt)
-    private var sheetExpandedHeight: CGFloat { UIScreen.main.bounds.height - 110 }
+    // Full expansion — leave room for status bar + search bar (~110pt)
+    private var sheetFullHeight: CGFloat { UIScreen.main.bounds.height - 110 }
+    // Half expansion — about half the screen
+    private var sheetHalfHeight: CGFloat { UIScreen.main.bounds.height * 0.5 }
 
+    private var snapHeight: CGFloat {
+        switch sheetPos {
+        case .collapsed: return grabBarHeight
+        case .half:      return sheetHalfHeight
+        case .full:      return sheetFullHeight
+        }
+    }
+
+    /// Current sheet height accounting for live drag offset. Clamped between
+    /// grab-bar and full height so the sheet never goes past either limit.
     private var currentSheetHeight: CGFloat {
-        let base = sheetExpanded ? sheetExpandedHeight : grabBarHeight
-        return max(grabBarHeight, min(sheetExpandedHeight, base - dragOffset))
+        return max(grabBarHeight, min(sheetFullHeight, snapHeight - dragOffset))
+    }
+
+    /// Snap to the nearest of the 3 positions based on drag distance + velocity.
+    private func snapSheet(translation: CGFloat, velocity: CGFloat) {
+        let currentHeight = snapHeight - translation
+        let heights: [(SheetPos, CGFloat)] = [
+            (.collapsed, grabBarHeight),
+            (.half,      sheetHalfHeight),
+            (.full,      sheetFullHeight),
+        ]
+        // If flick is strong, skip to the next position in flick direction.
+        if velocity < -800 {
+            // Strong upward flick
+            if sheetPos == .collapsed { sheetPos = .half }
+            else if sheetPos == .half  { sheetPos = .full }
+            return
+        }
+        if velocity > 800 {
+            // Strong downward flick
+            if sheetPos == .full      { sheetPos = .half }
+            else if sheetPos == .half { sheetPos = .collapsed }
+            return
+        }
+        // Otherwise snap to closest height
+        let nearest = heights.min { abs($0.1 - currentHeight) < abs($1.1 - currentHeight) }!
+        sheetPos = nearest.0
     }
 
     @ViewBuilder
-    private var bottomSheet: some View {
+    private var unifiedBottomSheet: some View {
         VStack(spacing: 0) {
-            // Grab bar + count label
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.secondary.opacity(0.5))
-                .frame(width: 38, height: 5)
-                .padding(.top, 10)
-                .padding(.bottom, 5)
+            // Drag handle + header row
+            VStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 38, height: 5)
+                    .padding(.top, 10)
+                    .padding(.bottom, 8)
 
-            HStack {
-                Spacer()
-                if loading && listings.isEmpty {
-                    Text("Cargando...")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text("\(filteredListings.count) propiedades")
-                        .font(.subheadline.bold())
+                HStack {
+                    // Small "Mapa" chip on the left — collapses the sheet to show the map
+                    if sheetPos != .collapsed {
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                sheetPos = .collapsed
+                                selectedListing = nil
+                            }
+                        } label: {
+                            Label("Mapa", systemImage: "map.fill")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.rdBlue)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.rdBlue.opacity(0.12), in: Capsule())
+                        }
+                        .padding(.leading, 14)
+                        .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                    } else {
+                        Spacer().frame(width: 70)
+                    }
+                    Spacer()
+                    if loading && listings.isEmpty {
+                        Text("Cargando...")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    } else {
+                        Text("\(filteredListings.count) propiedades")
+                            .font(.subheadline.bold())
+                    }
+                    Spacer()
+                    Spacer().frame(width: 70) // balance layout
                 }
-                Spacer()
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle()) // whole top area is draggable
+            .gesture(
+                DragGesture()
+                    .updating($dragOffset) { v, s, _ in s = v.translation.height }
+                    .onEnded { v in
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                            snapSheet(translation: v.translation.height,
+                                      velocity: v.predictedEndTranslation.height - v.translation.height)
+                        }
+                    }
+            )
+            .onTapGesture {
+                // Tap the header to cycle through positions (collapsed → half → full → collapsed)
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    switch sheetPos {
+                    case .collapsed: sheetPos = .half
+                    case .half:      sheetPos = .full
+                    case .full:      sheetPos = .collapsed; selectedListing = nil
+                    }
+                }
+            }
+
+            // List content — only visible when sheet is not fully collapsed
+            if sheetPos != .collapsed {
+                expandedListContent
+                    .transition(.opacity)
+            }
         }
-        .frame(height: grabBarHeight, alignment: .top)
+        .frame(height: currentSheetHeight, alignment: .top)
         .frame(maxWidth: .infinity)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 8, y: -3)
         .padding(.bottom, tabBarHeight)
-        .opacity(sheetExpanded ? 0 : 1)
-        .gesture(
-            DragGesture()
-                .updating($dragOffset) { v, s, _ in s = v.translation.height }
-                .onEnded { v in
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        if v.translation.height < -50 { sheetExpanded = true }
-                    }
-                }
-        )
-    }
-
-    // MARK: - Expanded list overlay (below search bar, full remaining height)
-    @ViewBuilder
-    private var expandedListOverlay: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Text("\(filteredListings.count) propiedades")
-                        .font(.subheadline.bold())
-                    Spacer()
-                }
-                .padding(.vertical, 10)
-
-                expandedListContent
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemBackground))
-
-            // Floating "Mapa" button
-            Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    sheetExpanded = false
-                    selectedListing = nil
-                }
-            } label: {
-                Label("Mapa", systemImage: "map.fill")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.rdBlue)
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-            }
-            .padding(.bottom, tabBarHeight + 4)
-        }
     }
 
     // Expanded: single-column full-width cards (larger images)
@@ -475,7 +510,7 @@ struct BrowseView: View {
                     listFooter
                 }
                 .padding(.horizontal, 14)
-                .padding(.bottom, 100)
+                .padding(.bottom, 24)
             }
             .onChange(of: selectedListing) { listing in
                 if let id = listing?.id {
