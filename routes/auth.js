@@ -9,7 +9,28 @@ const { logSec } = require('./security-log');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET; // required — enforced at startup by server.js
+// Rotation support: tokens signed under JWT_SECRET_PREV still verify during
+// the grace window after a key rotation. Operator rotates by:
+//   1. copy current JWT_SECRET to JWT_SECRET_PREV
+//   2. generate + set a new JWT_SECRET
+//   3. wait 14 days (max token lifetime) — old tokens expire naturally
+//   4. remove JWT_SECRET_PREV from .env
+const JWT_SECRET_PREV = process.env.JWT_SECRET_PREV || null;
 const BASE_URL   = process.env.BASE_URL || 'http://localhost:3000';
+
+/** Verify a JWT against the current secret, falling back to the previous
+ * one during rotation windows. Re-throws the original error if neither
+ * secret validates the token. */
+function verifyJWT(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    if (JWT_SECRET_PREV) {
+      try { return jwt.verify(token, JWT_SECRET_PREV); } catch {}
+    }
+    throw err;
+  }
+}
 
 // ── Rate limiters ─────────────────────────────────────────────────────────
 // Tight limit on login / registration — these are the brute-force targets.
@@ -89,6 +110,79 @@ function validateEmail(email) {
   if (email.length > 254) return false;
   if (/[\r\n]/.test(email)) return false;
   return EMAIL_RE.test(email.trim());
+}
+
+// ── Login anomaly detection ────────────────────────────────────────────────
+// Hash IPs (never store raw) and compare against the user's known set.
+// Unknown IP triggers an email alert. Keeps last 10 known IP hashes.
+function hashIP(ip) {
+  return crypto.createHash('sha256').update(String(ip || '') + JWT_SECRET).digest('hex').slice(0, 16);
+}
+
+function clientIPFromReq(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+      || req.socket?.remoteAddress
+      || 'unknown';
+}
+
+/** Called on successful login. Appends the current IP hash to the user's
+ * known list. If this IP has never been seen, fires an async alert email
+ * to the user (fire-and-forget). Returns true if alert was sent. */
+function trackLoginAndAlert(user, req) {
+  const ip    = clientIPFromReq(req);
+  const ipHash = hashIP(ip);
+  const ua     = (req.headers['user-agent'] || '').slice(0, 200);
+  const known  = Array.isArray(user.knownIPs) ? user.knownIPs : [];
+  const isNew  = !known.includes(ipHash);
+
+  const updated = isNew ? [...known, ipHash].slice(-10) : known;
+  user.knownIPs   = updated;
+  user.lastLoginAt = new Date().toISOString();
+  user.lastLoginIPHash = ipHash;
+  store.saveUser(user);
+
+  if (isNew && known.length > 0) {
+    // Not the user's VERY first login — this is a new device/network.
+    logSec('login_new_device', req, { userId: user.id });
+    sendNewDeviceAlert(user, ip, ua).catch(err =>
+      console.error('[auth] new-device alert failed:', err.message)
+    );
+  }
+  return isNew && known.length > 0;
+}
+
+async function sendNewDeviceAlert(user, ip, userAgent) {
+  if (!user.email) return;
+  const when = new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
+  const firstName = (user.name || '').split(' ')[0] || 'Usuario';
+  try {
+    await transporter.sendMail({
+      to:      user.email,
+      subject: 'Nuevo inicio de sesión en tu cuenta HogaresRD',
+      html: `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;"><tr><td align="center">
+<table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+  <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
+    <div style="font-size:1.1rem;font-weight:800;color:#fff;">Nuevo inicio de sesión detectado</div>
+  </td></tr>
+  <tr><td style="padding:24px 32px;">
+    <p style="margin:0 0 12px;color:#1a2b40;">Hola <strong>${firstName}</strong>,</p>
+    <p style="margin:0 0 16px;font-size:0.92rem;color:#4d6a8a;line-height:1.55;">
+      Detectamos un inicio de sesión en tu cuenta desde un dispositivo o red nueva:
+    </p>
+    <table width="100%" style="background:#f0f6ff;border-radius:10px;padding:14px 18px;font-size:0.85rem;color:#1a2b40;margin-bottom:14px;">
+      <tr><td style="padding:4px 0;color:#7a9bbf;">Fecha:</td><td style="padding:4px 0;"><strong>${when}</strong></td></tr>
+      <tr><td style="padding:4px 0;color:#7a9bbf;">IP:</td><td style="padding:4px 0;"><strong>${ip}</strong></td></tr>
+      <tr><td style="padding:4px 0;color:#7a9bbf;">Navegador:</td><td style="padding:4px 0;font-size:0.78rem;">${userAgent.slice(0, 120)}</td></tr>
+    </table>
+    <p style="margin:0;font-size:0.82rem;color:#7a9bbf;line-height:1.55;">
+      ¿No fuiste tú? Cambia tu contraseña inmediatamente y revoca sesiones activas desde tu perfil.
+    </p>
+  </td></tr>
+</table>
+</td></tr></table></body></html>`,
+    });
+  } catch {}
 }
 
 // Generates a SHA-256-hashed verification token, attaches fields to user in place,
@@ -196,7 +290,7 @@ function userAuth(req, res, next) {
   const token = cookieToken || headerToken;
   if (!token) return res.status(401).json({ error: 'No autenticado' });
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = verifyJWT(token);
 
     // Sprint 3: check revocation list (handles forced logout / stolen-token invalidation)
     if (payload.jti && store.isTokenRevoked(payload.jti)) {
@@ -973,6 +1067,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
     }
 
     logSec('login_success', req, { userId: user.id, role: user.role });
+    trackLoginAndAlert(user, req);
 
     const token = signToken(user);
 
@@ -1006,7 +1101,7 @@ router.post('/logout', (req, res) => {
 
   if (token) {
     try {
-      const payload = jwt.verify(token, JWT_SECRET);
+      const payload = verifyJWT(token);
       if (payload.jti) {
         store.revokeToken(payload.jti, payload.exp);
         logSec('logout', req, { userId: payload.sub });
@@ -1297,6 +1392,7 @@ router.post('/2fa/verify', twoFALimiter, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   logSec('2fa_verified', req, { userId: user.id });
+  trackLoginAndAlert(user, req);
   logSec('login_success', req, { userId: user.id, role: user.role, via: '2fa' });
 
   const token = signToken(user);
@@ -1493,7 +1589,7 @@ function optionalAuth(req, res, next) {
   if (!header || !header.startsWith('Bearer ')) { req.user = null; return next(); }
   try {
     const token   = header.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyJWT(token);
     if (decoded.jti && store.isTokenRevoked(decoded.jti)) { req.user = null; return next(); }
     req.user = decoded;
   } catch { req.user = null; }

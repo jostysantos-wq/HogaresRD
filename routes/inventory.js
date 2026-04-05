@@ -7,7 +7,8 @@ const { userAuth } = require('./auth');
 const router = express.Router();
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
-const JWT_SECRET  = process.env.JWT_SECRET;
+const JWT_SECRET      = process.env.JWT_SECRET;
+const JWT_SECRET_PREV = process.env.JWT_SECRET_PREV || null;
 const COOKIE_NAME = 'hrdt';
 
 function uid() { return 'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -44,11 +45,15 @@ function getOptionalUser(req) {
   const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
   const token = cookieToken || headerToken;
   if (!token || !JWT_SECRET) return null;
+  let payload;
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    if (payload.jti && store.isTokenRevoked(payload.jti)) return null;
-    return store.getUserById(payload.sub);
-  } catch { return null; }
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch {
+    if (!JWT_SECRET_PREV) return null;
+    try { payload = jwt.verify(token, JWT_SECRET_PREV); } catch { return null; }
+  }
+  if (payload.jti && store.isTokenRevoked(payload.jti)) return null;
+  return store.getUserById(payload.sub);
 }
 
 /** Check if user is affiliated to a listing (via agencies array) */

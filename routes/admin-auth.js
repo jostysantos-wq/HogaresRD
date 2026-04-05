@@ -11,7 +11,11 @@ const express  = require('express');
 const bcrypt   = require('bcryptjs');
 const crypto   = require('crypto');
 const jwt      = require('jsonwebtoken');
+const { authenticator } = require('otplib');
 const { createTransport } = require('./mailer');
+
+// TOTP settings — 30-second window, ±1 step drift tolerance
+authenticator.options = { step: 30, window: 1 };
 
 const router = express.Router();
 const mailer = createTransport();
@@ -183,7 +187,10 @@ router.post('/login', async (req, res) => {
 });
 
 // ── Step 2: POST /verify ──────────────────────────────────────────────────────
-// Accepts tempToken + OTP. On success issues session cookie.
+// Accepts tempToken + code. Code can be either:
+//   (a) the 6-digit email OTP we just sent, OR
+//   (b) a valid TOTP (Google/Authy/1Password) if ADMIN_TOTP_SECRET is set
+// TOTP is checked first — once enrolled, admin never needs to wait for email.
 
 router.post('/verify', (req, res) => {
   const { token, otp } = req.body || {};
@@ -198,8 +205,17 @@ router.post('/verify', (req, res) => {
   }
 
   record.attempts++;
+  const submitted = String(otp).trim();
 
-  if (String(otp).trim() !== record.otp) {
+  // Accept TOTP if configured
+  const totpSecret = process.env.ADMIN_TOTP_SECRET;
+  let okTotp = false;
+  if (totpSecret) {
+    try { okTotp = authenticator.check(submitted, totpSecret); } catch {}
+  }
+  const okEmail = submitted === record.otp;
+
+  if (!okTotp && !okEmail) {
     if (record.attempts >= MAX_OTP_TRIES) {
       _otpStore.delete(token);
       return res.status(401).json({ error: 'Demasiados intentos incorrectos. Inicia sesión nuevamente.' });
@@ -211,9 +227,28 @@ router.post('/verify', (req, res) => {
   // ✓ Success
   _otpStore.delete(token);
   issueSessionCookie(res);
-  _loginAttempts.delete(clientIp(req)); // reset rate limit on success
-  console.log(`[admin-auth] Successful admin login from ${clientIp(req)}`);
+  _loginAttempts.delete(clientIp(req));
+  console.log(`[admin-auth] Successful admin login from ${clientIp(req)} (${okTotp ? 'TOTP' : 'email'})`);
   res.json({ success: true });
+});
+
+// ── POST /totp-setup ──────────────────────────────────────────────────────────
+// Generates a fresh TOTP secret + otpauth:// URI for QR-code enrollment.
+// Admin copies the secret into .env as ADMIN_TOTP_SECRET and restarts PM2.
+// Requires a valid admin session.
+router.post('/totp-setup', adminSessionAuth, (req, res) => {
+  const secret = authenticator.generateSecret();
+  const issuer  = 'HogaresRD';
+  const account = process.env.ADMIN_USERNAME || 'admin';
+  const otpauth = authenticator.keyuri(account, issuer, secret);
+  res.json({
+    secret,
+    otpauth,
+    instructions:
+      'Escanea el otpauth:// URL con Google Authenticator / Authy / 1Password. ' +
+      'Luego añade ADMIN_TOTP_SECRET=' + secret + ' a .env y reinicia pm2. ' +
+      'A partir de entonces puedes usar el código de 6 dígitos del app en vez de esperar el correo.',
+  });
 });
 
 // ── POST /logout ──────────────────────────────────────────────────────────────

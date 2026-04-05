@@ -166,25 +166,49 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // pages embed cross-origin media
 }));
 
-// Report-only CSP. Browsers will log violations but won't block anything.
-// Once we've verified the app is clean (or added nonces), swap the header
-// name to `Content-Security-Policy` to enforce.
+// Report-only CSP. Browsers log violations to /api/csp-report but won't
+// block anything. After a week of clean logs, flip CSP_ENFORCE=1 in .env
+// to switch the header to `Content-Security-Policy` (enforcing mode).
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org",
+  "img-src 'self' data: blob: https: http:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org",
+  "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://checkout.stripe.com",
+  "frame-ancestors 'self'",
+  "report-uri /api/csp-report",
+].join('; ');
+const CSP_HEADER = process.env.CSP_ENFORCE === '1'
+  ? 'Content-Security-Policy'
+  : 'Content-Security-Policy-Report-Only';
 app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy-Report-Only', [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org",
-    "img-src 'self' data: blob: https: http:",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org",
-    "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self' https://checkout.stripe.com",
-    "frame-ancestors 'self'",
-  ].join('; '));
+  res.setHeader(CSP_HEADER, CSP_DIRECTIVES);
   next();
 });
+
+// CSP violation sink. Browsers POST here with the offending resource;
+// we append to the existing security log for review.
+app.post('/api/csp-report',
+  express.json({ type: ['application/csp-report', 'application/json'], limit: '16kb' }),
+  (req, res) => {
+    try {
+      const r = req.body?.['csp-report'] || req.body || {};
+      const { logSec } = require('./routes/security-log');
+      logSec('csp_violation', req, {
+        documentURI: (r['document-uri'] || '').slice(0, 200),
+        blockedURI:  (r['blocked-uri']  || '').slice(0, 200),
+        violatedDirective: (r['violated-directive'] || '').slice(0, 100),
+        sourceFile:  (r['source-file']  || '').slice(0, 200),
+      });
+    } catch {}
+    res.status(204).end();
+  }
+);
 
 app.use(cookieParser());
 
