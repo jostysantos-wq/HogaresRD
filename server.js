@@ -414,7 +414,7 @@ app.post('/submit', async (req, res) => {
 
     const adminPanelUrl = `${process.env.BASE_URL || 'https://hogaresrd.com'}/${process.env.ADMIN_PATH || 'admin'}`;
     await transporter.sendMail({
-      from:    `"HogaresRD Admin" <${process.env.EMAIL_USER}>`,
+      department: 'admin',
       to:      ADMIN_EMAIL,
       subject: isClaim
         ? `🔴 [IMPORTANTE] Solicitud de agencia — Anuncio #${submission.claim_listing_id}`
