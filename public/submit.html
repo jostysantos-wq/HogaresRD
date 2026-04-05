@@ -1330,9 +1330,9 @@
 
       const zoomLevel = address ? 17 : (city ? 14 : 11);
       fetch(url)
-        .then(r => r.json())
+        .then(r => { if (!r.ok) throw new Error('geocode ' + r.status); return r.json(); })
         .then(results => {
-          if (results.length === 0) return;
+          if (!Array.isArray(results) || results.length === 0) return;
           const { lat, lon } = results[0];
           const latlng = [parseFloat(lat), parseFloat(lon)];
           map.setView(latlng, zoomLevel);
@@ -1341,7 +1341,7 @@
           document.getElementById('lng').value = parseFloat(lon).toFixed(6);
           document.getElementById('mapError').style.display = 'none';
         })
-        .catch(() => {});
+        .catch(err => console.warn('[submit] geocode failed:', err.message));
     }
 
     let geocodeTimer;
@@ -1894,6 +1894,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
+        if (!res.ok) {
+          let msg = 'Error ' + res.status;
+          try { const e = await res.json(); if (e?.error) msg = e.error; } catch {}
+          throw new Error(msg);
+        }
         const data = await res.json();
         if (data.success) {
           const isClaim = document.getElementById('submission_type').value === 'agency_claim';
@@ -1934,7 +1939,7 @@
           throw new Error('Server error');
         }
       } catch (err) {
-        alert('Hubo un error al enviar. Por favor intenta de nuevo.');
+        alert('Hubo un error al enviar: ' + (err?.message || 'Por favor intenta de nuevo.'));
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Propiedad';

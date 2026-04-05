@@ -96,7 +96,13 @@ router.post('/', reportLimiter, (req, res, next) => {
     reporter_email: user?.email || req.body.reporterEmail || null,
     reason,
     details:        (details || '').trim().slice(0, 2000),
-    attachment:     attachment || null,
+    // Only accept attachment paths that point to our uploads directory —
+    // prevents arbitrary URLs or filesystem paths from being embedded in
+    // admin emails / rendered as links.
+    attachment:     (typeof attachment === 'string' &&
+                     /^\/uploads\/[A-Za-z0-9._/-]+$/.test(attachment) &&
+                     !attachment.includes('..'))
+                    ? attachment : null,
     status:         'pending',
     admin_notes:    null,
     created_at:     new Date().toISOString(),

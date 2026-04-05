@@ -750,7 +750,7 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   if (!['approved', 'rejected'].includes(status))
     return res.status(400).json({ error: 'status debe ser approved o rejected' });
   doc.review_status = status;
-  doc.review_note   = note || '';
+  doc.review_note   = (typeof note === 'string' ? note : '').slice(0, 1000);
   doc.reviewed_at   = new Date().toISOString();
   doc.reviewed_by   = req.user.sub;
 
