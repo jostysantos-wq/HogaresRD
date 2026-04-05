@@ -61,9 +61,17 @@ function createTransport() {
   const resendKey = process.env.RESEND_API_KEY;
 
   // Google Workspace SMTP transporter
+  // Force IPv4 + short timeouts — the droplet has no IPv6 route to Google's
+  // SMTP, so without this we hang ~30s before falling back to Resend.
   const smtp = (wsUser && wsPass) ? nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    family: 4,
     auth: { user: wsUser, pass: wsPass },
+    connectionTimeout: 8000,
+    greetingTimeout:   8000,
+    socketTimeout:     10000,
   }) : null;
 
   // Resend HTTP API fallback
