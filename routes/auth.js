@@ -90,81 +90,32 @@ function attachVerifyToken(user) {
 
 function sendVerificationEmail(user, rawToken) {
   const verifyUrl = `${BASE_URL}/verify-email?token=${rawToken}`;
+  const et = require('../utils/email-templates');
   return transporter.sendMail({
-    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to:      user.email,
-    subject: 'Verifica tu correo — HogaresRD 🔐',
-    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Verifica tu correo electrónico</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            Hola <strong>${user.name.split(' ')[0]}</strong>, gracias por registrarte en HogaresRD.
-          </p>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
-            Para activar tu cuenta y acceder a todas las funciones, haz clic en el botón a continuación. Este enlace expira en <strong>24 horas</strong>.
-          </p>
-          <div style="text-align:center;margin:28px 0;">
-            <a href="${verifyUrl}" style="display:inline-block;background:#002D62;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.2px;">
-              ✅ Verificar mi correo
-            </a>
-          </div>
-          <p style="margin:24px 0 0;font-size:0.8rem;color:#7a9bbf;line-height:1.5;">
-            Si no creaste esta cuenta, ignora este correo. Si el botón no funciona, copia este enlace en tu navegador:<br/>
-            <a href="${verifyUrl}" style="color:#4d6a8a;word-break:break-all;">${verifyUrl}</a>
-          </p>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+    subject: 'Verifica tu correo — HogaresRD',
+    html: et.layout({
+      title: 'Verifica tu correo electronico',
+      body: et.p(`Hola <strong>${et.esc(user.name.split(' ')[0])}</strong>, gracias por registrarte en HogaresRD.`)
+          + et.p('Para activar tu cuenta y acceder a todas las funciones, haz clic en el boton a continuacion. Este enlace expira en <strong>24 horas</strong>.')
+          + et.button('Verificar mi correo', verifyUrl)
+          + et.small(`Si no creaste esta cuenta, ignora este correo. Si el boton no funciona, copia este enlace: <a href="${verifyUrl}" style="color:#4d6a8a;word-break:break-all;">${verifyUrl}</a>`),
+    }),
   }).catch(err => console.error('Verification email error:', err.message));
 }
 
 function send2FAEmail(user, code) {
+  const et = require('../utils/email-templates');
   return transporter.sendMail({
-    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to: user.email,
-    subject: 'Tu código de verificación — HogaresRD 🔐',
-    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Código de verificación</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;text-align:center;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            Hola <strong>${user.name.split(' ')[0]}</strong>, tu código de verificación es:
-          </p>
-          <div style="margin:24px 0;padding:20px;background:#f0f4f9;border-radius:12px;display:inline-block;">
-            <span style="font-size:2.5rem;font-weight:900;letter-spacing:0.5em;color:#002D62;font-family:'Courier New',monospace;">${code}</span>
-          </div>
-          <p style="margin:16px 0 0;font-size:0.85rem;color:#4d6a8a;">
-            Este código expira en <strong>5 minutos</strong>.
-          </p>
-          <p style="margin:16px 0 0;font-size:0.8rem;color:#7a9bbf;">
-            Si no solicitaste este código, ignora este mensaje.
-          </p>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+    subject: 'Tu codigo de verificacion — HogaresRD',
+    html: et.layout({
+      title: 'Codigo de verificacion',
+      body: et.p(`Hola <strong>${et.esc(user.name.split(' ')[0])}</strong>, tu codigo de verificacion es:`)
+          + et.codeBlock(code)
+          + et.small('Este codigo expira en <strong>5 minutos</strong>.')
+          + et.small('Si no solicitaste este codigo, ignora este mensaje.'),
+    }),
   }).catch(err => console.error('2FA email error:', err.message));
 }
 
