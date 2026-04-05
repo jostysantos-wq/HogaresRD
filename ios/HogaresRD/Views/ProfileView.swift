@@ -625,10 +625,24 @@ struct TwoFactorSettingsView: View {
 // MARK: - Privacy Settings
 
 struct PrivacySettingsView: View {
-    @State private var profileVisible = true
-    @State private var showOnlineStatus = true
-    @State private var shareActivity = false
-    @State private var allowAnalytics = true
+    // Persisted across app launches via UserDefaults.
+    private static let defaults: [String: Bool] = [
+        "priv_profileVisible": true,
+        "priv_showOnlineStatus": true,
+        "priv_shareActivity": false,
+        "priv_allowAnalytics": true,
+    ]
+    private static func loadBool(_ key: String) -> Bool {
+        if UserDefaults.standard.object(forKey: key) == nil {
+            return defaults[key] ?? false
+        }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+
+    @State private var profileVisible    = Self.loadBool("priv_profileVisible")
+    @State private var showOnlineStatus  = Self.loadBool("priv_showOnlineStatus")
+    @State private var shareActivity     = Self.loadBool("priv_shareActivity")
+    @State private var allowAnalytics    = Self.loadBool("priv_allowAnalytics")
     @State private var showDeleteAlert = false
 
     var body: some View {
@@ -728,6 +742,10 @@ struct PrivacySettingsView: View {
         }
         .navigationTitle("Privacidad")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: profileVisible)   { _, v in UserDefaults.standard.set(v, forKey: "priv_profileVisible") }
+        .onChange(of: showOnlineStatus) { _, v in UserDefaults.standard.set(v, forKey: "priv_showOnlineStatus") }
+        .onChange(of: shareActivity)    { _, v in UserDefaults.standard.set(v, forKey: "priv_shareActivity") }
+        .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics") }
         .alert("¿Eliminar tu cuenta?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Eliminar", role: .destructive) {}

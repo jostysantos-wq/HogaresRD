@@ -8,12 +8,25 @@ class AppLockManager: ObservableObject {
     static let shared = AppLockManager()
 
     @Published var isLocked = false
-    @AppStorage("rd_lock_enabled") var lockEnabled = false
-    @AppStorage("rd_lock_timeout") var idleTimeoutMinutes = 5
+
+    // NOTE: @AppStorage only works inside View structs. Using it on a class
+    // property silently fails to persist changes. Manual UserDefaults
+    // bridging is required here.
+    @Published var lockEnabled: Bool {
+        didSet { UserDefaults.standard.set(lockEnabled, forKey: "rd_lock_enabled") }
+    }
+    @Published var idleTimeoutMinutes: Int {
+        didSet { UserDefaults.standard.set(idleTimeoutMinutes, forKey: "rd_lock_timeout") }
+    }
 
     private var backgroundDate: Date?
 
-    private init() {}
+    private init() {
+        // Load existing values, fall back to defaults when the keys are absent.
+        self.lockEnabled = UserDefaults.standard.bool(forKey: "rd_lock_enabled")
+        let storedTimeout = UserDefaults.standard.integer(forKey: "rd_lock_timeout")
+        self.idleTimeoutMinutes = storedTimeout > 0 ? storedTimeout : 5
+    }
 
     /// Call from `.onChange(of: scenePhase)` in the app root.
     func handleScenePhase(_ phase: ScenePhase, isLoggedIn: Bool) {

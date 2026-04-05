@@ -147,11 +147,9 @@ function addEvent(app, type, description, actor, actorName, data = {}) {
 }
 
 function sendNotification(to, subject, html) {
-  if (!process.env.EMAIL_USER) return;
-  transporter.sendMail({
-    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
-    to, subject, html,
-  }).catch(() => {});
+  if (!process.env.EMAIL_USER && !process.env.WS_EMAIL_USER && !process.env.RESEND_API_KEY) return;
+  transporter.sendMail({ to, subject, html })
+    .catch(err => console.error('[applications] Email failed:', subject, '→', to, err.message));
 }
 
 function statusEmail(app, oldStatus, newStatus, reason) {

@@ -123,12 +123,63 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Credenciales incorrectas' });
   }
 
-  // OTP step temporarily disabled — re-enable once email (Resend/SMTP) is confirmed working.
-  // TODO: restore OTP flow after DigitalOcean unblocks SMTP ports.
-  issueSessionCookie(res);
+  // Generate OTP + temp token
+  const otp       = String(crypto.randomInt(100000, 999999));
+  const tempToken = crypto.randomBytes(32).toString('hex');
+
+  _otpStore.set(tempToken, {
+    otp,
+    expiresAt: Date.now() + OTP_TTL,
+    attempts:  0,
+  });
+
+  // Purge expired OTPs
+  for (const [k, v] of _otpStore) {
+    if (Date.now() > v.expiresAt) _otpStore.delete(k);
+  }
+
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+
+  // Fallback: log OTP to server console so admin can recover even if
+  // email delivery breaks.
+  console.warn(`[admin-auth] 🔑 OTP for ${adminEmail} (IP ${ip}): ${otp}`);
+
+  try {
+    await mailer.sendMail({
+      to:      adminEmail,
+      subject: '🔐 HogaresRD Admin — Código de acceso',
+      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+  <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
+    <div style="font-size:1.1rem;font-weight:800;color:#fff;">Código de Acceso Admin</div>
+    <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:4px;">HogaresRD — Panel de Administración</div>
+  </td></tr>
+  <tr><td style="padding:28px 32px;">
+    <p style="margin:0 0 20px;font-size:0.92rem;color:#1a2b40;">Ingresa este código en el portal. Expira en <strong>10 minutos</strong>.</p>
+    <div style="background:#f0f6ff;border:2px solid #002D62;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
+      <div style="font-size:2.8rem;font-weight:900;letter-spacing:10px;color:#002D62;font-family:monospace;">${otp}</div>
+    </div>
+    <p style="margin:0;font-size:0.78rem;color:#9ab0c8;line-height:1.6;">
+      Si no solicitaste este código, alguien tiene tus credenciales. Cambia tu contraseña inmediatamente.<br/>
+      IP de origen registrada: <strong>${ip}</strong>
+    </p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`,
+    });
+    console.log(`[admin-auth] OTP emailed to ${adminEmail} (IP ${ip})`);
+  } catch (e) {
+    console.error(`[admin-auth] OTP email failed:`, e.message);
+    // Keep the OTP valid — admin can recover it from server logs above.
+    // Don't fail the request, since email can be flaky.
+  }
+
   _loginAttempts.delete(ip);
-  console.log(`[admin-auth] Successful admin login (password-only mode) from ${ip}`);
-  res.json({ success: true });
+  res.json({ step: 2, token: tempToken });
 });
 
 // ── Step 2: POST /verify ──────────────────────────────────────────────────────

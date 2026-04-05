@@ -220,14 +220,21 @@
     const url = lastTimestamp
       ? `/api/conversations/${id}?since=${encodeURIComponent(lastTimestamp)}`
       : `/api/conversations/${id}`;
-    const res  = await fetch(url, { credentials: 'include' });
-    if (!res.ok) return;
-    const conv = await res.json();
+    let conv;
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) return;
+      conv = await res.json();
+    } catch (err) {
+      // Network error or bad JSON — don't break the polling loop
+      console.warn('[mensajes] poll error:', err.message);
+      return;
+    }
     if (conv.messages?.length) {
       appendMessages(conv.messages);
       lastTimestamp = conv.messages.at(-1).timestamp;
       // Mark as read
-      fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
+      fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' }).catch(() => {});
       loadConvList(); // refresh unread counts
     }
   }
