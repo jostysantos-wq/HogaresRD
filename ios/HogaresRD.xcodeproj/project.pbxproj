@@ -25,6 +25,9 @@
 		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
 		INVENT0000000000000000B2 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = INVENT0000000000000000B1 /* InventoryView.swift */; };
 		REPORT0000000000000000B2 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPORT0000000000000000B1 /* ReportView.swift */; };
+		SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000B1 /* SavedSearch.swift */; };
+		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
+		ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCAMPS00000000000000B1 /* AdCampaignsView.swift */; };
 		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
@@ -72,6 +75,9 @@
 		AVATAR0000000000000000B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		INVENT0000000000000000B1 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		REPORT0000000000000000B1 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
+		SSEARCH000000000000000B1 /* SavedSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearch.swift; sourceTree = "<group>"; };
+		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
+		ADCAMPS00000000000000B1 /* AdCampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCampaignsView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
@@ -159,6 +165,7 @@
 				AA55000000000000000000B2 /* Application.swift */,
 				AA550000000000000000000000C1 /* DashboardModels.swift */,
 				AA990000000000000000000000D1 /* Tour.swift */,
+				SSEARCH000000000000000B1 /* SavedSearch.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -192,6 +199,8 @@
 				AVATAR0000000000000000B1 /* AvatarView.swift */,
 				INVENT0000000000000000B1 /* InventoryView.swift */,
 				REPORT0000000000000000B1 /* ReportView.swift */,
+				SSEARCH000000000000000D1 /* SavedSearchesView.swift */,
+				ADCAMPS00000000000000B1 /* AdCampaignsView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
 					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
@@ -295,6 +304,9 @@
 				AVATAR0000000000000000B2 /* AvatarView.swift in Sources */,
 				INVENT0000000000000000B2 /* InventoryView.swift in Sources */,
 				REPORT0000000000000000B2 /* ReportView.swift in Sources */,
+				SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */,
+				SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */,
+				ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */,
 				A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */,
 				AA11000000000000000000C6 /* HomeView.swift in Sources */,
 				AA11000000000000000000C7 /* BrowseView.swift in Sources */,

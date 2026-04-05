@@ -117,7 +117,7 @@ struct ProfileTabView: View {
                         }
                     }
 
-                    // ── Client: Saved Homes ──
+                    // ── Client: Saved Homes + Saved Searches ──
                     if !user.isAgency {
                         Section {
                             NavigationLink {
@@ -135,6 +135,11 @@ struct ProfileTabView: View {
                                             .clipShape(Capsule())
                                     }
                                 }
+                            }
+                            NavigationLink {
+                                SavedSearchesView().environmentObject(api)
+                            } label: {
+                                Label("Búsquedas guardadas", systemImage: "bell.badge.fill")
                             }
                         }
                     }
@@ -318,6 +323,11 @@ struct ProfileTabView: View {
                 BrokerToursView().environmentObject(api)
             } label: {
                 Label("Visitas agendadas", systemImage: "calendar.badge.clock")
+            }
+            NavigationLink {
+                AdCampaignsView().environmentObject(api)
+            } label: {
+                Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
             }
             NavigationLink {
                 BrokerAvailabilityView().environmentObject(api)

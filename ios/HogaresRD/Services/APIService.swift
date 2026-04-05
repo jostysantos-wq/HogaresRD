@@ -1076,6 +1076,122 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Saved Searches
+
+    private func authedRequest(_ url: URL, method: String = "GET", body: Data? = nil) throws -> URLRequest {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        if body != nil { req.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        req.httpBody = body
+        return req
+    }
+
+    private func throwIfErr(_ data: Data, _ resp: URLResponse, fallback: String) throws {
+        guard let http = resp as? HTTPURLResponse, http.statusCode >= 400 else { return }
+        if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+           let msg = obj["error"] as? String { throw APIError.server(msg) }
+        throw APIError.server(fallback)
+    }
+
+    func listSavedSearches() async throws -> [SavedSearch] {
+        let url = URL(string: "\(apiBase)/api/saved-searches")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando búsquedas")
+        return try decoder.decode(SavedSearchesResponse.self, from: data).searches
+    }
+
+    func createSavedSearch(name: String, filters: SavedSearchFilters, notify: Bool) async throws -> SavedSearch {
+        let url = URL(string: "\(apiBase)/api/saved-searches")!
+        let body: [String: Any] = [
+            "name": name,
+            "filters": filtersToDict(filters),
+            "notify": notify,
+        ]
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "POST", body: json)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error guardando búsqueda")
+        struct R: Decodable { let search: SavedSearch }
+        return try decoder.decode(R.self, from: data).search
+    }
+
+    func updateSavedSearch(id: String, name: String?, filters: SavedSearchFilters?, notify: Bool?) async throws -> SavedSearch {
+        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        var body: [String: Any] = [:]
+        if let name { body["name"] = name }
+        if let filters { body["filters"] = filtersToDict(filters) }
+        if let notify { body["notify"] = notify }
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "PUT", body: json)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error actualizando búsqueda")
+        struct R: Decodable { let search: SavedSearch }
+        return try decoder.decode(R.self, from: data).search
+    }
+
+    func deleteSavedSearch(id: String) async throws {
+        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        let req = try authedRequest(url, method: "DELETE")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error eliminando búsqueda")
+    }
+
+    func getSavedSearchResults(id: String) async throws -> SavedSearchResponse {
+        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando resultados")
+        return try decoder.decode(SavedSearchResponse.self, from: data)
+    }
+
+    // MARK: - Meta Ads (read-only management for iOS — creation stays on web)
+
+    func getMetaStatus() async throws -> MetaStatusResponse {
+        let url = URL(string: "\(apiBase)/api/paid-ads/meta/status")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando estado")
+        return try decoder.decode(MetaStatusResponse.self, from: data)
+    }
+
+    func getAdCampaigns() async throws -> AdCampaignsResponse {
+        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando campañas")
+        return try decoder.decode(AdCampaignsResponse.self, from: data)
+    }
+
+    func toggleAdCampaign(id: String) async throws {
+        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)/toggle-status")!
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cambiando estado")
+    }
+
+    func deleteAdCampaign(id: String) async throws {
+        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)")!
+        let req = try authedRequest(url, method: "DELETE")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error eliminando campaña")
+    }
+
+    private func filtersToDict(_ f: SavedSearchFilters) -> [String: Any] {
+        var d: [String: Any] = [:]
+        if let v = f.type        { d["type"] = v }
+        if let v = f.condition   { d["condition"] = v }
+        if let v = f.province    { d["province"] = v }
+        if let v = f.city        { d["city"] = v }
+        if let v = f.priceMin    { d["priceMin"] = v }
+        if let v = f.priceMax    { d["priceMax"] = v }
+        if let v = f.bedroomsMin { d["bedroomsMin"] = v }
+        if let v = f.tags        { d["tags"] = v }
+        return d
+    }
+
     // MARK: - Favorites
 
     func addFavorite(listingId: String) async throws {
