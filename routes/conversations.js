@@ -11,12 +11,10 @@ const { createTransport } = require('./mailer');
 const transporter = createTransport();
 
 function _sendMail(to, subject, html) {
-  if (!to || !process.env.EMAIL_USER) return;
-  transporter.sendMail({
-    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
-    to, subject, html,
-  }).catch(err => console.error('[conv-mail]', err.message));
+  if (!to || !process.env.RESEND_API_KEY && !process.env.WS_EMAIL_USER) return;
+  transporter.sendMail({ to, subject, html }).catch(err => console.error('[conv-mail]', err.message));
 }
+
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 

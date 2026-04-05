@@ -239,59 +239,40 @@ router.post('/:id/inquiry', async (req, res) => {
   }
   const listingUrl  = `${process.env.BASE_URL || 'http://localhost:3000'}/listing/${listing.id}`;
 
-  const agentHtml = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-      <div style="background:#002D62;padding:24px 32px;">
-        <h2 style="color:#fff;margin:0;font-size:1.2rem;">Nueva Consulta — HogaresRD</h2>
-        <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:0.88rem;">${listing.title}</p>
-      </div>
-      <div style="padding:28px 32px;background:#fff;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-          <tr><td style="padding:8px 0;color:#4d6a8a;width:35%;">Cliente</td><td style="padding:8px 0;font-weight:700;">${name}</td></tr>
-          <tr><td style="padding:8px 0;color:#4d6a8a;">Teléfono</td><td style="padding:8px 0;"><a href="tel:${phone}" style="color:#002D62;">${phone}</a></td></tr>
-          <tr><td style="padding:8px 0;color:#4d6a8a;">Correo</td><td style="padding:8px 0;"><a href="mailto:${email}" style="color:#002D62;">${email}</a></td></tr>
-          ${message ? `<tr><td style="padding:8px 0;color:#4d6a8a;vertical-align:top;">Mensaje</td><td style="padding:8px 0;">${message}</td></tr>` : ''}
-        </table>
-        <div style="margin-top:24px;padding:12px 16px;background:#f0f4f9;border-radius:8px;font-size:0.82rem;color:#4d6a8a;">
-          Esta consulta fue enviada simultáneamente a todas las inmobiliarias afiliadas al proyecto. El primer agente en contactar al cliente tiene ventaja.
-        </div>
-        <div style="margin-top:20px;">
-          <a href="${listingUrl}" style="background:#002D62;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.88rem;display:inline-block;">Ver anuncio →</a>
-        </div>
-      </div>
-      <div style="padding:14px 32px;background:#f0f4f9;font-size:0.78rem;color:#4d6a8a;">
-        HogaresRD · Consulta recibida el ${new Date().toLocaleString('es-DO')}
-      </div>
-    </div>`;
+  const et = require('../utils/email-templates');
+  const agentHtml = et.layout({
+    title: 'Nueva consulta recibida',
+    subtitle: listing.title,
+    body: et.p('Un cliente esta interesado en esta propiedad.')
+        + et.infoTable(
+            et.infoRow('Cliente', name)
+          + et.infoRow('Telefono', `<a href="tel:${phone}" style="color:#002D62;font-weight:700;">${phone}</a>`)
+          + et.infoRow('Correo', `<a href="mailto:${email}" style="color:#002D62;">${email}</a>`)
+          + (message ? et.infoRow('Mensaje', message) : '')
+        )
+        + et.alertBox('Esta consulta fue enviada a todas las inmobiliarias afiliadas. El primer agente en contactar al cliente tiene ventaja.', 'info')
+        + et.button('Ver anuncio', listingUrl),
+  });
 
-  const clientHtml = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-      <div style="background:#002D62;padding:24px 32px;">
-        <h2 style="color:#fff;margin:0;font-size:1.2rem;">¡Consulta recibida! 🏠</h2>
-        <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:0.88rem;">HogaresRD</p>
-      </div>
-      <div style="padding:28px 32px;background:#fff;">
-        <p style="font-size:0.95rem;color:#1a2e44;">Hola <strong>${name}</strong>,</p>
-        <p style="font-size:0.9rem;color:#4d6a8a;line-height:1.6;">Tu consulta sobre <strong>${listing.title}</strong> fue enviada exitosamente a ${agencyNames}. Un agente se pondrá en contacto contigo pronto al número <strong>${phone}</strong>.</p>
-        <div style="margin-top:20px;">
-          <a href="${listingUrl}" style="background:#002D62;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.88rem;display:inline-block;">Ver propiedad →</a>
-        </div>
-      </div>
-      <div style="padding:14px 32px;background:#f0f4f9;font-size:0.78rem;color:#4d6a8a;">HogaresRD · Bienes raíces en la República Dominicana</div>
-    </div>`;
+  const clientHtml = et.layout({
+    title: 'Consulta recibida',
+    subtitle: 'HogaresRD',
+    body: et.p('Hola <strong>' + et.esc(name) + '</strong>,')
+        + et.p('Tu consulta sobre <strong>' + et.esc(listing.title) + '</strong> fue enviada exitosamente a ' + agencyNames + '. Un agente se pondra en contacto contigo pronto al numero <strong>' + phone + '</strong>.')
+        + et.button('Ver propiedad', listingUrl)
+        + et.divider()
+        + et.small('Tambien puedes chatear directamente con el agente desde la pagina de la propiedad.'),
+  });
 
   try {
     const sends = agencyEmails.map(to =>
       transporter.sendMail({
-        from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
         to,
-        replyTo: email,
         subject: `Nueva consulta: ${listing.title}`,
         html:    agentHtml,
       })
     );
     sends.push(transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      email,
       subject: '¡Tu consulta fue enviada! — HogaresRD',
       html:    clientHtml,

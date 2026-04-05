@@ -155,30 +155,32 @@ function sendNotification(to, subject, html) {
 }
 
 function statusEmail(app, oldStatus, newStatus, reason) {
-  const label = STATUS_LABELS[newStatus] || newStatus;
+  const et = require('../utils/email-templates');
+  const STATUS_NAMES = {
+    aplicado: 'Aplicado', en_revision: 'En Revision', documentos_requeridos: 'Documentos Requeridos',
+    documentos_enviados: 'Documentos Enviados', documentos_insuficientes: 'Documentos Insuficientes',
+    en_aprobacion: 'En Aprobacion', reservado: 'Reservado', aprobado: 'Aprobado',
+    pendiente_pago: 'Pendiente de Pago', pago_enviado: 'Pago Enviado',
+    pago_aprobado: 'Pago Aprobado', completado: 'Completado', rechazado: 'Rechazado',
+  };
+  const statusName = STATUS_NAMES[newStatus] || newStatus;
+  const isPositive = ['aprobado', 'pago_aprobado', 'completado', 'reservado'].includes(newStatus);
+  const isNegative = ['rechazado', 'documentos_insuficientes'].includes(newStatus);
+  const badgeColor = isPositive ? '#16a34a' : isNegative ? '#CE1126' : '#002D62';
+
+  const body = et.p('Tu aplicacion para <strong>' + et.esc(app.listing_title) + '</strong> ha sido actualizada.')
+    + '<div style="text-align:center;margin:20px 0;">' + et.statusBadge(statusName, badgeColor) + '</div>'
+    + (reason ? et.alertBox('<strong>Motivo:</strong> ' + et.esc(reason), isNegative ? 'danger' : 'info') : '')
+    + et.button('Ver mi aplicacion', (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications?id=' + app.id)
+    + et.divider()
+    + et.small('Si tienes preguntas sobre este cambio, responde a este correo.');
+
   return {
-    subject: `HogaresRD — Tu aplicación: ${label}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-        <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-          <h2 style="margin:0;">HogaresRD</h2>
-        </div>
-        <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
-          <p>Hola <strong>${app.client.name}</strong>,</p>
-          <p>Tu aplicación para <strong>${app.listing_title}</strong> ha sido actualizada:</p>
-          <div style="background:#f0f4f9;padding:1rem;border-radius:8px;text-align:center;margin:1rem 0;">
-            <div style="font-size:0.8rem;color:#4d6a8a;">Estado actual</div>
-            <div style="font-size:1.3rem;font-weight:800;color:#0038A8;">${label}</div>
-          </div>
-          ${reason ? `<p><strong>Nota:</strong> ${reason}</p>` : ''}
-          <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;margin-top:0.5rem;">Ver mi aplicación</a>
-        </div>
-        <div style="padding:1rem;text-align:center;font-size:0.75rem;color:#999;">
-          &copy; 2026 HogaresRD
-        </div>
-      </div>`,
+    subject: 'HogaresRD — Tu aplicacion: ' + statusName,
+    html: et.layout({ title: 'Estado de tu aplicacion', subtitle: et.esc(app.listing_title), body }),
   };
 }
+
 
 function fmtAmt(n, cur) {
   return `${cur || 'DOP'} ${Number(n || 0).toLocaleString('es-DO')}`;
