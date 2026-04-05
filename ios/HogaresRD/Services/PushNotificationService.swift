@@ -6,6 +6,7 @@ class PushNotificationService: NSObject, ObservableObject {
     static let shared = PushNotificationService()
 
     @Published var isAuthorized = false
+    @Published var authStatus: UNAuthorizationStatus = .notDetermined
     @Published var deviceToken: String?
 
     override init() {
@@ -16,6 +17,7 @@ class PushNotificationService: NSObject, ObservableObject {
     func checkAuthorizationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
+                self.authStatus = settings.authorizationStatus
                 self.isAuthorized = settings.authorizationStatus == .authorized
             }
         }
@@ -27,6 +29,7 @@ class PushNotificationService: NSObject, ObservableObject {
                 .requestAuthorization(options: [.alert, .badge, .sound])
             await MainActor.run {
                 self.isAuthorized = granted
+                self.authStatus = granted ? .authorized : .denied
                 if granted {
                     UIApplication.shared.registerForRemoteNotifications()
                 }

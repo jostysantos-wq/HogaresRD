@@ -468,6 +468,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -500,6 +502,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -1359,6 +1359,7 @@
       const res = await fetch(`/api/listings/${listingId}/inquiry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           name:     document.getElementById('iqName').value,
           phone:    document.getElementById('iqPhone').value,
@@ -1407,7 +1408,9 @@
     if (e.target === document.getElementById('applyModal')) closeApplyModal();
   }
 
+  let applyInFlight = false;
   function submitApply() {
+    if (applyInFlight) return;
     const name           = document.getElementById('applyName').value.trim();
     const phone          = document.getElementById('applyPhone').value.trim();
     const email          = document.getElementById('applyEmail').value.trim();
@@ -1424,6 +1427,7 @@
     errEl.textContent = '';
 
     const btn = document.getElementById('applySubmitBtn');
+    applyInFlight = true;
     btn.disabled = true; btn.textContent = 'Enviando…';
 
     const listing = window._currentListing || {};
@@ -1436,6 +1440,7 @@
     fetch('/api/applications', {
       method:  'POST',
       headers,
+      credentials: 'include',
       body:    JSON.stringify({
         listing_id:    listing.id    || '',
         listing_title: listing.title || document.title,
@@ -1446,7 +1451,11 @@
         financing, pre_approved, contact_method, notes,
       })
     })
-    .then(r => r.json())
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Error ${r.status}: No se pudo enviar la aplicación.`);
+      return data;
+    })
     .then(data => {
       if (data.error) throw new Error(data.error);
       window._lastAppId = data.id;
@@ -1463,7 +1472,7 @@
       if (trackLink) trackLink.style.display = token ? 'inline-block' : 'none';
     })
     .catch(err => { errEl.textContent = err.message || 'Error al enviar. Inténtalo de nuevo.'; })
-    .finally(() => { btn.disabled = false; btn.textContent = 'Enviar Aplicación'; });
+    .finally(() => { applyInFlight = false; btn.disabled = false; btn.textContent = 'Enviar Aplicación'; });
   }
 
   // ── Share ──────────────────────────────────────────────────

@@ -14,6 +14,11 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         authStatus                 = manager.authorizationStatus
     }
 
+    /// True when the user has explicitly denied or restricted location.
+    var isDeniedOrRestricted: Bool {
+        authStatus == .denied || authStatus == .restricted
+    }
+
     func requestLocation() {
         switch manager.authorizationStatus {
         case .notDetermined:

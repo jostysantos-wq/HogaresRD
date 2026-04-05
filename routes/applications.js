@@ -110,12 +110,23 @@ async function validateMime(filePath) {
   }
 }
 
-// Guard a file path against path-traversal attacks.
-// Returns the resolved absolute path if it is within DOCS_DIR, otherwise null.
+// Guard a file path against path-traversal attacks (including symlink escapes).
+// Returns the real absolute path if it is within DOCS_DIR, otherwise null.
 function guardDocPath(rawPath) {
-  const resolved = path.resolve(rawPath);
-  const base     = path.resolve(DOCS_DIR) + path.sep;
-  return resolved.startsWith(base) ? resolved : null;
+  try {
+    const resolved = path.resolve(rawPath);
+    const base     = path.resolve(DOCS_DIR);
+    // First-level check on the resolved path (before realpath) to catch obvious escapes
+    if (!resolved.startsWith(base + path.sep) && resolved !== base) return null;
+    // Resolve symlinks on both sides and re-compare to prevent symlink escapes
+    const realFile = fs.realpathSync(resolved);
+    const realBase = fs.realpathSync(base);
+    if (realFile === realBase) return null;
+    if (!realFile.startsWith(realBase + path.sep)) return null;
+    return realFile;
+  } catch {
+    return null;
+  }
 }
 
 const docStorage = multer.diskStorage({
@@ -579,9 +590,21 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
-  const { documents } = req.body; // [{ type, label, required }]
+  let { documents } = req.body; // [{ type, label, required }]
   if (!Array.isArray(documents) || !documents.length)
     return res.status(400).json({ error: 'Lista de documentos requerida' });
+  if (documents.length > 20)
+    return res.status(400).json({ error: 'Demasiados documentos (máximo 20)' });
+
+  documents = documents
+    .filter(d => d && typeof d === 'object' && typeof d.type === 'string' && typeof d.label === 'string')
+    .map(d => ({
+      type:     d.type.slice(0, 50),
+      label:    d.label.slice(0, 100),
+      required: d.required !== false,
+    }));
+  if (!documents.length)
+    return res.status(400).json({ error: 'Lista de documentos inválida' });
 
   const newDocs = documents.map(d => ({
     id:           uuid(),

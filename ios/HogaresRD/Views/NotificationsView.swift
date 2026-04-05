@@ -360,13 +360,30 @@ struct NotificationSettingsView: View {
     @State private var pushEnabled = false
     @State private var loading = false
     @State private var errorMsg: String?
+    // Guard to ignore `.onChange` fired by our own programmatic reverts.
+    @State private var suppressToggleChange = false
 
-    // In-app notification preferences (local)
-    @AppStorage("notif_newListings")   private var newListings = true
-    @AppStorage("notif_priceDrops")    private var priceDrops = true
-    @AppStorage("notif_similar")       private var similar = false
-    @AppStorage("notif_agentMessages") private var agentMessages = true
-    @AppStorage("notif_appUpdates")    private var appUpdates = false
+    // In-app notification preferences — explicit UserDefaults read/write.
+    // We had issues where @AppStorage toggles wouldn't persist across app
+    // launches; manual handling guarantees writes commit.
+    private static let defaults: [String: Bool] = [
+        "notif_newListings": true,
+        "notif_priceDrops": true,
+        "notif_similar": false,
+        "notif_agentMessages": true,
+        "notif_appUpdates": false,
+    ]
+    private static func loadBool(_ key: String) -> Bool {
+        if UserDefaults.standard.object(forKey: key) == nil {
+            return defaults[key] ?? false
+        }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+    @State private var newListings: Bool   = Self.loadBool("notif_newListings")
+    @State private var priceDrops: Bool    = Self.loadBool("notif_priceDrops")
+    @State private var similar: Bool       = Self.loadBool("notif_similar")
+    @State private var agentMessages: Bool = Self.loadBool("notif_agentMessages")
+    @State private var appUpdates: Bool    = Self.loadBool("notif_appUpdates")
 
     var body: some View {
         List {
@@ -395,22 +412,31 @@ struct NotificationSettingsView: View {
                     if loading {
                         ProgressView()
                     } else {
-                        Toggle("", isOn: Binding(
-                            get: { pushEnabled },
-                            set: { newVal in Task { await togglePush(newVal) } }
-                        ))
-                        .labelsHidden()
+                        Toggle("", isOn: $pushEnabled)
+                            .labelsHidden()
+                            .disabled(loading)
                     }
                 }
 
                 if !pushService.isAuthorized && pushEnabled == false {
-                    HStack(spacing: 8) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(.orange)
-                            .font(.caption)
-                        Text("Las notificaciones push no están habilitadas en los ajustes del sistema.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                            Text("Las notificaciones push no estan habilitadas en los ajustes del sistema.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label("Abrir Ajustes", systemImage: "arrow.up.forward.app")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.rdBlue)
+                        }
                     }
                 }
 
@@ -468,36 +494,61 @@ struct NotificationSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             pushService.checkAuthorizationStatus()
-            pushEnabled = pushService.isAuthorized && pushService.deviceToken != nil
+            // Reflect current push auth status without comparing deviceToken,
+            // which can be momentarily nil while the app is re-registering.
+            suppressToggleChange = true
+            pushEnabled = pushService.isAuthorized
+            DispatchQueue.main.async { suppressToggleChange = false }
+            // Refresh from UserDefaults in case another view changed them
+            newListings   = Self.loadBool("notif_newListings")
+            priceDrops    = Self.loadBool("notif_priceDrops")
+            similar       = Self.loadBool("notif_similar")
+            agentMessages = Self.loadBool("notif_agentMessages")
+            appUpdates    = Self.loadBool("notif_appUpdates")
         }
+        .onChange(of: pushEnabled) { _, newVal in
+            guard !suppressToggleChange else { return }
+            Task { await togglePush(newVal) }
+        }
+        .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings") }
+        .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops") }
+        .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar") }
+        .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages") }
+        .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates") }
     }
 
+    @MainActor
     private func togglePush(_ enable: Bool) async {
         loading = true
         errorMsg = nil
 
         if enable {
-            let granted = await pushService.requestPermission()
-            await MainActor.run {
-                pushEnabled = granted
-                if !granted {
-                    errorMsg = "Permiso denegado. Habilita las notificaciones en Ajustes > HogaresRD."
-                }
+            // If the system already denied us, jump to Settings instead of
+            // asking again (the system prompt only appears once per install).
+            if pushService.authStatus == .denied {
+                errorMsg = "Activa las notificaciones en Ajustes > HogaresRD."
+                suppressToggleChange = true
+                pushEnabled = false
+                DispatchQueue.main.async { self.suppressToggleChange = false }
                 loading = false
+                return
             }
+            let granted = await pushService.requestPermission()
+            if !granted {
+                errorMsg = "Permiso denegado. Habilita las notificaciones en Ajustes > HogaresRD."
+                suppressToggleChange = true
+                pushEnabled = false
+                DispatchQueue.main.async { self.suppressToggleChange = false }
+            }
+            // If granted, leave pushEnabled = true (already set by the user's tap).
+            loading = false
         } else {
             do {
                 try await api.unregisterPushToken()
-                await MainActor.run {
-                    pushEnabled = false
-                    loading = false
-                }
             } catch {
-                await MainActor.run {
-                    errorMsg = "Error al desactivar notificaciones."
-                    loading = false
-                }
+                errorMsg = "Error al desactivar notificaciones."
             }
+            loading = false
         }
     }
 }

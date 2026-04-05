@@ -49,12 +49,15 @@ struct NativeMapView: UIViewRepresentable {
         // Store weak reference so MapStateStore can call convert(_:toPointTo:)
         mapState.mapView = map
 
-        // Initial region — Santo Domingo at city level
+        // Initial camera — Santo Domingo at a fixed altitude. Using a camera
+        // (altitude in meters) rather than setRegion(latitudinalMeters:)
+        // avoids the "zoom jump" you see when the map's frame is laid out
+        // AFTER the initial setRegion call — camera altitude is independent
+        // of the view's aspect ratio.
         let center = CLLocationCoordinate2D(latitude: 18.486, longitude: -69.931)
-        map.setRegion(MKCoordinateRegion(center: center,
-                                         latitudinalMeters: 35_000,
-                                         longitudinalMeters: 35_000),
-                      animated: false)
+        map.camera = MKMapCamera(lookingAtCenter: center,
+                                 fromDistance: 60_000, // altitude in meters
+                                 pitch: 0, heading: 0)
         return map
     }
 
