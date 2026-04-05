@@ -12,6 +12,31 @@ const COOKIE_NAME = 'hrdt';
 
 function uid() { return 'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+// Field length caps — prevent DB bloat from malicious/buggy clients
+const MAX_LABEL = 40;
+const MAX_TYPE  = 80;
+const MAX_FLOOR = 20;
+const MAX_NOTES = 500;
+const MAX_BATCH = 500;
+
+/** Normalize + validate a unit payload. Returns {unit, error} — error is
+ * null when valid. Trims + caps every string field. */
+function validateUnitPayload(raw) {
+  const label = (raw?.label || '').trim();
+  if (!label) return { unit: null, error: 'La etiqueta de la unidad es requerida' };
+  if (label.length > MAX_LABEL)
+    return { unit: null, error: `La etiqueta no puede exceder ${MAX_LABEL} caracteres` };
+  return {
+    unit: {
+      label,
+      type:  (raw?.type  || '').trim().slice(0, MAX_TYPE),
+      floor: (raw?.floor || '').trim().slice(0, MAX_FLOOR),
+      notes: (raw?.notes || '').trim().slice(0, MAX_NOTES),
+    },
+    error: null,
+  };
+}
+
 /** Try to identify the user from cookie/Bearer token. Returns null if not
  * authenticated — does NOT block the request. */
 function getOptionalUser(req) {
@@ -87,35 +112,35 @@ router.post('/:listingId/units', userAuth, (req, res) => {
   if (!isAffiliated(user, listing))
     return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
 
-  const { label, type, floor, notes } = req.body;
-  if (!label || !label.trim())
-    return res.status(400).json({ error: 'La etiqueta de la unidad es requerida' });
+  const { unit: payload, error: vErr } = validateUnitPayload(req.body);
+  if (vErr) return res.status(400).json({ error: vErr });
 
-  // Check for duplicate label
-  const inventory = listing.unit_inventory || [];
-  if (inventory.some(u => u.label.toLowerCase() === label.trim().toLowerCase()))
-    return res.status(400).json({ error: `La unidad "${label.trim()}" ya existe` });
-
-  const unit = {
-    id:            uid(),
-    label:         label.trim(),
-    type:          type?.trim() || '',
-    floor:         floor?.trim() || '',
-    notes:         notes?.trim() || '',
-    status:        'available',
-    applicationId: null,
-    clientName:    null,
-    createdAt:     new Date().toISOString(),
-  };
-
-  inventory.push(unit);
-  listing.unit_inventory = inventory;
-
-  // Update units_available count
-  listing.units_available = inventory.filter(u => u.status === 'available').length;
-
-  store.saveListing(listing);
-  res.status(201).json({ unit, summary: inventorySummary(inventory) });
+  try {
+    const result = store.withTransaction(() => {
+      // Re-read listing inside the tx to avoid stale state
+      const fresh = store.getListingById(req.params.listingId);
+      const inventory = fresh.unit_inventory || [];
+      if (inventory.some(u => u.label.toLowerCase() === payload.label.toLowerCase())) {
+        throw Object.assign(new Error(`La unidad "${payload.label}" ya existe`), { status: 400 });
+      }
+      const unit = {
+        id:            uid(),
+        ...payload,
+        status:        'available',
+        applicationId: null,
+        clientName:    null,
+        createdAt:     new Date().toISOString(),
+      };
+      inventory.push(unit);
+      fresh.unit_inventory    = inventory;
+      fresh.units_available   = inventory.filter(u => u.status === 'available').length;
+      store.saveListing(fresh);
+      return { unit, summary: inventorySummary(inventory) };
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Error' });
+  }
 });
 
 // ── POST /api/inventory/:listingId/units/batch ────────────────────────────
@@ -133,36 +158,49 @@ router.post('/:listingId/units/batch', userAuth, (req, res) => {
   const { units } = req.body;
   if (!Array.isArray(units) || !units.length)
     return res.status(400).json({ error: 'Se requiere un array de unidades' });
+  if (units.length > MAX_BATCH)
+    return res.status(400).json({ error: `Maximo ${MAX_BATCH} unidades por lote` });
 
-  const inventory = listing.unit_inventory || [];
-  const existingLabels = new Set(inventory.map(u => u.label.toLowerCase()));
-  const added = [];
+  try {
+    const result = store.withTransaction(() => {
+      const fresh = store.getListingById(req.params.listingId);
+      const inventory = fresh.unit_inventory || [];
+      const existingLabels = new Set(inventory.map(u => u.label.toLowerCase()));
+      const added   = [];
+      const skipped = [];
 
-  for (const u of units) {
-    if (!u.label?.trim()) continue;
-    const lbl = u.label.trim();
-    if (existingLabels.has(lbl.toLowerCase())) continue;
-    const unit = {
-      id:            uid(),
-      label:         lbl,
-      type:          u.type?.trim() || '',
-      floor:         u.floor?.trim() || '',
-      notes:         u.notes?.trim() || '',
-      status:        'available',
-      applicationId: null,
-      clientName:    null,
-      createdAt:     new Date().toISOString(),
-    };
-    inventory.push(unit);
-    existingLabels.add(lbl.toLowerCase());
-    added.push(unit);
+      units.forEach((raw, i) => {
+        const { unit: payload, error: vErr } = validateUnitPayload(raw);
+        if (vErr) {
+          skipped.push({ index: i, label: raw?.label || '', reason: vErr });
+          return;
+        }
+        if (existingLabels.has(payload.label.toLowerCase())) {
+          skipped.push({ index: i, label: payload.label, reason: 'duplicado' });
+          return;
+        }
+        const unit = {
+          id:            uid(),
+          ...payload,
+          status:        'available',
+          applicationId: null,
+          clientName:    null,
+          createdAt:     new Date().toISOString(),
+        };
+        inventory.push(unit);
+        existingLabels.add(payload.label.toLowerCase());
+        added.push(unit);
+      });
+
+      fresh.unit_inventory    = inventory;
+      fresh.units_available   = inventory.filter(u => u.status === 'available').length;
+      store.saveListing(fresh);
+      return { added, skipped, summary: inventorySummary(inventory) };
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Error' });
   }
-
-  listing.unit_inventory = inventory;
-  listing.units_available = inventory.filter(u => u.status === 'available').length;
-  store.saveListing(listing);
-
-  res.json({ added: added.length, summary: inventorySummary(inventory) });
 });
 
 // ── DELETE /api/inventory/:listingId/units/:unitId ────────────────────────
@@ -177,18 +215,24 @@ router.delete('/:listingId/units/:unitId', userAuth, (req, res) => {
   if (!isAffiliated(user, listing))
     return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
 
-  const inventory = listing.unit_inventory || [];
-  const idx = inventory.findIndex(u => u.id === req.params.unitId);
-  if (idx === -1) return res.status(404).json({ error: 'Unidad no encontrada' });
-  if (inventory[idx].status !== 'available')
-    return res.status(400).json({ error: 'Solo se pueden eliminar unidades disponibles' });
-
-  inventory.splice(idx, 1);
-  listing.unit_inventory = inventory;
-  listing.units_available = inventory.filter(u => u.status === 'available').length;
-  store.saveListing(listing);
-
-  res.json({ success: true, summary: inventorySummary(inventory) });
+  try {
+    const result = store.withTransaction(() => {
+      const fresh = store.getListingById(req.params.listingId);
+      const inventory = fresh.unit_inventory || [];
+      const idx = inventory.findIndex(u => u.id === req.params.unitId);
+      if (idx === -1) throw Object.assign(new Error('Unidad no encontrada'), { status: 404 });
+      if (inventory[idx].status !== 'available')
+        throw Object.assign(new Error('Solo se pueden eliminar unidades disponibles'), { status: 400 });
+      inventory.splice(idx, 1);
+      fresh.unit_inventory    = inventory;
+      fresh.units_available   = inventory.filter(u => u.status === 'available').length;
+      store.saveListing(fresh);
+      return { success: true, summary: inventorySummary(inventory) };
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Error' });
+  }
 });
 
 // ── POST /api/inventory/:listingId/units/:unitId/assign ───────────────────
@@ -206,39 +250,45 @@ router.post('/:listingId/units/:unitId/assign', userAuth, (req, res) => {
   const { applicationId } = req.body;
   if (!applicationId) return res.status(400).json({ error: 'applicationId requerido' });
 
-  const app = store.getApplicationById(applicationId);
-  if (!app) return res.status(404).json({ error: 'Aplicacion no encontrada' });
+  try {
+    const result = store.withTransaction(() => {
+      const app = store.getApplicationById(applicationId);
+      if (!app) throw Object.assign(new Error('Aplicacion no encontrada'), { status: 404 });
 
-  const inventory = listing.unit_inventory || [];
-  const unit = inventory.find(u => u.id === req.params.unitId);
-  if (!unit) return res.status(404).json({ error: 'Unidad no encontrada' });
-  if (unit.status !== 'available')
-    return res.status(400).json({ error: `Unidad "${unit.label}" no esta disponible (estado: ${unit.status})` });
+      const fresh = store.getListingById(req.params.listingId);
+      const inventory = fresh.unit_inventory || [];
+      const unit = inventory.find(u => u.id === req.params.unitId);
+      if (!unit) throw Object.assign(new Error('Unidad no encontrada'), { status: 404 });
+      if (unit.status !== 'available')
+        throw Object.assign(new Error(`Unidad "${unit.label}" no esta disponible (estado: ${unit.status})`), { status: 400 });
 
-  // Release any previously assigned unit on this application
-  if (app.assigned_unit?.unitId) {
-    const prevUnit = inventory.find(u => u.id === app.assigned_unit.unitId);
-    if (prevUnit && prevUnit.status === 'reserved') {
-      prevUnit.status = 'available';
-      prevUnit.applicationId = null;
-      prevUnit.clientName = null;
-    }
+      // Release any previously assigned unit on this application
+      if (app.assigned_unit?.unitId) {
+        const prevUnit = inventory.find(u => u.id === app.assigned_unit.unitId);
+        if (prevUnit && prevUnit.status === 'reserved') {
+          prevUnit.status = 'available';
+          prevUnit.applicationId = null;
+          prevUnit.clientName = null;
+        }
+      }
+
+      unit.status = 'reserved';
+      unit.applicationId = applicationId;
+      unit.clientName = app.client_name || app.client?.name || '';
+
+      fresh.unit_inventory    = inventory;
+      fresh.units_available   = inventory.filter(u => u.status === 'available').length;
+      store.saveListing(fresh);
+
+      app.assigned_unit = { unitId: unit.id, unitLabel: unit.label, unitType: unit.type };
+      store.saveApplication(app);
+
+      return { unit, summary: inventorySummary(inventory) };
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Error' });
   }
-
-  // Assign the new unit
-  unit.status = 'reserved';
-  unit.applicationId = applicationId;
-  unit.clientName = app.client_name || app.client?.name || '';
-
-  listing.unit_inventory = inventory;
-  listing.units_available = inventory.filter(u => u.status === 'available').length;
-  store.saveListing(listing);
-
-  // Update the application with the assigned unit
-  app.assigned_unit = { unitId: unit.id, unitLabel: unit.label, unitType: unit.type };
-  store.saveApplication(app);
-
-  res.json({ unit, summary: inventorySummary(inventory) });
 });
 
 // ── POST /api/inventory/:listingId/units/:unitId/release ──────────────────
@@ -253,37 +303,40 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
   if (!isAffiliated(user, listing))
     return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
 
-  const inventory = listing.unit_inventory || [];
-  const unit = inventory.find(u => u.id === req.params.unitId);
-  if (!unit) return res.status(404).json({ error: 'Unidad no encontrada' });
+  try {
+    const result = store.withTransaction(() => {
+      const fresh = store.getListingById(req.params.listingId);
+      const inventory = fresh.unit_inventory || [];
+      const unit = inventory.find(u => u.id === req.params.unitId);
+      if (!unit) throw Object.assign(new Error('Unidad no encontrada'), { status: 404 });
+      if (unit.status === 'sold') {
+        throw Object.assign(
+          new Error('Unidades vendidas no pueden liberarse. Contacta a soporte para anular la venta.'),
+          { status: 400 }
+        );
+      }
 
-  // Sold units are immutable via the release flow — a completed sale
-  // needs an explicit admin action to undo (audit trail, not a regular
-  // release). Prevents accidentally reverting finalized sales.
-  if (unit.status === 'sold') {
-    return res.status(400).json({
-      error: 'Unidades vendidas no pueden liberarse. Contacta a soporte para anular la venta.',
+      if (unit.applicationId) {
+        const app = store.getApplicationById(unit.applicationId);
+        if (app) {
+          app.assigned_unit = null;
+          store.saveApplication(app);
+        }
+      }
+
+      unit.status = 'available';
+      unit.applicationId = null;
+      unit.clientName = null;
+
+      fresh.unit_inventory    = inventory;
+      fresh.units_available   = inventory.filter(u => u.status === 'available').length;
+      store.saveListing(fresh);
+      return { unit, summary: inventorySummary(inventory) };
     });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Error' });
   }
-
-  // Clear application link
-  if (unit.applicationId) {
-    const app = store.getApplicationById(unit.applicationId);
-    if (app) {
-      app.assigned_unit = null;
-      store.saveApplication(app);
-    }
-  }
-
-  unit.status = 'available';
-  unit.applicationId = null;
-  unit.clientName = null;
-
-  listing.unit_inventory = inventory;
-  listing.units_available = inventory.filter(u => u.status === 'available').length;
-  store.saveListing(listing);
-
-  res.json({ unit, summary: inventorySummary(inventory) });
 });
 
 // ── Helper ────────────────────────────────────────────────────────────────

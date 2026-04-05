@@ -1293,4 +1293,8 @@ module.exports = {
   getBlogPosts, getBlogPostById, getBlogPostBySlug, saveBlogPost, deleteBlogPost, incrementBlogViews,
   getAllPageContent, getPageSection, savePageSection,
   getReports, getReportById, saveReport,
+  /** Run fn inside a SQLite transaction. Rolls back on throw. Use for
+   * multi-step reads+writes that must be atomic (e.g., inventory unit
+   * assign flows). */
+  withTransaction: (fn) => db.transaction(fn)(),
 };

@@ -7423,6 +7423,7 @@ async function loadInventory() {
       const dotColor = u.status === 'available' ? '#16a34a' : u.status === 'reserved' ? '#eab308' : '#dc2626';
       const statusLabel = u.status === 'available' ? 'Disponible' : u.status === 'reserved' ? 'Reservada' : 'Vendida';
       const deletable = u.status === 'available';
+      const releasable = u.status === 'reserved';
       return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);">
         <span style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
         <div style="flex:1;min-width:0;">
@@ -7431,6 +7432,7 @@ async function loadInventory() {
           ${u.clientName ? `<div style="font-size:0.7rem;color:${dotColor};">Cliente: ${esc(u.clientName)}</div>` : ''}
         </div>
         <span style="font-size:0.7rem;font-weight:700;color:${dotColor};padding:2px 8px;border-radius:10px;background:${dotColor}15;">${statusLabel}</span>
+        ${releasable ? `<button onclick="releaseInventoryUnit('${u.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:600;padding:3px 8px;color:var(--text-muted);" title="Liberar reserva">Liberar</button>` : ''}
         ${deletable ? `<button onclick="deleteInventoryUnit('${u.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.9rem;" title="Eliminar">&times;</button>` : ''}
       </div>`;
     }).join('');
@@ -7470,6 +7472,16 @@ async function deleteInventoryUnit(unitId) {
     loadInventory();
   } catch (e) {
     alert(e.message || 'Error eliminando unidad');
+  }
+}
+
+async function releaseInventoryUnit(unitId) {
+  if (!confirm('Liberar esta reserva? La unidad volverá a estar disponible.')) return;
+  try {
+    await API(`/api/inventory/${_invListingId}/units/${unitId}/release`, { method: 'POST' });
+    loadInventory();
+  } catch (e) {
+    alert(e.message || 'Error liberando unidad');
   }
 }
 </script>

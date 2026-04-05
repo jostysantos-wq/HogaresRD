@@ -145,6 +145,14 @@ struct InventoryManagementView: View {
                     Section("Reservadas (\(reserved.count))") {
                         ForEach(reserved) { unit in
                             UnitRow(unit: unit)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button {
+                                        Task { await releaseUnit(unit) }
+                                    } label: {
+                                        Label("Liberar", systemImage: "arrow.uturn.backward")
+                                    }
+                                    .tint(.orange)
+                                }
                         }
                     }
                 }
@@ -221,6 +229,19 @@ struct InventoryManagementView: View {
         do {
             try await api.deleteInventoryUnit(listingId: listingId, unitId: unit.id)
             units.removeAll { $0.id == unit.id }
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+    }
+
+    private func releaseUnit(_ unit: UnitInventoryItem) async {
+        errorMsg = nil
+        do {
+            try await api.releaseUnit(listingId: listingId, unitId: unit.id)
+            // Refresh so the unit moves into the Disponibles section with
+            // cleared buyer info. Easier than mutating in place.
+            await load()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
             errorMsg = error.localizedDescription
         }
