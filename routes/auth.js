@@ -258,87 +258,34 @@ router.post('/register', authLimiter, async (req, res, next) => {
         </td></tr>`
       : '';
 
+    const et = require('../utils/email-templates');
     transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
       to:      user.email,
-      subject: `¡Bienvenido a HogaresRD, ${user.name.split(' ')[0]}! Tu hogar ideal te espera 🏠`,
-      html: `<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-
-        <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:40px 40px 36px;">
-          <div style="font-size:1rem;font-weight:900;color:#ffffff;letter-spacing:-0.5px;margin-bottom:24px;">🏠 HogaresRD</div>
-          <div style="font-size:1.75rem;font-weight:800;color:#ffffff;line-height:1.2;margin-bottom:8px;">
-            ¡Hola, ${user.name.split(' ')[0]}! 👋
-          </div>
-          <div style="font-size:1rem;color:rgba(255,255,255,0.8);line-height:1.5;">
-            Ya eres parte de la comunidad inmobiliaria más completa de la República Dominicana.
-          </div>
-        </td></tr>
-
-        <!-- Intro -->
-        <tr><td style="padding:36px 40px 24px;">
-          <p style="margin:0 0 16px;font-size:1rem;color:#1a2b40;line-height:1.7;">
-            Nos alegra tenerte aquí. En <strong>HogaresRD</strong> encontrarás desde acogedores apartamentos en Santo Domingo hasta villas frente al mar en Punta Cana — y todo lo que hay en el medio. 🌴
-          </p>
-          <p style="margin:0 0 24px;font-size:1rem;color:#1a2b40;line-height:1.7;">
-            Con tu cuenta puedes guardar favoritos, contactar directamente a las inmobiliarias y recibir actualizaciones de las propiedades que te interesan. Básicamente, encontrar tu próximo hogar acaba de volverse mucho más fácil.
-          </p>
-
-          <!-- Features -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fd;border-radius:12px;padding:4px 0;margin-bottom:28px;">
-            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
-              <span style="font-size:1rem;margin-right:10px;">🔍</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Busca por ciudad, precio, tipo y más filtros</span>
-            </td></tr>
-            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
-              <span style="font-size:1rem;margin-right:10px;">📍</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Explora propiedades en un mapa interactivo</span>
-            </td></tr>
-            <tr><td style="padding:12px 20px;">
-              <span style="font-size:1rem;margin-right:10px;">💬</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Contacta inmobiliarias directamente desde cada anuncio</span>
-            </td></tr>
-          </table>
-
-          <!-- Main CTA -->
-          <div style="text-align:center;margin-bottom:8px;">
-            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#ffffff;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.3px;">
-              Explorar propiedades →
-            </a>
-          </div>
-        </td></tr>
-
-        ${trendingHTML}
-
-        <!-- Closing -->
-        <tr><td style="padding:0 40px 36px;">
-          <p style="margin:0;font-size:0.9rem;color:#4d6a8a;line-height:1.7;">
-            Si tienes alguna pregunta, responde directamente a este correo y con gusto te ayudamos. 😊<br/><br/>
-            Hasta pronto,<br/>
-            <strong style="color:#002D62;">El equipo de HogaresRD</strong>
-          </p>
-          ${user.marketingOptIn ? `<p style="margin:16px 0 0;font-size:0.78rem;color:#a0b4cc;">Recibirás ocasionalmente novedades y propiedades destacadas. Puedes cancelar en cualquier momento respondiendo a este correo.</p>` : ''}
-        </td></tr>
-
-        <!-- Footer -->
-        <tr><td style="padding:20px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.75rem;color:#9ab0c8;text-align:center;line-height:1.6;">
-            © ${new Date().getFullYear()} HogaresRD &mdash; República Dominicana<br/>
-            <a href="${BASE_URL}/home" style="color:#9ab0c8;text-decoration:underline;">hogaresrd.com</a>
-            &nbsp;·&nbsp;
-            <a href="${BASE_URL}/ciudades" style="color:#9ab0c8;text-decoration:underline;">Explorar ciudades</a>
-          </p>
-        </td></tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+      subject: `Bienvenido a HogaresRD, ${user.name.split(' ')[0]}`,
+      html: et.layout({
+        title: `Hola, ${et.esc(user.name.split(' ')[0])}`,
+        subtitle: 'Tu cuenta de cliente esta lista',
+        body: et.p('Ya eres parte de la comunidad inmobiliaria de la Republica Dominicana. Con tu cuenta puedes explorar propiedades, guardar favoritas y contactar agentes directamente.')
+            + et.divider()
+            + et.p('<strong>Lo que puedes hacer con tu cuenta:</strong>')
+            + et.featureList([
+                'Explorar propiedades en venta, alquiler y nuevos proyectos',
+                'Buscar por provincia, ciudad, tipo de propiedad y rango de precio',
+                'Guardar propiedades favoritas sincronizadas entre web y app',
+                'Ver propiedades en un mapa interactivo',
+                'Usar la calculadora de hipoteca integrada',
+                'Contactar agentes y chatear directamente sobre una propiedad',
+                'Agendar visitas a propiedades con calendario de disponibilidad',
+                'Aplicar a propiedades con un formulario completo',
+                'Recibir alertas cuando nuevas propiedades coincidan con tus busquedas guardadas',
+                'Acceder al Asistente IA para resolver dudas sobre el mercado dominicano',
+              ])
+            + et.button('Explorar Propiedades', `${BASE_URL}/home`)
+            + (trendingHTML ? trendingHTML : '')
+            + et.divider()
+            + et.p('Si tienes preguntas, responde directamente a este correo.<br/><br/>Hasta pronto,<br/><strong>El equipo de HogaresRD</strong>')
+            + (user.marketingOptIn ? et.small('Recibiras novedades y propiedades destacadas. Puedes cancelar en cualquier momento respondiendo a este correo.') : ''),
+      }),
     }).catch(err => console.error('Welcome email error:', err.message));
 
     sendVerificationEmail(user, verifyRawToken);
