@@ -196,6 +196,23 @@
     .btn-unit { display: block; width: 100%; text-align: center; padding: 0.5rem; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 6px; font-size: 0.83rem; font-weight: 700; text-decoration: none; background: none; cursor: pointer; transition: background 0.2s, color 0.2s; }
     .btn-unit:hover { background: var(--accent); color: #fff; }
 
+    /* ── LIVE INVENTORY ─────────────────────────────────────── */
+    .inv-summary { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
+    .inv-pill { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+    .inv-pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .inv-pill--available { background: rgba(22,163,74,0.08); color: #16a34a; }
+    .inv-pill--available .inv-pill-dot { background: #16a34a; }
+    .inv-pill--reserved  { background: rgba(234,179,8,0.08); color: #b45309; }
+    .inv-pill--reserved .inv-pill-dot  { background: #eab308; }
+    .inv-pill--sold      { background: rgba(220,38,38,0.08); color: #dc2626; }
+    .inv-pill--sold .inv-pill-dot      { background: #dc2626; }
+    .inv-units-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; }
+    .inv-unit-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.75rem; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); }
+    .inv-unit-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .inv-unit-label { font-size: 0.83rem; font-weight: 700; color: var(--text); }
+    .inv-unit-type { font-size: 0.72rem; color: var(--text-muted); }
+    .inv-unit-status { margin-left: auto; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; }
+
     /* ── AMENITIES ───────────────────────────────────────────── */
     .amenities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 0.6rem; }
     .amenity-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.87rem; color: var(--text-muted); padding: 0.5rem 0.75rem; background: var(--bg); border-radius: 6px; }
@@ -473,6 +490,13 @@
         <div class="detail-section" id="unitSection" style="display:none">
           <div class="section-heading">Tipos de Unidades</div>
           <div class="unit-grid" id="unitGrid"></div>
+        </div>
+
+        <!-- LIVE INVENTORY -->
+        <div class="detail-section" id="inventorySection" style="display:none">
+          <div class="section-heading">Disponibilidad en Tiempo Real</div>
+          <div class="inv-summary" id="invSummary"></div>
+          <div class="inv-units-list" id="invUnitsList"></div>
         </div>
 
         <!-- AMENITIES -->
@@ -1520,6 +1544,34 @@
         </div>`;
       }).join('');
     }
+
+    // Live Inventory
+    fetch(`/api/inventory/${l.id}`).then(r => r.json()).then(data => {
+      if (data.inventory && data.inventory.length) {
+        document.getElementById('inventorySection').style.display = '';
+        const avail = data.inventory.filter(u => u.status === 'available').length;
+        const reserved = data.inventory.filter(u => u.status === 'reserved').length;
+        const sold = data.inventory.filter(u => u.status === 'sold').length;
+        document.getElementById('invSummary').innerHTML = `
+          <div class="inv-pill inv-pill--available"><span class="inv-pill-dot"></span>${avail} Disponibles</div>
+          <div class="inv-pill inv-pill--reserved"><span class="inv-pill-dot"></span>${reserved} Reservadas</div>
+          <div class="inv-pill inv-pill--sold"><span class="inv-pill-dot"></span>${sold} Vendidas</div>
+        `;
+        document.getElementById('invUnitsList').innerHTML = data.inventory.map(u => {
+          const dotColor = u.status === 'available' ? '#16a34a' : u.status === 'reserved' ? '#eab308' : '#dc2626';
+          const statusLabel = u.status === 'available' ? 'Disponible' : u.status === 'reserved' ? 'Reservada' : 'Vendida';
+          const statusBg = u.status === 'available' ? 'rgba(22,163,74,0.08)' : u.status === 'reserved' ? 'rgba(234,179,8,0.08)' : 'rgba(220,38,38,0.08)';
+          return `<div class="inv-unit-row">
+            <span class="inv-unit-dot" style="background:${dotColor}"></span>
+            <div>
+              <div class="inv-unit-label">${esc(u.label)}</div>
+              ${u.type ? `<div class="inv-unit-type">${esc(u.type)}</div>` : ''}
+            </div>
+            <span class="inv-unit-status" style="background:${statusBg};color:${dotColor}">${statusLabel}</span>
+          </div>`;
+        }).join('');
+      }
+    }).catch(() => {});
 
     // Amenities
     if (l.amenities && l.amenities.length) {

@@ -5478,6 +5478,10 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
             Promocionar
           </button>
+          <button class="la-promo-btn" onclick="event.stopPropagation(); openInventoryModal('${l.id}','${esc(l.title)}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>
+            Inventario
+          </button>
           <a href="/listing/${l.id}" target="_blank" class="la-promo-btn" style="text-decoration:none;" onclick="event.stopPropagation()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             Ver
@@ -7284,6 +7288,127 @@
   // Auto-load on page load
   setTimeout(() => { loadTourRequests(); loadAvailability(); }, 1500);
 })();
+</script>
+<!-- ── Inventory Modal ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="inventoryModal" style="display:none" onclick="if(event.target===this)closeInventoryModal()">
+  <div class="modal-dialog" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+      <div>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;" id="invModalTitle">Inventario</h3>
+        <p style="margin:0;font-size:0.75rem;color:var(--text-muted);" id="invModalSubtitle"></p>
+      </div>
+      <button onclick="closeInventoryModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--text-muted);">&times;</button>
+    </div>
+    <div style="padding:1.25rem;">
+      <!-- Summary -->
+      <div id="invModalSummary" style="display:flex;gap:0.5rem;margin-bottom:1rem;"></div>
+      <!-- Add unit form -->
+      <div style="border:1.5px dashed var(--border);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;">AGREGAR UNIDAD</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <input id="invNewLabel" placeholder="Etiqueta (ej: Edif.3 - 2B)" style="flex:1;min-width:140px;padding:0.45rem 0.65rem;border:1px solid var(--border);border-radius:6px;font-size:0.83rem;">
+          <input id="invNewType" placeholder="Tipo (ej: Apt 2BR)" style="flex:1;min-width:100px;padding:0.45rem 0.65rem;border:1px solid var(--border);border-radius:6px;font-size:0.83rem;">
+          <button id="invAddBtn" onclick="addInventoryUnit()" style="padding:0.45rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:0.83rem;font-weight:700;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+        </div>
+        <div id="invAddError" style="font-size:0.75rem;color:var(--red);margin-top:0.3rem;display:none;"></div>
+      </div>
+      <!-- Units list -->
+      <div id="invModalUnits"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _invListingId = null;
+
+function openInventoryModal(listingId, title) {
+  _invListingId = listingId;
+  document.getElementById('invModalTitle').textContent = 'Inventario';
+  document.getElementById('invModalSubtitle').textContent = title;
+  document.getElementById('invNewLabel').value = '';
+  document.getElementById('invNewType').value = '';
+  document.getElementById('invAddError').style.display = 'none';
+  document.getElementById('inventoryModal').style.display = 'flex';
+  loadInventory();
+}
+
+function closeInventoryModal() {
+  document.getElementById('inventoryModal').style.display = 'none';
+  _invListingId = null;
+}
+
+async function loadInventory() {
+  const wrap = document.getElementById('invModalUnits');
+  wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</div>';
+  try {
+    const data = await API(`/api/inventory/${_invListingId}`);
+    const inv = data.inventory || [];
+    // Summary
+    const avail = inv.filter(u => u.status === 'available').length;
+    const reserved = inv.filter(u => u.status === 'reserved').length;
+    const sold = inv.filter(u => u.status === 'sold').length;
+    document.getElementById('invModalSummary').innerHTML = `
+      <span style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;background:rgba(22,163,74,0.08);color:#16a34a;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;"></span>${avail} Disponibles</span>
+      <span style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;background:rgba(234,179,8,0.08);color:#b45309;"><span style="width:8px;height:8px;border-radius:50%;background:#eab308;"></span>${reserved} Reservadas</span>
+      <span style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;background:rgba(220,38,38,0.08);color:#dc2626;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;"></span>${sold} Vendidas</span>
+    `;
+    if (!inv.length) {
+      wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.85rem;">Sin unidades registradas. Agrega la primera unidad arriba.</div>';
+      return;
+    }
+    wrap.innerHTML = inv.map(u => {
+      const dotColor = u.status === 'available' ? '#16a34a' : u.status === 'reserved' ? '#eab308' : '#dc2626';
+      const statusLabel = u.status === 'available' ? 'Disponible' : u.status === 'reserved' ? 'Reservada' : 'Vendida';
+      const deletable = u.status === 'available';
+      return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);">
+        <span style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.85rem;font-weight:700;">${esc(u.label)}</div>
+          ${u.type ? `<div style="font-size:0.72rem;color:var(--text-muted);">${esc(u.type)}</div>` : ''}
+          ${u.clientName ? `<div style="font-size:0.7rem;color:${dotColor};">Cliente: ${esc(u.clientName)}</div>` : ''}
+        </div>
+        <span style="font-size:0.7rem;font-weight:700;color:${dotColor};padding:2px 8px;border-radius:10px;background:${dotColor}15;">${statusLabel}</span>
+        ${deletable ? `<button onclick="deleteInventoryUnit('${u.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.9rem;" title="Eliminar">&times;</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    wrap.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`;
+  }
+}
+
+async function addInventoryUnit() {
+  const label = document.getElementById('invNewLabel').value.trim();
+  const type = document.getElementById('invNewType').value.trim();
+  const errEl = document.getElementById('invAddError');
+  if (!label) { errEl.textContent = 'La etiqueta es requerida'; errEl.style.display = ''; return; }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('invAddBtn');
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    await API(`/api/inventory/${_invListingId}/units`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, type }),
+    });
+    document.getElementById('invNewLabel').value = '';
+    document.getElementById('invNewType').value = '';
+    loadInventory();
+  } catch (e) {
+    errEl.textContent = e.message || 'Error agregando unidad';
+    errEl.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = '+ Agregar';
+}
+
+async function deleteInventoryUnit(unitId) {
+  if (!confirm('Eliminar esta unidad?')) return;
+  try {
+    await API(`/api/inventory/${_invListingId}/units/${unitId}`, { method: 'DELETE' });
+    loadInventory();
+  } catch (e) {
+    alert(e.message || 'Error eliminando unidad');
+  }
+}
 </script>
 <script src="/js/pixel.js" defer></script>
 </body>
