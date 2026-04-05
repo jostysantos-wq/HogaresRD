@@ -23,6 +23,18 @@ class PushNotificationService: NSObject, ObservableObject {
         }
     }
 
+    /// Async version — returns current authorization so callers can await
+    /// the result rather than racing against the published property.
+    @discardableResult
+    func refreshAuthorizationStatus() async -> UNAuthorizationStatus {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        await MainActor.run {
+            self.authStatus = settings.authorizationStatus
+            self.isAuthorized = settings.authorizationStatus == .authorized
+        }
+        return settings.authorizationStatus
+    }
+
     func requestPermission() async -> Bool {
         do {
             let granted = try await UNUserNotificationCenter.current()

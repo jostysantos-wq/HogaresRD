@@ -386,135 +386,161 @@ struct NotificationSettingsView: View {
     @State private var appUpdates: Bool    = Self.loadBool("notif_appUpdates")
 
     var body: some View {
+        listContent
+            .navigationTitle("Notificaciones")
+            .navigationBarTitleDisplayMode(.inline)
+            .task { await initialLoad() }
+            .onChange(of: pushEnabled, handlePushEnabledChange)
+            .onChange(of: pushService.isAuthorized, handleAuthChange)
+            .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings") }
+            .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops") }
+            .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar") }
+            .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages") }
+            .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates") }
+    }
+
+    private var listContent: some View {
         List {
-            // ── Push Notifications ──
-            Section {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                        Image(systemName: "bell.badge.fill")
-                            .foregroundStyle(Color.rdBlue)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Notificaciones push")
-                            .font(.subheadline).bold()
-                        Text("Recibe alertas en tiempo real sobre propiedades, mensajes y actualizaciones.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 4)
-
-                HStack {
-                    Label(pushEnabled ? "Activadas" : "Desactivadas",
-                          systemImage: pushEnabled ? "bell.fill" : "bell.slash.fill")
-                    Spacer()
-                    if loading {
-                        ProgressView()
-                    } else {
-                        Toggle("", isOn: $pushEnabled)
-                            .labelsHidden()
-                            .disabled(loading)
-                    }
-                }
-
-                if !pushService.isAuthorized && pushEnabled == false {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundStyle(.orange)
-                                .font(.caption)
-                            Text("Las notificaciones push no estan habilitadas en los ajustes del sistema.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Button {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
-                            }
-                        } label: {
-                            Label("Abrir Ajustes", systemImage: "arrow.up.forward.app")
-                                .font(.caption.bold())
-                                .foregroundStyle(Color.rdBlue)
-                        }
-                    }
-                }
-
-                if let err = errorMsg {
-                    Label(err, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-
-            // ── Property alerts ──
-            Section("Alertas de propiedades") {
-                Toggle(isOn: $newListings) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Nuevas propiedades")
-                        Text("Notificaciones de nuevos listados que coinciden con tus criterios")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Toggle(isOn: $priceDrops) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Bajas de precio")
-                        Text("Alertas cuando bajan los precios de propiedades guardadas")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Toggle(isOn: $similar) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Propiedades similares")
-                        Text("Sugerencias basadas en tus búsquedas recientes")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            // ── General ──
-            Section("General") {
-                Toggle(isOn: $agentMessages) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Mensajes de agentes")
-                        Text("Notificaciones cuando un agente te envía un mensaje")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Toggle(isOn: $appUpdates) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Actualizaciones de aplicación")
-                        Text("Novedades y mejoras de HogaresRD")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
+            pushSection
+            propertyAlertsSection
+            generalSection
         }
-        .navigationTitle("Notificaciones")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            pushService.checkAuthorizationStatus()
-            // Reflect current push auth status without comparing deviceToken,
-            // which can be momentarily nil while the app is re-registering.
+    }
+
+    private func handlePushEnabledChange(_ oldVal: Bool, _ newVal: Bool) {
+        guard !suppressToggleChange else { return }
+        Task { await togglePush(newVal) }
+    }
+
+    private func handleAuthChange(_ oldVal: Bool, _ newVal: Bool) {
+        if pushEnabled != newVal {
             suppressToggleChange = true
-            pushEnabled = pushService.isAuthorized
+            pushEnabled = newVal
             DispatchQueue.main.async { suppressToggleChange = false }
-            // Refresh from UserDefaults in case another view changed them
-            newListings   = Self.loadBool("notif_newListings")
-            priceDrops    = Self.loadBool("notif_priceDrops")
-            similar       = Self.loadBool("notif_similar")
-            agentMessages = Self.loadBool("notif_agentMessages")
-            appUpdates    = Self.loadBool("notif_appUpdates")
         }
-        .onChange(of: pushEnabled) { _, newVal in
-            guard !suppressToggleChange else { return }
-            Task { await togglePush(newVal) }
+    }
+
+    // MARK: - Sections (split to help the Swift type-checker)
+
+    @ViewBuilder
+    private var pushSection: some View {
+        Section {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
+                    Image(systemName: "bell.badge.fill").foregroundStyle(Color.rdBlue)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Notificaciones push").font(.subheadline).bold()
+                    Text("Recibe alertas en tiempo real sobre propiedades, mensajes y actualizaciones.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+
+            HStack {
+                Label(pushEnabled ? "Activadas" : "Desactivadas",
+                      systemImage: pushEnabled ? "bell.fill" : "bell.slash.fill")
+                Spacer()
+                if loading {
+                    ProgressView()
+                } else {
+                    Toggle("", isOn: $pushEnabled).labelsHidden().disabled(loading)
+                }
+            }
+
+            if !pushService.isAuthorized && pushEnabled == false {
+                pushDeniedHint
+            }
+
+            if let err = errorMsg {
+                Label(err, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.red)
+            }
         }
-        .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings") }
-        .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops") }
-        .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar") }
-        .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages") }
-        .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates") }
+    }
+
+    @ViewBuilder
+    private var pushDeniedHint: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle.fill").foregroundStyle(.orange).font(.caption)
+                Text("Las notificaciones push no estan habilitadas en los ajustes del sistema.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("Abrir Ajustes", systemImage: "arrow.up.forward.app")
+                    .font(.caption.bold()).foregroundStyle(Color.rdBlue)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var propertyAlertsSection: some View {
+        Section("Alertas de propiedades") {
+            Toggle(isOn: $newListings) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Nuevas propiedades")
+                    Text("Notificaciones de nuevos listados que coinciden con tus criterios")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Toggle(isOn: $priceDrops) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Bajas de precio")
+                    Text("Alertas cuando bajan los precios de propiedades guardadas")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Toggle(isOn: $similar) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Propiedades similares")
+                    Text("Sugerencias basadas en tus búsquedas recientes")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var generalSection: some View {
+        Section("General") {
+            Toggle(isOn: $agentMessages) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mensajes de agentes")
+                    Text("Notificaciones cuando un agente te envía un mensaje")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Toggle(isOn: $appUpdates) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Actualizaciones de aplicación")
+                    Text("Novedades y mejoras de HogaresRD")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func initialLoad() async {
+        // Read the ACTUAL auth status (async) before setting pushEnabled.
+        // Previously this read a stale @Published value before the async
+        // getNotificationSettings completed, causing the toggle to show
+        // "Activadas" when the system was really denied (or vice versa).
+        let status = await pushService.refreshAuthorizationStatus()
+        suppressToggleChange = true
+        pushEnabled = (status == .authorized)
+        DispatchQueue.main.async { self.suppressToggleChange = false }
+        newListings   = Self.loadBool("notif_newListings")
+        priceDrops    = Self.loadBool("notif_priceDrops")
+        similar       = Self.loadBool("notif_similar")
+        agentMessages = Self.loadBool("notif_agentMessages")
+        appUpdates    = Self.loadBool("notif_appUpdates")
     }
 
     @MainActor
