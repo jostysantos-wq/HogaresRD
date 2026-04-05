@@ -11,6 +11,7 @@ struct DashboardListingAnalyticsTab: View {
     @State private var range = "all"
     @State private var sort = "views"
     @State private var selectedListing: ListingAnalyticsItem?
+    @State private var inventoryListing: ListingAnalyticsItem?
 
     private let ranges = [("all", "Todo"), ("7d", "7d"), ("30d", "30d"), ("90d", "90d")]
     private let sorts  = [("views", "Vistas"), ("tours", "Tours"), ("favorites", "Favoritos"),
@@ -135,8 +136,31 @@ struct DashboardListingAnalyticsTab: View {
                     // Listing cards
                     LazyVStack(spacing: 12) {
                         ForEach(listings) { listing in
-                            ListingAnalyticsCard(listing: listing)
-                                .onTapGesture { selectedListing = listing }
+                            VStack(spacing: 0) {
+                                ListingAnalyticsCard(listing: listing)
+                                    .onTapGesture { selectedListing = listing }
+
+                                // Inventory button
+                                Button {
+                                    inventoryListing = listing
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "building.2")
+                                            .font(.system(size: 10))
+                                        Text("Gestionar Inventario")
+                                            .font(.system(size: 11, weight: .bold))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.secondarySystemGroupedBackground))
+                                    .foregroundStyle(Color.rdBlue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 0))
+                                    .clipShape(
+                                        .rect(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -156,6 +180,12 @@ struct DashboardListingAnalyticsTab: View {
         .sheet(item: $selectedListing) { listing in
             ListingAnalyticsDetailView(listingId: listing.id)
                 .environmentObject(api)
+        }
+        .sheet(item: $inventoryListing) { listing in
+            NavigationStack {
+                InventoryManagementView(listingId: listing.id, listingTitle: listing.title)
+                    .environmentObject(api)
+            }
         }
     }
 
