@@ -582,6 +582,38 @@ app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
 });
 
 // ── Newsletter admin ────────────────────────────────────────────────────────
+// ── Admin: Reports ─────────────────────────────────────────────
+// Lists all user-submitted reports (listings / agents / inmobiliarias)
+// with duplicate-target grouping so admins can see repeat offenders.
+app.get('/admin/reports', adminSessionAuth, (req, res) => {
+  const status = req.query.status || null;
+  const reports = store.getReports(status);
+  // Count how many total reports exist per target (across all statuses) so the
+  // UI can flag repeat offenders even when filtering by status.
+  const all = status ? store.getReports(null) : reports;
+  const counts = {};
+  for (const r of all) {
+    const key = r.type + ':' + r.target_id;
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  const enriched = reports.map(r => ({
+    ...r,
+    target_report_count: counts[r.type + ':' + r.target_id] || 1,
+  }));
+  res.json({ reports: enriched });
+});
+
+app.put('/admin/reports/:id', adminSessionAuth, (req, res) => {
+  const report = store.getReportById(req.params.id);
+  if (!report) return res.status(404).json({ error: 'Reporte no encontrado' });
+  const { status, admin_notes } = req.body;
+  if (status) report.status = status;
+  if (admin_notes !== undefined) report.admin_notes = admin_notes;
+  report.updated_at = new Date().toISOString();
+  store.saveReport(report);
+  res.json(report);
+});
+
 app.get('/admin/newsletter', adminSessionAuth, (req, res) => {
   const users = store.getUsers();
   res.json({

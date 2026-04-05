@@ -638,6 +638,13 @@
 
       <div class="sb-section-label">SISTEMA</div>
 
+      <button class="nav-item" data-page="reportes" onclick="showPage('reportes', this)">
+        <svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+        <span class="nav-item-label">Reportes</span>
+        <span class="nav-pill" id="reportsPill" style="display:none;"></span>
+        <span class="nav-tooltip">Reportes</span>
+      </button>
+
       <button class="nav-item" data-page="errores" onclick="showPage('errores', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         <span class="nav-item-label">Registro de Errores</span>
@@ -1119,6 +1126,44 @@
         </div>
       </div>
 
+      <!-- ── REPORTES ─────────────────────────────────────────────────────── -->
+      <div class="page-section" id="page-reportes">
+        <div class="error-grid">
+          <div class="error-stat"><div class="num" id="rptTotal">—</div><div class="lbl">Total</div></div>
+          <div class="error-stat"><div class="num" style="color:var(--warning);" id="rptPending">—</div><div class="lbl">Pendientes</div></div>
+          <div class="error-stat"><div class="num" style="color:var(--accent);" id="rptRepeat">—</div><div class="lbl">Reincidentes</div></div>
+          <div class="error-stat"><div class="num" style="color:var(--success);" id="rptResolved">—</div><div class="lbl">Resueltos</div></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <select id="rptFilterStatus" onchange="loadReports()" style="padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.85rem;">
+            <option value="">Todos los estados</option>
+            <option value="pending">Pendientes</option>
+            <option value="reviewing">En revisión</option>
+            <option value="resolved">Resueltos</option>
+            <option value="dismissed">Descartados</option>
+          </select>
+          <select id="rptFilterType" onchange="renderReports()" style="padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.85rem;">
+            <option value="">Todos los tipos</option>
+            <option value="listing">Propiedades</option>
+            <option value="agent">Agentes</option>
+            <option value="inmobiliaria">Inmobiliarias</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-muted);cursor:pointer;">
+            <input type="checkbox" id="rptFilterRepeat" onchange="renderReports()"> Solo reincidentes (2+)
+          </label>
+        </div>
+        <div class="error-log-table">
+          <table>
+            <thead>
+              <tr><th style="width:40px;">#</th><th>Tipo</th><th>Objetivo</th><th>Razón</th><th>Reportado por</th><th>Estado</th><th>Fecha</th><th></th></tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <tr><td colspan="8" class="leads-empty">Cargando reportes...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ── BLOG / CMS ──────────────────────────────────────────────────── -->
       <div class="page-section" id="page-blog">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
@@ -1283,6 +1328,7 @@
     errores:      'Registro de Errores',
     blog:         'Blog / CMS',
     paginas:      'Editor de Páginas',
+    reportes:     'Reportes',
   };
 
   let currentPage = 'dashboard';
@@ -1309,6 +1355,7 @@
     else if (page === 'errores')     { loadErrors(); }
     else if (page === 'blog')        { loadBlogPosts(); }
     else if (page === 'paginas')     { loadPageContent(); }
+    else if (page === 'reportes')    { loadReports(); }
   }
 
   function refreshCurrent() {
@@ -1747,6 +1794,127 @@
         </tr>`;
     }).join('');
   }
+
+  // ── Reports ───────────────────────────────────────────────────
+  let allReports = [];
+  const REPORT_REASON_LABELS = {
+    informacion_falsa: 'Información falsa',
+    precio_incorrecto: 'Precio incorrecto',
+    propiedad_vendida: 'Propiedad no disponible',
+    fotos_enganosas:   'Fotos engañosas',
+    spam:              'Spam / duplicado',
+    fraude:            'Posible fraude',
+    comportamiento_inapropiado: 'Comportamiento inapropiado',
+    no_responde:       'No responde',
+    acoso:             'Acoso',
+    practica_desleal:  'Práctica desleal',
+    incumplimiento:    'Incumplimiento',
+    otro:              'Otro',
+  };
+  const REPORT_TYPE_LABELS = { listing: 'Propiedad', agent: 'Agente', inmobiliaria: 'Inmobiliaria' };
+  const REPORT_STATUS_COLORS = {
+    pending:   { bg: '#fef3c7', fg: '#92400e' },
+    reviewing: { bg: '#dbeafe', fg: '#1e40af' },
+    resolved:  { bg: '#d1fae5', fg: '#065f46' },
+    dismissed: { bg: '#e5e7eb', fg: '#4b5563' },
+  };
+  const REPORT_STATUS_LABELS = { pending:'Pendiente', reviewing:'En revisión', resolved:'Resuelto', dismissed:'Descartado' };
+
+  function loadReports() {
+    const status = document.getElementById('rptFilterStatus').value;
+    const url = '/admin/reports' + (status ? '?status=' + encodeURIComponent(status) : '');
+    document.getElementById('reportsTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Cargando reportes...</td></tr>';
+    fetch(url)
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => { allReports = data.reports || []; renderReports(); })
+      .catch(() => {});
+  }
+
+  function renderReports() {
+    const typeFilter = document.getElementById('rptFilterType').value;
+    const onlyRepeat = document.getElementById('rptFilterRepeat').checked;
+
+    let list = allReports.slice();
+    if (typeFilter) list = list.filter(r => r.type === typeFilter);
+    if (onlyRepeat) list = list.filter(r => (r.target_report_count || 1) >= 2);
+
+    // Stats (always over all loaded reports, not the filtered view)
+    document.getElementById('rptTotal').textContent    = allReports.length;
+    document.getElementById('rptPending').textContent  = allReports.filter(r => r.status === 'pending').length;
+    document.getElementById('rptResolved').textContent = allReports.filter(r => r.status === 'resolved').length;
+    const uniqueRepeatTargets = new Set();
+    allReports.forEach(r => { if ((r.target_report_count || 1) >= 2) uniqueRepeatTargets.add(r.type + ':' + r.target_id); });
+    document.getElementById('rptRepeat').textContent = uniqueRepeatTargets.size;
+
+    // Nav pill
+    const pendingCount = allReports.filter(r => r.status === 'pending').length;
+    const pill = document.getElementById('reportsPill');
+    if (pill) {
+      if (pendingCount > 0) { pill.textContent = pendingCount; pill.style.display = ''; }
+      else { pill.style.display = 'none'; }
+    }
+
+    const tbody = document.getElementById('reportsTableBody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay reportes.</td></tr>'; return; }
+
+    tbody.innerHTML = list.map(r => {
+      const count = r.target_report_count || 1;
+      const repeatBadge = count >= 2
+        ? `<span title="Este objetivo ha sido reportado ${count} veces" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#fee2e2;color:#991b1b;border-radius:10px;font-size:0.72rem;font-weight:700;margin-left:6px;">⚠ ${count}×</span>`
+        : '';
+      const statusColor = REPORT_STATUS_COLORS[r.status] || REPORT_STATUS_COLORS.pending;
+      const date = new Date(r.created_at).toLocaleString('es-DO', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const link = r.type === 'listing'
+        ? `<a href="/listing/${r.target_id}" target="_blank" style="color:var(--accent);text-decoration:none;">${escapeHtml(r.target_name || r.target_id)}</a>`
+        : escapeHtml(r.target_name || r.target_id);
+      const rowBg = count >= 2 ? 'background:rgba(254,226,226,0.35);' : '';
+      return `<tr style="${rowBg}">
+        <td style="color:var(--text-muted);font-size:0.78rem;">${count >= 2 ? '⚠' : ''}</td>
+        <td><span style="padding:2px 8px;background:var(--bg);border-radius:6px;font-size:0.75rem;font-weight:600;">${REPORT_TYPE_LABELS[r.type]||r.type}</span></td>
+        <td>${link}${repeatBadge}</td>
+        <td style="font-size:0.82rem;">${escapeHtml(REPORT_REASON_LABELS[r.reason] || r.reason)}${r.details ? `<div style="font-size:0.74rem;color:var(--text-muted);margin-top:2px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.details)}">${escapeHtml(r.details)}</div>` : ''}</td>
+        <td style="font-size:0.8rem;">${escapeHtml(r.reporter_name || 'Anónimo')}${r.reporter_email ? `<div style="font-size:0.72rem;color:var(--text-muted);">${escapeHtml(r.reporter_email)}</div>` : ''}</td>
+        <td><span style="padding:2px 8px;background:${statusColor.bg};color:${statusColor.fg};border-radius:10px;font-size:0.72rem;font-weight:700;">${REPORT_STATUS_LABELS[r.status]||r.status}</span></td>
+        <td style="font-size:0.76rem;color:var(--text-muted);">${date}</td>
+        <td>
+          <select onchange="updateReportStatus('${r.id}', this.value)" style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;background:var(--bg-card);color:var(--text);">
+            <option value="">Cambiar</option>
+            <option value="reviewing">En revisión</option>
+            <option value="resolved">Resuelto</option>
+            <option value="dismissed">Descartar</option>
+            <option value="pending">Reabrir</option>
+          </select>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function updateReportStatus(id, status) {
+    if (!status) return;
+    fetch('/admin/reports/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(() => loadReports())
+      .catch(() => {});
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Fetch pending-report count on load for the sidebar pill
+  fetch('/admin/reports?status=pending').then(r => r.ok ? r.json() : null).then(d => {
+    if (!d) return;
+    const pill = document.getElementById('reportsPill');
+    if (pill && d.reports && d.reports.length) {
+      pill.textContent = d.reports.length;
+      pill.style.display = '';
+    }
+  }).catch(() => {});
 
   // ── Error Logs ────────────────────────────────────────────────
   function loadErrors() {
