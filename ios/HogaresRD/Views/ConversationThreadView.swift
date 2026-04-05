@@ -11,9 +11,26 @@ struct ConversationThreadView: View {
     @State private var input:          String = ""
     @State private var sending:        Bool   = false
     @State private var lastTimestamp:  String?
+    @State private var isClosed:       Bool   = false
+    @State private var closedByName:   String?
+    @State private var closedAt:       String?
+    @State private var closedReason:   String?
+    @State private var showCloseSheet: Bool   = false
+    @State private var closeReasonInput: String = ""
+    @State private var toggling:       Bool   = false
+    @State private var toggleError:    String?
 
     private var myId: String { api.currentUser?.id ?? "" }
     private var myRole: String { api.currentUser?.role ?? "user" }
+    private var isPro: Bool {
+        ["agency", "broker", "inmobiliaria", "constructora"].contains(myRole)
+    }
+    private var canToggleClose: Bool {
+        // Only pros can close/reopen, and only if they're the assigned broker or none assigned.
+        guard isPro else { return false }
+        if let bId = conversation.brokerId, !bId.isEmpty { return bId == myId }
+        return true
+    }
 
     /// Determine if a message is "mine" based on senderId AND senderRole.
     /// If the same user sent messages as both "client" and "broker" (testing),
@@ -32,6 +49,29 @@ struct ConversationThreadView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // ── Closed banner ───────────────────────────────────────
+            if isClosed {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.caption).foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Conversación cerrada")
+                            .font(.caption).bold()
+                            .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
+                        if let name = closedByName {
+                            Text("Cerrada por \(name)" + (closedReason.map { " — \($0)" } ?? ""))
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05).opacity(0.85))
+                                .lineLimit(2)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(Color(red: 1.0, green: 0.95, blue: 0.78))
+                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color(red: 0.99, green: 0.90, blue: 0.61)), alignment: .bottom)
+            }
+
             // ── Message list ────────────────────────────────────────
             ScrollViewReader { proxy in
                 ScrollView {
@@ -48,12 +88,17 @@ struct ConversationThreadView: View {
                                 .padding(.vertical, 10)
 
                             ForEach(group.messages) { msg in
-                                MessageBubble(
-                                    msg: msg,
-                                    isMe: isMyMessage(msg),
-                                    showSender: shouldShowSender(msg, in: group.messages)
-                                )
-                                .id(msg.id)
+                                if msg.senderRole == "system" {
+                                    SystemMessagePill(text: msg.text)
+                                        .id(msg.id)
+                                } else {
+                                    MessageBubble(
+                                        msg: msg,
+                                        isMe: isMyMessage(msg),
+                                        showSender: shouldShowSender(msg, in: group.messages)
+                                    )
+                                    .id(msg.id)
+                                }
                             }
                         }
                     }
@@ -66,30 +111,43 @@ struct ConversationThreadView: View {
 
             Divider()
 
-            // ── Input bar ───────────────────────────────────────────
-            HStack(spacing: 10) {
-                TextField("Escribe un mensaje...", text: $input, axis: .vertical)
-                    .lineLimit(1...4)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                Button {
-                    Task { await send() }
-                } label: {
-                    Image(systemName: sending ? "clock" : "paperplane.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
-                        .background(canSend ? Color.rdBlue : Color(.systemGray4))
-                        .clipShape(Circle())
+            // ── Input bar (hidden when closed) ───────────────────────
+            if isClosed {
+                HStack {
+                    Spacer()
+                    Text("No puedes enviar mensajes en una conversación cerrada.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
                 }
-                .disabled(!canSend)
+                .padding(.horizontal, 14).padding(.vertical, 14)
+                .background(Color(.systemBackground))
+            } else {
+                HStack(spacing: 10) {
+                    TextField("Escribe un mensaje...", text: $input, axis: .vertical)
+                        .lineLimit(1...4)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                    Button {
+                        Task { await send() }
+                    } label: {
+                        Image(systemName: sending ? "clock" : "paperplane.fill")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(canSend ? Color.rdBlue : Color(.systemGray4))
+                            .clipShape(Circle())
+                    }
+                    .disabled(!canSend)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color(.systemBackground))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color(.systemBackground))
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
@@ -104,7 +162,37 @@ struct ConversationThreadView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            if canToggleClose {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if isClosed {
+                            Button {
+                                Task { await toggleClose() }
+                            } label: {
+                                Label("Reabrir conversación", systemImage: "lock.open")
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                closeReasonInput = ""
+                                showCloseSheet = true
+                            } label: {
+                                Label("Cerrar conversación", systemImage: "lock")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .disabled(toggling)
+                }
+            }
         }
+        .sheet(isPresented: $showCloseSheet) {
+            closeReasonSheet
+        }
+        .alert("Error", isPresented: .constant(toggleError != nil), actions: {
+            Button("OK") { toggleError = nil }
+        }, message: { Text(toggleError ?? "") })
         .task {
             await loadMessages()
             await markRead()
@@ -191,11 +279,13 @@ struct ConversationThreadView: View {
         guard let conv = try? await api.getConversation(id: conversation.id) else { return }
         messages      = conv.messages ?? []
         lastTimestamp = messages.last?.timestamp
+        syncClosedState(conv)
     }
 
     private func pollNew() async {
         guard let conv = try? await api.getConversation(id: conversation.id, since: lastTimestamp) else { return }
         let fresh = conv.messages ?? []
+        syncClosedState(conv)
         guard !fresh.isEmpty else { return }
         let existingIDs = Set(messages.map { $0.id })
         let toAdd = fresh.filter { !existingIDs.contains($0.id) }
@@ -203,6 +293,75 @@ struct ConversationThreadView: View {
             messages.append(contentsOf: toAdd)
             lastTimestamp = toAdd.last?.timestamp
         }
+    }
+
+    private func syncClosedState(_ conv: Conversation) {
+        isClosed     = conv.closed ?? false
+        closedByName = conv.closedByName
+        closedAt     = conv.closedAt
+        closedReason = conv.closedReason
+    }
+
+    private func toggleClose(reason: String = "") async {
+        toggling = true
+        defer { toggling = false }
+        do {
+            let updated: Conversation
+            if isClosed {
+                updated = try await api.reopenConversation(id: conversation.id)
+            } else {
+                updated = try await api.closeConversation(id: conversation.id, reason: reason)
+            }
+            syncClosedState(updated)
+            // Append the new system message the server added
+            let fresh = updated.messages ?? []
+            let existingIDs = Set(messages.map { $0.id })
+            let toAdd = fresh.filter { !existingIDs.contains($0.id) }
+            messages.append(contentsOf: toAdd)
+            if let last = toAdd.last { lastTimestamp = last.timestamp }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch {
+            toggleError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Close Reason Sheet
+
+    private var closeReasonSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Una vez cerrada, ni tú ni el cliente podrán enviar mensajes hasta que la reabras.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Section("Razón (opcional)") {
+                    TextField("Ej: Cliente no interesado, propiedad vendida…", text: $closeReasonInput, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                Section {
+                    Button(role: .destructive) {
+                        let reason = closeReasonInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        showCloseSheet = false
+                        Task { await toggleClose(reason: String(reason.prefix(200))) }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Cerrar conversación").bold()
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Cerrar conversación")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { showCloseSheet = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     private func markRead() async {
@@ -219,6 +378,29 @@ struct ConversationThreadView: View {
             lastTimestamp = msg.timestamp
         }
         sending = false
+    }
+}
+
+// MARK: - System Message Pill
+
+struct SystemMessagePill: View {
+    let text: String
+    var body: some View {
+        HStack {
+            Spacer()
+            Text(text)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color(.systemGray6))
+                .overlay(
+                    Capsule().stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 0.5, dash: [3,3]))
+                )
+                .clipShape(Capsule())
+            Spacer()
+        }
+        .padding(.vertical, 6)
     }
 }
 

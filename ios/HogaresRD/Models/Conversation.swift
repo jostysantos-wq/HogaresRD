@@ -29,6 +29,12 @@ struct Conversation: Codable, Identifiable {
     let unreadClient:  Int?
     let messageCount:  Int?
     let messages:      [ConvMessage]?
+    let closed:        Bool?
+    let closedAt:      String?
+    let closedBy:      String?
+    let closedByName:  String?
+    let closedByRole:  String?
+    let closedReason:  String?
 }
 
 // MARK: - Response wrappers

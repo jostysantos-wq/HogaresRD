@@ -182,6 +182,15 @@ router.post('/:id/messages', requireLogin, (req, res) => {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
+  if (conv.closed) {
+    return res.status(403).json({
+      error: isClient
+        ? 'Esta conversación fue cerrada por el agente. No puedes enviar más mensajes.'
+        : 'Esta conversación está cerrada. Reábrela para enviar mensajes.',
+      closed: true,
+    });
+  }
+
   const msg = {
     id:         msgId(),
     senderId:   user.sub,
@@ -267,6 +276,89 @@ router.post('/:id/messages', requireLogin, (req, res) => {
       }
     } catch (e) { console.error('[notify]', e.message); }
   });
+});
+
+// ── PUT /api/conversations/:id/close ─────────────────────────────────────
+// Agents/agencies/inmobiliarias/constructoras can close a conversation
+// when the client is no longer viable. Clients cannot close — they can
+// simply stop replying. Closed conversations block new messages from
+// either side until reopened.
+router.put('/:id/close', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  if (!PRO_ROLES.includes(user.role)) {
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden cerrar conversaciones.' });
+  }
+  // Must be the assigned broker, OR no broker assigned yet (can't steal someone else's)
+  if (conv.brokerId && conv.brokerId !== user.sub) {
+    return res.status(403).json({ error: 'Solo el agente asignado puede cerrar esta conversación.' });
+  }
+
+  const reason = (req.body?.reason || '').trim().slice(0, 200);
+  conv.closed     = true;
+  conv.closedAt   = new Date().toISOString();
+  conv.closedBy   = user.sub;
+  conv.closedByName = user.name;
+  conv.closedByRole = user.role;
+  conv.closedReason = reason || null;
+  conv.updatedAt  = conv.closedAt;
+
+  // Append a system message so both sides see why the thread ended
+  const sysMsg = {
+    id:         msgId(),
+    senderId:   user.sub,
+    senderRole: 'system',
+    senderName: user.name,
+    text:       reason
+      ? `🔒 Conversación cerrada por ${user.name}: ${reason}`
+      : `🔒 Conversación cerrada por ${user.name}.`,
+    timestamp:  conv.closedAt,
+  };
+  conv.messages.push(sysMsg);
+  conv.lastMessage = sysMsg.text;
+  conv.unreadClient = (conv.unreadClient || 0) + 1;
+
+  store.saveConversation(conv);
+  res.json({ ok: true, conversation: conv });
+});
+
+// ── PUT /api/conversations/:id/reopen ────────────────────────────────────
+router.put('/:id/reopen', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  if (!PRO_ROLES.includes(user.role)) {
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden reabrir conversaciones.' });
+  }
+  if (conv.brokerId && conv.brokerId !== user.sub) {
+    return res.status(403).json({ error: 'Solo el agente asignado puede reabrir esta conversación.' });
+  }
+
+  conv.closed = false;
+  conv.closedAt = null;
+  conv.closedBy = null;
+  conv.closedByName = null;
+  conv.closedByRole = null;
+  conv.closedReason = null;
+  conv.updatedAt = new Date().toISOString();
+
+  const sysMsg = {
+    id:         msgId(),
+    senderId:   user.sub,
+    senderRole: 'system',
+    senderName: user.name,
+    text:       `🔓 Conversación reabierta por ${user.name}.`,
+    timestamp:  conv.updatedAt,
+  };
+  conv.messages.push(sysMsg);
+  conv.lastMessage = sysMsg.text;
+  conv.unreadClient = (conv.unreadClient || 0) + 1;
+
+  store.saveConversation(conv);
+  res.json({ ok: true, conversation: conv });
 });
 
 // ── PUT /api/conversations/:id/read ──────────────────────────────────────

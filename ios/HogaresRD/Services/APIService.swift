@@ -663,6 +663,42 @@ class APIService: ObservableObject {
         _ = try? await URLSession.shared.data(for: req)
     }
 
+    /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
+    /// conversation so no further messages can be sent from either side.
+    func closeConversation(id: String, reason: String) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/close")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["reason": reason])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+               let err = obj["error"] as? String { throw APIError.server(err) }
+            throw APIError.server("No se pudo cerrar la conversación")
+        }
+        struct Wrapper: Decodable { let conversation: Conversation }
+        return try decoder.decode(Wrapper.self, from: data).conversation
+    }
+
+    func reopenConversation(id: String) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/reopen")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+               let err = obj["error"] as? String { throw APIError.server(err) }
+            throw APIError.server("No se pudo reabrir la conversación")
+        }
+        struct Wrapper: Decodable { let conversation: Conversation }
+        return try decoder.decode(Wrapper.self, from: data).conversation
+    }
+
     // MARK: - Applications
 
     func getApplications() async throws -> [Application] {

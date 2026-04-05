@@ -2056,9 +2056,14 @@
             <div id="brkThreadSub" style="font-size:.78rem;color:var(--text-muted);"></div>
           </div>
           <div id="brkClientChip" style="margin-left:auto;font-size:.78rem;color:var(--text-muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:3px 10px;"></div>
+          <button id="brkCloseBtn" onclick="brkToggleClose()" title="Cerrar conversación"
+            style="margin-left:.5rem;background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:600;color:var(--text-muted);cursor:pointer;">Cerrar</button>
+        </div>
+        <div id="brkClosedBanner" style="display:none;padding:.6rem 1.25rem;background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-size:.78rem;">
+          <strong>🔒 Conversación cerrada.</strong> <span id="brkClosedInfo"></span>
         </div>
         <div id="brkMsgArea" style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:.75rem;"></div>
-        <div style="display:flex;gap:.6rem;padding:.85rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-card);">
+        <div id="brkInputBar" style="display:flex;gap:.6rem;padding:.85rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-card);">
           <textarea id="brkInput" rows="1" placeholder="Escribe tu respuesta…"
             style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:.6rem .9rem;font-size:.9rem;background:var(--bg);color:var(--text);resize:none;outline:none;font-family:inherit;max-height:100px;"></textarea>
           <button id="brkSendBtn" onclick="brkSend()"
@@ -6714,6 +6719,7 @@
     document.getElementById('brkThreadSub').textContent   = `Cliente: ${conv.clientName} · ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
     document.getElementById('brkClientChip').textContent  = conv.clientName;
 
+    brkApplyClosedState(conv);
     brkRenderMsgs(conv.messages);
     if (conv.messages.length) brkLastTs = conv.messages.at(-1).timestamp;
 
@@ -6752,9 +6758,12 @@
   }
 
   function brkMsgHTML(m) {
+    const text  = m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    if (m.senderRole === 'system') {
+      return `<div style="align-self:center;max-width:85%;padding:.45rem .85rem;background:var(--bg);border:1px dashed var(--border);border-radius:99px;font-size:.75rem;color:var(--text-muted);text-align:center;">${text}</div>`;
+    }
     const mine = m.senderRole === 'broker';
     const time  = new Date(m.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
-    const text  = m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     return `<div style="display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};">
       <div style="max-width:72%;padding:.55rem .85rem;border-radius:${mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};font-size:.87rem;line-height:1.5;word-break:break-word;
         background:${mine ? 'var(--accent)' : 'var(--bg-card)'};color:${mine ? '#fff' : 'var(--text)'};
@@ -6785,6 +6794,60 @@
   document.getElementById('brkInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); brkSend(); }
   });
+
+  // ── Close / reopen conversation (pros only) ─────────────────────────────
+  let brkCurrentClosed = false;
+
+  function brkApplyClosedState(conv) {
+    brkCurrentClosed = !!conv.closed;
+    const banner    = document.getElementById('brkClosedBanner');
+    const bannerInfo= document.getElementById('brkClosedInfo');
+    const inputBar  = document.getElementById('brkInputBar');
+    const btn       = document.getElementById('brkCloseBtn');
+    if (brkCurrentClosed) {
+      const when = conv.closedAt ? new Date(conv.closedAt).toLocaleString('es-DO') : '';
+      const who  = conv.closedByName ? ` por ${conv.closedByName}` : '';
+      const why  = conv.closedReason ? ` — "${conv.closedReason}"` : '';
+      bannerInfo.textContent = `Cerrada${who}${when ? ' el ' + when : ''}${why}`;
+      banner.style.display = 'block';
+      inputBar.style.display = 'none';
+      btn.textContent = 'Reabrir';
+      btn.style.color = '#065f46';
+      btn.style.borderColor = '#a7f3d0';
+    } else {
+      banner.style.display = 'none';
+      inputBar.style.display = 'flex';
+      btn.textContent = 'Cerrar';
+      btn.style.color = 'var(--text-muted)';
+      btn.style.borderColor = 'var(--border)';
+    }
+  }
+
+  window.brkToggleClose = async function() {
+    if (!brkActiveConv) return;
+    if (brkCurrentClosed) {
+      if (!confirm('¿Reabrir esta conversación? El cliente podrá enviar mensajes de nuevo.')) return;
+      const res = await fetch(`/api/conversations/${brkActiveConv}/reopen`, { method:'PUT', credentials:'include' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Error'); return; }
+      brkApplyClosedState(data.conversation);
+      brkAppendMsgs(data.conversation.messages.slice(-1));
+      brkLoadList();
+    } else {
+      const reason = prompt('¿Por qué cierras esta conversación? (opcional — máx. 200 caracteres)', '');
+      if (reason === null) return; // cancelled
+      const res = await fetch(`/api/conversations/${brkActiveConv}/close`, {
+        method:'PUT', credentials:'include',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ reason: reason.trim().slice(0, 200) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Error'); return; }
+      brkApplyClosedState(data.conversation);
+      brkAppendMsgs(data.conversation.messages.slice(-1));
+      brkLoadList();
+    }
+  };
 
   // Poll unread badge every 30s even when not on mensajes page
   setInterval(async () => {

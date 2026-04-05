@@ -107,8 +107,11 @@
         </div>
         <div class="msg-header-broker" id="threadBroker" style="display:none"></div>
       </div>
+      <div id="closedBanner" style="display:none;padding:.6rem 1rem;background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-size:.78rem;">
+        <strong>🔒 Conversación cerrada.</strong> <span id="closedInfo"></span>
+      </div>
       <div class="messages-area" id="messagesArea"></div>
-      <div class="msg-input-bar">
+      <div class="msg-input-bar" id="msgInputBar">
         <textarea class="msg-input" id="msgInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
         <button class="msg-send-btn" id="msgSendBtn" onclick="sendMessage()">Enviar</button>
       </div>
@@ -199,6 +202,7 @@
       brokerEl.style.display  = 'none';
     }
 
+    applyClosedState(conv);
     renderMessages(conv.messages);
     if (conv.messages.length) lastTimestamp = conv.messages.at(-1).timestamp;
 
@@ -244,6 +248,9 @@
   }
 
   function msgHTML(m) {
+    if (m.senderRole === 'system') {
+      return `<div style="align-self:center;max-width:85%;padding:.45rem .85rem;margin:.25rem 0;background:var(--bg);border:1px dashed var(--border);border-radius:99px;font-size:.75rem;color:var(--text-muted);text-align:center;">${escHtml(m.text)}</div>`;
+    }
     const mine = m.senderId === ME?.id;
     const time  = new Date(m.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
     return `
@@ -251,6 +258,23 @@
         <div class="msg-bubble">${escHtml(m.text)}</div>
         <div class="msg-meta">${mine ? 'Tú' : m.senderName} · ${time}</div>
       </div>`;
+  }
+
+  function applyClosedState(conv) {
+    const banner = document.getElementById('closedBanner');
+    const info   = document.getElementById('closedInfo');
+    const bar    = document.getElementById('msgInputBar');
+    if (conv.closed) {
+      const when = conv.closedAt ? new Date(conv.closedAt).toLocaleString('es-DO') : '';
+      const who  = conv.closedByName ? ` por ${conv.closedByName}` : '';
+      const why  = conv.closedReason ? ` — "${escHtml(conv.closedReason)}"` : '';
+      info.innerHTML = `Cerrada${who}${when ? ' el ' + when : ''}${why}`;
+      banner.style.display = 'block';
+      bar.style.display = 'none';
+    } else {
+      banner.style.display = 'none';
+      bar.style.display = '';
+    }
   }
 
   function escHtml(s) {

@@ -140,10 +140,17 @@ struct ConversationRow: View {
                         .font(.caption2)
                         .foregroundStyle(unread > 0 ? Color.rdBlue : .secondary)
                 }
-                Text(conv.propertyTitle)
-                    .font(.caption)
-                    .foregroundStyle(Color.rdBlue)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    if conv.closed == true {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(conv.propertyTitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdBlue)
+                        .lineLimit(1)
+                }
                 if let last = conv.lastMessage, !last.isEmpty {
                     Text(last)
                         .font(.caption)
