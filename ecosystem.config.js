@@ -5,10 +5,17 @@ module.exports = {
     {
       name: 'hogaresrd',
       script: 'server.js',
-      instances: 1,              // Single instance for SQLite compatibility
-      exec_mode: 'fork',         // fork mode (not cluster) for SQLite
+      // Kept at 1 instance / fork mode on purpose. Cluster mode would
+      // break 2-step flows that keep state in in-memory Maps per process:
+      //   - admin OTP (login → verify must hit same worker)
+      //   - Meta OAuth state (auth-url → callback)
+      //   - rate limiters (_loginAttempts, _viewSeen)
+      //   - listings cache
+      // To enable cluster later: move those maps to SQLite/Redis first.
+      instances: 1,
+      exec_mode: 'fork',
       watch: false,
-      max_memory_restart: '512M',
+      max_memory_restart: '1500M', // 2GB droplet — give Node 1.5GB headroom
       env: {
         NODE_ENV: 'production',
         PORT: 3000,

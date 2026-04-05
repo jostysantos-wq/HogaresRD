@@ -8,6 +8,11 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('foreign_keys = OFF');
+// Performance pragmas for higher concurrency + throughput:
+db.pragma('busy_timeout = 5000');      // Wait up to 5s on write lock instead of failing
+db.pragma('cache_size = -64000');      // 64 MB page cache (negative = KiB)
+db.pragma('temp_store = MEMORY');      // Keep temp tables in RAM
+db.pragma('mmap_size = 268435456');    // 256 MB memory-mapped I/O for reads
 
 const ACTIVITY_CAP = 200;
 
