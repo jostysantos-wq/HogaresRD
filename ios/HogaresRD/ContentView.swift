@@ -40,7 +40,9 @@ struct ContentView: View {
             favAuthSheet = .login
         }
         .sheet(item: $favAuthSheet) { mode in
-            AuthView(initialMode: mode).environmentObject(api)
+            AuthView(initialMode: mode)
+                .environmentObject(api)
+                .id(mode)
         }
     }
 }
@@ -180,7 +182,9 @@ struct ProfileTabView: View {
             }
             .navigationTitle("Perfil")
             .sheet(item: $authSheet) { mode in
-                AuthView(initialMode: mode).environmentObject(api)
+                AuthView(initialMode: mode)
+                    .environmentObject(api)
+                    .id(mode)
             }
             .sheet(isPresented: $showPost) {
                 SubmitListingView().environmentObject(api)

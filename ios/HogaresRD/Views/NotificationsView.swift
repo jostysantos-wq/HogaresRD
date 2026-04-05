@@ -346,7 +346,9 @@ struct ProfileMenuView: View {
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $authSheet) { mode in
-            AuthView(initialMode: mode).environmentObject(api)
+            AuthView(initialMode: mode)
+                .environmentObject(api)
+                .id(mode)
         }
     }
 }

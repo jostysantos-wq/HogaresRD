@@ -215,7 +215,11 @@ struct ProfileView: View {
 
             Spacer()
         }
-        .sheet(item: $authSheet) { mode in AuthView(initialMode: mode).environmentObject(api) }
+        .sheet(item: $authSheet) { mode in
+            AuthView(initialMode: mode)
+                .environmentObject(api)
+                .id(mode) // Force SwiftUI to recreate the view (not reuse stale @State)
+        }
         .navigationTitle("Perfil")
     }
 }
