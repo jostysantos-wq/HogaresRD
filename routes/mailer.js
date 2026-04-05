@@ -1,10 +1,10 @@
 /**
- * mailer.js — Central email transport (Resend HTTP API)
+ * mailer.js — Central email transport
  *
- * All emails route through Resend with department-specific "from" addresses.
- * Replies forward to the main inbox (Jostysantos@hogaresrd.com).
+ * Primary: Google Workspace SMTP (no daily limit, professional @hogaresrd.com)
+ * Fallback: Resend HTTP API (if SMTP fails due to port blocks)
  *
- * Departments (auto-detected from subject or manually set):
+ * Department routing:
  *   soporte@hogaresrd.com  — Support, welcome, verification, general
  *   legal@hogaresrd.com    — Terms, privacy, legal notices
  *   admin@hogaresrd.com    — Admin alerts, listing approvals, system
@@ -14,7 +14,9 @@
 
 'use strict';
 
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
+let Resend;
+try { Resend = require('resend').Resend; } catch (_) {}
 
 // ── Department email addresses ──────────────────────────────────────────
 const EMAILS = {
@@ -30,70 +32,90 @@ const REPLY_TO = 'Jostysantos@hogaresrd.com';
 
 /**
  * Auto-detect the department based on email subject keywords.
- * Routes emails to the appropriate from address automatically.
  */
 function detectDepartment(subject) {
   if (!subject) return 'soporte';
   const s = subject.toLowerCase();
 
-  // Admin alerts — listing approvals, system notifications
   if (s.includes('acción requerida') || s.includes('accion requerida') ||
       s.includes('nueva propiedad para aprobar') || s.includes('solicitud de agencia') ||
       s.includes('bloqueada temporalmente')) return 'admin';
 
-  // Sales — subscriptions, plans, payments
   if (s.includes('suscripción') || s.includes('suscripcion') || s.includes('plan') ||
       s.includes('pago') || s.includes('factura')) return 'ventas';
 
-  // Legal — terms, privacy
   if (s.includes('legal') || s.includes('términos') || s.includes('terminos') ||
       s.includes('privacidad') || s.includes('eliminar mi cuenta')) return 'legal';
 
-  // Automated notifications — status updates, newsletters, saved searches
   if (s.includes('tu aplicación') || s.includes('tu aplicacion') ||
       s.includes('resumen del día') || s.includes('resumen del dia') ||
       s.includes('nueva(s) propiedad') || s.includes('te respondió') ||
       s.includes('te respondio')) return 'noreply';
 
-  // Default — welcome, verification, password reset, general support
   return 'soporte';
 }
 
 function createTransport() {
-  const apiKey = process.env.RESEND_API_KEY;
-  const client = apiKey ? new Resend(apiKey) : null;
+  const wsUser = process.env.WS_EMAIL_USER;
+  const wsPass = process.env.WS_EMAIL_PASS;
+  const resendKey = process.env.RESEND_API_KEY;
+
+  // Google Workspace SMTP transporter
+  const smtp = (wsUser && wsPass) ? nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: wsUser, pass: wsPass },
+  }) : null;
+
+  // Resend HTTP API fallback
+  const resend = (resendKey && Resend) ? new Resend(resendKey) : null;
 
   return {
     /**
-     * sendMail({ from?, to, subject, html, department? })
+     * sendMail({ to, subject, html, department? })
      *
-     * Compatible with nodemailer's transporter.sendMail() signature.
-     * Optional `department` overrides auto-detection:
-     *   'soporte' | 'legal' | 'admin' | 'ventas' | 'noreply'
+     * Tries Workspace SMTP first, falls back to Resend if SMTP fails.
      */
-    sendMail(opts) {
-      if (!client) {
-        console.warn('[mailer] RESEND_API_KEY not set — email skipped:', opts && opts.subject);
-        return Promise.resolve();
-      }
-
+    async sendMail(opts) {
       const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];
       const dept = opts.department || detectDepartment(opts.subject);
       const from = EMAILS[dept] || EMAILS.soporte;
 
-      return client.emails.send({
-        from,
-        to:       toArray,
-        subject:  opts.subject,
-        html:     opts.html,
-        reply_to: REPLY_TO,
-        headers:  opts.headers || {},
-      }).then(result => {
+      // ── Try Workspace SMTP first ────────────────────────────────
+      if (smtp) {
+        try {
+          const result = await smtp.sendMail({
+            from,
+            to:       toArray.join(', '),
+            subject:  opts.subject,
+            html:     opts.html,
+            replyTo:  REPLY_TO,
+            headers:  opts.headers || {},
+          });
+          return result;
+        } catch (smtpErr) {
+          console.warn('[mailer] SMTP failed, trying Resend fallback:', smtpErr.message);
+        }
+      }
+
+      // ── Fallback to Resend HTTP API ─────────────────────────────
+      if (resend) {
+        const result = await resend.emails.send({
+          from,
+          to:       toArray,
+          subject:  opts.subject,
+          html:     opts.html,
+          reply_to: REPLY_TO,
+          headers:  opts.headers || {},
+        });
         if (result.error) {
           throw Object.assign(new Error(result.error.message || 'Resend error'), result.error);
         }
         return result;
-      });
+      }
+
+      // ── No transport available ──────────────────────────────────
+      console.warn('[mailer] No email transport available — email skipped:', opts.subject);
+      return undefined;
     },
   };
 }
