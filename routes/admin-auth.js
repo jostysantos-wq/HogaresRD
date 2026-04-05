@@ -14,8 +14,9 @@ const jwt      = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const { createTransport } = require('./mailer');
 
-// TOTP settings — 30-second window, ±1 step drift tolerance
-authenticator.options = { step: 30, window: 1 };
+// TOTP settings — 30-second window, ±1 step drift tolerance.
+// otplib v13: pass options on each verify call, not as a global setter.
+const TOTP_OPTIONS = { window: 1 };
 
 const router = express.Router();
 const mailer = createTransport();
@@ -211,7 +212,12 @@ router.post('/verify', (req, res) => {
   const totpSecret = process.env.ADMIN_TOTP_SECRET;
   let okTotp = false;
   if (totpSecret) {
-    try { okTotp = authenticator.check(submitted, totpSecret); } catch {}
+    try {
+      // verify with drift tolerance (±1 step = ±30s)
+      const { totp } = require('otplib');
+      totp.options = TOTP_OPTIONS;
+      okTotp = totp.check(submitted, totpSecret);
+    } catch {}
   }
   const okEmail = submitted === record.otp;
 
