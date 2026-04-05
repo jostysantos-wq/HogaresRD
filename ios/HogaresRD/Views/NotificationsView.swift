@@ -413,9 +413,12 @@ struct NotificationSettingsView: View {
     }
 
     private func handleAuthChange(_ oldVal: Bool, _ newVal: Bool) {
-        if pushEnabled != newVal {
+        // Only force the toggle OFF when system auth goes away — when
+        // system auth comes back, leave the toggle where the user left it
+        // (their in-app intent). Otherwise we'd keep flipping it back on.
+        if !newVal && pushEnabled {
             suppressToggleChange = true
-            pushEnabled = newVal
+            pushEnabled = false
             DispatchQueue.main.async { suppressToggleChange = false }
         }
     }
@@ -526,15 +529,26 @@ struct NotificationSettingsView: View {
         }
     }
 
+    // User's in-app intent for push (persisted). Default true — user wants
+    // notifications unless they explicitly opt out. Toggle state is the AND
+    // of (systemAuth.authorized, userIntent).
+    private static let USER_INTENT_KEY = "push_user_enabled"
+    private static func loadUserIntent() -> Bool {
+        if UserDefaults.standard.object(forKey: USER_INTENT_KEY) == nil { return true }
+        return UserDefaults.standard.bool(forKey: USER_INTENT_KEY)
+    }
+    private static func saveUserIntent(_ v: Bool) {
+        UserDefaults.standard.set(v, forKey: USER_INTENT_KEY)
+    }
+
     @MainActor
     private func initialLoad() async {
-        // Read the ACTUAL auth status (async) before setting pushEnabled.
-        // Previously this read a stale @Published value before the async
-        // getNotificationSettings completed, causing the toggle to show
-        // "Activadas" when the system was really denied (or vice versa).
         let status = await pushService.refreshAuthorizationStatus()
+        let userIntent = Self.loadUserIntent()
+        // Toggle ON only when BOTH the system grants permission AND the
+        // user hasn't opted out in-app. Otherwise it's OFF.
         suppressToggleChange = true
-        pushEnabled = (status == .authorized)
+        pushEnabled = (status == .authorized) && userIntent
         DispatchQueue.main.async { self.suppressToggleChange = false }
         newListings   = Self.loadBool("notif_newListings")
         priceDrops    = Self.loadBool("notif_priceDrops")
@@ -548,9 +562,11 @@ struct NotificationSettingsView: View {
         loading = true
         errorMsg = nil
 
+        // Always persist the user's in-app intent — this survives app
+        // restarts even when the system permission remains granted.
+        Self.saveUserIntent(enable)
+
         if enable {
-            // If the system already denied us, jump to Settings instead of
-            // asking again (the system prompt only appears once per install).
             if pushService.authStatus == .denied {
                 errorMsg = "Activa las notificaciones en Ajustes > HogaresRD."
                 suppressToggleChange = true
@@ -566,7 +582,6 @@ struct NotificationSettingsView: View {
                 pushEnabled = false
                 DispatchQueue.main.async { self.suppressToggleChange = false }
             }
-            // If granted, leave pushEnabled = true (already set by the user's tap).
             loading = false
         } else {
             do {
