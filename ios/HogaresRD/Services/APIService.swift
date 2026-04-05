@@ -272,6 +272,8 @@ class APIService: ObservableObject {
         token = nil
         UserDefaults.standard.removeObject(forKey: "rd_user")
         UserDefaults.standard.removeObject(forKey: "rd_token")
+        // Wipe local favorites — they belonged to the previous session.
+        Task { @MainActor in SavedStore.shared.clearLocal() }
     }
 
     // MARK: - Agencies

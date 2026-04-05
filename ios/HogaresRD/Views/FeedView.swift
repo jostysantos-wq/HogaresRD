@@ -570,10 +570,14 @@ struct ReelCard: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
             heartScale = 1.3
         }
-        saved.toggle(listing.id)
-        localFavCount += wasSaved ? -1 : 1
-        if localFavCount < 0 { localFavCount = 0 }
-        onSaveTap()
+        let didToggle = saved.toggle(listing.id)
+        // Only move the counter if the toggle actually applied — guests
+        // get sent to the auth sheet and the count stays put.
+        if didToggle {
+            localFavCount += wasSaved ? -1 : 1
+            if localFavCount < 0 { localFavCount = 0 }
+            onSaveTap()
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 heartScale = 1.0
@@ -591,9 +595,8 @@ struct ReelCard: View {
             heartScale = 1.3
         }
 
-        // Only count the like if not already saved
-        if !saved.isSaved(listing.id) {
-            saved.toggle(listing.id)
+        // Only count the like if not already saved AND toggle applied.
+        if !saved.isSaved(listing.id) && saved.toggle(listing.id) {
             localFavCount += 1
             onSaveTap()
         }

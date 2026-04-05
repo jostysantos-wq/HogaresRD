@@ -15,6 +15,7 @@ struct ContentView: View {
     @EnvironmentObject var saved: SavedStore
 
     @State private var selectedTab = 0
+    @State private var favAuthSheet: AuthView.Mode? = nil
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -35,6 +36,12 @@ struct ContentView: View {
                 .tag(3)
         }
         .tint(Color.rdBlue)
+        .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
+            favAuthSheet = .login
+        }
+        .sheet(item: $favAuthSheet) { mode in
+            AuthView(initialMode: mode).environmentObject(api)
+        }
     }
 }
 

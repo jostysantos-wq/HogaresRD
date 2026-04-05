@@ -1,5 +1,11 @@
 import Foundation
 
+extension Notification.Name {
+    /// Broadcast when an unauthenticated user tries to favorite a listing.
+    /// ContentView listens and presents the auth sheet.
+    static let authRequiredForFavorite = Notification.Name("rd.authRequiredForFavorite")
+}
+
 @MainActor
 class SavedStore: ObservableObject {
     static let shared = SavedStore()
@@ -13,7 +19,15 @@ class SavedStore: ObservableObject {
 
     func isSaved(_ id: String) -> Bool { savedIDs.contains(id) }
 
-    func toggle(_ id: String) {
+    /// Toggle a favorite. Requires authentication — if the user isn't logged
+    /// in, posts `authRequiredForFavorite` and returns false WITHOUT touching
+    /// local or server state. Returns true when the toggle was applied.
+    @discardableResult
+    func toggle(_ id: String) -> Bool {
+        guard APIService.shared.currentUser != nil else {
+            NotificationCenter.default.post(name: .authRequiredForFavorite, object: nil)
+            return false
+        }
         let wasAdding = !savedIDs.contains(id)
         if wasAdding { savedIDs.insert(id) }
         else         { savedIDs.remove(id) }
@@ -27,5 +41,13 @@ class SavedStore: ObservableObject {
                 try? await APIService.shared.removeFavorite(listingId: id)
             }
         }
+        return true
+    }
+
+    /// Wipe local favorites — call on logout so a later guest can't see
+    /// the previous user's hearts.
+    func clearLocal() {
+        savedIDs.removeAll()
+        UserDefaults.standard.removeObject(forKey: "saved_listing_ids")
     }
 }
