@@ -280,7 +280,10 @@ struct ProfileTabView: View {
     private func agentToolsSection(_ user: User) -> some View {
         Section("Herramientas de Agente") {
             NavigationLink {
-                if user.isInmobiliaria {
+                // Team leads (inmobiliaria + constructora) ALWAYS get the
+                // full team dashboard. Secretaries get the limited secretary
+                // dashboard. Everyone else (broker/agency) gets broker.
+                if user.isTeamLead {
                     InmobiliariaDashboardView().environmentObject(api)
                 } else if user.isSecretary {
                     SecretaryDashboardView().environmentObject(api)

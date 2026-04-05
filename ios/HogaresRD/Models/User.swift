@@ -32,6 +32,10 @@ struct User: Codable {
     var isAgency: Bool { role == "agency" || role == "broker" || role == "inmobiliaria" || role == "constructora" || role == "secretary" }
     var isInmobiliaria: Bool { role == "inmobiliaria" || role == "constructora" }
     var isConstructora: Bool { role == "constructora" }
+    /// True when user OWNS a team (inmobiliaria or constructora). Both get the
+    /// full team-management dashboard with Agentes/Solicitudes/Rendimiento/
+    /// Secretarias tabs — behaviour must be identical for consistency.
+    var isTeamLead: Bool { role == "inmobiliaria" || role == "constructora" }
     var isBroker: Bool { role == "broker" || role == "agency" }
     var isSecretary: Bool { role == "secretary" }
 }

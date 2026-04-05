@@ -234,7 +234,7 @@ struct ProfileMenuView: View {
                 // Broker / Inmobiliaria tools
                 Section("Herramientas de Agente") {
                     NavigationLink {
-                        if user.isInmobiliaria {
+                        if user.isTeamLead {
                             InmobiliariaDashboardView().environmentObject(api)
                         } else {
                             BrokerDashboardView().environmentObject(api)

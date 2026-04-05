@@ -12,6 +12,15 @@ struct InmobiliariaDashboardView: View {
         "Agentes", "Solicitudes", "Rendimiento", "Secretarias"
     ]
 
+    /// Role-aware title — "Constructora" for constructora users,
+    /// "Inmobiliaria" for inmobiliaria users, plain "Dashboard" otherwise.
+    /// Both roles use the SAME view with IDENTICAL tabs/data.
+    private var navTitle: String {
+        if api.currentUser?.isConstructora == true { return "Dashboard · Constructora" }
+        if api.currentUser?.role == "inmobiliaria"  { return "Dashboard · Inmobiliaria" }
+        return "Dashboard"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Tab bar
@@ -63,7 +72,7 @@ struct InmobiliariaDashboardView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
         }
-        .navigationTitle("Dashboard")
+        .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
