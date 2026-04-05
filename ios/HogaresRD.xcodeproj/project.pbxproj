@@ -24,6 +24,7 @@
 		SPLASH0000000000000000B2 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPLASH0000000000000000B1 /* SplashView.swift */; };
 		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
 		INVENT0000000000000000B2 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = INVENT0000000000000000B1 /* InventoryView.swift */; };
+		REPORT0000000000000000B2 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPORT0000000000000000B1 /* ReportView.swift */; };
 		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
@@ -70,6 +71,7 @@
 		SPLASH0000000000000000B1 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		AVATAR0000000000000000B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		INVENT0000000000000000B1 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
+		REPORT0000000000000000B1 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 				SPLASH0000000000000000B1 /* SplashView.swift */,
 				AVATAR0000000000000000B1 /* AvatarView.swift */,
 				INVENT0000000000000000B1 /* InventoryView.swift */,
+				REPORT0000000000000000B1 /* ReportView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
 					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
@@ -291,6 +294,7 @@
 				SPLASH0000000000000000B2 /* SplashView.swift in Sources */,
 				AVATAR0000000000000000B2 /* AvatarView.swift in Sources */,
 				INVENT0000000000000000B2 /* InventoryView.swift in Sources */,
+				REPORT0000000000000000B2 /* ReportView.swift in Sources */,
 				A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */,
 				AA11000000000000000000C6 /* HomeView.swift in Sources */,
 				AA11000000000000000000C7 /* BrowseView.swift in Sources */,

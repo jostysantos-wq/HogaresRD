@@ -937,6 +937,27 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Reports
+
+    func submitReport(type: String, targetId: String, targetName: String, reason: String, details: String) async throws {
+        let url = URL(string: "\(apiBase)/api/reports")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
+        let body: [String: String] = [
+            "type": type, "targetId": targetId, "targetName": targetName,
+            "reason": reason, "details": details,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error enviando reporte")
+        }
+    }
+
     // MARK: - Inventory
 
     struct InventoryResponse: Decodable {

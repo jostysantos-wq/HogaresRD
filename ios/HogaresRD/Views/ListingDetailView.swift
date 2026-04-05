@@ -13,6 +13,7 @@ struct ListingDetailView: View {
     @State private var showContactAgent = false
     @State private var showFullGallery  = false
     @State private var showTourBooking  = false
+    @State private var showReport       = false
 
     // Mortgage calculator state
     @State private var mcDownPercent: Double = 30
@@ -47,6 +48,12 @@ struct ListingDetailView: View {
         .sheet(isPresented: $showTourBooking) {
             if let l = listing, let brokerId = l.agencies?.first(where: { $0.userId != nil })?.userId {
                 TourBookingSheet(listing: l, brokerId: brokerId)
+                    .environmentObject(APIService.shared)
+            }
+        }
+        .sheet(isPresented: $showReport) {
+            if let l = listing {
+                ReportView(reportType: .listing, targetId: l.id, targetName: l.title)
                     .environmentObject(APIService.shared)
             }
         }
@@ -355,6 +362,16 @@ struct ListingDetailView: View {
             Button { shareListing(l) } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+            }
+
+            // Report button
+            Button { showReport = true } label: {
+                Image(systemName: "flag")
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 38, height: 38)
                     .background(.ultraThinMaterial.opacity(0.7), in: Circle())

@@ -262,6 +262,25 @@ db.exec(`
     data    TEXT DEFAULT '{}'
   );
   CREATE UNIQUE INDEX IF NOT EXISTS idx_page_content_uniq ON page_content(page, section);
+
+  CREATE TABLE IF NOT EXISTS reports (
+    id              TEXT PRIMARY KEY,
+    type            TEXT NOT NULL,
+    target_id       TEXT,
+    target_name     TEXT,
+    reporter_id     TEXT,
+    reporter_name   TEXT,
+    reporter_email  TEXT,
+    reason          TEXT NOT NULL,
+    details         TEXT,
+    attachment      TEXT,
+    status          TEXT DEFAULT 'pending',
+    admin_notes     TEXT,
+    created_at      TEXT,
+    updated_at      TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+  CREATE INDEX IF NOT EXISTS idx_reports_type   ON reports(type);
 `);
 
 // ── FTS5 full-text search index ──────────────────────────────────────────
@@ -1229,6 +1248,26 @@ function savePageSection(id, page, section, data) {
     .run(id, page, section, _jsonStringify(data));
 }
 
+// ── Reports ──────────────────────────────────────────────────────────────
+
+function getReports(status) {
+  if (status) return db.prepare('SELECT * FROM reports WHERE status = ? ORDER BY created_at DESC').all(status);
+  return db.prepare('SELECT * FROM reports ORDER BY created_at DESC').all();
+}
+
+function getReportById(id) {
+  return db.prepare('SELECT * FROM reports WHERE id = ?').get(id) || null;
+}
+
+function saveReport(report) {
+  const cols = ['id', 'type', 'target_id', 'target_name', 'reporter_id', 'reporter_name',
+    'reporter_email', 'reason', 'details', 'attachment', 'status', 'admin_notes', 'created_at', 'updated_at'];
+  const row = {};
+  for (const col of cols) row[col] = report[col] === undefined ? null : report[col];
+  const placeholders = cols.map(c => '@' + c).join(', ');
+  db.prepare(`INSERT OR REPLACE INTO reports (${cols.join(', ')}) VALUES (${placeholders})`).run(row);
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1253,4 +1292,5 @@ module.exports = {
   saveSavedSearch, deleteSavedSearch,
   getBlogPosts, getBlogPostById, getBlogPostBySlug, saveBlogPost, deleteBlogPost, incrementBlogViews,
   getAllPageContent, getPageSection, savePageSection,
+  getReports, getReportById, saveReport,
 };

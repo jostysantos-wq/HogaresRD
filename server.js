@@ -190,6 +190,7 @@ app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
 app.use('/api/inventory',          require('./routes/inventory'));
+app.use('/api/reports',            require('./routes/reports').router);
 app.use('/api/paid-ads',          require('./routes/paid-ads'));
 app.use('/api/push',              require('./routes/push').router);
 app.use('/api/saved-searches',    savedSearchRouter);
@@ -267,6 +268,37 @@ app.post('/api/upload/avatar', (req, res, next) => {
   res.json({ success: true, avatarUrl: user.avatarUrl });
 }, (err, req, res, next) => {
   console.error('[avatar] Upload error:', err.message);
+  res.status(400).json({ error: err.message });
+});
+
+// ── Report attachment upload ──────────────────────────────────────
+const REPORTS_DIR = path.join(__dirname, 'public', 'uploads', 'reports');
+if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
+
+const reportStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, REPORTS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const name = `rpt_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+const reportUpload = multer({
+  storage: reportStorage,
+  limits:  { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf')) return cb(null, true);
+    cb(new Error('Solo se permiten imagenes o PDF'));
+  },
+});
+
+app.post('/api/upload/report-attachment', (req, res, next) => {
+  const { userAuth } = require('./routes/auth');
+  userAuth(req, res, next);
+}, reportUpload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se recibio archivo.' });
+  res.json({ success: true, url: `/uploads/reports/${req.file.filename}` });
+}, (err, req, res, next) => {
   res.status(400).json({ error: err.message });
 });
 
