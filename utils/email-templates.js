@@ -1,24 +1,26 @@
 /**
  * email-templates.js — Shared email layout components
  *
- * All emails use a consistent professional template:
- *   - 560px max-width, table-based for email client compatibility
- *   - Navy header (#002D62), white body, light gray footer
- *   - No emojis, clean typography
- *   - Dominican flag colors: navy blue + red accent
+ * Dominican Republic flag colors throughout:
+ *   Navy Blue #002D62 — headers, primary buttons, text
+ *   Red #CE1126 — accents, badges, highlights
+ *   White — backgrounds, text on dark
+ *
+ * Professional, no emojis, clean typography.
  */
 
 'use strict';
 
 const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
 
-// Brand colors
+// Dominican flag + brand colors
 const C = {
   navy:     '#002D62',
   navyDark: '#001A3A',
-  blue:     '#0a4d8f',
   red:      '#CE1126',
-  green:    '#16a34a',
+  redLight: '#fef2f2',
+  green:    '#1B7A3E',
+  greenLt:  '#f0fdf4',
   orange:   '#b45309',
   text:     '#1a2b40',
   muted:    '#4d6a8a',
@@ -31,13 +33,6 @@ const C = {
 
 /**
  * Wrap email content in the standard HogaresRD layout.
- *
- * @param {object} opts
- * @param {string} opts.title     — Header title text
- * @param {string} opts.subtitle  — Optional subtitle below title
- * @param {string} opts.body      — HTML content for the body section
- * @param {string} [opts.headerColor] — Header background (default: navy)
- * @param {string} [opts.year]    — Copyright year
  */
 function layout({ title, subtitle, body, headerColor }) {
   const hdrColor = headerColor || C.navy;
@@ -49,10 +44,19 @@ function layout({ title, subtitle, body, headerColor }) {
 <tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${C.surface};border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,45,98,0.08);">
 
+<!-- Red accent stripe -->
+<tr><td style="background:${C.red};height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
 <!-- Header -->
-<tr><td style="background:${hdrColor};padding:32px 40px;">
-  <div style="font-size:0.85rem;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">HogaresRD</div>
-  <div style="font-size:1.35rem;font-weight:800;color:#fff;line-height:1.3;">${title}</div>
+<tr><td style="background:${hdrColor};padding:28px 40px;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td>
+        <div style="font-size:0.78rem;font-weight:800;color:rgba(255,255,255,0.55);letter-spacing:2px;text-transform:uppercase;">HOGARES<span style="color:${C.red};">RD</span></div>
+      </td>
+    </tr>
+  </table>
+  <div style="margin-top:14px;font-size:1.35rem;font-weight:800;color:#fff;line-height:1.3;">${title}</div>
   ${subtitle ? `<div style="margin-top:6px;font-size:0.88rem;color:rgba(255,255,255,0.7);">${subtitle}</div>` : ''}
 </td></tr>
 
@@ -63,12 +67,18 @@ function layout({ title, subtitle, body, headerColor }) {
 
 <!-- Footer -->
 <tr><td style="padding:20px 40px;background:${C.footerBg};border-top:1px solid ${C.border};">
-  <p style="margin:0;font-size:0.72rem;color:${C.light};text-align:center;">
-    &copy; ${year} HogaresRD &middot; Bienes raices en Republica Dominicana
-  </p>
-  <p style="margin:4px 0 0;font-size:0.68rem;color:${C.light};text-align:center;">
-    <a href="${BASE_URL}" style="color:${C.light};text-decoration:none;">hogaresrd.com</a>
-  </p>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="text-align:center;">
+      <div style="font-size:0.72rem;color:${C.light};">&copy; ${year} HogaresRD &middot; Bienes raices en Republica Dominicana</div>
+      <div style="margin-top:6px;">
+        <a href="${BASE_URL}" style="font-size:0.72rem;color:${C.navy};text-decoration:none;font-weight:600;">hogaresrd.com</a>
+        <span style="color:${C.border};margin:0 6px;">|</span>
+        <a href="${BASE_URL}/contacto" style="font-size:0.72rem;color:${C.muted};text-decoration:none;">Contacto</a>
+        <span style="color:${C.border};margin:0 6px;">|</span>
+        <a href="${BASE_URL}/terminos" style="font-size:0.72rem;color:${C.muted};text-decoration:none;">Terminos</a>
+      </div>
+    </td></tr>
+  </table>
 </td></tr>
 
 </table>
@@ -77,12 +87,17 @@ function layout({ title, subtitle, body, headerColor }) {
 </body></html>`;
 }
 
-/** Primary CTA button */
+/** Primary CTA button — DR blue with red hover feel */
 function button(label, url, color) {
   const bg = color || C.navy;
   return `<div style="text-align:center;margin:24px 0 8px;">
-  <a href="${url}" style="display:inline-block;background:${bg};color:#fff;padding:13px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">${label}</a>
+  <a href="${url}" style="display:inline-block;background:${bg};color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;border-bottom:3px solid ${C.red};">${label}</a>
 </div>`;
+}
+
+/** Red accent button (for urgent actions) */
+function buttonRed(label, url) {
+  return button(label, url, C.red);
 }
 
 /** Secondary outline button */
@@ -105,15 +120,15 @@ function small(text) {
 /** Highlighted code/number display (for verification codes, tokens) */
 function codeBlock(code) {
   return `<div style="margin:20px 0;text-align:center;">
-  <div style="display:inline-block;background:${C.bg};border:1px solid ${C.border};border-radius:8px;padding:14px 32px;font-family:'Courier New',monospace;font-size:1.8rem;font-weight:800;color:${C.navy};letter-spacing:6px;">${code}</div>
+  <div style="display:inline-block;background:${C.bg};border:2px solid ${C.navy};border-radius:10px;padding:16px 36px;font-family:'Courier New',monospace;font-size:2rem;font-weight:800;color:${C.navy};letter-spacing:8px;">${code}</div>
 </div>`;
 }
 
 /** Info row with label + value */
 function infoRow(label, value) {
   return `<tr>
-  <td style="padding:8px 0;border-bottom:1px solid ${C.bg};font-size:0.85rem;color:${C.muted};width:120px;vertical-align:top;">${label}</td>
-  <td style="padding:8px 0;border-bottom:1px solid ${C.bg};font-size:0.85rem;color:${C.text};font-weight:600;">${value}</td>
+  <td style="padding:9px 0;border-bottom:1px solid ${C.bg};font-size:0.85rem;color:${C.muted};width:130px;vertical-align:top;">${label}</td>
+  <td style="padding:9px 0;border-bottom:1px solid ${C.bg};font-size:0.85rem;color:${C.text};font-weight:600;">${value}</td>
 </tr>`;
 }
 
@@ -122,9 +137,9 @@ function infoTable(rows) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">${rows}</table>`;
 }
 
-/** Feature bullet point */
+/** Feature bullet point with red dash */
 function feature(text) {
-  return `<tr><td style="padding:7px 0;font-size:0.88rem;color:${C.muted};line-height:1.5;"><span style="color:${C.navy};margin-right:8px;font-weight:700;">—</span>${text}</td></tr>`;
+  return `<tr><td style="padding:8px 0;font-size:0.88rem;color:${C.text};line-height:1.5;"><span style="color:${C.red};margin-right:10px;font-weight:800;">—</span>${text}</td></tr>`;
 }
 
 /** Feature list wrapper */
@@ -135,24 +150,24 @@ function featureList(items) {
 /** Status badge */
 function statusBadge(label, color) {
   const bg = color || C.navy;
-  return `<span style="display:inline-block;background:${bg};color:#fff;padding:6px 16px;border-radius:20px;font-size:0.85rem;font-weight:700;">${label}</span>`;
+  return `<span style="display:inline-block;background:${bg};color:#fff;padding:6px 18px;border-radius:20px;font-size:0.85rem;font-weight:700;letter-spacing:0.3px;">${label}</span>`;
 }
 
 /** Alert/warning box */
 function alertBox(text, type) {
   const colors = {
-    info:    { bg: '#eef3fa', border: C.navy, text: C.navy },
+    info:    { bg: C.bg, border: C.navy, text: C.navy },
     warning: { bg: '#fff7ed', border: C.orange, text: C.orange },
-    danger:  { bg: '#fef2f2', border: '#dc2626', text: '#dc2626' },
-    success: { bg: '#f0fdf4', border: C.green, text: C.green },
+    danger:  { bg: C.redLight, border: C.red, text: C.red },
+    success: { bg: C.greenLt, border: C.green, text: C.green },
   };
   const c = colors[type] || colors.info;
-  return `<div style="margin:16px 0;padding:14px 18px;background:${c.bg};border-left:3px solid ${c.border};border-radius:4px;font-size:0.88rem;color:${c.text};line-height:1.5;">${text}</div>`;
+  return `<div style="margin:16px 0;padding:14px 18px;background:${c.bg};border-left:4px solid ${c.border};border-radius:4px;font-size:0.88rem;color:${c.text};line-height:1.5;">${text}</div>`;
 }
 
 /** Blockquote for message previews */
 function quote(text) {
-  return `<blockquote style="margin:14px 0;padding:12px 16px;background:${C.bg};border-left:3px solid ${C.navy};border-radius:4px;font-size:0.88rem;color:${C.text};font-style:italic;">${text}</blockquote>`;
+  return `<blockquote style="margin:14px 0;padding:14px 18px;background:${C.bg};border-left:4px solid ${C.red};border-radius:4px;font-size:0.88rem;color:${C.text};font-style:italic;line-height:1.5;">${text}</blockquote>`;
 }
 
 /** Listing card for newsletters/alerts */
@@ -165,17 +180,23 @@ function listingCard(listing) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;border:1px solid ${C.border};border-radius:8px;overflow:hidden;">
   ${imgUrl ? `<tr><td><img src="${imgUrl}" alt="" style="width:100%;height:140px;object-fit:cover;display:block;" /></td></tr>` : ''}
   <tr><td style="padding:14px 16px;">
-    <div style="font-size:1rem;font-weight:800;color:${C.navy};margin-bottom:4px;">${price}</div>
+    <div style="font-size:1.05rem;font-weight:800;color:${C.navy};margin-bottom:4px;">${price}</div>
     <div style="font-size:0.88rem;font-weight:700;color:${C.text};margin-bottom:4px;">${esc(listing.title)}</div>
     <div style="font-size:0.78rem;color:${C.muted};">${esc(listing.city || '')}${listing.province ? ', ' + esc(listing.province) : ''}</div>
-    <div style="margin-top:10px;"><a href="${url}" style="font-size:0.82rem;font-weight:700;color:${C.navy};text-decoration:none;">Ver propiedad &rarr;</a></div>
+    <div style="margin-top:12px;"><a href="${url}" style="font-size:0.82rem;font-weight:700;color:${C.red};text-decoration:none;">Ver propiedad &rarr;</a></div>
   </td></tr>
 </table>`;
 }
 
-/** Divider line */
+/** Divider line with red center accent */
 function divider() {
-  return `<hr style="border:none;border-top:1px solid ${C.border};margin:20px 0;" />`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;">
+  <tr>
+    <td style="border-top:1px solid ${C.border};"></td>
+    <td style="width:40px;text-align:center;"><div style="width:20px;height:3px;background:${C.red};border-radius:2px;margin:0 auto;"></div></td>
+    <td style="border-top:1px solid ${C.border};"></td>
+  </tr>
+</table>`;
 }
 
 /** HTML-escape */
@@ -185,7 +206,7 @@ function esc(s) {
 }
 
 module.exports = {
-  layout, button, buttonOutline, p, small, codeBlock,
+  layout, button, buttonRed, buttonOutline, p, small, codeBlock,
   infoRow, infoTable, feature, featureList,
   statusBadge, alertBox, quote, listingCard, divider, esc,
   C, BASE_URL,
