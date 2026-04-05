@@ -306,6 +306,19 @@ router.post('/', appCreateLimiter, (req, res) => {
   const inmobiliaria_id   = brokerUser?.inmobiliaria_id   || null;
   const inmobiliaria_name = brokerUser?.inmobiliaria_name || null;
 
+  // ── Idempotency: dedup identical submissions within 60s (network retry / race) ──
+  if (emailTrimmed) {
+    const sixtySecondsAgo = Date.now() - 60 * 1000;
+    const existing = (store.getApplications() || []).find(a =>
+      a.listing_id === listing_id
+      && a.client && a.client.email && a.client.email.toLowerCase() === emailTrimmed.toLowerCase()
+      && a.created_at && new Date(a.created_at).getTime() >= sixtySecondsAgo
+    );
+    if (existing) {
+      return res.status(200).json({ id: existing.id, duplicate: true });
+    }
+  }
+
   const app = {
     id:             uuid(),
     listing_id:     listing_id || '',

@@ -65,9 +65,15 @@ function describeFilters(f) {
 
 // GET /api/saved-searches — list user's saved searches with current match count
 router.get('/', userAuth, (req, res) => {
+  const limit = Math.min(Math.max(1, parseInt(req.query.limit, 10) || 100), 500);
   const searches = store.getSavedSearchesByUser(req.user.sub);
+  // Order by createdAt descending, then slice
+  const sorted = searches.slice().sort((a, b) =>
+    new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
+  const sliced = sorted.slice(0, limit);
   // Optionally include current match counts
-  const enriched = searches.map(s => {
+  const enriched = sliced.map(s => {
     const matches = runSearch(s.filters);
     return { ...s, matchCount: matches.length };
   });

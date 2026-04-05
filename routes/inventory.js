@@ -1,17 +1,34 @@
 const express    = require('express');
 const crypto     = require('crypto');
+const jwt        = require('jsonwebtoken');
 const store      = require('./store');
 const { userAuth } = require('./auth');
 
 const router = express.Router();
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+const JWT_SECRET  = process.env.JWT_SECRET;
+const COOKIE_NAME = 'hrdt';
 
 function uid() { return 'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+/** Try to identify the user from cookie/Bearer token. Returns null if not
+ * authenticated — does NOT block the request. */
+function getOptionalUser(req) {
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  const token = cookieToken || headerToken;
+  if (!token || !JWT_SECRET) return null;
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.jti && store.isTokenRevoked(payload.jti)) return null;
+    return store.getUserById(payload.sub);
+  } catch { return null; }
+}
+
 /** Check if user is affiliated to a listing (via agencies array) */
 function isAffiliated(user, listing) {
-  if (!listing.agencies || !Array.isArray(listing.agencies)) return false;
+  if (!user || !listing.agencies || !Array.isArray(listing.agencies)) return false;
   // Direct match
   if (listing.agencies.some(a => a.user_id === user.id)) return true;
   // Inmobiliaria match — check if any of the listing's agents are under this inmobiliaria
@@ -23,20 +40,36 @@ function isAffiliated(user, listing) {
   return false;
 }
 
+/** Strip buyer PII (clientName, clientEmail, clientPhone, applicationId)
+ * from inventory units. Used when the caller isn't affiliated to the
+ * listing — general public shouldn't see who bought what. */
+function stripBuyerInfo(units) {
+  return units.map(u => {
+    const { clientName, clientEmail, clientPhone, applicationId, ...safe } = u;
+    return safe;
+  });
+}
+
 // ── GET /api/inventory/:listingId ─────────────────────────────────────────
-// Public: returns the unit inventory for a listing
+// Public: returns the unit inventory for a listing. Only affiliated pros
+// (broker/inmobiliaria/constructora) see buyer names + applicationIds;
+// everyone else sees anonymized units (just status + label + floor).
 router.get('/:listingId', (req, res) => {
   const listing = store.getListingById(req.params.listingId);
   if (!listing || listing.status !== 'approved')
     return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-  const inventory = listing.unit_inventory || [];
+  const units = listing.unit_inventory || [];
   const summary = {
-    total:     inventory.length,
-    available: inventory.filter(u => u.status === 'available').length,
-    reserved:  inventory.filter(u => u.status === 'reserved').length,
-    sold:      inventory.filter(u => u.status === 'sold').length,
+    total:     units.length,
+    available: units.filter(u => u.status === 'available').length,
+    reserved:  units.filter(u => u.status === 'reserved').length,
+    sold:      units.filter(u => u.status === 'sold').length,
   };
+
+  const user = getOptionalUser(req);
+  const canSeeBuyers = user && isAffiliated(user, listing);
+  const inventory = canSeeBuyers ? units : stripBuyerInfo(units);
 
   res.json({ inventory, summary });
 });
@@ -223,6 +256,15 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
   const inventory = listing.unit_inventory || [];
   const unit = inventory.find(u => u.id === req.params.unitId);
   if (!unit) return res.status(404).json({ error: 'Unidad no encontrada' });
+
+  // Sold units are immutable via the release flow — a completed sale
+  // needs an explicit admin action to undo (audit trail, not a regular
+  // release). Prevents accidentally reverting finalized sales.
+  if (unit.status === 'sold') {
+    return res.status(400).json({
+      error: 'Unidades vendidas no pueden liberarse. Contacta a soporte para anular la venta.',
+    });
+  }
 
   // Clear application link
   if (unit.applicationId) {
