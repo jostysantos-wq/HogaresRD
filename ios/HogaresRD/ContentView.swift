@@ -336,6 +336,11 @@ struct ProfileTabView: View {
                 Label("Visitas agendadas", systemImage: "calendar.badge.clock")
             }
             NavigationLink {
+                TasksView().environmentObject(api)
+            } label: {
+                Label("Tareas", systemImage: "checklist")
+            }
+            NavigationLink {
                 AdCampaignsView().environmentObject(api)
             } label: {
                 Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
@@ -383,6 +388,11 @@ struct ProfileTabView: View {
                 ApplicationsView()
             } label: {
                 Label("Mis aplicaciones", systemImage: "doc.text.fill")
+            }
+            NavigationLink {
+                TasksView().environmentObject(api)
+            } label: {
+                Label("Mis tareas", systemImage: "checklist")
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)

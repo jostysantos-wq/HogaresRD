@@ -241,6 +241,7 @@ app.use('/api/reports',            require('./routes/reports').router);
 app.use('/api/paid-ads',          require('./routes/paid-ads'));
 app.use('/api/push',              require('./routes/push').router);
 app.use('/api/saved-searches',    savedSearchRouter);
+app.use('/api/tasks',             require('./routes/tasks'));
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 app.get('/api/config/meta', (req, res) => {
@@ -451,6 +452,7 @@ app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'post.html')));
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
+app.get('/tareas',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'tareas.html')));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 app.get('/register-success',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-success.html')));
 app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));

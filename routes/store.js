@@ -286,6 +286,29 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
   CREATE INDEX IF NOT EXISTS idx_reports_type   ON reports(type);
+
+  CREATE TABLE IF NOT EXISTS tasks (
+    id              TEXT PRIMARY KEY,
+    title           TEXT NOT NULL,
+    description     TEXT DEFAULT '',
+    status          TEXT DEFAULT 'pendiente',
+    priority        TEXT DEFAULT 'media',
+    due_date        TEXT,
+    assigned_to     TEXT NOT NULL,
+    assigned_by     TEXT NOT NULL,
+    application_id  TEXT,
+    listing_id      TEXT,
+    source          TEXT DEFAULT 'manual',
+    source_event    TEXT,
+    completed_at    TEXT,
+    created_at      TEXT,
+    updated_at      TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to  ON tasks(assigned_to);
+  CREATE INDEX IF NOT EXISTS idx_tasks_assigned_by  ON tasks(assigned_by);
+  CREATE INDEX IF NOT EXISTS idx_tasks_status       ON tasks(status);
+  CREATE INDEX IF NOT EXISTS idx_tasks_application  ON tasks(application_id);
+  CREATE INDEX IF NOT EXISTS idx_tasks_due_date     ON tasks(due_date);
 `);
 
 // ── FTS5 full-text search index ──────────────────────────────────────────
@@ -1273,6 +1296,36 @@ function saveReport(report) {
   db.prepare(`INSERT OR REPLACE INTO reports (${cols.join(', ')}) VALUES (${placeholders})`).run(row);
 }
 
+// ── Tasks ─────────────────────────────────────────────────────────────────
+
+const TASK_COLS = ['id', 'title', 'description', 'status', 'priority', 'due_date',
+  'assigned_to', 'assigned_by', 'application_id', 'listing_id', 'source',
+  'source_event', 'completed_at', 'created_at', 'updated_at'];
+
+function getTasksByUser(userId) {
+  return db.prepare(
+    'SELECT * FROM tasks WHERE assigned_to = ? OR assigned_by = ? ORDER BY created_at DESC'
+  ).all(userId, userId);
+}
+function getTasksByAssignee(userId) {
+  return db.prepare('SELECT * FROM tasks WHERE assigned_to = ? ORDER BY created_at DESC').all(userId);
+}
+function getTaskById(id) {
+  return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) || null;
+}
+function getTasksByApplication(appId) {
+  return db.prepare('SELECT * FROM tasks WHERE application_id = ? ORDER BY created_at DESC').all(appId);
+}
+function saveTask(task) {
+  const row = {};
+  for (const col of TASK_COLS) row[col] = task[col] === undefined ? null : task[col];
+  const placeholders = TASK_COLS.map(c => '@' + c).join(', ');
+  db.prepare(`INSERT OR REPLACE INTO tasks (${TASK_COLS.join(', ')}) VALUES (${placeholders})`).run(row);
+}
+function deleteTask(id) {
+  return db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1298,6 +1351,8 @@ module.exports = {
   getBlogPosts, getBlogPostById, getBlogPostBySlug, saveBlogPost, deleteBlogPost, incrementBlogViews,
   getAllPageContent, getPageSection, savePageSection,
   getReports, getReportById, saveReport,
+  getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
+  saveTask, deleteTask,
   /** Run fn inside a SQLite transaction. Rolls back on throw. Use for
    * multi-step reads+writes that must be atomic (e.g., inventory unit
    * assign flows). */

@@ -1093,6 +1093,40 @@ class APIService: ObservableObject {
         }
     }
 
+    // MARK: - Tasks
+
+    func listTasks(status: String? = nil) async throws -> [TaskItem] {
+        var url = "\(apiBase)/api/tasks"
+        if let s = status { url += "?status=\(s)" }
+        let req = try authedRequest(URL(string: url)!)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando tareas")
+        return try decoder.decode(TasksResponse.self, from: data).tasks
+    }
+
+    func completeTask(id: String) async throws {
+        let url = URL(string: "\(apiBase)/api/tasks/\(id)/complete")!
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error completando tarea")
+    }
+
+    func createTask(title: String, description: String, priority: String, dueDate: String?, assignedTo: String?) async throws -> TaskItem {
+        let url = URL(string: "\(apiBase)/api/tasks")!
+        var body: [String: Any] = [
+            "title": title,
+            "description": description,
+            "priority": priority,
+        ]
+        if let d = dueDate { body["due_date"] = d }
+        if let a = assignedTo, !a.isEmpty { body["assigned_to"] = a }
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "POST", body: json)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error creando tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
     // MARK: - Saved Searches
 
     private func authedRequest(_ url: URL, method: String = "GET", body: Data? = nil) throws -> URLRequest {

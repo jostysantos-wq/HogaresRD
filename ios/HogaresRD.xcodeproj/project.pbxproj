@@ -29,6 +29,8 @@
 		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
 		ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCAMPS00000000000000B1 /* AdCampaignsView.swift */; };
 		LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */; };
+		TASKMOD000000000000000B2 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKMOD000000000000000B1 /* Task.swift */; };
+		TASKVIEW00000000000000B2 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKVIEW00000000000000B1 /* TasksView.swift */; };
 		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
@@ -80,6 +82,8 @@
 		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
 		ADCAMPS00000000000000B1 /* AdCampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCampaignsView.swift; sourceTree = "<group>"; };
 		LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchCompleter.swift; sourceTree = "<group>"; };
+		TASKMOD000000000000000B1 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		TASKVIEW00000000000000B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
@@ -168,6 +172,7 @@
 				AA550000000000000000000000C1 /* DashboardModels.swift */,
 				AA990000000000000000000000D1 /* Tour.swift */,
 				SSEARCH000000000000000B1 /* SavedSearch.swift */,
+				TASKMOD000000000000000B1 /* Task.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -204,6 +209,7 @@
 				REPORT0000000000000000B1 /* ReportView.swift */,
 				SSEARCH000000000000000D1 /* SavedSearchesView.swift */,
 				ADCAMPS00000000000000B1 /* AdCampaignsView.swift */,
+				TASKVIEW00000000000000B1 /* TasksView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
 					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
@@ -311,6 +317,8 @@
 				SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */,
 				ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */,
 				LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */,
+				TASKMOD000000000000000B2 /* Task.swift in Sources */,
+				TASKVIEW00000000000000B2 /* TasksView.swift in Sources */,
 				A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */,
 				AA11000000000000000000C6 /* HomeView.swift in Sources */,
 				AA11000000000000000000C7 /* BrowseView.swift in Sources */,

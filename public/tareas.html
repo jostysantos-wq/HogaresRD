@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Tareas — HogaresRD</title>
+  <meta name="description" content="Gestiona y completa tus tareas pendientes en HogaresRD." />
+  <link rel="stylesheet" href="/css/core.css">
+
+  <style>
+    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
+    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 68px; display: flex; align-items: center; gap: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 26px; height: 26px; }
+    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo-text span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+    .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; padding: 0.45rem 0.85rem; border-radius: 8px; transition: color 0.2s, background 0.2s; white-space: nowrap; }
+    .nav-link:hover, .nav-link.active { color: var(--accent); background: var(--accent-light); }
+    .nav-item { position: relative; }
+    .nav-dropdown {
+      position: absolute; top: calc(100% + 2px); left: 0;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 0 0 14px 14px;
+      box-shadow: 0 16px 48px rgba(17,17,16,0.13);
+      padding: 1.5rem 1.75rem 1.75rem;
+      opacity: 0; visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.18s ease;
+      z-index: 200;
+      display: flex; gap: 0; min-width: 460px;
+      pointer-events: none;
+    }
+    .nav-item:hover .nav-dropdown {
+      opacity: 1; visibility: visible; transform: translateY(0);
+      pointer-events: auto;
+    }
+    .nav-mega-col { flex: 1; }
+    .nav-mega-col + .nav-mega-col {
+      padding-left: 1.75rem; margin-left: 1.75rem;
+      border-left: 1px solid var(--border);
+    }
+    .nav-mega-heading {
+      font-size: 0.82rem; font-weight: 800; color: var(--text);
+      letter-spacing: -0.01em; margin-bottom: 0.8rem;
+    }
+    .nav-dropdown a {
+      display: block; padding: 0.3rem 0;
+      font-size: 0.88rem; font-weight: 500;
+      color: var(--accent); text-decoration: none;
+      white-space: nowrap; transition: opacity 0.12s;
+    }
+    .nav-dropdown a:hover { text-decoration: underline; opacity: 0.8; }
+    .nav-dropdown .nav-see-all {
+      color: var(--text); font-weight: 700; margin-top: 0.75rem;
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.85rem;
+    }
+    .nav-dropdown .nav-see-all:hover { text-decoration: none; opacity: 1; color: var(--accent); }
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
+    .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; }
+    .btn-nav-primary:hover { background: var(--accent-hover); }
+
+    /* HAMBURGER & MOBILE */
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 0.4rem; color: var(--text); }
+    .hamburger svg { width: 26px; height: 26px; fill: currentColor; }
+    .mobile-menu { display: none; position: fixed; inset: 0; z-index: 999; }
+    .mobile-menu.open { display: flex; }
+    .mm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .mm-panel { position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: var(--bg-card); box-shadow: var(--shadow-lg); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem; animation: slideIn 0.25s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .mm-close { align-self: flex-end; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem; }
+    .mm-close svg { width: 24px; height: 24px; fill: currentColor; }
+    .mm-link { text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem; padding: 0.85rem 0.75rem; border-radius: 10px; transition: background 0.2s; }
+    .mm-link:hover, .mm-link.active { background: var(--accent-light); color: var(--accent); }
+
+    /* PAGE HEADER */
+    .page-header { background: linear-gradient(135deg, #001840 0%, #002D62 55%, #003d88 100%); padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+    .page-header-shapes { position: absolute; inset: 0; pointer-events: none; }
+    .ph-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .ph-shape-1 { width: 380px; height: 380px; top: -180px; right: -80px; }
+    .ph-shape-2 { width: 180px; height: 180px; bottom: -80px; left: 8%; }
+    .page-header-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; }
+    .page-eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(10,124,79,0.85); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.28rem 0.8rem; border-radius: 50px; margin-bottom: 0.9rem; }
+    .page-eyebrow svg { width: 10px; height: 10px; fill: #fff; }
+    .page-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
+    .page-sub { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+
+    /* MAIN CONTENT */
+    .main-content { max-width: 1280px; margin: 0 auto; padding: 2rem; flex: 1; width: 100%; }
+
+    /* LOADING SPINNER */
+    .loading-container { display: flex; flex-direction: column; align-items: center; padding: 5rem 2rem; gap: 1rem; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+    .empty-state svg { width: 64px; height: 64px; fill: var(--border); margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.92rem; margin-bottom: 1.5rem; }
+    .empty-state a { display: inline-block; background: var(--accent); color: #fff; font-weight: 700; padding: 0.7rem 1.6rem; border-radius: 10px; text-decoration: none; transition: background 0.2s; }
+    .empty-state a:hover { background: var(--accent-hover); }
+
+    /* FILTER CHIPS */
+    .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .filter-chip {
+      padding: 0.4rem 1rem; border-radius: 50px; border: 1.5px solid var(--border);
+      background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* TASK CARDS */
+    .task-list { display: flex; flex-direction: column; gap: 1rem; }
+    .task-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .task-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); }
+
+    .priority-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 0.35rem;
+    }
+    .priority-dot.alta { background: #EF4444; }
+    .priority-dot.media { background: #F59E0B; }
+    .priority-dot.baja { background: #22C55E; }
+
+    .task-body { flex: 1; min-width: 0; }
+    .task-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .task-desc { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.6rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    .task-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.8rem; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.6rem; border-radius: 50px; font-weight: 700; font-size: 0.75rem;
+      text-transform: capitalize;
+    }
+    .status-badge.pendiente { background: #FEF3C7; color: #92400E; }
+    .status-badge.en_progreso { background: #DBEAFE; color: #1E40AF; }
+    .status-badge.completada { background: #D1FAE5; color: #065F46; }
+
+    .due-date { color: var(--text-muted); font-weight: 500; }
+    .due-date.overdue { color: #EF4444; font-weight: 700; }
+
+    .task-link { font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: 600; }
+    .task-link:hover { text-decoration: underline; }
+
+    .task-actions { flex-shrink: 0; display: flex; align-items: center; }
+    .btn-complete {
+      background: var(--accent); color: #fff; border: none; font-size: 0.82rem;
+      font-weight: 700; padding: 0.45rem 1rem; border-radius: 8px; cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-complete:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-complete:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* FOOTER */
+    footer { background: var(--bg-card); border-top: 1px solid var(--border); padding: 3rem 2rem 2rem; margin-top: auto; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 2rem; }
+    .footer-brand p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.75rem; max-width: 280px; }
+    .footer-col h4 { font-size: 0.85rem; font-weight: 800; color: var(--text); margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+    .footer-col ul { list-style: none; }
+    .footer-col li { margin-bottom: 0.4rem; }
+    .footer-col a { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1280px; margin: 2rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hamburger { display: block; }
+      .nav-dropdown { display: none !important; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+      .task-card { flex-direction: column; gap: 0.75rem; }
+      .task-actions { align-self: flex-end; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/home">
+        <div class="logo-icon"><svg viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="134" y1="88" x2="174" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="134" y1="340" x2="174" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="88" x2="378" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="340" x2="378" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="256" y1="188" x2="256" y2="146" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/><line x1="238" y1="146" x2="274" y2="146" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.85"/><circle cx="256" cy="100" r="10" fill="#fff" opacity="0.95"/></svg></div><span class="logo-text">Hogares<span>RD</span></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/home">Inicio</a>
+
+        <!-- Comprar -->
+        <div class="nav-item">
+          <a class="nav-link" href="/mapa">Comprar</a>
+          <div class="nav-dropdown">
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Propiedades en Venta</div>
+              <a href="/comprar">Casas en venta</a>
+              <a href="/comprar?tipo=apartamento">Apartamentos</a>
+              <a href="/comprar?tipo=villa">Villas y Penthouses</a>
+              <a href="/nuevos-proyectos">Proyectos nuevos</a>
+              <a href="/comprar?tipo=terreno">Terrenos</a>
+              <a href="/comprar?tipo=comercial">Locales comerciales</a>
+              <a href="/comprar" class="nav-see-all">Ver todas las propiedades &rarr;</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Recursos</div>
+              <a href="/mapa">Explorar en el mapa</a>
+              <a href="/comparar">Comparar propiedades</a>
+              <a href="/blog">Guia del comprador</a>
+              <a href="/register-agency">Encontrar un agente</a>
+              <a href="/nuevos-proyectos">Proyectos en pre-venta</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alquilar -->
+        <div class="nav-item">
+          <a class="nav-link" href="/alquilar">Alquilar</a>
+          <div class="nav-dropdown">
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Propiedades en Alquiler</div>
+              <a href="/alquilar">Apartamentos en alquiler</a>
+              <a href="/alquilar?tipo=casa">Casas en alquiler</a>
+              <a href="/alquilar?tipo=cuarto">Cuartos</a>
+              <a href="/alquilar?tipo=comercial">Locales comerciales</a>
+              <a href="/alquilar" class="nav-see-all">Ver todas las propiedades &rarr;</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Recursos</div>
+              <a href="/mapa?type=alquiler">Explorar en el mapa</a>
+              <a href="/blog">Guia del inquilino</a>
+              <a href="/register-agency">Encontrar un agente</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vender -->
+        <div class="nav-item">
+          <a class="nav-link" href="/submit">Vender</a>
+          <div class="nav-dropdown">
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Publicar Propiedad</div>
+              <a href="/submit">Poner en venta</a>
+              <a href="/submit?tipo=alquiler">Poner en alquiler</a>
+              <a href="/register-inmobiliaria">Registrar inmobiliaria</a>
+              <a href="/register-agency">Trabajar como agente</a>
+              <a href="/submit" class="nav-see-all">Publicar ahora &rarr;</a>
+            </div>
+            <div class="nav-mega-col">
+              <div class="nav-mega-heading">Herramientas</div>
+              <a href="/blog">Guia del vendedor</a>
+              <a href="/mapa">Ver mercado actual</a>
+              <a href="/register-agency">Conectar con agentes</a>
+            </div>
+          </div>
+        </div>
+
+        <a class="nav-link" href="/blog">Blog</a>
+        <a class="nav-link" href="/about">Nosotros</a>
+      </div>
+      <div class="nav-actions">
+        <div id="navAuthArea">
+          <a href="/login" class="btn-login">Iniciar sesion</a>
+        </div>
+        <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mm-backdrop" onclick="document.getElementById('mobileMenu').classList.remove('open')"></div>
+    <div class="mm-panel">
+      <button class="mm-close" onclick="document.getElementById('mobileMenu').classList.remove('open')">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <a href="/home" class="mm-link">Inicio</a>
+      <a href="/comprar" class="mm-link">Comprar</a>
+      <a href="/alquilar" class="mm-link">Alquilar</a>
+      <a href="/mapa" class="mm-link">Mapa</a>
+      <a href="/nuevos-proyectos" class="mm-link">Nuevos Proyectos</a>
+      <a href="/about" class="mm-link">Nosotros</a>
+      <a href="/tareas" class="mm-link active">Mis Tareas</a>
+    </div>
+  </div>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header-shapes">
+      <div class="ph-shape ph-shape-1"></div>
+      <div class="ph-shape ph-shape-2"></div>
+    </div>
+    <div class="page-header-inner">
+      <div class="page-eyebrow">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        MIS TAREAS
+      </div>
+      <h1 class="page-title">Mis Tareas</h1>
+      <p class="page-sub">Gestiona y completa tus tareas pendientes.</p>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content" id="mainContent">
+    <div class="loading-container" id="loadingState">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted);">Cargando tus tareas...</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="/home">
+          <div class="logo-icon"><svg viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="134" y1="88" x2="174" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="134" y1="340" x2="174" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="88" x2="378" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="340" x2="378" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="256" y1="188" x2="256" y2="146" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/><line x1="238" y1="146" x2="274" y2="146" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.85"/><circle cx="256" cy="100" r="10" fill="#fff" opacity="0.95"/></svg></div><span class="logo-text">Hogares<span>RD</span></span>
+        </a>
+        <p>La forma mas facil de encontrar, explorar y publicar propiedades en la Republica Dominicana.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Propiedades</h4>
+        <ul>
+          <li><a href="/comprar">Comprar</a></li>
+          <li><a href="/alquilar">Alquilar</a></li>
+          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+          <li><a href="/submit">Publicar</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ciudades</h4>
+        <ul>
+          <li><a href="/comprar">Santo Domingo</a></li>
+          <li><a href="/comprar">Punta Cana</a></li>
+          <li><a href="/comprar">Santiago</a></li>
+          <li><a href="/comprar">Puerto Plata</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/register-agency">Para Agentes</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 HogaresRD &mdash; Bienes raices en la Republica Dominicana</p>
+      <p>Hecho con &#9829; para la Republica Dominicana</p>
+    </div>
+  </footer>
+
+  <script>
+    /* ── Theme ── */
+    const html = document.documentElement;
+    function getTheme() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
+    html.setAttribute('data-theme', getTheme());
+    function toggleTheme() {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch(e) {}
+      const label = document.getElementById('themeLabel');
+      const knob = document.getElementById('themeKnob');
+      if (label) label.textContent = next === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
+      if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
+    }
+
+    /* ── Auth ── */
+    let user;
+    try {
+      user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    } catch(e) {}
+
+    if (!user || !user.id) {
+      window.location.href = '/login';
+    }
+
+    // ── Email verification banner ──
+    if (user && user.emailVerified === false) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#fffbeb;border-bottom:2px solid #fde68a;color:#92400e;padding:10px 20px;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
+      banner.innerHTML = '<span>&#9888;&#65039; <strong>Verifica tu correo electronico.</strong> Revisa tu bandeja de entrada o <a href="/verify-email" style="color:#b45309;font-weight:700;">solicita un nuevo enlace</a>.</span>';
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+
+    /* ── State ── */
+    let allTasks = [];
+    let activeFilter = 'todas';
+
+    /* ── Filter chips ── */
+    function setFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.filter === filter);
+      });
+      renderTasks();
+    }
+
+    /* ── Render ── */
+    function renderTasks() {
+      const container = document.getElementById('mainContent');
+      const filtered = activeFilter === 'todas'
+        ? allTasks
+        : allTasks.filter(t => t.status === activeFilter);
+
+      if (allTasks.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" fill="var(--border)"/></svg>
+            <h3>No tienes tareas pendientes</h3>
+            <p>Cuando te asignen tareas, aparecerán aquí.</p>
+            <a href="/my-applications">Ver mis aplicaciones</a>
+          </div>`;
+        return;
+      }
+
+      const filtersHTML = `
+        <div class="filter-bar">
+          <button class="filter-chip ${activeFilter === 'todas' ? 'active' : ''}" data-filter="todas" onclick="setFilter('todas')">Todas (${allTasks.length})</button>
+          <button class="filter-chip ${activeFilter === 'pendiente' ? 'active' : ''}" data-filter="pendiente" onclick="setFilter('pendiente')">Pendientes (${allTasks.filter(t => t.status === 'pendiente').length})</button>
+          <button class="filter-chip ${activeFilter === 'en_progreso' ? 'active' : ''}" data-filter="en_progreso" onclick="setFilter('en_progreso')">En Progreso (${allTasks.filter(t => t.status === 'en_progreso').length})</button>
+          <button class="filter-chip ${activeFilter === 'completada' ? 'active' : ''}" data-filter="completada" onclick="setFilter('completada')">Completadas (${allTasks.filter(t => t.status === 'completada').length})</button>
+        </div>`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = filtersHTML + `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" fill="var(--border)"/></svg>
+            <h3>Sin tareas en esta categoria</h3>
+            <p>No tienes tareas con este estado.</p>
+          </div>`;
+        return;
+      }
+
+      const cardsHTML = filtered.map(task => {
+        const priorityClass = task.priority === 'alta' ? 'alta' : task.priority === 'baja' ? 'baja' : 'media';
+        const statusClass = task.status;
+        const statusLabel = task.status === 'en_progreso' ? 'En Progreso' : task.status === 'completada' ? 'Completada' : 'Pendiente';
+
+        let dueDateHTML = '';
+        if (task.due_date) {
+          const isOverdue = task.status !== 'completada' && task.due_date < new Date().toISOString();
+          const dateStr = new Date(task.due_date).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' });
+          dueDateHTML = `<span class="due-date ${isOverdue ? 'overdue' : ''}">${isOverdue ? '&#9888; ' : ''}${dateStr}</span>`;
+        }
+
+        const appLink = task.application_id
+          ? `<a class="task-link" href="/my-applications">Ver aplicacion &rarr;</a>`
+          : '';
+
+        const completeBtn = task.status !== 'completada'
+          ? `<button class="btn-complete" onclick="completeTask('${task.id}', this)">Completar</button>`
+          : `<span style="color:var(--accent);font-weight:700;font-size:0.82rem;">&#10003; Completada</span>`;
+
+        return `
+          <div class="task-card">
+            <div class="priority-dot ${priorityClass}" title="Prioridad: ${priorityClass}"></div>
+            <div class="task-body">
+              <div class="task-title">${escapeHTML(task.title)}</div>
+              ${task.description ? `<div class="task-desc">${escapeHTML(task.description)}</div>` : ''}
+              <div class="task-meta">
+                <span class="status-badge ${statusClass}">${statusLabel}</span>
+                ${dueDateHTML}
+                ${appLink}
+              </div>
+            </div>
+            <div class="task-actions">
+              ${completeBtn}
+            </div>
+          </div>`;
+      }).join('');
+
+      container.innerHTML = filtersHTML + `<div class="task-list">${cardsHTML}</div>`;
+    }
+
+    /* ── Helpers ── */
+    function escapeHTML(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    /* ── Complete Task ── */
+    async function completeTask(taskId, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch(`/api/tasks/${taskId}/complete`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Error al completar');
+        const task = allTasks.find(t => t.id === taskId);
+        if (task) {
+          task.status = 'completada';
+          task.completed_at = new Date().toISOString();
+        }
+        renderTasks();
+      } catch (err) {
+        alert('No se pudo completar la tarea. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Completar';
+      }
+    }
+
+    /* ── Load Tasks ── */
+    async function loadTasks() {
+      try {
+        const res = await fetch('/api/tasks', { credentials: 'include' });
+        if (!res.ok) throw new Error('Error al cargar');
+        const data = await res.json();
+        allTasks = data.tasks || [];
+        renderTasks();
+      } catch (err) {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="var(--border)"/></svg>
+            <h3>Error al cargar tareas</h3>
+            <p>No pudimos obtener tus tareas. Intenta recargar la pagina.</p>
+            <a href="/tareas">Reintentar</a>
+          </div>`;
+      }
+    }
+
+    /* ── Init ── */
+    if (user && user.id) {
+      loadTasks();
+    }
+  </script>
+  <script src="/js/pixel.js" defer></script>
+  <script src="/js/nav-auth.js"></script>
+</body>
+</html>

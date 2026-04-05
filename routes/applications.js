@@ -8,6 +8,7 @@ const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { userAuth } = require('./auth');
 const { logSec } = require('./security-log');
+const { createAutoTask, autoCompleteTasksByEvent } = require('./tasks');
 const notify     = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
@@ -646,6 +647,19 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
 
   store.saveApplication(app);
 
+  // Auto-task: notify client to upload requested documents
+  if (app.client?.user_id) {
+    createAutoTask({
+      title: `Sube los documentos solicitados para ${app.listing_title || 'la propiedad'}`,
+      description: documents.map(d => d.label).join(', '),
+      assigned_to: app.client.user_id,
+      assigned_by: req.user.sub,
+      application_id: app.id,
+      listing_id: app.listing_id,
+      source_event: 'documents_requested',
+    });
+  }
+
   // Notify client
   if (app.client.email) {
     const docList = newDocs.map(d => `• ${d.label}${d.required ? ' (requerido)' : ''}`).join('<br>');
@@ -734,6 +748,21 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
 
   store.saveApplication(app);
 
+  // Auto-task: complete client's "upload docs" task + create broker review task
+  autoCompleteTasksByEvent(app.id, 'documents_requested');
+  autoCompleteTasksByEvent(app.id, 'documents_rejected');
+  if (app.broker?.user_id) {
+    createAutoTask({
+      title: `Revisa documentos de ${app.client?.name || 'cliente'} para ${app.listing_title || 'la propiedad'}`,
+      description: `${req.files?.length || 1} documento(s) subido(s)`,
+      assigned_to: app.broker.user_id,
+      assigned_by: 'system',
+      application_id: app.id,
+      listing_id: app.listing_id,
+      source_event: 'document_uploaded',
+    });
+  }
+
   // Notify broker
   if (app.broker.email) {
     sendNotification(app.broker.email,
@@ -782,6 +811,20 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   }
 
   store.saveApplication(app);
+
+  // Auto-task: tell client to re-upload
+  autoCompleteTasksByEvent(app.id, 'document_uploaded');
+  if (app.client?.user_id) {
+    createAutoTask({
+      title: `Documentos insuficientes — revisa y vuelve a subir para ${app.listing_title || 'la propiedad'}`,
+      description: note ? `Nota: ${note}` : 'Revisa los documentos rechazados y sube nuevas versiones.',
+      assigned_to: app.client.user_id,
+      assigned_by: req.user.sub,
+      application_id: app.id,
+      listing_id: app.listing_id,
+      source_event: 'documents_rejected',
+    });
+  }
 
   // Push notification → client (document reviewed)
   if (app.client.user_id) {
@@ -952,6 +995,19 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
 
   store.saveApplication(app);
 
+  // Auto-task: broker must verify payment
+  if (app.broker?.user_id) {
+    createAutoTask({
+      title: `Verifica el pago de ${app.client?.name || 'cliente'} para ${app.listing_title || 'la propiedad'}`,
+      description: `Recibo: ${req.file?.originalname || 'archivo subido'}`,
+      assigned_to: app.broker.user_id,
+      assigned_by: 'system',
+      application_id: app.id,
+      listing_id: app.listing_id,
+      source_event: 'payment_uploaded',
+    });
+  }
+
   // Notify broker
   if (app.broker.email) {
     sendNotification(app.broker.email,
@@ -998,6 +1054,9 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
     req.user.sub, user?.name || 'Broker', { approved, notes });
 
   store.saveApplication(app);
+
+  // Auto-complete the "verify payment" task
+  autoCompleteTasksByEvent(app.id, 'payment_uploaded');
 
   // Notify client
   if (app.client.email) {

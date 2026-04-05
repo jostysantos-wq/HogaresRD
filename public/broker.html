@@ -1131,6 +1131,11 @@
       <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
       <span class="sidebar-nav-label">Disponibilidad</span>
     </button>
+    <div class="sidebar-section-label">Productividad</div>
+    <button class="sidebar-nav-item" data-page="tareas">
+      <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+      <span class="sidebar-nav-label">Tareas</span>
+    </button>
     <!-- ── Gestión de Equipo (inmobiliaria only) ─────────────── -->
     <div class="sidebar-section-label" id="sidebarTeamLabel" style="display:none">Gestión de Equipo</div>
     <button class="sidebar-nav-item" data-page="team-members" id="teamMembersNavBtn" style="display:none">
@@ -2356,6 +2361,23 @@
         <h3>8. Contacto</h3>
         <p>Para dudas sobre estos terminos, contacta a <strong>legal@hogaresrd.com</strong>.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: TAREAS ════════════════════════════════════ -->
+  <div class="page-section" id="page-tareas">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;" id="tareasFilterBar">
+        <button class="chip-filter active" onclick="filterTareas('all')">Todas</button>
+        <button class="chip-filter" onclick="filterTareas('pendiente')">Pendientes</button>
+        <button class="chip-filter" onclick="filterTareas('en_progreso')">En Progreso</button>
+        <button class="chip-filter" onclick="filterTareas('completada')">Completadas</button>
+        <button class="chip-filter" onclick="filterTareas('overdue')">Vencidas</button>
+      </div>
+      <button id="newTaskBtn" style="display:none;padding:0.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;" onclick="showCreateTaskModal()">+ Nueva Tarea</button>
+    </div>
+    <div id="tareasGrid" style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div style="text-align:center;padding:3rem;color:var(--text-muted);">Cargando tareas...</div>
     </div>
   </div>
 
@@ -4368,6 +4390,7 @@
     'team-secretaries': 'Equipo — Secretarias',
     'tour-requests': 'Solicitudes de Visita',
     'availability': 'Disponibilidad para Visitas',
+    'tareas': 'Mis Tareas',
   };
   let currentPage = 'dashboard';
 
@@ -4398,6 +4421,7 @@
     if (page === 'team-secretaries') loadSecretaries();
     if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
+    if (page === 'tareas') loadTareas();
   }
 
   // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
@@ -7485,6 +7509,155 @@ async function releaseInventoryUnit(unitId) {
   }
 }
 </script>
+<!-- Create Task Modal -->
+<div id="createTaskModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card,#fff);border-radius:16px;padding:1.75rem;max-width:480px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:ctSlide .2s ease;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h3 style="font-size:1.05rem;font-weight:700;">Nueva Tarea</h3>
+      <button onclick="closeCreateTaskModal()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--text-muted);">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <input id="taskTitle" placeholder="Título de la tarea *" style="padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.9rem;background:var(--bg);color:var(--text);">
+      <textarea id="taskDesc" placeholder="Descripción (opcional)" rows="3" style="padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.85rem;resize:none;background:var(--bg);color:var(--text);font-family:inherit;"></textarea>
+      <div style="display:flex;gap:0.5rem;">
+        <select id="taskPriority" style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card);color:var(--text);">
+          <option value="media">Prioridad: Media</option>
+          <option value="alta">Prioridad: Alta</option>
+          <option value="baja">Prioridad: Baja</option>
+        </select>
+        <input id="taskDueDate" type="date" style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card);color:var(--text);">
+      </div>
+      <select id="taskAssignee" style="padding:0.5rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg-card);color:var(--text);">
+        <option value="">Asignar a: Yo mismo</option>
+      </select>
+      <div id="taskModalMsg" style="font-size:0.82rem;min-height:1.2em;"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+        <button onclick="closeCreateTaskModal()" style="flex:1;padding:0.7rem;border:1.5px solid var(--border);border-radius:10px;background:none;color:var(--text-muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
+        <button id="taskSubmitBtn" onclick="submitNewTask()" style="flex:2;padding:0.7rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;">Crear Tarea</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tareas ─────────────────────────────────────────────
+let _tareasFilter = 'all';
+let _allTareas = [];
+
+async function loadTareas() {
+  const grid = document.getElementById('tareasGrid');
+  grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</div>';
+  // Show create button only for inmobiliaria/constructora
+  const canCreate = ['inmobiliaria','constructora'].includes(currentUser.role);
+  document.getElementById('newTaskBtn').style.display = canCreate ? '' : 'none';
+  try {
+    const data = await API('/api/tasks');
+    _allTareas = data.tasks || [];
+    renderTareas();
+  } catch(e) { grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`; }
+}
+
+function filterTareas(f) {
+  _tareasFilter = f;
+  document.querySelectorAll('#tareasFilterBar .chip-filter').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderTareas();
+}
+
+function renderTareas() {
+  const grid = document.getElementById('tareasGrid');
+  let list = _allTareas.slice();
+  const now = new Date().toISOString();
+  if (_tareasFilter === 'overdue') list = list.filter(t => t.due_date && t.due_date < now && t.status !== 'completada');
+  else if (_tareasFilter !== 'all') list = list.filter(t => t.status === _tareasFilter);
+  if (!list.length) { grid.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-muted);font-size:0.9rem;">No hay tareas.</div>'; return; }
+  grid.innerHTML = list.map(t => {
+    const priColor = t.priority === 'alta' ? '#dc2626' : t.priority === 'baja' ? '#16a34a' : '#eab308';
+    const statusLabel = t.status === 'pendiente' ? 'Pendiente' : t.status === 'en_progreso' ? 'En Progreso' : 'Completada';
+    const statusBg = t.status === 'completada' ? '#d1fae5' : t.status === 'en_progreso' ? '#dbeafe' : '#fef3c7';
+    const statusFg = t.status === 'completada' ? '#065f46' : t.status === 'en_progreso' ? '#1e40af' : '#92400e';
+    const overdue = t.due_date && t.due_date < now && t.status !== 'completada';
+    const srcBadge = t.source === 'auto' ? '<span style="font-size:0.65rem;padding:1px 6px;background:#e0e7ff;color:#4338ca;border-radius:6px;margin-left:4px;">Auto</span>' : '';
+    const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('es-DO',{day:'2-digit',month:'short'}) : '';
+    return `<div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem 1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;${overdue?'border-left:3px solid #dc2626;':''}">
+      <div style="width:10px;height:10px;border-radius:50%;background:${priColor};margin-top:6px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.9rem;font-weight:700;margin-bottom:2px;">${esc(t.title)}${srcBadge}</div>
+        ${t.description ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;max-height:2.4em;overflow:hidden;">${esc(t.description)}</div>` : ''}
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:0.7rem;padding:2px 8px;background:${statusBg};color:${statusFg};border-radius:10px;font-weight:700;">${statusLabel}</span>
+          ${dueStr ? `<span style="font-size:0.7rem;color:${overdue?'#dc2626':'var(--text-muted)'};font-weight:${overdue?'700':'400'};">${overdue?'⚠ ':''}${dueStr}</span>` : ''}
+        </div>
+      </div>
+      ${t.status !== 'completada' && t.assigned_to === currentUser.id ? `<button onclick="completarTarea('${t.id}')" style="padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">Completar</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function completarTarea(id) {
+  try {
+    await API(`/api/tasks/${id}/complete`, { method: 'POST' });
+    loadTareas();
+  } catch(e) { alert(e.message); }
+}
+
+function showCreateTaskModal() {
+  document.getElementById('taskTitle').value = '';
+  document.getElementById('taskDesc').value = '';
+  document.getElementById('taskPriority').value = 'media';
+  document.getElementById('taskDueDate').value = '';
+  document.getElementById('taskModalMsg').textContent = '';
+  // Load team members for assignee picker
+  loadTeamForTaskModal();
+  document.getElementById('createTaskModal').style.display = 'flex';
+}
+function closeCreateTaskModal() { document.getElementById('createTaskModal').style.display = 'none'; }
+document.getElementById('createTaskModal')?.addEventListener('click', function(e) { if (e.target === this) closeCreateTaskModal(); });
+
+async function loadTeamForTaskModal() {
+  const sel = document.getElementById('taskAssignee');
+  sel.innerHTML = '<option value="">Asignar a: Yo mismo</option>';
+  try {
+    const data = await API('/api/inmobiliaria/team');
+    if (data.brokers) {
+      data.brokers.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.name + (b.email ? ` (${b.email})` : '');
+        sel.appendChild(opt);
+      });
+    }
+  } catch {}
+}
+
+async function submitNewTask() {
+  const title = document.getElementById('taskTitle').value.trim();
+  const msg = document.getElementById('taskModalMsg');
+  if (!title) { msg.style.color = '#dc2626'; msg.textContent = 'Título requerido'; return; }
+  const btn = document.getElementById('taskSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Creando...';
+  try {
+    await API('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        description: document.getElementById('taskDesc').value.trim(),
+        priority: document.getElementById('taskPriority').value,
+        due_date: document.getElementById('taskDueDate').value || undefined,
+        assigned_to: document.getElementById('taskAssignee').value || undefined,
+      }),
+    });
+    closeCreateTaskModal();
+    loadTareas();
+  } catch(e) {
+    msg.style.color = '#dc2626';
+    msg.textContent = e.message || 'Error creando tarea';
+  }
+  btn.disabled = false; btn.textContent = 'Crear Tarea';
+}
+</script>
+
 <script src="/js/pixel.js" defer></script>
 </body>
 </html>
