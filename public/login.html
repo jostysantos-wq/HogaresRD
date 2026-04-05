@@ -214,6 +214,14 @@
       msg.classList.add('visible');
     }
 
+    // Open-redirect guard: only allow same-origin relative paths.
+    function safeNext(val) {
+      if (!val || typeof val !== 'string') return '/';
+      if (!val.startsWith('/')) return '/';
+      if (val.startsWith('//')) return '/';  // protocol-relative URL
+      return val;
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -244,8 +252,8 @@
         // Keep hogaresrd_user for display purposes (name, role) throughout the session.
         if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
         const role = data.user?.role;
-        let next = params.get('next');
-        if (!next) {
+        let next = safeNext(params.get('next'));
+        if (!next || next === '/') {
           // Pro roles go through /subscribe first — it auto-redirects to /broker if already subscribed
           if (['agency','broker','inmobiliaria','constructora'].includes(role)) next = '/subscribe';
           else next = '/home';
@@ -365,8 +373,8 @@
         if (data.user) localStorage.setItem('hogaresrd_user', JSON.stringify(data.user));
         const role = data.user?.role;
         const params = new URLSearchParams(window.location.search);
-        let next = params.get('next');
-        if (!next) {
+        let next = safeNext(params.get('next'));
+        if (!next || next === '/') {
           if (['agency','broker','inmobiliaria','constructora'].includes(role)) next = '/subscribe';
           else next = '/home';
         }

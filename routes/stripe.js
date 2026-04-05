@@ -158,14 +158,19 @@ router.post('/webhook', (req, res) => {
 
   console.log(`[Stripe] Webhook event: ${event.type}`);
 
-  // Helper: find user by Stripe customer ID or subscription metadata userId
+  // Helper: find user by Stripe customer ID or subscription metadata userId.
+  // Returns null if no matching user (logs a warning for observability).
   function findUser(sub) {
     const userId = sub.metadata?.userId;
     if (userId) {
       const u = store.getUserById(userId);
       if (u) return u;
     }
-    return store.getUsers().find(u => u.stripeCustomerId === sub.customer) || null;
+    const match = store.getUsers().find(u => u.stripeCustomerId === sub.customer);
+    if (!match) {
+      console.warn('[stripe] no user found for customer=%s metadata.userId=%s', sub.customer, userId || 'none');
+    }
+    return match || null;
   }
 
   switch (event.type) {

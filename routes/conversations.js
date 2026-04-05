@@ -152,8 +152,11 @@ router.get('/:id', requireLogin, (req, res) => {
   const isBroker = PRO_ROLES.includes(user.role);
   const isClient = conv.clientId === user.sub;
   const isOwner  = conv.brokerId === user.sub;
+  // Pros can only access conversations they're assigned to, OR unassigned
+  // conversations (so they can claim them on first reply).
+  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
 
-  if (!isClient && !isBroker) {
+  if (!isClient && !brokerHasAccess) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
@@ -187,8 +190,12 @@ router.post('/:id/messages', requireLogin, (req, res) => {
 
   const isBroker = PRO_ROLES.includes(user.role);
   const isClient = conv.clientId === user.sub;
+  const isOwner  = conv.brokerId === user.sub;
+  // Pros can only post in conversations they're assigned to, OR unassigned
+  // ones (which they claim on first reply).
+  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
 
-  if (!isClient && !isBroker) {
+  if (!isClient && !brokerHasAccess) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
@@ -378,6 +385,12 @@ router.put('/:id/read', requireLogin, (req, res) => {
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
   const isBroker = PRO_ROLES.includes(user.role);
+  const isClient = conv.clientId === user.sub;
+  const isOwner  = conv.brokerId === user.sub;
+  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
+  if (!isClient && !brokerHasAccess) {
+    return res.status(403).json({ error: 'Sin acceso.' });
+  }
 
   if (isBroker) {
     conv.unreadBroker = 0;

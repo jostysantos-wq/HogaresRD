@@ -77,6 +77,16 @@ function validatePassword(password) {
   return null;
 }
 
+// Strict email validator — RFC-lite pattern that also rejects CR/LF so the
+// value can never be used to inject SMTP headers downstream.
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+function validateEmail(email) {
+  if (typeof email !== 'string') return false;
+  if (email.length > 254) return false;
+  if (/[\r\n]/.test(email)) return false;
+  return EMAIL_RE.test(email.trim());
+}
+
 // Generates a SHA-256-hashed verification token, attaches fields to user in place,
 // and returns the raw (unhashed) token to embed in the email link.
 function attachVerifyToken(user) {
@@ -205,6 +215,8 @@ router.post('/register', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
@@ -415,6 +427,8 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !agencyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
@@ -546,6 +560,8 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !phone || !licenseNumber)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
@@ -672,6 +688,8 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !companyName || !licenseNumber || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
@@ -808,6 +826,8 @@ router.post('/register/constructora', authLimiter, async (req, res, next) => {
 
     if (!name || !email || !password || !companyName || !phone)
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
@@ -1001,6 +1021,9 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   // Always 200 — never reveal whether the email exists
   res.json({ success: true, message: 'Si ese correo está registrado, recibirás un enlace para restablecer tu contraseña.' });
 
+  // Guard against header-injection via malformed email input.
+  if (!validateEmail(email)) return;
+
   const user = store.getUserByEmail(email);
   if (!user) return;
 
@@ -1047,6 +1070,8 @@ router.post('/reset-password', async (req, res, next) => {
     const { token, password } = req.body;
     if (!token || !password)
       return res.status(400).json({ error: 'Token y contraseña son requeridos' });
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
 
@@ -1141,6 +1166,8 @@ router.post('/register/admin', authLimiter, async (req, res, next) => {
     if (!name || !email || !password)
       return res.status(400).json({ error: 'name, email y password son requeridos' });
 
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
 
@@ -1176,6 +1203,8 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
     if (!inviteToken || !name || !password)
       return res.status(400).json({ error: 'Token, nombre y contraseña requeridos' });
 
+    if (!validateEmail(email))
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
 

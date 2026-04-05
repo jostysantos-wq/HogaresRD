@@ -310,7 +310,7 @@ router.post('/', appCreateLimiter, (req, res) => {
     id:             uuid(),
     listing_id:     listing_id || '',
     listing_title:  listing_title || listing?.title || '',
-    listing_price:  listing_price || listing?.price || '',
+    listing_price:  Number(listing_price) || Number(listing?.price) || 0,
     listing_type:   listing_type  || listing?.type  || '',
     client: {
       name:    nameTrimmed,

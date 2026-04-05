@@ -87,9 +87,10 @@ router.get('/', (req, res) => {
   // Sort: newest approved first
   listings.sort((a, b) => new Date(b.approvedAt || b.submittedAt) - new Date(a.approvedAt || a.submittedAt));
 
-  // Pagination
-  const page  = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit = Math.min(50, parseInt(req.query.limit) || 20);
+  // Pagination — clamp to safe ranges so bad query params can't produce
+  // NaN/negative slice indices or huge pages.
+  const page  = Math.max(1, parseInt(req.query.page, 10)  || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const total = listings.length;
   const items = listings.slice((page - 1) * limit, page * limit);
 
