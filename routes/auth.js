@@ -52,8 +52,11 @@ const transporter = createTransport();
 
 function signToken(user) {
   // jti (JWT ID) is a unique identifier per-token, used for revocation (Sprint 3)
+  // 14-day expiry — shorter than the original 30d so stolen tokens decay
+  // faster. Users who want long-lived sessions can enable "Remember me"
+  // (bumps to 30d) or biometric on iOS (regenerates on demand).
   const jti = crypto.randomUUID();
-  return jwt.sign({ sub: user.id, role: user.role, name: user.name, jti }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ sub: user.id, role: user.role, name: user.name, jti }, JWT_SECRET, { expiresIn: '14d' });
 }
 
 function safeUser(user) {
@@ -61,11 +64,12 @@ function safeUser(user) {
   return safe;
 }
 
-// Password must be 8+ chars with upper, lower, digit, and special character.
-// Returns an error string, or null if valid.
+// Password must be 10+ chars with upper, lower, digit, and special character.
+// 10-char min is a modest upgrade over 8 — it roughly quadruples brute-force
+// search space without being annoying for users to remember.
 function validatePassword(password) {
-  if (!password || password.length < 8)
-    return 'La contraseña debe tener al menos 8 caracteres';
+  if (!password || password.length < 10)
+    return 'La contraseña debe tener al menos 10 caracteres';
   if (!/[A-Z]/.test(password))
     return 'La contraseña debe incluir al menos una letra mayúscula (A-Z)';
   if (!/[a-z]/.test(password))

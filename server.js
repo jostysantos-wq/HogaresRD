@@ -46,6 +46,8 @@ const cookieParser = require('cookie-parser');
 const helmet       = require('helmet');
 // nodemailer replaced by centralized mailer.js (Resend HTTP API)
 const multer       = require('multer');
+const sharp        = require('sharp');
+const fsp          = require('fs').promises;
 const cron         = require('node-cron');
 const { router: newsletterRouter, sendNewsletter } = require('./routes/newsletter');
 const { router: savedSearchRouter, checkSavedSearchMatches } = require('./routes/saved-searches');
@@ -155,13 +157,34 @@ app.use((req, res, next) => {
   next();
 });
 // ── Security headers (helmet) ─────────────────────────────────────
-// CSP is intentionally disabled for now — inline scripts are pervasive.
-// All other headers (HSTS, X-Frame-Options, X-Content-Type-Options, etc.)
-// are active. Tighten CSP with nonces/hashes in a future sprint.
+// HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy etc.
+// always active. CSP is Report-Only for now — logs violations without
+// blocking, so we can tighten into enforcing mode once the inline-script
+// footprint is measured. Tighten CSP with nonces/hashes in a future sprint.
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false, // pages embed cross-origin media
 }));
+
+// Report-only CSP. Browsers will log violations but won't block anything.
+// Once we've verified the app is clean (or added nonces), swap the header
+// name to `Content-Security-Policy` to enforce.
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy-Report-Only', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org",
+    "img-src 'self' data: blob: https: http:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org",
+    "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://checkout.stripe.com",
+    "frame-ancestors 'self'",
+  ].join('; '));
+  next();
+});
 
 app.use(cookieParser());
 
@@ -203,10 +226,32 @@ app.get('/api/config/meta', (req, res) => {
 });
 
 // ── Photo upload endpoint ──────────────────────────────────────
-app.post('/api/upload/photos', photoUpload.array('photos', 5), (req, res) => {
+// After multer writes the file, we pipe it through sharp to strip
+// EXIF (GPS coords, device serial, etc.) and cap dimensions at 1920px.
+// This protects user privacy (no home-GPS leaking from a property
+// photo) and trims bandwidth on view.
+app.post('/api/upload/photos', photoUpload.array('photos', 5), async (req, res) => {
   if (!req.files || !req.files.length)
     return res.status(400).json({ error: 'No se recibieron imágenes.' });
-  const urls = req.files.map(f => `/uploads/photos/${f.filename}`);
+
+  const urls = [];
+  for (const f of req.files) {
+    try {
+      const buf = await fsp.readFile(f.path);
+      // rotate() honors existing EXIF orientation, then strips metadata.
+      // resize() only downscales (withoutEnlargement).
+      const out = await sharp(buf)
+        .rotate()
+        .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+      await fsp.writeFile(f.path, out);
+    } catch (e) {
+      console.warn('[upload/photos] sharp processing failed for', f.filename, '-', e.message);
+      // If sharp fails, fall back to the original file (user still gets upload).
+    }
+    urls.push(`/uploads/photos/${f.filename}`);
+  }
   res.json({ urls });
 }, (err, req, res, next) => {
   res.status(400).json({ error: err.message });
@@ -507,6 +552,20 @@ app.post('/submit', async (req, res) => {
 // /admin is kept as the API base (browser fetch calls go here).
 // The dashboard HTML is served at /${ADMIN_PATH} (secret path, above).
 // Old /admin page route is removed — /admin now returns 404 to scanners.
+
+// Audit middleware: every non-GET admin request is written to the
+// security log so we can reconstruct what an admin touched.
+const { logSec: _logSec } = require('./routes/security-log');
+app.use('/admin', (req, res, next) => {
+  if (req.method !== 'GET') {
+    _logSec('admin_action', req, {
+      method: req.method,
+      path:   req.path,
+      body:   Object.keys(req.body || {}).slice(0, 20), // keys only, not values
+    });
+  }
+  next();
+});
 
 app.get('/admin/submissions', adminSessionAuth, (req, res) => {
   res.json(store.getAllSubmissions());
