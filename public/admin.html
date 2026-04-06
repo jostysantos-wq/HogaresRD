@@ -1380,6 +1380,65 @@
     renderList();
   }
 
+  function renderAIReview(s) {
+    const r = s.aiReview;
+    if (!r) return `
+      <div style="padding:0.75rem 1rem;background:#f0f4ff;border-top:1px solid #d0dcea;font-size:0.8rem;color:#4d6a8a;display:flex;align-items:center;gap:0.5rem;">
+        <span>🤖 Revisión IA: </span>
+        <span style="color:#9ab0c8;">Pendiente o no disponible</span>
+        <button onclick="rerunAIReview('${s.id}')" style="margin-left:auto;padding:3px 10px;background:#002D62;color:#fff;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;">Ejecutar revisión IA</button>
+      </div>`;
+    if (r.error) return `
+      <div style="padding:0.75rem 1rem;background:#fef3c7;border-top:1px solid #fde68a;font-size:0.8rem;color:#92400e;">
+        🤖 Revisión IA: Error — ${r.error}
+        <button onclick="rerunAIReview('${s.id}')" style="margin-left:8px;padding:3px 10px;background:#92400e;color:#fff;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;">Reintentar</button>
+      </div>`;
+
+    const scoreColor = (r.score||0) >= 8 ? '#16a34a' : (r.score||0) >= 5 ? '#eab308' : '#dc2626';
+    const statusIcon = r.status === 'approve' ? '✅' : r.status === 'reject' ? '❌' : '⚠️';
+    const statusLabel = r.status === 'approve' ? 'Aprobar' : r.status === 'reject' ? 'Rechazar' : 'Revisar';
+    const issues = (r.issues || []).map(i => {
+      const sevColor = i.severity === 'high' ? '#dc2626' : i.severity === 'medium' ? '#eab308' : '#9ca3af';
+      return `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${sevColor};margin-top:5px;flex-shrink:0;"></span>
+        <span>${i.message || i.type}</span>
+      </div>`;
+    }).join('');
+    const suggestions = (r.suggestions || []).map(s => `<li>${s}</li>`).join('');
+    const dupWarning = r.duplicateRisk
+      ? `<div style="margin-top:6px;padding:6px 10px;background:#fee2e2;border-radius:6px;font-size:0.75rem;color:#991b1b;">
+           ⚠️ <strong>Posible duplicado</strong> detectado${r.duplicateIds?.length ? ` (IDs: ${r.duplicateIds.join(', ')})` : ''}
+         </div>` : '';
+
+    return `
+      <div style="padding:0.85rem 1rem;background:linear-gradient(135deg,#f0f4ff,#f5f0ff);border-top:1px solid #d0dcea;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+          <span style="font-size:1.1rem;">🤖</span>
+          <strong style="font-size:0.82rem;color:#1a2b40;">Revisión IA</strong>
+          <span style="font-size:1.3rem;font-weight:900;color:${scoreColor};margin-left:4px;">${r.score || '?'}</span>
+          <span style="font-size:0.72rem;color:${scoreColor};font-weight:600;">/10</span>
+          <span style="padding:2px 8px;background:${scoreColor}18;color:${scoreColor};border-radius:10px;font-size:0.7rem;font-weight:700;">${statusIcon} ${statusLabel}</span>
+          <button onclick="rerunAIReview('${s.id}')" style="margin-left:auto;padding:3px 10px;background:#002D62;color:#fff;border:none;border-radius:6px;font-size:0.68rem;cursor:pointer;">⟳ Re-ejecutar</button>
+        </div>
+        ${r.summary ? `<div style="font-size:0.8rem;color:#4d6a8a;margin-bottom:6px;">${r.summary}</div>` : ''}
+        ${issues ? `<div style="font-size:0.78rem;color:#1a2b40;margin-bottom:6px;"><strong>Problemas:</strong>${issues}</div>` : ''}
+        ${suggestions ? `<div style="font-size:0.78rem;color:#1a2b40;"><strong>Sugerencias:</strong><ul style="margin:4px 0 0 16px;padding:0;">${suggestions}</ul></div>` : ''}
+        ${dupWarning}
+        <div style="font-size:0.65rem;color:#9ab0c8;margin-top:6px;">Modelo: ${r.model || '—'} · ${r.reviewedAt ? new Date(r.reviewedAt).toLocaleString('es-DO') : '—'}</div>
+      </div>`;
+  }
+
+  async function rerunAIReview(id) {
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = 'Analizando…';
+    try {
+      await fetch('/admin/ai-review/' + id, { method: 'POST' });
+      // Reload the listing
+      await loadSubmissions();
+    } catch(e) { alert('Error: ' + e.message); }
+    btn.disabled = false;
+  }
+
   function renderAll() {
     const props    = allSubmissions.filter(s => s.submission_type !== 'agency_claim');
     const claims   = allSubmissions.filter(s => s.submission_type === 'agency_claim');
@@ -1546,6 +1605,7 @@
           })()}
           ${agencyHTML}
           ${mapHTML}
+          ${renderAIReview(s)}
           <div class="sub-card-footer">
             <div class="contact-info">
               <strong>${s.name}</strong>

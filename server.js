@@ -510,6 +510,14 @@ app.post('/submit', async (req, res) => {
   // Save to store
   store.saveListing(submission);
 
+  // AI review — fire-and-forget (runs in background, stores result on listing)
+  if (submission.submission_type !== 'agency_claim') {
+    const { reviewListing } = require('./routes/ai-review');
+    setImmediate(() => reviewListing(submission.id).catch(e =>
+      console.error('[ai-review] Background error:', e.message)
+    ));
+  }
+
   // Send notification email
   try {
     const amenitiesList = Array.isArray(submission.amenities)
@@ -960,6 +968,17 @@ cron.schedule('17 * * * *', () => {
     console.error('[Cron] Auto-archive error:', e.message);
   }
 }, { timezone: 'America/Santo_Domingo' });
+
+// ── Admin: re-run AI review on a listing ─────────────────────────
+app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
+  const { reviewListing } = require('./routes/ai-review');
+  try {
+    await reviewListing(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── Admin error tracking endpoint ─────────────────────────────────
 app.use('/api/admin', errorTracker.router);
