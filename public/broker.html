@@ -4452,10 +4452,13 @@
 
   // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
   const VALID_PAGES = Object.keys(PAGE_TITLES).concat(['mensajes']);
-  (function () {
+  // Defer to next tick so ALL script blocks (including Tareas, Inventory,
+  // Mensajes in later <script> tags) have loaded before we call showPage.
+  // Without this, refreshing on #tareas calls loadTareas() before it exists.
+  setTimeout(() => {
     const hash = location.hash.slice(1);
     if (hash && VALID_PAGES.includes(hash)) showPage(hash);
-  })();
+  }, 0);
   // Browser back/forward navigates between sections
   window.addEventListener('popstate', () => {
     const hash = location.hash.slice(1);
