@@ -80,7 +80,9 @@ router.post('/', userAuth, (req, res) => {
     id:             uuid(),
     title:          title.trim().slice(0, 200),
     description:    (description || '').trim().slice(0, 2000),
-    status:         'pendiente',
+    // Auto-set "en_progreso" when assigning to someone else — the
+    // assignee already has work to do. Self-assigned starts as pendiente.
+    status:         assigneeId !== req.user.sub ? 'en_progreso' : 'pendiente',
     priority:       ['alta', 'media', 'baja'].includes(priority) ? priority : 'media',
     due_date:       due_date || null,
     assigned_to:    assigneeId,
