@@ -6895,29 +6895,55 @@
     }
   }
 
-  window.brkToggleClose = async function() {
+  window.brkToggleClose = function() {
     if (!brkActiveConv) return;
     if (brkCurrentClosed) {
-      if (!confirm('¿Reabrir esta conversación? El cliente podrá enviar mensajes de nuevo.')) return;
-      const res = await fetch(`/api/conversations/${brkActiveConv}/reopen`, { method:'PUT', credentials:'include' });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Error'); return; }
-      brkApplyClosedState(data.conversation);
-      brkAppendMsgs(data.conversation.messages.slice(-1));
-      brkLoadList();
+      // Show reopen confirmation modal
+      document.getElementById('closeConvModal').style.display = 'flex';
+      document.getElementById('closeConvModalTitle').textContent = 'Reabrir conversación';
+      document.getElementById('closeConvModalDesc').textContent = 'El cliente podrá enviar mensajes de nuevo. ¿Desea reabrir esta conversación?';
+      document.getElementById('closeConvReasonWrap').style.display = 'none';
+      document.getElementById('closeConvSubmitBtn').textContent = 'Reabrir';
+      document.getElementById('closeConvSubmitBtn').style.background = 'var(--accent)';
+      document.getElementById('closeConvSubmitBtn').onclick = async () => {
+        const btn = document.getElementById('closeConvSubmitBtn');
+        btn.disabled = true; btn.textContent = 'Reabriendo...';
+        const res = await fetch(`/api/conversations/${brkActiveConv}/reopen`, { method:'PUT', credentials:'include' });
+        const data = await res.json();
+        document.getElementById('closeConvModal').style.display = 'none';
+        btn.disabled = false;
+        if (!res.ok) { document.getElementById('closeConvModalMsg').textContent = data.error || 'Error'; return; }
+        brkApplyClosedState(data.conversation);
+        brkAppendMsgs(data.conversation.messages.slice(-1));
+        brkLoadList();
+      };
     } else {
-      const reason = prompt('¿Por qué cierras esta conversación? (opcional — máx. 200 caracteres)', '');
-      if (reason === null) return; // cancelled
-      const res = await fetch(`/api/conversations/${brkActiveConv}/close`, {
-        method:'PUT', credentials:'include',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ reason: reason.trim().slice(0, 200) }),
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Error'); return; }
-      brkApplyClosedState(data.conversation);
-      brkAppendMsgs(data.conversation.messages.slice(-1));
-      brkLoadList();
+      // Show close reason modal
+      document.getElementById('closeConvModal').style.display = 'flex';
+      document.getElementById('closeConvModalTitle').textContent = 'Cerrar conversación';
+      document.getElementById('closeConvModalDesc').textContent = 'Una vez cerrada, ni tú ni el cliente podrán enviar mensajes hasta que la reabras. La conversación se archivará automáticamente después de 24 horas.';
+      document.getElementById('closeConvReasonWrap').style.display = '';
+      document.getElementById('closeConvReasonInput').value = '';
+      document.getElementById('closeConvSubmitBtn').textContent = 'Cerrar conversación';
+      document.getElementById('closeConvSubmitBtn').style.background = '#991b1b';
+      document.getElementById('closeConvModalMsg').textContent = '';
+      document.getElementById('closeConvSubmitBtn').onclick = async () => {
+        const btn = document.getElementById('closeConvSubmitBtn');
+        const reason = document.getElementById('closeConvReasonInput').value.trim().slice(0, 200);
+        btn.disabled = true; btn.textContent = 'Cerrando...';
+        const res = await fetch(`/api/conversations/${brkActiveConv}/close`, {
+          method:'PUT', credentials:'include',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ reason }),
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        if (!res.ok) { document.getElementById('closeConvModalMsg').textContent = data.error || 'Error'; document.getElementById('closeConvSubmitBtn').textContent = 'Cerrar conversación'; return; }
+        document.getElementById('closeConvModal').style.display = 'none';
+        brkApplyClosedState(data.conversation);
+        brkAppendMsgs(data.conversation.messages.slice(-2));
+        brkLoadList();
+      };
     }
   };
 
@@ -7425,6 +7451,24 @@
 })();
 </script>
 <!-- ── Inventory Modal ──────────────────────────────────────────── -->
+<!-- Close/Reopen Conversation Modal -->
+<div id="closeConvModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg-card,#fff);border-radius:16px;padding:1.75rem;max-width:440px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:ctSlide .2s ease;">
+    <h3 id="closeConvModalTitle" style="font-size:1.05rem;font-weight:700;margin:0 0 0.75rem;">Cerrar conversación</h3>
+    <p id="closeConvModalDesc" style="font-size:0.85rem;color:var(--text-muted);line-height:1.5;margin:0 0 1rem;"></p>
+    <div id="closeConvReasonWrap">
+      <label style="font-size:0.82rem;font-weight:600;color:var(--text);display:block;margin-bottom:0.4rem;">Razón (opcional)</label>
+      <textarea id="closeConvReasonInput" placeholder="Ej: Cliente no interesado, propiedad vendida…" rows="3" maxlength="200"
+        style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:0.65rem 0.8rem;font-size:0.88rem;resize:none;outline:none;background:var(--bg);color:var(--text);font-family:inherit;"></textarea>
+    </div>
+    <div id="closeConvModalMsg" style="font-size:0.82rem;color:#991b1b;margin-top:0.5rem;min-height:1em;"></div>
+    <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+      <button onclick="document.getElementById('closeConvModal').style.display='none'" style="flex:1;padding:0.7rem;border:1.5px solid var(--border);border-radius:10px;background:none;color:var(--text-muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
+      <button id="closeConvSubmitBtn" style="flex:2;padding:0.7rem;background:#991b1b;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;">Cerrar conversación</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="inventoryModal" style="display:none" onclick="if(event.target===this)closeInventoryModal()">
   <div class="modal-dialog" style="max-width:560px;max-height:85vh;overflow-y:auto;">
     <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);">

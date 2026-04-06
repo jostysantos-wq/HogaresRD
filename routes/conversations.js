@@ -348,7 +348,7 @@ router.put('/:id/close', requireLogin, (req, res) => {
   };
   conv.messages.push(closeMsg);
   conv.messages.push(archiveNotice);
-  conv.lastMessage = sysMsg.text;
+  conv.lastMessage = closeMsg.text;
   conv.unreadClient = (conv.unreadClient || 0) + 1;
 
   store.saveConversation(conv);
@@ -374,7 +374,12 @@ router.put('/:id/reopen', requireLogin, (req, res) => {
   conv.closedByName = null;
   conv.closedByRole = null;
   conv.closedReason = null;
-  conv.updatedAt = new Date().toISOString();
+  // Also clear archived state — reopening an archived conversation
+  // should bring it back to the active list.
+  conv.archived   = false;
+  conv.archivedAt = null;
+  conv.archivedBy = null;
+  conv.updatedAt  = new Date().toISOString();
 
   const sysMsg = {
     id:         msgId(),
