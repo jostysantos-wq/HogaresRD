@@ -326,8 +326,9 @@ router.put('/:id/close', requireLogin, (req, res) => {
   conv.closedReason = reason || null;
   conv.updatedAt  = conv.closedAt;
 
-  // Append a system message so both sides see why the thread ended
-  const sysMsg = {
+  // Append system messages so both sides see why the thread ended
+  // + an archive notice with the 24h auto-archive timeline.
+  const closeMsg = {
     id:         msgId(),
     senderId:   user.sub,
     senderRole: 'system',
@@ -337,7 +338,16 @@ router.put('/:id/close', requireLogin, (req, res) => {
       : `🔒 Conversación cerrada por ${user.name}.`,
     timestamp:  conv.closedAt,
   };
-  conv.messages.push(sysMsg);
+  const archiveNotice = {
+    id:         msgId(),
+    senderId:   'system',
+    senderRole: 'system',
+    senderName: 'HogaresRD',
+    text:       '📋 Esta conversación será archivada automáticamente en 24 horas. Si desea archivarla antes, puede hacerlo desde el menú de opciones. Las conversaciones archivadas permanecen accesibles en la sección "Archivadas" de sus mensajes.',
+    timestamp:  conv.closedAt,
+  };
+  conv.messages.push(closeMsg);
+  conv.messages.push(archiveNotice);
   conv.lastMessage = sysMsg.text;
   conv.unreadClient = (conv.unreadClient || 0) + 1;
 
