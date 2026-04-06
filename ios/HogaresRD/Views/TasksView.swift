@@ -8,13 +8,16 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=Completadas
+    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Completadas, 4=Vencidas
     @State private var showCreate = false
 
     private var filteredTasks: [TaskItem] {
+        let now = ISO8601DateFormatter().string(from: Date())
         switch filter {
-        case 1:  return tasks.filter { $0.status != "completada" }
-        case 2:  return tasks.filter { $0.status == "completada" }
+        case 1:  return tasks.filter { $0.status == "pendiente" }
+        case 2:  return tasks.filter { $0.status == "en_progreso" }
+        case 3:  return tasks.filter { $0.status == "completada" }
+        case 4:  return tasks.filter { $0.isOverdue }
         default: return tasks
         }
     }
@@ -31,6 +34,13 @@ struct TasksView: View {
         api.currentUser?.isTeamLead == true
     }
 
+    // Stats
+    private var statTotal: Int { tasks.count }
+    private var statPending: Int { tasks.filter { $0.status == "pendiente" }.count }
+    private var statProgress: Int { tasks.filter { $0.status == "en_progreso" }.count }
+    private var statDone: Int { tasks.filter { $0.status == "completada" }.count }
+    private var statOverdue: Int { tasks.filter { $0.isOverdue }.count }
+
     var body: some View {
         Group {
             if loading {
@@ -44,50 +54,66 @@ struct TasksView: View {
                         .buttonStyle(.borderedProminent).tint(Color.rdBlue)
                 }
                 .padding()
-            } else if tasks.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "checklist")
-                        .font(.system(size: 60))
-                        .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin tareas")
-                        .font(.title3).bold()
-                    Text("No tienes tareas asignadas por el momento.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
             } else {
                 VStack(spacing: 0) {
-                    Picker("Filtro", selection: $filter) {
-                        Text("Todas").tag(0)
-                        Text("Pendientes").tag(1)
-                        Text("Completadas").tag(2)
+                    // Stats bar
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            statPill("Total", value: statTotal, color: .rdBlue)
+                            statPill("Pendientes", value: statPending, color: .orange)
+                            statPill("En Progreso", value: statProgress, color: .rdBlue)
+                            statPill("Completadas", value: statDone, color: .rdGreen)
+                            statPill("Vencidas", value: statOverdue, color: .rdRed)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
 
-                    List {
-                        if !activeTasks.isEmpty {
-                            Section("Activas") {
-                                ForEach(activeTasks) { task in
-                                    TaskRow(task: task)
-                                        .swipeActions(edge: .leading) {
-                                            Button {
-                                                Task { await completeTask(task) }
-                                            } label: {
-                                                Label("Completar", systemImage: "checkmark.circle.fill")
+                    // Filter tabs
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            filterChip("Todas", tag: 0)
+                            filterChip("Pendientes", tag: 1)
+                            filterChip("En Progreso", tag: 2)
+                            filterChip("Completadas", tag: 3)
+                            filterChip("Vencidas", tag: 4)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    }
+
+                    if filteredTasks.isEmpty {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "checklist")
+                                .font(.system(size: 48))
+                                .foregroundStyle(Color(.tertiaryLabel))
+                            Text("No hay tareas")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    } else {
+                        List {
+                            if !activeTasks.isEmpty {
+                                Section("Activas (\(activeTasks.count))") {
+                                    ForEach(activeTasks) { task in
+                                        TaskRow(task: task)
+                                            .swipeActions(edge: .leading) {
+                                                Button {
+                                                    Task { await completeTask(task) }
+                                                } label: {
+                                                    Label("Completar", systemImage: "checkmark.circle.fill")
+                                                }
+                                                .tint(Color.rdGreen)
                                             }
-                                            .tint(Color.rdGreen)
-                                        }
+                                    }
                                 }
                             }
-                        }
-                        if !completedTasks.isEmpty {
-                            Section("Completadas") {
-                                ForEach(completedTasks) { task in
-                                    TaskRow(task: task)
+                            if !completedTasks.isEmpty {
+                                Section("Completadas (\(completedTasks.count))") {
+                                    ForEach(completedTasks) { task in
+                                        TaskRow(task: task)
+                                    }
                                 }
                             }
                         }
@@ -118,6 +144,39 @@ struct TasksView: View {
         }
     }
 
+    // MARK: - Subviews
+
+    private func statPill(_ label: String, value: Int, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(.title3).bold()
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 60)
+        .padding(.vertical, 8).padding(.horizontal, 6)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func filterChip(_ title: String, tag: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) { filter = tag }
+        } label: {
+            Text(title)
+                .font(.caption).bold()
+                .padding(.horizontal, 14).padding(.vertical, 7)
+                .background(filter == tag ? Color(.label) : Color(.secondarySystemFill))
+                .foregroundStyle(filter == tag ? Color(.systemBackground) : .primary)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Actions
+
     private func load() async {
         if tasks.isEmpty { loading = true }
         errorMsg = nil
@@ -132,17 +191,7 @@ struct TasksView: View {
     private func completeTask(_ task: TaskItem) async {
         do {
             try await api.completeTask(id: task.id)
-            if let idx = tasks.firstIndex(where: { $0.id == task.id }) {
-                tasks[idx] = TaskItem(
-                    id: task.id, title: task.title, description: task.description,
-                    status: "completada", priority: task.priority, dueDate: task.dueDate,
-                    assignedTo: task.assignedTo, assignedBy: task.assignedBy,
-                    applicationId: task.applicationId, listingId: task.listingId,
-                    source: task.source, sourceEvent: task.sourceEvent,
-                    completedAt: ISO8601DateFormatter().string(from: Date()),
-                    createdAt: task.createdAt, updatedAt: task.updatedAt
-                )
-            }
+            await load() // Refresh entire list for correct stats
         } catch {
             errorMsg = error.localizedDescription
         }
@@ -158,7 +207,7 @@ struct TaskRow: View {
         switch task.priority {
         case "alta": return Color.rdRed
         case "baja": return Color.rdGreen
-        default:     return .yellow
+        default:     return .orange
         }
     }
 
@@ -180,7 +229,7 @@ struct TaskRow: View {
         fmt.dateStyle = .medium
         fmt.timeStyle = .none
         fmt.locale = Locale(identifier: "es_DO")
-        return "Vence \(fmt.string(from: date))"
+        return fmt.string(from: date)
     }
 
     var body: some View {
@@ -194,6 +243,7 @@ struct TaskRow: View {
                 Text(task.title)
                     .font(.subheadline).bold()
                     .strikethrough(task.status == "completada")
+                    .foregroundStyle(task.status == "completada" ? .secondary : .primary)
                     .lineLimit(2)
 
                 if let desc = task.description, !desc.isEmpty {
@@ -204,12 +254,22 @@ struct TaskRow: View {
                 }
 
                 HStack(spacing: 6) {
+                    // Status badge
                     Text(task.statusLabel)
                         .font(.caption2).bold()
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(statusColor.opacity(0.15))
                         .foregroundStyle(statusColor)
+                        .clipShape(Capsule())
+
+                    // Priority badge
+                    Text(task.priorityLabel)
+                        .font(.caption2).bold()
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(priorityColor.opacity(0.15))
+                        .foregroundStyle(priorityColor)
                         .clipShape(Capsule())
 
                     if task.source == "auto" {
@@ -224,6 +284,12 @@ struct TaskRow: View {
 
                     Spacer()
 
+                    if task.isOverdue {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Color.rdRed)
+                    }
+
                     if let dueStr = dueDateFormatted {
                         Text(dueStr)
                             .font(.caption2)
@@ -233,7 +299,20 @@ struct TaskRow: View {
             }
         }
         .padding(.vertical, 4)
+        .opacity(task.status == "completada" ? 0.6 : 1)
     }
+}
+
+// MARK: - Team member for picker
+
+struct TeamMember: Identifiable, Decodable {
+    let id: String
+    let name: String
+    let email: String?
+}
+
+struct TeamBrokersResponse: Decodable {
+    let brokers: [TeamMember]
 }
 
 // MARK: - Create Task Sheet
@@ -249,7 +328,8 @@ struct CreateTaskSheet: View {
     @State private var priority = "media"
     @State private var hasDueDate = false
     @State private var dueDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
-    @State private var assignedTo = ""
+    @State private var assignedTo = "" // "" = self
+    @State private var teamMembers: [TeamMember] = []
     @State private var saving = false
     @State private var errorMsg: String?
 
@@ -257,12 +337,12 @@ struct CreateTaskSheet: View {
         NavigationStack {
             Form {
                 Section("Tarea") {
-                    TextField("Titulo de la tarea", text: $title)
+                    TextField("Título de la tarea", text: $title)
                     TextEditor(text: $desc)
                         .frame(minHeight: 80)
                         .overlay(alignment: .topLeading) {
                             if desc.isEmpty {
-                                Text("Descripcion (opcional)")
+                                Text("Descripción (opcional)")
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 8)
                                     .padding(.leading, 4)
@@ -280,17 +360,29 @@ struct CreateTaskSheet: View {
                     .pickerStyle(.segmented)
                 }
 
-                Section("Fecha limite") {
-                    Toggle("Establecer fecha limite", isOn: $hasDueDate)
+                Section("Fecha límite") {
+                    Toggle("Establecer fecha límite", isOn: $hasDueDate)
                     if hasDueDate {
                         DatePicker("Vence", selection: $dueDate, displayedComponents: .date)
                     }
                 }
 
-                Section("Asignar a") {
-                    TextField("ID del agente", text: $assignedTo)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                Section {
+                    Picker("Asignar a", selection: $assignedTo) {
+                        Text("Yo mismo").tag("")
+                        ForEach(teamMembers) { member in
+                            Text("\(member.name)\(member.email.map { " (\($0))" } ?? "")")
+                                .tag(member.id)
+                        }
+                    }
+                } header: {
+                    Text("Asignar a")
+                } footer: {
+                    if assignedTo.isEmpty {
+                        Text("La tarea comenzará como Pendiente.")
+                    } else {
+                        Text("La tarea se asignará como En Progreso automáticamente.")
+                    }
                 }
 
                 if let err = errorMsg {
@@ -307,13 +399,24 @@ struct CreateTaskSheet: View {
                     Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(saving ? "Guardando..." : "Crear") {
+                    Button(saving ? "Guardando…" : "Crear") {
                         Task { await save() }
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || saving)
                 }
             }
             .presentationDetents([.large])
+            .task { await loadTeam() }
+        }
+    }
+
+    private func loadTeam() async {
+        guard api.currentUser?.isTeamLead == true else { return }
+        guard let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers") else { return }
+        guard let req = try? api.authedRequest(url) else { return }
+        guard let (data, _) = try? await URLSession.shared.data(for: req) else { return }
+        if let resp = try? JSONDecoder().decode(TeamBrokersResponse.self, from: data) {
+            teamMembers = resp.brokers
         }
     }
 
@@ -321,7 +424,7 @@ struct CreateTaskSheet: View {
         saving = true
         errorMsg = nil
         let dueDateStr: String? = hasDueDate ? ISO8601DateFormatter().string(from: dueDate) : nil
-        let assignee: String? = assignedTo.trimmingCharacters(in: .whitespaces).isEmpty ? nil : assignedTo.trimmingCharacters(in: .whitespaces)
+        let assignee: String? = assignedTo.isEmpty ? nil : assignedTo
         do {
             let task = try await api.createTask(
                 title: title.trimmingCharacters(in: .whitespaces),

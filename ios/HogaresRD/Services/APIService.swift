@@ -1129,7 +1129,7 @@ class APIService: ObservableObject {
 
     // MARK: - Saved Searches
 
-    private func authedRequest(_ url: URL, method: String = "GET", body: Data? = nil) throws -> URLRequest {
+    func authedRequest(_ url: URL, method: String = "GET", body: Data? = nil) throws -> URLRequest {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: url)
         req.httpMethod = method
