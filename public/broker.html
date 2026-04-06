@@ -7701,7 +7701,7 @@ async function loadTeamForTaskModal() {
   const sel = document.getElementById('taskAssignee');
   sel.innerHTML = '<option value="">Asignar a: Yo mismo</option>';
   try {
-    const data = await API('/api/inmobiliaria/team');
+    const data = await API('/api/inmobiliaria/brokers');
     if (data.brokers) {
       data.brokers.forEach(b => {
         const opt = document.createElement('option');
