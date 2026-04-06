@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import PhotosUI
 
 // MARK: - Unit Type model
 
@@ -54,10 +55,34 @@ struct SubmitListingView: View {
     // Tags
     @State private var selectedTags: Set<String> = []
 
+    // Photos
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var selectedImages: [UIImage] = []
+    @State private var uploadedPhotoURLs: [String] = []
+    @State private var uploadingPhotos = false
+
+    // Project-specific
+    @State private var constructionCompany = ""
+    @State private var unitsTotal    = ""
+    @State private var unitsAvailable = ""
+    @State private var deliveryDate  = Date()
+    @State private var projectStage  = ""
+
+    // Property details
+    @State private var floors       = ""
+    @State private var floorNumber  = ""
+    @State private var yearBuilt    = ""
+    @State private var referencePoint = ""
+
     // Contact
     @State private var contactName  = ""
     @State private var contactEmail = ""
     @State private var contactPhone = ""
+    @State private var contactPref  = ""
+    @State private var role         = ""
+
+    // Terms
+    @State private var acceptedTerms = false
 
     // State
     @State private var loading = false
@@ -71,6 +96,10 @@ struct SubmitListingView: View {
     private let bedroomOpts    = ["Estudio","1","2","3","4","5","6+"]
     private let bathroomOpts   = ["1","1.5","2","2.5","3","4+"]
     private let parkingOpts    = ["0","1","2","3","4+"]
+    private let floorsOpts     = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20+"]
+    private let projectStages  = ["En planos","En construcción","Listo para entrega"]
+    private let contactPrefs   = ["WhatsApp","Llamada","Correo"]
+    private let roleOpts       = ["Agente/Broker","Dueño","Constructora","Inmobiliaria"]
     private let provinces      = ["Azua","Bahoruco","Barahona","Dajabón","Distrito Nacional","Duarte",
                                    "Elías Piña","El Seibo","Espaillat","Hato Mayor","Hermanas Mirabal",
                                    "Independencia","La Altagracia","La Romana","La Vega",
@@ -195,6 +224,30 @@ struct SubmitListingView: View {
                         }
                     }
 
+                    // ── Datos del Proyecto (proyecto only) ─────────────
+                    if listingType == "proyecto" {
+                        FormSection(title: "Datos del Proyecto", icon: "building.2.fill", color: Color.rdGreen) {
+                            VStack(spacing: 14) {
+                                FloatingField(label: "Constructora / Empresa", text: $constructionCompany)
+                                HStack(spacing: 12) {
+                                    FloatingField(label: "Total de Unidades", text: $unitsTotal)
+                                        .keyboardType(.numberPad)
+                                    FloatingField(label: "Unidades Disponibles", text: $unitsAvailable)
+                                        .keyboardType(.numberPad)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("FECHA DE ENTREGA")
+                                        .font(.system(size:10,weight:.bold))
+                                        .foregroundStyle(Color(.tertiaryLabel)).kerning(0.5)
+                                    DatePicker("", selection: $deliveryDate, displayedComponents: .date)
+                                        .datePickerStyle(.compact)
+                                        .labelsHidden()
+                                }
+                                FormPicker(label: "Etapa del Proyecto", selection: $projectStage, options: projectStages)
+                            }
+                        }
+                    }
+
                     // ── Precio y medidas ────────────────────────────────
                     FormSection(title: "Precio y Medidas", icon: "dollarsign.circle.fill", color: Color.rdGreen) {
                         VStack(spacing: 14) {
@@ -224,6 +277,12 @@ struct SubmitListingView: View {
                                     }
                                 }
                                 FormPicker(label: "Parqueos", selection: $parking, options: parkingOpts)
+                                FormPicker(label: "Niveles / Pisos", selection: $floors, options: floorsOpts)
+                                FloatingField(label: "¿En qué piso?", text: $floorNumber)
+                                    .keyboardType(.numberPad)
+                                FloatingField(label: "Año de construcción (ej. 2020)", text: $yearBuilt)
+                                    .keyboardType(.numberPad)
+                                FloatingField(label: "Punto de referencia (ej. Frente al parque central)", text: $referencePoint)
                             }
                         }
                     }
@@ -257,6 +316,57 @@ struct SubmitListingView: View {
                     }
 
                     // ── Contacto ────────────────────────────────────────
+                    // ── Photos ──
+                    FormSection(title: "Fotos de la propiedad", icon: "camera.fill", color: .orange) {
+                        PhotosPicker(selection: $selectedPhotoItems,
+                                     maxSelectionCount: 5,
+                                     matching: .images) {
+                            HStack {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                Text(selectedImages.isEmpty ? "Seleccionar fotos (máx. 5)" : "\(selectedImages.count) foto(s) seleccionada(s)")
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                            }
+                        }
+                        .onChange(of: selectedPhotoItems) { _, items in
+                            Task { await loadPhotos(items) }
+                        }
+                        if !selectedImages.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { i, img in
+                                        Image(uiImage: img)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 80, height: 60)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(alignment: .topTrailing) {
+                                                Button {
+                                                    selectedImages.remove(at: i)
+                                                    if i < selectedPhotoItems.count {
+                                                        selectedPhotoItems.remove(at: i)
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.caption)
+                                                        .foregroundStyle(.white)
+                                                        .background(Circle().fill(.black.opacity(0.5)))
+                                                }
+                                                .offset(x: 4, y: -4)
+                                            }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        if uploadingPhotos {
+                            HStack(spacing: 8) {
+                                ProgressView().scaleEffect(0.7)
+                                Text("Subiendo fotos…").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
                     FormSection(title: "Datos de Contacto", icon: "person.fill", color: Color.rdBlue) {
                         VStack(spacing: 14) {
                             FloatingField(label: "Nombre completo *", text: $contactName)
@@ -265,10 +375,20 @@ struct SubmitListingView: View {
                                 .textInputAutocapitalization(.never)
                             FloatingField(label: "Teléfono *", text: $contactPhone)
                                 .keyboardType(.phonePad)
+                            FormPicker(label: "Preferencia de contacto", selection: $contactPref, options: contactPrefs)
+                            FormPicker(label: "Rol", selection: $role, options: roleOpts)
                         }
                     }
 
                     if let err = error { ErrorBanner(message: err) }
+
+                    // ── Términos ────────────────────────────────────────
+                    Toggle(isOn: $acceptedTerms) {
+                        Text("Acepto los términos y condiciones de publicación")
+                            .font(.subheadline)
+                    }
+                    .tint(Color.rdBlue)
+                    .padding(.horizontal, 4)
 
                     // ── Submit ───────────────────────────────────────────
                     Button { Task { await submit() } } label: {
@@ -321,13 +441,76 @@ struct SubmitListingView: View {
     private var canSubmit: Bool {
         !title.isEmpty && !propertyType.isEmpty && !condition.isEmpty &&
         !description.isEmpty && !price.isEmpty && !province.isEmpty &&
-        !city.isEmpty && !contactName.isEmpty && !contactEmail.isEmpty && !contactPhone.isEmpty
+        !city.isEmpty && !contactName.isEmpty && !contactEmail.isEmpty && !contactPhone.isEmpty &&
+        acceptedTerms
+    }
+
+    private var deliveryDateFormatted: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM"
+        return fmt.string(from: deliveryDate)
     }
 
     // MARK: - Submit
 
+    /// Load selected photos from PhotosPicker into UIImage array
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        var images: [UIImage] = []
+        for item in items.prefix(5) {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                images.append(img)
+            }
+        }
+        await MainActor.run { selectedImages = images }
+    }
+
+    /// Upload selected photos to server, returns array of URL strings
+    private func uploadPhotos() async throws -> [String] {
+        guard !selectedImages.isEmpty else { return [] }
+        guard let token = api.token else { return [] }
+        await MainActor.run { uploadingPhotos = true }
+        defer { Task { @MainActor in uploadingPhotos = false } }
+
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: URL(string: "\(apiBase)/api/upload/photos")!)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var data = Data()
+        for (i, img) in selectedImages.enumerated() {
+            guard let jpeg = img.jpegData(compressionQuality: 0.8) else { continue }
+            data.append("--\(boundary)\r\n".data(using: .utf8)!)
+            data.append("Content-Disposition: form-data; name=\"photos\"; filename=\"photo\(i).jpg\"\r\n".data(using: .utf8)!)
+            data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            data.append(jpeg)
+            data.append("\r\n".data(using: .utf8)!)
+        }
+        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = data
+
+        let (responseData, resp) = try await URLSession.shared.data(for: request)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw APIError.server("Error subiendo fotos")
+        }
+        struct UploadResponse: Decodable { let urls: [String] }
+        let result = try JSONDecoder().decode(UploadResponse.self, from: responseData)
+        return result.urls
+    }
+
     private func submit() async {
         loading = true; error = nil
+
+        // Upload photos first
+        do {
+            uploadedPhotoURLs = try await uploadPhotos()
+        } catch {
+            self.error = "Error subiendo fotos: \(error.localizedDescription)"
+            loading = false
+            return
+        }
+
         var body: [String: Any] = [
             "submission_type": "new_property",
             "type":            listingType,
@@ -350,6 +533,18 @@ struct SubmitListingView: View {
             "name":            contactName,
             "email":           contactEmail,
             "phone":           contactPhone,
+            "construction_company": constructionCompany,
+            "units_total":     unitsTotal,
+            "units_available": unitsAvailable,
+            "delivery_date":   deliveryDateFormatted,
+            "project_stage":   projectStage,
+            "floors":          floors,
+            "floor_num":       floorNumber,
+            "year_built":      yearBuilt,
+            "reference_point": referencePoint,
+            "contact_pref":    contactPref,
+            "role":            role,
+            "images":          uploadedPhotoURLs,
         ]
         if let coord = coordinate {
             body["lat"] = coord.latitude
