@@ -1195,8 +1195,10 @@
 
       <!-- ── PÁGINAS ─────────────────────────────────────────────── -->
       <div class="page-section" id="page-paginas">
-        <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:1.5rem;">Edita el contenido de secciones clave de las páginas del sitio. Los cambios se aplican en tiempo real.</p>
-        <div id="pagesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;">
+        <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:1rem;">Edita el contenido de todas las páginas del sitio. Los cambios se aplican en tiempo real.</p>
+        <!-- Page tabs -->
+        <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1.25rem;" id="pageTabBar"></div>
+        <div id="pagesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem;">
           <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;">Cargando secciones…</div>
         </div>
       </div>
@@ -2563,39 +2565,242 @@
   }
 
   // ── Page Content Editor ───────────────────────────────────────────────────
+  // Comprehensive page-section definitions grouped by page. Each entry
+  // has a `page` (for tab grouping), `section` (unique per page), display
+  // label, description, and fields array. Field types: input, textarea, url.
+  const PAGE_TABS = [
+    { key: 'all',       label: 'Todas' },
+    { key: 'home',      label: 'Inicio',     icon: '🏠', url: '/home' },
+    { key: 'about',     label: 'Nosotros',   icon: '👥', url: '/about' },
+    { key: 'contacto',  label: 'Contacto',   icon: '📞', url: '/contacto' },
+    { key: 'comprar',   label: 'Comprar',    icon: '🏡', url: '/comprar' },
+    { key: 'alquilar',  label: 'Alquilar',   icon: '🔑', url: '/alquilar' },
+    { key: 'proyectos', label: 'Proyectos',  icon: '🏗', url: '/nuevos-proyectos' },
+    { key: 'blog',      label: 'Blog',       icon: '📝', url: '/blog' },
+    { key: 'footer',    label: 'Footer',     icon: '📋' },
+    { key: 'global',    label: 'Global',     icon: '⚙️' },
+  ];
+
+  let activePageTab = 'all';
+
   const PAGE_SECTIONS_DEF = [
-    {
-      page: 'home', section: 'hero', label: 'Inicio — Héroe',
-      desc: 'Título y subtítulo de la sección principal de la página de inicio.',
+    // ── HOME ──────────────────────────────────────────────────
+    { page: 'home', section: 'hero', label: 'Héroe principal',
+      desc: 'Título y subtítulo de la sección principal.',
       fields: [
-        { key: 'title',    label: 'Título principal',  type: 'input',    placeholder: 'Encuentra tu hogar ideal en República Dominicana' },
-        { key: 'subtitle', label: 'Subtítulo',         type: 'textarea', placeholder: 'Explora miles de propiedades…' },
-      ]
-    },
-    {
-      page: 'blog', section: 'hero', label: 'Blog — Héroe',
-      desc: 'Título y subtítulo del hero de la sección de blog.',
+        { key: 'title',      label: 'Título principal',    type: 'input',    placeholder: 'Encuentra tu hogar ideal en República Dominicana' },
+        { key: 'subtitle',   label: 'Subtítulo',           type: 'textarea', placeholder: 'Explora miles de propiedades…' },
+        { key: 'ctaText',    label: 'Texto del botón CTA', type: 'input',    placeholder: 'Explorar propiedades' },
+        { key: 'ctaLink',    label: 'Enlace del botón',    type: 'url',      placeholder: '/comprar' },
+      ]},
+    { page: 'home', section: 'stats', label: 'Estadísticas',
+      desc: 'Números destacados que se muestran debajo del héroe.',
       fields: [
-        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Todo sobre bienes raíces en República Dominicana' },
-        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Guías prácticas, consejos de expertos…' },
-      ]
-    },
-    {
-      page: 'home', section: 'cta', label: 'Inicio — Llamada a acción',
-      desc: 'Texto del banner de llamada a acción en la página principal.',
+        { key: 'stat1Number', label: 'Número 1', type: 'input', placeholder: '1,200+' },
+        { key: 'stat1Label',  label: 'Etiqueta 1', type: 'input', placeholder: 'Propiedades' },
+        { key: 'stat2Number', label: 'Número 2', type: 'input', placeholder: '350+' },
+        { key: 'stat2Label',  label: 'Etiqueta 2', type: 'input', placeholder: 'Agentes' },
+        { key: 'stat3Number', label: 'Número 3', type: 'input', placeholder: '25+' },
+        { key: 'stat3Label',  label: 'Etiqueta 3', type: 'input', placeholder: 'Ciudades' },
+        { key: 'stat4Number', label: 'Número 4', type: 'input', placeholder: '5,000+' },
+        { key: 'stat4Label',  label: 'Etiqueta 4', type: 'input', placeholder: 'Clientes satisfechos' },
+      ]},
+    { page: 'home', section: 'howItWorks', label: 'Cómo funciona',
+      desc: 'Los 3 pasos que explican el proceso de la plataforma.',
       fields: [
-        { key: 'title',      label: 'Título del banner', type: 'input',    placeholder: '¿Listo para encontrar tu próximo hogar?' },
-        { key: 'buttonText', label: 'Texto del botón',   type: 'input',    placeholder: 'Ver propiedades' },
-      ]
-    },
-    {
-      page: 'home', section: 'seo', label: 'Inicio — SEO',
-      desc: 'Meta descripción y título SEO de la página de inicio.',
+        { key: 'sectionTitle', label: 'Título de sección', type: 'input',    placeholder: '¿Cómo funciona?' },
+        { key: 'step1Title',   label: 'Paso 1 — Título',   type: 'input',    placeholder: 'Busca tu propiedad' },
+        { key: 'step1Desc',    label: 'Paso 1 — Descripción', type: 'textarea', placeholder: 'Explora miles de opciones…' },
+        { key: 'step2Title',   label: 'Paso 2 — Título',   type: 'input',    placeholder: 'Contacta al agente' },
+        { key: 'step2Desc',    label: 'Paso 2 — Descripción', type: 'textarea', placeholder: 'Envía un mensaje directo…' },
+        { key: 'step3Title',   label: 'Paso 3 — Título',   type: 'input',    placeholder: 'Cierra el trato' },
+        { key: 'step3Desc',    label: 'Paso 3 — Descripción', type: 'textarea', placeholder: 'Nuestros agentes te guían…' },
+      ]},
+    { page: 'home', section: 'whyUs', label: 'Por qué elegirnos',
+      desc: 'Puntos de valor que diferencian a HogaresRD.',
+      fields: [
+        { key: 'sectionTitle', label: 'Título de sección',  type: 'input',    placeholder: '¿Por qué HogaresRD?' },
+        { key: 'point1',       label: 'Punto 1',            type: 'input',    placeholder: 'Verificación de propiedades' },
+        { key: 'point1Desc',   label: 'Descripción 1',      type: 'textarea', placeholder: 'Todas las propiedades son verificadas…' },
+        { key: 'point2',       label: 'Punto 2',            type: 'input',    placeholder: 'Agentes certificados' },
+        { key: 'point2Desc',   label: 'Descripción 2',      type: 'textarea', placeholder: 'Solo agentes con licencia MIREX…' },
+        { key: 'point3',       label: 'Punto 3',            type: 'input',    placeholder: 'Soporte personalizado' },
+        { key: 'point3Desc',   label: 'Descripción 3',      type: 'textarea', placeholder: 'Te acompañamos en cada paso…' },
+      ]},
+    { page: 'home', section: 'testimonials', label: 'Testimonios',
+      desc: 'Reseñas de clientes que se muestran en la página de inicio.',
+      fields: [
+        { key: 'sectionTitle',  label: 'Título de sección', type: 'input',    placeholder: 'Lo que dicen nuestros clientes' },
+        { key: 'test1Name',     label: 'Nombre 1',          type: 'input',    placeholder: 'María González' },
+        { key: 'test1Text',     label: 'Testimonio 1',      type: 'textarea', placeholder: 'HogaresRD me ayudó a encontrar…' },
+        { key: 'test1Role',     label: 'Rol/Ciudad 1',      type: 'input',    placeholder: 'Compradora — Santo Domingo' },
+        { key: 'test2Name',     label: 'Nombre 2',          type: 'input',    placeholder: 'Carlos Ramírez' },
+        { key: 'test2Text',     label: 'Testimonio 2',      type: 'textarea', placeholder: 'Excelente plataforma para buscar…' },
+        { key: 'test2Role',     label: 'Rol/Ciudad 2',      type: 'input',    placeholder: 'Inquilino — Santiago' },
+        { key: 'test3Name',     label: 'Nombre 3',          type: 'input',    placeholder: 'Ana Pérez' },
+        { key: 'test3Text',     label: 'Testimonio 3',      type: 'textarea', placeholder: 'Como agente, HogaresRD me permite…' },
+        { key: 'test3Role',     label: 'Rol/Ciudad 3',      type: 'input',    placeholder: 'Agente — Punta Cana' },
+      ]},
+    { page: 'home', section: 'cta', label: 'Llamada a acción',
+      desc: 'Banner de llamada a acción en la página principal.',
+      fields: [
+        { key: 'title',      label: 'Título del banner',   type: 'input',    placeholder: '¿Listo para encontrar tu próximo hogar?' },
+        { key: 'subtitle',   label: 'Subtítulo',           type: 'textarea', placeholder: 'Miles de propiedades te esperan…' },
+        { key: 'buttonText', label: 'Texto del botón',     type: 'input',    placeholder: 'Ver propiedades' },
+        { key: 'buttonLink', label: 'Enlace del botón',    type: 'url',      placeholder: '/comprar' },
+      ]},
+    { page: 'home', section: 'faq', label: 'Preguntas frecuentes',
+      desc: 'FAQ que se muestra en la página de inicio.',
+      fields: [
+        { key: 'sectionTitle', label: 'Título de sección', type: 'input',    placeholder: 'Preguntas frecuentes' },
+        { key: 'q1',           label: 'Pregunta 1',        type: 'input',    placeholder: '¿Es gratis publicar una propiedad?' },
+        { key: 'a1',           label: 'Respuesta 1',       type: 'textarea', placeholder: 'Sí, publicar es completamente gratis…' },
+        { key: 'q2',           label: 'Pregunta 2',        type: 'input',    placeholder: '¿Cómo contacto a un agente?' },
+        { key: 'a2',           label: 'Respuesta 2',       type: 'textarea', placeholder: 'Desde cualquier listado puedes…' },
+        { key: 'q3',           label: 'Pregunta 3',        type: 'input',    placeholder: '¿Qué zonas cubren?' },
+        { key: 'a3',           label: 'Respuesta 3',       type: 'textarea', placeholder: 'Cubrimos toda la República Dominicana…' },
+        { key: 'q4',           label: 'Pregunta 4',        type: 'input',    placeholder: '¿Ofrecen financiamiento?' },
+        { key: 'a4',           label: 'Respuesta 4',       type: 'textarea', placeholder: 'No directamente, pero nuestros agentes…' },
+      ]},
+    { page: 'home', section: 'seo', label: 'SEO',
+      desc: 'Meta título y descripción para motores de búsqueda.',
       fields: [
         { key: 'metaTitle', label: 'Meta título (SEO)',       type: 'input',    placeholder: 'HogaresRD — Bienes raíces en República Dominicana' },
         { key: 'metaDesc',  label: 'Meta descripción (SEO)',  type: 'textarea', placeholder: 'Encuentra tu propiedad ideal…' },
-      ]
-    },
+      ]},
+    // ── ABOUT ─────────────────────────────────────────────────
+    { page: 'about', section: 'hero', label: 'Héroe',
+      desc: 'Sección principal de la página "Nosotros".',
+      fields: [
+        { key: 'title',    label: 'Título',      type: 'input',    placeholder: 'Sobre HogaresRD' },
+        { key: 'subtitle', label: 'Subtítulo',   type: 'textarea', placeholder: 'Conectamos a compradores, vendedores y agentes…' },
+      ]},
+    { page: 'about', section: 'mission', label: 'Misión y visión',
+      desc: 'Declaración de misión, visión y valores.',
+      fields: [
+        { key: 'mission',      label: 'Misión',            type: 'textarea', placeholder: 'Democratizar el acceso a bienes raíces…' },
+        { key: 'vision',       label: 'Visión',            type: 'textarea', placeholder: 'Ser la plataforma #1 de bienes raíces…' },
+        { key: 'values',       label: 'Valores (uno por línea)', type: 'textarea', placeholder: 'Transparencia\nConfianza\nInnovación\nServicio' },
+      ]},
+    { page: 'about', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página "Nosotros".',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Sobre nosotros — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Conoce al equipo detrás de HogaresRD…' },
+      ]},
+    // ── CONTACTO ──────────────────────────────────────────────
+    { page: 'contacto', section: 'hero', label: 'Héroe',
+      desc: 'Título de la página de contacto.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Contáctanos' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Estamos aquí para ayudarte…' },
+      ]},
+    { page: 'contacto', section: 'info', label: 'Información de contacto',
+      desc: 'Dirección, teléfono, correo y horarios.',
+      fields: [
+        { key: 'address',  label: 'Dirección',          type: 'textarea', placeholder: 'Av. Winston Churchill, Torre Empresarial…' },
+        { key: 'phone',    label: 'Teléfono',           type: 'input',    placeholder: '+1 (809) 555-0100' },
+        { key: 'email',    label: 'Correo de contacto', type: 'input',    placeholder: 'contacto@hogaresrd.com' },
+        { key: 'hours',    label: 'Horario',            type: 'input',    placeholder: 'Lunes a Viernes, 9:00 AM — 6:00 PM' },
+        { key: 'whatsapp', label: 'WhatsApp',           type: 'input',    placeholder: '+18095550100' },
+      ]},
+    { page: 'contacto', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página de contacto.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Contacto — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Ponte en contacto con HogaresRD…' },
+      ]},
+    // ── COMPRAR ───────────────────────────────────────────────
+    { page: 'comprar', section: 'hero', label: 'Héroe',
+      desc: 'Título de la página de comprar.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Propiedades en venta' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Explora casas, apartamentos, terrenos…' },
+      ]},
+    { page: 'comprar', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página de comprar.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Comprar propiedades — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Encuentra tu propiedad ideal para comprar…' },
+      ]},
+    // ── ALQUILAR ──────────────────────────────────────────────
+    { page: 'alquilar', section: 'hero', label: 'Héroe',
+      desc: 'Título de la página de alquiler.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Propiedades en alquiler' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Apartamentos, casas y locales en alquiler…' },
+      ]},
+    { page: 'alquilar', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página de alquiler.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Alquilar propiedades — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Encuentra tu próximo alquiler…' },
+      ]},
+    // ── NUEVOS PROYECTOS ──────────────────────────────────────
+    { page: 'proyectos', section: 'hero', label: 'Héroe',
+      desc: 'Título de la página de nuevos proyectos.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Nuevos proyectos de construcción' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Invierte en proyectos en desarrollo…' },
+      ]},
+    { page: 'proyectos', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página de proyectos.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Nuevos proyectos — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Descubre los últimos proyectos inmobiliarios…' },
+      ]},
+    // ── BLOG ──────────────────────────────────────────────────
+    { page: 'blog', section: 'hero', label: 'Héroe',
+      desc: 'Título de la sección de blog.',
+      fields: [
+        { key: 'title',    label: 'Título',    type: 'input',    placeholder: 'Blog — Todo sobre bienes raíces en RD' },
+        { key: 'subtitle', label: 'Subtítulo', type: 'textarea', placeholder: 'Guías prácticas, consejos de expertos…' },
+      ]},
+    { page: 'blog', section: 'seo', label: 'SEO',
+      desc: 'Meta datos para la página de blog.',
+      fields: [
+        { key: 'metaTitle', label: 'Meta título',       type: 'input',    placeholder: 'Blog de bienes raíces — HogaresRD' },
+        { key: 'metaDesc',  label: 'Meta descripción',  type: 'textarea', placeholder: 'Lee nuestras guías sobre compra, venta…' },
+      ]},
+    // ── FOOTER ────────────────────────────────────────────────
+    { page: 'footer', section: 'about', label: 'Texto del footer',
+      desc: 'Descripción breve que aparece en el pie de página.',
+      fields: [
+        { key: 'description', label: 'Descripción',     type: 'textarea', placeholder: 'La forma más fácil de encontrar propiedades en RD.' },
+        { key: 'copyright',   label: 'Texto de copyright', type: 'input', placeholder: '© 2026 HogaresRD. Todos los derechos reservados.' },
+      ]},
+    { page: 'footer', section: 'social', label: 'Redes sociales',
+      desc: 'Enlaces a las redes sociales de HogaresRD.',
+      fields: [
+        { key: 'facebook',  label: 'Facebook URL',  type: 'url', placeholder: 'https://facebook.com/hogaresrd' },
+        { key: 'instagram', label: 'Instagram URL', type: 'url', placeholder: 'https://instagram.com/hogaresrd' },
+        { key: 'twitter',   label: 'Twitter/X URL', type: 'url', placeholder: 'https://x.com/hogaresrd' },
+        { key: 'youtube',   label: 'YouTube URL',   type: 'url', placeholder: 'https://youtube.com/@hogaresrd' },
+        { key: 'tiktok',    label: 'TikTok URL',    type: 'url', placeholder: 'https://tiktok.com/@hogaresrd' },
+        { key: 'linkedin',  label: 'LinkedIn URL',  type: 'url', placeholder: 'https://linkedin.com/company/hogaresrd' },
+      ]},
+    // ── GLOBAL ────────────────────────────────────────────────
+    { page: 'global', section: 'branding', label: 'Marca y nombre',
+      desc: 'Nombre del sitio y texto que aparece en la marca global.',
+      fields: [
+        { key: 'siteName',    label: 'Nombre del sitio', type: 'input', placeholder: 'HogaresRD' },
+        { key: 'tagline',     label: 'Eslogan',          type: 'input', placeholder: 'Bienes raíces en República Dominicana' },
+        { key: 'logoAlt',     label: 'Alt del logo',     type: 'input', placeholder: 'HogaresRD Logo' },
+      ]},
+    { page: 'global', section: 'announcement', label: 'Barra de anuncio',
+      desc: 'Mensaje opcional que aparece en la parte superior de todas las páginas. Déjalo vacío para ocultar.',
+      fields: [
+        { key: 'text',      label: 'Texto del anuncio',  type: 'input',    placeholder: '🎉 ¡Nuevas propiedades disponibles esta semana!' },
+        { key: 'link',      label: 'Enlace (opcional)',   type: 'url',      placeholder: '/comprar' },
+        { key: 'bgColor',   label: 'Color de fondo (hex)', type: 'input',  placeholder: '#002D62' },
+      ]},
+    { page: 'global', section: 'emails', label: 'Plantillas de correo',
+      desc: 'Textos usados en los correos transaccionales del sistema.',
+      fields: [
+        { key: 'welcomeSubject', label: 'Asunto de bienvenida',    type: 'input',    placeholder: '¡Bienvenido/a a HogaresRD!' },
+        { key: 'welcomeBody',    label: 'Cuerpo de bienvenida',    type: 'textarea', placeholder: 'Gracias por unirte a la plataforma…' },
+        { key: 'footerText',     label: 'Texto del pie de correo', type: 'input',    placeholder: '© 2026 HogaresRD — República Dominicana' },
+      ]},
   ];
 
   let pageContentData = {};
@@ -2614,28 +2819,58 @@
   }
 
   function renderPageCards() {
+    // Render tabs
+    const tabBar = document.getElementById('pageTabBar');
+    tabBar.innerHTML = PAGE_TABS.map(t =>
+      `<button class="filter-btn${t.key === activePageTab ? ' active' : ''}" onclick="setPageTab('${t.key}')">${t.icon ? t.icon + ' ' : ''}${t.label}</button>`
+    ).join('');
+
+    // Filter by tab
+    const defs = activePageTab === 'all'
+      ? PAGE_SECTIONS_DEF
+      : PAGE_SECTIONS_DEF.filter(d => d.page === activePageTab);
+
     const grid = document.getElementById('pagesGrid');
-    grid.innerHTML = PAGE_SECTIONS_DEF.map(def => {
+    if (!defs.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No hay secciones para esta página.</p>';
+      return;
+    }
+
+    grid.innerHTML = defs.map(def => {
       const saved = pageContentData[`${def.page}_${def.section}`] || {};
+      const tab = PAGE_TABS.find(t => t.key === def.page);
+      const previewLink = tab?.url
+        ? `<a href="${tab.url}" target="_blank" style="font-size:0.72rem;color:var(--accent);text-decoration:none;margin-left:auto;">Vista previa ↗</a>`
+        : '';
+      const pageLabel = activePageTab === 'all'
+        ? `<span style="font-size:0.68rem;padding:2px 6px;background:var(--accent-light);color:var(--accent);border-radius:4px;font-weight:600;">${tab?.label || def.page}</span> `
+        : '';
       const fieldsHtml = def.fields.map(f => `
         <div class="page-field">
           <label>${escAdm(f.label)}</label>
           ${f.type === 'textarea'
             ? `<textarea id="pf_${def.page}_${def.section}_${f.key}" placeholder="${escAdm(f.placeholder)}" rows="3">${escAdm(saved[f.key] || '')}</textarea>`
-            : `<input type="text" id="pf_${def.page}_${def.section}_${f.key}" placeholder="${escAdm(f.placeholder)}" value="${escAdm(saved[f.key] || '')}" />`
+            : `<input type="${f.type === 'url' ? 'url' : 'text'}" id="pf_${def.page}_${def.section}_${f.key}" placeholder="${escAdm(f.placeholder)}" value="${escAdm(saved[f.key] || '')}" />`
           }
         </div>`).join('');
       return `
         <div class="page-card">
-          <h4>${escAdm(def.label)}</h4>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            ${pageLabel}<h4 style="margin:0;">${escAdm(def.label)}</h4>${previewLink}
+          </div>
           <p>${escAdm(def.desc)}</p>
           ${fieldsHtml}
-          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.5rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
             <span class="page-card-saved" id="pcs_${def.page}_${def.section}">✅ Guardado</span>
             <button class="btn-primary" style="margin-left:auto;" onclick="savePageSection('${def.page}','${def.section}')">Guardar</button>
           </div>
         </div>`;
     }).join('');
+  }
+
+  function setPageTab(tab) {
+    activePageTab = tab;
+    renderPageCards();
   }
 
   async function savePageSection(page, section) {
