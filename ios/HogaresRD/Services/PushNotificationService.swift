@@ -11,6 +11,13 @@ class PushNotificationService: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        // Don't call checkAuthorizationStatus() here — it hits an async
+        // system API that stalls the main thread before the splash renders.
+        // HogaresRDApp calls deferredInit() after splash instead.
+    }
+
+    /// Call AFTER splash screen to avoid blocking launch.
+    func deferredInit() {
         checkAuthorizationStatus()
     }
 

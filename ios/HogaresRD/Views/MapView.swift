@@ -11,16 +11,27 @@ final class MapStateStore: ObservableObject {
     /// the map already has proper bounds when we call convert(_:toPointTo:).
     @Published var pinScreenPositions: [(Listing, CGPoint)] = []
 
-    /// Re-compute every visible pin's screen position.
+    /// Re-compute visible pin screen positions. Uses a fast lat/lng bounding-box
+    /// pre-filter so we only call the expensive `convert(_:toPointTo:)` on pins
+    /// that could possibly be in the viewport — 20→50 pins instead of all 200+.
     func refresh(listings: [Listing]) {
         guard let mv = mapView else { return }
+        let region = mv.region
+        let halfLat = region.span.latitudeDelta / 2 * 1.15  // 15% margin
+        let halfLng = region.span.longitudeDelta / 2 * 1.15
+        let minLat = region.center.latitude  - halfLat
+        let maxLat = region.center.latitude  + halfLat
+        let minLng = region.center.longitude - halfLng
+        let maxLng = region.center.longitude + halfLng
+
         pinScreenPositions = listings.compactMap { listing in
             guard let lat = listing.lat, let lng = listing.lng else { return nil }
+            // Quick lat/lng bounds check — skips expensive convert() for distant pins
+            guard lat >= minLat && lat <= maxLat &&
+                  lng >= minLng && lng <= maxLng else { return nil }
             let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
             let pt    = mv.convert(coord, toPointTo: mv)
-            // Only show pins within the visible viewport (±20% margin)
-            let margin: CGFloat = -20
-            let extended = mv.bounds.insetBy(dx: margin, dy: margin)
+            let extended = mv.bounds.insetBy(dx: -20, dy: -20)
             guard extended.contains(pt) else { return nil }
             return (listing, pt)
         }

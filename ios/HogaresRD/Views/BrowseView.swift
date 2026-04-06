@@ -929,7 +929,7 @@ struct BrowseView: View {
         loading = true; error = nil
         do {
             let res = try await APIService.shared.getListings(
-                type: selectedType, province: filterProvince, limit: 50, page: page
+                type: selectedType, province: filterProvince, limit: 20, page: page
             )
             listings   = res.listings
             totalPages = res.pages
@@ -944,7 +944,7 @@ struct BrowseView: View {
         guard !loading else { return }
         page += 1; loading = true
         if let res = try? await APIService.shared.getListings(
-            type: selectedType, province: filterProvince, limit: 50, page: page
+            type: selectedType, province: filterProvince, limit: 20, page: page
         ) {
             listings.append(contentsOf: res.listings)
             pins.append(contentsOf: res.listings.filter { $0.lat != nil && $0.lng != nil })
