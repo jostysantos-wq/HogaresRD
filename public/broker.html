@@ -1200,6 +1200,25 @@
   <!-- CONTENT AREA -->
   <div class="content-area">
 
+  <!-- Instant hash routing — runs synchronously BEFORE first paint so
+       the user never sees a dashboard flash when refreshing on #tareas. -->
+  <script>
+  (function(){
+    var h = location.hash.slice(1);
+    if (h && document.getElementById('page-' + h)) {
+      var d = document.getElementById('page-dashboard');
+      if (d) d.classList.remove('active');
+      var t = document.getElementById('page-' + h);
+      if (t) t.classList.add('active');
+      // Also fix sidebar highlight
+      var sOld = document.querySelector('.sidebar-nav-item.active');
+      if (sOld) sOld.classList.remove('active');
+      var sNew = document.querySelector('.sidebar-nav-item[data-page="' + h + '"]');
+      if (sNew) sNew.classList.add('active');
+    }
+  })();
+  </script>
+
   <!-- ═══ PAGE: DASHBOARD ═══════════════════════════════════ -->
   <div class="page-section active" id="page-dashboard">
 
