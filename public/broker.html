@@ -2041,9 +2041,13 @@
 
     <!-- Conversation list -->
     <div id="brkConvPane" style="width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
-      <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+      <div style="padding:1rem 1.25rem 0.5rem;">
         <div style="font-size:1rem;font-weight:700;">Mensajes de Clientes</div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Conversaciones entrantes</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;margin-bottom:0.5rem;">Conversaciones entrantes</div>
+        <div style="display:flex;gap:0.35rem;">
+          <button class="filter-btn active" id="brkConvTabActive" onclick="window._switchBrkConvTab('active')">Activas</button>
+          <button class="filter-btn" id="brkConvTabArchived" onclick="window._switchBrkConvTab('archived')">Archivadas</button>
+        </div>
       </div>
       <div id="brkConvList" style="flex:1;overflow-y:auto;"></div>
     </div>
@@ -4435,6 +4439,7 @@
     if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
     if (page === 'tareas') loadTareas();
+    if (page === 'mensajes' && typeof window.brkLoadList === 'function') window.brkLoadList();
   }
 
   // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
@@ -6692,12 +6697,21 @@
   let brkActiveConv  = null;
   let brkLastTs      = null;
   let brkPollTimer   = null;
+  let brkConvTab     = 'active'; // 'active' or 'archived'
+
+  // Expose so showPage + sidebar + archive buttons can call these
+  window._switchBrkConvTab = function(tab) {
+    brkConvTab = tab;
+    document.getElementById('brkConvTabActive').classList.toggle('active', tab === 'active');
+    document.getElementById('brkConvTabArchived').classList.toggle('active', tab === 'archived');
+    brkLoadList();
+  };
+  window.brkLoadList = brkLoadList;
 
   // Hook into page navigation for mensajes polling
   document.querySelectorAll('.sidebar-nav-item[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.dataset.page === 'mensajes') {
-        // Load conversation list when navigating to mensajes
         setTimeout(brkLoadList, 50);
       } else {
         clearInterval(brkPollTimer);
@@ -6706,25 +6720,36 @@
   });
 
   async function brkLoadList() {
-    const res  = await fetch('/api/conversations', { credentials: 'include' });
+    const archived = brkConvTab === 'archived' ? '?archived=true' : '';
+    const res  = await fetch('/api/conversations' + archived, { credentials: 'include' });
     const list = await res.json();
     const el   = document.getElementById('brkConvList');
     if (!list.length) {
-      el.innerHTML = '<div style="padding:1.5rem 1.25rem;font-size:.85rem;color:var(--text-muted);text-align:center;">Sin conversaciones aún.<br>Los clientes te contactarán desde los listados.</div>';
+      el.innerHTML = brkConvTab === 'archived'
+        ? '<div style="padding:1.5rem 1.25rem;font-size:.85rem;color:var(--text-muted);text-align:center;">Sin conversaciones archivadas.</div>'
+        : '<div style="padding:1.5rem 1.25rem;font-size:.85rem;color:var(--text-muted);text-align:center;">Sin conversaciones aún.<br>Los clientes te contactarán desde los listados.</div>';
       return;
     }
     el.innerHTML = list.map(c => {
       const unread = c.unreadBroker || 0;
       const badge  = unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:99px;font-size:.7rem;font-weight:700;padding:1px 6px;flex-shrink:0;">${unread}</span>` : '';
       const status = c.brokerId ? '' : '<span style="font-size:.68rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;margin-left:4px;">Sin asignar</span>';
+      const closedIcon = c.closed ? '<span style="font-size:.68rem;margin-left:3px;">🔒</span>' : '';
+      const archiveBtn = c.closed && !c.archived
+        ? `<button onclick="event.stopPropagation();brkArchiveConv('${c.id}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:.65rem;color:var(--text-muted);cursor:pointer;margin-top:3px;">Archivar</button>`
+        : '';
+      const restoreBtn = c.archived
+        ? `<button onclick="event.stopPropagation();brkUnarchiveConv('${c.id}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:.65rem;color:var(--text-muted);cursor:pointer;margin-top:3px;">Restaurar</button>`
+        : '';
       return `<div onclick="brkOpenConv('${c.id}')" style="display:flex;gap:.6rem;align-items:flex-start;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;" class="brk-conv-item ${c.id === brkActiveConv ? 'brk-active' : ''}" data-id="${c.id}"
         onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''"
       >
         <div style="width:38px;height:38px;border-radius:9px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">👤</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.clientName}${status}</div>
-          <div style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">🏠 ${c.propertyTitle}</div>
+          <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.clientName}${closedIcon}${status}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">🏠 ${c.propertyTitle || 'Propiedad'}</div>
           <div style="font-size:.73rem;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.lastMessage || '—'}</div>
+          ${archiveBtn}${restoreBtn}
         </div>
         ${badge}
       </div>`;
@@ -6831,6 +6856,16 @@
   document.getElementById('brkInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); brkSend(); }
   });
+
+  // ── Archive / unarchive conversation ─────────────────────────────────────
+  window.brkArchiveConv = async function(id) {
+    await fetch(`/api/conversations/${id}/archive`, { method:'PUT', credentials:'include' });
+    brkLoadList();
+  };
+  window.brkUnarchiveConv = async function(id) {
+    await fetch(`/api/conversations/${id}/unarchive`, { method:'PUT', credentials:'include' });
+    brkLoadList();
+  };
 
   // ── Close / reopen conversation (pros only) ─────────────────────────────
   let brkCurrentClosed = false;
