@@ -2659,6 +2659,9 @@
       return data;
     });
   };
+  // Expose API globally so script blocks outside this IIFE can use it
+  // (e.g. Tareas, Inventory modules added in later <script> blocks).
+  window.API = API;
 
   // Now that API is defined, fetch full user data — also used for fresh email verification check
   (async () => {
