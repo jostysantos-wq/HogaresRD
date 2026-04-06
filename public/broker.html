@@ -2377,13 +2377,7 @@
 
     <!-- Filter + actions row -->
     <div class="export-row" style="margin-bottom:1rem;">
-      <div class="filters" id="tareasFilterBar" style="flex:1;margin-bottom:0;display:flex;gap:0.4rem;flex-wrap:wrap;">
-        <button class="chip-filter active" onclick="filterTareas('all',this)">Todas</button>
-        <button class="chip-filter" onclick="filterTareas('pendiente',this)">Pendientes</button>
-        <button class="chip-filter" onclick="filterTareas('en_progreso',this)">En Progreso</button>
-        <button class="chip-filter" onclick="filterTareas('completada',this)">Completadas</button>
-        <button class="chip-filter" onclick="filterTareas('overdue',this)">Vencidas</button>
-      </div>
+      <div class="filters" id="tareasFilterBar" style="flex:1;margin-bottom:0;"></div>
       <button id="newTaskBtn" style="display:none;" class="export-trigger-btn" onclick="showCreateTaskModal()">
         <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         Nueva Tarea
@@ -7559,9 +7553,25 @@ async function releaseInventoryUnit(unitId) {
 let _tareasFilter = 'all';
 let _allTareas = [];
 
+const TAREAS_FILTERS = [
+  ['all',         'Todas'],
+  ['pendiente',   'Pendientes'],
+  ['en_progreso', 'En Progreso'],
+  ['completada',  'Completadas'],
+  ['overdue',     'Vencidas'],
+];
+
 async function loadTareas() {
   const grid = document.getElementById('tareasGrid');
   grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  // Render filter pills using the same filter-btn class as Aplicaciones
+  const bar = document.getElementById('tareasFilterBar');
+  bar.innerHTML = TAREAS_FILTERS.map(([key, label]) =>
+    `<button class="filter-btn${key === _tareasFilter ? ' active' : ''}" data-filter="${key}">${label}</button>`
+  ).join('');
+  bar.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.onclick = () => { filterTareas(btn.dataset.filter, btn); };
+  });
   // Show create button for inmobiliaria/constructora
   const canCreate = ['inmobiliaria','constructora'].includes(currentUser.role);
   document.getElementById('newTaskBtn').style.display = canCreate ? '' : 'none';
@@ -7585,7 +7595,7 @@ function updateTareasStats() {
 
 function filterTareas(f, btn) {
   _tareasFilter = f;
-  document.querySelectorAll('#tareasFilterBar .chip-filter').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tareasFilterBar .filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderTareas();
 }
