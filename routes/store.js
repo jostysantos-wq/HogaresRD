@@ -97,6 +97,7 @@ db.exec(`
     floors             TEXT,
     units_total        TEXT,
     units_available    TEXT,
+    unit_inventory     TEXT DEFAULT '[]',
     project_stage      TEXT,
     delivery_date      TEXT,
     submission_type    TEXT,
@@ -375,7 +376,7 @@ const SUBMISSION_KNOWN_COLS = [
   'id', 'title', 'type', 'condition', 'description', 'price', 'area_const', 'area_land',
   'bedrooms', 'bathrooms', 'parking', 'province', 'city', 'sector', 'address', 'lat', 'lng',
   'name', 'email', 'phone', 'role', 'status', 'submittedAt', 'approvedAt', 'rejectedAt',
-  'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'project_stage',
+  'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'unit_inventory', 'project_stage',
   'delivery_date', 'submission_type', 'claim_listing_id',
   'amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'unit_inventory', 'construction_company',
 ];

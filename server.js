@@ -453,6 +453,7 @@ app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/tareas',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'tareas.html')));
+app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 app.get('/register-success',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-success.html')));
 app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));
