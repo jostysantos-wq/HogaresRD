@@ -2496,6 +2496,8 @@
   }
 
   if (!currentUser) { location.href = '/login'; return; }
+  // Expose after auth so external script blocks can read the user.
+  window.currentUser = currentUser;
 
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
   const isInmobiliariaRole = currentUser.role === 'inmobiliaria' || currentUser.role === 'constructora';
@@ -2659,9 +2661,10 @@
       return data;
     });
   };
-  // Expose API globally so script blocks outside this IIFE can use it
+  // Expose globals so script blocks outside this IIFE can use them
   // (e.g. Tareas, Inventory modules added in later <script> blocks).
   window.API = API;
+  window.esc = esc;
 
   // Now that API is defined, fetch full user data — also used for fresh email verification check
   (async () => {
