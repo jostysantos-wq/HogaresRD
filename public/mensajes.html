@@ -28,9 +28,12 @@
 
     /* CONVERSATION LIST */
     .conv-pane { display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg-card); }
-    .conv-pane-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    .conv-pane-header { padding: 1rem 1.25rem; border-bottom: none; }
     .conv-pane-header h2 { font-size: 1rem; font-weight: 700; }
     .conv-pane-header p  { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .conv-tab { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; font-weight: 500; padding: 0.35rem 0.85rem; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .conv-tab:hover { border-color: var(--text-muted); color: var(--text); }
+    .conv-tab.active { background: var(--text); border-color: var(--text); color: var(--bg-card); font-weight: 600; }
     .conv-list { flex: 1; overflow-y: auto; }
     .conv-item { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
     .conv-item:hover, .conv-item.active { background: var(--accent-light); }
@@ -165,6 +168,10 @@
       <h2>Mensajes</h2>
       <p>Tus conversaciones con agentes</p>
     </div>
+    <div style="display:flex;gap:0.35rem;padding:0 1rem 0.5rem;">
+      <button class="conv-tab active" id="tabActive" onclick="switchConvTab('active')">Activas</button>
+      <button class="conv-tab" id="tabArchived" onclick="switchConvTab('archived')">Archivadas</button>
+    </div>
     <div class="conv-list" id="convList">
       <div class="spinner"></div>
     </div>
@@ -217,17 +224,28 @@
   let activeConvId  = null;
   let lastTimestamp = null;
   let pollTimer     = null;
+  let convTab       = 'active'; // 'active' or 'archived'
+
+  function switchConvTab(tab) {
+    convTab = tab;
+    document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+    document.getElementById('tabArchived').classList.toggle('active', tab === 'archived');
+    loadConvList();
+  }
 
   window.addEventListener('beforeunload', () => { if (pollTimer) clearInterval(pollTimer); });
 
   // ── Load conversation list ────────────────────────────────────────────────
   async function loadConvList() {
-    const res  = await fetch('/api/conversations', { credentials: 'include' });
+    const archived = convTab === 'archived' ? '?archived=true' : '';
+    const res  = await fetch('/api/conversations' + archived, { credentials: 'include' });
     const list = await res.json();
     const el   = document.getElementById('convList');
 
     if (!list.length) {
-      el.innerHTML = '<div class="conv-empty">Aún no tienes conversaciones.<br>Muestra interés en una propiedad para comenzar.</div>';
+      el.innerHTML = convTab === 'archived'
+        ? '<div class="conv-empty">No tienes conversaciones archivadas.</div>'
+        : '<div class="conv-empty">Aún no tienes conversaciones.<br>Muestra interés en una propiedad para comenzar.</div>';
       return;
     }
 
@@ -238,16 +256,32 @@
         : `<div class="conv-thumb-placeholder">🏠</div>`;
       const badge  = unread > 0 ? `<span class="conv-badge">${unread}</span>` : '';
       const broker = c.brokerName ? `Agente: ${c.brokerName}` : 'Sin agente asignado aún';
+      const closedIcon = c.closed ? '<span style="font-size:0.7rem;margin-left:4px;">🔒</span>' : '';
+      const archiveBtn = c.closed && !c.archived
+        ? `<button onclick="event.stopPropagation();archiveConv('${c.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:0.68rem;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Archivar">Archivar</button>`
+        : '';
+      const unarchiveBtn = c.archived
+        ? `<button onclick="event.stopPropagation();unarchiveConv('${c.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:0.68rem;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Desarchivar">Restaurar</button>`
+        : '';
       return `
         <div class="conv-item ${c.id === activeConvId ? 'active' : ''}" onclick="openConv('${c.id}')">
           ${img}
           <div class="conv-info">
-            <div class="conv-title">${c.propertyTitle}</div>
+            <div class="conv-title">${c.propertyTitle}${closedIcon}</div>
             <div class="conv-sub">${c.lastMessage || broker}</div>
           </div>
-          ${badge}
+          ${archiveBtn}${unarchiveBtn}${badge}
         </div>`;
     }).join('');
+  }
+
+  async function archiveConv(id) {
+    await fetch(`/api/conversations/${id}/archive`, { method: 'PUT', credentials: 'include' });
+    loadConvList();
+  }
+  async function unarchiveConv(id) {
+    await fetch(`/api/conversations/${id}/unarchive`, { method: 'PUT', credentials: 'include' });
+    loadConvList();
   }
 
   // ── Open a conversation ───────────────────────────────────────────────────

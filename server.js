@@ -936,6 +936,30 @@ cron.schedule('0 */2 * * *', () => {
     .catch(e => console.error('[Cron] Saved search error:', e.message));
 }, { timezone: 'America/Santo_Domingo' });
 
+// ── Auto-archive closed conversations after 24h (hourly check) ──────────
+cron.schedule('17 * * * *', () => {
+  try {
+    const allConvs = store.getConversations();
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24h ago
+    let archived = 0;
+    for (const conv of allConvs) {
+      if (conv.closed && !conv.archived && conv.closedAt) {
+        if (new Date(conv.closedAt).getTime() <= cutoff) {
+          conv.archived   = true;
+          conv.archivedAt = new Date().toISOString();
+          conv.archivedBy = 'system';
+          conv.updatedAt  = conv.archivedAt;
+          store.saveConversation(conv);
+          archived++;
+        }
+      }
+    }
+    if (archived > 0) console.log(`[Cron] Auto-archived ${archived} conversation(s) closed >24h`);
+  } catch (e) {
+    console.error('[Cron] Auto-archive error:', e.message);
+  }
+}, { timezone: 'America/Santo_Domingo' });
+
 // ── Admin error tracking endpoint ─────────────────────────────────
 app.use('/api/admin', errorTracker.router);
 

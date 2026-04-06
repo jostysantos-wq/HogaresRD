@@ -600,9 +600,10 @@ class APIService: ObservableObject {
 
     // MARK: - Conversations
 
-    func getConversations() async throws -> [Conversation] {
+    func getConversations(archived: Bool = false) async throws -> [Conversation] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations")!)
+        let suffix = archived ? "?archived=true" : ""
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations\(suffix)")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await URLSession.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
@@ -714,6 +715,34 @@ class APIService: ObservableObject {
         }
         struct Wrapper: Decodable { let conversation: Conversation }
         return try decoder.decode(Wrapper.self, from: data).conversation
+    }
+
+    func archiveConversation(id: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/archive")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+               let err = obj["error"] as? String { throw APIError.server(err) }
+            throw APIError.server("Error archivando")
+        }
+    }
+
+    func unarchiveConversation(id: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/unarchive")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+               let err = obj["error"] as? String { throw APIError.server(err) }
+            throw APIError.server("Error desarchivando")
+        }
     }
 
     // MARK: - Applications

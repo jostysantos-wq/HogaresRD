@@ -100,6 +100,7 @@ router.post('/', requireLogin, (req, res) => {
 
 // ── GET /api/conversations ────────────────────────────────────────────────
 // Client: their own. Broker/agency/inmobiliaria: assigned to them or unassigned.
+// ?archived=true returns only archived conversations. Default excludes them.
 router.get('/', requireLogin, (req, res) => {
   const user = getUser(req);
   let convs;
@@ -111,6 +112,9 @@ router.get('/', requireLogin, (req, res) => {
   } else {
     convs = store.getConversations(); // admin sees all
   }
+
+  const wantArchived = req.query.archived === 'true';
+  convs = convs.filter(c => wantArchived ? !!c.archived : !c.archived);
 
   // Return without full message array for list view (just metadata)
   const list = convs.map(({ messages, ...meta }) => ({
@@ -376,6 +380,51 @@ router.put('/:id/reopen', requireLogin, (req, res) => {
 
   store.saveConversation(conv);
   res.json({ ok: true, conversation: conv });
+});
+
+// ── PUT /api/conversations/:id/archive ───────────────────────────────────
+// Archive a closed conversation — removes it from the active messages list.
+// Both the client and the assigned broker can archive.
+router.put('/:id/archive', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  const isClient = conv.clientId === user.sub;
+  const isBroker = PRO_ROLES.includes(user.role);
+  if (!isClient && !isBroker) {
+    return res.status(403).json({ error: 'Sin acceso.' });
+  }
+  if (!conv.closed) {
+    return res.status(400).json({ error: 'La conversación debe estar cerrada antes de archivarla.' });
+  }
+
+  conv.archived    = true;
+  conv.archivedAt  = new Date().toISOString();
+  conv.archivedBy  = user.sub;
+  conv.updatedAt   = conv.archivedAt;
+  store.saveConversation(conv);
+  res.json({ ok: true });
+});
+
+// ── PUT /api/conversations/:id/unarchive ─────────────────────────────────
+router.put('/:id/unarchive', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  const isClient = conv.clientId === user.sub;
+  const isBroker = PRO_ROLES.includes(user.role);
+  if (!isClient && !isBroker) {
+    return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  conv.archived   = false;
+  conv.archivedAt = null;
+  conv.archivedBy = null;
+  conv.updatedAt  = new Date().toISOString();
+  store.saveConversation(conv);
+  res.json({ ok: true });
 });
 
 // ── PUT /api/conversations/:id/read ──────────────────────────────────────

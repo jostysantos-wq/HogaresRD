@@ -8,76 +8,136 @@ struct ConversationsView: View {
     @State private var loading = true
     @State private var errorMsg: String?
     @State private var locallyRead: Set<String> = []
+    @State private var showArchived = false
 
     var body: some View {
-        Group {
-            if loading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let err = errorMsg {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                    Text(err)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button("Reintentar") { Task { await load() } }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.rdBlue)
-                }
-                .padding()
-            } else if conversations.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                        .font(.system(size: 60))
-                        .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin mensajes aun")
-                        .font(.title2).bold()
-                    Text("Cuando contactes a un agente sobre una propiedad, la conversacion aparecera aqui.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-            } else {
-                List(conversations) { conv in
-                    NavigationLink {
-                        ConversationThreadView(conversation: conv)
-                            .environmentObject(api)
-                            .onAppear {
-                                // Clear the badge the moment the thread opens —
-                                // markRead is sent server-side by the thread, but
-                                // we zero locally so the list badge clears instantly.
-                                locallyRead.insert(conv.id)
-                            }
-                    } label: {
-                        ConversationRow(
-                            conv: conv,
-                            myId: api.currentUser?.id ?? "",
-                            readOverride: locallyRead.contains(conv.id)
-                        )
+        VStack(spacing: 0) {
+            // Activas / Archivadas tab bar
+            HStack(spacing: 6) {
+                convTabButton("Activas", active: !showArchived) { showArchived = false }
+                convTabButton("Archivadas", active: showArchived) { showArchived = true }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Group {
+                if loading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let err = errorMsg, conversations.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text(err)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.rdBlue)
                     }
+                    .padding()
+                } else if conversations.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: showArchived ? "archivebox" : "bubble.left.and.bubble.right")
+                            .font(.system(size: 60))
+                            .foregroundStyle(Color.rdBlue.opacity(0.35))
+                        Text(showArchived ? "Sin conversaciones archivadas" : "Sin mensajes aún")
+                            .font(.title2).bold()
+                        if !showArchived {
+                            Text("Cuando contactes a un agente sobre una propiedad, la conversación aparecerá aquí.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                        }
+                    }
+                    .frame(maxHeight: .infinity)
+                } else {
+                    List(conversations) { conv in
+                        NavigationLink {
+                            ConversationThreadView(conversation: conv)
+                                .environmentObject(api)
+                                .onAppear { locallyRead.insert(conv.id) }
+                        } label: {
+                            ConversationRow(
+                                conv: conv,
+                                myId: api.currentUser?.id ?? "",
+                                readOverride: locallyRead.contains(conv.id)
+                            )
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if conv.closed == true && conv.archived != true {
+                                Button {
+                                    Task { await archiveConv(conv) }
+                                } label: {
+                                    Label("Archivar", systemImage: "archivebox")
+                                }
+                                .tint(.indigo)
+                            }
+                            if conv.archived == true {
+                                Button {
+                                    Task { await unarchiveConv(conv) }
+                                } label: {
+                                    Label("Restaurar", systemImage: "arrow.uturn.backward")
+                                }
+                                .tint(.orange)
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
                 }
-                .listStyle(.plain)
             }
         }
         .navigationTitle("Mis Mensajes")
         .task { await load() }
         .refreshable { await load() }
         .onAppear { Task { await load() } }
+        .onChange(of: showArchived) { _, _ in Task { await load() } }
+    }
+
+    @ViewBuilder
+    private func convTabButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption).bold()
+                .padding(.horizontal, 14).padding(.vertical, 7)
+                .background(active ? Color(.label) : Color(.secondarySystemFill))
+                .foregroundStyle(active ? Color(.systemBackground) : .primary)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 
     private func load() async {
         if conversations.isEmpty { loading = true }
         errorMsg = nil
         do {
-            conversations = try await api.getConversations()
+            conversations = try await api.getConversations(archived: showArchived)
             conversations.sort { $0.updatedAt > $1.updatedAt }
         } catch {
             errorMsg = error.localizedDescription
         }
         loading = false
+    }
+
+    private func archiveConv(_ conv: Conversation) async {
+        do {
+            try await api.archiveConversation(id: conv.id)
+            conversations.removeAll { $0.id == conv.id }
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+    }
+
+    private func unarchiveConv(_ conv: Conversation) async {
+        do {
+            try await api.unarchiveConversation(id: conv.id)
+            conversations.removeAll { $0.id == conv.id }
+        } catch {
+            errorMsg = error.localizedDescription
+        }
     }
 }
 
