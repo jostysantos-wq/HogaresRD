@@ -4425,6 +4425,10 @@
 
   function showPage(page) {
     currentPage = page;
+    // Persist the active section in the URL hash so refresh keeps you
+    // on the same page. Safe — hash changes don't trigger a server
+    // round-trip, and the deep-link reader at boot already handles it.
+    if (location.hash !== '#' + page) location.hash = page;
     document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
     const activeBtn = document.querySelector(`.sidebar-nav-item[data-page="${page}"]`);
     if (activeBtn) activeBtn.classList.add('active');
@@ -4447,11 +4451,16 @@
   }
 
   // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
+  const VALID_PAGES = Object.keys(PAGE_TITLES).concat(['mensajes']);
   (function () {
-    const VALID = Object.keys(PAGE_TITLES).concat(['mensajes']);
-    const hash  = location.hash.slice(1);
-    if (hash && VALID.includes(hash)) showPage(hash);
+    const hash = location.hash.slice(1);
+    if (hash && VALID_PAGES.includes(hash)) showPage(hash);
   })();
+  // Browser back/forward navigates between sections
+  window.addEventListener('popstate', () => {
+    const hash = location.hash.slice(1);
+    if (hash && VALID_PAGES.includes(hash) && hash !== currentPage) showPage(hash);
+  });
 
   // ── Dashboard Section Nav (internal tabs) ──────────────────
   document.getElementById('sectionNav').addEventListener('click', e => {
