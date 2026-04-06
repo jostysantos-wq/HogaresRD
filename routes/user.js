@@ -40,6 +40,46 @@ router.delete('/favorites/:listingId', userAuth, (req, res) => {
   res.json({ success: true, favorites: user.favorites });
 });
 
+// GET /api/user/comparisons — get user's comparison list (array of listing IDs)
+router.get('/comparisons', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json({ ids: user.comparisonIds || [] });
+});
+
+// PUT /api/user/comparisons — replace the entire comparison list
+router.put('/comparisons', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  const { ids } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids debe ser un array' });
+  user.comparisonIds = ids.slice(0, 10); // max 10 comparisons
+  store.saveUser(user);
+  res.json({ ids: user.comparisonIds });
+});
+
+// POST /api/user/recently-viewed/:listingId — log a recently viewed listing
+router.post('/recently-viewed/:listingId', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  const id = req.params.listingId;
+  let recent = Array.isArray(user.recentlyViewed) ? user.recentlyViewed : [];
+  // Remove if already in list, add to front, cap at 20
+  recent = recent.filter(r => r !== id);
+  recent.unshift(id);
+  if (recent.length > 20) recent = recent.slice(0, 20);
+  user.recentlyViewed = recent;
+  store.saveUser(user);
+  res.json({ success: true });
+});
+
+// GET /api/user/recently-viewed — get recently viewed listing IDs
+router.get('/recently-viewed', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json({ ids: user.recentlyViewed || [] });
+});
+
 // POST /api/user/activity — log a user event and rebuild profile if it's a view
 router.post('/activity', userAuth, (req, res) => {
   const { type, listingId, metadata } = req.body;

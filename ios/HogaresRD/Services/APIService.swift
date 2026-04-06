@@ -1292,6 +1292,16 @@ class APIService: ObservableObject {
         _ = try? await URLSession.shared.data(for: req)
     }
 
+    /// Log a recently viewed listing. Fire-and-forget.
+    func trackRecentlyViewed(_ listingId: String) {
+        guard let t = token else { return }
+        guard let url = URL(string: "\(apiBase)/api/user/recently-viewed/\(listingId)") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: req).resume()
+    }
+
     func removeFavorite(listingId: String) async throws {
         guard let t = token else { return }
         let url = URL(string: "\(apiBase)/api/user/favorites/\(listingId)")!

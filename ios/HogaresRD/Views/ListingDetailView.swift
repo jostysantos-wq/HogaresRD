@@ -62,6 +62,7 @@ struct ListingDetailView: View {
             // Track view — matches web's listing.html POST /api/listings/:id/view
             // so broker analytics count iOS views too.
             APIService.shared.trackListingView(id)
+            APIService.shared.trackRecentlyViewed(id)
         }
     }
 

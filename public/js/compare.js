@@ -14,6 +14,50 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids.slice(0, MAX_COMPARE))); }
     catch {}
     render();
+    syncCompareToServer(ids.slice(0, MAX_COMPARE));
+  }
+
+  // ── Server sync ───────────────────────────────────────────
+  function getAuthToken() {
+    try { return localStorage.getItem('hogaresrd_token') || localStorage.getItem('token'); }
+    catch { return null; }
+  }
+
+  function syncCompareToServer(ids) {
+    const token = getAuthToken();
+    if (!token) return;
+    fetch('/api/user/comparisons', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      credentials: 'include',
+      body: JSON.stringify({ ids: ids }),
+    }).catch(() => {});
+  }
+
+  async function mergeFromServer() {
+    const token = getAuthToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/user/comparisons', {
+        headers: { 'Authorization': 'Bearer ' + token },
+        credentials: 'include',
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const serverIds = Array.isArray(data.ids) ? data.ids : [];
+      if (!serverIds.length) return;
+      const local = getCompareIds();
+      // Merge: local first, then server items not already in local, capped at MAX
+      const merged = [...local];
+      serverIds.forEach(id => { if (!merged.includes(id)) merged.push(id); });
+      const final = merged.slice(0, MAX_COMPARE);
+      // Only update if changed
+      if (JSON.stringify(final) !== JSON.stringify(local)) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(final)); } catch {}
+        render();
+        updateAllButtons();
+      }
+    } catch {}
   }
 
   function isInCompare(id) { return getCompareIds().includes(id); }
@@ -237,6 +281,7 @@
   // ── Init ───────────────────────────────────────────────────
   injectStyles();
   render();
+  mergeFromServer();
 
   // Expose global API
   window.HogaresCompare = {

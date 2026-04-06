@@ -510,10 +510,22 @@
       content.innerHTML = html;
     }
 
+    function syncCompareToServer(ids) {
+      const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+      if (!token) return;
+      fetch('/api/user/comparisons', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        credentials: 'include',
+        body: JSON.stringify({ ids }),
+      }).catch(() => {});
+    }
+
     function removeListing(id) {
       const remaining = ids.filter(i => i !== id);
       // Update localStorage
       try { localStorage.setItem('hogaresrd_compare', JSON.stringify(remaining)); } catch {}
+      syncCompareToServer(remaining);
       if (remaining.length) {
         window.location.href = '/comparar?ids=' + remaining.join(',');
       } else {
@@ -523,6 +535,7 @@
 
     function clearAll() {
       try { localStorage.setItem('hogaresrd_compare', '[]'); } catch {}
+      syncCompareToServer([]);
       window.location.href = '/comparar';
     }
 

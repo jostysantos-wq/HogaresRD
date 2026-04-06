@@ -1564,10 +1564,52 @@
       } catch {}
     }
 
-    function loadRecentlyViewed() {
+    async function loadRecentlyViewed() {
       try {
         const RV_KEY = 'hogaresrd_recently_viewed';
-        const rvList = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+        let rvList = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+
+        // Merge with server-side recently viewed if logged in
+        const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+        if (token) {
+          try {
+            const res = await fetch('/api/user/recently-viewed', {
+              headers: { 'Authorization': 'Bearer ' + token },
+              credentials: 'include',
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const serverIds = Array.isArray(data.ids) ? data.ids : [];
+              // Merge server IDs that are not already in localStorage list
+              const localIds = new Set(rvList.map(r => r.id));
+              const missing = serverIds.filter(id => !localIds.has(id));
+              if (missing.length) {
+                // Fetch minimal listing data for missing IDs and prepend
+                const fetches = await Promise.all(
+                  missing.slice(0, 10).map(id =>
+                    fetch('/api/listings/' + encodeURIComponent(id))
+                      .then(r => r.ok ? r.json() : null).catch(() => null)
+                  )
+                );
+                fetches.filter(Boolean).forEach(l => {
+                  rvList.unshift({
+                    id: l.id, title: l.title, price: l.price, type: l.type,
+                    city: l.city, province: l.province, bedrooms: l.bedrooms,
+                    bathrooms: l.bathrooms, area_const: l.area_const,
+                    image: (l.images && l.images[0]) ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0].url || '') : '',
+                    viewedAt: new Date().toISOString(),
+                  });
+                });
+                // Deduplicate by id, keep first occurrence
+                const seen = new Set();
+                rvList = rvList.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
+                rvList = rvList.slice(0, 20);
+                localStorage.setItem(RV_KEY, JSON.stringify(rvList));
+              }
+            }
+          } catch {}
+        }
+
         if (!rvList.length) return;
         const c = createCarousel('rvTrack', 'rvPrev', 'rvNext');
         rvList.forEach(item => {

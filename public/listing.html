@@ -1852,6 +1852,16 @@ const tabsHtml = shuffled.map((a, i) =>
         })
         .catch(() => {});
 
+      // Also log to recently-viewed for the logged-in user
+      const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+      if (token) {
+        fetch(`/api/user/recently-viewed/${listingId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include',
+        }).catch(() => {});
+      }
+
       // Resolve ?ref= affiliate token (must be async, so lives here not in renderListing)
       const urlRef = new URLSearchParams(location.search).get('ref');
       if (urlRef) {
