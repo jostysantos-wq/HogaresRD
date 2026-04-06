@@ -2368,11 +2368,11 @@
   <div class="page-section" id="page-tareas">
     <!-- Stats bar (same as Aplicaciones) -->
     <div class="stats-bar" id="tareasStats">
-      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value blue" id="tStatTotal">--</div></div>
-      <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value orange" id="tStatPending">--</div></div>
-      <div class="stat-card"><div class="stat-label">En Progreso</div><div class="stat-value blue" id="tStatProgress">--</div></div>
-      <div class="stat-card"><div class="stat-label">Completadas</div><div class="stat-value green" id="tStatDone">--</div></div>
-      <div class="stat-card"><div class="stat-label">Vencidas</div><div class="stat-value red" id="tStatOverdue">--</div></div>
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value blue" id="tStatTotal">0</div></div>
+      <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value orange" id="tStatPending">0</div></div>
+      <div class="stat-card"><div class="stat-label">En Progreso</div><div class="stat-value blue" id="tStatProgress">0</div></div>
+      <div class="stat-card"><div class="stat-label">Completadas</div><div class="stat-value green" id="tStatDone">0</div></div>
+      <div class="stat-card"><div class="stat-label">Vencidas</div><div class="stat-value red" id="tStatOverdue">0</div></div>
     </div>
 
     <!-- Filter + actions row -->
@@ -2385,9 +2385,7 @@
     </div>
 
     <!-- Task list -->
-    <div id="tareasGrid">
-      <div style="text-align:center;padding:3rem;color:var(--text-muted);">Cargando tareas...</div>
-    </div>
+    <div id="tareasGrid"></div>
   </div>
 
   </div><!-- /content-area -->
@@ -7563,8 +7561,12 @@ const TAREAS_FILTERS = [
 
 async function loadTareas() {
   const grid = document.getElementById('tareasGrid');
-  grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  // Render filter pills using the same filter-btn class as Aplicaciones
+  // Only show spinner on first load — subsequent refreshes keep existing
+  // content visible (matches the Aplicaciones tab pattern).
+  if (!_allTareas.length) {
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  }
+  // Render filter pills
   const bar = document.getElementById('tareasFilterBar');
   bar.innerHTML = TAREAS_FILTERS.map(([key, label]) =>
     `<button class="filter-btn${key === _tareasFilter ? ' active' : ''}" data-filter="${key}">${label}</button>`
@@ -7580,7 +7582,11 @@ async function loadTareas() {
     _allTareas = data.tasks || [];
     updateTareasStats();
     renderTareas();
-  } catch(e) { grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`; }
+  } catch(e) {
+    if (!_allTareas.length) {
+      grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`;
+    }
+  }
 }
 
 function updateTareasStats() {
