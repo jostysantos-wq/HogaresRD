@@ -2070,6 +2070,10 @@
         </div>
         <div id="brkClosedBanner" style="display:none;padding:.6rem 1.25rem;background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-size:.78rem;">
           <strong>🔒 Conversación cerrada.</strong> <span id="brkClosedInfo"></span>
+          <div id="brkClosedArchiveRow" style="display:none;margin-top:.4rem;display:flex;align-items:center;gap:.5rem;">
+            <span style="font-size:.75rem;">Esta conversación será archivada automáticamente en 24 horas.</span>
+            <button onclick="brkArchiveCurrentConv()" style="padding:3px 10px;background:#92400e;color:#fff;border:none;border-radius:6px;font-size:.7rem;font-weight:600;cursor:pointer;white-space:nowrap;">Archivar ahora</button>
+          </div>
         </div>
         <div id="brkMsgArea" style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:.75rem;"></div>
         <div id="brkInputBar" style="display:flex;gap:.6rem;padding:.85rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-card);">
@@ -6876,6 +6880,7 @@
     const bannerInfo= document.getElementById('brkClosedInfo');
     const inputBar  = document.getElementById('brkInputBar');
     const btn       = document.getElementById('brkCloseBtn');
+    const archiveRow = document.getElementById('brkClosedArchiveRow');
     if (brkCurrentClosed) {
       const when = conv.closedAt ? new Date(conv.closedAt).toLocaleString('es-DO') : '';
       const who  = conv.closedByName ? ` por ${conv.closedByName}` : '';
@@ -6886,14 +6891,24 @@
       btn.textContent = 'Reabrir';
       btn.style.color = '#065f46';
       btn.style.borderColor = '#a7f3d0';
+      // Show archive option if not already archived
+      archiveRow.style.display = conv.archived ? 'none' : 'flex';
     } else {
       banner.style.display = 'none';
       inputBar.style.display = 'flex';
       btn.textContent = 'Cerrar';
       btn.style.color = 'var(--text-muted)';
       btn.style.borderColor = 'var(--border)';
+      archiveRow.style.display = 'none';
     }
   }
+
+  window.brkArchiveCurrentConv = async function() {
+    if (!brkActiveConv) return;
+    await fetch(`/api/conversations/${brkActiveConv}/archive`, { method:'PUT', credentials:'include' });
+    document.getElementById('brkClosedArchiveRow').style.display = 'none';
+    brkLoadList();
+  };
 
   window.brkToggleClose = function() {
     if (!brkActiveConv) return;
