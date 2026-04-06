@@ -368,7 +368,7 @@ struct ReelCard: View {
                         .frame(width: geo.size.width, height: geo.size.height)
                 }
 
-                // ── Top-right controls (counter + heart) ──────────────
+                // ── Top-right controls (like + save + share) ──────────────
                 VStack {
                     HStack {
                         Spacer()
@@ -381,27 +381,47 @@ struct ReelCard: View {
                                     .foregroundStyle(.white)
                                     .clipShape(Capsule())
                             }
-                            // Save button + count
+                            // Like button (heart) + count
                             Button {
-                                toggleSave()
+                                toggleLike()
                             } label: {
                                 VStack(spacing: 3) {
-                                    Image(systemName: saved.isSaved(listing.id) ? "heart.fill" : "heart")
+                                    Image(systemName: localFavCount > 0 ? "heart.fill" : "heart")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(saved.isSaved(listing.id) ? Color.rdRed : .white)
+                                        .foregroundStyle(localFavCount > 0 ? Color.rdRed : .white)
                                         .shadow(color: .black.opacity(0.5), radius: 4)
                                         .scaleEffect(heartScale)
-                                    Text(localFavCount > 0 ? "\(localFavCount)" : "Guardar")
+                                    Text("\(localFavCount)")
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(.white)
                                         .shadow(color: .black.opacity(0.5), radius: 2)
                                 }
-                                .frame(width: 56)
-                                .frame(minHeight: 48)
+                                .frame(width: 48)
+                                .frame(minHeight: 44)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                            .onAppear { localFavCount = (listing.favoriteCount ?? 0) + (saved.isSaved(listing.id) ? 1 : 0) }
+                            .onAppear { localFavCount = listing.favoriteCount ?? 0 }
+
+                            // Save/Guardar button (bookmark)
+                            Button {
+                                toggleSave()
+                            } label: {
+                                VStack(spacing: 3) {
+                                    Image(systemName: saved.isSaved(listing.id) ? "bookmark.fill" : "bookmark")
+                                        .font(.system(size: 22, weight: .semibold))
+                                        .foregroundStyle(saved.isSaved(listing.id) ? Color.rdBlue : .white)
+                                        .shadow(color: .black.opacity(0.5), radius: 4)
+                                    Text("Guardar")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .shadow(color: .black.opacity(0.5), radius: 2)
+                                }
+                                .frame(width: 48)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
 
                             // Share button
                             Button {
@@ -411,25 +431,10 @@ struct ReelCard: View {
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .shadow(color: .black.opacity(0.5), radius: 4)
-                                    .frame(width: 48, height: 48)
+                                    .frame(width: 48, height: 44)
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-
-                            // View count
-                            if let views = listing.views, views > 0 {
-                                VStack(spacing: 2) {
-                                    Image(systemName: "eye.fill")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 4)
-                                    Text(views >= 1000 ? String(format: "%.1fk", Double(views) / 1000) : "\(views)")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 2)
-                                }
-                                .frame(width: 48)
-                            }
                         }
                         .padding(.top, 48)
                         .padding(.trailing, 4)
@@ -562,26 +567,32 @@ struct ReelCard: View {
 
     // MARK: - Actions
 
-    private func toggleSave() {
+    /// Like button (heart) — visual engagement counter. Does NOT save
+    /// the listing to "Propiedades guardadas". Just bumps the like count.
+    private func toggleLike() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
-
-        let wasSaved = saved.isSaved(listing.id)
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
             heartScale = 1.3
         }
-        let didToggle = saved.toggle(listing.id)
-        // Only move the counter if the toggle actually applied — guests
-        // get sent to the auth sheet and the count stays put.
-        if didToggle {
-            localFavCount += wasSaved ? -1 : 1
-            if localFavCount < 0 { localFavCount = 0 }
-            onSaveTap()
-        }
+        // TODO: wire to a dedicated /api/listings/:id/like endpoint if
+        // server-side like tracking is needed. For now, optimistic local.
+        localFavCount += 1
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 heartScale = 1.0
             }
+        }
+    }
+
+    /// Save/Guardar button (bookmark) — adds to "Propiedades guardadas".
+    /// Requires auth; guests see login sheet.
+    private func toggleSave() {
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+        let didToggle = saved.toggle(listing.id)
+        if didToggle {
+            onSaveTap()
         }
     }
 
@@ -595,11 +606,8 @@ struct ReelCard: View {
             heartScale = 1.3
         }
 
-        // Only count the like if not already saved AND toggle applied.
-        if !saved.isSaved(listing.id) && saved.toggle(listing.id) {
-            localFavCount += 1
-            onSaveTap()
-        }
+        // Bump the like count
+        localFavCount += 1
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             withAnimation(.easeOut(duration: 0.3)) {
