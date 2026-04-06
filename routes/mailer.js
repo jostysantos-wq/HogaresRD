@@ -88,10 +88,15 @@ function createTransport() {
       const dept = opts.department || detectDepartment(opts.subject);
       const from = EMAILS[dept] || EMAILS.soporte;
 
-      // ── Try Workspace SMTP first ────────────────────────────────
-      if (smtp) {
+      // ── Primary: Resend HTTP API (always works, no port blocks) ──
+      // DigitalOcean blocks SMTP ports 465/587. Until they unblock,
+      // Resend is the primary transport. When DO opens the ports, set
+      // SMTP_PRIMARY=1 in .env to swap SMTP back to primary.
+      const smtpFirst = process.env.SMTP_PRIMARY === '1';
+
+      if (smtpFirst && smtp) {
         try {
-          const result = await smtp.sendMail({
+          return await smtp.sendMail({
             from,
             to:       toArray.join(', '),
             subject:  opts.subject,
@@ -99,26 +104,46 @@ function createTransport() {
             replyTo:  REPLY_TO,
             headers:  opts.headers || {},
           });
-          return result;
         } catch (smtpErr) {
           console.warn('[mailer] SMTP failed, trying Resend fallback:', smtpErr.message);
         }
       }
 
-      // ── Fallback to Resend HTTP API ─────────────────────────────
+      // ── Resend HTTP API (primary while SMTP is blocked) ─────────
       if (resend) {
-        const result = await resend.emails.send({
-          from,
-          to:       toArray,
-          subject:  opts.subject,
-          html:     opts.html,
-          reply_to: REPLY_TO,
-          headers:  opts.headers || {},
-        });
-        if (result.error) {
-          throw Object.assign(new Error(result.error.message || 'Resend error'), result.error);
+        try {
+          const result = await resend.emails.send({
+            from,
+            to:       toArray,
+            subject:  opts.subject,
+            html:     opts.html,
+            reply_to: REPLY_TO,
+            headers:  opts.headers || {},
+          });
+          if (result.error) {
+            throw Object.assign(new Error(result.error.message || 'Resend error'), result.error);
+          }
+          return result;
+        } catch (resendErr) {
+          console.warn('[mailer] Resend failed:', resendErr.message);
+          // Fall through to SMTP fallback if Resend is primary
         }
-        return result;
+      }
+
+      // ── Fallback: try SMTP if it wasn't the primary ────────────
+      if (!smtpFirst && smtp) {
+        try {
+          return await smtp.sendMail({
+            from,
+            to:       toArray.join(', '),
+            subject:  opts.subject,
+            html:     opts.html,
+            replyTo:  REPLY_TO,
+            headers:  opts.headers || {},
+          });
+        } catch (smtpErr) {
+          console.warn('[mailer] SMTP fallback also failed:', smtpErr.message);
+        }
       }
 
       // ── No transport available ──────────────────────────────────
