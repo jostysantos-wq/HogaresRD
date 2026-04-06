@@ -308,28 +308,37 @@ struct ListingDetailView: View {
 
     // MARK: - Hero Images
 
+    /// Vertical scroll gallery — two images visible at once (Zillow-style).
+    /// Each image is ~half the gallery height so users see a peek of the next
+    /// one, encouraging vertical scroll. Tap opens full-screen gallery.
+    private let imageSlotHeight: CGFloat = UIScreen.main.bounds.height * 0.27
+
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
         if !l.images.isEmpty {
-            TabView(selection: $imageIndex) {
-                ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
-                    let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            Rectangle().fill(Color(.systemGray6))
-                                .overlay(Image(systemName: "photo").font(.system(size: 40)).foregroundStyle(Color(.systemGray3)))
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 2) {
+                    ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
+                        let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            default:
+                                Rectangle().fill(Color(.systemGray6))
+                                    .overlay(Image(systemName: "photo").font(.system(size: 36)).foregroundStyle(Color(.systemGray3)))
+                            }
+                        }
+                        .frame(height: imageSlotHeight)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                        .onTapGesture {
+                            imageIndex = i
+                            showFullGallery = true
                         }
                     }
-                    .frame(height: heroHeight)
-                    .clipped()
-                    .tag(i)
-                    .onTapGesture { showFullGallery = true }
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: heroHeight)
         } else {
             Rectangle().fill(Color(.systemGray6)).frame(height: heroHeight)
@@ -354,14 +363,18 @@ struct ListingDetailView: View {
 
             Spacer()
 
-            // Image counter
+            // Photo count badge
             if l.images.count > 1 {
-                Text("\(imageIndex + 1)/\(l.images.count)")
-                    .font(.caption.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                HStack(spacing: 4) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("\(l.images.count)")
+                        .font(.caption.bold())
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
             }
 
             // Share button
