@@ -63,6 +63,15 @@ class APIService: ObservableObject {
         return (try? decoder.decode([Ad].self, from: data)) ?? []
     }
 
+    /// Fire-and-forget view tracking — matches web's listing.html POST
+    /// /api/listings/:id/view so broker analytics count iOS views too.
+    func trackListingView(_ listingId: String) {
+        guard let url = URL(string: "\(apiBase)/api/listings/\(listingId)/view") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        URLSession.shared.dataTask(with: req).resume()
+    }
+
     func trackAdImpression(_ adID: String) {
         guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/impression") else { return }
         var req = URLRequest(url: url)

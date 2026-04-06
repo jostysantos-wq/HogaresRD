@@ -746,15 +746,32 @@ struct PrivacySettingsView: View {
         }
         .navigationTitle("Privacidad")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: profileVisible)   { _, v in UserDefaults.standard.set(v, forKey: "priv_profileVisible") }
-        .onChange(of: showOnlineStatus) { _, v in UserDefaults.standard.set(v, forKey: "priv_showOnlineStatus") }
-        .onChange(of: shareActivity)    { _, v in UserDefaults.standard.set(v, forKey: "priv_shareActivity") }
-        .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics") }
+        .onChange(of: profileVisible)   { _, v in UserDefaults.standard.set(v, forKey: "priv_profileVisible"); syncPrivacy("profileVisible", v) }
+        .onChange(of: showOnlineStatus) { _, v in UserDefaults.standard.set(v, forKey: "priv_showOnlineStatus"); syncPrivacy("showOnlineStatus", v) }
+        .onChange(of: shareActivity)    { _, v in UserDefaults.standard.set(v, forKey: "priv_shareActivity"); syncPrivacy("shareActivity", v) }
+        .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics"); syncPrivacy("allowAnalytics", v) }
         .alert("¿Eliminar tu cuenta?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Eliminar", role: .destructive) {}
         } message: {
             Text("Esta acción es permanente. Se eliminarán todos tus datos, propiedades guardadas y conversaciones. Contacta soporte para proceder.")
+        }
+    }
+
+    /// Sync a single privacy toggle to the server so it persists across
+    /// platforms. Fire-and-forget — local UserDefaults is the source of
+    /// truth for instant UI; server is the cross-device backup.
+    private func syncPrivacy(_ key: String, _ value: Bool) {
+        Task.detached {
+            guard let url = URL(string: "\(apiBase)/api/user/profile") else { return }
+            var req = URLRequest(url: url)
+            req.httpMethod = "PATCH"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let t = APIService.shared.token {
+                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+            }
+            req.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
+            _ = try? await URLSession.shared.data(for: req)
         }
     }
 }

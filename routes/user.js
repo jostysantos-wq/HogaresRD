@@ -121,17 +121,27 @@ router.patch('/profile', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  const { phone, bio, jobTitle } = req.body;
+  const { phone, bio, jobTitle,
+          profileVisible, showOnlineStatus, shareActivity, allowAnalytics,
+          notif_newListings, notif_priceDrops, notif_similar, notif_agentMessages, notif_appUpdates
+  } = req.body;
 
-  if (phone !== undefined) {
-    user.phone = (phone + '').trim();
-  }
-  if (bio !== undefined) {
-    user.bio = (bio + '').trim().slice(0, 300);
-  }
+  if (phone !== undefined) user.phone = (phone + '').trim();
+  if (bio !== undefined) user.bio = (bio + '').trim().slice(0, 300);
   if (jobTitle !== undefined && ['broker', 'agency'].includes(user.role)) {
     user.jobTitle = (jobTitle + '').trim().slice(0, 60);
   }
+  // Privacy settings — synced across platforms
+  if (profileVisible !== undefined)   user.profileVisible   = !!profileVisible;
+  if (showOnlineStatus !== undefined) user.showOnlineStatus = !!showOnlineStatus;
+  if (shareActivity !== undefined)    user.shareActivity    = !!shareActivity;
+  if (allowAnalytics !== undefined)   user.allowAnalytics   = !!allowAnalytics;
+  // Notification preferences — synced across platforms
+  if (notif_newListings !== undefined)   user.notif_newListings   = !!notif_newListings;
+  if (notif_priceDrops !== undefined)    user.notif_priceDrops    = !!notif_priceDrops;
+  if (notif_similar !== undefined)       user.notif_similar       = !!notif_similar;
+  if (notif_agentMessages !== undefined) user.notif_agentMessages = !!notif_agentMessages;
+  if (notif_appUpdates !== undefined)    user.notif_appUpdates    = !!notif_appUpdates;
 
   store.saveUser(user);
   res.json({ success: true, user: {
@@ -140,6 +150,15 @@ router.patch('/profile', userAuth, (req, res) => {
     bio:      user.bio,
     jobTitle: user.jobTitle,
     avatarUrl: user.avatarUrl,
+    profileVisible:   user.profileVisible,
+    showOnlineStatus: user.showOnlineStatus,
+    shareActivity:    user.shareActivity,
+    allowAnalytics:   user.allowAnalytics,
+    notif_newListings:   user.notif_newListings,
+    notif_priceDrops:    user.notif_priceDrops,
+    notif_similar:       user.notif_similar,
+    notif_agentMessages: user.notif_agentMessages,
+    notif_appUpdates:    user.notif_appUpdates,
   }});
 });
 

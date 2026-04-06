@@ -57,7 +57,12 @@ struct ListingDetailView: View {
                     .environmentObject(APIService.shared)
             }
         }
-        .task { await load() }
+        .task {
+            await load()
+            // Track view — matches web's listing.html POST /api/listings/:id/view
+            // so broker analytics count iOS views too.
+            APIService.shared.trackListingView(id)
+        }
     }
 
     // MARK: - Detail Body

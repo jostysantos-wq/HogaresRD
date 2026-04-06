@@ -394,11 +394,11 @@ struct NotificationSettingsView: View {
             .task { await initialLoad() }
             .onChange(of: pushEnabled, handlePushEnabledChange)
             .onChange(of: pushService.isAuthorized, handleAuthChange)
-            .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings") }
-            .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops") }
-            .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar") }
-            .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages") }
-            .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates") }
+            .onChange(of: newListings)   { _, v in UserDefaults.standard.set(v, forKey: "notif_newListings"); syncNotifPref("notif_newListings", v) }
+            .onChange(of: priceDrops)    { _, v in UserDefaults.standard.set(v, forKey: "notif_priceDrops"); syncNotifPref("notif_priceDrops", v) }
+            .onChange(of: similar)       { _, v in UserDefaults.standard.set(v, forKey: "notif_similar"); syncNotifPref("notif_similar", v) }
+            .onChange(of: agentMessages) { _, v in UserDefaults.standard.set(v, forKey: "notif_agentMessages"); syncNotifPref("notif_agentMessages", v) }
+            .onChange(of: appUpdates)    { _, v in UserDefaults.standard.set(v, forKey: "notif_appUpdates"); syncNotifPref("notif_appUpdates", v) }
     }
 
     private var listContent: some View {
@@ -557,6 +557,22 @@ struct NotificationSettingsView: View {
         similar       = Self.loadBool("notif_similar")
         agentMessages = Self.loadBool("notif_agentMessages")
         appUpdates    = Self.loadBool("notif_appUpdates")
+    }
+
+    /// Sync a notification preference to the server so it persists across
+    /// platforms. Fire-and-forget — UserDefaults is instant UI truth.
+    private func syncNotifPref(_ key: String, _ value: Bool) {
+        Task.detached {
+            guard let url = URL(string: "\(apiBase)/api/user/profile") else { return }
+            var req = URLRequest(url: url)
+            req.httpMethod = "PATCH"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let t = APIService.shared.token {
+                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+            }
+            req.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
+            _ = try? await URLSession.shared.data(for: req)
+        }
     }
 
     @MainActor
