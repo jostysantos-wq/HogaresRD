@@ -4,6 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel de Broker — HogaresRD</title>
+  <!-- Prevent dashboard flash on hash-routed refresh. Runs in <head>
+       BEFORE the browser paints any body content. If a hash is present,
+       injects CSS that hides the dashboard section and de-highlights the
+       dashboard sidebar button, so the correct page shows instantly. -->
+  <script>
+  (function(){
+    var h = location.hash.slice(1);
+    if (h) {
+      var s = document.createElement('style');
+      s.id = 'hash-preload';
+      s.textContent =
+        '#page-dashboard { display:none !important; }' +
+        '.sidebar-nav-item[data-page="dashboard"] { color:var(--text-muted) !important; background:none !important; }' +
+        '#page-' + CSS.escape(h) + ' { display:flex !important; }' +
+        '.sidebar-nav-item[data-page="' + CSS.escape(h) + '"] { background:var(--sb-active) !important; color:#fff !important; }';
+      document.head.appendChild(s);
+    }
+  })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet">
@@ -1199,25 +1218,6 @@
 
   <!-- CONTENT AREA -->
   <div class="content-area">
-
-  <!-- Instant hash routing — runs synchronously BEFORE first paint so
-       the user never sees a dashboard flash when refreshing on #tareas. -->
-  <script>
-  (function(){
-    var h = location.hash.slice(1);
-    if (h && document.getElementById('page-' + h)) {
-      var d = document.getElementById('page-dashboard');
-      if (d) d.classList.remove('active');
-      var t = document.getElementById('page-' + h);
-      if (t) t.classList.add('active');
-      // Also fix sidebar highlight
-      var sOld = document.querySelector('.sidebar-nav-item.active');
-      if (sOld) sOld.classList.remove('active');
-      var sNew = document.querySelector('.sidebar-nav-item[data-page="' + h + '"]');
-      if (sNew) sNew.classList.add('active');
-    }
-  })();
-  </script>
 
   <!-- ═══ PAGE: DASHBOARD ═══════════════════════════════════ -->
   <div class="page-section active" id="page-dashboard">
@@ -4474,7 +4474,12 @@
   // Defer to next tick so ALL script blocks (including Tareas, Inventory,
   // Mensajes in later <script> tags) have loaded before we call showPage.
   // Without this, refreshing on #tareas calls loadTareas() before it exists.
+  // The <head> CSS injection already hides dashboard and shows the target
+  // section visually — this just triggers the data loading + cleans up.
   setTimeout(() => {
+    // Remove the <head> preload override now that JS is in control
+    const preload = document.getElementById('hash-preload');
+    if (preload) preload.remove();
     const hash = location.hash.slice(1);
     if (hash && VALID_PAGES.includes(hash)) showPage(hash);
   }, 0);
