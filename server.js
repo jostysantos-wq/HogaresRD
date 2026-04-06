@@ -611,6 +611,38 @@ app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
   sub.status     = 'approved';
   sub.approvedAt = new Date().toISOString();
+
+  // ── Auto-generate inventory units from unit_types ──────────────
+  // If the listing was submitted with unit types (e.g., "Penthouse 3BR × 5"),
+  // auto-create individual inventory units so the broker doesn't have to add
+  // them one by one. Only runs if no inventory already exists.
+  const unitTypes = Array.isArray(sub.unit_types) ? sub.unit_types : [];
+  if (unitTypes.length > 0 && (!Array.isArray(sub.unit_inventory) || sub.unit_inventory.length === 0)) {
+    const inventory = [];
+    for (const ut of unitTypes) {
+      const count = parseInt(ut.available) || 0;
+      const baseName = (ut.name || 'Unidad').trim();
+      for (let i = 1; i <= count; i++) {
+        inventory.push({
+          id:            'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          label:         `${baseName}-${String(i).padStart(2, '0')}`,
+          type:          `${baseName}${ut.bedrooms ? ' · ' + ut.bedrooms + ' hab.' : ''}${ut.area ? ' · ' + ut.area + ' m²' : ''}`,
+          floor:         '',
+          notes:         ut.price ? `Precio: $${Number(ut.price).toLocaleString()}` : '',
+          status:        'available',
+          applicationId: null,
+          clientName:    null,
+          createdAt:     new Date().toISOString(),
+        });
+      }
+    }
+    if (inventory.length > 0) {
+      sub.unit_inventory  = inventory;
+      sub.units_available = inventory.length;
+      console.log(`[approve] Auto-generated ${inventory.length} inventory unit(s) for listing ${sub.id} from ${unitTypes.length} type(s)`);
+    }
+  }
+
   store.saveListing(sub);
   res.json({ success: true });
 });
