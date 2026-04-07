@@ -332,14 +332,16 @@ class APIService: ObservableObject {
     }
 
     func requestTour(listingId: String, brokerId: String, date: String, time: String,
-                     name: String, phone: String, email: String, notes: String) async throws -> TourRequest {
+                     name: String, phone: String, email: String, notes: String,
+                     tourType: String = "presencial") async throws -> TourRequest {
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/request")!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
         let body: [String: String] = [
             "listing_id": listingId, "broker_id": brokerId, "date": date,
-            "time": time, "name": name, "phone": phone, "email": email, "notes": notes
+            "time": time, "name": name, "phone": phone, "email": email, "notes": notes,
+            "tour_type": tourType
         ]
         req.httpBody = try JSONEncoder().encode(body)
         let (data, resp) = try await URLSession.shared.data(for: req)
@@ -388,6 +390,68 @@ class APIService: ObservableObject {
         let (_, resp) = try await URLSession.shared.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al cancelar visita")
+        }
+    }
+
+    func completeTour(tourId: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/complete")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al completar visita")
+        }
+    }
+
+    func rescheduleTour(tourId: String, date: String, time: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/reschedule")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: String] = ["date": date, "time": time]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al reprogramar visita")
+        }
+    }
+
+    func submitTourFeedback(tourId: String, rating: Int, comment: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/feedback")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = ["rating": rating, "comment": comment]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al enviar calificación")
+        }
+    }
+
+    func fetchTourSettings() async throws -> [String: Bool] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/settings")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode([String: Bool].self, from: data)
+    }
+
+    func updateAutoConfirmTours(enabled: Bool) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/settings/auto-confirm")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body = ["enabled": enabled]
+        req.httpBody = try JSONEncoder().encode(body)
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
+            throw APIError.server("Error al actualizar configuración")
         }
     }
 

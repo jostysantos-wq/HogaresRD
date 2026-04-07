@@ -2338,6 +2338,15 @@
       <h2 class="settings-card-title">Disponibilidad para Visitas</h2>
       <p class="settings-card-desc">Selecciona un dia en el calendario para configurar tus horas disponibles.</p>
 
+      <!-- Auto-confirm toggle -->
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;margin:0.75rem 0;background:var(--bg-secondary,#f5f7fa);border-radius:10px;border:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;font-weight:600;">
+          <input type="checkbox" id="autoConfirmToggle" onchange="toggleAutoConfirm(this.checked)" style="width:18px;height:18px;accent-color:#0038A8;">
+          Confirmar visitas automáticamente
+        </label>
+        <span style="font-size:0.72rem;color:var(--text-muted);">Las solicitudes se confirman sin aprobación manual</span>
+      </div>
+
       <!-- ── Duration + Year nav ─────────────────── -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin:1rem 0 0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <div style="display:flex;align-items:center;gap:0.75rem;">
@@ -7151,7 +7160,11 @@
       if (t.status === 'pending') {
         actions = `<div class="tour-card-actions">
           <button style="background:#16a34a;color:#fff;" onclick="updateTourStatus('${t.id}','confirmed')">Confirmar</button>
-          <button style="background:#ef4444;color:#fff;" onclick="updateTourStatus('${t.id}','rejected')">Rechazar</button>
+          <button style="background:#ef4444;color:#fff;" onclick="rejectTour('${t.id}')">Rechazar</button>
+        </div>`;
+      } else if (t.status === 'confirmed') {
+        actions = `<div class="tour-card-actions">
+          <button style="background:#0038A8;color:#fff;" onclick="completeTour('${t.id}')">Completar</button>
         </div>`;
       }
 
@@ -7159,9 +7172,11 @@
         <div class="tour-card-info">
           <div class="tour-card-title">${esc(t.listing_title)} <span class="tour-badge ${badgeCls[t.status]||''}">${badgeLabel[t.status]||t.status}</span></div>
           <div class="tour-card-meta">
-            <strong>${dateStr} a las ${timeStr}</strong><br>
+            <strong>${dateStr} a las ${timeStr}</strong> ${t.tour_type === 'virtual' ? '<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:700;margin-left:6px;">Virtual</span>' : ''}<br>
             ${esc(t.client_name)} &middot; ${esc(t.client_phone)} ${t.client_email ? '&middot; '+esc(t.client_email) : ''}
             ${t.client_notes ? '<br><em>'+esc(t.client_notes)+'</em>' : ''}
+            ${t.virtual_link && t.virtual_link.startsWith('http') ? '<br><a href="'+esc(t.virtual_link)+'" target="_blank" rel="noopener" style="color:#7c3aed;font-size:.8rem;">Enlace virtual</a>' : ''}
+            ${t.feedback_rating ? '<br><span style="color:#f59e0b;">'+('★'.repeat(t.feedback_rating)+'☆'.repeat(5-t.feedback_rating))+'</span> <span style="font-size:.78rem;color:var(--text-muted);">'+esc(t.feedback_comment||'')+'</span>' : ''}
           </div>
         </div>
         ${actions}
@@ -7169,17 +7184,34 @@
     }).join('');
   }
 
-  window.updateTourStatus = async function(id, status) {
-    const label = status === 'confirmed' ? 'confirmar' : 'rechazar';
-    if (!confirm('Seguro que deseas ' + label + ' esta visita?')) return;
+  window.updateTourStatus = async function(id, status, notes) {
     try {
       const res = await fetch(`/api/tours/${id}/status`, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, notes }),
       });
-      if (res.ok) loadTourRequests();
-    } catch {}
+      if (res.ok) { toast(status === 'confirmed' ? 'Visita confirmada' : 'Visita rechazada'); loadTourRequests(); }
+      else toast('Error al actualizar visita', 'error');
+    } catch { toast('Error de conexión', 'error'); }
+  };
+
+  window.rejectTour = function(id) {
+    const reason = prompt('Motivo del rechazo (opcional):');
+    if (reason === null) return;
+    updateTourStatus(id, 'rejected', reason || '');
+  };
+
+  window.completeTour = async function(id) {
+    if (!confirm('¿Marcar esta visita como completada?')) return;
+    try {
+      const res = await fetch(`/api/tours/${id}/complete`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) { toast('Visita completada'); loadTourRequests(); }
+      else toast('Error al completar visita', 'error');
+    } catch { toast('Error de conexión', 'error'); }
   };
 
   // ── Availability (Unified Calendar + Multi-Select + Day Editor) ────
@@ -7196,7 +7228,27 @@
     _selectedDates.clear();
     renderYearCal();
     updateSelectBar();
+    // Load auto-confirm setting
+    try {
+      const sr = await fetch('/api/tours/settings', { credentials: 'include' });
+      if (sr.ok) {
+        const s = await sr.json();
+        const cb = document.getElementById('autoConfirmToggle');
+        if (cb) cb.checked = !!s.auto_confirm_tours;
+      }
+    } catch {}
   }
+
+  window.toggleAutoConfirm = async function(enabled) {
+    try {
+      await fetch('/api/tours/settings/auto-confirm', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      toast(enabled ? 'Auto-confirmación activada' : 'Auto-confirmación desactivada');
+    } catch { toast('Error al guardar', 'error'); }
+  };
 
   window.availCalPrevYear = function() { _calYear--; _selectedDates.clear(); renderYearCal(); updateSelectBar(); };
   window.availCalNextYear = function() { _calYear++; _selectedDates.clear(); renderYearCal(); updateSelectBar(); };

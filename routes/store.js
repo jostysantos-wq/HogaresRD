@@ -679,6 +679,9 @@ const stmts = {
   getBookedSlots:      db.prepare(
     "SELECT * FROM tours WHERE broker_id = ? AND requested_date = ? AND status IN ('confirmed', 'pending')"
   ),
+  getConfirmedToursByDate: db.prepare(
+    "SELECT * FROM tours WHERE status = 'confirmed' AND requested_date = ?"
+  ),
 
   // 2FA Sessions
   getAllTwoFA:          db.prepare('SELECT * FROM twofa_sessions'),
@@ -1046,6 +1049,10 @@ function getToursByListing(listingId) {
   return stmts.getToursByListing.all(listingId).map(hydrateTour);
 }
 
+function getConfirmedToursByDate(dateStr) {
+  return stmts.getConfirmedToursByDate.all(dateStr).map(hydrateTour);
+}
+
 function getBookedSlots(brokerId, date) {
   return stmts.getBookedSlots.all(brokerId, date).map(hydrateTour);
 }
@@ -1342,7 +1349,7 @@ module.exports = {
   getUsersByRole, getUsersByInmobiliaria, getSecretariesByInmobiliaria,
   revokeToken, isTokenRevoked,
   getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
-  getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing,
+  getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing, getConfirmedToursByDate,
   getBookedSlots, saveTour,
   getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, cleanExpiredTwoFASessions,
   getPushSubscriptions, getPushSubscriptionsByUser, savePushSubscription,

@@ -18,12 +18,13 @@ struct TourBookingSheet: View {
     @State private var loadingDates = false
 
     // Contact info
-    @State private var name    = ""
-    @State private var phone   = ""
-    @State private var email   = ""
-    @State private var notes   = ""
-    @State private var sending = false
-    @State private var sent    = false
+    @State private var name      = ""
+    @State private var phone     = ""
+    @State private var email     = ""
+    @State private var notes     = ""
+    @State private var tourType  = "presencial"
+    @State private var sending   = false
+    @State private var sent      = false
     @State private var errorMsg: String?
 
     private let dayNames = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"]
@@ -303,6 +304,17 @@ struct TourBookingSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
+            // Tour type
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tipo de visita")
+                    .font(.headline)
+                Picker("", selection: $tourType) {
+                    Text("Presencial").tag("presencial")
+                    Text("Virtual").tag("virtual")
+                }
+                .pickerStyle(.segmented)
+            }
+
             Text("Tu información")
                 .font(.headline)
 
@@ -514,7 +526,8 @@ struct TourBookingSheet: View {
             _ = try await api.requestTour(
                 listingId: listing.id, brokerId: brokerId,
                 date: date, time: time,
-                name: name, phone: phone, email: email, notes: notes
+                name: name, phone: phone, email: email, notes: notes,
+                tourType: tourType
             )
             sent = true
         } catch {
@@ -531,10 +544,12 @@ struct BrokerToursView: View {
     @State private var tours: [TourRequest] = []
     @State private var loading = true
     @State private var selectedTab = 0
+    @State private var rejectingId: String?
+    @State private var rejectReason = ""
+    @State private var reschedulingTour: TourRequest?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
             Picker("", selection: $selectedTab) {
                 Text("Pendientes").tag(0)
                 Text("Confirmadas").tag(1)
@@ -567,6 +582,23 @@ struct BrokerToursView: View {
         .navigationTitle("Visitas")
         .task { await loadTours() }
         .refreshable { await loadTours() }
+        .alert("Motivo del rechazo", isPresented: .init(
+            get: { rejectingId != nil },
+            set: { if !$0 { rejectingId = nil; rejectReason = "" } }
+        )) {
+            TextField("Motivo (opcional)", text: $rejectReason)
+            Button("Rechazar", role: .destructive) {
+                if let id = rejectingId {
+                    Task { await updateStatus(id, "rejected", notes: rejectReason) }
+                }
+                rejectingId = nil; rejectReason = ""
+            }
+            Button("Cancelar", role: .cancel) { rejectingId = nil; rejectReason = "" }
+        }
+        .sheet(item: $reschedulingTour) { tour in
+            RescheduleSheet(tour: tour, onDone: { await loadTours() })
+                .environmentObject(api)
+        }
     }
 
     private var filteredTours: [TourRequest] {
@@ -584,6 +616,14 @@ struct BrokerToursView: View {
                 Text(tour.listing_title)
                     .font(.subheadline).bold()
                     .lineLimit(1)
+                if tour.isVirtual {
+                    Text("Virtual")
+                        .font(.caption2).bold()
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.purple.opacity(0.15))
+                        .foregroundStyle(.purple)
+                        .clipShape(Capsule())
+                }
                 Spacer()
                 statusBadge(tour.status)
             }
@@ -610,6 +650,28 @@ struct BrokerToursView: View {
                     .foregroundStyle(.tertiary)
             }
 
+            if let link = tour.virtual_link, !link.isEmpty, tour.isVirtual {
+                Link(destination: URL(string: link) ?? URL(string: "https://hogaresrd.com")!) {
+                    Label("Enlace virtual", systemImage: "video.fill")
+                        .font(.caption).bold()
+                }
+            }
+
+            // Feedback display
+            if let rating = tour.feedback_rating {
+                HStack(spacing: 4) {
+                    ForEach(1...5, id: \.self) { i in
+                        Image(systemName: i <= rating ? "star.fill" : "star")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                    if let comment = tour.feedback_comment, !comment.isEmpty {
+                        Text(comment).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            }
+
+            // Action buttons
             if tour.isPending {
                 HStack(spacing: 8) {
                     Button {
@@ -623,7 +685,7 @@ struct BrokerToursView: View {
                             .foregroundStyle(.white)
                     }
                     Button {
-                        Task { await updateStatus(tour.id, "rejected") }
+                        rejectingId = tour.id
                     } label: {
                         Label("Rechazar", systemImage: "xmark")
                             .font(.caption).bold()
@@ -631,6 +693,29 @@ struct BrokerToursView: View {
                             .padding(.vertical, 8)
                             .background(Color.rdRed, in: RoundedRectangle(cornerRadius: 8))
                             .foregroundStyle(.white)
+                    }
+                }
+            } else if tour.isConfirmed {
+                HStack(spacing: 8) {
+                    Button {
+                        Task { await completeTour(tour.id) }
+                    } label: {
+                        Label("Completar", systemImage: "checkmark.circle.fill")
+                            .font(.caption).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(.white)
+                    }
+                    Button {
+                        reschedulingTour = tour
+                    } label: {
+                        Label("Reprogramar", systemImage: "calendar.badge.clock")
+                            .font(.caption).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.purple.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(.purple)
                     }
                 }
             }
@@ -642,11 +727,12 @@ struct BrokerToursView: View {
     private func statusBadge(_ status: String) -> some View {
         let (text, color): (String, Color) = {
             switch status {
-            case "pending":   return ("Pendiente", .orange)
-            case "confirmed": return ("Confirmada", .rdGreen)
-            case "rejected":  return ("Rechazada", .rdRed)
-            case "cancelled": return ("Cancelada", .gray)
-            default:          return (status.capitalized, .gray)
+            case "pending":    return ("Pendiente", .orange)
+            case "confirmed":  return ("Confirmada", .rdGreen)
+            case "rejected":   return ("Rechazada", .rdRed)
+            case "cancelled":  return ("Cancelada", .gray)
+            case "completed":  return ("Completada", .rdBlue)
+            default:           return (status.capitalized, .gray)
             }
         }()
         Text(text)
@@ -663,8 +749,13 @@ struct BrokerToursView: View {
         loading = false
     }
 
-    private func updateStatus(_ id: String, _ status: String) async {
-        try? await api.updateTourStatus(tourId: id, status: status)
+    private func updateStatus(_ id: String, _ status: String, notes: String? = nil) async {
+        try? await api.updateTourStatus(tourId: id, status: status, notes: notes)
+        await loadTours()
+    }
+
+    private func completeTour(_ id: String) async {
+        try? await api.completeTour(tourId: id)
         await loadTours()
     }
 }
@@ -681,6 +772,7 @@ struct BrokerAvailabilityView: View {
     @State private var editingDates: [String] = []
     @State private var showEditor = false
     @State private var selectedDates: Set<String> = []
+    @State private var autoConfirm = false
 
     private let dayFull   = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
     private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -704,6 +796,23 @@ struct BrokerAvailabilityView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // ── Auto-confirm toggle ──
+                Toggle(isOn: $autoConfirm) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Confirmar automáticamente")
+                            .font(.subheadline).bold()
+                        Text("Las solicitudes se confirman sin aprobación manual")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .tint(Color.rdBlue)
+                .padding(12)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .onChange(of: autoConfirm) { _, newVal in
+                    Task { try? await api.updateAutoConfirmTours(enabled: newVal) }
+                }
+
                 // ── Duration + Year nav ──
                 HStack {
                     HStack(spacing: 6) {
@@ -930,6 +1039,9 @@ struct BrokerAvailabilityView: View {
         loading = true
         if let result = try? await api.fetchBrokerAvailability() {
             weekly = result.weekly; overrides = result.overrides
+        }
+        if let settings = try? await api.fetchTourSettings() {
+            autoConfirm = settings["auto_confirm_tours"] ?? false
         }
         loading = false
     }
@@ -1254,12 +1366,251 @@ extension Int: @retroactive Identifiable {
     public var id: Int { self }
 }
 
+// MARK: - Reschedule Sheet
+
+struct RescheduleSheet: View {
+    let tour: TourRequest
+    let onDone: () async -> Void
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+
+    @State private var step = 1
+    @State private var availableDates: [String] = []
+    @State private var currentMonth = Date()
+    @State private var selectedDate: String?
+    @State private var availableSlots: [AvailableSlot] = []
+    @State private var selectedTime: String?
+    @State private var loadingDates = false
+    @State private var loadingSlots = false
+    @State private var saving = false
+    @State private var errorMsg: String?
+
+    private let dayNames = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"]
+    private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Step indicator
+                HStack(spacing: 0) {
+                    stepDot(1, "Fecha")
+                    Rectangle().fill(step >= 2 ? Color.rdBlue : Color(.systemGray4)).frame(height: 2).frame(maxWidth: 40)
+                    stepDot(2, "Hora")
+                }
+                .padding()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Current appointment info
+                        HStack(spacing: 10) {
+                            Image(systemName: "arrow.triangle.swap")
+                                .foregroundStyle(Color.rdBlue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Fecha actual: \(tour.formattedDate)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text("Hora actual: \(tour.formattedTime)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(10)
+                        .background(Color.rdBlue.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        if step == 1 { dateStepBody }
+                        else { timeStepBody }
+                    }
+                    .padding(16)
+                }
+            }
+            .navigationTitle("Reprogramar Visita")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+        .onAppear { loadMonth() }
+    }
+
+    @ViewBuilder private func stepDot(_ s: Int, _ label: String) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(s <= step ? Color.rdBlue : Color(.systemGray4))
+                    .frame(width: 28, height: 28)
+                Text("\(s)").font(.caption2.bold()).foregroundStyle(.white)
+            }
+            Text(label).font(.caption2).foregroundStyle(s <= step ? .primary : .secondary)
+        }
+    }
+
+    // MARK: - Date Step
+    @ViewBuilder private var dateStepBody: some View {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month], from: currentMonth)
+        let year = comps.year!, month = comps.month!
+        let monthLabel = "\(monthNames[month - 1]) \(year)"
+        let monthStr = String(format: "%04d-%02d", year, month)
+
+        VStack(spacing: 12) {
+            HStack {
+                Button { moveMonth(-1) } label: { Image(systemName: "chevron.left").font(.caption.bold()) }
+                Spacer()
+                Text(monthLabel).font(.subheadline.bold())
+                Spacer()
+                Button { moveMonth(1) } label: { Image(systemName: "chevron.right").font(.caption.bold()) }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                ForEach(dayNames, id: \.self) { d in
+                    Text(d).font(.caption2.bold()).foregroundStyle(.secondary)
+                }
+                let firstWeekday = cal.component(.weekday, from: cal.date(from: DateComponents(year: year, month: month, day: 1))!) - 1
+                ForEach(0..<firstWeekday, id: \.self) { _ in Color.clear.frame(height: 36) }
+                let daysInMonth = cal.range(of: .day, in: .month, for: currentMonth)!.count
+                ForEach(1...daysInMonth, id: \.self) { day in
+                    let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
+                    let isAvail = availableDates.contains(dateStr)
+                    let isSel = selectedDate == dateStr
+
+                    Button {
+                        if isAvail {
+                            selectedDate = dateStr
+                            loadSlots(dateStr)
+                            step = 2
+                        }
+                    } label: {
+                        Text("\(day)")
+                            .font(.caption)
+                            .frame(width: 36, height: 36)
+                            .background(isSel ? Color.rdBlue : (isAvail ? Color.rdBlue.opacity(0.1) : Color.clear))
+                            .foregroundStyle(isSel ? .white : (isAvail ? .primary : .secondary.opacity(0.4)))
+                            .clipShape(Circle())
+                    }
+                    .disabled(!isAvail)
+                }
+            }
+
+            if loadingDates {
+                ProgressView().padding()
+            }
+        }
+    }
+
+    // MARK: - Time Step
+    @ViewBuilder private var timeStepBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button { step = 1; selectedTime = nil } label: {
+                Label("Cambiar fecha", systemImage: "chevron.left")
+                    .font(.caption.bold()).foregroundStyle(Color.rdBlue)
+            }
+
+            if loadingSlots {
+                ProgressView().frame(maxWidth: .infinity).padding()
+            } else if availableSlots.isEmpty {
+                Text("No hay horarios disponibles para esta fecha")
+                    .font(.caption).foregroundStyle(.secondary).padding()
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                    ForEach(availableSlots, id: \.time) { slot in
+                        let isSel = selectedTime == slot.time
+                        Button { selectedTime = slot.time } label: {
+                            Text(formatTime(slot.time))
+                                .font(.caption).bold()
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(isSel ? Color.rdBlue : Color(.systemGray6))
+                                .foregroundStyle(isSel ? .white : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+                }
+            }
+
+            if let err = errorMsg {
+                Text(err).font(.caption).foregroundStyle(.red)
+            }
+
+            if selectedTime != nil {
+                Button {
+                    Task { await reschedule() }
+                } label: {
+                    if saving {
+                        ProgressView().frame(maxWidth: .infinity).padding(.vertical, 12)
+                    } else {
+                        Text("Confirmar Reprogramación")
+                            .font(.subheadline).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                }
+                .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(.white)
+                .disabled(saving)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+    private func formatTime(_ t: String) -> String {
+        let parts = t.split(separator: ":")
+        guard parts.count >= 2, let h = Int(parts[0]) else { return t }
+        let m = parts[1]
+        let ampm = h >= 12 ? "PM" : "AM"
+        let h12 = h > 12 ? h - 12 : (h == 0 ? 12 : h)
+        return "\(h12):\(m) \(ampm)"
+    }
+
+    private func moveMonth(_ delta: Int) {
+        currentMonth = Calendar.current.date(byAdding: .month, value: delta, to: currentMonth)!
+        selectedDate = nil; selectedTime = nil
+        loadMonth()
+    }
+
+    private func loadMonth() {
+        loadingDates = true
+        let comps = Calendar.current.dateComponents([.year, .month], from: currentMonth)
+        let monthStr = String(format: "%04d-%02d", comps.year!, comps.month!)
+        Task {
+            availableDates = (try? await api.fetchSchedule(brokerId: tour.broker_id, month: monthStr)) ?? []
+            loadingDates = false
+        }
+    }
+
+    private func loadSlots(_ date: String) {
+        loadingSlots = true
+        Task {
+            availableSlots = (try? await api.fetchAvailableSlots(brokerId: tour.broker_id, date: date)) ?? []
+            loadingSlots = false
+        }
+    }
+
+    private func reschedule() async {
+        guard let date = selectedDate, let time = selectedTime else { return }
+        saving = true; errorMsg = nil
+        do {
+            try await api.rescheduleTour(tourId: tour.id, date: date, time: time)
+            await onDone()
+            dismiss()
+        } catch {
+            errorMsg = "Error al reprogramar. Intenta de nuevo."
+        }
+        saving = false
+    }
+}
+
 // MARK: - Client My Tours View
 
 struct MyToursView: View {
     @EnvironmentObject var api: APIService
     @State private var tours: [TourRequest] = []
     @State private var loading = true
+    @State private var feedbackTourId: String?
+    @State private var feedbackRating = 5
+    @State private var feedbackComment = ""
+    @State private var reschedulingTour: TourRequest?
 
     var body: some View {
         Group {
@@ -1278,36 +1629,7 @@ struct MyToursView: View {
             } else {
                 List {
                     ForEach(tours) { tour in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(tour.listing_title)
-                                    .font(.subheadline).bold()
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(tour.statusLabel)
-                                    .font(.caption2).bold()
-                                    .padding(.horizontal, 8).padding(.vertical, 3)
-                                    .background(statusColor(tour.status).opacity(0.15))
-                                    .foregroundStyle(statusColor(tour.status))
-                                    .clipShape(Capsule())
-                            }
-                            HStack(spacing: 12) {
-                                Label(tour.formattedDate, systemImage: "calendar")
-                                Label(tour.formattedTime, systemImage: "clock")
-                            }
-                            .font(.caption).foregroundStyle(.secondary)
-
-                            if tour.isPending {
-                                Button {
-                                    Task { await cancel(tour.id) }
-                                } label: {
-                                    Text("Cancelar visita")
-                                        .font(.caption).bold()
-                                        .foregroundStyle(Color.rdRed)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        myTourCard(tour).padding(.vertical, 4)
                     }
                 }
                 .listStyle(.plain)
@@ -1316,14 +1638,159 @@ struct MyToursView: View {
         .navigationTitle("Mis Visitas")
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $feedbackTourId) { tourId in
+            feedbackSheet(tourId: tourId)
+        }
+        .sheet(item: $reschedulingTour) { tour in
+            RescheduleSheet(tour: tour, onDone: { await load() })
+                .environmentObject(api)
+        }
+    }
+
+    @ViewBuilder
+    private func myTourCard(_ tour: TourRequest) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(tour.listing_title)
+                    .font(.subheadline).bold()
+                    .lineLimit(1)
+                if tour.isVirtual {
+                    Text("Virtual")
+                        .font(.caption2).bold()
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.purple.opacity(0.15))
+                        .foregroundStyle(.purple)
+                        .clipShape(Capsule())
+                }
+                Spacer()
+                Text(tour.statusLabel)
+                    .font(.caption2).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(statusColor(tour.status).opacity(0.15))
+                    .foregroundStyle(statusColor(tour.status))
+                    .clipShape(Capsule())
+            }
+            HStack(spacing: 12) {
+                Label(tour.formattedDate, systemImage: "calendar")
+                Label(tour.formattedTime, systemImage: "clock")
+            }
+            .font(.caption).foregroundStyle(.secondary)
+
+            if let link = tour.virtual_link, !link.isEmpty, tour.isVirtual, tour.isConfirmed {
+                Link(destination: URL(string: link) ?? URL(string: "https://hogaresrd.com")!) {
+                    Label("Unirse a visita virtual", systemImage: "video.fill")
+                        .font(.caption).bold()
+                }
+            }
+
+            if let notes = tour.broker_notes, !notes.isEmpty {
+                Text("Nota del agente: \(notes)")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            // Feedback display
+            if let rating = tour.feedback_rating {
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { i in
+                        Image(systemName: i <= rating ? "star.fill" : "star")
+                            .font(.caption2).foregroundStyle(.orange)
+                    }
+                    if let c = tour.feedback_comment, !c.isEmpty {
+                        Text(c).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            }
+
+            // Actions
+            HStack(spacing: 8) {
+                if tour.isPending || tour.isConfirmed {
+                    Button {
+                        reschedulingTour = tour
+                    } label: {
+                        Label("Reprogramar", systemImage: "calendar.badge.clock")
+                            .font(.caption).bold()
+                            .foregroundStyle(.purple)
+                    }
+                    Button {
+                        Task { await cancel(tour.id) }
+                    } label: {
+                        Text("Cancelar")
+                            .font(.caption).bold()
+                            .foregroundStyle(Color.rdRed)
+                    }
+                }
+                if tour.isCompleted && tour.feedback_rating == nil {
+                    Button {
+                        feedbackTourId = tour.id
+                    } label: {
+                        Label("Calificar", systemImage: "star.fill")
+                            .font(.caption).bold()
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func feedbackSheet(tourId: String) -> some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Text("¿Cómo fue tu visita?")
+                    .font(.title3).bold()
+
+                HStack(spacing: 8) {
+                    ForEach(1...5, id: \.self) { i in
+                        Image(systemName: i <= feedbackRating ? "star.fill" : "star")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                            .onTapGesture { feedbackRating = i }
+                    }
+                }
+
+                TextField("Comentario (opcional)", text: $feedbackComment, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(3...5)
+
+                Button {
+                    Task {
+                        try? await api.submitTourFeedback(tourId: tourId, rating: feedbackRating, comment: feedbackComment)
+                        feedbackTourId = nil
+                        feedbackRating = 5
+                        feedbackComment = ""
+                        await load()
+                    }
+                } label: {
+                    Text("Enviar Calificación")
+                        .font(.subheadline).bold()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                        .foregroundStyle(.white)
+                }
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Calificar Visita")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { feedbackTourId = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "pending":   return .orange
-        case "confirmed": return .rdGreen
-        case "rejected":  return .rdRed
-        default:          return .gray
+        case "pending":    return .orange
+        case "confirmed":  return .rdGreen
+        case "rejected":   return .rdRed
+        case "cancelled":  return .gray
+        case "completed":  return .rdBlue
+        default:           return .gray
         }
     }
 

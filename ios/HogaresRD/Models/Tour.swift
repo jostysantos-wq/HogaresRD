@@ -30,11 +30,17 @@ struct TourRequest: Codable, Identifiable {
     let client_name:     String
     let client_email:    String
     let client_phone:    String
-    let requested_date:  String
-    let requested_time:  String
-    var status:          String  // pending, confirmed, rejected, cancelled
+    var requested_date:  String
+    var requested_time:  String
+    var status:          String  // pending, confirmed, rejected, cancelled, completed
     var broker_notes:    String?
     let client_notes:    String?
+    var tour_type:       String?  // presencial, virtual
+    var virtual_link:    String?
+    var application_id:  String?
+    var feedback_rating: Int?
+    var feedback_comment:String?
+    var completed_at:    String?
     let created_at:      String
     var updated_at:      String
 
@@ -49,8 +55,10 @@ struct TourRequest: Codable, Identifiable {
         }
     }
 
-    var isPending:   Bool { status == "pending" }
-    var isConfirmed: Bool { status == "confirmed" }
+    var isPending:    Bool { status == "pending" }
+    var isConfirmed:  Bool { status == "confirmed" }
+    var isCompleted:  Bool { status == "completed" }
+    var isVirtual:    Bool { tour_type == "virtual" }
 
     var formattedDate: String {
         let formatter = DateFormatter()

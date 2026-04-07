@@ -1004,6 +1004,68 @@ cron.schedule('17 * * * *', () => {
   }
 }, { timezone: 'America/Santo_Domingo' });
 
+// ── Tour reminders — runs every 30 min, sends 24h + 1h reminders ──────────
+cron.schedule('*/30 * * * *', () => {
+  try {
+    const { notify: pushNotify } = require('./routes/push');
+    const { createTransport } = require('./routes/mailer');
+    const mailer = createTransport();
+    const now = new Date();
+
+    // Check today and tomorrow for confirmed tours
+    const today = now.toISOString().slice(0, 10);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const tours = [
+      ...store.getConfirmedToursByDate(today),
+      ...store.getConfirmedToursByDate(tomorrow),
+    ];
+
+    let sent = 0;
+    for (const tour of tours) {
+      const tourDateTime = new Date(`${tour.requested_date}T${tour.requested_time}:00-04:00`); // DR timezone
+      const hoursUntil = (tourDateTime - now) / (1000 * 60 * 60);
+
+      const reminders = tour.reminder_sent ? tour.reminder_sent.split(',') : [];
+
+      // 24h reminder (between 23–25h before)
+      if (hoursUntil >= 23 && hoursUntil <= 25 && !reminders.includes('24h')) {
+        reminders.push('24h');
+        const msg = `Recordatorio: tienes una visita mañana a las ${tour.requested_time} — ${tour.listing_title}`;
+        if (tour.client_id) pushNotify(tour.client_id, { type: 'tour_reminder', title: 'Visita Mañana', body: msg, url: '/profile' });
+        pushNotify(tour.broker_id, { type: 'tour_reminder', title: 'Visita Mañana', body: `${tour.client_name} — ${msg}`, url: '/broker.html' });
+
+        const clientEmail = tour.client_email || (tour.client_id ? store.getUserById(tour.client_id)?.email : null);
+        if (clientEmail) {
+          mailer.sendMail({ to: clientEmail, subject: `Recordatorio de visita mañana — ${tour.listing_title}`, department: 'noreply',
+            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;"><div style="background:#0038A8;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;"><h2 style="margin:0;">Recordatorio de Visita</h2></div><div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;"><p>Tu visita a <strong>${tour.listing_title}</strong> es mañana.</p><p><strong>Fecha:</strong> ${tour.requested_date}<br><strong>Hora:</strong> ${tour.requested_time}</p><p style="color:#666;font-size:.85rem;">Te recomendamos llegar 5 minutos antes.</p></div></div>`
+          }).catch(() => {});
+        }
+        sent++;
+      }
+
+      // 1h reminder (between 45min–75min before)
+      if (hoursUntil >= 0.75 && hoursUntil <= 1.25 && !reminders.includes('1h')) {
+        reminders.push('1h');
+        const msg = `Tu visita a ${tour.listing_title} es en 1 hora (${tour.requested_time})`;
+        if (tour.client_id) pushNotify(tour.client_id, { type: 'tour_reminder', title: 'Visita en 1 Hora', body: msg, url: '/profile' });
+        pushNotify(tour.broker_id, { type: 'tour_reminder', title: 'Visita en 1 Hora', body: `${tour.client_name} — ${msg}`, url: '/broker.html' });
+        sent++;
+      }
+
+      // Update reminder_sent
+      if (reminders.length > 0) {
+        tour.reminder_sent = reminders.join(',');
+        tour.updated_at = new Date().toISOString();
+        store.saveTour(tour);
+      }
+    }
+    if (sent > 0) console.log(`[Cron] Sent ${sent} tour reminder(s)`);
+  } catch (e) {
+    console.error('[Cron] Tour reminder error:', e.message);
+  }
+}, { timezone: 'America/Santo_Domingo' });
+
 // ── Admin: re-run AI review on a listing ─────────────────────────
 app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
   const { reviewListing } = require('./routes/ai-review');
