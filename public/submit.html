@@ -1397,14 +1397,24 @@
         <input type="number" name="unit_bathrooms[]" placeholder="2"      min="0" />
         <input type="number" name="unit_area[]"      placeholder="95"     min="1" />
         <input type="number" name="unit_price[]"     placeholder="185000" min="0" />
-        <input type="number" name="unit_available[]" placeholder="8"      min="0" />
+        <input type="number" name="unit_available[]" placeholder="8"      min="0" onchange="toggleUnitIds(this)" />
         <input type="number" name="unit_phase[]"     placeholder="1"      min="1" />
+        <div class="unit-ids-wrap" style="display:none;grid-column:1/-1;margin-top:4px;">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:2px;display:block;">IDs de las unidades (uno por línea, ej: Apt 1A, Apt 2A…). Dejar vacío para generar automáticamente.</label>
+          <textarea name="unit_ids[]" rows="3" placeholder="Apt 1A&#10;Apt 2A&#10;Apt 3A" style="width:100%;font-size:0.82rem;padding:0.5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;"></textarea>
+        </div>
         <button type="button" class="remove-unit-btn" onclick="removeUnitType(${idx})" title="Eliminar">
           <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>`;
       document.getElementById('unitTypesList').appendChild(row);
       document.getElementById('unitTableHeader').style.display = '';
       updatePriceNote();
+    }
+
+    function toggleUnitIds(input) {
+      const wrap = input.closest('.unit-table-row').querySelector('.unit-ids-wrap');
+      const count = parseInt(input.value) || 0;
+      if (wrap) wrap.style.display = count > 0 ? '' : 'none';
     }
 
     function removeUnitType(idx) {
@@ -1849,15 +1859,20 @@
       }
 
       // Collect unit types
-      body.unit_types = Array.from(document.querySelectorAll('.unit-table-row')).map(row => ({
-        name:      row.querySelector('[name="unit_name[]"]').value.trim(),
-        bedrooms:  row.querySelector('[name="unit_bedrooms[]"]').value,
-        bathrooms: row.querySelector('[name="unit_bathrooms[]"]').value,
-        area:      row.querySelector('[name="unit_area[]"]').value,
-        price:     row.querySelector('[name="unit_price[]"]').value,
-        available: row.querySelector('[name="unit_available[]"]').value,
-        phase:     row.querySelector('[name="unit_phase[]"]').value,
-      })).filter(u => u.name || u.price || u.area);
+      body.unit_types = Array.from(document.querySelectorAll('.unit-table-row')).map(row => {
+        const idsText = (row.querySelector('[name="unit_ids[]"]')?.value || '').trim();
+        const unitIds = idsText ? idsText.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+        return {
+          name:      row.querySelector('[name="unit_name[]"]').value.trim(),
+          bedrooms:  row.querySelector('[name="unit_bedrooms[]"]').value,
+          bathrooms: row.querySelector('[name="unit_bathrooms[]"]').value,
+          area:      row.querySelector('[name="unit_area[]"]').value,
+          price:     row.querySelector('[name="unit_price[]"]').value,
+          available: row.querySelector('[name="unit_available[]"]').value,
+          phase:     row.querySelector('[name="unit_phase[]"]').value,
+          unitIds,
+        };
+      }).filter(u => u.name || u.price || u.area);
 
       // Upload labeled photos and collect {url, label} pairs
       try {

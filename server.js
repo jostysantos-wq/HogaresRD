@@ -622,10 +622,13 @@ app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
     for (const ut of unitTypes) {
       const count = parseInt(ut.available) || 0;
       const baseName = (ut.name || 'Unidad').trim();
+      // Use custom unit IDs if the broker provided them, otherwise auto-generate
+      const customIds = Array.isArray(ut.unitIds) ? ut.unitIds.filter(Boolean) : [];
       for (let i = 1; i <= count; i++) {
+        const label = customIds[i - 1] || `${baseName}-${String(i).padStart(2, '0')}`;
         inventory.push({
           id:            'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          label:         `${baseName}-${String(i).padStart(2, '0')}`,
+          label,
           type:          `${baseName}${ut.bedrooms ? ' · ' + ut.bedrooms + ' hab.' : ''}${ut.area ? ' · ' + ut.area + ' m²' : ''}`,
           floor:         '',
           notes:         ut.price ? `Precio: $${Number(ut.price).toLocaleString()}` : '',

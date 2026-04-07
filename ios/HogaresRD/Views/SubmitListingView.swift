@@ -12,6 +12,7 @@ struct UnitType: Identifiable {
     var area      = ""
     var price     = ""
     var available = ""
+    var unitIds   = ""   // newline-separated IDs (e.g. "Apt 1A\nApt 2A\nApt 3A")
 }
 
 // MARK: - Submit Listing View
@@ -552,8 +553,10 @@ struct SubmitListingView: View {
         }
         if !unitTypes.isEmpty {
             body["unit_types"] = unitTypes.map {
-                ["name": $0.name, "bedrooms": $0.bedrooms, "bathrooms": $0.bathrooms,
-                 "area": $0.area, "price": $0.price, "available": $0.available]
+                let ids = $0.unitIds.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                return ["name": $0.name, "bedrooms": $0.bedrooms, "bathrooms": $0.bathrooms,
+                 "area": $0.area, "price": $0.price, "available": $0.available,
+                 "unitIds": ids] as [String: Any]
             }
         }
         if let user = api.currentUser, user.isAgency {
@@ -597,6 +600,24 @@ struct UnitTypeRow: View {
             HStack(spacing: 10) {
                 FloatingField(label: "Precio USD", text: $unit.price).keyboardType(.numberPad)
                 FloatingField(label: "Disponibles", text: $unit.available).keyboardType(.numberPad)
+            }
+
+            // Unit IDs — shown when available count > 0
+            if let count = Int(unit.available), count > 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("IDs de las unidades (uno por línea)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color(.label))
+                    Text("Ej: Apt 1A, Apt 2A… Dejar vacío para generar automáticamente.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $unit.unitIds)
+                        .font(.system(size: 14))
+                        .frame(minHeight: 60)
+                        .padding(6)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
         }
         .padding()
