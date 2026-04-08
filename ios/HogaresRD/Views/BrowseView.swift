@@ -343,15 +343,15 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Location button
+            // Location button — sits above the carousel bar
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     locationButton
                         .padding(.trailing, 16)
-                        .padding(.bottom, 16)
                 }
+                .padding(.bottom, showFullList ? 16 : 175) // above carousel + count bar
             }
         }
         .onTapGesture {
