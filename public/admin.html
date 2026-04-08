@@ -767,6 +767,12 @@
             <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
           </div>
         </div>
+        <div id="subBulkBar" style="display:none;padding:.6rem 1rem;background:#002D62;color:#fff;border-radius:8px;margin-bottom:.75rem;align-items:center;gap:1rem;font-size:.82rem;">
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="subSelectAll" onchange="toggleSubSelectAll(this.checked)" style="width:15px;height:15px;"> Seleccionar todos</label>
+          <span id="subBulkCount">0</span>
+          <button onclick="bulkSubAction('approve')" style="background:rgba(22,163,74,0.9);border:none;color:#fff;padding:.3rem .8rem;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">Aprobar</button>
+          <button onclick="bulkSubAction('reject')" style="background:rgba(220,38,38,0.9);border:none;color:#fff;padding:.3rem .8rem;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">Rechazar</button>
+        </div>
         <div class="submissions-list" id="submissionsList">
           <div class="loading">Cargando propiedades...</div>
         </div>
@@ -833,12 +839,67 @@
               <input type="text" id="adAdvertiser" placeholder="ej. Banco Popular">
             </div>
             <div class="ads-field ads-field-full">
-              <label>URL de Imagen * <span style="font-weight:400;color:#7a93b0;">(accesible públicamente)</span></label>
-              <input type="url" id="adImageUrl" placeholder="https://...">
+              <label>Descripción / CTA</label>
+              <textarea id="adDescription" rows="2" placeholder="Texto del anuncio..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.6rem .8rem;font-family:inherit;font-size:.85rem;resize:vertical;background:var(--bg);color:var(--text);"></textarea>
             </div>
+
+            <!-- Image: upload or URL -->
+            <div class="ads-field ads-field-full">
+              <label>Imagen *</label>
+              <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+                <button type="button" class="ads-img-tab active" id="adImgTabUpload" onclick="switchAdImgTab('upload')" style="flex:1;padding:.4rem;border:1.5px solid var(--accent);border-radius:6px;background:var(--accent);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">Subir imagen</button>
+                <button type="button" class="ads-img-tab" id="adImgTabUrl" onclick="switchAdImgTab('url')" style="flex:1;padding:.4rem;border:1.5px solid var(--border);border-radius:6px;background:none;color:var(--text-muted);font-size:.78rem;font-weight:600;cursor:pointer;">URL externa</button>
+              </div>
+              <div id="adImgUploadZone" style="border:2px dashed var(--border);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color .2s;" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleAdDrop(event)" onclick="document.getElementById('adFileInput').click()">
+                <input type="file" id="adFileInput" accept="image/*" style="display:none" onchange="handleAdFileSelect(this)">
+                <div style="font-size:.85rem;color:var(--text-muted);">Arrastra una imagen o <strong style="color:var(--accent)">haz clic</strong></div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">JPG, PNG, WEBP — max 5MB — se optimiza a 1200x628</div>
+              </div>
+              <div id="adImgUrlZone" style="display:none;">
+                <input type="url" id="adImageUrl" placeholder="https://..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.6rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);" oninput="previewAdImg(this.value)">
+              </div>
+              <div id="adImgPreview" style="margin-top:.5rem;display:none;">
+                <img id="adPreviewImg" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);">
+              </div>
+            </div>
+
             <div class="ads-field ads-field-full">
               <label>URL de Destino <span style="font-weight:400;color:#7a93b0;">(al tocar el anuncio)</span></label>
               <input type="url" id="adTargetUrl" placeholder="https://...">
+            </div>
+
+            <div class="ads-field">
+              <label>Tipo de anuncio</label>
+              <select id="adType" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+                <option value="fullscreen">Fullscreen (Feed)</option>
+                <option value="banner">Banner (728x90)</option>
+                <option value="card">Card (300x250)</option>
+              </select>
+            </div>
+            <div class="ads-field">
+              <label>Ubicación</label>
+              <select id="adPlacement" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+                <option value="feed">Feed principal</option>
+                <option value="sidebar">Sidebar</option>
+                <option value="listing-page">Página de propiedad</option>
+              </select>
+            </div>
+            <div class="ads-field">
+              <label>Audiencia</label>
+              <select id="adAudience" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+                <option value="todos">Todos</option>
+                <option value="compradores">Compradores</option>
+                <option value="arrendatarios">Arrendatarios</option>
+                <option value="agentes">Agentes</option>
+              </select>
+            </div>
+            <div class="ads-field">
+              <label>Prioridad (1-10)</label>
+              <input type="number" id="adPriority" min="1" max="10" value="5" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+            </div>
+            <div class="ads-field">
+              <label>Presupuesto (USD)</label>
+              <input type="number" id="adBudget" placeholder="0" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
             </div>
             <div class="ads-field">
               <label>Fecha de inicio</label>
@@ -852,6 +913,15 @@
           <button class="ads-create-btn" onclick="createAd()">+ Crear Anuncio</button>
           <div class="ads-msg" id="adMsg"></div>
         </div>
+
+        <!-- Bulk actions bar -->
+        <div id="adsBulkBar" style="display:none;padding:.75rem 1rem;background:var(--accent);color:#fff;border-radius:8px;margin-bottom:1rem;display:none;align-items:center;gap:1rem;">
+          <span id="adsBulkCount">0 seleccionados</span>
+          <button onclick="bulkAdsAction('activate')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:.35rem .8rem;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">Activar</button>
+          <button onclick="bulkAdsAction('deactivate')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:.35rem .8rem;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">Desactivar</button>
+          <button onclick="bulkAdsAction('delete')" style="background:rgba(220,38,38,0.8);border:none;color:#fff;padding:.35rem .8rem;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">Eliminar</button>
+        </div>
+
         <div class="ads-list" id="adsList">
           <div class="loading">Cargando anuncios...</div>
         </div>
@@ -1233,6 +1303,8 @@
               <div class="rte-sep"></div>
               <button class="rte-btn" onclick="rteLink()" title="Enlace">🔗</button>
               <button class="rte-btn" onclick="rteImage()" title="Imagen URL">🖼</button>
+              <button class="rte-btn" onclick="rteUploadImage()" title="Subir imagen" style="color:var(--accent);font-weight:700;">📤 Subir</button>
+              <input type="file" id="rteFileInput" accept="image/*" style="display:none" onchange="handleRteFileUpload(this)">
               <div class="rte-sep"></div>
               <button class="rte-btn" id="rteSourceBtn" onclick="toggleRteSource()" title="Editar HTML">⌨ HTML</button>
             </div>
@@ -1258,9 +1330,27 @@
             </select>
           </div>
           <div class="editor-field">
-            <label>Imagen de portada (URL)</label>
-            <input type="url" id="editorCover" placeholder="https://…" oninput="previewCover(this.value)" />
+            <label>Imagen de portada</label>
+            <div style="display:flex;gap:.4rem;margin-bottom:.4rem;">
+              <button type="button" onclick="document.getElementById('coverFileInput').click()" style="flex:1;padding:.35rem;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;">Subir</button>
+              <button type="button" onclick="document.getElementById('editorCover').style.display='';this.style.display='none'" style="flex:1;padding:.35rem;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text-muted);font-size:.72rem;font-weight:600;cursor:pointer;">URL</button>
+            </div>
+            <input type="file" id="coverFileInput" accept="image/*" style="display:none" onchange="handleCoverUpload(this)">
+            <input type="url" id="editorCover" placeholder="https://…" oninput="previewCover(this.value)" style="display:none;" />
             <img id="coverPreview" class="cover-preview" alt="Preview" />
+          </div>
+          <div class="editor-field">
+            <label>Meta descripción (SEO)</label>
+            <textarea id="editorMetaDesc" placeholder="Descripción para buscadores (max 160 chars)…" maxlength="160" style="height:50px;"></textarea>
+          </div>
+          <div class="editor-field">
+            <label>Etiquetas</label>
+            <input type="text" id="editorTags" placeholder="ej: inversión, santo domingo, guía" />
+          </div>
+          <div class="editor-field">
+            <label>Publicación programada</label>
+            <input type="datetime-local" id="editorPublishAt" />
+            <div style="font-size:.65rem;color:var(--text-muted);margin-top:.2rem;">Dejar vacío para publicar inmediatamente</div>
           </div>
           <div class="editor-field">
             <label>Autor</label>
@@ -1558,7 +1648,8 @@
       return `
         <div class="sub-card" id="card-${s.id}">
           <div class="sub-card-header">
-            <div class="sub-title-row">
+            <div class="sub-title-row" style="display:flex;align-items:flex-start;gap:0.6rem;">
+              <input type="checkbox" class="sub-bulk-cb" data-id="${s.id}" onchange="updateSubBulkBar()" style="width:16px;height:16px;margin-top:4px;accent-color:#002D62;flex-shrink:0;">
               <div class="sub-title">${s.title}</div>
               <div class="sub-meta">
                 <span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${s.city}, ${s.province}</span>
@@ -1585,6 +1676,38 @@
               ${s.project_stage ? `<div class="sub-field"><label>Etapa</label><span>${s.project_stage}</span></div>` : ''}
               ${s.delivery_date ? `<div class="sub-field"><label>Entrega Estimada</label><span>${s.delivery_date}</span></div>` : ''}
             </div>` : ''}
+          ${(() => {
+            const imgs = Array.isArray(s.images) ? s.images : [];
+            if (!imgs.length) return '';
+            return `<div style="padding:0.75rem 1.4rem;border-top:1px solid #f0f4f9;">
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8aaac8;margin-bottom:.5rem;">Fotos (${imgs.length})</div>
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                ${imgs.map(img => {
+                  const url = typeof img === 'string' ? img : (img.url || img.path || '');
+                  const label = typeof img === 'object' ? (img.label || '') : '';
+                  return `<div style="position:relative;width:120px;height:80px;border-radius:6px;overflow:hidden;border:1px solid #d0dcea;flex-shrink:0;">
+                    <img src="${url}" alt="${label}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>Error</div>'">
+                    ${label ? `<div style="position:absolute;bottom:0;left:0;right:0;padding:2px 4px;background:rgba(0,0,0,0.6);color:#fff;font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>` : ''}
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>`;
+          })()}
+          ${(() => {
+            const bps = Array.isArray(s.blueprints) ? s.blueprints : [];
+            if (!bps.length) return '';
+            return `<div style="padding:0.5rem 1.4rem;border-top:1px solid #f0f4f9;">
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8aaac8;margin-bottom:.5rem;">Planos (${bps.length})</div>
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                ${bps.map(bp => {
+                  const url = typeof bp === 'string' ? bp : (bp.url || bp.path || '');
+                  return `<a href="${url}" target="_blank" style="display:block;width:100px;height:70px;border-radius:6px;overflow:hidden;border:1px solid #d0dcea;flex-shrink:0;">
+                    <img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:.65rem;color:#8aaac8>PDF</div>'">
+                  </a>`;
+                }).join('')}
+              </div>
+            </div>`;
+          })()}
           ${s.description ? `<div class="sub-desc"><strong>Descripción</strong>${s.description}</div>` : ''}
           ${amenityTags ? `<div class="sub-amenities">${amenityTags}</div>` : ''}
           ${(() => {
@@ -1668,6 +1791,28 @@
       });
   }
 
+  // ── Bulk submission actions ────────────────────────────────────
+  function updateSubBulkBar() {
+    const checked = document.querySelectorAll('.sub-bulk-cb:checked');
+    const bar = document.getElementById('subBulkBar');
+    if (checked.length > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('subBulkCount').textContent = checked.length + ' seleccionados';
+    } else { bar.style.display = 'none'; }
+  }
+  function toggleSubSelectAll(checked) {
+    document.querySelectorAll('.sub-bulk-cb').forEach(cb => { cb.checked = checked; });
+    updateSubBulkBar();
+  }
+  function bulkSubAction(action) {
+    const ids = [...document.querySelectorAll('.sub-bulk-cb:checked')].map(cb => cb.dataset.id);
+    if (!ids.length) return;
+    if (!confirm(`¿${action === 'approve' ? 'Aprobar' : 'Rechazar'} ${ids.length} propiedad(es)?`)) return;
+    const endpoint = action === 'approve' ? 'approve' : 'reject';
+    Promise.all(ids.map(id => fetch(`/admin/submissions/${id}/${endpoint}`, { method: 'POST' })))
+      .then(() => loadSubmissions());
+  }
+
   // ── Leads ─────────────────────────────────────────────────────
   let allLeads = [], currentLeadFilter = 'all';
   const STATUS_LABELS = { pendiente: 'Pendiente', en_proceso: 'En Proceso', comprado: 'Comprado', no_comprado: 'No Comprado' };
@@ -1737,47 +1882,184 @@
     document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
     fetch('/api/ads').then(r => r.json()).then(data => { allAds = data; renderAds(data); }).catch(() => {});
   }
+  // ── Ad image upload helpers ──────────────────────────────────
+  let _adUploadedUrl = '';
+  function switchAdImgTab(mode) {
+    const uploadTab = document.getElementById('adImgTabUpload');
+    const urlTab = document.getElementById('adImgTabUrl');
+    const uploadZone = document.getElementById('adImgUploadZone');
+    const urlZone = document.getElementById('adImgUrlZone');
+    if (mode === 'upload') {
+      uploadTab.style.background = 'var(--accent)'; uploadTab.style.color = '#fff'; uploadTab.style.borderColor = 'var(--accent)';
+      urlTab.style.background = 'none'; urlTab.style.color = 'var(--text-muted)'; urlTab.style.borderColor = 'var(--border)';
+      uploadZone.style.display = ''; urlZone.style.display = 'none';
+    } else {
+      urlTab.style.background = 'var(--accent)'; urlTab.style.color = '#fff'; urlTab.style.borderColor = 'var(--accent)';
+      uploadTab.style.background = 'none'; uploadTab.style.color = 'var(--text-muted)'; uploadTab.style.borderColor = 'var(--border)';
+      uploadZone.style.display = 'none'; urlZone.style.display = '';
+    }
+  }
+  function previewAdImg(url) {
+    const preview = document.getElementById('adImgPreview');
+    const img = document.getElementById('adPreviewImg');
+    if (url) { img.src = url; preview.style.display = ''; } else { preview.style.display = 'none'; }
+  }
+  async function uploadAdImage(file) {
+    const fd = new FormData(); fd.append('image', file);
+    const res = await fetch('/api/ads/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.url) { _adUploadedUrl = data.url; previewAdImg(data.url); }
+    else throw new Error(data.error || 'Upload failed');
+  }
+  function handleAdFileSelect(input) {
+    if (input.files[0]) uploadAdImage(input.files[0]).catch(e => alert(e.message));
+  }
+  function handleAdDrop(e) {
+    e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border)';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) uploadAdImage(file).catch(e => alert(e.message));
+  }
+
   function renderAds(ads) {
     const el = document.getElementById('adsList');
     if (!ads.length) { el.innerHTML = '<div class="ads-empty">No hay anuncios aún. Crea el primero arriba.</div>'; return; }
+    const typeLabels = { fullscreen: 'Fullscreen', banner: 'Banner', card: 'Card' };
+    const placementLabels = { feed: 'Feed', sidebar: 'Sidebar', 'listing-page': 'Propiedad' };
     el.innerHTML = ads.map(ad => {
       const imgHtml = ad.image_url
-        ? `<img class="ad-card-img" src="${ad.image_url}" alt="${ad.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
+        ? `<img class="ad-card-img" src="${ad.image_url}" alt="${esc(ad.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"><div class="ad-card-img-placeholder" style="display:none;">Sin imagen</div>`
         : `<div class="ad-card-img-placeholder">Sin imagen</div>`;
       const badge = ad.is_active ? `<span class="ad-badge-active">Activo</span>` : `<span class="ad-badge-inactive">Inactivo</span>`;
-      const dateStr = [ad.start_date, ad.end_date].filter(Boolean).join(' → ') || 'Sin fechas límite';
+      const dateStr = [ad.start_date?.slice(0,10), ad.end_date?.slice(0,10)].filter(Boolean).join(' → ') || 'Sin fechas';
+      const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) + '% CTR' : '—';
+      const typeBadge = ad.ad_type ? `<span style="font-size:.65rem;font-weight:600;padding:2px 6px;border-radius:4px;background:var(--bg-secondary);color:var(--text-muted);">${typeLabels[ad.ad_type] || ad.ad_type}</span>` : '';
+      const placeBadge = ad.placement ? `<span style="font-size:.65rem;font-weight:600;padding:2px 6px;border-radius:4px;background:var(--bg-secondary);color:var(--text-muted);">${placementLabels[ad.placement] || ad.placement}</span>` : '';
       return `
         <div class="ad-card" id="adcard-${ad.id}">
+          <label style="position:absolute;top:8px;left:8px;z-index:2;"><input type="checkbox" class="ad-bulk-cb" data-id="${ad.id}" onchange="updateAdBulkBar()" style="width:16px;height:16px;accent-color:var(--accent);"></label>
           ${imgHtml}
           <div class="ad-card-body">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
-              <div class="ad-card-title">${ad.title}</div>${badge}
+            <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem;flex-wrap:wrap;">
+              <div class="ad-card-title">${esc(ad.title)}</div>${badge} ${typeBadge} ${placeBadge}
             </div>
-            ${ad.advertiser ? `<div class="ad-card-advertiser">${ad.advertiser}</div>` : ''}
-            <div class="ad-card-stats"><span>${ad.impressions || 0} impresiones</span><span>${ad.clicks || 0} clics</span></div>
+            ${ad.advertiser ? `<div class="ad-card-advertiser">${esc(ad.advertiser)}</div>` : ''}
+            ${ad.description ? `<div style="font-size:.75rem;color:var(--text-muted);margin:0.2rem 0;line-height:1.4;">${esc(ad.description)}</div>` : ''}
+            <div class="ad-card-stats">
+              <span>${(ad.impressions||0).toLocaleString()} impr.</span>
+              <span>${(ad.clicks||0).toLocaleString()} clics</span>
+              <span style="font-weight:700;color:var(--accent);">${ctr}</span>
+              ${ad.priority ? `<span>P${ad.priority}</span>` : ''}
+            </div>
             <div class="ad-card-dates">${dateStr}</div>
           </div>
           <div class="ad-card-footer">
-            <button class="ad-toggle ${ad.is_active ? 'active' : 'inactive'}" onclick="toggleAd('${ad.id}', ${ad.is_active})">${ad.is_active ? '✓ Activo — Desactivar' : '○ Inactivo — Activar'}</button>
+            <button class="ad-toggle ${ad.is_active ? 'active' : 'inactive'}" onclick="toggleAd('${ad.id}', ${ad.is_active})">${ad.is_active ? '✓ Desactivar' : '○ Activar'}</button>
+            <button style="background:none;border:1px solid var(--border);color:var(--accent);padding:.3rem .7rem;border-radius:4px;font-size:.75rem;cursor:pointer;" onclick="openEditAdModal('${ad.id}')">Editar</button>
             <button class="ad-delete" onclick="deleteAd('${ad.id}')">Eliminar</button>
           </div>
         </div>`;
     }).join('');
   }
+
+  function updateAdBulkBar() {
+    const checked = document.querySelectorAll('.ad-bulk-cb:checked');
+    const bar = document.getElementById('adsBulkBar');
+    if (checked.length > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('adsBulkCount').textContent = checked.length + ' seleccionados';
+    } else { bar.style.display = 'none'; }
+  }
+
+  function bulkAdsAction(action) {
+    const ids = [...document.querySelectorAll('.ad-bulk-cb:checked')].map(cb => cb.dataset.id);
+    if (!ids.length) return;
+    if (action === 'delete' && !confirm(`¿Eliminar ${ids.length} anuncio(s)?`)) return;
+    Promise.all(ids.map(id => {
+      if (action === 'activate') return fetch(`/api/ads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: true }) });
+      if (action === 'deactivate') return fetch(`/api/ads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: false }) });
+      if (action === 'delete') return fetch(`/api/ads/${id}`, { method: 'DELETE' });
+    })).then(() => loadAds());
+  }
+
+  function openEditAdModal(id) {
+    const ad = allAds.find(a => a.id === id);
+    if (!ad) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:var(--bg-card);border-radius:12px;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.3);padding:1.5rem;">
+        <h3 style="margin:0 0 1rem;font-size:1.1rem;">Editar Anuncio</h3>
+        <div style="display:grid;gap:.75rem;">
+          <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Título</label><input id="editAdTitle" value="${esc(ad.title)}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Anunciante</label><input id="editAdAdv" value="${esc(ad.advertiser||'')}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Descripción</label><textarea id="editAdDesc" rows="2" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box;">${esc(ad.description||'')}</textarea></div>
+          <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">URL Imagen</label><input id="editAdImg" value="${esc(ad.image_url)}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">URL Destino</label><input id="editAdUrl" value="${esc(ad.target_url||'')}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Prioridad</label><input id="editAdPrio" type="number" min="1" max="10" value="${ad.priority||5}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+            <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Presupuesto</label><input id="editAdBudget" type="number" value="${ad.budget||''}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Inicio</label><input id="editAdStart" type="date" value="${(ad.start_date||'').slice(0,10)}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+            <div><label style="font-size:.75rem;font-weight:600;color:var(--text-muted);">Fin</label><input id="editAdEnd" type="date" value="${(ad.end_date||'').slice(0,10)}" style="width:100%;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--bg);color:var(--text);box-sizing:border-box;"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;">
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:.5rem 1rem;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text);cursor:pointer;">Cancelar</button>
+          <button id="editAdSaveBtn" style="padding:.5rem 1rem;border:none;border-radius:6px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    overlay.querySelector('#editAdSaveBtn').onclick = () => {
+      const body = {
+        title: document.getElementById('editAdTitle').value.trim(),
+        advertiser: document.getElementById('editAdAdv').value.trim(),
+        description: document.getElementById('editAdDesc').value.trim(),
+        image_url: document.getElementById('editAdImg').value.trim(),
+        target_url: document.getElementById('editAdUrl').value.trim(),
+        priority: Number(document.getElementById('editAdPrio').value) || 5,
+        budget: Number(document.getElementById('editAdBudget').value) || null,
+        start_date: document.getElementById('editAdStart').value || null,
+        end_date: document.getElementById('editAdEnd').value || null,
+      };
+      fetch(`/api/ads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(r => r.json()).then(updated => {
+          const idx = allAds.findIndex(a => a.id === id);
+          if (idx !== -1) allAds[idx] = updated;
+          renderAds(allAds);
+          overlay.remove();
+        });
+    };
+  }
+
   function createAd() {
     const title = document.getElementById('adTitle').value.trim();
     const advertiser = document.getElementById('adAdvertiser').value.trim();
-    const image_url = document.getElementById('adImageUrl').value.trim();
+    const description = document.getElementById('adDescription').value.trim();
+    const urlInput = document.getElementById('adImageUrl');
+    const image_url = _adUploadedUrl || (urlInput ? urlInput.value.trim() : '');
     const target_url = document.getElementById('adTargetUrl').value.trim();
+    const ad_type = document.getElementById('adType').value;
+    const placement = document.getElementById('adPlacement').value;
+    const audience = document.getElementById('adAudience').value;
+    const priority = document.getElementById('adPriority').value;
+    const budget = document.getElementById('adBudget').value;
     const start_date = document.getElementById('adStartDate').value;
     const end_date = document.getElementById('adEndDate').value;
     const msg = document.getElementById('adMsg');
     if (!title || !image_url) { msg.textContent = 'Título e imagen son obligatorios.'; msg.className = 'ads-msg err'; return; }
-    fetch('/api/ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, advertiser, image_url, target_url, start_date: start_date || null, end_date: end_date || null }) })
-      .then(r => r.json()).then(ad => {
+    fetch('/api/ads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, advertiser, description, image_url, target_url, ad_type, placement, audience, priority, budget, start_date: start_date || null, end_date: end_date || null })
+    }).then(r => r.json()).then(ad => {
         if (ad.error) throw new Error(ad.error);
         msg.textContent = '¡Anuncio creado! Actívalo cuando estés listo.'; msg.className = 'ads-msg ok';
-        ['adTitle','adAdvertiser','adImageUrl','adTargetUrl','adStartDate','adEndDate'].forEach(id => document.getElementById(id).value = '');
+        ['adTitle','adAdvertiser','adTargetUrl','adStartDate','adEndDate','adBudget'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('adDescription').value = '';
+        if (urlInput) urlInput.value = '';
+        _adUploadedUrl = '';
+        document.getElementById('adImgPreview').style.display = 'none';
+        document.getElementById('adPriority').value = '5';
         allAds.unshift(ad); renderAds(allAds);
         setTimeout(() => { msg.textContent = ''; }, 4000);
       }).catch(e => { msg.textContent = 'Error: ' + e.message; msg.className = 'ads-msg err'; });
@@ -2478,6 +2760,9 @@
     document.getElementById('editorReadTime').value = post ? (post.read_time || 5) : 5;
     document.getElementById('editorSlug').value = post ? (post.slug || '') : '';
     document.getElementById('editorFeatured').checked = post ? !!post.featured : false;
+    if (document.getElementById('editorTags')) document.getElementById('editorTags').value = post ? (post.tags || '') : '';
+    if (document.getElementById('editorMetaDesc')) document.getElementById('editorMetaDesc').value = post ? (post.meta_description || '') : '';
+    if (document.getElementById('editorPublishAt')) document.getElementById('editorPublishAt').value = post?.publish_at ? post.publish_at.slice(0, 16) : '';
     document.getElementById('blogSaveMsg').style.display = 'none';
 
     // Set cover preview
@@ -2552,6 +2837,38 @@
     document.execCommand('insertImage', false, url);
   }
 
+  function rteUploadImage() {
+    document.getElementById('rteFileInput').click();
+  }
+
+  async function handleRteFileUpload(input) {
+    if (!input.files[0]) return;
+    const fd = new FormData(); fd.append('image', input.files[0]);
+    try {
+      const res = await fetch('/admin/blog/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) {
+        document.getElementById('rteContent').focus();
+        document.execCommand('insertImage', false, data.url);
+      } else { alert(data.error || 'Error al subir imagen'); }
+    } catch { alert('Error de conexión'); }
+    input.value = '';
+  }
+
+  async function handleCoverUpload(input) {
+    if (!input.files[0]) return;
+    const fd = new FormData(); fd.append('image', input.files[0]);
+    try {
+      const res = await fetch('/admin/blog/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) {
+        document.getElementById('editorCover').value = data.url;
+        previewCover(data.url);
+      } else { alert(data.error || 'Error al subir imagen'); }
+    } catch { alert('Error de conexión'); }
+    input.value = '';
+  }
+
   function toggleRteSource() {
     const content = document.getElementById('rteContent');
     const source  = document.getElementById('rteSource');
@@ -2582,14 +2899,17 @@
 
     const payload = {
       title,
-      excerpt:     document.getElementById('editorExcerpt').value.trim(),
-      content:     getRteContent(),
-      category:    document.getElementById('editorCategory').value,
-      cover_image: document.getElementById('editorCover').value.trim(),
-      author:      document.getElementById('editorAuthor').value.trim() || 'Equipo HogaresRD',
-      read_time:   parseInt(document.getElementById('editorReadTime').value) || 5,
-      slug:        document.getElementById('editorSlug').value.trim() || '',
-      featured:    document.getElementById('editorFeatured').checked,
+      excerpt:          document.getElementById('editorExcerpt').value.trim(),
+      content:          getRteContent(),
+      category:         document.getElementById('editorCategory').value,
+      cover_image:      document.getElementById('editorCover').value.trim(),
+      author:           document.getElementById('editorAuthor').value.trim() || 'Equipo HogaresRD',
+      read_time:        parseInt(document.getElementById('editorReadTime').value) || 5,
+      slug:             document.getElementById('editorSlug').value.trim() || '',
+      featured:         document.getElementById('editorFeatured').checked,
+      tags:             document.getElementById('editorTags')?.value.trim() || '',
+      meta_description: document.getElementById('editorMetaDesc')?.value.trim() || '',
+      publish_at:       document.getElementById('editorPublishAt')?.value || null,
       status,
     };
 

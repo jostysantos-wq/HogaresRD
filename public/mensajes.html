@@ -23,8 +23,21 @@
     .nav-link:hover { color: var(--accent); }
 
     /* LAYOUT */
-    .chat-shell { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - var(--nav-h)); }
-    @media (max-width: 700px) { .chat-shell { grid-template-columns: 1fr; } .conv-pane { display: none; } .conv-pane.mobile-show { display: flex; } .msg-pane { display: none; } .msg-pane.mobile-show { display: flex; } }
+    .chat-shell { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - var(--nav-h)); overflow: hidden; }
+    @media (max-width: 900px) { .chat-shell { grid-template-columns: 280px 1fr; } }
+    @media (max-width: 700px) {
+      .chat-shell { grid-template-columns: 1fr; }
+      .conv-pane { display: none; }
+      .conv-pane.mobile-show { display: flex; }
+      .msg-pane { display: none; }
+      .msg-pane.mobile-show { display: flex; }
+      .msg-header-broker { display: none; }
+      .messages-area { padding: 0.75rem; }
+      .msg-bubble { max-width: 85%; }
+      .msg-input-bar { padding: 0.6rem 0.75rem; }
+      .conv-pane-header { padding: 0.75rem 1rem; }
+      .conv-item { padding: 0.7rem 1rem; }
+    }
 
     /* CONVERSATION LIST */
     .conv-pane { display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg-card); }
@@ -163,7 +176,7 @@
 <div class="chat-shell">
 
   <!-- LEFT: conversation list -->
-  <div class="conv-pane" id="convPane">
+  <div class="conv-pane mobile-show" id="convPane">
     <div class="conv-pane-header">
       <h2>Mensajes</h2>
       <p>Tus conversaciones con agentes</p>
@@ -211,6 +224,8 @@
 
 <script src="/js/auth.js"></script>
 <script>
+  function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
   // Theme
   const html  = document.documentElement;
   const saved = localStorage.getItem('theme') || 'light';
@@ -261,6 +276,7 @@
       const badge  = unread > 0 ? `<span class="conv-badge">${unread}</span>` : '';
       const broker = c.brokerName ? `Agente: ${c.brokerName}` : 'Sin agente asignado aún';
       const closedIcon = c.closed ? '<span style="font-size:0.7rem;margin-left:4px;">🔒</span>' : '';
+      const claimIcon = c.claimRequired ? '<span style="font-size:0.65rem;background:var(--accent);color:#fff;padding:1px 6px;border-radius:50px;margin-left:4px;font-weight:700;">Pendiente</span>' : '';
       const archiveBtn = c.closed && !c.archived
         ? `<button onclick="event.stopPropagation();archiveConv('${c.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:0.68rem;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Archivar">Archivar</button>`
         : '';
@@ -271,8 +287,8 @@
         <div class="conv-item ${c.id === activeConvId ? 'active' : ''}" onclick="openConv('${c.id}')">
           ${img}
           <div class="conv-info">
-            <div class="conv-title">${c.propertyTitle}${closedIcon}</div>
-            <div class="conv-sub">${c.lastMessage || broker}</div>
+            <div class="conv-title">${esc(c.propertyTitle)}${closedIcon}${claimIcon}</div>
+            <div class="conv-sub">${esc(c.lastMessage || broker)}</div>
           </div>
           ${archiveBtn}${unarchiveBtn}${badge}
         </div>`;
@@ -317,6 +333,31 @@
     } else {
       brokerEl.style.display  = 'none';
     }
+
+    // If this is an unclaimed org conversation, show claim prompt instead of messages
+    if (conv.claimRequired) {
+      const area = document.getElementById('messagesArea');
+      area.innerHTML = `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center;padding:2rem;">
+          <div style="width:64px;height:64px;background:var(--accent-light,#EBF3FF);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:var(--accent,#006AFF);"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          </div>
+          <div style="font-weight:700;font-size:1rem;">Conversación pendiente</div>
+          <div style="font-size:.85rem;color:var(--text-muted);max-width:320px;line-height:1.5;">
+            <strong>${esc(conv.clientName)}</strong> envió ${conv.messageCount} mensaje(s) sobre <strong>${esc(conv.propertyTitle)}</strong>.
+            Reclama esta conversación para ver los mensajes y responder.
+          </div>
+          <button onclick="claimConversation('${id}')" style="margin-top:.5rem;padding:.6rem 1.5rem;background:var(--accent,#006AFF);color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;">
+            Reclamar conversación
+          </button>
+        </div>`;
+      // Hide input bar for unclaimed conversations
+      document.getElementById('msgInputBar').style.display = 'none';
+      return;
+    }
+
+    // Show input bar (may have been hidden by a previous claim view)
+    document.getElementById('msgInputBar').style.display = '';
 
     applyClosedState(conv);
     renderMessages(conv.messages);
@@ -458,6 +499,25 @@
     activeConvId = null;
     document.getElementById('convPane').classList.add('mobile-show');
     document.getElementById('msgPane').classList.remove('mobile-show');
+  }
+
+  async function claimConversation(id) {
+    try {
+      const res = await fetch(`/api/conversations/${id}/claim`, {
+        method: 'POST', credentials: 'include',
+      });
+      if (res.ok) {
+        // Reload the conversation — now we have full access
+        openConv(id);
+        // Refresh the list to update the sidebar
+        loadConvList();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'No se pudo reclamar la conversación');
+      }
+    } catch {
+      alert('Error de conexión');
+    }
   }
 
   // Enter sends, Shift+Enter = newline

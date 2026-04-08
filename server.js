@@ -165,6 +165,12 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false, // pages embed cross-origin media
 }));
+// Additional security headers not covered by helmet defaults
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(self)');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  next();
+});
 
 // Report-only CSP. Browsers log violations to /api/csp-report but won't
 // block anything. After a week of clean logs, flip CSP_ENFORCE=1 in .env
@@ -218,7 +224,34 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(errorTracker.requestTimer);
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'deny',
+  index: false,
+}));
+
+// ── Referral cookie middleware ────────────────────────────────
+// When any page is visited with ?ref=TOKEN, validate it exists in DB
+// then set a 30-day cookie for attribution
+app.use((req, res, next) => {
+  const ref = req.query.ref;
+  if (ref && typeof ref === 'string' && ref.length === 16 && /^[a-f0-9]{16}$/i.test(ref)) {
+    // Only set cookie if token belongs to a real agent
+    const agent = store.getUserByRefToken(ref);
+    if (agent) {
+      res.cookie('hrd_ref', ref, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    }
+  }
+  next();
+});
+
+// ── Short referral links ─────────────────────────────────────
+app.get('/r/:refToken', (req, res) => res.redirect(`/comprar?ref=${req.params.refToken}`));
+app.get('/r/:refToken/:listingId', (req, res) => res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`));
 
 // ── API routes ─────────────────────────────────────────────────
 app.use('/api/stripe',     require('./routes/stripe'));
@@ -230,6 +263,13 @@ app.use('/api/ads',        require('./routes/ads'));
 app.use('/api/leads',         require('./routes/leads'));
 app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
+
+// Public agent count for home page stats
+app.get('/api/agents', (req, res) => {
+  const brokers = store.getUsersByRole('broker').length + store.getUsersByRole('agency').length;
+  res.json({ total: brokers, length: brokers });
+});
+app.use('/api/referrals',     require('./routes/referrals'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
@@ -279,7 +319,11 @@ app.post('/api/upload/photos', photoUpload.array('photos', 5), async (req, res) 
   }
   res.json({ urls });
 }, (err, req, res, next) => {
-  res.status(400).json({ error: err.message });
+  const safe = err.code === 'LIMIT_FILE_SIZE' ? 'Archivo demasiado grande' :
+               err.code === 'LIMIT_FILE_COUNT' ? 'Demasiados archivos' :
+               err.code === 'LIMIT_UNEXPECTED_FILE' ? 'Campo de archivo inesperado' :
+               'Error al subir archivo';
+  res.status(400).json({ error: safe });
 });
 
 // ── Blueprint upload endpoint ──────────────────────────────────
@@ -290,7 +334,10 @@ app.post('/api/upload/blueprints', blueprintUpload.array('blueprints', 5), (req,
   const urls = req.files.map(f => `/uploads/blueprints/${f.filename}`);
   res.json({ urls });
 }, (err, req, res, next) => {
-  res.status(400).json({ error: err.message });
+  const safe = err.code === 'LIMIT_FILE_SIZE' ? 'Archivo demasiado grande' :
+               err.code === 'LIMIT_FILE_COUNT' ? 'Demasiados archivos' :
+               'Error al subir archivo';
+  res.status(400).json({ error: safe });
 });
 
 // ── Avatar upload (multer) ─────────────────────────────────────
@@ -382,10 +429,12 @@ const {
 const ADMIN_PATH = process.env.ADMIN_PATH;
 if (!ADMIN_PATH) {
   console.error('❌  ADMIN_PATH env var is missing — admin panel disabled');
+} else if (!/^[a-zA-Z0-9_-]+$/.test(ADMIN_PATH)) {
+  console.error('❌  ADMIN_PATH contains invalid characters — admin panel disabled');
 }
 
 // Mount admin auth API under the secret path
-if (ADMIN_PATH) {
+if (ADMIN_PATH && /^[a-zA-Z0-9_-]+$/.test(ADMIN_PATH)) {
   app.use(`/${ADMIN_PATH}`, adminAuthRouter);
 
   // Dashboard page — session gated (redirect to login if not authenticated)
@@ -441,7 +490,7 @@ app.get('/comparar',              (req, res) => res.sendFile(path.join(__dirname
 app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'busquedas-guardadas.html')));
 app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));
 app.get('/nuevos-proyectos',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'nuevos-proyectos.html')));
-app.get('/profile',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
+app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 app.get('/inmobiliaria/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inmobiliaria.html')));
 app.get('/ciudades',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudades.html')));
@@ -453,7 +502,6 @@ app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/tareas',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'tareas.html')));
-app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 app.get('/register-success',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-success.html')));
 app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));
@@ -860,6 +908,23 @@ app.get('/admin/blog/posts', adminSessionAuth, (req, res) => {
   res.json(store.getBlogPosts());
 });
 
+// ── Blog image upload ────────────────────────────────────────────
+const blogUploadDir = path.join(__dirname, 'public/uploads/blog');
+fsp.mkdir(blogUploadDir, { recursive: true }).catch(() => {});
+const blogImgUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype) ? cb(null, true) : cb(new Error('Solo imágenes')),
+});
+app.post('/admin/blog/upload', adminSessionAuth, blogImgUpload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image' });
+  try {
+    const fname = `blog_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.webp`;
+    await sharp(req.file.buffer).resize(1200, null, { withoutEnlargement: true }).webp({ quality: 85 }).toFile(path.join(blogUploadDir, fname));
+    res.json({ url: `/uploads/blog/${fname}` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/admin/blog/posts', adminSessionAuth, (req, res) => {
   const { v4: uuidv4 } = require('uuid');
   const body = req.body;
@@ -878,19 +943,22 @@ app.post('/admin/blog/posts', adminSessionAuth, (req, res) => {
   while (store.getBlogPostBySlug(slug)) { slug = `${base}-${n++}`; }
 
   const post = {
-    id:          body.id || uuidv4(),
+    id:               body.id || uuidv4(),
     slug,
-    title:       body.title,
-    excerpt:     body.excerpt || '',
-    content:     body.content || '',
-    category:    body.category || 'general',
-    cover_image: body.cover_image || '',
-    author:      body.author || 'Equipo HogaresRD',
-    read_time:   parseInt(body.read_time) || 5,
-    featured:    !!body.featured,
-    status:      body.status || 'draft',
-    published_at:body.status === 'published' ? new Date().toISOString() : null,
-    created_at:  new Date().toISOString(),
+    title:            body.title,
+    excerpt:          body.excerpt || '',
+    content:          body.content || '',
+    category:         body.category || 'general',
+    cover_image:      body.cover_image || '',
+    author:           body.author || 'Equipo HogaresRD',
+    read_time:        parseInt(body.read_time) || 5,
+    featured:         !!body.featured,
+    status:           body.status || 'draft',
+    tags:             body.tags || '',
+    meta_description: (body.meta_description || '').slice(0, 160),
+    publish_at:       body.publish_at || null,
+    published_at:     body.status === 'published' ? new Date().toISOString() : null,
+    created_at:       new Date().toISOString(),
   };
   store.saveBlogPost(post);
   res.json({ success: true, post });
@@ -954,9 +1022,9 @@ app.post('/admin/page-content', adminSessionAuth, (req, res) => {
 // ── Unsubscribe ────────────────────────────────────────────────
 app.get('/unsubscribe', (req, res) => {
   const token = req.query.token || '';
-  let userId;
-  try { userId = Buffer.from(token, 'base64').toString('utf8'); } catch { userId = ''; }
-  const user = store.getUsers().find(u => u.id === userId);
+  const { verifyUnsubToken } = require('./routes/newsletter');
+  const userId = verifyUnsubToken(token);
+  const user = userId ? store.getUserById(userId) : null;
   if (!user) {
     return res.status(400).send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD</title></head><body style="font-family:sans-serif;text-align:center;padding:80px 20px;color:#1a2b40;"><h2>Enlace inválido o expirado.</h2><p><a href="/home">Volver al inicio</a></p></body></html>`);
   }

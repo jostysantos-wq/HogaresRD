@@ -1,9 +1,23 @@
 const express    = require('express');
+const crypto     = require('crypto');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store      = require('./store');
 
 const router   = express.Router();
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const UNSUB_SECRET = process.env.JWT_SECRET || 'hogaresrd-unsub';
+
+function makeUnsubToken(userId) {
+  const sig = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex').slice(0, 16);
+  return Buffer.from(userId).toString('base64url') + '.' + sig;
+}
+function verifyUnsubToken(token) {
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const userId = Buffer.from(parts[0], 'base64url').toString();
+  const expected = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex').slice(0, 16);
+  return crypto.timingSafeEqual(Buffer.from(parts[1]), Buffer.from(expected)) ? userId : null;
+}
 
 const { createTransport } = require('./mailer');
 const transporter = createTransport();
@@ -53,7 +67,7 @@ function listingCard(l) {
 
 function buildNewsletterHTML(user, { trending, newest, stats }) {
   const firstName  = user.name.split(' ')[0];
-  const unsubToken = Buffer.from(user.id).toString('base64');
+  const unsubToken = makeUnsubToken(user.id);
   const today      = new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' });
   const todayCap   = today.charAt(0).toUpperCase() + today.slice(1);
 
@@ -258,4 +272,4 @@ router.post('/send', adminSessionAuth, async (req, res) => {
   }
 });
 
-module.exports = { router, sendNewsletter };
+module.exports = { router, sendNewsletter, verifyUnsubToken };

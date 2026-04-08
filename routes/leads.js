@@ -25,7 +25,8 @@ router.post('/', (req, res) => {
     agencies,
     name, phone, email,
     budget, timeline, intent, notes,
-    financing, pre_approved, contact_method
+    financing, pre_approved, contact_method,
+    ref_token: bodyRefToken
   } = req.body;
 
   if (!name || !phone || !listing_id) {
@@ -50,9 +51,19 @@ router.post('/', (req, res) => {
     contact_method: contact_method || 'whatsapp',
     notes:         (notes || '').trim(),
     status:        'pendiente',
+    ref_token:     bodyRefToken || req.cookies?.hrd_ref || null,
+    referred_by:   null, // resolved below
     created_at:    new Date().toISOString(),
     updated_at:    new Date().toISOString()
   };
+
+  // Resolve referring agent from refToken
+  const refTk = lead.ref_token;
+  if (refTk) {
+    const store = require('./store');
+    const agent = store.getUserByRefToken(refTk);
+    if (agent) lead.referred_by = agent.id;
+  }
 
   const leads = readLeads();
   leads.unshift(lead);

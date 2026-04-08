@@ -1,12 +1,27 @@
 const express  = require('express');
 const fs       = require('fs');
 const path     = require('path');
-const crypto = require('crypto');
+const crypto   = require('crypto');
+const multer   = require('multer');
+const sharp    = require('sharp');
 function uuidv4() { return crypto.randomUUID(); }
 
 const router   = express.Router();
 const ADS_FILE = path.join(__dirname, '../data/ads.json');
 const { adminSessionAuth } = require('./admin-auth');
+
+// ── Image upload config ───────────────────────────────────────
+const ADS_UPLOAD_DIR = path.join(__dirname, '../public/uploads/ads');
+if (!fs.existsSync(ADS_UPLOAD_DIR)) fs.mkdirSync(ADS_UPLOAD_DIR, { recursive: true });
+
+const adUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_, file, cb) => {
+    if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Solo JPG, PNG, WEBP o GIF'));
+  },
+});
 
 // ── helpers ────────────────────────────────────────────────────
 if (!fs.existsSync(ADS_FILE)) fs.writeFileSync(ADS_FILE, '[]');
@@ -31,9 +46,25 @@ router.get('/', adminSessionAuth, (req, res) => {
   res.json(readAds());
 });
 
+// ── POST /api/ads/upload  (admin — upload ad image) ────────────
+router.post('/upload', adminSessionAuth, adUpload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+  try {
+    const fname = `ad_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.webp`;
+    await sharp(req.file.buffer)
+      .resize(1200, 628, { fit: 'cover' }) // standard ad ratio
+      .webp({ quality: 85 })
+      .toFile(path.join(ADS_UPLOAD_DIR, fname));
+    res.json({ url: `/uploads/ads/${fname}` });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al procesar imagen: ' + e.message });
+  }
+});
+
 // ── POST /api/ads  (admin — create) ───────────────────────────
 router.post('/', adminSessionAuth, (req, res) => {
-  const { title, advertiser, image_url, target_url, start_date, end_date } = req.body;
+  const { title, advertiser, image_url, target_url, start_date, end_date,
+          ad_type, placement, description, budget, priority, audience } = req.body;
   if (!title || !image_url) {
     return res.status(400).json({ error: 'title and image_url are required' });
   }
@@ -41,8 +72,14 @@ router.post('/', adminSessionAuth, (req, res) => {
     id:          uuidv4(),
     title,
     advertiser:  advertiser || '',
+    description: (description || '').slice(0, 500),
     image_url,
     target_url:  target_url || '',
+    ad_type:     ad_type || 'fullscreen',  // banner, card, fullscreen
+    placement:   placement || 'feed',       // feed, sidebar, listing-page
+    budget:      budget ? Number(budget) : null,
+    priority:    Math.min(10, Math.max(1, Number(priority) || 5)),
+    audience:    audience || 'todos',       // compradores, arrendatarios, agentes, todos
     is_active:   false,
     start_date:  start_date || null,
     end_date:    end_date   || null,

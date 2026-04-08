@@ -31,7 +31,11 @@ class SavedStore: ObservableObject {
         let wasAdding = !savedIDs.contains(id)
         if wasAdding { savedIDs.insert(id) }
         else         { savedIDs.remove(id) }
-        UserDefaults.standard.set(Array(savedIDs), forKey: "saved_listing_ids")
+        // Write to disk in background to avoid blocking main thread
+        let snapshot = Array(savedIDs)
+        DispatchQueue.global(qos: .utility).async {
+            UserDefaults.standard.set(snapshot, forKey: "saved_listing_ids")
+        }
 
         // Sync with server in background (fire-and-forget)
         Task.detached {

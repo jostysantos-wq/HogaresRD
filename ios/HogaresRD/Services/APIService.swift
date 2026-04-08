@@ -3,6 +3,38 @@ import Foundation
 // Change to "http://localhost:3000" for local development
 let apiBase = "https://hogaresrd.com"
 
+// MARK: - Simple In-Memory Cache
+
+private final class ResponseCache {
+    static let shared = ResponseCache()
+    private var store: [String: (data: Any, expires: Date)] = [:]
+    private let lock = NSLock()
+
+    func get<T>(_ key: String) -> T? {
+        lock.lock(); defer { lock.unlock() }
+        guard let entry = store[key], Date() < entry.expires else {
+            store.removeValue(forKey: key)
+            return nil
+        }
+        return entry.data as? T
+    }
+
+    func set(_ key: String, value: Any, ttl: TimeInterval = 120) {
+        lock.lock(); defer { lock.unlock() }
+        store[key] = (data: value, expires: Date().addingTimeInterval(ttl))
+    }
+
+    func invalidate(_ prefix: String) {
+        lock.lock(); defer { lock.unlock() }
+        store = store.filter { !$0.key.hasPrefix(prefix) }
+    }
+
+    func clear() {
+        lock.lock(); defer { lock.unlock() }
+        store.removeAll()
+    }
+}
+
 // MARK: - APIService
 
 class APIService: ObservableObject {
@@ -12,9 +44,25 @@ class APIService: ObservableObject {
     @Published var currentUser: User?
     @Published var token: String?
 
+    private let cache = ResponseCache.shared
+
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         return d
+    }()
+
+    /// Custom URLSession with tuned timeouts and cache policy
+    private lazy var session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.urlCache = {
+            let cache = URLCache(memoryCapacity: 20 * 1024 * 1024,  // 20MB memory
+                                 diskCapacity: 50 * 1024 * 1024)     // 50MB disk
+            return cache
+        }()
+        return URLSession(configuration: config)
     }()
 
     private init() {
@@ -45,22 +93,33 @@ class APIService: ObservableObject {
         if let p = province  { items.append(.init(name: "province",  value: p)) }
         if let ci = city     { items.append(.init(name: "city",      value: ci)) }
         components.queryItems = items
-        let (data, _) = try await URLSession.shared.data(from: components.url!)
-        return try decoder.decode(ListingsResponse.self, from: data)
+        let cacheKey = "listings:\(components.url!.absoluteString)"
+        if let cached: ListingsResponse = cache.get(cacheKey) { return cached }
+        let (data, _) = try await session.data(from: components.url!)
+        let result = try decoder.decode(ListingsResponse.self, from: data)
+        cache.set(cacheKey, value: result, ttl: 60) // 1 min cache
+        return result
     }
 
     func getListing(id: String) async throws -> Listing {
+        let cacheKey = "listing:\(id)"
+        if let cached: Listing = cache.get(cacheKey) { return cached }
         let url = URL(string: "\(apiBase)/api/listings/\(id)")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try decoder.decode(Listing.self, from: data)
+        let (data, _) = try await session.data(from: url)
+        let result = try decoder.decode(Listing.self, from: data)
+        cache.set(cacheKey, value: result, ttl: 300) // 5 min cache
+        return result
     }
 
     // MARK: - Ads
 
     func fetchActiveAds() async -> [Ad] {
+        if let cached: [Ad] = cache.get("ads:active") { return cached }
         guard let url = URL(string: "\(apiBase)/api/ads/active") else { return [] }
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return [] }
-        return (try? decoder.decode([Ad].self, from: data)) ?? []
+        guard let (data, _) = try? await session.data(from: url) else { return [] }
+        let ads = (try? decoder.decode([Ad].self, from: data)) ?? []
+        cache.set("ads:active", value: ads, ttl: 300) // 5 min cache
+        return ads
     }
 
     /// Fire-and-forget view tracking — matches web's listing.html POST
@@ -69,14 +128,14 @@ class APIService: ObservableObject {
         guard let url = URL(string: "\(apiBase)/api/listings/\(listingId)/view") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        URLSession.shared.dataTask(with: req).resume()
+        session.dataTask(with: req).resume()
     }
 
     func trackAdImpression(_ adID: String) {
         guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/impression") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        URLSession.shared.dataTask(with: req).resume()
+        session.dataTask(with: req).resume()
     }
 
     // MARK: - Leads
@@ -108,7 +167,7 @@ class APIService: ObservableObject {
             "budget":   budget, "notes":   notes
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        guard let (data, _) = try? await URLSession.shared.data(for: req),
+        guard let (data, _) = try? await session.data(for: req),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               json["ok"] as? Bool == true else { return false }
         return true
@@ -118,7 +177,7 @@ class APIService: ObservableObject {
         guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/click") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        URLSession.shared.dataTask(with: req).resume()
+        session.dataTask(with: req).resume()
     }
 
     // MARK: - Auth
@@ -132,7 +191,7 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(["email": email])
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 500 {
             throw APIError.server("No se pudo enviar el correo. Intenta más tarde.")
         }
@@ -144,7 +203,7 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(["email": email, "password": password])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -172,7 +231,7 @@ class APIService: ObservableObject {
             "marketingOptIn": marketingOptIn
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -195,7 +254,7 @@ class APIService: ObservableObject {
             "phone": phone, "agencyName": agencyName, "licenseNumber": licenseNumber
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -219,7 +278,7 @@ class APIService: ObservableObject {
         ]
         if let jobTitle { body["jobTitle"] = jobTitle }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -241,7 +300,7 @@ class APIService: ObservableObject {
             "phone": phone, "companyName": companyName, "licenseNumber": licenseNumber
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -265,7 +324,7 @@ class APIService: ObservableObject {
             "yearsExperience": yearsExperience
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 201 && http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -281,7 +340,8 @@ class APIService: ObservableObject {
         token = nil
         UserDefaults.standard.removeObject(forKey: "rd_user")
         UserDefaults.standard.removeObject(forKey: "rd_token")
-        // Wipe local favorites — they belonged to the previous session.
+        cache.clear() // Flush cached API responses
+        session.configuration.urlCache?.removeAllCachedResponses()
         Task { @MainActor in SavedStore.shared.clearLocal() }
     }
 
@@ -293,13 +353,13 @@ class APIService: ObservableObject {
             URLQueryItem(name: "page",  value: "\(page)"),
             URLQueryItem(name: "limit", value: "12")
         ]
-        let (data, _) = try await URLSession.shared.data(from: comps.url!)
+        let (data, _) = try await session.data(from: comps.url!)
         return try decoder.decode(AgencyDetail.self, from: data)
     }
 
     func getAgencies() async throws -> [Inmobiliaria] {
         let url = URL(string: "\(apiBase)/api/listings/agencies")!
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await session.data(from: url)
         return (try decoder.decode(AgenciesResponse.self, from: data)).agencies
     }
 
@@ -314,20 +374,20 @@ class APIService: ObservableObject {
             "name": name, "email": email, "phone": phone, "message": message
         ]
         req.httpBody = try JSONEncoder().encode(body)
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await session.data(for: req)
     }
 
     // MARK: - Tours
 
     func fetchAvailableSlots(brokerId: String, date: String) async throws -> [AvailableSlot] {
         let url = URL(string: "\(Self.baseURL)/api/tours/availability/\(brokerId)?date=\(date)")!
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await session.data(from: url)
         return try JSONDecoder().decode(AvailableSlotsResponse.self, from: data).slots
     }
 
     func fetchSchedule(brokerId: String, month: String) async throws -> [String] {
         let url = URL(string: "\(Self.baseURL)/api/tours/schedule/\(brokerId)?month=\(month)")!
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await session.data(from: url)
         return try JSONDecoder().decode(ScheduleResponse.self, from: data).available_dates
     }
 
@@ -344,7 +404,7 @@ class APIService: ObservableObject {
             "tour_type": tourType
         ]
         req.httpBody = try JSONEncoder().encode(body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode == 409 {
             throw APIError.server("Este horario ya no está disponible.")
         }
@@ -355,7 +415,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/my-requests")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try JSONDecoder().decode([TourRequest].self, from: data)
     }
 
@@ -363,7 +423,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-requests")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try JSONDecoder().decode([TourRequest].self, from: data)
     }
 
@@ -376,7 +436,7 @@ class APIService: ObservableObject {
         var body: [String: String] = ["status": status]
         if let n = notes { body["notes"] = n }
         req.httpBody = try JSONEncoder().encode(body)
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al actualizar visita")
         }
@@ -387,7 +447,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/cancel")!)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al cancelar visita")
         }
@@ -399,7 +459,7 @@ class APIService: ObservableObject {
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al completar visita")
         }
@@ -413,7 +473,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body: [String: String] = ["date": date, "time": time]
         req.httpBody = try JSONEncoder().encode(body)
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al reprogramar visita")
         }
@@ -427,7 +487,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body: [String: Any] = ["rating": rating, "comment": comment]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al enviar calificación")
         }
@@ -437,7 +497,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/settings")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try JSONDecoder().decode([String: Bool].self, from: data)
     }
 
@@ -449,7 +509,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body = ["enabled": enabled]
         req.httpBody = try JSONEncoder().encode(body)
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let httpResp = resp as? HTTPURLResponse, httpResp.statusCode != 200 {
             throw APIError.server("Error al actualizar configuración")
         }
@@ -459,7 +519,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try JSONDecoder().decode(BrokerAvailabilityResponse.self, from: data)
     }
 
@@ -474,7 +534,7 @@ class APIService: ObservableObject {
             "end_time": endTime, "slot_duration_min": duration
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await session.data(for: req)
     }
 
     func deleteBrokerAvailability(slotId: String) async throws {
@@ -482,7 +542,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/\(slotId)")!)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await session.data(for: req)
     }
 
     func saveBrokerOverride(date: String, available: Bool) async throws {
@@ -493,7 +553,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body: [String: Any] = ["date": date, "available": available]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await session.data(for: req)
     }
 
     func deleteBrokerOverride(overrideId: String) async throws {
@@ -501,7 +561,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/override/\(overrideId)")!)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await session.data(for: req)
     }
 
     // MARK: - Two-Factor Authentication
@@ -513,7 +573,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: String] = ["twoFASessionId": sessionId, "code": code]
         req.httpBody = try JSONEncoder().encode(body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -530,7 +590,7 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(["twoFASessionId": sessionId])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -545,7 +605,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONEncoder().encode(["method": "email"])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -564,7 +624,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body: [String: String] = ["sessionId": sessionId, "code": code]
         req.httpBody = try JSONEncoder().encode(body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -579,7 +639,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONEncoder().encode(["password": password])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -593,7 +653,7 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -610,7 +670,7 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(["email": email, "biometricToken": biometricToken])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -632,7 +692,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/biometric/revoke")!)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
             throw APIError.server("Error revocando biometrico")
         }
@@ -646,7 +706,7 @@ class APIService: ObservableObject {
         comps.queryItems = [URLQueryItem(name: "range", value: range)]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsSummary.self, from: data)
     }
 
@@ -659,7 +719,7 @@ class APIService: ObservableObject {
         ]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsListResponse.self, from: data).listings
     }
 
@@ -667,7 +727,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/listing-analytics/listing/\(id)")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsDetail.self, from: data)
     }
 
@@ -678,7 +738,7 @@ class APIService: ObservableObject {
         let suffix = archived ? "?archived=true" : ""
         var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations\(suffix)")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -695,7 +755,7 @@ class APIService: ObservableObject {
         }
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -717,7 +777,7 @@ class APIService: ObservableObject {
             "message":       message
         ]
         req.httpBody = try JSONEncoder().encode(body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -735,7 +795,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONEncoder().encode(["text": text])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -751,7 +811,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        _ = try? await URLSession.shared.data(for: req)
+        _ = try? await session.data(for: req)
     }
 
     /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
@@ -764,7 +824,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["reason": reason])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
                let err = obj["error"] as? String { throw APIError.server(err) }
@@ -780,7 +840,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
                let err = obj["error"] as? String { throw APIError.server(err) }
@@ -790,13 +850,30 @@ class APIService: ObservableObject {
         return try decoder.decode(Wrapper.self, from: data).conversation
     }
 
+    func claimConversation(id: String) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/claim")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let err = obj["error"] as? String { throw APIError.server(err) }
+            throw APIError.server("Error reclamando conversación")
+        }
+        let result = try JSONDecoder().decode([String: Conversation].self, from: data)
+        guard let conv = result["conversation"] else { throw APIError.server("Respuesta inválida") }
+        return conv
+    }
+
     func archiveConversation(id: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         let url = URL(string: "\(apiBase)/api/conversations/\(id)/archive")!
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
                let err = obj["error"] as? String { throw APIError.server(err) }
@@ -810,7 +887,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
                let err = obj["error"] as? String { throw APIError.server(err) }
@@ -824,7 +901,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/my")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         // Backend returns { applications: [...] }
         if let wrapper = try? decoder.decode(ApplicationsResponse.self, from: data) {
             return wrapper.applications
@@ -841,7 +918,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -853,11 +930,11 @@ class APIService: ObservableObject {
 
     func getDashboardAnalytics(range: String = "30d") async throws -> DashboardAnalytics {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/analytics")!
+        var comps = URLComponents(string: "\(apiBase)/api/broker/analytics")!
         comps.queryItems = [URLQueryItem(name: "range", value: range)]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAnalytics.self, from: data)
     }
 
@@ -865,7 +942,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/broker-dashboard/sales")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardSales.self, from: data)
     }
 
@@ -875,7 +952,7 @@ class APIService: ObservableObject {
         comps.queryItems = [URLQueryItem(name: "commission_rate", value: "\(commissionRate)")]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAccounting.self, from: data)
     }
 
@@ -892,7 +969,7 @@ class APIService: ObservableObject {
         comps.queryItems = items
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardDocuments.self, from: data)
     }
 
@@ -908,7 +985,7 @@ class APIService: ObservableObject {
         comps.queryItems = items
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAudit.self, from: data)
     }
 
@@ -927,7 +1004,7 @@ class APIService: ObservableObject {
         ]
         if !context.isEmpty { body["context"] = context }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -947,7 +1024,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.timeoutInterval = 10
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -961,7 +1038,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/details")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.timeoutInterval = 10
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -976,7 +1053,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -990,7 +1067,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1004,7 +1081,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1030,7 +1107,7 @@ class APIService: ObservableObject {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, _) = try await session.data(for: req)
         return try decoder.decode(SecretariesResponse.self, from: data).secretaries
     }
 
@@ -1041,7 +1118,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["email": email])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1054,7 +1131,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries/\(id)/remove")!)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1070,12 +1147,37 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["notes": notes])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al guardar notas")
         }
+    }
+
+    func updateTeamMemberRole(userId: String, accessLevel: Int, teamTitle: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/inmobiliaria/team/\(userId)/role")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = ["access_level": accessLevel, "team_title": teamTitle]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error al asignar rol")
+        }
+    }
+
+    func fetchMyAccess() async throws -> MyAccessResponse {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/my-access")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, _) = try await session.data(for: req)
+        return try JSONDecoder().decode(MyAccessResponse.self, from: data)
     }
 
     func sendBrokerPasswordReset(brokerId: String) async throws {
@@ -1084,7 +1186,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1105,7 +1207,7 @@ class APIService: ObservableObject {
             "reason": reason, "details": details,
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1128,7 +1230,7 @@ class APIService: ObservableObject {
 
     func getInventory(listingId: String) async throws -> InventoryResponse {
         let url = URL(string: "\(apiBase)/api/inventory/\(listingId)")!
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await session.data(from: url)
         return try decoder.decode(InventoryResponse.self, from: data)
     }
 
@@ -1140,7 +1242,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["label": label, "type": type, "floor": floor])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1157,7 +1259,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1173,7 +1275,7 @@ class APIService: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["applicationId": applicationId])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1187,7 +1289,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1201,7 +1303,7 @@ class APIService: ObservableObject {
         var url = "\(apiBase)/api/tasks"
         if let s = status { url += "?status=\(s)" }
         let req = try authedRequest(URL(string: url)!)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando tareas")
         return try decoder.decode(TasksResponse.self, from: data).tasks
     }
@@ -1209,7 +1311,7 @@ class APIService: ObservableObject {
     func completeTask(id: String) async throws {
         let url = URL(string: "\(apiBase)/api/tasks/\(id)/complete")!
         let req = try authedRequest(url, method: "POST")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error completando tarea")
     }
 
@@ -1224,7 +1326,7 @@ class APIService: ObservableObject {
         if let a = assignedTo, !a.isEmpty { body["assigned_to"] = a }
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error creando tarea")
         return try decoder.decode(TaskItem.self, from: data)
     }
@@ -1251,7 +1353,7 @@ class APIService: ObservableObject {
     func listSavedSearches() async throws -> [SavedSearch] {
         let url = URL(string: "\(apiBase)/api/saved-searches")!
         let req = try authedRequest(url)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando búsquedas")
         return try decoder.decode(SavedSearchesResponse.self, from: data).searches
     }
@@ -1265,7 +1367,7 @@ class APIService: ObservableObject {
         ]
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error guardando búsqueda")
         struct R: Decodable { let search: SavedSearch }
         return try decoder.decode(R.self, from: data).search
@@ -1279,7 +1381,7 @@ class APIService: ObservableObject {
         if let notify { body["notify"] = notify }
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "PUT", body: json)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error actualizando búsqueda")
         struct R: Decodable { let search: SavedSearch }
         return try decoder.decode(R.self, from: data).search
@@ -1288,14 +1390,14 @@ class APIService: ObservableObject {
     func deleteSavedSearch(id: String) async throws {
         let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
         let req = try authedRequest(url, method: "DELETE")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error eliminando búsqueda")
     }
 
     func getSavedSearchResults(id: String) async throws -> SavedSearchResponse {
         let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
         let req = try authedRequest(url)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando resultados")
         return try decoder.decode(SavedSearchResponse.self, from: data)
     }
@@ -1305,7 +1407,7 @@ class APIService: ObservableObject {
     func getMetaStatus() async throws -> MetaStatusResponse {
         let url = URL(string: "\(apiBase)/api/paid-ads/meta/status")!
         let req = try authedRequest(url)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando estado")
         return try decoder.decode(MetaStatusResponse.self, from: data)
     }
@@ -1313,7 +1415,7 @@ class APIService: ObservableObject {
     func getAdCampaigns() async throws -> AdCampaignsResponse {
         let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns")!
         let req = try authedRequest(url)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando campañas")
         return try decoder.decode(AdCampaignsResponse.self, from: data)
     }
@@ -1321,14 +1423,14 @@ class APIService: ObservableObject {
     func toggleAdCampaign(id: String) async throws {
         let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)/toggle-status")!
         let req = try authedRequest(url, method: "POST")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cambiando estado")
     }
 
     func deleteAdCampaign(id: String) async throws {
         let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)")!
         let req = try authedRequest(url, method: "DELETE")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error eliminando campaña")
     }
 
@@ -1353,7 +1455,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        _ = try? await URLSession.shared.data(for: req)
+        _ = try? await session.data(for: req)
     }
 
     /// Log a recently viewed listing. Fire-and-forget.
@@ -1363,7 +1465,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: req).resume()
+        session.dataTask(with: req).resume()
     }
 
     func removeFavorite(listingId: String) async throws {
@@ -1372,7 +1474,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        _ = try? await URLSession.shared.data(for: req)
+        _ = try? await session.data(for: req)
     }
 
     func changePassword(current: String, newPassword: String) async throws {
@@ -1384,7 +1486,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let body: [String: String] = ["currentPassword": current, "newPassword": newPassword]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1417,7 +1519,7 @@ class APIService: ObservableObject {
         body.append(Data("--\(boundary)--\r\n".utf8))
 
         // Use upload(for:from:) instead of httpBody — handles large payloads better
-        let (data, resp) = try await URLSession.shared.upload(for: req, from: body)
+        let (data, resp) = try await session.upload(for: req, from: body)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1456,7 +1558,7 @@ class APIService: ObservableObject {
             "type": "ios",
             "deviceToken": token
         ])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
@@ -1470,7 +1572,7 @@ class APIService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (_, _) = try await URLSession.shared.data(for: req)
+        let (_, _) = try await session.data(for: req)
     }
 
     // MARK: - Private

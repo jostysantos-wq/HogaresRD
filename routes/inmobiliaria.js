@@ -18,6 +18,13 @@ function send(to, subject, html) {
   }).catch(() => {});
 }
 
+// ── Access level constants ────────────────────────────────────────────────
+const LEVEL_ASISTENTE = 1;
+const LEVEL_GERENTE   = 2;
+const LEVEL_DIRECTOR  = 3;
+const LEVEL_LABELS = { 1: 'Asistente', 2: 'Gerente', 3: 'Director' };
+const OWNER_ROLES = ['inmobiliaria', 'constructora'];
+
 // ── Role middlewares ──────────────────────────────────────────────────────
 function brokerAuth(req, res, next) {
   const user = store.getUserById(req.user.sub);
@@ -29,10 +36,45 @@ function brokerAuth(req, res, next) {
 
 function inmobiliariaAuth(req, res, next) {
   const user = store.getUserById(req.user.sub);
-  if (!user || (user.role !== 'inmobiliaria' && user.role !== 'constructora'))
+  if (!user || !OWNER_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo inmobiliarias o constructoras pueden realizar esta accion' });
   req.inmobiliariaUser = user;
   next();
+}
+
+/**
+ * teamAuth(minLevel) — RBAC middleware for team members.
+ * Resolves effective access level:
+ *   - Owner (inmobiliaria/constructora role) → always level 3
+ *   - Team member (has inmobiliaria_id) → stored access_level or default 1
+ * Attaches req.teamUser, req.inmobiliariaId, req.accessLevel
+ */
+function teamAuth(minLevel) {
+  return (req, res, next) => {
+    const user = store.getUserById(req.user.sub);
+    if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+    let inmobiliariaId, accessLevel;
+
+    if (OWNER_ROLES.includes(user.role)) {
+      inmobiliariaId = user.id;
+      accessLevel = LEVEL_DIRECTOR; // owner always has full access
+    } else if (user.inmobiliaria_id) {
+      inmobiliariaId = user.inmobiliaria_id;
+      accessLevel = user.access_level || LEVEL_ASISTENTE;
+    } else {
+      return res.status(403).json({ error: 'No perteneces a ninguna inmobiliaria' });
+    }
+
+    if (accessLevel < minLevel) {
+      return res.status(403).json({ error: 'No tienes permisos suficientes para esta acción' });
+    }
+
+    req.teamUser = user;
+    req.inmobiliariaId = inmobiliariaId;
+    req.accessLevel = accessLevel;
+    next();
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -188,21 +230,25 @@ router.post('/leave', userAuth, brokerAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── GET /brokers ── Inmobiliaria: see team + pending requests
 // ══════════════════════════════════════════════════════════════════
-router.get('/brokers', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm = req.inmobiliariaUser;
+router.get('/brokers', userAuth, teamAuth(LEVEL_GERENTE), (req, res) => {
+  const inmId = req.inmobiliariaId;
+  const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(inmId);
 
-  const brokers = store.getUsersByInmobiliaria(inm.id).map(b => ({
+  const brokers = store.getUsersByInmobiliaria(inmId).map(b => ({
     id:            b.id,
     name:          b.name,
     email:         b.email,
     phone:         b.phone || '',
+    role:          b.role,
     licenseNumber: b.licenseNumber || '',
     jobTitle:      b.jobTitle || '',
+    team_title:    b.team_title || '',
+    access_level:  b.access_level || LEVEL_ASISTENTE,
     joined_at:     b.inmobiliaria_joined_at || b.createdAt,
     app_count:     store.getApplicationsByBroker(b.id).length,
   }));
 
-  const pending_requests = (inm.join_requests || [])
+  const pending_requests = (inm?.join_requests || [])
     .filter(r => r.status === 'pending')
     .sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at));
 
@@ -212,8 +258,8 @@ router.get('/brokers', userAuth, inmobiliariaAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── POST /brokers/:brokerId/approve ── Inmobiliaria approves
 // ══════════════════════════════════════════════════════════════════
-router.post('/brokers/:brokerId/approve', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.post('/brokers/:brokerId/approve', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
+  const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
   const broker = store.getUserById(req.params.brokerId);
 
   if (!broker || !['broker', 'agency'].includes(broker.role))
@@ -236,6 +282,8 @@ router.post('/brokers/:brokerId/approve', userAuth, inmobiliariaAuth, (req, res)
   broker.inmobiliaria_pending_id   = null;
   broker.inmobiliaria_pending_name = null;
   broker.inmobiliaria_joined_at    = new Date().toISOString();
+  broker.access_level              = LEVEL_ASISTENTE;
+  broker.team_title                = '';
   store.saveUser(broker);
 
   // Notify broker
@@ -259,8 +307,8 @@ router.post('/brokers/:brokerId/approve', userAuth, inmobiliariaAuth, (req, res)
 // ══════════════════════════════════════════════════════════════════
 // ── POST /brokers/:brokerId/reject ── Inmobiliaria rejects
 // ══════════════════════════════════════════════════════════════════
-router.post('/brokers/:brokerId/reject', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.post('/brokers/:brokerId/reject', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
+  const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
   const broker = store.getUserById(req.params.brokerId);
 
   if (!broker)
@@ -303,17 +351,18 @@ router.post('/brokers/:brokerId/reject', userAuth, inmobiliariaAuth, (req, res) 
 // ══════════════════════════════════════════════════════════════════
 // ── POST /brokers/:brokerId/remove ── Inmobiliaria removes broker
 // ══════════════════════════════════════════════════════════════════
-router.post('/brokers/:brokerId/remove', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.post('/brokers/:brokerId/remove', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
   const broker = store.getUserById(req.params.brokerId);
 
-  if (!broker || broker.inmobiliaria_id !== inm.id)
+  if (!broker || broker.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Agente no encontrado en tu inmobiliaria' });
 
   broker.inmobiliaria_id          = null;
   broker.inmobiliaria_name        = null;
   broker.inmobiliaria_join_status = null;
   broker.inmobiliaria_joined_at   = null;
+  broker.access_level             = null;
+  broker.team_title               = null;
   store.saveUser(broker);
 
   res.json({ success: true });
@@ -322,8 +371,8 @@ router.post('/brokers/:brokerId/remove', userAuth, inmobiliariaAuth, (req, res) 
 // ══════════════════════════════════════════════════════════════════
 // ── GET /profile ── Inmobiliaria public profile info
 // ══════════════════════════════════════════════════════════════════
-router.get('/profile', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm = req.inmobiliariaUser;
+router.get('/profile', userAuth, teamAuth(LEVEL_ASISTENTE), (req, res) => {
+  const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
   const { passwordHash, resetToken, resetTokenExpiry, ...safe } = inm;
   res.json(safe);
 });
@@ -331,10 +380,9 @@ router.get('/profile', userAuth, inmobiliariaAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── GET /brokers/:brokerId/details ── Full broker info + recent apps
 // ══════════════════════════════════════════════════════════════════
-router.get('/brokers/:brokerId/details', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.get('/brokers/:brokerId/details', userAuth, teamAuth(LEVEL_GERENTE), (req, res) => {
   const broker = store.getUserById(req.params.brokerId);
-  if (!broker || broker.inmobiliaria_id !== inm.id)
+  if (!broker || broker.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Agente no encontrado' });
 
   const apps = store.getApplicationsByBroker(broker.id)
@@ -346,6 +394,8 @@ router.get('/brokers/:brokerId/details', userAuth, inmobiliariaAuth, (req, res) 
     id: broker.id, name: broker.name, email: broker.email, phone: broker.phone || '',
     licenseNumber: broker.licenseNumber || '', role: broker.role,
     jobTitle: broker.jobTitle || '',
+    team_title: broker.team_title || '',
+    access_level: broker.access_level || LEVEL_ASISTENTE,
     joined_at: broker.inmobiliaria_joined_at || broker.createdAt,
     emailVerified: broker.emailVerified !== false,
     app_count: store.getApplicationsByBroker(broker.id).length,
@@ -357,10 +407,10 @@ router.get('/brokers/:brokerId/details', userAuth, inmobiliariaAuth, (req, res) 
 // ══════════════════════════════════════════════════════════════════
 // ── POST /brokers/:brokerId/send-reset ── Send password reset email
 // ══════════════════════════════════════════════════════════════════
-router.post('/brokers/:brokerId/send-reset', userAuth, inmobiliariaAuth, async (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.post('/brokers/:brokerId/send-reset', userAuth, teamAuth(LEVEL_DIRECTOR), async (req, res) => {
+  const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
   const broker = store.getUserById(req.params.brokerId);
-  if (!broker || broker.inmobiliaria_id !== inm.id)
+  if (!broker || broker.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Agente no encontrado' });
 
   const rawToken  = crypto.randomBytes(32).toString('hex');
@@ -391,10 +441,9 @@ router.post('/brokers/:brokerId/send-reset', userAuth, inmobiliariaAuth, async (
 // ══════════════════════════════════════════════════════════════════
 // ── PATCH /brokers/:brokerId/notes ── Save internal notes
 // ══════════════════════════════════════════════════════════════════
-router.patch('/brokers/:brokerId/notes', userAuth, inmobiliariaAuth, (req, res) => {
-  const inm    = req.inmobiliariaUser;
+router.patch('/brokers/:brokerId/notes', userAuth, teamAuth(LEVEL_GERENTE), (req, res) => {
   const broker = store.getUserById(req.params.brokerId);
-  if (!broker || broker.inmobiliaria_id !== inm.id)
+  if (!broker || broker.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Agente no encontrado' });
 
   broker.inm_notes = (req.body.notes || '').trim().slice(0, 1000);
@@ -404,8 +453,8 @@ router.patch('/brokers/:brokerId/notes', userAuth, inmobiliariaAuth, (req, res) 
 
 // ── Secretary Management ──────────────────────────────────────────────────
 
-router.get('/secretaries', userAuth, inmobiliariaAuth, (req, res) => {
-  const secretaries = store.getSecretariesByInmobiliaria(req.inmobiliariaUser.id);
+router.get('/secretaries', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
+  const secretaries = store.getSecretariesByInmobiliaria(req.inmobiliariaId);
   res.json({
     secretaries: secretaries.map(s => ({
       id: s.id, name: s.name, email: s.email, phone: s.phone,
@@ -414,7 +463,7 @@ router.get('/secretaries', userAuth, inmobiliariaAuth, (req, res) => {
   });
 });
 
-router.post('/secretaries/invite', userAuth, inmobiliariaAuth, (req, res) => {
+router.post('/secretaries/invite', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
   const { email, name } = req.body;
   if (!email) return res.status(400).json({ error: 'Email requerido' });
 
@@ -422,9 +471,8 @@ router.post('/secretaries/invite', userAuth, inmobiliariaAuth, (req, res) => {
   const existing = store.getUserByEmail(email);
   if (existing) return res.status(400).json({ error: 'Este correo ya está registrado' });
 
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
-  const user = req.inmobiliariaUser;
+  const user = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
 
   if (!user.secretary_invites) user.secretary_invites = [];
   user.secretary_invites.push({
@@ -471,9 +519,9 @@ router.post('/secretaries/invite', userAuth, inmobiliariaAuth, (req, res) => {
   res.json({ success: true, message: 'Invitación enviada' });
 });
 
-router.post('/secretaries/:id/remove', userAuth, inmobiliariaAuth, (req, res) => {
+router.post('/secretaries/:id/remove', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
   const secretary = store.getUserById(req.params.id);
-  if (!secretary || secretary.role !== 'secretary' || secretary.inmobiliaria_id !== req.inmobiliariaUser.id)
+  if (!secretary || secretary.role !== 'secretary' || secretary.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Secretaria no encontrada' });
 
   secretary.role = 'deactivated';
@@ -482,6 +530,78 @@ router.post('/secretaries/:id/remove', userAuth, inmobiliariaAuth, (req, res) =>
   store.saveUser(secretary);
 
   res.json({ success: true });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── RBAC: Get my access level ─────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+router.get('/my-access', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  let accessLevel, inmobiliariaId;
+  if (OWNER_ROLES.includes(user.role)) {
+    accessLevel = LEVEL_DIRECTOR;
+    inmobiliariaId = user.id;
+  } else if (user.inmobiliaria_id) {
+    accessLevel = user.access_level || LEVEL_ASISTENTE;
+    inmobiliariaId = user.inmobiliaria_id;
+  } else {
+    return res.json({ access_level: 0, team_title: '', inmobiliaria_id: null, role: user.role,
+      can: { view_team: false, approve_payments: false, manage_team: false, view_billing: false } });
+  }
+
+  res.json({
+    access_level:    accessLevel,
+    access_label:    LEVEL_LABELS[accessLevel] || '',
+    team_title:      user.team_title || '',
+    inmobiliaria_id: inmobiliariaId,
+    role:            user.role,
+    can: {
+      view_team:        accessLevel >= LEVEL_GERENTE,
+      approve_payments: accessLevel >= LEVEL_GERENTE,
+      view_analytics:   accessLevel >= LEVEL_GERENTE,
+      manage_team:      accessLevel >= LEVEL_DIRECTOR,
+      assign_roles:     accessLevel >= LEVEL_DIRECTOR,
+      view_billing:     accessLevel >= LEVEL_DIRECTOR,
+      invite_members:   accessLevel >= LEVEL_DIRECTOR,
+    },
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── RBAC: Assign role + title to a team member ────────────────
+// ══════════════════════════════════════════════════════════════════
+router.put('/team/:userId/role', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
+  const target = store.getUserById(req.params.userId);
+  if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Target must belong to the same inmobiliaria
+  if (target.inmobiliaria_id !== req.inmobiliariaId && target.id !== req.inmobiliariaId)
+    return res.status(403).json({ error: 'Este usuario no pertenece a tu equipo' });
+
+  // Cannot change owner's level
+  if (OWNER_ROLES.includes(target.role))
+    return res.status(400).json({ error: 'No se puede cambiar el nivel del propietario' });
+
+  const { access_level, team_title } = req.body;
+  if (access_level !== undefined) {
+    const level = Number(access_level);
+    if (![LEVEL_ASISTENTE, LEVEL_GERENTE, LEVEL_DIRECTOR].includes(level))
+      return res.status(400).json({ error: 'Nivel de acceso inválido (1, 2 o 3)' });
+    target.access_level = level;
+  }
+  if (team_title !== undefined) {
+    target.team_title = String(team_title).trim().slice(0, 100);
+  }
+
+  store.saveUser(target);
+  res.json({
+    success: true,
+    access_level: target.access_level || LEVEL_ASISTENTE,
+    team_title: target.team_title || '',
+    access_label: LEVEL_LABELS[target.access_level] || LEVEL_LABELS[LEVEL_ASISTENTE],
+  });
 });
 
 module.exports = router;

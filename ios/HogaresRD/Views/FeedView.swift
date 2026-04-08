@@ -5,12 +5,12 @@ import SwiftUI
 /// A feed item is either a real listing or a sponsored ad.
 enum FeedItem: Identifiable {
     case listing(Listing)
-    case ad(Ad)
+    case ad(Ad, slot: Int) // slot index makes each ad placement unique
 
     var id: String {
         switch self {
-        case .listing(let l): return "l-\(l.id)"
-        case .ad(let a):      return "a-\(a.id)"
+        case .listing(let l):      return "l-\(l.id)"
+        case .ad(let a, let slot): return "a-\(a.id)-\(slot)"
         }
     }
 }
@@ -83,7 +83,7 @@ struct FeedView: View {
                                                     trackDwell(listing, seconds: Date().timeIntervalSince(start))
                                                 }
                                             }
-                                        case .ad(let ad):
+                                        case .ad(let ad, _):
                                             AdCard(
                                                 ad: ad,
                                                 onImpression: { api.trackAdImpression(ad.id) },
@@ -194,13 +194,14 @@ struct FeedView: View {
     private func interleaved(_ listings: [Listing]) -> [FeedItem] {
         guard !activeAds.isEmpty else { return listings.map { .listing($0) } }
         var result: [FeedItem] = []
-        var adIndex = (feed.filter { if case .ad = $0 { return true }; return false }.count) % activeAds.count
+        var adSlot = feed.filter { if case .ad = $0 { return true }; return false }.count
+        var adIndex = adSlot % activeAds.count
         for (i, listing) in listings.enumerated() {
             result.append(.listing(listing))
-            // Insert an ad after every `adFrequency` listings
             if (i + 1) % adFrequency == 0 {
-                result.append(.ad(activeAds[adIndex % activeAds.count]))
+                result.append(.ad(activeAds[adIndex % activeAds.count], slot: adSlot))
                 adIndex += 1
+                adSlot += 1
             }
         }
         return result
@@ -281,9 +282,16 @@ struct FeedView: View {
         return d
     }
 
+    private var _prefSaveTask: Task<Void, Never>?
     private func savePrefs(_ p: [String: Double]) {
-        if let data = try? JSONEncoder().encode(p),
-           let str  = String(data: data, encoding: .utf8) { prefJSON = str }
+        // Debounce: batch rapid writes (dwell time, taps) into one disk write
+        _prefSaveTask?.cancel()
+        _prefSaveTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            if let data = try? JSONEncoder().encode(p),
+               let str  = String(data: data, encoding: .utf8) { prefJSON = str }
+        }
     }
 }
 

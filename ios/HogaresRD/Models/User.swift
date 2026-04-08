@@ -12,6 +12,8 @@ struct User: Codable {
     let twoFAMethod: String?
     let avatarUrl: String?
     let refToken: String?
+    let access_level: Int?
+    let team_title: String?
 
     var firstName: String { name.components(separatedBy: " ").first ?? name }
 
@@ -32,12 +34,26 @@ struct User: Codable {
     var isAgency: Bool { role == "agency" || role == "broker" || role == "inmobiliaria" || role == "constructora" || role == "secretary" }
     var isInmobiliaria: Bool { role == "inmobiliaria" || role == "constructora" }
     var isConstructora: Bool { role == "constructora" }
-    /// True when user OWNS a team (inmobiliaria or constructora). Both get the
-    /// full team-management dashboard with Agentes/Solicitudes/Rendimiento/
-    /// Secretarias tabs — behaviour must be identical for consistency.
     var isTeamLead: Bool { role == "inmobiliaria" || role == "constructora" }
     var isBroker: Bool { role == "broker" || role == "agency" }
     var isSecretary: Bool { role == "secretary" }
+
+    /// Effective access level: owner=3, team member=stored or 1
+    var effectiveAccessLevel: Int {
+        if isTeamLead { return 3 }
+        return access_level ?? 1
+    }
+    var canViewTeam: Bool { effectiveAccessLevel >= 2 }
+    var canManageTeam: Bool { effectiveAccessLevel >= 3 }
+    var canApprovePayments: Bool { effectiveAccessLevel >= 2 }
+}
+
+struct MyAccessResponse: Codable {
+    let access_level: Int
+    let access_label: String?
+    let team_title: String?
+    let inmobiliaria_id: String?
+    let role: String
 }
 
 struct AuthResponse: Codable {

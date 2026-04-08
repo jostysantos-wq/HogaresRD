@@ -196,13 +196,15 @@ function fmtAmt(n, cur) {
   return `${cur || 'DOP'} ${Number(n || 0).toLocaleString('es-DO')}`;
 }
 
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function buildPaymentPlanEmail(app) {
   const plan = app.payment_plan;
   const rows = plan.installments.map(i =>
     `<tr>
-       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;">#${i.number} — ${i.label}</td>
+       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;">#${i.number} — ${_esc(i.label)}</td>
        <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;font-weight:600;">${fmtAmt(i.amount, plan.currency)}</td>
-       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;color:#555;">${i.due_date || '—'}</td>
+       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;color:#555;">${_esc(i.due_date) || '—'}</td>
      </tr>`
   ).join('');
   return `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;">
@@ -210,15 +212,15 @@ function buildPaymentPlanEmail(app) {
       <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Plan de Pagos</h2>
     </div>
     <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-      <p>Hola <strong>${app.client.name}</strong>,</p>
-      <p>Tu broker ha creado un plan de pagos para tu solicitud de <strong>${app.listing_title}</strong>.</p>
-      <p><strong>Método de pago:</strong> ${plan.payment_method || '—'}</p>
-      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;margin:.5rem 0;">${plan.method_details}</div>` : ''}
+      <p>Hola <strong>${_esc(app.client.name)}</strong>,</p>
+      <p>Tu broker ha creado un plan de pagos para tu solicitud de <strong>${_esc(app.listing_title)}</strong>.</p>
+      <p><strong>Método de pago:</strong> ${_esc(plan.payment_method) || '—'}</p>
+      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;margin:.5rem 0;">${_esc(plan.method_details)}</div>` : ''}
       <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
         <thead><tr style="background:#f5f7fa;"><th style="padding:.5rem .75rem;text-align:left;">Cuota</th><th style="padding:.5rem .75rem;text-align:left;">Monto</th><th style="padding:.5rem .75rem;text-align:left;">Vence</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${plan.notes ? `<p style="font-size:.9rem;color:#555;"><strong>Notas:</strong> ${plan.notes}</p>` : ''}
+      ${plan.notes ? `<p style="font-size:.9rem;color:#555;"><strong>Notas:</strong> ${_esc(plan.notes)}</p>` : ''}
       <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563EB;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;margin-top:.5rem;">Ver mi Plan de Pagos</a>
     </div>
   </div>`;
@@ -234,11 +236,11 @@ function buildPaymentReminderEmail(app, inst) {
       <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Recordatorio de Pago</h2>
     </div>
     <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-      <p>Hola <strong>${app.client.name}</strong>,</p>
-      <p>Tienes un pago pendiente para tu solicitud de <strong>${app.listing_title}</strong>:</p>
+      <p>Hola <strong>${_esc(app.client.name)}</strong>,</p>
+      <p>Tienes un pago pendiente para tu solicitud de <strong>${_esc(app.listing_title)}</strong>:</p>
       <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:1rem;margin:1rem 0;">
         <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.05em;">Cuota #${inst.number}</div>
-        <div style="font-size:1.15rem;font-weight:700;margin:.3rem 0;">${inst.label}</div>
+        <div style="font-size:1.15rem;font-weight:700;margin:.3rem 0;">${_esc(inst.label)}</div>
         <div style="font-size:1.05rem;color:#1C2B3A;font-weight:600;">${fmtAmt(inst.amount, plan.currency)}</div>
         <div style="font-size:.85rem;color:#B45309;margin-top:.3rem;">📅 Vence: ${dueLabel}</div>
       </div>
@@ -353,10 +355,18 @@ router.post('/', appCreateLimiter, (req, res) => {
     payment_plan: null,
     inmobiliaria_id,
     inmobiliaria_name,
+    ref_token:       req.body.ref_token || req.cookies?.hrd_ref || null,
+    referred_by:     null, // resolved below
     timeline_events: [],
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
   };
+
+  // Resolve referring agent
+  if (app.ref_token) {
+    const refAgent = store.getUserByRefToken(app.ref_token);
+    if (refAgent) app.referred_by = refAgent.id;
+  }
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',
     { from: null, to: 'aplicado' });

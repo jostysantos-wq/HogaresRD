@@ -35,6 +35,21 @@
     .toc a:hover { text-decoration: underline; }
     footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
     @media (max-width: 640px) { .doc { padding: 2rem 1.5rem; } }
+
+    /* Print / PDF styles */
+    @media print {
+      nav, footer, .doc-download-bar { display: none !important; }
+      body { background: #fff !important; color: #000 !important; }
+      main { padding: 0 !important; }
+      .doc { box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important; padding: 2cm 2.5cm !important; }
+      h2 { page-break-after: avoid; color: #002D62 !important; border-left-color: #002D62 !important; }
+      h3 { page-break-after: avoid; }
+      p, ul, ol { page-break-inside: avoid; color: #333 !important; }
+      .highlight-box, .warning-box { page-break-inside: avoid; }
+      .toc { page-break-after: always; }
+      a { color: #002D62 !important; text-decoration: none !important; }
+      @page { margin: 1.5cm; size: letter; }
+    }
   </style>
 </head>
 <body>
@@ -49,7 +64,7 @@
 
       <div class="doc-badge">Cuenta de Usuario</div>
       <div class="doc-title">Términos y Condiciones de Uso &mdash; Cuenta de Usuario</div>
-      <div class="doc-date">Versión 1.0 &mdash; Vigente a partir del 3 de abril de 2026 &mdash; República Dominicana</div>
+      <div class="doc-date">Versión 2.0 &mdash; Vigente a partir del 7 de abril de 2026 &mdash; República Dominicana</div>
 
       <div class="toc">
         <div class="toc-title">Tabla de Contenido</div>
@@ -71,10 +86,24 @@
           <li><a href="#s15">Pagos y Suscripciones</a></li>
           <li><a href="#s16">Limitación de Responsabilidad y Exclusión de Garantías</a></li>
           <li><a href="#s17">Propiedad Intelectual</a></li>
-          <li><a href="#s18">Suspensión, Cancelación y Eliminación de Cuenta</a></li>
-          <li><a href="#s19">Modificaciones al Servicio y a estos Términos</a></li>
-          <li><a href="#s20">Ley Aplicable, Jurisdicción y Disposiciones Generales</a></li>
+          <li><a href="#s18">Enlaces de Referido y Atribución de Agentes</a></li>
+          <li><a href="#s19">Inteligencia Artificial y Revisión Automatizada</a></li>
+          <li><a href="#s20">Publicidad y Anuncios Patrocinados</a></li>
+          <li><a href="#s21">Suspensión, Cancelación y Eliminación de Cuenta</a></li>
+          <li><a href="#s22">Resolución de Disputas</a></li>
+          <li><a href="#s23">Modificaciones al Servicio y a estos Términos</a></li>
+          <li><a href="#s24">Ley Aplicable, Jurisdicción y Disposiciones Generales</a></li>
         </ol>
+      </div>
+
+      <!-- PDF Download Button -->
+      <div class="doc-download-bar" style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem;padding:1rem 1.25rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;">
+        <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--accent);flex-shrink:0;"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <div style="flex:1;">
+          <div style="font-size:.88rem;font-weight:700;">Descargar en PDF</div>
+          <div style="font-size:.72rem;color:var(--text-muted);">Guarda una copia de estos términos para tus registros</div>
+        </div>
+        <button onclick="window.print()" style="padding:.45rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;">Descargar PDF</button>
       </div>
 
       <div class="highlight-box">
@@ -352,10 +381,49 @@
       <h3>17.4 Marcas de Terceros</h3>
       <p>Las marcas comerciales de terceros mencionadas en la plataforma (Apple, Google, Stripe, etc.) son propiedad de sus respectivos dueños. Su mención en la plataforma no implica ninguna afiliación, patrocinio o aval de estos terceros respecto a HogaresRD.</p>
 
-      <h2 id="s18">18. Suspensión, Cancelación y Eliminación de Cuenta</h2>
-      <h3>18.1 Cancelación por Parte del Usuario</h3>
+      <!-- ═══ NEW SECTIONS: Affiliate, AI, Ads ═══ -->
+
+      <h2 id="s18">18. Enlaces de Referido y Atribución de Agentes</h2>
+      <h3>18.1 Sistema de Enlaces de Referido</h3>
+      <p>HogaresRD proporciona a los agentes inmobiliarios registrados un código de referido único (refToken) que pueden compartir mediante enlaces personalizados. Cuando un Usuario accede a la plataforma a través de un enlace de referido, su actividad puede ser atribuida al agente que generó dicho enlace durante un período de treinta (30) días mediante el uso de cookies.</p>
+      <h3>18.2 Atribución y Seguimiento</h3>
+      <p>Al utilizar un enlace de referido, el Usuario acepta que:</p>
+      <ul>
+        <li>Una cookie de atribución (hrd_ref) será almacenada en su navegador con una vigencia de 30 días.</li>
+        <li>Las consultas, mensajes y aplicaciones realizadas durante este período podrán ser asociadas al agente referente.</li>
+        <li>La comunicación iniciada a través del enlace será dirigida directamente al agente que generó el enlace o, en caso de un enlace organizacional, a todos los agentes de la inmobiliaria correspondiente.</li>
+      </ul>
+      <h3>18.3 Derechos del Usuario</h3>
+      <p>El uso de un enlace de referido no afecta los derechos del Usuario ni le impone obligaciones adicionales. El Usuario siempre puede contactar a cualquier agente o inmobiliaria de su elección, independientemente del enlace utilizado para acceder a la plataforma. El Usuario puede eliminar la cookie de atribución en cualquier momento desde la configuración de su navegador.</p>
+
+      <h2 id="s19">19. Inteligencia Artificial y Revisión Automatizada</h2>
+      <h3>19.1 Uso de Inteligencia Artificial</h3>
+      <p>HogaresRD utiliza herramientas de inteligencia artificial (IA) proporcionadas por terceros para mejorar la calidad de la plataforma. Estas herramientas se emplean para:</p>
+      <ul>
+        <li>Revisar automáticamente las publicaciones de propiedades para verificar calidad, completitud y veracidad de la información proporcionada.</li>
+        <li>Detectar publicaciones duplicadas o contenido fraudulento.</li>
+        <li>Generar puntuaciones de calidad y recomendaciones para los anunciantes.</li>
+        <li>Personalizar las recomendaciones de propiedades mostradas al Usuario en el feed.</li>
+      </ul>
+      <h3>19.2 Limitaciones de la IA</h3>
+      <div class="warning-box">
+        <strong>Aviso Importante:</strong> Las evaluaciones generadas por inteligencia artificial son orientativas y no sustituyen la inspección física de las propiedades ni el asesoramiento profesional. HogaresRD no garantiza la exactitud de las evaluaciones automatizadas y recomienda al Usuario verificar toda información de manera independiente antes de tomar decisiones de compra o alquiler.
+      </div>
+      <h3>19.3 Datos y Privacidad en Relación con la IA</h3>
+      <p>El contenido de las publicaciones (títulos, descripciones, precios, ubicaciones) puede ser procesado por sistemas de IA para los fines descritos. Los datos personales del Usuario (nombre, correo, teléfono) no son compartidos con proveedores de IA. HogaresRD no utiliza datos del Usuario para entrenar modelos de inteligencia artificial de terceros.</p>
+
+      <h2 id="s20">20. Publicidad y Anuncios Patrocinados</h2>
+      <h3>20.1 Contenido Patrocinado en el Feed</h3>
+      <p>La plataforma y la aplicación móvil de HogaresRD pueden mostrar anuncios patrocinados de terceros intercalados en el feed de propiedades. Estos anuncios están claramente identificados con la etiqueta "Publicidad" y pueden incluir ofertas de servicios financieros, seguros, decoración, construcción y otros servicios relacionados con el sector inmobiliario.</p>
+      <h3>20.2 Responsabilidad sobre Anuncios de Terceros</h3>
+      <p>HogaresRD actúa únicamente como plataforma para la exhibición de anuncios de terceros. La empresa no endosa, garantiza ni se hace responsable de la veracidad, calidad o legalidad de los productos o servicios anunciados por terceros. El Usuario interactúa con los anunciantes bajo su propia responsabilidad.</p>
+      <h3>20.3 Seguimiento y Métricas</h3>
+      <p>HogaresRD registra métricas anónimas de los anuncios (impresiones y clics) con fines de medición de rendimiento para los anunciantes. Esta información no incluye datos personales identificables del Usuario.</p>
+
+      <h2 id="s21">21. Suspensión, Cancelación y Eliminación de Cuenta</h2>
+      <h3>21.1 Cancelación por Parte del Usuario</h3>
       <p>El Usuario puede eliminar su cuenta en cualquier momento a través de la sección "Configuración de cuenta" en la plataforma o solicitándolo por escrito a soporte@hogaresrd.com. Tras la solicitud de eliminación, la cuenta será desactivada de inmediato y los datos personales serán tratados conforme a la política de retención descrita en la Sección 12.4 de estos Términos.</p>
-      <h3>18.2 Suspensión y Cancelación por HogaresRD</h3>
+      <h3>21.2 Suspensión y Cancelación por HogaresRD</h3>
       <p>HogaresRD se reserva el derecho de suspender o cancelar unilateralmente la cuenta del Usuario, con o sin previo aviso, en caso de:</p>
       <ul>
         <li>Violación de cualquier disposición de estos Términos y Condiciones.</li>
@@ -366,32 +434,45 @@
         <li>Utilización de la plataforma para actividades ilegales.</li>
       </ul>
       <p>Para violaciones no graves, HogaresRD intentará notificar al Usuario con anticipación razonable y otorgar un período de corrección antes de proceder con la suspensión definitiva.</p>
-      <h3>18.3 Efectos de la Cancelación</h3>
+      <h3>21.3 Efectos de la Cancelación</h3>
       <p>Tras la cancelación de la cuenta, el Usuario perderá acceso a todas las funcionalidades de la plataforma, incluyendo el historial de consultas, aplicaciones y mensajes. Los datos personales serán gestionados conforme a la política de privacidad y retención de HogaresRD. Las aplicaciones de propiedad en curso pueden no continuar siendo procesadas sin la cuenta activa del Usuario.</p>
 
-      <h2 id="s19">19. Modificaciones al Servicio y a estos Términos</h2>
-      <h3>19.1 Modificaciones al Servicio</h3>
+      <h2 id="s22">22. Resolución de Disputas</h2>
+      <h3>22.1 Naturaleza de la Plataforma</h3>
+      <p>HogaresRD opera exclusivamente como una plataforma de intermediación tecnológica entre compradores/arrendatarios y agentes inmobiliarios. HogaresRD no es parte en las transacciones inmobiliarias y no asume responsabilidad por disputas contractuales entre compradores, vendedores, arrendatarios o agentes.</p>
+      <h3>22.2 Proceso de Reclamación</h3>
+      <p>En caso de controversia entre el Usuario y un agente o inmobiliaria registrada en la plataforma, el Usuario debe:</p>
+      <ol>
+        <li><strong>Contacto directo:</strong> Intentar resolver la disputa directamente con la otra parte involucrada.</li>
+        <li><strong>Reporte en plataforma:</strong> Si no se logra una resolución, el Usuario puede reportar la situación a través de la función de reportes disponible en la plataforma.</li>
+        <li><strong>Mediación de HogaresRD:</strong> El equipo de HogaresRD revisará el reporte y podrá mediar entre las partes a discreción, sin obligación de actuar como árbitro ni asumir responsabilidad por el resultado.</li>
+      </ol>
+      <h3>22.3 Conducta Fraudulenta</h3>
+      <p>Si HogaresRD determina que un agente o inmobiliaria ha actuado de manera fraudulenta, la plataforma se reserva el derecho de suspender o eliminar permanentemente la cuenta del infractor, notificar a los usuarios afectados, y reportar la conducta a las autoridades competentes según lo requiera la legislación dominicana.</p>
+
+      <h2 id="s23">23. Modificaciones al Servicio y a estos Términos</h2>
+      <h3>23.1 Modificaciones al Servicio</h3>
       <p>HogaresRD puede modificar, ampliar, reducir o discontinuar cualquier funcionalidad de la plataforma en cualquier momento. Para modificaciones materiales que afecten significativamente la experiencia del Usuario, HogaresRD realizará sus mejores esfuerzos para comunicar los cambios con anticipación razonable a través de la plataforma o por correo electrónico.</p>
-      <h3>19.2 Modificaciones a los Términos</h3>
+      <h3>23.2 Modificaciones a los Términos</h3>
       <p>HogaresRD puede actualizar estos Términos y Condiciones en cualquier momento. Ante modificaciones materiales —aquellas que afecten los derechos u obligaciones fundamentales del Usuario—, HogaresRD notificará a los usuarios registrados con al menos <strong>quince (15) días calendarios de anticipación</strong>, ya sea mediante correo electrónico a la dirección registrada, mediante un aviso destacado en la plataforma, o mediante ambos medios.</p>
       <p>La versión actualizada de los Términos será publicada en la plataforma con la fecha de entrada en vigencia claramente indicada. El uso continuado de la plataforma después de la fecha de vigencia de los términos actualizados constituirá la aceptación tácita de los mismos por parte del Usuario.</p>
-      <h3>19.3 Rechazo de Modificaciones</h3>
+      <h3>23.3 Rechazo de Modificaciones</h3>
       <p>Si el Usuario no está de acuerdo con los cambios introducidos, tiene derecho a cancelar su cuenta antes de la fecha de entrada en vigencia de los nuevos términos. El ejercicio de este derecho no genera ninguna obligación de pago adicional para el Usuario.</p>
 
-      <h2 id="s20">20. Ley Aplicable, Jurisdicción y Disposiciones Generales</h2>
-      <h3>20.1 Ley Aplicable</h3>
+      <h2 id="s24">24. Ley Aplicable, Jurisdicción y Disposiciones Generales</h2>
+      <h3>24.1 Ley Aplicable</h3>
       <p>Estos Términos y Condiciones, así como cualquier controversia que surja de su interpretación, validez, ejecución o incumplimiento, se rigen e interpretan de conformidad con las leyes de la República Dominicana, incluyendo pero no limitándose al Código Civil Dominicano, la Ley No. 126-02 sobre Comercio Electrónico, la Ley No. 172-13 sobre Protección de Datos Personales, y las reglamentaciones del Ministerio de Industria, Comercio y Mipymes.</p>
-      <h3>20.2 Jurisdicción</h3>
+      <h3>24.2 Jurisdicción</h3>
       <p>Para la resolución de cualquier controversia que no pueda resolverse de forma amigable entre las partes, el Usuario y HogaresRD se someten expresamente a la jurisdicción exclusiva de los Tribunales del Distrito Nacional de la República Dominicana, renunciando a cualquier otro fuero que pudiera corresponderles por razón de su domicilio o cualquier otra causa.</p>
-      <h3>20.3 Resolución Amigable</h3>
+      <h3>24.3 Resolución Amigable</h3>
       <p>Antes de iniciar cualquier acción legal, las partes se comprometen a intentar resolver la controversia de forma directa y amigable. El Usuario puede contactar a HogaresRD en soporte@hogaresrd.com para iniciar este proceso.</p>
-      <h3>20.4 Divisibilidad</h3>
+      <h3>24.4 Divisibilidad</h3>
       <p>Si alguna disposición de estos Términos fuera declarada inválida, nula o inaplicable por cualquier tribunal competente, dicha disposición se considerará separada del resto del acuerdo, el cual continuará en plena vigencia y efecto. Las partes acuerdan reemplazar la disposición inválida por una nueva que refleje lo más fielmente posible la intención económica y jurídica original.</p>
-      <h3>20.5 Acuerdo Completo</h3>
+      <h3>24.5 Acuerdo Completo</h3>
       <p>Estos Términos y Condiciones, junto con la Política de Privacidad de HogaresRD y cualquier acuerdo específico celebrado por escrito entre las partes, constituyen el acuerdo completo entre el Usuario y HogaresRD respecto al objeto aquí tratado, sustituyendo cualquier acuerdo, comunicación o negociación anterior.</p>
-      <h3>20.6 No Renuncia</h3>
+      <h3>24.6 No Renuncia</h3>
       <p>El hecho de que HogaresRD no ejerza o no haga cumplir algún derecho o disposición de estos Términos no constituirá una renuncia a dicho derecho o disposición. Cualquier renuncia a derechos bajo estos Términos deberá constar por escrito y estar firmada por un representante autorizado de HogaresRD.</p>
-      <h3>20.7 Contacto</h3>
+      <h3>24.7 Contacto</h3>
       <p>Para cualquier consulta sobre estos Términos, el Usuario puede contactar a HogaresRD a través de:</p>
       <ul>
         <li>Correo electrónico general: soporte@hogaresrd.com</li>

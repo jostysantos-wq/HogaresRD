@@ -1,7 +1,14 @@
 const express      = require('express');
+const rateLimit    = require('express-rate-limit');
 const router       = express.Router();
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
+
+const msgRateLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 20,
+  message: { error: 'Demasiados mensajes. Espera un momento.' },
+  standardHeaders: true, legacyHeaders: false,
+});
 const notify       = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 
@@ -38,7 +45,7 @@ function msgId() {
 // One conversation per client per listing — returns existing if already open.
 router.post('/', requireLogin, (req, res) => {
   const user = getUser(req);
-  const { propertyId, propertyTitle, propertyImage, message } = req.body;
+  const { propertyId, propertyTitle, propertyImage, message, refToken: bodyRefToken } = req.body;
 
   if (!propertyId || !message?.trim()) {
     return res.status(400).json({ error: 'Propiedad y mensaje requeridos.' });
@@ -67,6 +74,27 @@ router.post('/', requireLogin, (req, res) => {
     return res.json({ conversation: existing });
   }
 
+  // Resolve referring agent from refToken (body param or cookie)
+  const refTk = bodyRefToken || req.cookies?.hrd_ref || null;
+  let assignedBrokerId = null;
+  let assignedBrokerName = null;
+  let inmobiliariaId = null;
+
+  if (refTk) {
+    const refAgent = store.getUserByRefToken(refTk);
+    if (refAgent) {
+      if (['agency', 'broker'].includes(refAgent.role)) {
+        // Individual agent — pre-assign conversation to them
+        assignedBrokerId = refAgent.id;
+        assignedBrokerName = refAgent.name;
+      } else if (['inmobiliaria', 'constructora'].includes(refAgent.role)) {
+        // Org link — leave brokerId null so ALL org agents see it
+        // Store inmobiliaria_id so we can restrict visibility
+        inmobiliariaId = refAgent.id;
+      }
+    }
+  }
+
   // Create new conversation
   const msg = {
     id:         msgId(),
@@ -78,14 +106,16 @@ router.post('/', requireLogin, (req, res) => {
   };
 
   const conv = {
-    id:            uid(),
+    id:             uid(),
     propertyId,
     propertyTitle:  propertyTitle || 'Propiedad',
     propertyImage:  propertyImage || null,
     clientId:       user.sub,
     clientName:     user.name,
-    brokerId:       null,   // assigned when broker first replies
-    brokerName:     null,
+    brokerId:       assignedBrokerId,   // pre-assigned from ref link, or null
+    brokerName:     assignedBrokerName,
+    inmobiliariaId: inmobiliariaId,      // set when org link used (for team visibility)
+    refToken:       refTk || null,
     createdAt:      new Date().toISOString(),
     updatedAt:      new Date().toISOString(),
     lastMessage:    message.trim(),
@@ -95,6 +125,36 @@ router.post('/', requireLogin, (req, res) => {
   };
 
   store.saveConversation(conv);
+
+  // Push notification to assigned broker or org team
+  const { notify: pushNotify } = require('./push');
+  if (assignedBrokerId) {
+    pushNotify(assignedBrokerId, {
+      type: 'new_message',
+      title: 'Nuevo mensaje de cliente',
+      body: `${user.name}: ${message.trim().slice(0, 80)}`,
+      url: '/mensajes',
+    });
+  } else if (inmobiliariaId) {
+    // Notify all agents in the org
+    const teamMembers = store.getUsersByInmobiliaria(inmobiliariaId);
+    for (const member of teamMembers) {
+      pushNotify(member.id, {
+        type: 'new_message',
+        title: 'Nuevo mensaje de cliente',
+        body: `${user.name}: ${message.trim().slice(0, 80)}`,
+        url: '/mensajes',
+      });
+    }
+    // Also notify the inmobiliaria owner
+    pushNotify(inmobiliariaId, {
+      type: 'new_message',
+      title: 'Nuevo mensaje de cliente',
+      body: `${user.name}: ${message.trim().slice(0, 80)}`,
+      url: '/mensajes',
+    });
+  }
+
   res.status(201).json({ conversation: conv });
 });
 
@@ -109,6 +169,18 @@ router.get('/', requireLogin, (req, res) => {
     convs = store.getConversationsByClient(user.sub);
   } else if (PRO_ROLES.includes(user.role)) {
     convs = store.getConversationsForBroker(user.sub);
+    // Also include UNCLAIMED org conversations (inmobiliariaId matches, brokerId still null)
+    // Once a conversation is claimed by any agent, only that agent sees it
+    const fullUser = store.getUserById(user.sub);
+    const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+      ? fullUser.id : fullUser?.inmobiliaria_id;
+    if (inmId) {
+      const allConvs = store.getConversations();
+      const orgConvs = allConvs.filter(c =>
+        c.inmobiliariaId === inmId && !c.brokerId && !convs.some(x => x.id === c.id)
+      );
+      convs = convs.concat(orgConvs);
+    }
   } else {
     convs = store.getConversations(); // admin sees all
   }
@@ -116,11 +188,30 @@ router.get('/', requireLogin, (req, res) => {
   const wantArchived = req.query.archived === 'true';
   convs = convs.filter(c => wantArchived ? !!c.archived : !c.archived);
 
+  // Determine if this user is an org owner (level 3 — full oversight)
+  const fullUserForList = PRO_ROLES.includes(user.role) ? store.getUserById(user.sub) : null;
+  const isOrgOwner = fullUserForList && ['inmobiliaria', 'constructora'].includes(fullUserForList.role);
+
   // Return without full message array for list view (just metadata)
-  const list = convs.map(({ messages, ...meta }) => ({
-    ...meta,
-    messageCount: messages.length,
-  }));
+  const list = convs.map(({ messages, ...meta }) => {
+    const isUnclaimed = meta.inmobiliariaId && !meta.brokerId;
+    const isMyConv = meta.brokerId === user.sub || meta.clientId === user.sub;
+
+    // Unclaimed org conversations: redact details for non-owners
+    if (isUnclaimed && !isMyConv && !isOrgOwner) {
+      const firstName = (meta.clientName || '').split(' ')[0];
+      return {
+        ...meta,
+        clientName:   firstName,
+        clientEmail:  null,
+        lastMessage:  'Nuevo mensaje pendiente',
+        messageCount: messages.length,
+        claimRequired: true,
+      };
+    }
+
+    return { ...meta, messageCount: messages.length };
+  });
 
   res.json(list);
 });
@@ -139,6 +230,16 @@ router.get('/unread', requireLogin, (req, res) => {
 
   if (PRO_ROLES.includes(user.role)) {
     convs = store.getConversationsForBroker(user.sub);
+    // Include unclaimed org conversations in unread count
+    const fullUser = store.getUserById(user.sub);
+    const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+      ? fullUser.id : fullUser?.inmobiliaria_id;
+    if (inmId) {
+      const orgConvs = store.getConversations().filter(c =>
+        c.inmobiliariaId === inmId && !c.brokerId && !convs.some(x => x.id === c.id)
+      );
+      convs = convs.concat(orgConvs);
+    }
     const count = convs.reduce((n, c) => n + (c.unreadBroker || 0), 0);
     return res.json({ count });
   }
@@ -156,12 +257,33 @@ router.get('/:id', requireLogin, (req, res) => {
   const isBroker = PRO_ROLES.includes(user.role);
   const isClient = conv.clientId === user.sub;
   const isOwner  = conv.brokerId === user.sub;
-  // Pros can only access conversations they're assigned to, OR unassigned
-  // conversations (so they can claim them on first reply).
-  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
+  // Org members can access unclaimed org conversations (to claim them)
+  const fullUser = isBroker ? store.getUserById(user.sub) : null;
+  const userInmId = fullUser ? (['inmobiliaria', 'constructora'].includes(fullUser.role) ? fullUser.id : fullUser.inmobiliaria_id) : null;
+  const isOrgUnclaimed = isBroker && conv.inmobiliariaId && conv.inmobiliariaId === userInmId && !conv.brokerId;
+  // Pros can access: assigned to them, unassigned (no brokerId), or unclaimed org conversations
+  const brokerHasAccess = isBroker && (isOwner || (!conv.brokerId && !conv.inmobiliariaId) || isOrgUnclaimed);
 
   if (!isClient && !brokerHasAccess) {
     return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  // For unclaimed org conversations: non-owner agents see a claim prompt, not the messages
+  const isOrgOwnerUser = fullUser && ['inmobiliaria', 'constructora'].includes(fullUser.role);
+  if (isOrgUnclaimed && !isOrgOwnerUser) {
+    const firstName = (conv.clientName || '').split(' ')[0];
+    return res.json({
+      id:             conv.id,
+      propertyId:     conv.propertyId,
+      propertyTitle:  conv.propertyTitle,
+      propertyImage:  conv.propertyImage,
+      clientName:     firstName,
+      inmobiliariaId: conv.inmobiliariaId,
+      messageCount:   conv.messages.length,
+      createdAt:      conv.createdAt,
+      claimRequired:  true,
+      messages:       [], // hidden until claimed
+    });
   }
 
   // Since the request comes with ?since= for polling, return only new messages
@@ -171,8 +293,6 @@ router.get('/:id', requireLogin, (req, res) => {
     : conv.messages;
 
   // Auto-mark-read on INITIAL load (no ?since= = user just opened the thread).
-  // This is more reliable than client-side markRead calls which can get
-  // killed when the app backgrounds before the request completes.
   if (!since) {
     let dirty = false;
     if (isBroker && conv.unreadBroker) { conv.unreadBroker = 0; dirty = true; }
@@ -183,8 +303,54 @@ router.get('/:id', requireLogin, (req, res) => {
   res.json({ ...conv, messages });
 });
 
+// ── POST /api/conversations/:id/claim ────────────────────────────────────
+// Agent explicitly claims an unclaimed org conversation
+router.post('/:id/claim', requireLogin, (req, res) => {
+  const user = getUser(req);
+  if (!PRO_ROLES.includes(user.role))
+    return res.status(403).json({ error: 'Solo agentes pueden reclamar conversaciones.' });
+
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  // Must be unclaimed and org-tagged
+  if (conv.brokerId)
+    return res.status(400).json({ error: 'Esta conversación ya fue reclamada por otro agente.' });
+
+  // Verify agent belongs to the conversation's org
+  const fullUser = store.getUserById(user.sub);
+  const userInmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+    ? fullUser.id : fullUser?.inmobiliaria_id;
+
+  if (conv.inmobiliariaId && conv.inmobiliariaId !== userInmId)
+    return res.status(403).json({ error: 'No perteneces a esta organización.' });
+
+  // Double-check before claiming (re-read to prevent race condition)
+  const fresh = store.getConversationById(req.params.id);
+  if (fresh.brokerId)
+    return res.status(400).json({ error: 'Esta conversación ya fue reclamada por otro agente.' });
+
+  // Claim it
+  fresh.brokerId   = user.sub;
+  fresh.brokerName = user.name;
+  fresh.updatedAt  = new Date().toISOString();
+
+  // Add system message
+  fresh.messages.push({
+    id:         'msg_' + crypto.randomBytes(6).toString('hex'),
+    senderId:   'system',
+    senderRole: 'system',
+    senderName: 'HogaresRD',
+    text:       `${user.name} ha tomado esta conversación.`,
+    timestamp:  fresh.updatedAt,
+  });
+
+  store.saveConversation(fresh);
+  res.json({ ok: true, conversation: fresh });
+});
+
 // ── POST /api/conversations/:id/messages ─────────────────────────────────
-router.post('/:id/messages', requireLogin, (req, res) => {
+router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
   const user = getUser(req);
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });

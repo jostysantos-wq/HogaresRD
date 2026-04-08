@@ -6,7 +6,8 @@ struct SecretaryDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    private let tabs = ["Aplicaciones", "Analíticas", "Archivo", "Auditoría", "Mis Propiedades"]
+    // Level 1 secretaries: limited tab set
+    private let tabs = ["Aplicaciones", "Archivo", "Mis Propiedades"]
 
     var body: some View {
         VStack(spacing: 0) {

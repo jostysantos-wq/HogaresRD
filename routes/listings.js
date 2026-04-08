@@ -122,9 +122,10 @@ router.get('/trending', (req, res) => {
 // GET /api/listings/agent/:refToken — public: resolve affiliate token to agent name/agency
 router.get('/agent/:refToken', (req, res) => {
   const agent = store.getUserByRefToken(req.params.refToken);
-  if (!agent || agent.role !== 'agency')
+  const agentRoles = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+  if (!agent || !agentRoles.includes(agent.role))
     return res.status(404).json({ error: 'Agente no encontrado' });
-  res.json({ name: agent.name, agencyName: agent.agencyName });
+  res.json({ name: agent.name, agencyName: agent.agencyName || agent.companyName || agent.name });
 });
 
 // GET /api/agencies — list all agencies with listing counts
@@ -224,15 +225,25 @@ router.post('/:id/inquiry', async (req, res) => {
   if (!name || !phone || !email)
     return res.status(400).json({ error: 'Nombre, teléfono y correo son requeridos' });
 
-  // If refToken provided, route ONLY to that agent
+  // If refToken provided, route to referring agent (or org's agents for inmobiliaria)
   let agencyEmails = [];
   let agencyNames  = 'las inmobiliarias afiliadas';
   const refAgent   = refToken ? store.getUserByRefToken(refToken) : null;
+  const agentRoles = ['agency', 'broker'];
+  const orgRoles   = ['inmobiliaria', 'constructora'];
 
-  if (refAgent && refAgent.role === 'agency') {
+  if (refAgent && agentRoles.includes(refAgent.role)) {
+    // Individual agent — route directly to them
     agencyEmails = [refAgent.email];
-    agencyNames  = `${refAgent.name} de ${refAgent.agencyName}`;
+    agencyNames  = `${refAgent.name}${refAgent.agencyName ? ' de ' + refAgent.agencyName : ''}`;
+  } else if (refAgent && orgRoles.includes(refAgent.role)) {
+    // Inmobiliaria/Constructora — route to ALL agents in the organization
+    const teamMembers = store.getUsersByInmobiliaria(refAgent.id);
+    agencyEmails = [refAgent.email, ...teamMembers.map(m => m.email)].filter(Boolean);
+    agencyEmails = [...new Set(agencyEmails)]; // dedupe
+    agencyNames  = refAgent.companyName || refAgent.name;
   } else {
+    // No valid refToken — fall back to listing's affiliated agencies
     const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
     agencyEmails   = agencies.map(a => a.email).filter(Boolean);
     agencyNames    = agencies.map(a => a.name).join(', ') || 'las inmobiliarias afiliadas';

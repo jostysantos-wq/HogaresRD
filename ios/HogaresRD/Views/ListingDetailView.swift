@@ -59,10 +59,11 @@ struct ListingDetailView: View {
         }
         .task {
             await load()
-            // Track view — matches web's listing.html POST /api/listings/:id/view
-            // so broker analytics count iOS views too.
-            APIService.shared.trackListingView(id)
-            APIService.shared.trackRecentlyViewed(id)
+            // Defer tracking to background — don't compete with data loading
+            Task.detached(priority: .utility) { [id] in
+                APIService.shared.trackListingView(id)
+                APIService.shared.trackRecentlyViewed(id)
+            }
         }
     }
 
@@ -1060,12 +1061,10 @@ struct ListingDetailView: View {
 
     private func shareListing(_ l: Listing) {
         var url = "https://hogaresrd.com/listing/\(l.id)"
-        // Append affiliate refToken if agent is affiliated to this listing
+        // Append affiliate refToken for any agent sharing a listing
         if let ref = APIService.shared.currentUser?.refToken,
            let userRole = APIService.shared.currentUser?.role,
-           ["agency", "broker", "inmobiliaria", "constructora"].contains(userRole),
-           let agencies = l.agencies,
-           agencies.contains(where: { $0.userId == APIService.shared.currentUser?.id }) {
+           ["agency", "broker", "inmobiliaria", "constructora"].contains(userRole) {
             url += "?ref=\(ref)"
         }
         let text = "\(l.title) – \(l.priceFormatted)\n\(url)"

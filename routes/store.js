@@ -108,7 +108,6 @@ db.exec(`
     blueprints         TEXT DEFAULT '[]',
     tags               TEXT DEFAULT '[]',
     unit_types         TEXT DEFAULT '[]',
-    unit_inventory     TEXT DEFAULT '[]',
     construction_company TEXT,
     _extra             TEXT DEFAULT '{}'
   );
@@ -594,8 +593,11 @@ function dehydrateTour(tour) {
 
 // ── Generic upsert builder ───────────────────────────────────────────────
 
+const SAFE_COL_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 function buildUpsert(table, row, pkCol) {
-  const cols = Object.keys(row);
+  const cols = Object.keys(row).filter(c => SAFE_COL_RE.test(c));
+  if (!cols.length) throw new Error('buildUpsert: no valid columns');
   const placeholders = cols.map(() => '?').join(', ');
   const updates = cols.filter(c => c !== pkCol).map(c => `${c} = excluded.${c}`).join(', ');
   const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})
@@ -1085,6 +1087,14 @@ function deleteTwoFASession(id) {
   stmts.deleteTwoFA.run(id);
 }
 
+function deleteTwoFASessionsByUser(userId) {
+  const all = stmts.getAllTwoFA.all();
+  for (const row of all) {
+    const session = _jsonParse(row.data, null);
+    if (session && session.userId === userId) stmts.deleteTwoFA.run(row.id);
+  }
+}
+
 function cleanExpiredTwoFASessions() {
   const now = new Date();
   const all = stmts.getAllTwoFA.all();
@@ -1351,7 +1361,7 @@ module.exports = {
   getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
   getTours, getTourById, getToursByBroker, getToursByClient, getToursByListing, getConfirmedToursByDate,
   getBookedSlots, saveTour,
-  getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, cleanExpiredTwoFASessions,
+  getTwoFASessions, getTwoFASession, saveTwoFASession, deleteTwoFASession, deleteTwoFASessionsByUser, cleanExpiredTwoFASessions,
   getPushSubscriptions, getPushSubscriptionsByUser, savePushSubscription,
   removePushSubscription, getPushPreferences, savePushPreferences,
   getSavedSearchesByUser, getSavedSearchById, getAllNotifiableSavedSearches,

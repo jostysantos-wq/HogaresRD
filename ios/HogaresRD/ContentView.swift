@@ -156,7 +156,7 @@ struct ProfileTabView: View {
                     // ── Role-specific tools ──
                     if user.isAgency {
                         agentToolsSection(user)
-                        if user.isInmobiliaria {
+                        if user.isInmobiliaria || user.canViewTeam {
                             teamManagementSection
                         }
                     } else {
@@ -299,7 +299,7 @@ struct ProfileTabView: View {
                 // Team leads (inmobiliaria + constructora) ALWAYS get the
                 // full team dashboard. Secretaries get the limited secretary
                 // dashboard. Everyone else (broker/agency) gets broker.
-                if user.isTeamLead {
+                if user.isTeamLead || user.effectiveAccessLevel >= 2 {
                     InmobiliariaDashboardView().environmentObject(api)
                 } else if user.isSecretary {
                     SecretaryDashboardView().environmentObject(api)
@@ -356,21 +356,26 @@ struct ProfileTabView: View {
     // MARK: - Team Management (Inmobiliaria only)
 
     private var teamManagementSection: some View {
-        Section("Gestión de Equipo") {
-            NavigationLink {
-                InmobiliariaTeamListView().environmentObject(api)
-            } label: {
-                Label("Mis agentes", systemImage: "person.2.fill")
+        let level = api.currentUser?.effectiveAccessLevel ?? 1
+        return Section("Gestión de Equipo") {
+            if level >= 2 {
+                NavigationLink {
+                    InmobiliariaTeamListView().environmentObject(api)
+                } label: {
+                    Label("Mis agentes", systemImage: "person.2.fill")
+                }
+                NavigationLink {
+                    InmobiliariaPerformanceListView().environmentObject(api)
+                } label: {
+                    Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+                }
             }
-            NavigationLink {
-                InmobiliariaRequestsListView().environmentObject(api)
-            } label: {
-                Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
-            }
-            NavigationLink {
-                InmobiliariaPerformanceListView().environmentObject(api)
-            } label: {
-                Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+            if level >= 3 {
+                NavigationLink {
+                    InmobiliariaRequestsListView().environmentObject(api)
+                } label: {
+                    Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
+                }
             }
         }
     }

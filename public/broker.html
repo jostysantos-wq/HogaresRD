@@ -1061,22 +1061,29 @@
 
     /* ── RESPONSIVE ───────────────────────────────────────────── */
     @media (max-width: 900px) {
-      .sidebar { position: fixed; top: 0; left: 0; transform: translateX(-100%); transition: transform 0.25s, width 0.25s; z-index: 50; width: var(--sidebar-w) !important; height: 100vh; }
+      .sidebar { position: fixed; top: 0; left: 0; transform: translateX(-100%); transition: transform 0.25s, width 0.25s; z-index: 999; width: var(--sidebar-w) !important; height: 100vh; }
       .sidebar.mobile-open { transform: translateX(0); }
+      .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 998; }
+      .sidebar.mobile-open ~ .sidebar-backdrop { display: block; }
       .topbar-hamburger { display: flex; }
       .content-area { padding: 1rem 1rem 4rem; }
+      .section-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 0.3rem; padding-bottom: 0.25rem; }
+      .section-nav-btn { white-space: nowrap; flex-shrink: 0; font-size: 0.72rem; padding: 0.4rem 0.7rem; }
     }
     @media (max-width: 768px) {
       .stats-bar { grid-template-columns: repeat(2, 1fr); }
       .app-card { grid-template-columns: 1fr; }
       .app-card-right { flex-direction: row; align-items: center; gap: 0.75rem; }
-      .detail-panel { width: 100vw; }
+      .detail-panel { width: 100vw; max-width: 100vw; left: 0; right: 0; border-radius: 0; }
       .info-grid { grid-template-columns: 1fr; }
       .chart-row { grid-template-columns: 1fr; }
+      .equipo-grid { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 480px) {
       .stats-bar { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: 1fr; }
+      .topbar { padding: 0 0.75rem; }
+      .content-area { padding: 0.75rem 0.75rem 4rem; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -1172,6 +1179,12 @@
     <button class="sidebar-nav-item" data-page="team-secretaries" id="teamSecNavBtn" style="display:none">
       <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
       <span class="sidebar-nav-label">Secretarias</span>
+    </button>
+
+    <div class="sidebar-section-label" id="sidebarRefLabel" style="display:none">Marketing</div>
+    <button class="sidebar-nav-item" data-page="referrals" id="referralsNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+      <span class="sidebar-nav-label">Enlaces de Referido</span>
     </button>
   </nav>
 
@@ -1847,6 +1860,93 @@
     </div>
     <div id="teamPerfList">
       <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- ═══ REFERRAL LINKS PAGE ═══════════════════════════════════ -->
+  <div class="page-section" id="page-referrals">
+    <div class="team-page-header">
+      <h2>Enlaces de Referido</h2>
+      <p>Comparte tus enlaces personalizados y recibe crédito por cada cliente que traigas</p>
+    </div>
+
+    <!-- Referral Code Card -->
+    <div style="background:linear-gradient(135deg,#001840,#003580);border-radius:14px;padding:2rem;color:#fff;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:.4rem;">Tu Código de Referido</div>
+          <div style="font-size:1.6rem;font-weight:900;font-family:monospace;letter-spacing:2px;" id="refCodeDisplay">---</div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button onclick="copyRefLink('general')" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;padding:.5rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;">
+            Copiar enlace general
+          </button>
+          <button onclick="shareRefWhatsApp()" style="background:#25D366;border:none;color:#fff;padding:.5rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;">
+            WhatsApp
+          </button>
+        </div>
+      </div>
+      <div style="margin-top:1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;color:rgba(255,255,255,.6);">
+        <span>Enlace corto: <strong id="refShortLink" style="color:#93C5FD;">---</strong></span>
+        <span>Los clientes que lleguen por tu enlace quedan vinculados por 30 días</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;" id="refStatsGrid">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:var(--accent);" id="refStatClicks">--</div>
+        <div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Clics (30 días)</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:var(--accent);" id="refStatVisitors">--</div>
+        <div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Visitantes únicos</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:#16a34a;" id="refStatLeads">--</div>
+        <div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Leads generados</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:#7c3aed;" id="refStatApps">--</div>
+        <div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Aplicaciones</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:#f59e0b;" id="refStatConversion">--</div>
+        <div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Conversión</div>
+      </div>
+    </div>
+
+    <!-- Link Generator -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+      <h3 style="font-size:.92rem;font-weight:700;margin-bottom:.75rem;">Generador de Enlaces</h3>
+      <div style="display:flex;gap:.75rem;align-items:end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:.72rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:.3rem;">Selecciona una propiedad</label>
+          <select id="refListingSelect" style="width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--bg);color:var(--text);">
+            <option value="">Enlace general (todas las propiedades)</option>
+          </select>
+        </div>
+        <button onclick="copyRefLink('listing')" style="padding:.5rem 1.25rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+          Copiar enlace
+        </button>
+      </div>
+      <div id="refGeneratedLink" style="margin-top:.6rem;padding:.5rem .75rem;background:var(--bg-secondary);border-radius:6px;font-size:.8rem;font-family:monospace;color:var(--text-muted);word-break:break-all;display:none;"></div>
+    </div>
+
+    <!-- QR Code -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;text-align:center;">
+      <h3 style="font-size:.92rem;font-weight:700;margin-bottom:.75rem;">Código QR</h3>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.75rem;">Imprime o comparte tu QR para que clientes escaneen y lleguen directo a tu perfil</p>
+      <div id="refQRCode" style="display:inline-block;padding:1rem;background:#fff;border-radius:8px;border:1px solid var(--border);"></div>
+      <div style="margin-top:.5rem;">
+        <button onclick="downloadQR()" style="font-size:.78rem;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600;">Descargar QR</button>
+      </div>
+    </div>
+
+    <!-- Top listings by clicks -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;">
+      <h3 style="font-size:.92rem;font-weight:700;margin-bottom:.75rem;">Top Propiedades por Clics</h3>
+      <div id="refTopListings" style="font-size:.82rem;color:var(--text-muted);">Cargando...</div>
     </div>
   </div>
 
@@ -2538,6 +2638,7 @@
   const isBrokerRole      = ['agency', 'broker'].includes(currentUser.role);
   const isInmobiliariaRole = currentUser.role === 'inmobiliaria' || currentUser.role === 'constructora';
   const isSecretaryRole = currentUser.role === 'secretary';
+  let userAccessLevel = isInmobiliariaRole ? 3 : 0; // will be fetched for team members
 
   // ── Full user data (affiliation fields, etc.) ───────────────
   // Initialized after API helper is defined below to avoid temporal dead zone.
@@ -2794,20 +2895,53 @@
   const roleLabels = { agency: 'Agente Broker', broker: 'Agente Broker', inmobiliaria: 'Inmobiliaria', constructora: 'Constructora', secretary: 'Secretaria' };
   document.getElementById('sidebarRoleLabel').textContent = roleLabels[currentUser.role] || 'Agente';
 
-  if (isInmobiliariaRole) {
-    ['sidebarTeamLabel','teamMembersNavBtn','teamRequestsNavBtn','teamPerfNavBtn','teamSecNavBtn'].forEach(id => {
+  // Fetch access level for team members (brokers/secretaries with inmobiliaria)
+  if (!isInmobiliariaRole && (isSecretaryRole || isBrokerRole)) {
+    try {
+      const accessRes = await fetch('/api/inmobiliaria/my-access', { credentials: 'include' });
+      if (accessRes.ok) {
+        const accessData = await accessRes.json();
+        userAccessLevel = accessData.access_level || 0;
+      }
+    } catch {}
+  }
+
+  // Show team sidebar items based on access level
+  if (userAccessLevel >= 2) {
+    ['sidebarTeamLabel','teamMembersNavBtn','teamPerfNavBtn'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
+  }
+  if (userAccessLevel >= 3) {
+    ['teamRequestsNavBtn','teamSecNavBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+  }
+  if (isInmobiliariaRole || userAccessLevel >= 2) {
     loadEquipo();
   }
-  if (isSecretaryRole) {
-    // Secretary sees: Aplicaciones, Analiticas, Archivo, Auditoria, Mis Propiedades
-    // Hide: Ventas, Contabilidad tabs
-    document.querySelectorAll('.section-nav-btn[data-section="ventas"], .section-nav-btn[data-section="contabilidad"]').forEach(el => el.style.display = 'none');
+
+  // Hide dashboard tabs based on access level
+  if (userAccessLevel < 2 && !isInmobiliariaRole) {
+    // Level 1 (Asistente): only sees Aplicaciones, Archivo, Mis Propiedades
+    ['ventas','contabilidad','analiticas','auditoria','publicidad'].forEach(s => {
+      document.querySelector(`.section-nav-btn[data-section="${s}"]`)?.style.setProperty('display', 'none');
+    });
+  } else if (userAccessLevel < 3 && !isInmobiliariaRole) {
+    // Level 2 (Gerente): sees everything except Auditoria
+    document.querySelector('.section-nav-btn[data-section="auditoria"]')?.style.setProperty('display', 'none');
   }
   if (isBrokerRole) {
     initAffiliationBanner();
+  }
+
+  // Show referral link section for all agent roles
+  if (currentUser.refToken) {
+    ['sidebarRefLabel','referralsNavBtn'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = '';
+    });
   }
 
   // ── State ──────────────────────────────────────────────────
@@ -4043,13 +4177,17 @@
         grid.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;grid-column:1/-1;">No se encontraron agentes.</p>`;
         return;
       }
+      const levelColors = { 1: '#94a3b8', 2: '#f59e0b', 3: '#7c3aed' };
+      const levelLabels = { 1: 'Asistente', 2: 'Gerente', 3: 'Director' };
       grid.innerHTML = list.map(b => {
         const av = b.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        const lvl = b.access_level || 1;
+        const titleDisplay = b.team_title || b.jobTitle || '';
         return `<div class="equipo-card" data-id="${esc(b.id)}" style="overflow:visible;">
           <div class="equipo-avatar">${esc(av)}</div>
           <div style="flex:1;min-width:0;">
-            <div class="equipo-name">${esc(b.name)}</div>
-            ${b.jobTitle ? `<div class="equipo-meta" style="color:var(--accent);font-weight:600;font-size:0.74rem;">${esc(b.jobTitle)}</div>` : ''}
+            <div class="equipo-name">${esc(b.name)} <span style="display:inline-block;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:50px;background:${levelColors[lvl]}20;color:${levelColors[lvl]};vertical-align:middle;margin-left:4px;">${levelLabels[lvl]}</span></div>
+            ${titleDisplay ? `<div class="equipo-meta" style="color:var(--accent);font-weight:600;font-size:0.74rem;">${esc(titleDisplay)}</div>` : ''}
             <div class="equipo-meta">${esc(b.email)}</div>
             ${b.licenseNumber ? `<div class="equipo-meta">Lic. ${esc(b.licenseNumber)}</div>` : ''}
             <span class="equipo-apps">${b.app_count} aplicacion(es)</span>
@@ -4064,6 +4202,10 @@
               <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
               Resetear contraseña
             </button>
+            ${userAccessLevel >= 3 ? `<button class="equipo-dropdown-item" data-action="role" data-id="${esc(b.id)}" data-name="${esc(b.name)}" data-level="${lvl}" data-title="${esc(b.team_title||'')}">
+              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+              Asignar Rol
+            </button>` : ''}
             <button class="equipo-dropdown-item danger" data-action="remove" data-id="${esc(b.id)}" data-name="${esc(b.name)}">
               <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
               Desvincular
@@ -4092,6 +4234,7 @@
           if (action === 'view')   openBrokerModal(id);
           if (action === 'reset')  sendBrokerReset(id, name);
           if (action === 'remove') removeBroker(id, name);
+          if (action === 'role')   openRoleModal(id, name, item.dataset.level, item.dataset.title);
         };
       });
     }
@@ -4135,6 +4278,94 @@
     // Render performance page
     renderTeamPerformance(brokers);
   }
+
+  // ── Role assignment modal ──────────────────────────────────────
+  window.openRoleModal = function(userId, userName, currentLevel, currentTitle) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:var(--bg-card);border-radius:16px;width:90%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#002D62,#0047A8);padding:1.5rem;color:#fff;">
+          <h3 style="margin:0;font-size:1.1rem;font-weight:800;">Asignar Rol</h3>
+          <p style="margin:.3rem 0 0;font-size:.82rem;opacity:.7;">${esc(userName)}</p>
+        </div>
+        <div style="padding:1.5rem;">
+          <div style="margin-bottom:1.25rem;">
+            <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:.4rem;">Titulo del cargo</label>
+            <input type="text" id="roleTitle" value="${esc(currentTitle||'')}" placeholder="Ej: CMO, Gerente de Ventas, Asistente..." style="width:100%;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;background:var(--bg);color:var(--text);box-sizing:border-box;" maxlength="100">
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:.4rem;">Nivel de acceso</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;" id="roleLevelPicker">
+              <button class="role-lvl-btn ${currentLevel==1?'active':''}" data-lvl="1" style="padding:.6rem .4rem;border:1.5px solid ${currentLevel==1?'#94a3b8':'var(--border)'};border-radius:8px;background:${currentLevel==1?'#94a3b815':'var(--bg)'};cursor:pointer;text-align:center;transition:all .15s;">
+                <div style="font-size:1.1rem;font-weight:800;color:#94a3b8;">1</div>
+                <div style="font-size:.68rem;font-weight:700;color:#94a3b8;">Asistente</div>
+              </button>
+              <button class="role-lvl-btn ${currentLevel==2?'active':''}" data-lvl="2" style="padding:.6rem .4rem;border:1.5px solid ${currentLevel==2?'#f59e0b':'var(--border)'};border-radius:8px;background:${currentLevel==2?'#f59e0b15':'var(--bg)'};cursor:pointer;text-align:center;transition:all .15s;">
+                <div style="font-size:1.1rem;font-weight:800;color:#f59e0b;">2</div>
+                <div style="font-size:.68rem;font-weight:700;color:#f59e0b;">Gerente</div>
+              </button>
+              <button class="role-lvl-btn ${currentLevel==3?'active':''}" data-lvl="3" style="padding:.6rem .4rem;border:1.5px solid ${currentLevel==3?'#7c3aed':'var(--border)'};border-radius:8px;background:${currentLevel==3?'#7c3aed15':'var(--bg)'};cursor:pointer;text-align:center;transition:all .15s;">
+                <div style="font-size:1.1rem;font-weight:800;color:#7c3aed;">3</div>
+                <div style="font-size:.68rem;font-weight:700;color:#7c3aed;">Director</div>
+              </button>
+            </div>
+            <div style="margin-top:.6rem;font-size:.72rem;color:var(--text-muted);line-height:1.5;" id="roleLevelDesc">
+              ${currentLevel==1?'Puede ver aplicaciones asignadas y propiedades propias.':currentLevel==2?'Puede ver agentes, aprobar pagos y ver analiticas del equipo.':'Acceso completo: gestionar equipo, roles, facturacion y configuracion.'}
+            </div>
+          </div>
+          <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+            <button id="roleCancelBtn" style="padding:.55rem 1.2rem;border:1.5px solid var(--border);border-radius:8px;background:none;color:var(--text);font-weight:600;cursor:pointer;font-size:.85rem;">Cancelar</button>
+            <button id="roleSaveBtn" style="padding:.55rem 1.2rem;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;font-size:.85rem;">Guardar</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    let selectedLevel = Number(currentLevel) || 1;
+    const descs = {
+      1: 'Puede ver aplicaciones asignadas y propiedades propias.',
+      2: 'Puede ver agentes, aprobar pagos y ver analiticas del equipo.',
+      3: 'Acceso completo: gestionar equipo, roles, facturacion y configuracion.',
+    };
+    const colors = { 1: '#94a3b8', 2: '#f59e0b', 3: '#7c3aed' };
+
+    overlay.querySelectorAll('[data-lvl]').forEach(btn => {
+      btn.onclick = () => {
+        selectedLevel = Number(btn.dataset.lvl);
+        overlay.querySelectorAll('[data-lvl]').forEach(b => {
+          const l = Number(b.dataset.lvl);
+          const active = l === selectedLevel;
+          b.style.borderColor = active ? colors[l] : 'var(--border)';
+          b.style.background = active ? colors[l] + '15' : 'var(--bg)';
+        });
+        document.getElementById('roleLevelDesc').textContent = descs[selectedLevel];
+      };
+    });
+
+    overlay.querySelector('#roleCancelBtn').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.querySelector('#roleSaveBtn').onclick = async () => {
+      const title = document.getElementById('roleTitle').value.trim();
+      try {
+        const res = await fetch(`/api/inmobiliaria/team/${userId}/role`, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_level: selectedLevel, team_title: title }),
+        });
+        if (res.ok) {
+          toast('Rol actualizado');
+          overlay.remove();
+          loadEquipo();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast(data.error || 'Error al guardar', 'error');
+        }
+      } catch { toast('Error de conexion', 'error'); }
+    };
+  };
 
   function renderTeamPerformance(brokers) {
     const el = document.getElementById('teamPerfList');
@@ -4241,6 +4472,103 @@
   // ── Broker detail modal ────────────────────────────────────────
   const statusLabels = { aplicado:'Aplicado', en_revision:'En Revisión', documentos_requeridos:'Docs. Requeridos', documentos_enviados:'Docs. Enviados', documentos_insuficientes:'Docs. Insuficientes', en_aprobacion:'En Aprobación', reservado:'Reservado', aprobado:'Aprobado', pendiente_pago:'Pendiente Pago', pago_enviado:'Pago Enviado', pago_aprobado:'Pago Aprobado', completado:'Completado', rechazado:'Rechazado' };
   const statusColors = { aplicado:'#3b82f6', en_revision:'#f59e0b', documentos_requeridos:'#f97316', documentos_enviados:'#8b5cf6', en_aprobacion:'#06b6d4', reservado:'#6366f1', aprobado:'#22c55e', pendiente_pago:'#ef4444', pago_enviado:'#f59e0b', pago_aprobado:'#10b981', completado:'#16a34a', rechazado:'#ef4444' };
+
+  // ── Referral Link Hub ──────────────────────────────────────────
+  async function loadReferralPage() {
+    if (!currentUser.refToken) return;
+    const baseUrl = location.origin;
+    const refToken = currentUser.refToken;
+
+    document.getElementById('refCodeDisplay').textContent = refToken;
+    document.getElementById('refShortLink').textContent = `${baseUrl}/r/${refToken}`;
+
+    // Load stats
+    try {
+      const res = await fetch('/api/referrals/my-stats', { credentials: 'include' });
+      if (res.ok) {
+        const s = await res.json();
+        document.getElementById('refStatClicks').textContent = s.clicks_30d || 0;
+        document.getElementById('refStatVisitors').textContent = s.unique_visitors || 0;
+        document.getElementById('refStatLeads').textContent = s.leads || 0;
+        document.getElementById('refStatApps').textContent = s.applications || 0;
+        document.getElementById('refStatConversion').textContent = s.conversion_rate + '%';
+
+        // Top listings
+        const topEl = document.getElementById('refTopListings');
+        if (s.top_listings && s.top_listings.length) {
+          topEl.innerHTML = s.top_listings.map((l, i) => `
+            <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;${i > 0 ? 'border-top:1px solid var(--border);' : ''}">
+              <span style="font-size:.72rem;font-weight:800;color:var(--accent);width:20px;">#${i+1}</span>
+              <span style="flex:1;font-weight:600;">${esc(l.title)}</span>
+              <span style="font-size:.78rem;color:var(--text-muted);">${l.clicks} clics</span>
+            </div>`).join('');
+        } else { topEl.textContent = 'No hay datos aún. Comparte tus enlaces para empezar.'; }
+      }
+    } catch {}
+
+    // Populate listing selector
+    try {
+      const listRes = await API('/api/listings?limit=50');
+      const select = document.getElementById('refListingSelect');
+      if (listRes.listings) {
+        listRes.listings.forEach(l => {
+          const opt = document.createElement('option');
+          opt.value = l.id; opt.textContent = `${l.title} — $${Number(l.price).toLocaleString()}`;
+          select.appendChild(opt);
+        });
+      }
+    } catch {}
+
+    // Generate QR code (using a simple API)
+    const qrUrl = `${baseUrl}/r/${refToken}`;
+    const qrEl = document.getElementById('refQRCode');
+    qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}&color=002D62" alt="QR Code" style="width:180px;height:180px;">`;
+  }
+
+  window.copyRefLink = function(type) {
+    const refToken = currentUser.refToken;
+    if (!refToken) return;
+    const baseUrl = location.origin;
+    let url;
+    if (type === 'listing') {
+      const select = document.getElementById('refListingSelect');
+      const listingId = select.value;
+      url = listingId ? `${baseUrl}/r/${refToken}/${listingId}` : `${baseUrl}/r/${refToken}`;
+    } else {
+      url = `${baseUrl}/r/${refToken}`;
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      toast('Enlace copiado');
+      const linkEl = document.getElementById('refGeneratedLink');
+      linkEl.textContent = url;
+      linkEl.style.display = '';
+    });
+  };
+
+  window.shareRefWhatsApp = function() {
+    const refToken = currentUser.refToken;
+    if (!refToken) return;
+    const url = `${location.origin}/r/${refToken}`;
+    const text = encodeURIComponent(`Busca tu próximo hogar en HogaresRD. Explora propiedades en venta y alquiler:\n${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  window.downloadQR = function() {
+    const img = document.querySelector('#refQRCode img');
+    if (!img) return;
+    const a = document.createElement('a');
+    a.href = img.src; a.download = `hogaresrd-qr-${currentUser.refToken}.png`;
+    a.click();
+  };
+
+  // Load referral page when navigating to it
+  const origShowPage = window.showPage;
+  if (origShowPage) {
+    window.showPage = function(page) {
+      origShowPage(page);
+      if (page === 'referrals') loadReferralPage();
+    };
+  }
 
   async function openBrokerModal(brokerId) {
     const modal = document.getElementById('brokerDetailModal');
@@ -4507,7 +4835,11 @@
   });
 
   function showSection(section) {
-    if (isSecretaryRole && (section === 'ventas' || section === 'contabilidad')) return;
+    // RBAC: enforce section access based on level
+    const lvl1Blocked = ['ventas','contabilidad','analiticas','auditoria','publicidad','team-members','team-requests','team-secretaries','team-performance'];
+    const lvl2Blocked = ['auditoria','team-requests','team-secretaries'];
+    if (userAccessLevel < 2 && !isInmobiliariaRole && lvl1Blocked.includes(section)) return;
+    if (userAccessLevel >= 2 && userAccessLevel < 3 && !isInmobiliariaRole && lvl2Blocked.includes(section)) return;
     currentSection = section;
     document.querySelectorAll('.section-nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`.section-nav-btn[data-section="${section}"]`).classList.add('active');

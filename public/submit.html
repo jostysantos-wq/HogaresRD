@@ -461,8 +461,14 @@
     @media (max-width: 640px) {
       nav { padding: 1rem 1.25rem; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .col-span-2 { grid-column: span 1; }
-      .card { padding: 1.5rem 1.25rem; }
+      .col-span-2, .col-span-3 { grid-column: span 1; }
+      .card { padding: 1.25rem 1rem; }
+      .amenities-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+      .photo-slots { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+    @media (max-width: 400px) {
+      .card { padding: 1rem 0.75rem; }
+      input, select, textarea { font-size: 0.88rem; padding: 0.6rem 0.75rem; }
     }
 
     /* ── Project details (conditional) ──────────────────────── */

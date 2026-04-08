@@ -1,11 +1,18 @@
 const express      = require('express');
 const crypto       = require('crypto');
+const rateLimit    = require('express-rate-limit');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
 const { userAuth } = require('./auth');
 const { notify }   = require('./push');
 
 const router  = express.Router();
+
+const savedSearchLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 15,
+  message: { error: 'Demasiadas búsquedas guardadas. Intenta más tarde.' },
+  standardHeaders: true, legacyHeaders: false,
+});
 const MAX_SAVED_SEARCHES = 10;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -81,7 +88,7 @@ router.get('/', userAuth, (req, res) => {
 });
 
 // POST /api/saved-searches — create a new saved search
-router.post('/', userAuth, (req, res) => {
+router.post('/', savedSearchLimiter, userAuth, (req, res) => {
   const existing = store.getSavedSearchesByUser(req.user.sub);
   if (existing.length >= MAX_SAVED_SEARCHES) {
     return res.status(400).json({

@@ -721,6 +721,12 @@ router.post('/:id/feedback', userAuth, (req, res) => {
     return res.status(400).json({ error: 'La calificación debe ser entre 1 y 5' });
   }
 
+  // Double-check to prevent race condition
+  const freshTour = store.getTourById(req.params.id);
+  if (freshTour.feedback_rating) {
+    return res.status(400).json({ error: 'Ya dejaste una calificación para esta visita' });
+  }
+
   tour.feedback_rating  = Math.round(rating);
   tour.feedback_comment = (comment || '').slice(0, 500);
   tour.feedback_at      = new Date().toISOString();

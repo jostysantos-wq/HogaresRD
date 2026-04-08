@@ -6,11 +6,18 @@ struct InmobiliariaDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    private let tabs = [
-        "Aplicaciones", "Analíticas", "Ventas", "Contabilidad",
-        "Archivo", "Auditoría", "Mis Propiedades",
-        "Agentes", "Solicitudes", "Rendimiento", "Secretarias"
-    ]
+    /// Tabs visible based on user's effective access level
+    private var tabs: [String] {
+        let level = api.currentUser?.effectiveAccessLevel ?? 1
+        var t = ["Aplicaciones"]
+        if level >= 2 { t.append(contentsOf: ["Analíticas", "Ventas", "Contabilidad"]) }
+        t.append("Archivo")
+        if level >= 3 { t.append("Auditoría") }
+        t.append("Mis Propiedades")
+        if level >= 2 { t.append(contentsOf: ["Agentes", "Rendimiento"]) }
+        if level >= 3 { t.append(contentsOf: ["Solicitudes", "Secretarias"]) }
+        return t
+    }
 
     /// Role-aware title — "Constructora" for constructora users,
     /// "Inmobiliaria" for inmobiliaria users, plain "Dashboard" otherwise.
@@ -338,12 +345,21 @@ struct BrokerCard: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(broker.name)
-                            .font(.caption).bold()
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        if let jt = broker.jobTitle, !jt.isEmpty {
-                            Text(jt)
+                        HStack(spacing: 4) {
+                            Text(broker.name)
+                                .font(.caption).bold()
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(broker.accessLabel)
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(levelColor(broker.accessLevel).opacity(0.15))
+                                .foregroundStyle(levelColor(broker.accessLevel))
+                                .clipShape(Capsule())
+                        }
+                        let title = broker.displayTitle
+                        if !title.isEmpty {
+                            Text(title)
                                 .font(.system(size: 10))
                                 .foregroundStyle(purpleColor)
                                 .lineLimit(1)
@@ -418,6 +434,15 @@ struct BrokerCard: View {
     }
 }
 
+private func levelColor(_ level: Int) -> Color {
+    switch level {
+    case 1: return .gray
+    case 2: return .orange
+    case 3: return .purple
+    default: return .gray
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────
 // MARK: - Broker Detail Sheet
 // ────────────────────────────────────────────────────────────────────
@@ -437,6 +462,10 @@ struct BrokerDetailSheet: View {
     @State private var showRemoveAlert = false
     @State private var showResetAlert = false
     @State private var actionMessage: String?
+    @State private var editAccessLevel: Int = 1
+    @State private var editTeamTitle: String = ""
+    @State private var savingRole = false
+    @State private var roleSaved = false
 
     private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
 
@@ -507,6 +536,63 @@ struct BrokerDetailSheet: View {
                             infoItem("Aplicaciones", value: "\(d.appCount)")
                         }
                         .padding(.horizontal)
+
+                        // Role assignment (level 3 only)
+                        if api.currentUser?.canManageTeam == true {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Rol y Acceso")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+
+                                VStack(spacing: 12) {
+                                    TextField("Titulo del cargo (ej: CMO, Gerente)", text: $editTeamTitle)
+                                        .textFieldStyle(.roundedBorder)
+                                        .font(.subheadline)
+
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Nivel de acceso").font(.caption).foregroundStyle(.secondary)
+                                        Picker("Nivel", selection: $editAccessLevel) {
+                                            Text("1 - Asistente").tag(1)
+                                            Text("2 - Gerente").tag(2)
+                                            Text("3 - Director").tag(3)
+                                        }
+                                        .pickerStyle(.segmented)
+
+                                        Text(editAccessLevel == 1 ? "Aplicaciones asignadas y propiedades propias" :
+                                             editAccessLevel == 2 ? "Agentes, pagos, analiticas del equipo" :
+                                             "Acceso completo: equipo, roles, facturacion")
+                                            .font(.caption2).foregroundStyle(.tertiary)
+                                    }
+
+                                    HStack {
+                                        if roleSaved {
+                                            Label("Guardado", systemImage: "checkmark.circle.fill")
+                                                .font(.caption).foregroundStyle(.green)
+                                        }
+                                        Spacer()
+                                        Button {
+                                            Task { await saveRole() }
+                                        } label: {
+                                            if savingRole {
+                                                ProgressView().scaleEffect(0.7)
+                                            } else {
+                                                Text("Guardar Rol")
+                                                    .font(.caption).bold()
+                                            }
+                                        }
+                                        .padding(.horizontal, 16).padding(.vertical, 8)
+                                        .background(Color.purple, in: RoundedRectangle(cornerRadius: 8))
+                                        .foregroundStyle(.white)
+                                        .disabled(savingRole)
+                                    }
+                                }
+                                .padding(14)
+                                .background(Color.purple.opacity(0.04))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.15)))
+                                .padding(.horizontal)
+                            }
+                        }
 
                         // Recent apps
                         if !d.recentApps.isEmpty {
@@ -685,6 +771,8 @@ struct BrokerDetailSheet: View {
         do {
             detail = try await api.getBrokerDetail(brokerId: broker.id)
             notes = detail?.notes ?? ""
+            editAccessLevel = detail?.accessLevel ?? broker.accessLevel
+            editTeamTitle = detail?.teamTitle ?? broker.teamTitle ?? ""
         } catch {
             errorMsg = error.localizedDescription
         }
@@ -696,6 +784,13 @@ struct BrokerDetailSheet: View {
         try? await api.saveBrokerNotes(brokerId: broker.id, notes: notes)
         savingNotes = false; notesSaved = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { notesSaved = false }
+    }
+
+    private func saveRole() async {
+        savingRole = true; roleSaved = false
+        try? await api.updateTeamMemberRole(userId: broker.id, accessLevel: editAccessLevel, teamTitle: editTeamTitle)
+        savingRole = false; roleSaved = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { roleSaved = false }
     }
 
     private func resetPassword() async {

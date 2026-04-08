@@ -381,17 +381,22 @@
       .gallery-main { grid-row: 1; }
     }
     @media (max-width: 600px) {
-      .page-wrap { padding: 1.25rem 1rem 3rem; }
+      .page-wrap { padding: 1rem 0.75rem 3rem; }
       .gallery-inner { padding: 0; }
       .gallery-grid { border-radius: 0; height: 240px; }
-      .spec-item { padding: 0.75rem 0.75rem; }
+      .spec-item { padding: 0.6rem 0.5rem; font-size: 0.78rem; }
       .builder-stats { grid-template-columns: repeat(3, 1fr); }
       .unit-grid { grid-template-columns: 1fr 1fr; }
       #mortgageSection > div:first-of-type { grid-template-columns: 1fr !important; }
       #similarGrid { grid-template-columns: 1fr 1fr !important; }
+      .amenities-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+      .tour-calendar { font-size: 0.7rem; }
+      .tour-calendar th, .tour-calendar td { padding: 0.25rem 0.1rem; }
     }
     @media (max-width: 400px) {
       #similarGrid { grid-template-columns: 1fr !important; }
+      .unit-grid { grid-template-columns: 1fr; }
+      .builder-stats { grid-template-columns: 1fr 1fr; }
     }
   
     .section-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted, #9E9A94); margin-bottom: 0.4rem; }
@@ -1863,26 +1868,38 @@ const tabsHtml = shuffled.map((a, i) =>
       }
 
       // Resolve ?ref= affiliate token (must be async, so lives here not in renderListing)
+      // Referral attribution: URL param takes priority, cookie is fallback
       const urlRef = new URLSearchParams(location.search).get('ref');
-      if (urlRef) {
+      const cookieRef = document.cookie.split('; ').find(c => c.startsWith('hrd_ref='))?.split('=')[1];
+      const effectiveRef = urlRef || cookieRef;
+
+      if (effectiveRef) {
         try {
-          const agentRes = await fetch(`/api/listings/agent/${urlRef}`);
+          const agentRes = await fetch(`/api/listings/agent/${effectiveRef}`);
           if (agentRes.ok) {
             const agent = await agentRes.json();
-            _refToken = urlRef;
+            _refToken = effectiveRef;
             document.getElementById('inquiryModalSub').textContent =
               `Tu consulta irá directamente a ${agent.name} de ${agent.agencyName}.`;
             const badge = document.getElementById('inquiryRefBadge');
             document.getElementById('inquiryRefLabel').textContent =
               `${agent.name} · ${agent.agencyName}`;
             badge.style.display = 'inline-flex';
+
+            // Track click (fire-and-forget)
+            if (urlRef) {
+              fetch('/api/referrals/click', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ref_token: urlRef, listing_id: listingId }),
+              }).catch(() => {});
+            }
           }
         } catch {}
       }
 
-      // Show affiliate link button if logged-in agency user
+      // Show affiliate link button if logged-in agent
       const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-      if (me && me.role === 'agency' && me.refToken) {
+      if (me && me.refToken && ['agency','broker','inmobiliaria','constructora'].includes(me.role)) {
         document.getElementById('affiliateBtn').classList.add('visible');
       }
     } catch {
@@ -2169,6 +2186,7 @@ const tabsHtml = shuffled.map((a, i) =>
           propertyTitle: listing.title || document.title,
           propertyImage: image,
           message:       text,
+          refToken:      _refToken || undefined,
         }),
       });
       const data = await res.json();

@@ -358,16 +358,21 @@ struct TeamBroker: Decodable, Identifiable {
     let name: String
     let email: String
     let phone: String?
+    let role: String?
     let licenseNumber: String?
     let jobTitle: String?
+    let teamTitle: String?
+    let accessLevel: Int
     let joinedAt: String?
     let appCount: Int
     let emailVerified: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, email, phone
+        case id, name, email, phone, role
         case licenseNumber = "licenseNumber"
         case jobTitle = "jobTitle"
+        case teamTitle = "team_title"
+        case accessLevel = "access_level"
         case joinedAt = "joined_at"
         case appCount = "app_count"
         case emailVerified = "emailVerified"
@@ -379,12 +384,35 @@ struct TeamBroker: Decodable, Identifiable {
         name           = (try? c.decode(String.self, forKey: .name)) ?? "—"
         email          = (try? c.decode(String.self, forKey: .email)) ?? ""
         phone          = try? c.decode(String.self, forKey: .phone)
+        role           = try? c.decode(String.self, forKey: .role)
         licenseNumber  = try? c.decode(String.self, forKey: .licenseNumber)
         jobTitle       = try? c.decode(String.self, forKey: .jobTitle)
+        teamTitle      = try? c.decode(String.self, forKey: .teamTitle)
+        accessLevel    = (try? c.decode(Int.self, forKey: .accessLevel)) ?? 1
         joinedAt       = try? c.decode(String.self, forKey: .joinedAt)
         appCount       = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
         emailVerified  = try? c.decode(Bool.self, forKey: .emailVerified)
     }
+
+    var accessLabel: String {
+        switch accessLevel {
+        case 1: return "Asistente"
+        case 2: return "Gerente"
+        case 3: return "Director"
+        default: return "Asistente"
+        }
+    }
+
+    var accessColor: String {
+        switch accessLevel {
+        case 1: return "gray"
+        case 2: return "orange"
+        case 3: return "purple"
+        default: return "gray"
+        }
+    }
+
+    var displayTitle: String { teamTitle ?? jobTitle ?? "" }
 
     var initials: String {
         name.components(separatedBy: " ")
@@ -454,6 +482,8 @@ struct BrokerDetail: Decodable {
     let licenseNumber: String?
     let role: String?
     let jobTitle: String?
+    let teamTitle: String?
+    let accessLevel: Int
     let joinedAt: String?
     let emailVerified: Bool?
     let appCount: Int
@@ -464,6 +494,8 @@ struct BrokerDetail: Decodable {
         case id, name, email, phone, role, notes
         case licenseNumber = "licenseNumber"
         case jobTitle = "jobTitle"
+        case teamTitle = "team_title"
+        case accessLevel = "access_level"
         case joinedAt = "joined_at"
         case emailVerified = "emailVerified"
         case appCount = "app_count"
@@ -479,6 +511,8 @@ struct BrokerDetail: Decodable {
         licenseNumber = try? c.decode(String.self, forKey: .licenseNumber)
         role          = try? c.decode(String.self, forKey: .role)
         jobTitle      = try? c.decode(String.self, forKey: .jobTitle)
+        teamTitle     = try? c.decode(String.self, forKey: .teamTitle)
+        accessLevel   = (try? c.decode(Int.self, forKey: .accessLevel)) ?? 1
         joinedAt      = try? c.decode(String.self, forKey: .joinedAt)
         emailVerified = try? c.decode(Bool.self, forKey: .emailVerified)
         appCount      = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
@@ -486,26 +520,29 @@ struct BrokerDetail: Decodable {
         recentApps    = (try? c.decode([BrokerApp].self, forKey: .recentApps)) ?? []
     }
 
-    /// Create a basic detail from the TeamBroker card data (used as fallback when API fails)
+    // Memberwise init for fallback
+    init(id: String, name: String, email: String, phone: String?,
+         licenseNumber: String?, role: String?, jobTitle: String?,
+         teamTitle: String? = nil, accessLevel: Int = 1,
+         joinedAt: String?, emailVerified: Bool?,
+         appCount: Int, notes: String?, recentApps: [BrokerApp]) {
+        self.id = id; self.name = name; self.email = email; self.phone = phone
+        self.licenseNumber = licenseNumber; self.role = role; self.jobTitle = jobTitle
+        self.teamTitle = teamTitle; self.accessLevel = accessLevel
+        self.joinedAt = joinedAt; self.emailVerified = emailVerified
+        self.appCount = appCount; self.notes = notes; self.recentApps = recentApps
+    }
+
     static func fallback(from b: TeamBroker) -> BrokerDetail {
         BrokerDetail(
             id: b.id, name: b.name, email: b.email, phone: b.phone,
             licenseNumber: b.licenseNumber, role: nil, jobTitle: b.jobTitle,
+            teamTitle: b.teamTitle, accessLevel: b.accessLevel,
             joinedAt: b.joinedAt, emailVerified: b.emailVerified,
             appCount: b.appCount, notes: nil, recentApps: []
         )
     }
 
-    init(id: String, name: String, email: String, phone: String?,
-         licenseNumber: String?, role: String?, jobTitle: String?,
-         joinedAt: String?, emailVerified: Bool?, appCount: Int,
-         notes: String?, recentApps: [BrokerApp]) {
-        self.id = id; self.name = name; self.email = email
-        self.phone = phone; self.licenseNumber = licenseNumber
-        self.role = role; self.jobTitle = jobTitle; self.joinedAt = joinedAt
-        self.emailVerified = emailVerified; self.appCount = appCount
-        self.notes = notes; self.recentApps = recentApps
-    }
 }
 
 struct BrokerApp: Decodable, Identifiable {

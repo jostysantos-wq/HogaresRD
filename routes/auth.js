@@ -318,9 +318,9 @@ router.post('/register', authLimiter, async (req, res, next) => {
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const user = {
       id:               `usr_${Date.now()}`,
       email:            email.toLowerCase().trim(),
@@ -530,9 +530,9 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const refToken     = crypto.randomBytes(8).toString('hex');
 
     const user = {
@@ -663,9 +663,9 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const refToken     = crypto.randomBytes(8).toString('hex');
 
     const user = {
@@ -791,9 +791,9 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const refToken     = crypto.randomBytes(8).toString('hex');
 
     const user = {
@@ -929,9 +929,9 @@ router.post('/register/constructora', authLimiter, async (req, res, next) => {
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const refToken     = crypto.randomBytes(8).toString('hex');
 
     const user = {
@@ -1048,7 +1048,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
     // ── 2FA check ─────────────────────────────────────────
     if (user.twoFAEnabled) {
       const sessionId = crypto.randomUUID();
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const code = String(crypto.randomInt(100000, 999999));
       const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
       store.saveTwoFASession({
@@ -1076,7 +1076,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
       httpOnly: true,
       secure:   IS_PROD,      // HTTPS-only in production
       sameSite: 'lax',        // CSRF protection; still works with normal navigation
-      maxAge:   30 * 24 * 60 * 60 * 1000, // 30 days in ms
+      maxAge:   14 * 24 * 60 * 60 * 1000, // 14 days — matches JWT expiry
     });
 
     // Also return the token in the body so mobile / API clients can store it.
@@ -1106,6 +1106,8 @@ router.post('/logout', (req, res) => {
         store.revokeToken(payload.jti, payload.exp);
         logSec('logout', req, { userId: payload.sub });
       }
+      // Clean up any pending 2FA sessions
+      if (payload.sub) store.deleteTwoFASessionsByUser(payload.sub);
     } catch { /* token already invalid — nothing to revoke */ }
   }
 
@@ -1185,7 +1187,7 @@ router.post('/reset-password', async (req, res, next) => {
     if (new Date(user.resetTokenExpiry) < new Date())
       return res.status(400).json({ error: 'El enlace ha expirado. Solicita uno nuevo.' });
 
-    user.passwordHash     = await bcrypt.hash(password, 10);
+    user.passwordHash     = await bcrypt.hash(password, 12);
     user.resetToken       = null;
     user.resetTokenExpiry = null;
     store.saveUser(user);
@@ -1197,7 +1199,13 @@ router.post('/reset-password', async (req, res, next) => {
 
 // ── Verify email ───────────────────────────────────────────────────────────
 // The link in the email is a GET — verifies and redirects to the landing page.
-router.get('/verify-email', (req, res) => {
+const emailVerifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 30,
+  message: { error: 'Demasiados intentos. Intenta más tarde.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
+router.get('/verify-email', emailVerifyLimiter, (req, res) => {
   const { token } = req.query;
   if (!token) return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
 
@@ -1205,9 +1213,8 @@ router.get('/verify-email', (req, res) => {
   const users = store.getUsers();
   const user  = users.find(u => u.emailVerifyToken === submittedHash);
 
-  if (!user) return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
-  if (new Date(user.emailVerifyExpiry) < new Date())
-    return res.redirect(`${BASE_URL}/verify-email?status=expired`);
+  if (!user || new Date(user.emailVerifyExpiry) < new Date())
+    return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
 
   user.emailVerified     = true;
   user.emailVerifyToken  = null;
@@ -1271,9 +1278,9 @@ router.post('/register/admin', authLimiter, async (req, res, next) => {
     if (pwError) return res.status(400).json({ error: pwError });
 
     if (store.getUserByEmail(email))
-      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+      return res.status(409).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const user = {
       id:               `usr_${Date.now()}`,
       email:            email.toLowerCase().trim(),
@@ -1323,7 +1330,7 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
 
     // Check email not already registered
     if (store.getUserByEmail(invite.email))
-      return res.status(400).json({ error: 'Este correo ya está registrado' });
+      return res.status(400).json({ error: 'No se pudo crear la cuenta. Verifica tus datos e intenta de nuevo.' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = {
@@ -1355,7 +1362,7 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
     const jwtToken = signToken(user);
     res.cookie('hrdt', jwtToken, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000,
+      sameSite: 'lax', maxAge: 14 * 24 * 60 * 60 * 1000,
     });
     res.status(201).json({ token: jwtToken, user: safeUser(user) });
   } catch (err) { next(err); }
@@ -1398,7 +1405,7 @@ router.post('/2fa/verify', twoFALimiter, (req, res) => {
   const token = signToken(user);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true, secure: IS_PROD, sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+    maxAge: 14 * 24 * 60 * 60 * 1000,
   });
   res.json({ token, user: safeUser(user) });
 });
@@ -1419,7 +1426,7 @@ router.post('/2fa/resend', twoFALimiter, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   // Generate new code
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(crypto.randomInt(100000, 999999));
   session.codeHash = crypto.createHash('sha256').update(code).digest('hex');
   session.expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   session.attempts = 0;
@@ -1436,7 +1443,7 @@ router.post('/2fa/enable', userAuth, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   const sessionId = crypto.randomUUID();
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(crypto.randomInt(100000, 999999));
   const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
   store.saveTwoFASession({
@@ -1547,7 +1554,7 @@ router.post('/biometric/login', authLimiter, async (req, res) => {
   // If 2FA is enabled, still require it (biometric replaces password, not 2FA)
   if (user.twoFAEnabled) {
     const sessionId = crypto.randomUUID();
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(crypto.randomInt(100000, 999999));
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
     store.saveTwoFASession({
@@ -1566,7 +1573,7 @@ router.post('/biometric/login', authLimiter, async (req, res) => {
   const token = signToken(user);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true, secure: IS_PROD, sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+    maxAge: 14 * 24 * 60 * 60 * 1000,
   });
   res.json({ token, user: safeUser(user) });
 });

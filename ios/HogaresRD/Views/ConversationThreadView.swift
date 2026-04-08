@@ -19,6 +19,8 @@ struct ConversationThreadView: View {
     @State private var closeReasonInput: String = ""
     @State private var toggling:       Bool   = false
     @State private var toggleError:    String?
+    @State private var claiming:       Bool   = false
+    @State private var claimed:        Bool   = false
 
     private var myId: String { api.currentUser?.id ?? "" }
     private var myRole: String { api.currentUser?.role ?? "user" }
@@ -71,6 +73,40 @@ struct ConversationThreadView: View {
                 .background(Color(red: 1.0, green: 0.95, blue: 0.78))
                 .overlay(Rectangle().frame(height: 1).foregroundStyle(Color(red: 0.99, green: 0.90, blue: 0.61)), alignment: .bottom)
             }
+
+            // ── Claim required prompt ──────────────────────────────
+            if conversation.claimRequired == true && !claimed {
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Color.rdBlue)
+                    Text("Conversación pendiente")
+                        .font(.title3).bold()
+                    Text("\(conversation.clientName) envió \(conversation.messageCount ?? 0) mensaje(s) sobre \(conversation.propertyTitle). Reclama esta conversación para ver los mensajes y responder.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Button {
+                        Task { await claimConv() }
+                    } label: {
+                        if claiming {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Reclamar conversación")
+                                .font(.subheadline).bold()
+                        }
+                    }
+                    .frame(width: 220)
+                    .padding(.vertical, 12)
+                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(.white)
+                    .disabled(claiming)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
 
             // ── Message list ────────────────────────────────────────
             ScrollViewReader { proxy in
@@ -148,6 +184,7 @@ struct ConversationThreadView: View {
                 .padding(.vertical, 10)
                 .background(Color(.systemBackground))
             }
+            } // end else (claim required check)
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
@@ -280,6 +317,21 @@ struct ConversationThreadView: View {
         messages      = conv.messages ?? []
         lastTimestamp = messages.last?.timestamp
         syncClosedState(conv)
+    }
+
+    private func claimConv() async {
+        claiming = true
+        do {
+            let conv = try await api.claimConversation(id: conversation.id)
+            claimed = true
+            // Reload messages now that we have access
+            messages = conv.messages ?? []
+            if let last = messages.last { lastTimestamp = last.timestamp }
+            isClosed = conv.closed ?? false
+        } catch {
+            toggleError = error.localizedDescription
+        }
+        claiming = false
     }
 
     private func pollNew() async {

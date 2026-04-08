@@ -35,9 +35,11 @@ struct Conversation: Codable, Identifiable {
     let closedByName:  String?
     let closedByRole:  String?
     let closedReason:  String?
-    let archived:      Bool?
-    let archivedAt:    String?
-    let archivedBy:    String?
+    let archived:       Bool?
+    let archivedAt:     String?
+    let archivedBy:     String?
+    let claimRequired:  Bool?
+    let inmobiliariaId: String?
 }
 
 // MARK: - Response wrappers

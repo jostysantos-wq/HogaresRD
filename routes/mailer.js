@@ -35,7 +35,18 @@ const EMAILS = {
 };
 
 // Department sender addresses (just the email part)
+// These are the "From:" display addresses used in email headers.
 const DEPT_EMAILS = {
+  soporte: 'soporte@hogaresrd.com',
+  legal:   'legal@hogaresrd.com',
+  admin:   'admin@hogaresrd.com',
+  ventas:  'ventas@hogaresrd.com',
+  noreply: 'noreply@hogaresrd.com',
+};
+
+// Gmail API delegation: each department has its own Workspace account/alias.
+// The service account impersonates the department's address directly.
+const DEPT_ACCOUNTS = {
   soporte: 'soporte@hogaresrd.com',
   legal:   'legal@hogaresrd.com',
   admin:   'admin@hogaresrd.com',
@@ -116,8 +127,9 @@ async function getGmailClient(senderEmail) {
  * Constructs a raw RFC 2822 message and sends via users.messages.send.
  */
 async function sendViaGmailAPI(opts) {
-  const senderEmail = DEPT_EMAILS[opts._dept] || DEPT_EMAILS.soporte;
-  const gmail = await getGmailClient(senderEmail);
+  const dept = opts._dept || 'soporte';
+  const delegateEmail = DEPT_ACCOUNTS[dept] || DEPT_ACCOUNTS.soporte;
+  const gmail = await getGmailClient(delegateEmail);
   if (!gmail) return null;
 
   const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];

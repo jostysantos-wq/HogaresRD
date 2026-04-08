@@ -96,7 +96,7 @@ struct HogaresRDApp: App {
                 lockManager.handleScenePhase(newPhase, isLoggedIn: api.currentUser != nil)
             }
             .task {
-                try? await Task.sleep(for: .seconds(1.2))
+                try? await Task.sleep(for: .seconds(0.8))
                 showSplash = false
                 // Deferred init — push service checks system permissions
                 // AFTER splash, not during app init (avoids main-thread stall).

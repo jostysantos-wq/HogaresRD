@@ -87,6 +87,11 @@
     .twofa-digit { width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; border: 2px solid var(--border); border-radius: 4px; outline: none; background: var(--bg-card); color: var(--text); font-family: 'Courier New', monospace; transition: border-color 0.15s; }
     .twofa-digit:focus { border-color: var(--text-secondary); box-shadow: 0 0 0 3px rgba(17,17,16,0.07); }
     .twofa-digit.filled { border-color: var(--text-secondary); background: var(--bg-secondary); }
+    @media (max-width: 400px) {
+      .twofa-digit { width: 38px; height: 46px; font-size: 1.2rem; }
+      .twofa-inputs { gap: 5px; }
+      .auth-card { padding: 1.5rem 1rem; }
+    }
   </style>
 </head>
 <body>

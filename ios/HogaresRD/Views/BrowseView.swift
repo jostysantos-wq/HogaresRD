@@ -114,13 +114,19 @@ struct BrowseView: View {
 
     /// Pins filtered by search radius (same logic as filteredListings but for map)
     private var filteredPins: [Listing] {
-        guard let center = searchCenter, searchRadius > 0 else { return pins }
-        let centerLoc = CLLocation(latitude: center.latitude, longitude: center.longitude)
-        return pins.filter { listing in
-            guard let lat = listing.lat, let lng = listing.lng else { return false }
-            let dist = CLLocation(latitude: lat, longitude: lng).distance(from: centerLoc) / 1000.0
-            return dist <= searchRadius
+        // Cap pins to prevent map rendering slowdown on older devices
+        let source: [Listing]
+        if let center = searchCenter, searchRadius > 0 {
+            let centerLoc = CLLocation(latitude: center.latitude, longitude: center.longitude)
+            source = pins.filter { listing in
+                guard let lat = listing.lat, let lng = listing.lng else { return false }
+                let dist = CLLocation(latitude: lat, longitude: lng).distance(from: centerLoc) / 1000.0
+                return dist <= searchRadius
+            }
+        } else {
+            source = pins
         }
+        return Array(source.prefix(200))
     }
 
     private var activeFilterCount: Int {

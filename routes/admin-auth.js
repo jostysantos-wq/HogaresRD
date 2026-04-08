@@ -21,6 +21,11 @@ const TOTP_OPTIONS = { window: 1 };
 const router = express.Router();
 const mailer = createTransport();
 
+// ── Startup validation ───────────────────────────────────────────────────────
+if (process.env.ADMIN_SESSION_SECRET && process.env.ADMIN_SESSION_SECRET.length < 32) {
+  console.warn('[admin-auth] WARNING: ADMIN_SESSION_SECRET is shorter than 32 characters — consider using a stronger secret');
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const RATE_WINDOW  = 15 * 60 * 1000;   // 15 min window for login attempts
 const MAX_ATTEMPTS = 5;                 // max password attempts per window
@@ -147,7 +152,12 @@ router.post('/login', async (req, res) => {
 
   // Fallback: log OTP to server console so admin can recover even if
   // email delivery breaks.
-  console.warn(`[admin-auth] 🔑 OTP for ${adminEmail} (IP ${ip}): ${otp}`);
+  // OTP code intentionally NOT logged in production — sent via email only
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[admin-auth] OTP for ${adminEmail} (IP ${ip}): ${otp}`);
+  } else {
+    console.log(`[admin-auth] OTP sent to ${adminEmail} (IP ${ip})`);
+  }
 
   try {
     await mailer.sendMail({
