@@ -250,14 +250,37 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Location button
+            // Floating buttons over map
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
-                    locationButton
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 100)
+                    VStack(spacing: 10) {
+                        locationButton
+                        // Mapa / Lista toggle
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                if sheetDetent == .fraction(0.08) {
+                                    sheetDetent = .large
+                                } else {
+                                    sheetDetent = .fraction(0.08)
+                                    selectedListing = nil
+                                }
+                            }
+                        } label: {
+                            Label(sheetDetent == .fraction(0.08) ? "Lista" : "Mapa",
+                                  systemImage: sheetDetent == .fraction(0.08) ? "list.bullet" : "map.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.rdBlue)
+                                .clipShape(Capsule())
+                                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                        }
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 16)
                 }
             }
         }
