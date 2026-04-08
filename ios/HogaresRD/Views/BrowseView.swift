@@ -53,11 +53,9 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // Bottom sheet — free-roam, 1:1 drag tracking.
-    // Height is stored directly; drag updates it continuously per pixel.
-    // Starts collapsed — user opens via Lista button or drag.
-    @State private var sheetHeight: CGFloat = 56
-    @State private var sheetHeightAtDragStart: CGFloat? = nil
+    // Bottom sheet — uses native presentationDetents for smooth GPU-accelerated dragging
+    @State private var sheetDetent: PresentationDetent = .fraction(0.08)
+    @State private var showSheet = true
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -161,19 +159,6 @@ struct BrowseView: View {
             mapContent
                 .ignoresSafeArea()
 
-            // Top mask — opacity is tied directly to sheet height, so as the
-            // user drags (or the button springs) the list up, the dark bar
-            // fades in progressively. When the sheet reaches the top, the
-            // mask is fully opaque and meets it with zero seam. No threshold,
-            // no pop-in — one continuous motion.
-            Color(.systemBackground)
-                .frame(height: 126)
-                .frame(maxWidth: .infinity)
-                .ignoresSafeArea(edges: .top)
-                .opacity(topMaskOpacity)
-                .allowsHitTesting(false)
-                .zIndex(1)
-
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     searchBarButton
@@ -265,47 +250,76 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Location button — above the grab bar
+            // Location button
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     locationButton
                         .padding(.trailing, 16)
+                        .padding(.bottom, 100)
                 }
             }
-            .padding(.bottom, sheetHeight + tabBarHeight + 12)
-            .opacity(sheetHeight >= sheetFullHeight - 1 ? 0 : 1)
-            .animation(nil, value: sheetHeight)
-
-            unifiedBottomSheet
-
-            // Bottom mask — solid colored filler behind the tab bar area so
-            // list content can't bleed through the translucent tab bar.
-            // Always opaque when the list is visible; hidden when collapsed
-            // so the map area is unobstructed.
-            VStack(spacing: 0) {
-                Spacer()
-                Color(.systemBackground)
-                    .frame(height: tabBarHeight + 6)
-            }
-            .frame(maxWidth: .infinity)
-            .ignoresSafeArea(edges: .bottom)
-            .opacity(isSheetCollapsed ? 0 : 1)
-            .animation(.easeOut(duration: 0.22), value: isSheetCollapsed)
-            .allowsHitTesting(false)
-
-            // Independent animation context for the Mapa pill
-            VStack {
-                Spacer()
-                mapaFloatingButton
-            }
-            .animation(.easeOut(duration: 0.2), value: isSheetCollapsed)
         }
         .onTapGesture {
-            // Tap on empty map area dismisses callout
-            if selectedListing != nil && !isSheetFull {
+            if selectedListing != nil {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
+            }
+        }
+        .sheet(isPresented: $showSheet) {
+            listSheetContent
+                .presentationDetents([.fraction(0.08), .medium, .large], selection: $sheetDetent)
+                .presentationDragIndicator(.visible)
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+                .presentationCornerRadius(18)
+                .interactiveDismissDisabled()
+        }
+    }
+
+    // MARK: - Native Sheet Content
+    @ViewBuilder
+    private var listSheetContent: some View {
+        VStack(spacing: 0) {
+            // Count row
+            HStack {
+                Spacer()
+                if loading && listings.isEmpty {
+                    Text("Cargando...")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                } else {
+                    Text("\(filteredListings.count) propiedades")
+                        .font(.subheadline.bold())
+                }
+                Spacer()
+            }
+            .padding(.vertical, 10)
+
+            // List content
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filteredListings) { listing in
+                            ListingRow(listing: listing,
+                                       isSelected: listing.id == selectedListing?.id)
+                            .id("row_\(listing.id)")
+                            .onTapGesture { detailListingID = listing.id }
+                            .onAppear {
+                                if listing.id == filteredListings.last?.id, page < totalPages {
+                                    Task { await loadMore() }
+                                }
+                            }
+                        }
+
+                        listFooter
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 80)
+                }
+                .onChange(of: selectedListing) { listing in
+                    if let id = listing?.id {
+                        withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
+                    }
+                }
             }
         }
     }
@@ -416,182 +430,22 @@ struct BrowseView: View {
         .ignoresSafeArea()
     }
 
-    // MARK: - Bottom sheet (free-roam, 1:1 drag tracking)
-    private var grabBarHeight: CGFloat { 56 }
-    // Max sheet height: total screen − tab bar padding − space reserved for
-    // the search bar row at top (56pt top padding + ~44pt bar + 16pt breathing).
-    // This keeps the sheet's top edge ALWAYS below the search menu.
-    private var sheetFullHeight: CGFloat {
-        UIScreen.main.bounds.height - tabBarHeight - 120
-    }
-    private var sheetMinHeight:  CGFloat { grabBarHeight }
+    // Dead code removed — replaced by native presentationDetents sheet
 
-    /// True when the list is basically fully expanded.
-    private var isSheetFull: Bool { sheetHeight >= sheetFullHeight - 20 }
-    /// True when the sheet is effectively collapsed (list hidden).
-    private var isSheetCollapsed: Bool { sheetHeight <= grabBarHeight + 8 }
-
-    /// 0...1 opacity for the top + bottom masks. Starts fading in once the
-    /// sheet crosses 75% of its max height, fully opaque at 100%. This gives
-    /// the masks enough runway to fade in smoothly as the user drags, rather
-    /// than popping in at a threshold.
-    private var topMaskOpacity: Double {
-        let fadeStart = sheetFullHeight * 0.75
-        let fadeEnd   = sheetFullHeight
-        guard fadeEnd > fadeStart else { return 0 }
-        let p = Double((sheetHeight - fadeStart) / (fadeEnd - fadeStart))
-        return max(0, min(1, p))
-    }
-
-    /// Update height from a drag gesture with 1:1 tracking.
-    private func handleDragChange(_ value: DragGesture.Value) {
-        if sheetHeightAtDragStart == nil { sheetHeightAtDragStart = sheetHeight }
-        let proposed = (sheetHeightAtDragStart ?? sheetHeight) - value.translation.height
-        sheetHeight = max(sheetMinHeight, min(sheetFullHeight, proposed))
-    }
-
-    private func handleDragEnd(_ value: DragGesture.Value) {
-        let startH = sheetHeightAtDragStart ?? sheetHeight
-        sheetHeightAtDragStart = nil
-
-        let velocity = value.predictedEndTranslation.height - value.translation.height
-        let midpoint = (sheetFullHeight + sheetMinHeight) / 2
-
-        // Snap based on position + velocity
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            if velocity < -100 {
-                // Fast swipe up → expand
-                sheetHeight = sheetFullHeight
-            } else if velocity > 100 {
-                // Fast swipe down → collapse
-                sheetHeight = sheetMinHeight
-            } else if sheetHeight > midpoint {
-                // Above midpoint → snap to full
-                sheetHeight = sheetFullHeight
-            } else {
-                // Below midpoint → snap to collapsed
-                sheetHeight = sheetMinHeight
-            }
-        }
-    }
-
+    // MARK: - List footer content (used by listSheetContent)
     @ViewBuilder
-    private var unifiedBottomSheet: some View {
-        VStack(spacing: 0) {
-            // Drag handle + count row (all draggable)
-            VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.secondary.opacity(0.5))
-                    .frame(width: 38, height: 5)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
-
-                HStack {
-                    Spacer()
-                    if loading && listings.isEmpty {
-                        Text("Cargando...")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    } else {
-                        Text("\(filteredListings.count) propiedades")
-                            .font(.subheadline.bold())
-                    }
-                    Spacer()
+    private var expandedListContentLegacy: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(filteredListings) { listing in
+                    ListingRow(listing: listing, isSelected: listing.id == selectedListing?.id)
+                    .id("row_\(listing.id)")
+                    .onTapGesture { detailListingID = listing.id }
                 }
-                .padding(.bottom, 8)
+                listFooter
             }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged(handleDragChange)
-                    .onEnded(handleDragEnd)
-            )
-
-            // List content — only visible when sheet is not fully collapsed
-            if !isSheetCollapsed {
-                expandedListContent
-            }
-        }
-        .frame(height: sheetHeight, alignment: .top)
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
-        // Single clipShape with the rounded-top shape — simultaneously
-        // clips overflowing content AND rounds the top corners. Replaces
-        // the old .clipped() + .mask() combo which was causing a scroll
-        // glitch because SwiftUI was compositing both every frame.
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 18, bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0, topTrailingRadius: 18,
-                style: .continuous
-            )
-        )
-        .shadow(color: .black.opacity(0.12), radius: 6, y: -2)
-        .padding(.bottom, tabBarHeight)
-    }
-
-    /// Separate floating Mapa / Lista button — kept OUT of the sheet so the
-    /// sheet's drag stays pure (no shared animation context with the button).
-    /// Shows "Lista" when collapsed (opens list fully), "Mapa" when open
-    /// (collapses the list to reveal the map).
-    @ViewBuilder
-    private var mapaFloatingButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
-                if isSheetCollapsed {
-                    // Open fully — right below the search bar
-                    sheetHeight = sheetFullHeight
-                } else {
-                    // Collapse back to the grab bar
-                    sheetHeight = sheetMinHeight
-                    selectedListing = nil
-                }
-            }
-        } label: {
-            Label(isSheetCollapsed ? "Lista" : "Mapa",
-                  systemImage: isSheetCollapsed ? "list.bullet" : "map.fill")
-                .font(.subheadline.bold())
-                .foregroundStyle(.white)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 10)
-                .background(Color.rdBlue)
-                .clipShape(Capsule())
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-        }
-        // Always sit above the collapsed grab bar so the button is visible
-        // even when the sheet is fully closed.
-        .padding(.bottom, tabBarHeight + grabBarHeight + 10)
-    }
-
-    // Expanded: single-column full-width cards (larger images)
-    @ViewBuilder
-    private var expandedListContent: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(filteredListings) { listing in
-                        ListingRow(listing: listing,
-                                   isSelected: listing.id == selectedListing?.id)
-                        .id("row_\(listing.id)")
-                        .onTapGesture { detailListingID = listing.id }
-                        .onAppear {
-                            if listing.id == filteredListings.last?.id, page < totalPages {
-                                Task { await loadMore() }
-                            }
-                        }
-                    }
-
-                    // Footer below last listing
-                    listFooter
-                }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 80)
-            }
-            .onChange(of: selectedListing) { listing in
-                if let id = listing?.id {
-                    withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
-                }
-            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 80)
         }
     }
 
