@@ -282,7 +282,7 @@ struct FeedView: View {
         return d
     }
 
-    private var _prefSaveTask: Task<Void, Never>?
+    @State private var _prefSaveTask: Task<Void, Never>?
     private func savePrefs(_ p: [String: Double]) {
         // Debounce: batch rapid writes (dwell time, taps) into one disk write
         _prefSaveTask?.cancel()
