@@ -53,9 +53,8 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // List mode: collapsed (map only + peek bar), expanded (list visible)
-    enum ListMode { case peek, half, full }
-    @State private var listMode: ListMode = .peek
+    // Horizontal card carousel state
+    @State private var showFullList = false
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -155,34 +154,99 @@ struct BrowseView: View {
 
     // MARK: - body
     var body: some View {
-        GeometryReader { geo in
+        ZStack(alignment: .top) {
+            // ── Full-screen map ──────────────────────────────
+            mapContent
+                .ignoresSafeArea()
+
+            // ── Search bar overlay ───────────────────────────
             VStack(spacing: 0) {
-                // ── Map section ──────────────────────────────
-                ZStack(alignment: .top) {
-                    mapContent
-
-                    // Search bar overlay
-                    HStack(spacing: 10) {
-                        searchBarButton
-                        filterIconButton
-                    }
-                    .padding(.top, geo.safeAreaInsets.top + 8)
-                    .padding(.horizontal, 16)
+                HStack(spacing: 10) {
+                    searchBarButton
+                    filterIconButton
                 }
-                .frame(height: listMode == .full ? 0 : (listMode == .half ? geo.size.height * 0.45 : geo.size.height - 50))
-                .clipped()
+                .padding(.top, 56)
+                .padding(.horizontal, 16)
+            }
+            .zIndex(2)
 
-                // ── List section ─────────────────────────────
-                VStack(spacing: 0) {
-                    // Peek bar — always visible, tappable to expand
-                    peekBar
+            // ── Bottom area: count bar + horizontal carousel ─
+            VStack(spacing: 0) {
+                Spacer()
 
-                    if listMode != .peek {
+                if !showFullList {
+                    // Count bar + List toggle
+                    HStack(spacing: 12) {
+                        Text("\(filteredListings.count) propiedades")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Button {
+                            withAnimation(.spring(response: 0.35)) { showFullList = true }
+                        } label: {
+                            Label("Lista", systemImage: "list.bullet")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+
+                    // Horizontal property card carousel
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 12) {
+                                ForEach(filteredListings) { listing in
+                                    CarouselCard(listing: listing, isSelected: listing.id == selectedListing?.id)
+                                        .id("card_\(listing.id)")
+                                        .onTapGesture { detailListingID = listing.id }
+                                        .frame(width: 280)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                        }
+                        .frame(height: 130)
+                        .background(Color(.systemBackground).opacity(0.95))
+                        .onChange(of: selectedListing) { listing in
+                            if let id = listing?.id {
+                                withAnimation { proxy.scrollTo("card_\(id)", anchor: .center) }
+                            }
+                        }
+                    }
+                } else {
+                    // Full list view
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("\(filteredListings.count) propiedades")
+                                .font(.subheadline.bold())
+                            Spacer()
+                            Button {
+                                withAnimation(.spring(response: 0.35)) { showFullList = false }
+                            } label: {
+                                Label("Mapa", systemImage: "map.fill")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(Color.rdBlue, in: Capsule())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color(.systemBackground))
+
                         Divider()
+
                         listSheetContent
                     }
+                    .background(Color(.systemBackground))
+                    .transition(.move(edge: .bottom))
                 }
-                .background(Color(.systemBackground))
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -282,44 +346,6 @@ struct BrowseView: View {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
             }
         }
-    }
-
-    // MARK: - Peek Bar (always visible at bottom of map)
-    private var peekBar: some View {
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
-                switch listMode {
-                case .peek: listMode = .half
-                case .half: listMode = .full
-                case .full: listMode = .peek
-                }
-            }
-        } label: {
-            VStack(spacing: 6) {
-                // Drag indicator
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.secondary.opacity(0.4))
-                    .frame(width: 36, height: 5)
-                    .padding(.top, 8)
-
-                HStack {
-                    if loading && listings.isEmpty {
-                        Text("Cargando...")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    } else {
-                        Text("\(filteredListings.count) propiedades en venta")
-                            .font(.footnote.bold())
-                    }
-                    Spacer()
-                    Image(systemName: listMode == .peek ? "chevron.up" : "chevron.down")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
-            }
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - List Content
@@ -894,6 +920,73 @@ struct BrowseView: View {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// MARK: - Horizontal Carousel Card (Airbnb-style)
+// ────────────────────────────────────────────────────────────────────────────
+struct CarouselCard: View {
+    let listing: Listing
+    var isSelected: Bool = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            // Image
+            AsyncImage(url: listing.firstImageURL) { phase in
+                switch phase {
+                case .success(let img): img.resizable().scaledToFill()
+                default:
+                    Rectangle()
+                        .fill(Color.rdBlue.opacity(0.08))
+                        .overlay(Image(systemName: "house.fill")
+                                    .foregroundStyle(Color.rdBlue.opacity(0.3)))
+                }
+            }
+            .frame(width: 100, height: 100)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            // Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(listing.shortPrice)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.rdBlue)
+
+                Text(listing.title)
+                    .font(.caption)
+                    .lineLimit(2)
+                    .foregroundStyle(.primary)
+
+                HStack(spacing: 8) {
+                    if let beds = listing.bedrooms {
+                        Label(beds, systemImage: "bed.double.fill")
+                    }
+                    if let baths = listing.bathrooms {
+                        Label(baths, systemImage: "shower.fill")
+                    }
+                    if let area = listing.area_const, !area.isEmpty {
+                        Label("\(area) m²", systemImage: "ruler.fill")
+                    }
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+
+                if let city = listing.city {
+                    Text(city)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(8)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.rdBlue : Color.clear, lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+    }
+}
+
 // MARK: - Single-column Listing Row  (large image, full-width)
 // ────────────────────────────────────────────────────────────────────────────
 struct ListingRow: View {
