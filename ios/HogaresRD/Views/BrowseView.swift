@@ -250,32 +250,38 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Floating buttons — only visible when list is collapsed
+            // Floating buttons — always visible when list is collapsed
             if !listExpanded {
+                VStack {
+                    Spacer()
+
+                    // Lista button centered at bottom
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                            listExpanded = true
+                        }
+                    } label: {
+                        Label("Lista", systemImage: "list.bullet")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.rdBlue)
+                            .clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+                    }
+                    .padding(.bottom, tabBarHeight + 20)
+                }
+                .frame(maxWidth: .infinity)
+
+                // Location button in bottom-right
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
-                        VStack(spacing: 10) {
-                            locationButton
-
-                            Button {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                                    listExpanded = true
-                                }
-                            } label: {
-                                Label("Lista", systemImage: "list.bullet")
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(Color.rdBlue)
-                                    .clipShape(Capsule())
-                                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-                            }
-                        }
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
+                        locationButton
+                            .padding(.trailing, 16)
+                            .padding(.bottom, tabBarHeight + 80)
                     }
                 }
             }
