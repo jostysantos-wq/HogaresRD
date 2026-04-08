@@ -225,7 +225,7 @@ struct BrowseView: View {
                         }
                     }
                 } else {
-                    // Full list view
+                    // Full list view — starts below the search bar area
                     ZStack(alignment: .bottom) {
                     VStack(spacing: 0) {
                         HStack {
@@ -235,6 +235,7 @@ struct BrowseView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
+                        .padding(.top, 110) // below search bar + status bar
                         .background(Color(.systemBackground))
 
                         Divider()
