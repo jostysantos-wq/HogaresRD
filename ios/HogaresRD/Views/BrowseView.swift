@@ -55,7 +55,7 @@ struct BrowseView: View {
 
     // Zillow-style bottom sheet — uses native presentationDetents
     @State private var showListSheet = true
-    @State private var listDetent: PresentationDetent = .height(60)
+    @State private var listDetent: PresentationDetent = .height(60 + 83) // 60 + tabBarHeight
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -222,14 +222,16 @@ struct BrowseView: View {
             Text("Para mostrarte propiedades cerca de ti, HogaresRD necesita acceso a tu ubicacion. Puedes habilitarla en Ajustes.")
         }
         // ── Zillow-style bottom sheet ─────────────────────────────
+        // Detent heights account for tab bar so the sheet sits above it
         .sheet(isPresented: .constant(true)) {
             listSheetContent
+                .padding(.bottom, tabBarHeight)
                 .presentationDetents(
-                    [.height(60), .medium, .large],
+                    [.height(60 + tabBarHeight), .fraction(0.55), .fraction(0.92)],
                     selection: $listDetent
                 )
                 .presentationDragIndicator(.visible)
-                .presentationBackgroundInteraction(.enabled(upThrough: .large))
+                .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.92)))
                 .presentationCornerRadius(16)
                 .interactiveDismissDisabled()
         }
