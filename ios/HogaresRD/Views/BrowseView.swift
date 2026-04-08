@@ -177,7 +177,7 @@ struct BrowseView: View {
                 if !showFullList {
                     // Count bar + List toggle
                     HStack(spacing: 12) {
-                        Text("\(filteredListings.count) propiedades")
+                        Text("\(filteredPins.count) propiedades")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
                         Spacer()
@@ -196,11 +196,11 @@ struct BrowseView: View {
                     .padding(.vertical, 8)
                     .background(.ultraThinMaterial)
 
-                    // Horizontal property card carousel
+                    // Horizontal property card carousel — matches map pins
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: 12) {
-                                ForEach(filteredListings) { listing in
+                                ForEach(filteredPins) { listing in
                                     CarouselCard(listing: listing, isSelected: listing.id == selectedListing?.id)
                                         .id("card_\(listing.id)")
                                         .onTapGesture { detailListingID = listing.id }
@@ -437,13 +437,19 @@ struct BrowseView: View {
                         .frame(width: cardW, height: 110)
                         .clipped()
 
-                        // Heart / save button
-                        Image(systemName: "heart")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+                        // Close button
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation(.spring(response: 0.25)) { selectedListing = nil }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+                            }
                             .padding(8)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
                     }
 
                     // Info
