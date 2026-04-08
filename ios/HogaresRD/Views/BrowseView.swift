@@ -220,21 +220,12 @@ struct BrowseView: View {
                     }
                 } else {
                     // Full list view
+                    ZStack(alignment: .bottom) {
                     VStack(spacing: 0) {
                         HStack {
                             Text("\(filteredListings.count) propiedades")
                                 .font(.subheadline.bold())
                             Spacer()
-                            Button {
-                                withAnimation(.spring(response: 0.35)) { showFullList = false }
-                            } label: {
-                                Label("Mapa", systemImage: "map.fill")
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(Color.rdBlue, in: Capsule())
-                            }
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
@@ -244,6 +235,22 @@ struct BrowseView: View {
 
                         listSheetContent
                     }
+
+                    // Floating Mapa button — centered at bottom, easy thumb reach
+                    Button {
+                        withAnimation(.spring(response: 0.35)) { showFullList = false }
+                    } label: {
+                        Label("Mapa", systemImage: "map.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.rdBlue)
+                            .clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+                    }
+                    .padding(.bottom, 16)
+                    } // close ZStack
                     .background(Color(.systemBackground))
                     .transition(.move(edge: .bottom))
                 }
