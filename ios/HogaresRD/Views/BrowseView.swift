@@ -53,9 +53,9 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // Zillow-style bottom sheet — uses native presentationDetents
-    @State private var showListSheet = true
-    @State private var listDetent: PresentationDetent = .height(50)
+    // List mode: collapsed (map only + peek bar), expanded (list visible)
+    enum ListMode { case peek, half, full }
+    @State private var listMode: ListMode = .peek
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -155,20 +155,35 @@ struct BrowseView: View {
 
     // MARK: - body
     var body: some View {
-        ZStack(alignment: .top) {
-            mapContent
-                .ignoresSafeArea()
-
+        GeometryReader { geo in
             VStack(spacing: 0) {
-                HStack(spacing: 10) {
-                    searchBarButton
-                    filterIconButton
-                }
-                .padding(.top, 56)
-                .padding(.horizontal, 16)
+                // ── Map section ──────────────────────────────
+                ZStack(alignment: .top) {
+                    mapContent
 
+                    // Search bar overlay
+                    HStack(spacing: 10) {
+                        searchBarButton
+                        filterIconButton
+                    }
+                    .padding(.top, geo.safeAreaInsets.top + 8)
+                    .padding(.horizontal, 16)
+                }
+                .frame(height: listMode == .full ? 0 : (listMode == .half ? geo.size.height * 0.45 : geo.size.height - 50))
+                .clipped()
+
+                // ── List section ─────────────────────────────
+                VStack(spacing: 0) {
+                    // Peek bar — always visible, tappable to expand
+                    peekBar
+
+                    if listMode != .peek {
+                        Divider()
+                        listSheetContent
+                    }
+                }
+                .background(Color(.systemBackground))
             }
-            .zIndex(2)
         }
         .ignoresSafeArea(edges: .top)
         .onAppear     { selectedType = initialType }
@@ -221,19 +236,7 @@ struct BrowseView: View {
         } message: {
             Text("Para mostrarte propiedades cerca de ti, HogaresRD necesita acceso a tu ubicacion. Puedes habilitarla en Ajustes.")
         }
-        // ── Zillow-style bottom sheet ─────────────────────────────
-        // Detent heights account for tab bar so the sheet sits above it
-        .sheet(isPresented: .constant(true)) {
-            listSheetContent
-                .presentationDetents(
-                    [.height(50), .medium, .large],
-                    selection: $listDetent
-                )
-                .presentationDragIndicator(.visible)
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                .presentationCornerRadius(16)
-                .interactiveDismissDisabled()
-        }
+        // Sheet removed — using VStack layout instead
     }
 
     // Tab bar height estimate
@@ -281,49 +284,69 @@ struct BrowseView: View {
         }
     }
 
-    // MARK: - Zillow-Style Sheet Content
+    // MARK: - Peek Bar (always visible at bottom of map)
+    private var peekBar: some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                switch listMode {
+                case .peek: listMode = .half
+                case .half: listMode = .full
+                case .full: listMode = .peek
+                }
+            }
+        } label: {
+            VStack(spacing: 6) {
+                // Drag indicator
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.secondary.opacity(0.4))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+
+                HStack {
+                    if loading && listings.isEmpty {
+                        Text("Cargando...")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        Text("\(filteredListings.count) propiedades en venta")
+                            .font(.footnote.bold())
+                    }
+                    Spacer()
+                    Image(systemName: listMode == .peek ? "chevron.up" : "chevron.down")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - List Content
     @ViewBuilder
     private var listSheetContent: some View {
-        VStack(spacing: 0) {
-            // Peek header — compact like Zillow
-            if loading && listings.isEmpty {
-                Text("Cargando propiedades...")
-                    .font(.footnote).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            } else {
-                Text("\(filteredListings.count) propiedades en venta")
-                    .font(.footnote.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
-
-            Divider()
-
-            // Scrollable list
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 14) {
-                        ForEach(filteredListings) { listing in
-                            ListingRow(listing: listing,
-                                       isSelected: listing.id == selectedListing?.id)
-                            .id("row_\(listing.id)")
-                            .onTapGesture { detailListingID = listing.id }
-                            .onAppear {
-                                if listing.id == filteredListings.last?.id, page < totalPages {
-                                    Task { await loadMore() }
-                                }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    ForEach(filteredListings) { listing in
+                        ListingRow(listing: listing,
+                                   isSelected: listing.id == selectedListing?.id)
+                        .id("row_\(listing.id)")
+                        .onTapGesture { detailListingID = listing.id }
+                        .onAppear {
+                            if listing.id == filteredListings.last?.id, page < totalPages {
+                                Task { await loadMore() }
                             }
                         }
-                        listFooter
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 20)
+                    listFooter
                 }
-                .onChange(of: selectedListing) { listing in
-                    if let id = listing?.id {
-                        withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
-                    }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 20)
+            }
+            .onChange(of: selectedListing) { listing in
+                if let id = listing?.id {
+                    withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
                 }
             }
         }
