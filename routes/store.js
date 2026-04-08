@@ -85,7 +85,7 @@ function hydrateUser(row) {
     if (obj[col] !== undefined && obj[col] !== null) obj[col] = !!obj[col];
   }
   // Merge _extra into top-level
-  const extra = obj._extra || {};
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
@@ -126,7 +126,7 @@ function dehydrateUser(user) {
 function hydrateSubmission(row) {
   if (!row) return null;
   const obj = { ...row };
-  const extra = obj._extra || {};
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
@@ -176,7 +176,7 @@ function hydrateApplication(row) {
   if (!row) return null;
   const obj = { ...row };
   if (obj.pre_approved !== undefined) obj.pre_approved = !!obj.pre_approved;
-  const extra = obj._extra || {};
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
@@ -213,7 +213,7 @@ const TOUR_KNOWN_COLS = [
 function hydrateTour(row) {
   if (!row) return null;
   const obj = { ...row };
-  const extra = obj._extra || {};
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
@@ -358,10 +358,19 @@ function saveUser(user) {
   const row = dehydrateUser(user);
   const { sql, values } = buildUpsert('users', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveUser error:', err.message));
-  // Update cache
+  // Update cache — parse _extra back to object for consistency with PG-loaded rows
+  const cacheRow = { ...row };
+  if (typeof cacheRow._extra === 'string') {
+    try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; }
+  }
+  for (const col of ['favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile']) {
+    if (typeof cacheRow[col] === 'string') {
+      try { cacheRow[col] = JSON.parse(cacheRow[col]); } catch {}
+    }
+  }
   const idx = _users.findIndex(u => u.id === user.id);
-  if (idx >= 0) _users[idx] = row;
-  else _users.push(row);
+  if (idx >= 0) _users[idx] = cacheRow;
+  else _users.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -417,9 +426,16 @@ function saveListing(listing) {
   const row = dehydrateSubmission(listing);
   const { sql, values } = buildUpsert('submissions', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveListing error:', err.message));
+  // Parse JSON strings back to objects for cache consistency
+  const cacheRow = { ...row };
+  for (const col of SUBMISSION_JSON_COLS) {
+    if (typeof cacheRow[col] === 'string') {
+      try { cacheRow[col] = JSON.parse(cacheRow[col]); } catch {}
+    }
+  }
   const idx = _submissions.findIndex(s => s.id === listing.id);
-  if (idx >= 0) _submissions[idx] = row;
-  else _submissions.push(row);
+  if (idx >= 0) _submissions[idx] = cacheRow;
+  else _submissions.push(cacheRow);
   _invalidateCache();
 }
 
@@ -456,9 +472,15 @@ function saveApplication(app) {
   const row = dehydrateApplication(app);
   const { sql, values } = buildUpsert('applications', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveApplication error:', err.message));
+  const cacheRow = { ...row };
+  for (const col of APP_JSON_COLS) {
+    if (typeof cacheRow[col] === 'string') {
+      try { cacheRow[col] = JSON.parse(cacheRow[col]); } catch {}
+    }
+  }
   const idx = _applications.findIndex(a => a.id === app.id);
-  if (idx >= 0) _applications[idx] = row;
-  else _applications.push(row);
+  if (idx >= 0) _applications[idx] = cacheRow;
+  else _applications.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -492,15 +514,17 @@ function getConversationsForBroker(brokerId) {
 }
 
 function saveConversation(conv) {
-  const row = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, data: JSON.stringify(conv) };
+  const jsonData = JSON.stringify(conv);
   pool.query(
     `INSERT INTO conversations (id, "clientId", "brokerId", data) VALUES ($1, $2, $3, $4)
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
-    [row.id, row.clientId, row.brokerId, row.data]
+    [conv.id, conv.clientId, conv.brokerId, jsonData]
   ).catch(err => console.error('[store-pg] saveConversation error:', err.message));
+  // Store parsed object in cache (PG returns JSONB as object, so match that)
+  const cacheRow = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, data: conv };
   const idx = _conversations.findIndex(c => c.id === conv.id);
-  if (idx >= 0) _conversations[idx] = row;
-  else _conversations.push(row);
+  if (idx >= 0) _conversations[idx] = cacheRow;
+  else _conversations.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -521,9 +545,11 @@ function saveTour(tour) {
   const row = dehydrateTour(tour);
   const { sql, values } = buildUpsert('tours', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveTour error:', err.message));
+  const cacheRow = { ...row };
+  if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   const idx = _tours.findIndex(t => t.id === tour.id);
-  if (idx >= 0) _tours[idx] = row;
-  else _tours.push(row);
+  if (idx >= 0) _tours[idx] = cacheRow;
+  else _tours.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -752,7 +778,7 @@ function saveReport(report) {
 function hydrateTask(row) {
   if (!row) return null;
   const obj = { ...row };
-  const extra = obj._extra || {};
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
@@ -778,9 +804,10 @@ function saveTask(task) {
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('tasks', row, 'id');
   pool.query(sql, values).catch(() => {});
+  const cacheRow = { ...row, _extra: extra }; // store parsed object in cache
   const idx = _tasks.findIndex(t => t.id === task.id);
-  if (idx >= 0) _tasks[idx] = row;
-  else _tasks.push(row);
+  if (idx >= 0) _tasks[idx] = cacheRow;
+  else _tasks.push(cacheRow);
 }
 
 function deleteTask(id) {
