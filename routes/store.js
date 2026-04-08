@@ -16,9 +16,13 @@
 const { Pool } = require('pg');
 
 // ── Connection ───────────────────────────────────────────────────────────
+// Strip sslmode from URL — pg driver treats sslmode=require as verify-full
+// in newer versions, rejecting DO's managed database CA. Set ssl separately.
+const _rawUrl = process.env.DATABASE_URL || '';
+const _connStr = _rawUrl.replace(/[?&]sslmode=[^&]*/g, '');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connectionString: _connStr,
+  ssl: _rawUrl.includes('sslmode') ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -405,14 +409,8 @@ function getListings(filters = {}) {
     });
   }
 
-  const total = items.length;
-  const page  = parseInt(filters.page) || 1;
-  const limit = parseInt(filters.limit) || 20;
-  const pages = Math.ceil(total / limit);
-  const offset = (page - 1) * limit;
-  const listings = items.slice(offset, offset + limit);
-
-  return { listings, total, page, limit, pages };
+  // Return flat array for backward compatibility with all callers
+  return items;
 }
 
 function saveListing(listing) {
