@@ -53,9 +53,9 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // Bottom sheet — two-state overlay (collapsed/expanded) to avoid
-    // per-pixel rebuilds while keeping tab bar visible
-    @State private var listExpanded = false
+    // Zillow-style bottom sheet — uses native presentationDetents
+    @State private var showListSheet = true
+    @State private var listDetent: PresentationDetent = .height(60)
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -221,6 +221,18 @@ struct BrowseView: View {
         } message: {
             Text("Para mostrarte propiedades cerca de ti, HogaresRD necesita acceso a tu ubicacion. Puedes habilitarla en Ajustes.")
         }
+        // ── Zillow-style bottom sheet ─────────────────────────────
+        .sheet(isPresented: .constant(true)) {
+            listSheetContent
+                .presentationDetents(
+                    [.height(60), .medium, .large],
+                    selection: $listDetent
+                )
+                .presentationDragIndicator(.visible)
+                .presentationBackgroundInteraction(.enabled(upThrough: .large))
+                .presentationCornerRadius(16)
+                .interactiveDismissDisabled()
+        }
     }
 
     // Tab bar height estimate
@@ -250,115 +262,69 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Floating buttons — always visible when list is collapsed
-            if !listExpanded {
-                VStack {
+            // Location button
+            VStack {
+                Spacer()
+                HStack {
                     Spacer()
-
-                    // Lista button centered at bottom
-                    Button {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                            listExpanded = true
-                        }
-                    } label: {
-                        Label("Lista", systemImage: "list.bullet")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.rdBlue)
-                            .clipShape(Capsule())
-                            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
-                    }
-                    .padding(.bottom, tabBarHeight + 20)
+                    locationButton
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
                 }
-                .frame(maxWidth: .infinity)
-
-                // Location button in bottom-right
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        locationButton
-                            .padding(.trailing, 16)
-                            .padding(.bottom, tabBarHeight + 80)
-                    }
-                }
-            }
-
-            // Expanded list overlay — slides up from bottom, stays above tab bar
-            if listExpanded {
-                VStack(spacing: 0) {
-                    // Header with Mapa button to collapse
-                    HStack {
-                        Text("\(filteredListings.count) propiedades")
-                            .font(.subheadline.bold())
-                        Spacer()
-                        Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                                listExpanded = false
-                                selectedListing = nil
-                            }
-                        } label: {
-                            Label("Mapa", systemImage: "map.fill")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.rdBlue)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemBackground))
-
-                    Divider()
-
-                    listSheetContent
-                }
-                .background(Color(.systemBackground))
-                .clipShape(UnevenRoundedRectangle(
-                    topLeadingRadius: 18, bottomLeadingRadius: 0,
-                    bottomTrailingRadius: 0, topTrailingRadius: 18,
-                    style: .continuous
-                ))
-                .shadow(color: .black.opacity(0.12), radius: 8, y: -3)
-                .transition(.move(edge: .bottom))
             }
         }
         .onTapGesture {
-            if selectedListing != nil && !listExpanded {
+            if selectedListing != nil {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
             }
         }
     }
 
-    // MARK: - List Content
+    // MARK: - Zillow-Style Sheet Content
     @ViewBuilder
     private var listSheetContent: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(filteredListings) { listing in
-                        ListingRow(listing: listing,
-                                   isSelected: listing.id == selectedListing?.id)
-                        .id("row_\(listing.id)")
-                        .onTapGesture { detailListingID = listing.id }
-                        .onAppear {
-                            if listing.id == filteredListings.last?.id, page < totalPages {
-                                Task { await loadMore() }
+        VStack(spacing: 0) {
+            // Peek header — always visible, shows count
+            HStack {
+                if loading && listings.isEmpty {
+                    Text("Cargando propiedades...")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                } else {
+                    Text("\(filteredListings.count) propiedades")
+                        .font(.subheadline.bold())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
+
+            Divider()
+
+            // Scrollable list
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 14) {
+                        ForEach(filteredListings) { listing in
+                            ListingRow(listing: listing,
+                                       isSelected: listing.id == selectedListing?.id)
+                            .id("row_\(listing.id)")
+                            .onTapGesture { detailListingID = listing.id }
+                            .onAppear {
+                                if listing.id == filteredListings.last?.id, page < totalPages {
+                                    Task { await loadMore() }
+                                }
                             }
                         }
+                        listFooter
                     }
-                    listFooter
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 20)
-            }
-            .onChange(of: selectedListing) { listing in
-                if let id = listing?.id {
-                    withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
+                .onChange(of: selectedListing) { listing in
+                    if let id = listing?.id {
+                        withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
+                    }
                 }
             }
         }
