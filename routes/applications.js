@@ -348,7 +348,8 @@ router.post('/', appCreateLimiter, (req, res) => {
     documents_uploaded:  [],
     tours:               [],
     payment: {
-      amount: null, currency: 'USD', receipt_path: null,
+      amount: null, currency: 'DOP', receipt_path: null,
+      receipt_filename: null, receipt_original: null,
       receipt_uploaded_at: null, verification_status: 'none',
       verified_at: null, verified_by: null, notes: '',
     },
@@ -973,6 +974,11 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
+  // If a payment plan exists, use the installment upload instead
+  if (app.payment_plan && app.payment_plan.installments?.length > 0) {
+    return res.status(400).json({ error: 'Esta aplicación tiene un plan de pagos. Suba el comprobante en la cuota correspondiente.' });
+  }
+
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
@@ -988,7 +994,9 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   app.payment.receipt_filename = req.file.filename;
   app.payment.receipt_original = req.file.originalname;
   app.payment.receipt_uploaded_at = new Date().toISOString();
-  app.payment.amount = req.body.amount || app.listing_price;
+  const paymentAmount = Number(req.body.amount) || Number(app.listing_price) || 0;
+  if (paymentAmount <= 0) return res.status(400).json({ error: 'Monto de pago inválido' });
+  app.payment.amount = paymentAmount;
   app.payment.verification_status = 'pending';
   app.payment.notes = req.body.notes || '';
 
@@ -1052,7 +1060,8 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
     app.status = 'pago_aprobado';
     addEvent(app, 'status_change', 'Pago verificado y aprobado',
       req.user.sub, user?.name || 'Broker', { from: old, to: 'pago_aprobado' });
-  } else if (!approved && STATUS_FLOW[app.status]?.includes('pendiente_pago')) {
+  } else if (!approved) {
+    // Payment rejected — always revert to pendiente_pago so client can re-upload
     const old = app.status;
     app.status = 'pendiente_pago';
     addEvent(app, 'status_change', `Pago rechazado${notes ? ': ' + notes : ''}`,
@@ -1208,6 +1217,19 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   const { payment_method, method_details, currency, total_amount, notes, installments } = req.body;
   if (!Array.isArray(installments) || !installments.length)
     return res.status(400).json({ error: 'Se requiere al menos una cuota' });
+
+  // Validate installment amounts are positive
+  for (const inst of installments) {
+    if (!inst.amount || Number(inst.amount) <= 0)
+      return res.status(400).json({ error: 'Cada cuota debe tener un monto mayor a 0' });
+  }
+
+  // Validate installment sum matches total (if total provided)
+  const instSum = installments.reduce((s, inst) => s + Number(inst.amount || 0), 0);
+  if (total_amount && Math.abs(instSum - Number(total_amount)) > 1) {
+    return res.status(400).json({ error: `La suma de las cuotas (${instSum.toLocaleString()}) no coincide con el total (${Number(total_amount).toLocaleString()})` });
+  }
+
   const existing = app.payment_plan?.installments || [];
   const isEdit   = existing.length > 0;
   app.payment_plan = {
@@ -1306,10 +1328,10 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
-  const isBrokerOwner  = app.broker.user_id === req.user.sub;
-  const admin          = isAdmin(req) || user?.role === 'admin';
-  if (!isInmobiliaria && !isSecretary && !isBrokerOwner && !admin)
-    return res.status(403).json({ error: 'No autorizado' });
+  const admin       = isAdmin(req) || user?.role === 'admin';
+  // Only inmobiliaria, secretary, or admin can verify payments (not the broker — separation of duties)
+  if (!isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'Solo la inmobiliaria o secretaria pueden aprobar pagos' });
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });
   if (inst.status !== 'proof_uploaded')
