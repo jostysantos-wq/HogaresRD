@@ -56,6 +56,12 @@ struct BrowseView: View {
     // Horizontal card carousel state
     @State private var showFullList = false
 
+    /// Listings currently visible on the map — derived from pin screen positions
+    /// which are recalculated by MKMapView whenever the region changes.
+    private var visibleOnMap: [Listing] {
+        mapState.pinScreenPositions.map { $0.0 }
+    }
+
     // Detail nav
     @State private var detailListingID: String? = nil
 
@@ -177,7 +183,7 @@ struct BrowseView: View {
                 if !showFullList {
                     // Count bar + List toggle
                     HStack(spacing: 12) {
-                        Text("\(filteredPins.count) propiedades")
+                        Text("\(visibleOnMap.count) propiedades")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
                         Spacer()
@@ -196,11 +202,11 @@ struct BrowseView: View {
                     .padding(.vertical, 8)
                     .background(.ultraThinMaterial)
 
-                    // Horizontal property card carousel — matches map pins
+                    // Horizontal property card carousel — shows only what's visible on map
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: 12) {
-                                ForEach(filteredPins) { listing in
+                                ForEach(visibleOnMap) { listing in
                                     CarouselCard(listing: listing, isSelected: listing.id == selectedListing?.id)
                                         .id("card_\(listing.id)")
                                         .onTapGesture { detailListingID = listing.id }
