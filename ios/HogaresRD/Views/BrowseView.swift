@@ -443,9 +443,7 @@ struct BrowseView: View {
         return max(0, min(1, p))
     }
 
-    /// Update height from a drag gesture. Anchors the starting height on the
-    /// first .onChanged call so every subsequent frame is a pure 1:1 mapping
-    /// from finger movement — no snapping, no twitching.
+    /// Update height from a drag gesture with 1:1 tracking.
     private func handleDragChange(_ value: DragGesture.Value) {
         if sheetHeightAtDragStart == nil { sheetHeightAtDragStart = sheetHeight }
         let proposed = (sheetHeightAtDragStart ?? sheetHeight) - value.translation.height
@@ -453,11 +451,28 @@ struct BrowseView: View {
     }
 
     private func handleDragEnd(_ value: DragGesture.Value) {
+        let startH = sheetHeightAtDragStart ?? sheetHeight
         sheetHeightAtDragStart = nil
-        // Nudge away from the extremes if the user barely scraped them —
-        // otherwise leave the height exactly where the finger let go.
-        if sheetHeight < sheetMinHeight + 4 { sheetHeight = sheetMinHeight }
-        if sheetHeight > sheetFullHeight - 4 { sheetHeight = sheetFullHeight }
+
+        let velocity = value.predictedEndTranslation.height - value.translation.height
+        let midpoint = (sheetFullHeight + sheetMinHeight) / 2
+
+        // Snap based on position + velocity
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            if velocity < -100 {
+                // Fast swipe up → expand
+                sheetHeight = sheetFullHeight
+            } else if velocity > 100 {
+                // Fast swipe down → collapse
+                sheetHeight = sheetMinHeight
+            } else if sheetHeight > midpoint {
+                // Above midpoint → snap to full
+                sheetHeight = sheetFullHeight
+            } else {
+                // Below midpoint → snap to collapsed
+                sheetHeight = sheetMinHeight
+            }
+        }
     }
 
     @ViewBuilder
@@ -485,9 +500,9 @@ struct BrowseView: View {
                 .padding(.bottom, 8)
             }
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle()) // whole top strip is draggable
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 0)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 8)
                     .onChanged(handleDragChange)
                     .onEnded(handleDragEnd)
             )
