@@ -53,9 +53,9 @@ struct BrowseView: View {
     // Pin overlay
     @StateObject private var mapState = MapStateStore()
 
-    // Bottom sheet — uses native presentationDetents for smooth GPU-accelerated dragging
-    @State private var sheetDetent: PresentationDetent = .fraction(0.08)
-    @State private var showSheet = true
+    // Bottom sheet — two-state overlay (collapsed/expanded) to avoid
+    // per-pixel rebuilds while keeping tab bar visible
+    @State private var listExpanded = false
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -250,98 +250,109 @@ struct BrowseView: View {
                 mapCalloutCard(listing: pair.0, pinPoint: pair.1)
             }
 
-            // Floating buttons over map
-            VStack {
-                Spacer()
-                HStack {
+            // Floating buttons — only visible when list is collapsed
+            if !listExpanded {
+                VStack {
                     Spacer()
-                    VStack(spacing: 10) {
-                        locationButton
-                        // Mapa / Lista toggle
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                if sheetDetent == .fraction(0.08) {
-                                    sheetDetent = .large
-                                } else {
-                                    sheetDetent = .fraction(0.08)
-                                    selectedListing = nil
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            locationButton
+
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                                    listExpanded = true
                                 }
+                            } label: {
+                                Label("Lista", systemImage: "list.bullet")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.rdBlue)
+                                    .clipShape(Capsule())
+                                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                            }
+                        }
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
+                    }
+                }
+            }
+
+            // Expanded list overlay — slides up from bottom, stays above tab bar
+            if listExpanded {
+                VStack(spacing: 0) {
+                    // Header with Mapa button to collapse
+                    HStack {
+                        Text("\(filteredListings.count) propiedades")
+                            .font(.subheadline.bold())
+                        Spacer()
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                                listExpanded = false
+                                selectedListing = nil
                             }
                         } label: {
-                            Label(sheetDetent == .fraction(0.08) ? "Lista" : "Mapa",
-                                  systemImage: sheetDetent == .fraction(0.08) ? "list.bullet" : "map.fill")
+                            Label("Mapa", systemImage: "map.fill")
                                 .font(.subheadline.bold())
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
                                 .background(Color.rdBlue)
                                 .clipShape(Capsule())
-                                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                         }
                     }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemBackground))
+
+                    Divider()
+
+                    listSheetContent
                 }
+                .background(Color(.systemBackground))
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: 18, bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0, topTrailingRadius: 18,
+                    style: .continuous
+                ))
+                .shadow(color: .black.opacity(0.12), radius: 8, y: -3)
+                .transition(.move(edge: .bottom))
             }
         }
         .onTapGesture {
-            if selectedListing != nil {
+            if selectedListing != nil && !listExpanded {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
             }
         }
-        .sheet(isPresented: $showSheet) {
-            listSheetContent
-                .presentationDetents([.fraction(0.08), .medium, .large], selection: $sheetDetent)
-                .presentationDragIndicator(.visible)
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                .presentationCornerRadius(18)
-                .interactiveDismissDisabled()
-        }
     }
 
-    // MARK: - Native Sheet Content
+    // MARK: - List Content
     @ViewBuilder
     private var listSheetContent: some View {
-        VStack(spacing: 0) {
-            // Count row
-            HStack {
-                Spacer()
-                if loading && listings.isEmpty {
-                    Text("Cargando...")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text("\(filteredListings.count) propiedades")
-                        .font(.subheadline.bold())
-                }
-                Spacer()
-            }
-            .padding(.vertical, 10)
-
-            // List content
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredListings) { listing in
-                            ListingRow(listing: listing,
-                                       isSelected: listing.id == selectedListing?.id)
-                            .id("row_\(listing.id)")
-                            .onTapGesture { detailListingID = listing.id }
-                            .onAppear {
-                                if listing.id == filteredListings.last?.id, page < totalPages {
-                                    Task { await loadMore() }
-                                }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    ForEach(filteredListings) { listing in
+                        ListingRow(listing: listing,
+                                   isSelected: listing.id == selectedListing?.id)
+                        .id("row_\(listing.id)")
+                        .onTapGesture { detailListingID = listing.id }
+                        .onAppear {
+                            if listing.id == filteredListings.last?.id, page < totalPages {
+                                Task { await loadMore() }
                             }
                         }
-
-                        listFooter
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 80)
+                    listFooter
                 }
-                .onChange(of: selectedListing) { listing in
-                    if let id = listing?.id {
-                        withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
-                    }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 20)
+            }
+            .onChange(of: selectedListing) { listing in
+                if let id = listing?.id {
+                    withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
                 }
             }
         }
