@@ -940,7 +940,7 @@ class APIService: ObservableObject {
 
     func getDashboardSales() async throws -> DashboardSales {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/broker-dashboard/sales")!)
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/broker/sales")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardSales.self, from: data)
@@ -948,7 +948,7 @@ class APIService: ObservableObject {
 
     func getDashboardAccounting(commissionRate: Double = 0.03) async throws -> DashboardAccounting {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/accounting")!
+        var comps = URLComponents(string: "\(apiBase)/api/broker/accounting")!
         comps.queryItems = [URLQueryItem(name: "commission_rate", value: "\(commissionRate)")]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -958,7 +958,7 @@ class APIService: ObservableObject {
 
     func getDashboardDocuments(status: String? = nil, type: String? = nil, search: String? = nil, page: Int = 1) async throws -> DashboardDocuments {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/documents/archive")!
+        var comps = URLComponents(string: "\(apiBase)/api/broker/documents/archive")!
         var items: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "20")
@@ -975,7 +975,7 @@ class APIService: ObservableObject {
 
     func getDashboardAudit(search: String? = nil, type: String? = nil, page: Int = 1) async throws -> DashboardAudit {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker-dashboard/audit")!
+        var comps = URLComponents(string: "\(apiBase)/api/broker/audit")!
         var items: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "50")
