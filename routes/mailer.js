@@ -1,8 +1,10 @@
 /**
  * mailer.js — Central email transport
  *
- * Primary: Google Workspace SMTP (no daily limit, professional @hogaresrd.com)
- * Fallback: Resend HTTP API (if SMTP fails due to port blocks)
+ * Transport priority:
+ *   1. Gmail API (Google Workspace via service account — no SMTP ports needed)
+ *   2. Resend HTTP API (fallback if Gmail API not configured)
+ *   3. Google Workspace SMTP (only if SMTP_PRIMARY=1 and ports are open)
  *
  * Department routing:
  *   soporte@hogaresrd.com  — Support, welcome, verification, general
@@ -15,8 +17,13 @@
 'use strict';
 
 const nodemailer = require('nodemailer');
+const path = require('path');
+const fs = require('fs');
 let Resend;
 try { Resend = require('resend').Resend; } catch (_) {}
+
+// Gmail API — loaded lazily to avoid startup cost if not configured
+let _gmailClient = null;
 
 // ── Department email addresses ──────────────────────────────────────────
 const EMAILS = {
@@ -25,6 +32,15 @@ const EMAILS = {
   admin:   'HogaresRD Admin <admin@hogaresrd.com>',
   ventas:  'HogaresRD Ventas <ventas@hogaresrd.com>',
   noreply: 'HogaresRD <noreply@hogaresrd.com>',
+};
+
+// Department sender addresses (just the email part)
+const DEPT_EMAILS = {
+  soporte: 'soporte@hogaresrd.com',
+  legal:   'legal@hogaresrd.com',
+  admin:   'admin@hogaresrd.com',
+  ventas:  'ventas@hogaresrd.com',
+  noreply: 'noreply@hogaresrd.com',
 };
 
 // All replies go to the main workspace inbox
@@ -55,14 +71,98 @@ function detectDepartment(subject) {
   return 'soporte';
 }
 
+// ── Gmail API Transport ──────────────────────────────────────────────────
+
+/**
+ * Initialize the Gmail API client using a service account with
+ * domain-wide delegation. This allows sending as any @hogaresrd.com address.
+ *
+ * Required env vars:
+ *   GOOGLE_SERVICE_ACCOUNT_KEY — path to the service account JSON key file
+ *                                 OR the JSON key contents directly
+ *   GOOGLE_DELEGATED_USER     — the Workspace user to impersonate (e.g., soporte@hogaresrd.com)
+ */
+async function getGmailClient(senderEmail) {
+  const keyEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (!keyEnv) return null;
+
+  try {
+    const { google } = require('googleapis');
+
+    // Load key — either file path or inline JSON
+    let key;
+    if (keyEnv.startsWith('{')) {
+      key = JSON.parse(keyEnv);
+    } else {
+      key = JSON.parse(fs.readFileSync(keyEnv, 'utf8'));
+    }
+
+    const auth = new google.auth.JWT({
+      email:   key.client_email,
+      key:     key.private_key,
+      scopes:  ['https://www.googleapis.com/auth/gmail.send'],
+      subject: senderEmail || process.env.GOOGLE_DELEGATED_USER || 'soporte@hogaresrd.com',
+    });
+
+    return google.gmail({ version: 'v1', auth });
+  } catch (err) {
+    console.warn('[mailer] Gmail API init failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Send an email via Gmail API.
+ * Constructs a raw RFC 2822 message and sends via users.messages.send.
+ */
+async function sendViaGmailAPI(opts) {
+  const senderEmail = DEPT_EMAILS[opts._dept] || DEPT_EMAILS.soporte;
+  const gmail = await getGmailClient(senderEmail);
+  if (!gmail) return null;
+
+  const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];
+  const boundary = '----=_Part_' + Date.now().toString(36);
+
+  // Build RFC 2822 message
+  const messageParts = [
+    `From: ${opts.from}`,
+    `To: ${toArray.join(', ')}`,
+    `Subject: =?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`,
+    `Reply-To: ${REPLY_TO}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(opts.html).toString('base64'),
+    `--${boundary}--`,
+  ];
+
+  const raw = Buffer.from(messageParts.join('\r\n'))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const result = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw },
+  });
+
+  return result.data;
+}
+
+// ── Main Transport Factory ───────────────────────────────────────────────
+
 function createTransport() {
   const wsUser = process.env.WS_EMAIL_USER;
   const wsPass = process.env.WS_EMAIL_PASS;
   const resendKey = process.env.RESEND_API_KEY;
+  const hasGmailAPI = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
-  // Google Workspace SMTP transporter
-  // Force IPv4 + short timeouts — the droplet has no IPv6 route to Google's
-  // SMTP, so without this we hang ~30s before falling back to Resend.
+  // Google Workspace SMTP transporter (only used when SMTP_PRIMARY=1)
   const smtp = (wsUser && wsPass) ? nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -74,42 +174,38 @@ function createTransport() {
     socketTimeout:     10000,
   }) : null;
 
-  // Resend HTTP API fallback
+  // Resend HTTP API
   const resend = (resendKey && Resend) ? new Resend(resendKey) : null;
+
+  if (hasGmailAPI) console.log('[mailer] Gmail API configured as primary transport');
+  else if (resend) console.log('[mailer] Resend HTTP API configured as primary transport');
+  else if (smtp)   console.log('[mailer] SMTP configured as primary transport');
+  else             console.warn('[mailer] No email transport configured!');
 
   return {
     /**
      * sendMail({ to, subject, html, department? })
      *
-     * Tries Workspace SMTP first, falls back to Resend if SMTP fails.
+     * Priority: Gmail API → Resend → SMTP
      */
     async sendMail(opts) {
       const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];
+      // Sanitize subject — strip newlines to prevent header injection
+      if (opts.subject) opts.subject = String(opts.subject).replace(/[\r\n]/g, ' ').slice(0, 200);
       const dept = opts.department || detectDepartment(opts.subject);
       const from = EMAILS[dept] || EMAILS.soporte;
 
-      // ── Primary: Resend HTTP API (always works, no port blocks) ──
-      // DigitalOcean blocks SMTP ports 465/587. Until they unblock,
-      // Resend is the primary transport. When DO opens the ports, set
-      // SMTP_PRIMARY=1 in .env to swap SMTP back to primary.
-      const smtpFirst = process.env.SMTP_PRIMARY === '1';
-
-      if (smtpFirst && smtp) {
+      // ── 1. Gmail API (primary — works over HTTPS, no SMTP ports) ──
+      if (hasGmailAPI) {
         try {
-          return await smtp.sendMail({
-            from,
-            to:       toArray.join(', '),
-            subject:  opts.subject,
-            html:     opts.html,
-            replyTo:  REPLY_TO,
-            headers:  opts.headers || {},
-          });
-        } catch (smtpErr) {
-          console.warn('[mailer] SMTP failed, trying Resend fallback:', smtpErr.message);
+          return await sendViaGmailAPI({ ...opts, from, to: toArray, _dept: dept });
+        } catch (gmailErr) {
+          console.warn('[mailer] Gmail API failed:', gmailErr.message);
+          // Fall through to Resend
         }
       }
 
-      // ── Resend HTTP API (primary while SMTP is blocked) ─────────
+      // ── 2. Resend HTTP API ────────────────────────────────────────
       if (resend) {
         try {
           const result = await resend.emails.send({
@@ -126,12 +222,11 @@ function createTransport() {
           return result;
         } catch (resendErr) {
           console.warn('[mailer] Resend failed:', resendErr.message);
-          // Fall through to SMTP fallback if Resend is primary
         }
       }
 
-      // ── Fallback: try SMTP if it wasn't the primary ────────────
-      if (!smtpFirst && smtp) {
+      // ── 3. SMTP fallback (only works if DO unblocks ports) ────────
+      if (smtp) {
         try {
           return await smtp.sendMail({
             from,
@@ -142,7 +237,7 @@ function createTransport() {
             headers:  opts.headers || {},
           });
         } catch (smtpErr) {
-          console.warn('[mailer] SMTP fallback also failed:', smtpErr.message);
+          console.warn('[mailer] SMTP failed:', smtpErr.message);
         }
       }
 
