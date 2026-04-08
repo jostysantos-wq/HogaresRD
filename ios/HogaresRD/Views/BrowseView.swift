@@ -55,7 +55,7 @@ struct BrowseView: View {
 
     // Zillow-style bottom sheet — uses native presentationDetents
     @State private var showListSheet = true
-    @State private var listDetent: PresentationDetent = .height(60 + 83) // 60 + tabBarHeight
+    @State private var listDetent: PresentationDetent = .height(50)
 
     // Detail nav
     @State private var detailListingID: String? = nil
@@ -225,13 +225,12 @@ struct BrowseView: View {
         // Detent heights account for tab bar so the sheet sits above it
         .sheet(isPresented: .constant(true)) {
             listSheetContent
-                .padding(.bottom, tabBarHeight)
                 .presentationDetents(
-                    [.height(60 + tabBarHeight), .fraction(0.55), .fraction(0.92)],
+                    [.height(50), .medium, .large],
                     selection: $listDetent
                 )
                 .presentationDragIndicator(.visible)
-                .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.92)))
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                 .presentationCornerRadius(16)
                 .interactiveDismissDisabled()
         }
@@ -286,20 +285,18 @@ struct BrowseView: View {
     @ViewBuilder
     private var listSheetContent: some View {
         VStack(spacing: 0) {
-            // Peek header — always visible, shows count
-            HStack {
-                if loading && listings.isEmpty {
-                    Text("Cargando propiedades...")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text("\(filteredListings.count) propiedades")
-                        .font(.subheadline.bold())
-                }
-                Spacer()
+            // Peek header — compact like Zillow
+            if loading && listings.isEmpty {
+                Text("Cargando propiedades...")
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            } else {
+                Text("\(filteredListings.count) propiedades en venta")
+                    .font(.footnote.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 6)
-            .padding(.bottom, 10)
 
             Divider()
 
