@@ -351,7 +351,7 @@ struct BrowseView: View {
                     locationButton
                         .padding(.trailing, 16)
                 }
-                .padding(.bottom, showFullList ? 16 : 175) // above carousel + count bar
+                .padding(.bottom, showFullList ? 16 : 220) // above carousel + count bar + tab bar
             }
         }
         .onTapGesture {
