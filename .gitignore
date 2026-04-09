@@ -6,3 +6,4 @@ data/hogaresrd.db-shm
 public/uploads/
 server.log
 ios/build/
+*.p8
