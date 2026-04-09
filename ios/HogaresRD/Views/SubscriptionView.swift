@@ -5,7 +5,7 @@ import StoreKit
 // HogaresRD — Subscription Plans View
 // ══════════════════════════════════════════════════════════════════════════
 
-struct SubscriptionView: View {
+struct PlansView: View {
     @EnvironmentObject var api: APIService
     @ObservedObject private var store = StoreManager.shared
     @Environment(\.dismiss) var dismiss

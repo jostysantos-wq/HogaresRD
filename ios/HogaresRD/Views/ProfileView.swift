@@ -81,7 +81,7 @@ struct ProfileView: View {
                     }
                 }
                 .sheet(isPresented: $showSubscription) {
-                    SubscriptionView().environmentObject(api)
+                    PlansView().environmentObject(api)
                 }
             }
 
