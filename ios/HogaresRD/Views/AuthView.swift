@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 // MARK: - AuthView (root sheet)
 
@@ -318,6 +319,23 @@ struct LoginForm: View {
                     }
                     .buttonStyle(.plain)
                 }
+                // Sign in with Apple — divider + button
+                HStack {
+                    Rectangle().fill(Color(.separator)).frame(height: 0.5)
+                    Text("o").font(.caption).foregroundStyle(.secondary)
+                    Rectangle().fill(Color(.separator)).frame(height: 0.5)
+                }
+                .padding(.vertical, 4)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    Task { await handleAppleSignIn(result) }
+                }
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
             } else {
                 // 2FA Code Entry
                 VStack(spacing: 16) {
@@ -387,6 +405,36 @@ struct LoginForm: View {
             }
         } catch { self.error = error.localizedDescription }
         loading = false
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let auth):
+            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                  let identityToken = credential.identityToken,
+                  let tokenStr = String(data: identityToken, encoding: .utf8) else {
+                self.error = "No se pudo obtener el token de Apple"
+                return
+            }
+            loading = true; error = nil
+            do {
+                let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                    .compactMap { $0 }.joined(separator: " ")
+                try await api.loginWithApple(
+                    identityToken: tokenStr,
+                    name: fullName.isEmpty ? nil : fullName,
+                    email: credential.email
+                )
+                onSuccess()
+            } catch {
+                self.error = error.localizedDescription
+            }
+            loading = false
+        case .failure(let err):
+            if (err as NSError).code != ASAuthorizationError.canceled.rawValue {
+                self.error = "Error de Apple Sign In: \(err.localizedDescription)"
+            }
+        }
     }
 
     private func loginWithBiometric(_ savedEmail: String) async {
@@ -590,6 +638,27 @@ struct RegisterForm: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Quick register with Apple
+            SignInWithAppleButton(.signUp) { request in
+                request.requestedScopes = [.fullName, .email]
+            } onCompletion: { result in
+                Task { await handleAppleRegister(result) }
+            }
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Divider
+            HStack {
+                Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1)
+                Text("o completa el formulario")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize()
+                Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1)
+            }
+            .padding(.vertical, 4)
+
             // Fields
             FloatingField(label: "Nombre completo", text: $name)
             FloatingField(label: "Correo electrónico", text: $email)
@@ -650,6 +719,36 @@ struct RegisterForm: View {
             onSuccess()
         } catch { self.error = error.localizedDescription }
         loading = false
+    }
+
+    private func handleAppleRegister(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let auth):
+            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                  let identityToken = credential.identityToken,
+                  let tokenStr = String(data: identityToken, encoding: .utf8) else {
+                self.error = "No se pudo obtener el token de Apple"
+                return
+            }
+            loading = true; error = nil
+            do {
+                let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                    .compactMap { $0 }.joined(separator: " ")
+                try await api.loginWithApple(
+                    identityToken: tokenStr,
+                    name: fullName.isEmpty ? nil : fullName,
+                    email: credential.email
+                )
+                onSuccess()
+            } catch {
+                self.error = error.localizedDescription
+            }
+            loading = false
+        case .failure(let err):
+            if (err as NSError).code != ASAuthorizationError.canceled.rawValue {
+                self.error = "Error: \(err.localizedDescription)"
+            }
+        }
     }
 }
 
