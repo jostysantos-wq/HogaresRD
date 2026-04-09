@@ -94,6 +94,10 @@ struct HogaresRDApp: App {
             .animation(.easeInOut(duration: 0.25), value: lockManager.isLocked)
             .onChange(of: scenePhase) { _, newPhase in
                 lockManager.handleScenePhase(newPhase, isLoggedIn: api.currentUser != nil)
+                // Clear notification badge when app becomes active
+                if newPhase == .active {
+                    UNUserNotificationCenter.current().setBadgeCount(0)
+                }
             }
             .task {
                 try? await Task.sleep(for: .seconds(0.8))
