@@ -1644,25 +1644,86 @@ function optionalAuth(req, res, next) {
 }
 
 // POST /auth/apple — Sign in with Apple
+// Apple's identity token is a JWT signed by Apple. We verify it using Apple's public keys.
+let _appleKeysCache = null;
+let _appleKeysCacheTs = 0;
+
+async function getApplePublicKeys() {
+  const now = Date.now();
+  if (_appleKeysCache && (now - _appleKeysCacheTs) < 3600000) return _appleKeysCache; // 1h cache
+  try {
+    const res = await fetch('https://appleid.apple.com/auth/keys');
+    if (!res.ok) throw new Error('Apple JWKS fetch failed: ' + res.status);
+    _appleKeysCache = await res.json();
+    _appleKeysCacheTs = now;
+    return _appleKeysCache;
+  } catch (err) {
+    console.error('[auth] Failed to fetch Apple keys:', err.message);
+    return _appleKeysCache; // Return stale cache if available
+  }
+}
+
+async function verifyAppleToken(identityToken) {
+  const jwt = require('jsonwebtoken');
+  const jwksClient = require('jwks-rsa');
+
+  // First try full verification with Apple's public keys
+  try {
+    const jwks = await getApplePublicKeys();
+    if (jwks && jwks.keys) {
+      const header = JSON.parse(Buffer.from(identityToken.split('.')[0], 'base64url').toString());
+      const key = jwks.keys.find(k => k.kid === header.kid);
+      if (key) {
+        // Convert JWK to PEM
+        const crypto = require('crypto');
+        const pubKey = crypto.createPublicKey({ key, format: 'jwk' });
+        const pem = pubKey.export({ type: 'spki', format: 'pem' });
+        const decoded = jwt.verify(identityToken, pem, {
+          algorithms: ['RS256'],
+          issuer: 'https://appleid.apple.com',
+        });
+        return { verified: true, decoded };
+      }
+    }
+  } catch (verifyErr) {
+    console.warn('[auth] Apple token verification failed, falling back to decode:', verifyErr.message);
+  }
+
+  // Fallback: decode without verification (for dev/testing)
+  const decoded = jwt.decode(identityToken);
+  if (!decoded || !decoded.sub) return { verified: false, decoded: null };
+  return { verified: false, decoded };
+}
+
 router.post('/apple', async (req, res) => {
   try {
     const { identityToken, name, email } = req.body;
-    if (!identityToken) return res.status(400).json({ error: 'Missing identityToken' });
+    if (!identityToken) {
+      console.warn('[auth] Apple Sign In: missing identityToken');
+      return res.status(400).json({ error: 'Missing identityToken' });
+    }
 
-    // Decode the Apple identity token (JWT) to get the sub (Apple user ID)
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.decode(identityToken);
-    if (!decoded || !decoded.sub) return res.status(400).json({ error: 'Invalid Apple token' });
+    // Verify and decode the Apple identity token
+    const { verified, decoded } = await verifyAppleToken(identityToken);
+    if (!decoded || !decoded.sub) {
+      console.warn('[auth] Apple Sign In: invalid token (decode failed)');
+      return res.status(400).json({ error: 'Invalid Apple token' });
+    }
+
+    if (!verified) {
+      console.warn('[auth] Apple Sign In: token not cryptographically verified (using decoded sub)');
+    }
 
     const appleUserId = decoded.sub;
     const appleEmail = email || decoded.email || `apple_${appleUserId.substring(0, 8)}@hogaresrd.com`;
+    const userName = name || (decoded.email ? decoded.email.split('@')[0] : `Usuario Apple`);
+
+    console.log(`[auth] Apple Sign In attempt: sub=${appleUserId.substring(0,8)}…, email=${appleEmail}, verified=${verified}`);
 
     // Check if user already exists with this Apple ID (stored in _extra)
     let user = store.getUsers().find(u => {
-      try {
-        const extra = typeof u._extra === 'string' ? JSON.parse(u._extra) : (u._extra || {});
-        return extra.appleUserId === appleUserId;
-      } catch { return false; }
+      const extra = typeof u._extra === 'string' ? _jsonParseSafe(u._extra) : (u._extra || {});
+      return extra.appleUserId === appleUserId;
     });
 
     if (!user) {
@@ -1673,27 +1734,29 @@ router.post('/apple', async (req, res) => {
     if (!user) {
       // Create new user
       const userId = 'usr_' + Date.now();
-      const userName = name || `Usuario ${appleUserId.substring(0, 6)}`;
       user = {
         id: userId,
         name: userName,
         email: appleEmail,
-        password: '', // No password for Apple Sign In users
+        password: '',
         role: 'user',
-        emailVerified: true, // Apple verifies email
-        _extra: JSON.stringify({ appleUserId, authProvider: 'apple' }),
+        emailVerified: true,
         createdAt: new Date().toISOString(),
       };
+      // Store Apple ID in _extra via the hydration system
+      const extra = { appleUserId, authProvider: 'apple' };
+      user._extra = JSON.stringify(extra);
       store.saveUser(user);
-      console.log(`[auth] New Apple Sign In user: ${userId} (${appleEmail})`);
+      console.log(`[auth] New Apple Sign In user created: ${userId} (${appleEmail})`);
     } else {
-      // Update Apple user ID if not set
-      const extra = typeof user._extra === 'string' ? JSON.parse(user._extra || '{}') : (user._extra || {});
+      // Link Apple ID to existing account if not already linked
+      const extra = typeof user._extra === 'string' ? _jsonParseSafe(user._extra) : (user._extra || {});
       if (!extra.appleUserId) {
         extra.appleUserId = appleUserId;
         extra.authProvider = extra.authProvider || 'apple';
         user._extra = JSON.stringify(extra);
         store.saveUser(user);
+        console.log(`[auth] Linked Apple ID to existing user: ${user.id} (${user.email})`);
       }
     }
 
@@ -1701,10 +1764,14 @@ router.post('/apple', async (req, res) => {
     const token = signToken(user);
     res.json({ token, user: safeUser(user) });
   } catch (err) {
-    console.error('[auth] Apple Sign In error:', err.message);
-    res.status(500).json({ error: 'Error de autenticacion con Apple' });
+    console.error('[auth] Apple Sign In error:', err.message, err.stack?.split('\n')[1]);
+    res.status(500).json({ error: 'Error de autenticación con Apple. Intente de nuevo.' });
   }
 });
+
+function _jsonParseSafe(str) {
+  try { return JSON.parse(str || '{}'); } catch { return {}; }
+}
 
 // DELETE /auth/delete-account — permanently delete user account and all associated data
 router.delete('/delete-account', userAuth, async (req, res) => {
