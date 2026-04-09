@@ -87,7 +87,7 @@ class StoreManager: ObservableObject {
             let result = try await product.purchase()
             switch result {
             case .success(let verification):
-                let transaction = try checkVerified(verification)
+                let transaction = try Self.verify(verification)
                 await transaction.finish()
                 await updatePurchasedProducts()
                 // Notify server of the purchase
@@ -136,7 +136,7 @@ class StoreManager: ObservableObject {
         Task.detached {
             for await result in StoreKit.Transaction.updates {
                 do {
-                    let transaction = try self.checkVerified(result)
+                    let transaction = try StoreManager.verify(result)
                     await transaction.finish()
                     await self.updatePurchasedProducts()
                     await self.syncWithServer(transaction: transaction)
@@ -154,7 +154,7 @@ class StoreManager: ObservableObject {
         var latestTransaction: StoreKit.Transaction?
 
         for await result in StoreKit.Transaction.currentEntitlements {
-            if let transaction = try? checkVerified(result) {
+            if let transaction = try? Self.verify(result) {
                 if transaction.revocationDate == nil {
                     purchased.insert(transaction.productID)
                     if latestTransaction == nil || transaction.purchaseDate > (latestTransaction?.purchaseDate ?? .distantPast) {
@@ -170,7 +170,7 @@ class StoreManager: ObservableObject {
 
     // ── Verify Transaction ──────────────────────────────────────
 
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    nonisolated private static func verify<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified(_, let error):
             throw error
