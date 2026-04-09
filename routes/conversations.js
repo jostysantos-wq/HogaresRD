@@ -18,8 +18,8 @@ const { createTransport } = require('./mailer');
 const transporter = createTransport();
 
 function _sendMail(to, subject, html) {
-  if (!to || !process.env.RESEND_API_KEY && !process.env.WS_EMAIL_USER) return;
-  transporter.sendMail({ to, subject, html }).catch(err => console.error('[conv-mail]', err.message));
+  if (!to) return;
+  transporter.sendMail({ to, subject, html, department: 'noreply' }).catch(err => console.error('[conv-mail]', err.message));
 }
 
 
@@ -126,7 +126,17 @@ router.post('/', requireLogin, (req, res) => {
 
   store.saveConversation(conv);
 
-  // Push notification to assigned broker or org team
+  // Start cascade if enabled and no refToken assignment
+  const cascadeEngine = require('./cascade-engine');
+  if (cascadeEngine.isEnabled() && !assignedBrokerId && !inmobiliariaId && propertyId) {
+    cascadeEngine.startCascade('conversation', conv.id, propertyId, {
+      name: user.name || '',
+    });
+    // Cascade handles notifications — skip legacy notification block
+    return res.status(201).json({ id: conv.id, created: true });
+  }
+
+  // Push notification to assigned broker or org team (legacy)
   const { notify: pushNotify } = require('./push');
   if (assignedBrokerId) {
     pushNotify(assignedBrokerId, {

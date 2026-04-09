@@ -141,6 +141,7 @@ const SUBMISSION_KNOWN_COLS = [
   'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'unit_inventory', 'project_stage',
   'delivery_date', 'submission_type', 'claim_listing_id',
   'amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'construction_company',
+  'creator_user_id',
 ];
 const SUBMISSION_JSON_COLS = ['amenities', 'agencies', 'images', 'blueprints', 'tags', 'unit_types', 'unit_inventory', 'construction_company', '_extra'];
 
@@ -262,13 +263,53 @@ let _pageContent = [];
 let _reports = [];
 let _tasks = [];
 let _metaLeads = [];
+let _leadQueue = [];
+let _contributionScores = [];
 let _cacheReady = false;
 
 // ── Initial cache load ──────────────────────────────────────────────────
 async function _loadCache() {
   try {
+    // Ensure cascade tables exist (idempotent)
+    await exec(`
+      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS creator_user_id TEXT;
+      CREATE TABLE IF NOT EXISTS lead_queue (
+        id TEXT PRIMARY KEY,
+        inquiry_type TEXT NOT NULL,
+        inquiry_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL,
+        buyer_name TEXT,
+        buyer_phone TEXT,
+        buyer_email TEXT,
+        current_tier INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'active',
+        claimed_by TEXT,
+        claimed_at TEXT,
+        tier1_notified_at TEXT,
+        tier2_notified_at TEXT,
+        tier3_notified_at TEXT,
+        auto_responded_at TEXT,
+        created_at TEXT NOT NULL,
+        _extra JSONB DEFAULT '{}'
+      );
+      CREATE TABLE IF NOT EXISTS contribution_scores (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL,
+        role TEXT DEFAULT 'affiliate',
+        score INTEGER DEFAULT 0,
+        score_breakdown JSONB DEFAULT '{}',
+        avg_response_ms INTEGER,
+        response_count INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        _extra JSONB DEFAULT '{}'
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_cs_user_listing ON contribution_scores (user_id, listing_id);
+    `);
+
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
-           searches, blog, pages, reports, tasks, meta] = await Promise.all([
+           searches, blog, pages, reports, tasks, meta, lq, cs] = await Promise.all([
       query('SELECT * FROM users'),
       query('SELECT * FROM submissions'),
       query('SELECT * FROM applications'),
@@ -284,6 +325,8 @@ async function _loadCache() {
       query('SELECT * FROM reports'),
       query('SELECT * FROM tasks'),
       query('SELECT * FROM meta_leads'),
+      query('SELECT * FROM lead_queue'),
+      query('SELECT * FROM contribution_scores'),
     ]);
     _users = users;
     _submissions = subs;
@@ -300,8 +343,10 @@ async function _loadCache() {
     _reports = reports;
     _tasks = tasks;
     _metaLeads = meta;
+    _leadQueue = lq;
+    _contributionScores = cs;
     _cacheReady = true;
-    console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps`);
+    console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} queue, ${cs.length} scores`);
   } catch (err) {
     console.error('[store-pg] Cache load failed:', err.message);
   }
@@ -371,6 +416,10 @@ function saveUser(user) {
   const idx = _users.findIndex(u => u.id === user.id);
   if (idx >= 0) _users[idx] = cacheRow;
   else _users.push(cacheRow);
+}
+
+function deleteUser(id) {
+  _users = _users.filter(u => u.id !== id);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -660,9 +709,13 @@ function savePushSubscription(userId, current) {
   else _pushSubs.push(row);
 }
 
-function removePushSubscription(userId, endpoint) {
+function removePushSubscription(userId, type, identifier) {
   const sub = getPushSubscriptionsByUser(userId);
-  sub.web = sub.web.filter(s => s.endpoint !== endpoint);
+  if (type === 'ios') {
+    sub.ios = sub.ios.filter(t => t !== identifier);
+  } else {
+    sub.web = sub.web.filter(s => s.endpoint !== identifier);
+  }
   savePushSubscription(userId, sub);
 }
 
@@ -845,6 +898,63 @@ function appendMetaLead(lead) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// LEAD QUEUE (cascade state machine)
+// ══════════════════════════════════════════════════════════════════════════
+
+function getLeadQueue() { return _leadQueue; }
+
+function getLeadQueueById(id) { return _leadQueue.find(q => q.id === id) || null; }
+
+function getActiveLeadQueueForListing(listingId) {
+  return _leadQueue.filter(q => q.listing_id === listingId && q.status === 'active');
+}
+
+function getActiveLeadQueue() {
+  return _leadQueue.filter(q => q.status === 'active');
+}
+
+function saveLeadQueueItem(item) {
+  const row = { ...item };
+  // Serialize _extra
+  if (row._extra && typeof row._extra !== 'string') row._extra = JSON.stringify(row._extra);
+  const { sql, values } = buildUpsert('lead_queue', row, 'id');
+  pool.query(sql, values).catch(err => console.error('[store-pg] saveLeadQueueItem error:', err.message));
+  // Parse back for cache
+  if (typeof row._extra === 'string') try { row._extra = JSON.parse(row._extra); } catch {}
+  const idx = _leadQueue.findIndex(q => q.id === item.id);
+  if (idx >= 0) _leadQueue[idx] = row;
+  else _leadQueue.push(row);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONTRIBUTION SCORES
+// ══════════════════════════════════════════════════════════════════════════
+
+function getContributionScores() { return _contributionScores; }
+
+function getContributionScoresForListing(listingId) {
+  return _contributionScores.filter(c => c.listing_id === listingId);
+}
+
+function getContributionScore(userId, listingId) {
+  return _contributionScores.find(c => c.user_id === userId && c.listing_id === listingId) || null;
+}
+
+function saveContributionScore(score) {
+  const row = { ...score };
+  if (row.score_breakdown && typeof row.score_breakdown !== 'string') row.score_breakdown = JSON.stringify(row.score_breakdown);
+  if (row._extra && typeof row._extra !== 'string') row._extra = JSON.stringify(row._extra);
+  const { sql, values } = buildUpsert('contribution_scores', row, 'id');
+  pool.query(sql, values).catch(err => console.error('[store-pg] saveContributionScore error:', err.message));
+  // Parse back for cache
+  if (typeof row.score_breakdown === 'string') try { row.score_breakdown = JSON.parse(row.score_breakdown); } catch {}
+  if (typeof row._extra === 'string') try { row._extra = JSON.parse(row._extra); } catch {}
+  const idx = _contributionScores.findIndex(c => c.id === score.id);
+  if (idx >= 0) _contributionScores[idx] = row;
+  else _contributionScores.push(row);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // TRANSACTION SUPPORT
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -861,7 +971,7 @@ function withTransaction(fn) {
 // ══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
-  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser,
+  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser, deleteUser,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,
@@ -885,6 +995,10 @@ module.exports = {
   getReports, getReportById, saveReport,
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
+  // Lead queue (cascade)
+  getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
+  // Contribution scores
+  getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,
   withTransaction,
   // PostgreSQL pool for direct queries if needed
   pool,

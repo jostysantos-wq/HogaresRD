@@ -159,8 +159,8 @@ function addEvent(app, type, description, actor, actorName, data = {}) {
 }
 
 function sendNotification(to, subject, html) {
-  if (!process.env.EMAIL_USER && !process.env.WS_EMAIL_USER && !process.env.RESEND_API_KEY) return;
-  transporter.sendMail({ to, subject, html })
+  if (!to) return;
+  transporter.sendMail({ to, subject, html, department: 'admin' })
     .catch(err => console.error('[applications] Email failed:', subject, '→', to, err.message));
 }
 
@@ -290,10 +290,12 @@ router.post('/', appCreateLimiter, (req, res) => {
   // Find listing to get affiliated broker
   const listing = store.getListingById(listing_id);
   const agencies = listing?.agencies || [];
+  const cascadeEngine = require('./cascade-engine');
+  const useCascade = cascadeEngine.isEnabled() && agencies.length > 0;
 
-  // Auto-assign first agency broker (or leave unassigned)
+  // Auto-assign first agency broker (or leave unassigned for cascade)
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
-  if (agencies.length) {
+  if (!useCascade && agencies.length) {
     const agency = agencies[0];
     broker = {
       user_id: agency.user_id || null,
@@ -302,6 +304,8 @@ router.post('/', appCreateLimiter, (req, res) => {
       email:   agency.email || '',
       phone:   agency.phone || '',
     };
+  } else if (useCascade) {
+    broker = { user_id: null, name: 'Pendiente de asignación', agency_name: '', email: '', phone: '' };
   }
 
   // Snapshot inmobiliaria affiliation at application creation time
@@ -405,57 +409,68 @@ router.post('/', appCreateLimiter, (req, res) => {
     </div>`;
   }
 
-  // Notify broker
-  if (broker.email) {
-    sendNotification(broker.email, `Nueva aplicación — ${app.listing_title}`, newAppHtml(''));
-  }
+  // ── Notifications: cascade vs legacy ──────────────────────────────
+  if (useCascade) {
+    // Cascade handles all notifications — just respond and start cascade
+    res.status(201).json({ ok: true, id: app.id });
 
-  // Notify inmobiliaria (if broker is affiliated)
-  if (inmobiliaria_id) {
-    const inmUser = store.getUserById(inmobiliaria_id);
-    if (inmUser?.email) {
-      sendNotification(
-        inmUser.email,
-        `Nueva aplicación (${broker.name || 'agente'}) — ${app.listing_title}`,
-        newAppHtml(`Agente: ${broker.name}`)
-      );
+    cascadeEngine.startCascade('application', app.id, listing_id, {
+      name:  app.client?.name  || '',
+      phone: app.client?.phone || '',
+      email: app.client?.email || '',
+    });
+  } else {
+    // Legacy: direct broker notification
+    if (broker.email) {
+      sendNotification(broker.email, `Nueva aplicación — ${app.listing_title}`, newAppHtml(''));
     }
-  }
 
-  res.status(201).json({ ok: true, id: app.id });
-
-  // Push notification → broker (fire-and-forget)
-  if (broker.user_id) {
-    pushNotify(broker.user_id, {
-      type: 'new_application',
-      title: 'Nueva Aplicación',
-      body: `${app.client.name} aplicó para ${app.listing_title}`,
-      url: '/broker.html',
-    });
-  }
-  if (inmobiliaria_id) {
-    pushNotify(inmobiliaria_id, {
-      type: 'new_application',
-      title: 'Nueva Aplicación',
-      body: `${app.client.name} aplicó para ${app.listing_title} (${broker.name || 'agente'})`,
-      url: '/broker.html',
-    });
-  }
-
-  // WhatsApp broker notification (fire-and-forget)
-  setImmediate(async () => {
-    try {
-      const brokerUser = broker.user_id ? store.getUserById(broker.user_id) : null;
-      if (brokerUser?.phone) {
-        await notify.notifyBrokerNewApplication({
-          brokerPhone:   brokerUser.phone,
-          clientName:    app.client.name,
-          propertyTitle: app.listing_title,
-          appId:         app.id,
-        });
+    if (inmobiliaria_id) {
+      const inmUser = store.getUserById(inmobiliaria_id);
+      if (inmUser?.email) {
+        sendNotification(
+          inmUser.email,
+          `Nueva aplicación (${broker.name || 'agente'}) — ${app.listing_title}`,
+          newAppHtml(`Agente: ${broker.name}`)
+        );
       }
-    } catch (e) { console.error('[notify-app]', e.message); }
-  });
+    }
+
+    res.status(201).json({ ok: true, id: app.id });
+
+    // Push notification → broker (fire-and-forget)
+    if (broker.user_id) {
+      pushNotify(broker.user_id, {
+        type: 'new_application',
+        title: 'Nueva Aplicación',
+        body: `${app.client.name} aplicó para ${app.listing_title}`,
+        url: '/broker.html',
+      });
+    }
+    if (inmobiliaria_id) {
+      pushNotify(inmobiliaria_id, {
+        type: 'new_application',
+        title: 'Nueva Aplicación',
+        body: `${app.client.name} aplicó para ${app.listing_title} (${broker.name || 'agente'})`,
+        url: '/broker.html',
+      });
+    }
+
+    // WhatsApp broker notification (fire-and-forget)
+    setImmediate(async () => {
+      try {
+        const brokerUser = broker.user_id ? store.getUserById(broker.user_id) : null;
+        if (brokerUser?.phone) {
+          await notify.notifyBrokerNewApplication({
+            brokerPhone:   brokerUser.phone,
+            clientName:    app.client.name,
+            propertyTitle: app.listing_title,
+            appId:         app.id,
+          });
+        }
+      } catch (e) { console.error('[notify-app]', e.message); }
+    });
+  }
 });
 
 // ══════════════════════════════════════════════════════════════════

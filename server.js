@@ -273,6 +273,8 @@ app.use('/api/referrals',     require('./routes/referrals'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
+app.use('/api/lead-queue',    require('./routes/auth').userAuth, require('./routes/lead-queue').router);
+app.use('/api/contributions', require('./routes/auth').userAuth, require('./routes/contributions').router);
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
@@ -284,6 +286,64 @@ app.use('/api/saved-searches',    savedSearchRouter);
 app.use('/api/tasks',             require('./routes/tasks'));
 
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
+// MapKit JS token — uses the same .p8 key as APNs
+// Search suggestions — extracts unique locations from approved listings
+app.get('/api/search-suggestions', (req, res) => {
+  const allListings = store.getListings();
+  const listings = Array.isArray(allListings) ? allListings : (allListings.listings || []);
+  const approved = listings.filter(l => l.status === 'approved');
+
+  const provinces = new Map();
+  const cities = new Map();
+  const sectors = new Map();
+
+  approved.forEach(l => {
+    if (l.province) {
+      const key = l.province;
+      if (!provinces.has(key)) provinces.set(key, { name: key, type: 'province', count: 0, lat: parseFloat(l.lat) || null, lng: parseFloat(l.lng) || null });
+      provinces.get(key).count++;
+    }
+    if (l.city) {
+      const key = `${l.city}|${l.province || ''}`;
+      if (!cities.has(key)) cities.set(key, { name: l.city, province: l.province || '', type: 'city', count: 0, lat: parseFloat(l.lat) || null, lng: parseFloat(l.lng) || null });
+      cities.get(key).count++;
+    }
+    if (l.sector) {
+      const key = `${l.sector}|${l.city || ''}|${l.province || ''}`;
+      if (!sectors.has(key)) sectors.set(key, { name: l.sector, city: l.city || '', province: l.province || '', type: 'sector', count: 0, lat: parseFloat(l.lat) || null, lng: parseFloat(l.lng) || null });
+      sectors.get(key).count++;
+    }
+  });
+
+  const results = [
+    ...Array.from(provinces.values()).sort((a, b) => b.count - a.count),
+    ...Array.from(cities.values()).sort((a, b) => b.count - a.count),
+    ...Array.from(sectors.values()).sort((a, b) => b.count - a.count),
+  ];
+
+  res.json({ suggestions: results, total: approved.length });
+});
+
+app.get('/api/mapkit-token', (req, res) => {
+  try {
+    const keyPath = process.env.APNS_KEY_PATH;
+    const keyId   = process.env.APNS_KEY_ID;
+    const teamId  = process.env.APNS_TEAM_ID;
+    if (!keyPath || !keyId || !teamId) return res.status(503).json({ error: 'MapKit not configured' });
+
+    const key = require('fs').readFileSync(keyPath, 'utf8');
+    const token = require('jsonwebtoken').sign(
+      { iss: teamId, iat: Math.floor(Date.now() / 1000), origin: 'https://hogaresrd.com' },
+      key,
+      { algorithm: 'ES256', expiresIn: '1h', header: { alg: 'ES256', kid: keyId, typ: 'JWT' } }
+    );
+    res.json({ token });
+  } catch (err) {
+    console.error('[MapKit] Token error:', err.message);
+    res.status(500).json({ error: 'Token generation failed' });
+  }
+});
+
 app.get('/api/config/meta', (req, res) => {
   const pixelId = process.env.META_PIXEL_ID;
   if (!pixelId) return res.json({ pixelId: null });
@@ -485,11 +545,11 @@ app.get('/terminos-publicacion', (req, res) => res.sendFile(path.join(__dirname,
 app.get('/terminos-inmobiliaria',(req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-inmobiliaria.html')));
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
-app.get('/alquilar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'alquilar.html')));
+app.get('/alquilar',          (req, res) => res.redirect(301, '/comprar?type=alquiler'));
 app.get('/comparar',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'comparar.html')));
 app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'busquedas-guardadas.html')));
-app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));
-app.get('/nuevos-proyectos',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'nuevos-proyectos.html')));
+app.get('/mapa',              (req, res) => res.redirect(301, '/comprar'));
+app.get('/nuevos-proyectos',  (req, res) => res.redirect(301, '/comprar?type=proyecto'));
 app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
 app.get('/inmobiliaria/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inmobiliaria.html')));
@@ -508,12 +568,13 @@ app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/subscription',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscription.html')));
 app.get('/mensajes',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'mensajes.html')));
 
-app.post('/submit', async (req, res) => {
+app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
   const body = req.body;
   const isClaim = body.submission_type === 'agency_claim';
 
   const submission = {
     id:              Date.now().toString(),
+    creator_user_id: req.user?.sub || null,
     submission_type: isClaim ? 'agency_claim' : 'new_property',
     // Agency claim fields
     claim_listing_id: isClaim ? (body.claim_listing_id || '') : undefined,
@@ -696,6 +757,51 @@ app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
 
   store.saveListing(sub);
   res.json({ success: true });
+
+  // ── Create contribution scores for creator and affiliates ─────
+  const agencies = Array.isArray(sub.agencies) ? sub.agencies : [];
+  const creatorId = sub.creator_user_id;
+  const nowIso = new Date().toISOString();
+
+  if (creatorId && !store.getContributionScore(creatorId, sub.id)) {
+    store.saveContributionScore({
+      id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10),
+      user_id: creatorId,
+      listing_id: sub.id,
+      role: 'creator',
+      score: 50,
+      score_breakdown: { created_listing: 50 },
+      avg_response_ms: null,
+      response_count: 0,
+      created_at: nowIso,
+      updated_at: nowIso,
+      _extra: {},
+    });
+  }
+
+  for (const agency of agencies) {
+    const agentId = agency.user_id;
+    if (!agentId || agentId === creatorId) continue;
+    if (!store.getContributionScore(agentId, sub.id)) {
+      store.saveContributionScore({
+        id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10),
+        user_id: agentId,
+        listing_id: sub.id,
+        role: 'affiliate',
+        score: 0,
+        score_breakdown: {},
+        avg_response_ms: null,
+        response_count: 0,
+        created_at: nowIso,
+        updated_at: nowIso,
+        _extra: {},
+      });
+    }
+  }
+
+  // Broadcast push notification to all subscribed users
+  const { broadcastNewListing } = require('./routes/push');
+  broadcastNewListing(sub).catch(() => {});
 });
 
 app.post('/admin/submissions/:id/reject', adminSessionAuth, (req, res) => {
@@ -1178,6 +1284,16 @@ app.use(errorTracker.errorHandler);
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`HogaresRD running at http://localhost:${PORT}`);
+
+    // ── Cascade recovery timer ───────────────────────────────────
+    const cascadeEngine = require('./routes/cascade-engine');
+    if (cascadeEngine.isEnabled()) {
+      // Initial recovery on startup (after cache is ready)
+      setTimeout(() => cascadeEngine.recoverStaleCascades(), 5000);
+      // Periodic recovery every 30s
+      setInterval(() => cascadeEngine.recoverStaleCascades(), 30000);
+      console.log('[cascade] Recovery timer started (30s interval)');
+    }
   });
 }
 

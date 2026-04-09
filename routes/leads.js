@@ -64,6 +64,16 @@ router.post('/', (req, res) => {
   ).catch(err => console.error('[leads] Insert error:', err.message));
 
   res.status(201).json({ ok: true, id: lead.id });
+
+  // Start cascade if enabled and not a referral
+  const cascadeEngine = require('./cascade-engine');
+  if (cascadeEngine.isEnabled() && !lead.referred_by && lead.listing_id) {
+    cascadeEngine.startCascade('lead', lead.id, lead.listing_id, {
+      name:  lead.name  || '',
+      phone: lead.phone || '',
+      email: lead.email || '',
+    });
+  }
 });
 
 // Admin routes below

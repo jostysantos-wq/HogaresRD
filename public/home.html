@@ -245,16 +245,17 @@
     .city-card:hover .city-overlay { opacity: 1; }
     .city-card:hover .city-img { transform: scale(1.05); }
     .city-img { width: 100%; height: 100%; transition: transform 0.4s ease; display: flex; align-items: center; justify-content: center; }
-    .city-sd  { background: linear-gradient(155deg, #003580, #001840); }
-    .city-pc  { background: linear-gradient(155deg, #0077b6, #023e8a); }
-    .city-stg { background: linear-gradient(155deg, #1b4332, #081c15); }
-    .city-pp  { background: linear-gradient(155deg, #7b2d8b, #4a0a5c); }
-    .city-lr  { background: linear-gradient(155deg, #ae2012, #6a040f); }
-    .city-sam { background: linear-gradient(155deg, #0f4c75, #1b262c); }
+    .city-sd  { background: url('https://images.unsplash.com/photo-1585543805890-6051f7829f98?w=600&q=75') center/cover, linear-gradient(155deg, #003580, #001840); }
+    .city-pc  { background: url('https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?w=600&q=75') center/cover, linear-gradient(155deg, #0077b6, #023e8a); }
+    .city-stg { background: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=75') center/cover, linear-gradient(155deg, #1b4332, #081c15); }
+    .city-pp  { background: url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=600&q=75') center/cover, linear-gradient(155deg, #7b2d8b, #4a0a5c); }
+    .city-lr  { background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=75') center/cover, linear-gradient(155deg, #ae2012, #6a040f); }
+    .city-sam { background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=75') center/cover, linear-gradient(155deg, #0f4c75, #1b262c); }
     .city-overlay { position: absolute; inset: 0; background: rgba(0,24,64,0.45); opacity: 0.6; transition: opacity 0.3s; }
     .city-info { position: absolute; bottom: 1rem; left: 1rem; }
     .city-name { font-size: 1.1rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.4); line-height: 1.2; }
     .city-count { font-size: 0.78rem; color: rgba(255,255,255,0.8); font-weight: 500; margin-top: 0.15rem; }
+    .city-price { font-size: 0.68rem; color: rgba(255,255,255,0.65); font-weight: 600; margin-top: 0.2rem; background: rgba(0,0,0,0.3); display: inline-block; padding: 2px 8px; border-radius: 4px; backdrop-filter: blur(4px); }
     .city-icon { position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 4px; display: flex; align-items: center; justify-content: center; }
     .city-icon svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.85); }
 
@@ -502,6 +503,19 @@
     .agency-card-count { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; }
     .agency-card-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent); font-size: 0.88rem; font-weight: 600; text-decoration: none; border: 1.5px solid var(--accent); border-radius: 4px; padding: 0.4rem 0.9rem; transition: background 0.2s, color 0.2s; align-self: flex-start; }
     .agency-card-link:hover { background: var(--accent); color: #fff; }
+
+    /* Scroll-triggered fade-in animations */
+    .fade-in-section { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .fade-in-section.visible { opacity: 1; transform: translateY(0); }
+
+    /* Blog preview cards */
+    .blog-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; color: inherit; display: block; }
+    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    .blog-card-img { width: 100%; height: 160px; object-fit: cover; background: var(--bg-secondary); }
+    .blog-card-body { padding: 1rem; }
+    .blog-card-date { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .blog-card-title { font-size: 0.95rem; font-weight: 700; line-height: 1.35; margin-bottom: 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .blog-card-excerpt { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -524,7 +538,7 @@
               <a href="/comprar">Casas en venta</a>
               <a href="/comprar?tipo=apartamento">Apartamentos</a>
               <a href="/comprar?tipo=villa">Villas y Penthouses</a>
-              <a href="/nuevos-proyectos">Proyectos nuevos</a>
+              <a href="/comprar?type=proyecto">Proyectos nuevos</a>
               <a href="/comprar?tipo=terreno">Terrenos</a>
               <a href="/comprar?tipo=comercial">Locales comerciales</a>
               <a href="/comprar" class="nav-see-all">Ver todas las propiedades →</a>
@@ -535,22 +549,22 @@
               <a href="/comparar">Comparar propiedades</a>
               <a href="/blog">Guía del comprador</a>
               <a href="/register-agency">Encontrar un agente</a>
-              <a href="/nuevos-proyectos">Proyectos en pre-venta</a>
+              <a href="/comprar?type=proyecto">Proyectos en pre-venta</a>
             </div>
           </div>
         </div>
 
         <!-- Alquilar -->
         <div class="nav-item">
-          <a class="nav-link" href="/alquilar">Alquilar</a>
+          <a class="nav-link" href="/comprar?type=alquiler">Alquilar</a>
           <div class="nav-dropdown">
             <div class="nav-mega-col">
               <div class="nav-mega-heading">Propiedades en Alquiler</div>
-              <a href="/alquilar">Apartamentos en alquiler</a>
+              <a href="/comprar?type=alquiler">Apartamentos en alquiler</a>
               <a href="/alquilar?tipo=casa">Casas en alquiler</a>
               <a href="/alquilar?tipo=cuarto">Cuartos</a>
               <a href="/alquilar?tipo=comercial">Locales comerciales</a>
-              <a href="/alquilar" class="nav-see-all">Ver todas las propiedades →</a>
+              <a href="/comprar?type=alquiler" class="nav-see-all">Ver todas las propiedades →</a>
             </div>
             <div class="nav-mega-col">
               <div class="nav-mega-heading">Recursos</div>
@@ -591,67 +605,59 @@
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-overlay">
-      <div class="hero-glow hero-glow-1"></div>
-      <div class="hero-glow hero-glow-2"></div>
-      <div class="hero-glow hero-glow-3"></div>
-    </div>
-    <div class="hero-content">
-      <div class="hero-badge">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 12h3v8h6v-5h2v5h6v-8h3L12 2z"/></svg>
-        República Dominicana
+  <!-- HERO — Full-bleed background with glass search -->
+  <section class="hero" style="background:url('https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1920&q=80') center/cover no-repeat;position:relative;">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,20,50,0.55) 0%,rgba(0,20,50,0.7) 60%,rgba(0,10,30,0.85) 100%);"></div>
+    <div class="hero-content" style="position:relative;z-index:2;">
+      <div class="hero-badge" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);">
+        <svg viewBox="0 0 24 24" style="fill:#fff;"><path d="M12 2L2 12h3v8h6v-5h2v5h6v-8h3L12 2z"/></svg>
+        La plataforma inmobiliaria #1 de RD
       </div>
-      <h1>Tu próximo hogar te espera<br><em>en la República Dominicana</em></h1>
-      <p class="hero-sub">Explora miles de propiedades en venta y alquiler. Conecta con los mejores agentes.</p>
+      <h1 style="color:#fff;text-shadow:0 2px 20px rgba(0,0,0,0.3);">Encuentra tu hogar<br><em>en el paraiso</em></h1>
+      <p class="hero-sub" style="color:rgba(255,255,255,0.85);">Compra, alquila o invierte en las mejores propiedades de Republica Dominicana.</p>
 
-      <!-- Search widget -->
-      <div class="search-widget">
+      <!-- Search widget — glassmorphism -->
+      <div class="search-widget" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.18);border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
         <div class="search-tabs">
           <button class="search-tab active" data-mode="comprar" data-url="/mapa">Comprar</button>
           <button class="search-tab" data-mode="alquilar" data-url="/alquilar">Alquilar</button>
           <button class="search-tab" data-mode="proyectos" data-url="/nuevos-proyectos">Proyectos Nuevos</button>
         </div>
-        <div class="search-bar">
+        <div class="search-bar" style="background:rgba(255,255,255,0.95);border-radius:12px;position:relative;">
           <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" id="heroSearchInput" class="search-input" placeholder="Ciudad, sector, zona… (ej. Piantini, Punta Cana)" autocomplete="off" />
+          <input type="text" id="heroSearchInput" class="search-input" placeholder="Ciudad, sector, zona... (ej. Piantini, Punta Cana)" autocomplete="off" style="background:transparent;" />
           <button class="search-btn" id="heroSearchBtn">Buscar</button>
+          <!-- Suggestions dropdown -->
+          <div id="heroSuggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:200;max-height:340px;overflow-y:auto;"></div>
         </div>
-        <div class="search-hints">
+        <div class="search-hints" style="color:rgba(255,255,255,0.6);">
           <span>Popular:</span>
-          <a href="/comprar?q=Piantini">Piantini</a>
-          <a href="/comprar?q=Punta+Cana">Punta Cana</a>
-          <a href="/comprar?q=Naco">Naco</a>
-          <a href="/alquilar?q=Bella+Vista">Bella Vista</a>
-          <a href="/nuevos-proyectos">Proyectos nuevos</a>
+          <a href="/comprar?q=Piantini" style="color:rgba(255,255,255,0.75);">Piantini</a>
+          <a href="/comprar?q=Punta+Cana" style="color:rgba(255,255,255,0.75);">Punta Cana</a>
+          <a href="/comprar?q=Naco" style="color:rgba(255,255,255,0.75);">Naco</a>
+          <a href="/alquilar?q=Bella+Vista" style="color:rgba(255,255,255,0.75);">Bella Vista</a>
+          <a href="/comprar?type=proyecto" style="color:rgba(255,255,255,0.75);">Proyectos nuevos</a>
+        </div>
+      </div>
+
+      <!-- Inline trust stats -->
+      <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statListings">--</span> Propiedades
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statAgents">--</span> Agentes
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;">32</span> Ciudades
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+          <span style="color:#fbbf24;">&#9733;</span> <span style="font-size:1.3rem;font-weight:800;color:#fff;">4.8</span> Satisfaccion
         </div>
       </div>
 
     </div>
   </section>
-
-  <!-- TRUST STATS BAR -->
-  <div class="stats-bar">
-    <div class="stats-inner">
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
-        <div><div class="stat-number" id="statListings">--</div><div class="stat-label">Propiedades</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
-        <div><div class="stat-number" id="statAgents">--</div><div class="stat-label">Agentes activos</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
-        <div><div class="stat-number" id="statCities">32</div><div class="stat-label">Ciudades</div></div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-icon" style="background:#FEF3C7;"><svg viewBox="0 0 24 24" style="fill:#D97706;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>
-        <div><div class="stat-number">4.8</div><div class="stat-label">Satisfacción</div></div>
-      </div>
-    </div>
-  </div>
 
   <!-- TRENDING CAROUSEL — top 8 most viewed this week — shown first so visitors see homes immediately -->
   <div id="trendingSection">
@@ -689,7 +695,7 @@
           </div>
           <svg class="qa-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
         </a>
-        <a href="/alquilar" class="qa-card">
+        <a href="/comprar?type=alquiler" class="qa-card">
           <div class="qa-icon" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">
             <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>
           </div>
@@ -699,7 +705,7 @@
           </div>
           <svg class="qa-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
         </a>
-        <a href="/nuevos-proyectos" class="qa-card">
+        <a href="/comprar?type=proyecto" class="qa-card">
           <div class="qa-icon" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
           </div>
@@ -1082,12 +1088,12 @@
         <a href="/ciudades" class="section-link">Ver todas <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
       </div>
       <div class="cities-grid">
-        <a class="city-card" href="/ciudad/santo-domingo"><div class="city-img city-sd"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santo Domingo</div><div class="city-count">4,820 propiedades</div></div></a>
-        <a class="city-card" href="/ciudad/punta-cana"><div class="city-img city-pc"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Punta Cana</div><div class="city-count">2,340 propiedades</div></div></a>
-        <a class="city-card" href="/ciudad/santiago"><div class="city-img city-stg"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santiago</div><div class="city-count">1,890 propiedades</div></div></a>
-        <a class="city-card" href="/ciudad/puerto-plata"><div class="city-img city-pp"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v9h6v-5h2v5h6v-9h3L12 3z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Puerto Plata</div><div class="city-count">980 propiedades</div></div></a>
-        <a class="city-card" href="/ciudad/la-romana"><div class="city-img city-lr"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">La Romana</div><div class="city-count">760 propiedades</div></div></a>
-        <a class="city-card" href="/ciudad/las-terrenas"><div class="city-img city-sam"><div class="city-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Samaná</div><div class="city-count">540 propiedades</div></div></a>
+        <a class="city-card" href="/ciudad/santo-domingo"><div class="city-img city-sd"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santo Domingo</div><div class="city-count">Capital de RD</div><div class="city-price">Desde $65,000 USD</div></div></a>
+        <a class="city-card" href="/ciudad/punta-cana"><div class="city-img city-pc"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Punta Cana</div><div class="city-count">Paraiso tropical</div><div class="city-price">Desde $95,000 USD</div></div></a>
+        <a class="city-card" href="/ciudad/santiago"><div class="city-img city-stg"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Santiago</div><div class="city-count">Ciudad corazon</div><div class="city-price">Desde $45,000 USD</div></div></a>
+        <a class="city-card" href="/ciudad/puerto-plata"><div class="city-img city-pp"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Puerto Plata</div><div class="city-count">Costa norte</div><div class="city-price">Desde $55,000 USD</div></div></a>
+        <a class="city-card" href="/ciudad/la-romana"><div class="city-img city-lr"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">La Romana</div><div class="city-count">Casa de Campo</div><div class="city-price">Desde $85,000 USD</div></div></a>
+        <a class="city-card" href="/ciudad/las-terrenas"><div class="city-img city-sam"></div><div class="city-overlay"></div><div class="city-info"><div class="city-name">Samana</div><div class="city-count">Playa y naturaleza</div><div class="city-price">Desde $75,000 USD</div></div></a>
       </div>
     </div>
   </div>
@@ -1139,22 +1145,91 @@
   </div>
   </div>
 
-  <!-- CTA -->
-  <div style="background:linear-gradient(135deg,#001229 0%,#002D62 100%);">
-  <div class="section" style="text-align:center;padding-top:4rem;padding-bottom:4rem;">
+  <!-- CTA — with background image + newsletter -->
+  <div style="background:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=75') center/cover no-repeat;position:relative;">
+  <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,18,41,0.88) 0%,rgba(0,45,98,0.85) 100%);"></div>
+  <div class="section" style="text-align:center;padding-top:4.5rem;padding-bottom:4.5rem;position:relative;z-index:2;">
     <div style="font-size:0.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#CF142B;margin-bottom:0.75rem;">¿Listo para comenzar?</div>
-    <h2 style="font-size:clamp(1.75rem,4vw,2.75rem);font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-bottom:1rem;">Tu hogar ideal está<br>a un clic de distancia</h2>
-    <p style="color:rgba(255,255,255,0.65);font-size:1rem;max-width:480px;margin:0 auto 2.5rem;line-height:1.65;">Únete a miles de dominicanos que ya encontraron su próxima propiedad a través de HogaresRD.</p>
-    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+    <h2 style="font-size:clamp(1.75rem,4vw,2.75rem);font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-bottom:1rem;">Tu hogar ideal esta<br>a un clic de distancia</h2>
+    <p style="color:rgba(255,255,255,0.7);font-size:1rem;max-width:480px;margin:0 auto 2rem;line-height:1.65;">Unete a miles de dominicanos que ya encontraron su proxima propiedad a traves de HogaresRD.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem;">
       <a href="/comprar" class="btn-primary" style="text-decoration:none;padding:0.85rem 2rem;font-size:1rem;">Explorar propiedades</a>
-      <a href="/register" class="btn-ghost" style="text-decoration:none;padding:0.85rem 2rem;font-size:1rem;border-color:rgba(255,255,255,0.3);color:#fff;" onmouseover="this.style.borderColor='#fff';this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.background='transparent'">Crear cuenta</a>
+      <a href="/register" class="btn-ghost" style="text-decoration:none;padding:0.85rem 2rem;font-size:1rem;border-color:rgba(255,255,255,0.3);color:#fff;" onmouseover="this.style.borderColor='#fff';this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.background='transparent'">Crear cuenta gratis</a>
     </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:2rem;margin-top:2.5rem;flex-wrap:wrap;">
+
+    <!-- Newsletter signup -->
+    <div style="max-width:460px;margin:0 auto 2rem;">
+      <p style="color:rgba(255,255,255,0.55);font-size:0.8rem;margin-bottom:0.6rem;">Recibe nuevas propiedades y ofertas en tu correo</p>
+      <form id="newsletterForm" onsubmit="return subscribeNewsletter(event)" style="display:flex;gap:0.5rem;">
+        <input id="newsletterEmail" type="email" placeholder="tu@correo.com" required
+          style="flex:1;padding:0.75rem 1rem;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:0.88rem;outline:none;backdrop-filter:blur(8px);font-family:inherit;"
+          onfocus="this.style.borderColor='rgba(255,255,255,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'">
+        <button type="submit" style="padding:0.75rem 1.5rem;border-radius:10px;border:none;background:#CF142B;color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:background 0.2s;" onmouseover="this.style.background='#e61e35'" onmouseout="this.style.background='#CF142B'">Suscribirse</button>
+      </form>
+      <p id="newsletterMsg" style="color:rgba(255,255,255,0.6);font-size:0.72rem;margin-top:0.4rem;display:none;"></p>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.5);font-size:0.78rem;"><span>✅</span> Sin costo para compradores</div>
-      <div style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.5);font-size:0.78rem;"><span>✅</span> Más de 12,000 propiedades</div>
+      <div style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.5);font-size:0.78rem;"><span>✅</span> Mas de 12,000 propiedades</div>
       <div style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.5);font-size:0.78rem;"><span>✅</span> Agentes verificados</div>
     </div>
   </div>
+  </div>
+
+  <!-- TESTIMONIALS — Social Proof -->
+  <div class="section fade-in-section">
+    <div class="section-header" style="text-align:center;display:block;">
+      <div class="section-label">Lo que dicen nuestros clientes</div>
+      <h2 class="section-title">Historias de Exito</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;margin-top:1.5rem;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;position:relative;">
+        <div style="font-size:2.5rem;color:var(--accent);opacity:0.15;position:absolute;top:12px;right:16px;font-family:Georgia,serif;">"</div>
+        <div style="display:flex;gap:4px;margin-bottom:0.75rem;">
+          <span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span>
+        </div>
+        <p style="font-size:0.88rem;line-height:1.6;color:var(--text-muted);margin-bottom:1rem;">Encontre mi apartamento ideal en Piantini en menos de dos semanas. La plataforma es muy facil de usar y el agente fue increible.</p>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0038A8,#1e60c9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.8rem;">MC</div>
+          <div><div style="font-size:0.82rem;font-weight:700;">Maria Castillo</div><div style="font-size:0.7rem;color:var(--text-muted);">Compradora · Santo Domingo</div></div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;position:relative;">
+        <div style="font-size:2.5rem;color:var(--accent);opacity:0.15;position:absolute;top:12px;right:16px;font-family:Georgia,serif;">"</div>
+        <div style="display:flex;gap:4px;margin-bottom:0.75rem;">
+          <span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span>
+        </div>
+        <p style="font-size:0.88rem;line-height:1.6;color:var(--text-muted);margin-bottom:1rem;">Como agente, HogaresRD me ha triplicado los leads. Las herramientas de dashboard y el sistema de tours son de primer nivel.</p>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1b7a3e,#22c55e);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.8rem;">RP</div>
+          <div><div style="font-size:0.82rem;font-weight:700;">Roberto Perez</div><div style="font-size:0.7rem;color:var(--text-muted);">Agente · Punta Cana</div></div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;position:relative;">
+        <div style="font-size:2.5rem;color:var(--accent);opacity:0.15;position:absolute;top:12px;right:16px;font-family:Georgia,serif;">"</div>
+        <div style="display:flex;gap:4px;margin-bottom:0.75rem;">
+          <span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9733;</span><span style="color:#fbbf24;">&#9734;</span>
+        </div>
+        <p style="font-size:0.88rem;line-height:1.6;color:var(--text-muted);margin-bottom:1rem;">Viviendo en Nueva York, pude comprar un penthouse en Santiago de forma 100% remota. El proceso fue transparente y seguro.</p>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.8rem;">JM</div>
+          <div><div style="font-size:0.82rem;font-weight:700;">Jose Martinez</div><div style="font-size:0.7rem;color:var(--text-muted);">Inversionista · Diaspora (NY)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOG PREVIEW -->
+  <div class="section fade-in-section" id="blogPreviewSection" style="display:none;">
+    <div class="section-header">
+      <div>
+        <div class="section-label">Aprende y Explora</div>
+        <h2 class="section-title">Del Blog</h2>
+      </div>
+      <a href="/blog" class="section-link">Ver todos los articulos <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></a>
+    </div>
+    <div id="blogPreviewGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;"></div>
   </div>
 
   <!-- INMOBILIARIAS AFILIADAS -->
@@ -1170,32 +1245,54 @@
     </div>
   </div>
 
-  <!-- APP DOWNLOAD CTA -->
+  <!-- APP DOWNLOAD CTA — Enhanced -->
   <div style="background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border);transition:background 0.3s;">
     <div class="section" style="padding-top:3.5rem;padding-bottom:3.5rem;">
       <div style="display:flex;align-items:center;gap:3rem;flex-wrap:wrap;justify-content:center;">
-        <div style="flex:1;min-width:280px;max-width:480px;">
+        <div style="flex:1;min-width:280px;max-width:500px;">
           <div class="section-label">Lleva HogaresRD contigo</div>
-          <h2 style="font-size:clamp(1.5rem,3vw,2.2rem);font-weight:900;letter-spacing:-0.04em;line-height:1.15;margin-bottom:0.75rem;">Descarga nuestra app</h2>
+          <h2 style="font-size:clamp(1.5rem,3vw,2.2rem);font-weight:900;letter-spacing:-0.04em;line-height:1.15;margin-bottom:0.75rem;">Tu proximo hogar,<br>en tu bolsillo</h2>
           <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.65;margin-bottom:1.5rem;">Busca propiedades, agenda visitas, chatea con agentes y recibe notificaciones en tiempo real. Todo desde tu iPhone.</p>
-          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Notificaciones push</div>
-            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Mapa interactivo</div>
-            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Chat directo</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.5rem;max-width:360px;">
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+              Push en tiempo real
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>
+              Mapa interactivo
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
+              Chat con agentes
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--text-secondary);">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
+              Agenda visitas
+            </div>
           </div>
-          <div style="display:inline-flex;align-items:center;gap:0.6rem;background:#000;color:#fff;padding:0.7rem 1.5rem;border-radius:10px;font-size:0.85rem;">
+          <a href="#" style="display:inline-flex;align-items:center;gap:0.6rem;background:#000;color:#fff;padding:0.75rem 1.75rem;border-radius:12px;font-size:0.85rem;text-decoration:none;transition:transform 0.2s,box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
             <svg width="20" height="24" viewBox="0 0 384 512" fill="#fff"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-            <div><div style="font-size:0.65rem;opacity:0.7;">Disponible en el</div><div style="font-weight:700;font-size:1rem;margin-top:-2px;">App Store</div></div>
-          </div>
+            <div><div style="font-size:0.62rem;opacity:0.7;">Disponible en el</div><div style="font-weight:700;font-size:1.05rem;margin-top:-2px;">App Store</div></div>
+          </a>
         </div>
         <div style="flex:0 0 auto;">
-          <div style="width:220px;height:420px;background:linear-gradient(150deg,#001840,#003580);border-radius:32px;border:3px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;box-shadow:0 24px 60px rgba(0,45,98,0.35);position:relative;overflow:hidden;">
-            <div style="position:absolute;inset:8px;border-radius:26px;background:linear-gradient(180deg,#002D62 0%,#004494 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;">
-              <div style="width:50px;height:50px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                <svg width="30" height="30" viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/></svg>
+          <div style="width:240px;height:480px;background:linear-gradient(150deg,#001840,#003580);border-radius:36px;border:3px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,45,98,0.3);position:relative;overflow:hidden;">
+            <!-- Phone notch -->
+            <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:80px;height:24px;background:#000;border-radius:0 0 12px 12px;z-index:3;"></div>
+            <div style="position:absolute;inset:8px;border-radius:30px;background:linear-gradient(180deg,#002D62 0%,#004494 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.75rem;">
+              <div style="width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,56,168,0.4);">
+                <svg width="32" height="32" viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/></svg>
               </div>
-              <div style="color:#fff;font-weight:800;font-size:1.1rem;">HogaresRD</div>
-              <div style="color:rgba(255,255,255,0.5);font-size:0.7rem;">Tu hogar ideal</div>
+              <div style="color:#fff;font-weight:800;font-size:1.2rem;letter-spacing:-0.02em;">HogaresRD</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:0.72rem;">Tu proximo hogar</div>
+              <!-- Fake UI elements -->
+              <div style="width:80%;margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;">
+                <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;"></div>
+                <div style="height:8px;background:rgba(255,255,255,0.07);border-radius:4px;width:65%;"></div>
+                <div style="height:32px;background:rgba(255,255,255,0.08);border-radius:8px;margin-top:0.3rem;"></div>
+                <div style="height:32px;background:rgba(255,255,255,0.06);border-radius:8px;"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1214,8 +1311,8 @@
         <h4>Propiedades</h4>
         <ul>
           <li><a href="/comprar">Comprar</a></li>
-          <li><a href="/alquilar">Alquilar</a></li>
-          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+          <li><a href="/comprar?type=alquiler">Alquilar</a></li>
+          <li><a href="/comprar?type=proyecto">Nuevos Proyectos</a></li>
           <li><a href="/comprar">Terrenos</a></li>
           <li><a href="/comprar">Locales Comerciales</a></li>
         </ul>
@@ -1262,12 +1359,13 @@
       if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
-    // Hero search tabs & button
+    // Hero search tabs, autocomplete & button
     (function() {
       const tabs   = document.querySelectorAll('.search-tab');
       const input  = document.getElementById('heroSearchInput');
       const btn    = document.getElementById('heroSearchBtn');
-      if (!tabs.length || !input || !btn) return;
+      const drop   = document.getElementById('heroSuggestions');
+      if (!tabs.length || !input || !btn || !drop) return;
 
       const placeholders = {
         comprar:   'Ciudad, sector, zona… (ej. Piantini, Punta Cana)',
@@ -1275,7 +1373,11 @@
         proyectos: 'Ciudad o proyecto… (ej. Santo Domingo, Santiago)',
       };
       let activeUrl = '/comprar';
+      let suggestionsCache = null;
+      let debounceTimer = null;
+      let highlightIdx = -1;
 
+      // ── Tab switching ──────────────────────────────────────
       tabs.forEach(tab => {
         tab.addEventListener('click', () => {
           tabs.forEach(t => t.classList.remove('active'));
@@ -1285,13 +1387,144 @@
         });
       });
 
-      btn.addEventListener('click', () => {
-        const q = input.value.trim();
+      // ── Navigate ───────────────────────────────────────────
+      function goSearch(q) {
         window.location.href = activeUrl + (q ? '?q=' + encodeURIComponent(q) : '');
+      }
+
+      btn.addEventListener('click', () => goSearch(input.value.trim()));
+
+      // ── Fetch suggestions (cached) ─────────────────────────
+      async function fetchSuggestions() {
+        if (suggestionsCache) return suggestionsCache;
+        try {
+          const res = await fetch('/api/search-suggestions');
+          const data = await res.json();
+          suggestionsCache = data.suggestions || [];
+          return suggestionsCache;
+        } catch { return []; }
+      }
+
+      // ── Default popular locations ──────────────────────────
+      const defaults = [
+        { name: 'Santo Domingo', type: 'city', province: 'Distrito Nacional' },
+        { name: 'Punta Cana', type: 'city', province: 'La Altagracia' },
+        { name: 'Santiago', type: 'city', province: 'Santiago' },
+        { name: 'Piantini', type: 'sector', city: 'Santo Domingo', province: 'Distrito Nacional' },
+        { name: 'Naco', type: 'sector', city: 'Santo Domingo', province: 'Distrito Nacional' },
+        { name: 'Bávaro', type: 'sector', city: 'Higüey', province: 'La Altagracia' },
+        { name: 'Puerto Plata', type: 'city', province: 'Puerto Plata' },
+        { name: 'La Romana', type: 'city', province: 'La Romana' },
+      ];
+
+      // ── Render dropdown ────────────────────────────────────
+      function renderSuggestions(items, query) {
+        if (!items.length) { drop.style.display = 'none'; return; }
+
+        const typeIcons = {
+          province: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>',
+          city:     '<path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/>',
+          sector:   '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>',
+        };
+
+        drop.innerHTML = items.map((s, i) => {
+          const icon = typeIcons[s.type] || typeIcons.city;
+          const sub = s.type === 'sector' ? (s.city || s.province || '') :
+                      s.type === 'city'   ? (s.province || '') : 'Provincia';
+          const countBadge = s.count ? `<span style="font-size:0.7rem;color:#8A94A6;margin-left:auto;white-space:nowrap;">${s.count} prop.</span>` : '';
+
+          return `<div class="hero-sug-item" data-idx="${i}"
+            style="display:flex;align-items:center;gap:0.7rem;padding:0.7rem 1rem;cursor:pointer;transition:background 0.15s;${i === 0 ? 'border-radius:14px 14px 0 0;' : ''}${i === items.length - 1 ? 'border-radius:0 0 14px 14px;' : ''}"
+            onmouseenter="this.style.background='#EBF3FF'"
+            onmouseleave="this.style.background='transparent'"
+            onclick="document.getElementById('heroSearchInput').value='${s.name.replace(/'/g, "\\'")}';document.getElementById('heroSuggestions').style.display='none';document.getElementById('heroSearchBtn').click();">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#00A878;flex-shrink:0;opacity:0.8;">${icon}</svg>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.92rem;font-weight:600;color:#1A2535;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${highlight(s.name, query)}</div>
+              <div style="font-size:0.72rem;color:#8A94A6;">${sub}</div>
+            </div>
+            ${countBadge}
+          </div>`;
+        }).join('');
+
+        drop.style.display = 'block';
+        highlightIdx = -1;
+      }
+
+      function highlight(text, query) {
+        if (!query) return text;
+        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp(`(${esc})`, 'gi'), '<span style="color:#006AFF;font-weight:700;">$1</span>');
+      }
+
+      // ── Input events ───────────────────────────────────────
+      input.addEventListener('focus', async () => {
+        if (!input.value.trim()) {
+          renderSuggestions(defaults, '');
+        } else {
+          showFiltered(input.value.trim());
+        }
       });
 
+      input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const q = input.value.trim();
+        if (!q) { renderSuggestions(defaults, ''); return; }
+        if (q.length < 2) { drop.style.display = 'none'; return; }
+        debounceTimer = setTimeout(() => showFiltered(q), 250);
+      });
+
+      async function showFiltered(q) {
+        const all = await fetchSuggestions();
+        const lower = q.toLowerCase();
+        const matched = all.filter(s =>
+          (s.name || '').toLowerCase().includes(lower) ||
+          (s.city || '').toLowerCase().includes(lower) ||
+          (s.province || '').toLowerCase().includes(lower)
+        ).slice(0, 8);
+
+        // Merge with defaults that match (in case API has no data yet)
+        if (matched.length < 4) {
+          const names = new Set(matched.map(m => m.name.toLowerCase()));
+          for (const d of defaults) {
+            if (names.has(d.name.toLowerCase())) continue;
+            if (d.name.toLowerCase().includes(lower)) {
+              matched.push(d);
+              if (matched.length >= 8) break;
+            }
+          }
+        }
+
+        renderSuggestions(matched, q);
+      }
+
+      // ── Keyboard navigation ────────────────────────────────
       input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') btn.click();
+        const items = drop.querySelectorAll('.hero-sug-item');
+        if (e.key === 'ArrowDown' && items.length) {
+          e.preventDefault();
+          highlightIdx = Math.min(highlightIdx + 1, items.length - 1);
+          items.forEach((it, i) => it.style.background = i === highlightIdx ? '#EBF3FF' : 'transparent');
+          input.value = items[highlightIdx]?.textContent?.trim().split('\n')[0] || input.value;
+        } else if (e.key === 'ArrowUp' && items.length) {
+          e.preventDefault();
+          highlightIdx = Math.max(highlightIdx - 1, 0);
+          items.forEach((it, i) => it.style.background = i === highlightIdx ? '#EBF3FF' : 'transparent');
+          input.value = items[highlightIdx]?.textContent?.trim().split('\n')[0] || input.value;
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          drop.style.display = 'none';
+          goSearch(input.value.trim());
+        } else if (e.key === 'Escape') {
+          drop.style.display = 'none';
+        }
+      });
+
+      // ── Close on outside click ─────────────────────────────
+      document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !drop.contains(e.target)) {
+          drop.style.display = 'none';
+        }
       });
     })();
 
@@ -1887,6 +2120,8 @@
       loadRecent();
       loadProvinces();
       loadAgencies();
+      loadBlogPreview();
+      initScrollAnimations();
 
       // Load stats bar counts
       try {
@@ -1907,6 +2142,89 @@
         }
       } catch {}
     })();
+
+    // ── Blog Preview ─────────────────────────────────────────
+    async function loadBlogPreview() {
+      try {
+        const res = await fetch('/api/blog?limit=3');
+        if (!res.ok) return;
+        const data = await res.json();
+        const posts = data.posts || data || [];
+        if (!posts.length) return;
+
+        document.getElementById('blogPreviewSection').style.display = '';
+        const grid = document.getElementById('blogPreviewGrid');
+        grid.innerHTML = posts.slice(0, 3).map(p => {
+          const date = p.date ? new Date(p.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+          const img = p.image ? `<img src="${p.image}" alt="" class="blog-card-img" loading="lazy">` : `<div class="blog-card-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:2rem;">📝</div>`;
+          return `<a href="/blog/${p.slug || p.id}" class="blog-card">
+            ${img}
+            <div class="blog-card-body">
+              <div class="blog-card-date">${date}</div>
+              <div class="blog-card-title">${p.title || ''}</div>
+              <div class="blog-card-excerpt">${p.excerpt || p.summary || ''}</div>
+            </div>
+          </a>`;
+        }).join('');
+      } catch (e) { console.log('[Blog] Preview load error:', e); }
+    }
+
+    // ── Newsletter Signup ─────────────────────────────────────
+    window.subscribeNewsletter = function(e) {
+      e.preventDefault();
+      const email = document.getElementById('newsletterEmail').value;
+      const msg = document.getElementById('newsletterMsg');
+      if (!email) return false;
+      fetch('/api/newsletter/subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).then(r => {
+        msg.style.display = 'block';
+        if (r.ok) {
+          msg.textContent = '¡Suscrito! Recibiras las mejores propiedades en tu correo.';
+          msg.style.color = '#4ade80';
+          document.getElementById('newsletterEmail').value = '';
+        } else {
+          msg.textContent = 'Este correo ya esta suscrito o hubo un error.';
+          msg.style.color = '#fbbf24';
+        }
+        setTimeout(() => { msg.style.display = 'none'; }, 5000);
+      }).catch(() => {
+        msg.style.display = 'block';
+        msg.textContent = 'Error de conexion. Intenta de nuevo.';
+        msg.style.color = '#ef4444';
+      });
+      return false;
+    };
+
+    // ── Scroll-triggered Fade-in Animations ──────────────────
+    function initScrollAnimations() {
+      const sections = document.querySelectorAll('.fade-in-section, .section, .cities-bg, .hiw-grid, .qa-grid');
+      if (!('IntersectionObserver' in window)) {
+        sections.forEach(s => { s.style.opacity = '1'; s.style.transform = 'none'; });
+        return;
+      }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+      sections.forEach(s => {
+        if (!s.classList.contains('fade-in-section')) {
+          s.style.opacity = '0';
+          s.style.transform = 'translateY(25px)';
+          s.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        }
+        observer.observe(s);
+      });
+    }
+
     async function logout() {
       try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
       ['hogaresrd_token','hogaresrd_user','token'].forEach(k => localStorage.removeItem(k));
