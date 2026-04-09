@@ -1253,8 +1253,10 @@ router.get('/verify-email', emailVerifyLimiter, (req, res) => {
   const users = store.getUsers();
   const user  = users.find(u => u.emailVerifyToken === submittedHash);
 
-  if (!user || new Date(user.emailVerifyExpiry) < new Date())
+  if (!user)
     return res.redirect(`${BASE_URL}/verify-email?status=invalid`);
+  if (new Date(user.emailVerifyExpiry) < new Date())
+    return res.redirect(`${BASE_URL}/verify-email?status=expired`);
 
   user.emailVerified     = true;
   user.emailVerifyToken  = null;
