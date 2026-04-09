@@ -1767,8 +1767,6 @@
       metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Entrega estimada</span><span class="sidebar-row-value">${esc(l.delivery_date)}</span></div>`);
     if (l.project_stage)
       metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Estado del proyecto</span><span class="sidebar-row-value">${esc(l.project_stage)}</span></div>`);
-    if (l.floors)
-      metaRows.push(`<div class="sidebar-row"><span class="sidebar-row-label">Número de pisos</span><span class="sidebar-row-value">${l.floors}</span></div>`);
     document.getElementById('sidebarMeta').innerHTML = metaRows.join('');
 
     // WhatsApp pre-filled message
