@@ -597,7 +597,7 @@
         </div>
 
         <a class="nav-link" href="/blog">Blog</a>
-        <a class="nav-link" href="/about">Nosotros</a>
+        <a class="nav-link" href="/about" data-i18n="nav.about">Nosotros</a>
       </div>
       <div class="nav-actions">
         <div id="navAuthArea"></div>
@@ -611,22 +611,22 @@
     <div class="hero-content" style="position:relative;z-index:2;">
       <div class="hero-badge" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);">
         <svg viewBox="0 0 24 24" style="fill:#fff;"><path d="M12 2L2 12h3v8h6v-5h2v5h6v-8h3L12 2z"/></svg>
-        La plataforma inmobiliaria #1 de RD
+        <span data-i18n="hero.badge">La plataforma inmobiliaria #1 de RD</span>
       </div>
-      <h1 style="color:#fff;text-shadow:0 2px 20px rgba(0,0,0,0.3);">Encuentra tu hogar<br><em>en el paraiso</em></h1>
-      <p class="hero-sub" style="color:rgba(255,255,255,0.85);">Compra, alquila o invierte en las mejores propiedades de Republica Dominicana.</p>
+      <h1 style="color:#fff;text-shadow:0 2px 20px rgba(0,0,0,0.3);"><span data-i18n="hero.title_1">Encuentra tu hogar</span><br><em data-i18n="hero.title_2">en el paraiso</em></h1>
+      <p class="hero-sub" style="color:rgba(255,255,255,0.85);" data-i18n="hero.subtitle">Compra, alquila o invierte en las mejores propiedades de Republica Dominicana.</p>
 
       <!-- Search widget — glassmorphism -->
       <div class="search-widget" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.18);border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
         <div class="search-tabs">
-          <button class="search-tab active" data-mode="comprar" data-url="/mapa">Comprar</button>
-          <button class="search-tab" data-mode="alquilar" data-url="/alquilar">Alquilar</button>
-          <button class="search-tab" data-mode="proyectos" data-url="/nuevos-proyectos">Proyectos Nuevos</button>
+          <button class="search-tab active" data-mode="comprar" data-url="/mapa" data-i18n="hero.tab_buy">Comprar</button>
+          <button class="search-tab" data-mode="alquilar" data-url="/alquilar" data-i18n="hero.tab_rent">Alquilar</button>
+          <button class="search-tab" data-mode="proyectos" data-url="/nuevos-proyectos" data-i18n="hero.tab_projects">Proyectos Nuevos</button>
         </div>
         <div class="search-bar" style="background:rgba(255,255,255,0.95);border-radius:12px;position:relative;">
           <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" id="heroSearchInput" class="search-input" placeholder="Ciudad, sector, zona... (ej. Piantini, Punta Cana)" autocomplete="off" style="background:transparent;" />
-          <button class="search-btn" id="heroSearchBtn">Buscar</button>
+          <input type="text" id="heroSearchInput" class="search-input" data-i18n-placeholder="hero.search_placeholder_buy" placeholder="Ciudad, sector, zona... (ej. Piantini, Punta Cana)" autocomplete="off" style="background:transparent;" />
+          <button class="search-btn" id="heroSearchBtn" data-i18n="hero.search_btn">Buscar</button>
           <div id="heroSuggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:0 0 12px 12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:50;max-height:260px;overflow-y:auto;"></div>
         </div>
         <div class="search-hints" style="color:rgba(255,255,255,0.6);">
@@ -642,16 +642,16 @@
       <!-- Inline trust stats -->
       <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;">
         <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statListings">--</span> Propiedades
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statListings">--</span> <span data-i18n="hero.stat_properties">Propiedades</span>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statAgents">--</span> Agentes
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statAgents">--</span> <span data-i18n="hero.stat_agents">Agentes</span>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;">32</span> Ciudades
+          <span style="font-size:1.3rem;font-weight:800;color:#fff;">32</span> <span data-i18n="hero.stat_cities">Ciudades</span>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="color:#fbbf24;">&#9733;</span> <span style="font-size:1.3rem;font-weight:800;color:#fff;">4.8</span> Satisfaccion
+          <span style="color:#fbbf24;">&#9733;</span> <span style="font-size:1.3rem;font-weight:800;color:#fff;">4.8</span> <span data-i18n="hero.stat_satisfaction">Satisfacción</span>
         </div>
       </div>
 
@@ -1338,7 +1338,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
+      <p data-i18n="footer.copyright">&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</p>
       <p>Hecho con ♥ para la República Dominicana</p>
     </div>
   </footer>
@@ -1366,20 +1366,29 @@
       const sugBox = document.getElementById('heroSuggestions');
       if (!tabs.length || !input || !btn) return;
 
-      const placeholders = {
-        comprar:   'Ciudad, sector, zona… (ej. Piantini, Punta Cana)',
-        alquilar:  'Zona donde quieres alquilar… (ej. Naco, Bella Vista)',
-        proyectos: 'Ciudad o proyecto… (ej. Santo Domingo, Santiago)',
-      };
+      function getPlaceholders() {
+        return {
+          comprar:   (window.i18n ? i18n.t('hero.search_placeholder_buy') : 'Ciudad, sector, zona… (ej. Piantini, Punta Cana)'),
+          alquilar:  (window.i18n ? i18n.t('hero.search_placeholder_rent') : 'Zona donde quieres alquilar… (ej. Naco, Bella Vista)'),
+          proyectos: (window.i18n ? i18n.t('hero.search_placeholder_projects') : 'Ciudad o proyecto… (ej. Santo Domingo, Santiago)'),
+        };
+      }
       let activeUrl = '/comprar';
+      let activeMode = 'comprar';
 
       tabs.forEach(tab => {
         tab.addEventListener('click', () => {
           tabs.forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
-          input.placeholder = placeholders[tab.dataset.mode] || placeholders.comprar;
+          activeMode = tab.dataset.mode;
+          input.placeholder = getPlaceholders()[activeMode] || getPlaceholders().comprar;
           activeUrl = tab.dataset.url;
         });
+      });
+
+      // Update placeholders when language changes
+      window.addEventListener('langchange', () => {
+        input.placeholder = getPlaceholders()[activeMode] || getPlaceholders().comprar;
       });
 
       function doSearch() {
@@ -2403,6 +2412,7 @@
       }
     }
   </script>
+<script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>
 </body>
 </html>

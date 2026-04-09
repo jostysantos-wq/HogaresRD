@@ -257,6 +257,7 @@ app.get('/r/:refToken/:listingId', (req, res) => res.redirect(`/listing/${req.pa
 app.use('/api/stripe',     require('./routes/stripe'));
 app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/listings',   require('./routes/listings'));
+app.use('/api/listings',   require('./routes/ai-translate').router);
 app.use('/api/user',       require('./routes/user'));
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/ads',        require('./routes/ads'));
