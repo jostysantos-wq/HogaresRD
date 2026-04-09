@@ -1497,7 +1497,7 @@
   }
 
   // ── Render listing ─────────────────────────────────────────
-  function renderListing(l) {
+  async function renderListing(l) {
     window._currentListing = l;   // used by apply modal
     document.title = `${l.title} — HogaresRD`;
     applyGalleryImages(l.images);
