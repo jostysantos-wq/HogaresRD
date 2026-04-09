@@ -378,6 +378,27 @@
     .agency-card:not(.primary) .agency-card-cta button { background: var(--bg-secondary); color: var(--text); border: 1.5px solid var(--border); }
     .agency-card:not(.primary) .agency-card-cta button:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* ── SIMILAR PROPERTY CARDS ──────────────────────────────── */
+    .similar-card { background: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(26,37,53,0.08); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; cursor: pointer; text-decoration: none; color: inherit; display: block; }
+    .similar-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,37,53,0.15); border-color: transparent; }
+    .similar-card-img { position: relative; height: 200px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .similar-card-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+    .similar-card-img svg { width: 40px; height: 40px; opacity: 0.3; fill: #fff; }
+    .similar-card-img .sim-save { position: absolute; top: 0.6rem; right: 0.6rem; width: 32px; height: 32px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.15s; z-index: 2; }
+    .similar-card-img .sim-save:hover { background: #fff; transform: scale(1.1); }
+    .similar-card-img .sim-save svg { width: 15px; height: 15px; fill: var(--text-muted); opacity: 1; }
+    .similar-card-img .sim-save:hover svg { fill: var(--red, #E53E3E); }
+    .similar-card-img .sim-save.saved svg { fill: var(--red, #E53E3E); }
+    .sim-body { padding: 1rem 1.1rem 1.15rem; }
+    .sim-price { font-size: 1.25rem; font-weight: 800; color: var(--accent); margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+    .sim-price .per { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }
+    .sim-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sim-location { font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .sim-location svg { width: 12px; height: 12px; fill: var(--text-muted); flex-shrink: 0; }
+    .sim-specs { display: flex; gap: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+    .sim-spec { display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+    .sim-spec svg { width: 13px; height: 13px; fill: var(--text-muted); }
+
     /* ── LOADING / ERROR ─────────────────────────────────────── */
     .state-center { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem; text-align: center; }
     .state-icon { width: 56px; height: 56px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -1507,6 +1528,25 @@
   }
 
   // ── Share ──────────────────────────────────────────────────
+  // Toggle favorite on similar property cards
+  async function toggleSimFav(btn, listingId) {
+    if (!window._currentUser) { window.location.href = '/login?next=' + encodeURIComponent(location.pathname); return; }
+    try {
+      const res = await fetch('/api/user/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const isSaved = data.favorites?.includes(listingId);
+      btn.classList.toggle('saved', isSaved);
+      const heartFilled = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+      const heartOutline = 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z';
+      btn.querySelector('svg path').setAttribute('d', isSaved ? heartFilled : heartOutline);
+    } catch(e) { console.warn('Fav toggle error:', e); }
+  }
+
   function share() {
     if (navigator.share) {
       navigator.share({ title: document.title, url: location.href });
@@ -1866,21 +1906,46 @@
         const similar = (simData.listings || []).filter(s => s.id !== listing.id).slice(0, 4);
         if (similar.length) {
           document.getElementById('similarSection').style.display = '';
-          document.getElementById('similarGrid').innerHTML = similar.map(s => {
-            const sImg = Array.isArray(s.images) && s.images.length
-              ? `<img src="${s.images[0]}" alt="" loading="lazy" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'" />`
-              : `<div style="width:100%;height:160px;background:linear-gradient(135deg,#002D62,#004aaa);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:rgba(255,255,255,0.25)"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
-            return `<a href="/listing/${s.id}" style="background:var(--bg-card);border-radius:12px;border:1px solid var(--border);overflow:hidden;text-decoration:none;color:var(--text);transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-              ${sImg}
-              <div style="padding:0.85rem;">
-                <div style="font-size:1.05rem;font-weight:800;color:var(--accent);">$${Number(s.price).toLocaleString('en-US')}</div>
-                <div style="font-size:0.85rem;font-weight:600;margin:0.25rem 0;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${s.title}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted);">${[s.sector || s.city, s.province].filter(Boolean).join(', ')}</div>
-                <div style="display:flex;gap:0.75rem;margin-top:0.5rem;font-size:0.72rem;color:var(--text-muted);">
-                  ${s.bedrooms ? `<span>${s.bedrooms} hab.</span>` : ''}
-                  ${s.bathrooms ? `<span>${s.bathrooms} baños</span>` : ''}
-                  ${s.area_const ? `<span>${s.area_const} m²</span>` : ''}
-                </div>
+          const gradients = [
+            'linear-gradient(135deg,#1a6b9a,#0d4a6e)',
+            'linear-gradient(135deg,#2d7d5a,#1a5c3e)',
+            'linear-gradient(135deg,#8b4513,#5c2d0a)',
+            'linear-gradient(135deg,#6b3fa0,#4a2870)',
+          ];
+          const savedSet = new Set(window._currentUser?.favorites || []);
+          const heartFilled = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+          const heartOutline = 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z';
+
+          document.getElementById('similarGrid').innerHTML = similar.map((s, i) => {
+            const firstImg = Array.isArray(s.images) && s.images.length ? (s.images[0].url || s.images[0]) : null;
+            const isSaved = savedSet.has(s.id);
+            const loc = [s.sector || s.city, s.province].filter(Boolean).join(', ');
+            const price = s.type === 'alquiler'
+              ? `$${Number(s.price).toLocaleString('en-US')} <span class="per">/mes</span>`
+              : `$${Number(s.price).toLocaleString('en-US')}`;
+
+            const imgHtml = firstImg
+              ? `<img src="${firstImg}" alt="" loading="lazy" onerror="this.style.display='none'" /><svg viewBox="0 0 24 24" style="opacity:0"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`
+              : `<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
+
+            const specs = [
+              s.bedrooms   ? `<div class="sim-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${s.bedrooms} hab.</div>` : '',
+              s.bathrooms  ? `<div class="sim-spec"><svg viewBox="0 0 24 24"><path d="M7 7c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9-2h-2v6H4v4c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4v-4h-4V5z"/></svg>${s.bathrooms} baños</div>` : '',
+              s.area_const ? `<div class="sim-spec"><svg viewBox="0 0 24 24"><path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/></svg>${s.area_const} m²</div>` : '',
+            ].join('');
+
+            return `<a class="similar-card" href="/listing/${s.id}">
+              <div class="similar-card-img" style="background:${gradients[i % gradients.length]};">
+                ${imgHtml}
+                <button class="sim-save${isSaved ? ' saved' : ''}" data-sim-id="${s.id}" onclick="event.preventDefault();event.stopPropagation();toggleSimFav(this,'${s.id}')">
+                  <svg viewBox="0 0 24 24"><path d="${isSaved ? heartFilled : heartOutline}"/></svg>
+                </button>
+              </div>
+              <div class="sim-body">
+                <div class="sim-price">${price}</div>
+                <div class="sim-title">${s.title || ''}</div>
+                <div class="sim-location"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${loc}</div>
+                <div class="sim-specs">${specs}</div>
               </div>
             </a>`;
           }).join('');
