@@ -6,6 +6,7 @@ struct ProfileView: View {
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @AppStorage("appColorScheme") private var schemePref: String = "system"
+    @State private var showSubscription = false
 
     var body: some View {
         NavigationStack {
@@ -55,7 +56,9 @@ struct ProfileView: View {
 
             // ── Subscription ──
             Section("Plan") {
-                NavigationLink(destination: SubscriptionView().environmentObject(api)) {
+                Button {
+                    showSubscription = true
+                } label: {
                     HStack {
                         Label("Suscripción", systemImage: "crown.fill")
                             .foregroundStyle(.primary)
@@ -72,7 +75,13 @@ struct ProfileView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
+                }
+                .sheet(isPresented: $showSubscription) {
+                    SubscriptionView().environmentObject(api)
                 }
             }
 
