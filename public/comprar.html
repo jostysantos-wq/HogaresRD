@@ -720,6 +720,8 @@
 
     // Capture ?q= from URL (e.g. from homepage search)
     const _urlQ = new URLSearchParams(window.location.search).get('q') || '';
+    const urlType = new URLSearchParams(window.location.search).get('type');
+    let currentListingType = urlType || 'venta';
 
     function getFilters() {
       return {
@@ -1344,8 +1346,7 @@
 
     // Listing type toggle (Comprar/Alquilar/Proyectos)
     // Read from URL param ?type=alquiler or ?type=proyecto
-    const urlType = new URLSearchParams(window.location.search).get('type');
-    let currentListingType = urlType || 'venta';
+    // (currentListingType is declared earlier, before getFilters())
 
     // Pre-select the correct tab on load
     if (urlType) {
