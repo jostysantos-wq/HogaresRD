@@ -38,6 +38,8 @@
 		AA11000000000000000000C9 /* CitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B9 /* CitiesView.swift */; };
 		AA11000000000000000000CA /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BA /* AuthView.swift */; };
 		AA11000000000000000000CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BB /* ProfileView.swift */; };
+		AA55000000000000000001 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000011 /* SubscriptionView.swift */; };
+		AA55000000000000000002 /* StoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000012 /* StoreManager.swift */; };
 		AA11000000000000000000CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BC /* Assets.xcassets */; };
 		AA11000000000000000000CD /* SubmitListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BE /* SubmitListingView.swift */; };
 		AA11000000000000000000CE /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BF /* FeedView.swift */; };
@@ -59,6 +61,7 @@
 		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
 		AA66000000000000000000C1 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA66000000000000000000B1 /* MapView.swift */; };
 		AA77000000000000000000C1 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA77000000000000000000B1 /* LocationManager.swift */; };
+		AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000FF /* DashboardHomeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -91,6 +94,8 @@
 		AA11000000000000000000B9 /* CitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CitiesView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BA /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BB /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		AA55000000000000000011 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
+		AA55000000000000000012 /* StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreManager.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA11000000000000000000BD /* HogaresRD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HogaresRD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA11000000000000000000BE /* SubmitListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitListingView.swift; sourceTree = "<group>"; };
@@ -116,6 +121,7 @@
 		PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		COMPARE0000000000000001 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
 		ENTITLE0000000000000001 /* HogaresRD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HogaresRD.entitlements; sourceTree = "<group>"; };
+		AA550000000000000000000000FF /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -181,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				AA11000000000000000000B5 /* APIService.swift */,
+				AA55000000000000000012 /* StoreManager.swift */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */,
 				APPLOCK000000000000000001 /* AppLockManager.swift */,
 				AA77000000000000000000B1 /* LocationManager.swift */,
@@ -200,8 +207,10 @@
 				AA11000000000000000000B9 /* CitiesView.swift */,
 				AA11000000000000000000BA /* AuthView.swift */,
 				AA550000000000000000000000C3 /* BrokerDashboardView.swift */,
+				AA550000000000000000000000FF /* DashboardHomeView.swift */,
 				AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */,
 				AA11000000000000000000BB /* ProfileView.swift */,
+				AA55000000000000000011 /* SubscriptionView.swift */,
 				LOCKSCR000000000000000001 /* LockScreenView.swift */,
 				SPLASH0000000000000000B1 /* SplashView.swift */,
 				AVATAR0000000000000000B1 /* AvatarView.swift */,
@@ -326,6 +335,8 @@
 				AA11000000000000000000C9 /* CitiesView.swift in Sources */,
 				AA11000000000000000000CA /* AuthView.swift in Sources */,
 				AA11000000000000000000CB /* ProfileView.swift in Sources */,
+				AA55000000000000000001 /* SubscriptionView.swift in Sources */,
+				AA55000000000000000002 /* StoreManager.swift in Sources */,
 				AA11000000000000000000CD /* SubmitListingView.swift in Sources */,
 				AA11000000000000000000CE /* FeedView.swift in Sources */,
 					AA22000000000000000000D1 /* SavedStore.swift in Sources */,
@@ -338,6 +349,7 @@
 			AA55000000000000000000C2 /* Application.swift in Sources */,
 			AA550000000000000000000000C2 /* DashboardModels.swift in Sources */,
 			AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */,
+				AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */,
 			AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */,
 			AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
 			AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
@@ -485,7 +497,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HogaresRD/HogaresRD.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -493,6 +505,8 @@
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HogaresRD necesita acceso a tu calendario para agregar visitas programadas a propiedades.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -519,7 +533,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HogaresRD/HogaresRD.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -527,6 +541,8 @@
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HogaresRD necesita acceso a tu calendario para agregar visitas programadas a propiedades.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
