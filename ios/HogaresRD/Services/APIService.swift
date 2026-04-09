@@ -220,6 +220,54 @@ class APIService: ObservableObject {
         return .success(user)
     }
 
+    // Sign in with Apple
+    func loginWithApple(identityToken: String, name: String?, email: String?) async throws {
+        let url = URL(string: "\(apiBase)/api/auth/apple")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: String] = ["identityToken": identityToken]
+        if let n = name { body["name"] = n }
+        if let e = email { body["email"] = e }
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error con Apple Sign In")
+        }
+        let loginResp = try decoder.decode(LoginResponse.self, from: data)
+        guard let user = loginResp.user, let token = loginResp.token else {
+            throw APIError.server("Respuesta inesperada")
+        }
+        await persist(user: user, token: token)
+    }
+
+    // Sync Apple subscription with server (upgrade/downgrade role)
+    func syncAppleSubscription(productID: String, transactionID: String, originalTransactionID: String, role: String, expirationDate: String?) async throws {
+        let url = URL(string: "\(apiBase)/api/auth/apple-subscription")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
+        var body: [String: String] = [
+            "productID": productID,
+            "transactionID": transactionID,
+            "originalTransactionID": originalTransactionID,
+            "role": role,
+        ]
+        if let exp = expirationDate { body["expirationDate"] = exp }
+        req.httpBody = try JSONEncoder().encode(body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode == 200 {
+            // Update local user with new role
+            if let loginResp = try? decoder.decode(LoginResponse.self, from: data),
+               let user = loginResp.user, let token = loginResp.token {
+                await persist(user: user, token: token)
+            }
+        }
+    }
+
     // Register user → server returns {success, user} (no token), so we login afterwards
     func register(name: String, email: String, password: String, marketingOptIn: Bool) async throws -> User {
         let url = URL(string: "\(apiBase)/api/auth/register")!
@@ -333,6 +381,43 @@ class APIService: ObservableObject {
         let loginResult = try await login(email: email, password: password)
         if case .success(let user) = loginResult { return user }
         throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesion.")
+    }
+
+    /// Refresh user profile from server — updates emailVerified, subscription status, etc.
+    func refreshUser() async {
+        guard let t = token else { return }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/me")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        guard let (data, resp) = try? await session.data(for: req),
+              let http = resp as? HTTPURLResponse, http.statusCode == 200,
+              let user = try? decoder.decode(User.self, from: data) else { return }
+        await MainActor.run {
+            self.currentUser = user
+            UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
+        }
+    }
+
+    func resendVerificationEmail() async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/resend-verification")!)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (_, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            throw APIError.server("Error al reenviar verificacion")
+        }
+    }
+
+    func deleteAccount() async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/delete-account")!)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (_, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            throw APIError.server("Error al eliminar cuenta")
+        }
     }
 
     func logout() {

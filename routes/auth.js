@@ -1802,6 +1802,52 @@ router.delete('/delete-account', userAuth, async (req, res) => {
   }
 });
 
+// POST /auth/apple-subscription — Sync Apple IAP subscription with user role
+router.post('/apple-subscription', userAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { productID, transactionID, originalTransactionID, role, expirationDate } = req.body;
+
+    if (!productID || !transactionID || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const validRoles = ['broker', 'inmobiliaria', 'constructora'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid subscription role' });
+    }
+
+    const user = store.getUserById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Update user role
+    const previousRole = user.role;
+    user.role = role;
+
+    // Store subscription info in _extra
+    const extra = typeof user._extra === 'string' ? (function() { try { return JSON.parse(user._extra); } catch { return {}; } })() : (user._extra || {});
+    extra.appleSubscription = {
+      productID,
+      transactionID,
+      originalTransactionID,
+      role,
+      expirationDate: expirationDate || null,
+      subscribedAt: new Date().toISOString(),
+    };
+    user._extra = JSON.stringify(extra);
+
+    store.saveUser(user);
+
+    console.log(`[auth] Apple subscription: ${userId} upgraded ${previousRole} → ${role} (product: ${productID})`);
+
+    const token = signToken(user);
+    res.json({ token, user: safeUser(user) });
+  } catch (err) {
+    console.error('[auth] Apple subscription error:', err.message);
+    res.status(500).json({ error: 'Error processing subscription' });
+  }
+});
+
 module.exports        = router;
 module.exports.userAuth = userAuth;
 module.exports.optionalAuth = optionalAuth;

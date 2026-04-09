@@ -53,6 +53,31 @@ struct ProfileView: View {
                 .padding(.vertical, 6)
             }
 
+            // ── Subscription ──
+            Section("Plan") {
+                NavigationLink {
+                    SubscriptionView().environmentObject(api)
+                } label: {
+                    HStack {
+                        Label("Suscripción", systemImage: "crown.fill")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if user.isAgency {
+                            Text(subscriptionLabel(user))
+                                .font(.caption).bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(subscriptionColor(user))
+                                .clipShape(Capsule())
+                        } else {
+                            Text("Gratis")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
             // ── Security & Account ──
             Section("Seguridad") {
                 NavigationLink {
@@ -221,6 +246,24 @@ struct ProfileView: View {
                 .id(mode) // Force SwiftUI to recreate the view (not reuse stale @State)
         }
         .navigationTitle("Perfil")
+    }
+
+    private func subscriptionLabel(_ user: User) -> String {
+        switch user.role {
+        case "broker", "agency": return "Broker"
+        case "inmobiliaria": return "Inmobiliaria"
+        case "constructora": return "Constructora"
+        default: return "Activo"
+        }
+    }
+
+    private func subscriptionColor(_ user: User) -> Color {
+        switch user.role {
+        case "broker", "agency": return Color(red: 0.16, green: 0.65, blue: 0.45)
+        case "inmobiliaria": return Color(red: 0.55, green: 0.27, blue: 0.68)
+        case "constructora": return Color(red: 0.7, green: 0.35, blue: 0.04)
+        default: return .blue
+        }
     }
 }
 
@@ -629,6 +672,7 @@ struct TwoFactorSettingsView: View {
 // MARK: - Privacy Settings
 
 struct PrivacySettingsView: View {
+    @EnvironmentObject var api: APIService
     // Persisted across app launches via UserDefaults.
     private static let defaults: [String: Bool] = [
         "priv_profileVisible": true,
@@ -752,9 +796,18 @@ struct PrivacySettingsView: View {
         .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics"); syncPrivacy("allowAnalytics", v) }
         .alert("¿Eliminar tu cuenta?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}
-            Button("Eliminar", role: .destructive) {}
+            Button("Eliminar permanentemente", role: .destructive) {
+                Task {
+                    do {
+                        try await api.deleteAccount()
+                        api.logout()
+                    } catch {
+                        // Silent fail — user will stay logged in
+                    }
+                }
+            }
         } message: {
-            Text("Esta acción es permanente. Se eliminarán todos tus datos, propiedades guardadas y conversaciones. Contacta soporte para proceder.")
+            Text("Esta accion es permanente e irreversible. Se eliminaran todos tus datos, propiedades guardadas, conversaciones y documentos.")
         }
     }
 
