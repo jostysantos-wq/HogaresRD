@@ -345,20 +345,28 @@
     .tour-step.done { background: var(--green); color: #fff; border-color: var(--green); }
     .tour-step-line { width: 24px; height: 2px; background: var(--border); }
 
-    /* ── AGENCY TABS ─────────────────────────────────────────── */
+    /* ── AGENCY CARDS ────────────────────────────────────────── */
     .agencies-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
-    .agency-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .agency-tab { flex: 1 1 calc(33.33% - 0.3rem); min-width: 0; padding: 0.45rem 0.6rem; border-radius: 6px; border: 1.5px solid var(--border); background: none; color: var(--text-muted); font-size: 0.72rem; font-weight: 600; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: border-color 0.18s, color 0.18s, background 0.18s; }
-    .agency-tab:hover { border-color: var(--accent); color: var(--accent); }
-    .agency-tab.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
-    .agency-panel { display: none; }
-    .agency-panel.active { display: block; }
-    .agency-top { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; }
+    .agency-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 0.6rem; transition: border-color 0.2s, box-shadow 0.2s; }
+    .agency-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,106,255,0.08); }
+    .agency-card.primary { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 3%, var(--bg-card)); }
+    .agency-card-top { display: flex; align-items: center; gap: 0.75rem; }
     .agent-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #004aaa); color: #fff; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .agency-card.primary .agent-avatar { width: 48px; height: 48px; font-size: 0.88rem; box-shadow: 0 0 0 3px rgba(0,106,255,0.15); }
+    .agent-info { flex: 1; min-width: 0; }
     .agent-name { font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.2; }
     .agent-title { font-size: 0.75rem; color: var(--text-muted); }
     .agency-name-tag { font-size: 0.75rem; font-weight: 600; color: var(--accent); margin-top: 0.1rem; }
-    .agency-fairness-note { font-size: 0.68rem; color: var(--text-muted); text-align: center; margin-top: 0.75rem; font-style: italic; }
+    .primary-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); padding: 0.18rem 0.55rem; border-radius: 50px; margin-top: 0.3rem; }
+    .primary-badge svg { width: 10px; height: 10px; fill: currentColor; }
+    .response-time { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: var(--green, #00A878); font-weight: 600; margin-top: 0.35rem; }
+    .response-time svg { width: 12px; height: 12px; fill: currentColor; }
+    .agency-card-cta { margin-top: 0.75rem; }
+    .agency-card-cta button { width: 100%; padding: 0.6rem; border-radius: 8px; border: none; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .agency-card.primary .agency-card-cta button { background: var(--accent); color: #fff; }
+    .agency-card.primary .agency-card-cta button:hover { background: var(--accent-hover, #0052CC); transform: translateY(-1px); }
+    .agency-card:not(.primary) .agency-card-cta button { background: var(--bg-secondary); color: var(--text); border: 1.5px solid var(--border); }
+    .agency-card:not(.primary) .agency-card-cta button:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── LOADING / ERROR ─────────────────────────────────────── */
     .state-center { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem; text-align: center; }
@@ -620,7 +628,7 @@
 
         <!-- AGENCIES -->
         <div class="sidebar-box" id="agenciesBox" style="display:none">
-          <div class="agencies-label">Inmobiliarias Afiliadas</div>
+          <div class="agencies-label" data-i18n="listing.affiliated_agencies">Inmobiliarias Afiliadas</div>
           <div id="agencyCards"></div>
         </div>
 
@@ -1712,49 +1720,67 @@
     document.getElementById('inquiryModalSub').textContent =
       `Un agente de las inmobiliarias afiliadas a "${l.title}" se pondrá en contacto contigo.`;
 
-    // Agencies — randomized tab selector (no favoritism)
+    // Agencies — sorted by role: creator first, then by contribution score
     if (l.agencies && l.agencies.length) {
       document.getElementById('agenciesBox').style.display = '';
 
-      // Fisher-Yates shuffle so no agency is consistently first
-      const shuffled = [...l.agencies];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
+      // Fetch contribution scores to determine creator and sort order
+      let scores = [];
+      try {
+        const scRes = await fetch(`/api/contributions/${l.id}`);
+        if (scRes.ok) { const d = await scRes.json(); scores = d.scores || []; }
+      } catch {}
 
-const tabsHtml = shuffled.map((a, i) =>
-        `<button class="agency-tab${i === 0 ? ' active' : ''}" data-idx="${i}">${esc(a.name)}</button>`
-      ).join('');
+      const creatorId = l.creator_user_id || null;
+      const scoreMap = {};
+      scores.forEach(s => { scoreMap[s.user_id] = s; });
 
-      const panelsHtml = shuffled.map((a, i) => {
-        const initials = a.agent.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const agSlug   = a.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        return `<div class="agency-panel${i === 0 ? ' active' : ''}" data-idx="${i}">
-          <div class="agency-top">
+      // Sort: creator first, then by score descending, then alphabetical
+      const sorted = [...l.agencies].sort((a, b) => {
+        if (a.user_id === creatorId && b.user_id !== creatorId) return -1;
+        if (b.user_id === creatorId && a.user_id !== creatorId) return 1;
+        const sa = scoreMap[a.user_id]?.score || 0;
+        const sb = scoreMap[b.user_id]?.score || 0;
+        if (sb !== sa) return sb - sa;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      const contactLabel = (window.i18n ? i18n.t('listing.contact_agent') : 'Contactar Agente');
+      const primaryLabel = (window.i18n ? i18n.t('listing.contact_agent') : 'Contactar');
+
+      const cardsHtml = sorted.map((a, i) => {
+        const isCreator = a.user_id === creatorId;
+        const initials  = (a.agent || a.name || 'A').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const agSlug    = (a.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const sc        = scoreMap[a.user_id];
+        const avgMs     = sc?.avg_response_ms;
+        const avgMin    = avgMs ? (avgMs / 60000).toFixed(0) : null;
+
+        const badgeHtml = isCreator
+          ? `<div class="primary-badge"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Agente Principal</div>`
+          : '';
+
+        const responseHtml = avgMin && parseInt(avgMin) > 0
+          ? `<div class="response-time"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg> Responde en ~${avgMin} min</div>`
+          : '';
+
+        return `<div class="agency-card${isCreator ? ' primary' : ''}">
+          <div class="agency-card-top">
             <div class="agent-avatar">${initials}</div>
-            <div>
-              <div class="agent-name">${esc(a.agent)}</div>
-              <div class="agent-title">${esc(a.title)}</div>
+            <div class="agent-info">
+              <div class="agent-name">${esc(a.agent || a.contact || a.name)}</div>
               <div class="agency-name-tag"><a href="/inmobiliaria/${agSlug}" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${esc(a.name)}</a></div>
+              ${badgeHtml}
+              ${responseHtml}
             </div>
+          </div>
+          <div class="agency-card-cta">
+            <button onclick="document.getElementById('contactBtn')?.click()">${isCreator ? primaryLabel : contactLabel}</button>
           </div>
         </div>`;
       }).join('');
 
-      document.getElementById('agencyCards').innerHTML =
-        `<div class="agency-tabs">${tabsHtml}</div>${panelsHtml}
-         <div class="agency-fairness-note">El orden de las inmobiliarias cambia en cada visita.</div>`;
-
-      document.querySelectorAll('.agency-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          const idx = tab.dataset.idx;
-          document.querySelectorAll('.agency-tab').forEach(t => t.classList.remove('active'));
-          document.querySelectorAll('.agency-panel').forEach(p => p.classList.remove('active'));
-          tab.classList.add('active');
-          document.querySelector(`.agency-panel[data-idx="${idx}"]`).classList.add('active');
-        });
-      });
+      document.getElementById('agencyCards').innerHTML = cardsHtml;
     }
   }
 
