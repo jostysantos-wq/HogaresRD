@@ -223,7 +223,7 @@ struct BrowseView: View {
 
                 quickFilterBar
             }
-            .padding(.top, 12)
+            .padding(.top, 56)
             .zIndex(2)
 
             // ── Bottom area: count bar + horizontal carousel ─

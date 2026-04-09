@@ -21,127 +21,33 @@ struct ContentView: View {
     @State private var resendingVerification = false
     @State private var verificationSent = false
     @State private var verificationError = false
-    @State private var dismissedEmailBanner = false
-    @State private var dismissedTrialBanner = false
+    @State private var showPopup = false
+    @State private var popupDismissed = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Email verification banner
-            if let user = api.currentUser, !user.isEmailVerified, !dismissedEmailBanner {
-                HStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.envelope.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Correo no verificado")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
-                        Text(user.email)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    Spacer()
-                    if verificationSent {
-                        Text("Enviado ✓")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.white.opacity(0.8))
-                    } else if verificationError {
-                        Text("Error ✗")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.white.opacity(0.8))
-                    } else {
-                        Button {
-                            Task {
-                                resendingVerification = true
-                                verificationError = false
-                                do {
-                                    try await api.resendVerificationEmail()
-                                    verificationSent = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                        verificationSent = false
-                                    }
-                                } catch {
-                                    verificationError = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        verificationError = false
-                                    }
-                                }
-                                resendingVerification = false
-                            }
-                        } label: {
-                            if resendingVerification {
-                                ProgressView().tint(.white).scaleEffect(0.7)
-                            } else {
-                                Text("Reenviar")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(Color(red: 0.9, green: 0.5, blue: 0))
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(.white, in: Capsule())
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Button { dismissedEmailBanner = true } label: {
-                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 10)
-                .background(Color(red: 0.9, green: 0.5, blue: 0))
-            }
+        TabView(selection: $selectedTab) {
+            FeedView()
+                .tabItem { Label("Feed", systemImage: "newspaper.fill") }
+                .tag(0)
 
-            // Trial countdown banner (for pro users)
-            if let user = api.currentUser, user.isOnTrial, user.isAgency, !dismissedTrialBanner,
-               let days = user.trialDaysRemaining {
-                HStack(spacing: 8) {
-                    Image(systemName: days <= 3 ? "exclamationmark.triangle.fill" : "clock.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white)
-                    Text(days == 0 ? "Tu periodo de prueba termina hoy" :
-                         days == 1 ? "Te queda 1 dia de prueba" :
-                         "Te quedan \(days) dias de prueba")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                    Spacer()
-                    Button {
-                        // Navigate to subscription page
-                        selectedTab = 3
-                    } label: {
-                        Text("Ver planes")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(days <= 3 ? Color.rdRed : Color.rdBlue)
-                            .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(.white, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    Button { dismissedTrialBanner = true } label: {
-                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(days <= 3 ? Color.rdRed : Color.rdBlue)
-            }
+            BrowseView()
+                .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
+                .tag(1)
 
-            TabView(selection: $selectedTab) {
-                FeedView()
-                    .tabItem { Label("Feed", systemImage: "newspaper.fill") }
-                    .tag(0)
+            MessagesTabView()
+                .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
+                .tag(2)
 
-                BrowseView()
-                    .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
-                    .tag(1)
-
-                MessagesTabView()
-                    .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
-                    .tag(2)
-
-                ProfileTabView()
-                    .tabItem { Label("Perfil", systemImage: "person.fill") }
-                    .tag(3)
-            }
+            ProfileTabView()
+                .tabItem { Label("Perfil", systemImage: "person.fill") }
+                .tag(3)
         }
         .tint(Color.rdBlue)
+        .overlay {
+            if showPopup, let user = api.currentUser {
+                reminderPopup(user)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
             favAuthSheet = .login
         }
@@ -158,6 +64,157 @@ struct ContentView: View {
                 Task { await api.refreshUser() }
             }
         }
+        .onChange(of: api.currentUser?.id) {
+            // Show popup shortly after login if needed
+            schedulePopupIfNeeded()
+        }
+        .onAppear { schedulePopupIfNeeded() }
+    }
+
+    // MARK: - Popup Logic
+
+    private func schedulePopupIfNeeded() {
+        guard !popupDismissed, let user = api.currentUser else { return }
+        let needsVerification = !user.isEmailVerified
+        let needsTrialReminder = user.isOnTrial && user.isAgency && (user.trialDaysRemaining ?? 99) <= 7
+        guard needsVerification || needsTrialReminder else { return }
+        // Show after a short delay so the app loads first
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            if !popupDismissed { withAnimation(.spring(response: 0.4)) { showPopup = true } }
+        }
+    }
+
+    private func dismissPopup() {
+        withAnimation(.spring(response: 0.3)) { showPopup = false }
+        popupDismissed = true
+    }
+
+    // MARK: - Reminder Popup
+
+    @ViewBuilder
+    private func reminderPopup(_ user: User) -> some View {
+        ZStack {
+            // Dimmed background
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { dismissPopup() }
+
+            VStack(spacing: 0) {
+                // Close button
+                HStack {
+                    Spacer()
+                    Button { dismissPopup() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.bottom, 4)
+
+                // Email verification card
+                if !user.isEmailVerified {
+                    VStack(spacing: 14) {
+                        Image(systemName: "envelope.badge.shield.half.filled")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color(red: 0.9, green: 0.5, blue: 0))
+                        Text("Verifica tu correo")
+                            .font(.title3.bold())
+                        Text("Enviamos un enlace de verificacion a **\(user.email)**. Revisa tu bandeja de entrada o spam.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        if verificationSent {
+                            Label("Correo enviado", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.green)
+                        } else if verificationError {
+                            Label("Error al enviar", systemImage: "xmark.circle.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.red)
+                        } else {
+                            Button {
+                                Task {
+                                    resendingVerification = true
+                                    verificationError = false
+                                    do {
+                                        try await api.resendVerificationEmail()
+                                        verificationSent = true
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                            verificationSent = false
+                                        }
+                                    } catch {
+                                        verificationError = true
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                            verificationError = false
+                                        }
+                                    }
+                                    resendingVerification = false
+                                }
+                            } label: {
+                                if resendingVerification {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                } else {
+                                    Text("Reenviar correo")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color(red: 0.9, green: 0.5, blue: 0), in: RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(20)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                // Trial reminder card
+                if user.isOnTrial, user.isAgency, let days = user.trialDaysRemaining {
+                    VStack(spacing: 14) {
+                        Image(systemName: days <= 3 ? "exclamationmark.triangle.fill" : "clock.badge.exclamationmark")
+                            .font(.system(size: 40))
+                            .foregroundStyle(days <= 3 ? Color.rdRed : Color.rdBlue)
+                        Text(days == 0 ? "Tu prueba termina hoy" :
+                             days == 1 ? "Te queda 1 dia de prueba" :
+                             "Te quedan \(days) dias de prueba")
+                            .font(.title3.bold())
+                        Text("Suscribete para seguir publicando propiedades y recibiendo leads.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button {
+                            dismissPopup()
+                            selectedTab = 3
+                        } label: {
+                            Text("Ver planes")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(days <= 3 ? Color.rdRed : Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(20)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.top, !user.isEmailVerified ? 12 : 0)
+                }
+            }
+            .padding(24)
+            .background(Color(.systemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+            .padding(.horizontal, 28)
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
+        }
+        .transition(.opacity)
     }
 
     /// Handle push notification tap — navigate to relevant tab
