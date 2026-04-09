@@ -2450,10 +2450,11 @@
         </td>
         <td style="${subStyle}">${subLabel}</td>
         <td>${isLocked ? '<span class="locked-badge">🔒 Bloqueado</span>' : '<span style="color:#4d6a8a;font-size:0.78rem;">Activo</span>'}</td>
-        <td>
+        <td style="display:flex;gap:6px;align-items:center;">
           ${isLocked
             ? `<button class="btn-unlock" onclick="toggleLockUser('${u.id}', 'unlock')">Desbloquear</button>`
             : `<button class="btn-lock"   onclick="toggleLockUser('${u.id}', 'lock')">Bloquear</button>`}
+          <button class="btn-lock" style="background:#CE1126;color:#fff;border-color:#CE1126;" onclick="deleteUser('${u.id}', '${(u.email||'').replace(/'/g, "\\'")}')">Eliminar</button>
         </td>
       </tr>`;
     }).join('');
@@ -2466,7 +2467,20 @@
       .then(r => r.json())
       .then(data => {
         if (data.error) { alert('Error: ' + data.error); return; }
-        loadUsers(); // reload to reflect change
+        loadUsers();
+      })
+      .catch(() => alert('Error de conexión'));
+  }
+
+  function deleteUser(id, email) {
+    if (!confirm(`¿Eliminar permanentemente al usuario "${email}"?\n\nEsto también eliminará sus búsquedas guardadas y tareas. Esta acción NO se puede deshacer.`)) return;
+    if (!confirm(`CONFIRMAR: ¿Estás seguro de eliminar "${email}"?`)) return;
+    fetch(`/admin/users/${id}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); return; }
+        alert(`Usuario eliminado: ${data.deleted.user}\n\nDatos limpiados:\n• ${data.deleted.apps} aplicaciones\n• ${data.deleted.conversations} conversaciones\n• ${data.deleted.tours} visitas\n• ${data.deleted.tasks} tareas\n• ${data.deleted.savedSearches} búsquedas`);
+        loadUsers();
       })
       .catch(() => alert('Error de conexión'));
   }
@@ -2706,6 +2720,7 @@
             <span class="${starClass}" title="${starTitle}" onclick="toggleFeature('${l.id}', this)">★</span>
             ${isApproved ? `<a href="/listing/${l.id}" target="_blank" class="btn-cat btn-cat-view">Ver</a>` : ''}
             <button class="btn-cat btn-cat-unpub" ${!isApproved ? 'disabled' : ''} onclick="unpublish('${l.id}', this)" title="Mover de vuelta a Pendiente">Despublicar</button>
+            <button class="btn-cat" style="background:#CE1126;color:#fff;border-color:#CE1126;font-size:0.7rem;" onclick="deleteListing('${l.id}', '${(l.title||'').replace(/'/g, "\\'")}')">Eliminar</button>
           </div>
         </td>
       </tr>`;
@@ -2747,6 +2762,28 @@
         document.getElementById('catPending').textContent  = allCatalogue.filter(l => l.status === 'pending').length;
       })
       .catch(() => { alert('Error de conexión'); btn.disabled = false; btn.textContent = 'Despublicar'; });
+  }
+
+  function deleteListing(id, title) {
+    if (!confirm(`¿Eliminar permanentemente el anuncio "${title}"?\n\nEsta acción NO se puede deshacer.`)) return;
+    if (!confirm(`CONFIRMAR: ¿Estás seguro de eliminar "${title}"?`)) return;
+    fetch(`/admin/catalogue/${id}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Error: ' + data.error); return; }
+        allCatalogue = allCatalogue.filter(l => l.id !== id);
+        renderCatalogue(allCatalogue.filter(l => {
+          if (catTypeFilter === 'proyecto_nuevo') return ['proyecto_nuevo','planos','construccion'].includes(l.condition);
+          if (catTypeFilter !== 'all') return l.type === catTypeFilter;
+          return true;
+        }));
+        document.getElementById('catTotal').textContent    = allCatalogue.length;
+        document.getElementById('catApproved').textContent  = allCatalogue.filter(l => l.status === 'approved').length;
+        document.getElementById('catPending').textContent   = allCatalogue.filter(l => l.status === 'pending').length;
+        document.getElementById('catFeatured').textContent  = allCatalogue.filter(l => l.featured).length;
+        alert(`Anuncio eliminado: "${data.deleted.title}"`);
+      })
+      .catch(() => alert('Error de conexión'));
   }
 
   // ── Init ──────────────────────────────────────────────────────

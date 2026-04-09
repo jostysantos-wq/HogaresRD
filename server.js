@@ -865,6 +865,73 @@ app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Admin: Delete user account ──────────────────────────────────────────
+app.delete('/admin/users/:id', adminSessionAuth, (req, res) => {
+  const user = store.getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Also clean up related data
+  const apps = store.getApplicationsByClient(req.params.id);
+  const conversations = store.getConversations().filter(c => c.clientId === req.params.id || c.brokerId === req.params.id);
+  const tours = store.getToursByClient(req.params.id);
+  const tasks = store.getTasksByUser(req.params.id);
+  const savedSearches = store.getSavedSearchesByUser(req.params.id);
+
+  // Delete related records
+  for (const s of savedSearches) store.deleteSavedSearch(s.id);
+  for (const t of tasks) store.deleteTask(t.id);
+
+  store.deleteUser(req.params.id);
+  console.log(`[admin] Deleted user ${user.email} (${user.role}) — cleaned up ${apps.length} apps, ${conversations.length} convs, ${tours.length} tours, ${tasks.length} tasks, ${savedSearches.length} saved searches`);
+  res.json({ success: true, deleted: { user: user.email, apps: apps.length, conversations: conversations.length, tours: tours.length, tasks: tasks.length, savedSearches: savedSearches.length } });
+});
+
+// ── Admin: Delete listing ──────────────────────────────────────────────
+app.delete('/admin/catalogue/:id', adminSessionAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Anuncio no encontrado' });
+
+  store.deleteListing(req.params.id);
+  console.log(`[admin] Deleted listing "${listing.title}" (${req.params.id})`);
+  res.json({ success: true, deleted: { id: req.params.id, title: listing.title } });
+});
+
+// ── Admin: Bulk delete users ───────────────────────────────────────────
+app.post('/admin/users/bulk-delete', adminSessionAuth, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'Se requiere un arreglo de IDs' });
+
+  const deleted = [];
+  for (const id of ids) {
+    const user = store.getUserById(id);
+    if (!user) continue;
+    const savedSearches = store.getSavedSearchesByUser(id);
+    const tasks = store.getTasksByUser(id);
+    for (const s of savedSearches) store.deleteSavedSearch(s.id);
+    for (const t of tasks) store.deleteTask(t.id);
+    store.deleteUser(id);
+    deleted.push(user.email);
+    console.log(`[admin] Bulk-deleted user ${user.email}`);
+  }
+  res.json({ success: true, deleted });
+});
+
+// ── Admin: Bulk delete listings ────────────────────────────────────────
+app.post('/admin/catalogue/bulk-delete', adminSessionAuth, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'Se requiere un arreglo de IDs' });
+
+  const deleted = [];
+  for (const id of ids) {
+    const listing = store.getListingById(id);
+    if (!listing) continue;
+    store.deleteListing(id);
+    deleted.push({ id, title: listing.title });
+    console.log(`[admin] Bulk-deleted listing "${listing.title}"`);
+  }
+  res.json({ success: true, deleted });
+});
+
 // ── Newsletter admin ────────────────────────────────────────────────────────
 // ── Admin: Reports ─────────────────────────────────────────────
 // ── Admin Cascade Dashboard ─────────────────────────────────────────────

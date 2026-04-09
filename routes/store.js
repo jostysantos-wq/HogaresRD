@@ -402,6 +402,7 @@ function saveUser(user) {
 }
 
 function deleteUser(id) {
+  pool.query('DELETE FROM users WHERE id = $1', [id]).catch(err => console.error('[store-pg] deleteUser error:', err.message));
   _users = _users.filter(u => u.id !== id);
 }
 
@@ -468,6 +469,12 @@ function saveListing(listing) {
   const idx = _submissions.findIndex(s => s.id === listing.id);
   if (idx >= 0) _submissions[idx] = cacheRow;
   else _submissions.push(cacheRow);
+  _invalidateCache();
+}
+
+function deleteListing(id) {
+  pool.query('DELETE FROM submissions WHERE id = $1', [id]).catch(err => console.error('[store-pg] deleteListing error:', err.message));
+  _submissions = _submissions.filter(s => s.id !== id);
   _invalidateCache();
 }
 
@@ -992,7 +999,7 @@ function withTransaction(fn) {
 module.exports = {
   getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser, deleteUser,
   getActivityByUser, getListingActivity, appendActivity,
-  getListings, getListingById, saveListing, invalidateListingsCache: _invalidateCache,
+  getListings, getListingById, saveListing, deleteListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
