@@ -273,7 +273,7 @@ app.use('/api/referrals',     require('./routes/referrals'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
-app.use('/api/lead-queue',    require('./routes/auth').userAuth, require('./routes/lead-queue').router);
+app.use('/api/lead-queue', require('./routes/auth').userAuth, require('./routes/lead-queue').router);
 app.use('/api/contributions', require('./routes/auth').userAuth, require('./routes/contributions').router);
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
 app.use('/api/tours',         require('./routes/tours'));
@@ -758,44 +758,44 @@ app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
   store.saveListing(sub);
   res.json({ success: true });
 
-  // ── Create contribution scores for creator and affiliates ─────
-  const agencies = Array.isArray(sub.agencies) ? sub.agencies : [];
-  const creatorId = sub.creator_user_id;
-  const nowIso = new Date().toISOString();
-
-  if (creatorId && !store.getContributionScore(creatorId, sub.id)) {
-    store.saveContributionScore({
-      id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10),
-      user_id: creatorId,
-      listing_id: sub.id,
-      role: 'creator',
-      score: 50,
-      score_breakdown: { created_listing: 50 },
-      avg_response_ms: null,
-      response_count: 0,
-      created_at: nowIso,
-      updated_at: nowIso,
-      _extra: {},
-    });
-  }
-
-  for (const agency of agencies) {
-    const agentId = agency.user_id;
-    if (!agentId || agentId === creatorId) continue;
-    if (!store.getContributionScore(agentId, sub.id)) {
+  // Create contribution scores for cascade system
+  const cascadeEngine = require('./routes/cascade-engine');
+  if (cascadeEngine.isEnabled()) {
+    const nowISO = new Date().toISOString();
+    // Creator gets 50 points
+    if (sub.creator_user_id) {
       store.saveContributionScore({
-        id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10),
-        user_id: agentId,
+        id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+        user_id: sub.creator_user_id,
         listing_id: sub.id,
-        role: 'affiliate',
-        score: 0,
-        score_breakdown: {},
+        role: 'creator',
+        score: 50,
+        score_breakdown: { creator_bonus: 50 },
         avg_response_ms: null,
         response_count: 0,
-        created_at: nowIso,
-        updated_at: nowIso,
+        created_at: nowISO,
+        updated_at: nowISO,
         _extra: {},
       });
+    }
+    // Affiliated agencies get 0 points (entry created for cascade eligibility)
+    const agencies = Array.isArray(sub.agencies) ? sub.agencies : [];
+    for (const agency of agencies) {
+      if (agency.user_id && agency.user_id !== sub.creator_user_id) {
+        store.saveContributionScore({
+          id: 'cs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+          user_id: agency.user_id,
+          listing_id: sub.id,
+          role: 'affiliate',
+          score: 0,
+          score_breakdown: {},
+          avg_response_ms: null,
+          response_count: 0,
+          created_at: nowISO,
+          updated_at: nowISO,
+          _extra: {},
+        });
+      }
     }
   }
 
@@ -1285,12 +1285,9 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`HogaresRD running at http://localhost:${PORT}`);
 
-    // ── Cascade recovery timer ───────────────────────────────────
     const cascadeEngine = require('./routes/cascade-engine');
     if (cascadeEngine.isEnabled()) {
-      // Initial recovery on startup (after cache is ready)
       setTimeout(() => cascadeEngine.recoverStaleCascades(), 5000);
-      // Periodic recovery every 30s
       setInterval(() => cascadeEngine.recoverStaleCascades(), 30000);
       console.log('[cascade] Recovery timer started (30s interval)');
     }

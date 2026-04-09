@@ -198,80 +198,118 @@ function attachVerifyToken(user) {
 
 function sendVerificationEmail(user, rawToken) {
   const verifyUrl = `${BASE_URL}/verify-email?token=${rawToken}`;
+  const firstName = user.name.split(' ')[0];
   return transporter.sendMail({
-    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
-    to:      user.email,
-    subject: 'Verifica tu correo — HogaresRD 🔐',
+    to:         user.email,
+    subject:    'Verifica tu correo — HogaresRD',
+    department: 'soporte',
     html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Verifica tu correo electrónico</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            Hola <strong>${user.name.split(' ')[0]}</strong>, gracias por registrarte en HogaresRD.
-          </p>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
-            Para activar tu cuenta y acceder a todas las funciones, haz clic en el botón a continuación. Este enlace expira en <strong>24 horas</strong>.
-          </p>
-          <div style="text-align:center;margin:28px 0;">
-            <a href="${verifyUrl}" style="display:inline-block;background:#002D62;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.2px;">
-              ✅ Verificar mi correo
-            </a>
-          </div>
-          <p style="margin:24px 0 0;font-size:0.8rem;color:#7a9bbf;line-height:1.5;">
-            Si no creaste esta cuenta, ignora este correo. Si el botón no funciona, copia este enlace en tu navegador:<br/>
-            <a href="${verifyUrl}" style="color:#4d6a8a;word-break:break-all;">${verifyUrl}</a>
-          </p>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0 16px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+  <!-- Logo -->
+  <tr><td style="padding:40px 0 32px;">
+    <div style="font-size:1.4rem;font-weight:900;color:#002D62;letter-spacing:-0.5px;">HogaresRD</div>
+  </td></tr>
+
+  <!-- Headline -->
+  <tr><td>
+    <h1 style="margin:0 0 24px;font-size:1.75rem;font-weight:800;color:#1a1a1a;line-height:1.2;">Verifica tu correo electronico</h1>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td>
+    <p style="margin:0 0 24px;font-size:1rem;color:#333;line-height:1.7;">
+      Hola ${firstName}, haz clic en el boton de abajo para verificar tu direccion de correo electronico y activar tu cuenta. Este enlace expira en <strong>24 horas</strong>.
+    </p>
+  </td></tr>
+
+  <!-- Button -->
+  <tr><td style="padding:8px 0 32px;">
+    <a href="${verifyUrl}" style="display:inline-block;background:#002D62;color:#ffffff;padding:16px 40px;border-radius:6px;text-decoration:none;font-weight:700;font-size:1rem;">Verificar mi correo</a>
+  </td></tr>
+
+  <!-- Secondary -->
+  <tr><td>
+    <p style="margin:0 0 8px;font-size:0.85rem;color:#666;line-height:1.6;">
+      Si no creaste esta cuenta, puedes ignorar este correo.
+    </p>
+    <p style="margin:0;font-size:0.8rem;color:#999;line-height:1.6;">
+      Para mayor seguridad, no compartas este enlace con nadie.
+    </p>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="padding:32px 0 0;">
+    <div style="border-top:1px solid #e5e5e5;"></div>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:24px 0 40px;">
+    <p style="margin:0 0 4px;font-size:0.75rem;color:#999;font-weight:600;">El equipo de HogaresRD</p>
+    <p style="margin:0;font-size:0.72rem;color:#bbb;">Republica Dominicana · hogaresrd.com</p>
+  </td></tr>
+
+</table>
+</td></tr></table>
 </body></html>`,
   }).catch(err => console.error('Verification email error:', err.message));
 }
 
 function send2FAEmail(user, code) {
+  const firstName = user.name.split(' ')[0];
+  const codeSpaced = code.toString().split('').join(' ');
   return transporter.sendMail({
-    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
-    to: user.email,
-    subject: 'Tu código de verificación — HogaresRD 🔐',
+    to:         user.email,
+    department: 'soporte',
+    subject:    'Tu codigo de verificacion — HogaresRD',
     html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Código de verificación</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;text-align:center;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            Hola <strong>${user.name.split(' ')[0]}</strong>, tu código de verificación es:
-          </p>
-          <div style="margin:24px 0;padding:20px;background:#f0f4f9;border-radius:12px;display:inline-block;">
-            <span style="font-size:2.5rem;font-weight:900;letter-spacing:0.5em;color:#002D62;font-family:'Courier New',monospace;">${code}</span>
-          </div>
-          <p style="margin:16px 0 0;font-size:0.85rem;color:#4d6a8a;">
-            Este código expira en <strong>5 minutos</strong>.
-          </p>
-          <p style="margin:16px 0 0;font-size:0.8rem;color:#7a9bbf;">
-            Si no solicitaste este código, ignora este mensaje.
-          </p>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0 16px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+  <!-- Logo -->
+  <tr><td style="padding:40px 0 32px;">
+    <div style="font-size:1.4rem;font-weight:900;color:#002D62;letter-spacing:-0.5px;">HogaresRD</div>
+  </td></tr>
+
+  <!-- Headline -->
+  <tr><td>
+    <h1 style="margin:0 0 24px;font-size:1.75rem;font-weight:800;color:#1a1a1a;line-height:1.2;">Ingresa este codigo para iniciar sesion</h1>
+  </td></tr>
+
+  <!-- Code -->
+  <tr><td>
+    <div style="font-size:2.5rem;font-weight:300;color:#1a1a1a;letter-spacing:0.15em;margin:0 0 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${codeSpaced}</div>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td>
+    <p style="margin:0 0 20px;font-size:1rem;color:#333;line-height:1.7;">
+      Ingresa el codigo de arriba en tu dispositivo para iniciar sesion en HogaresRD. Este codigo expira en <strong>5 minutos</strong>.
+    </p>
+    <p style="margin:0 0 8px;font-size:0.85rem;color:#666;line-height:1.6;">
+      Si no solicitaste este codigo, puedes ignorar este correo.
+    </p>
+    <p style="margin:0;font-size:0.8rem;color:#999;line-height:1.6;">
+      Para mayor seguridad, no compartas este codigo con nadie.
+    </p>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="padding:32px 0 0;">
+    <div style="border-top:1px solid #e5e5e5;"></div>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:24px 0 40px;">
+    <p style="margin:0 0 4px;font-size:0.75rem;color:#999;font-weight:600;">El equipo de HogaresRD</p>
+    <p style="margin:0;font-size:0.72rem;color:#bbb;">Republica Dominicana · hogaresrd.com</p>
+  </td></tr>
+
+</table>
+</td></tr></table>
 </body></html>`,
   }).catch(err => console.error('2FA email error:', err.message));
 }
@@ -363,7 +401,9 @@ router.post('/register', authLimiter, async (req, res, next) => {
     });
 
     // Welcome email — pull top 3 trending listings by views
-    const trending = store.getListings()
+    const allListings = store.getListings();
+    const listingsArr = Array.isArray(allListings) ? allListings : (allListings.listings || []);
+    const trending = listingsArr
       .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 3);
 
@@ -418,7 +458,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       : '';
 
     transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+      department: 'soporte',
       to:      user.email,
       subject: `¡Bienvenido a HogaresRD, ${user.name.split(' ')[0]}! Tu hogar ideal te espera 🏠`,
       html: `<!DOCTYPE html>
@@ -585,7 +625,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
           });
           store.saveUser(inm);
           transporter.sendMail({
-            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+            department: 'soporte',
             to:      inm.email,
             subject: `Nueva solicitud de afiliación — ${user.name}`,
             html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
@@ -607,7 +647,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
     }
 
     transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+      department: 'soporte',
       to:      user.email,
       subject: '¡Bienvenido a HogaresRD! Tu cuenta de inmobiliaria está lista 🏢',
       html: `<!DOCTYPE html>
@@ -719,7 +759,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
           store.saveUser(inm);
           // Notify the inmobiliaria of the pending request
           transporter.sendMail({
-            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+            department: 'soporte',
             to:      inm.email,
             subject: `Nueva solicitud de afiliación — ${user.name}`,
             html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
@@ -741,7 +781,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
     }
 
     transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+      department: 'soporte',
       to:      user.email,
       subject: '¡Bienvenido a HogaresRD! Tu cuenta de agente está lista 🏡',
       html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -823,7 +863,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
     store.saveUser(user);
 
     transporter.sendMail({
-      from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+      department: 'soporte',
       to:      user.email,
       subject: `¡Bienvenido a HogaresRD! ${companyName} está registrada 🏢`,
       html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -874,7 +914,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
         );
         candidates.forEach(agent => {
           transporter.sendMail({
-            from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+            department: 'soporte',
             to:      agent.email,
             subject: `¡${companyName} ya está en HogaresRD! Conecta tu cuenta ahora 🔗`,
             html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -1002,7 +1042,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
         // Notify user by email (fire-and-forget)
         transporter.sendMail({
-          from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+          department: 'soporte',
           to:      user.email,
           subject: '⚠️ Tu cuenta ha sido bloqueada temporalmente — HogaresRD',
           html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
@@ -1139,7 +1179,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   logSec('reset_requested', req, { userId: user.id });
 
   transporter.sendMail({
-    from:    `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
+    department: 'soporte',
     to:      user.email,
     subject: 'Restablecer tu contraseña — HogaresRD',
     html: `
@@ -1602,6 +1642,98 @@ function optionalAuth(req, res, next) {
   } catch { req.user = null; }
   next();
 }
+
+// POST /auth/apple — Sign in with Apple
+router.post('/apple', async (req, res) => {
+  try {
+    const { identityToken, name, email } = req.body;
+    if (!identityToken) return res.status(400).json({ error: 'Missing identityToken' });
+
+    // Decode the Apple identity token (JWT) to get the sub (Apple user ID)
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.decode(identityToken);
+    if (!decoded || !decoded.sub) return res.status(400).json({ error: 'Invalid Apple token' });
+
+    const appleUserId = decoded.sub;
+    const appleEmail = email || decoded.email || `apple_${appleUserId.substring(0, 8)}@hogaresrd.com`;
+
+    // Check if user already exists with this Apple ID (stored in _extra)
+    let user = store.getUsers().find(u => {
+      try {
+        const extra = typeof u._extra === 'string' ? JSON.parse(u._extra) : (u._extra || {});
+        return extra.appleUserId === appleUserId;
+      } catch { return false; }
+    });
+
+    if (!user) {
+      // Check by email
+      user = store.getUserByEmail(appleEmail);
+    }
+
+    if (!user) {
+      // Create new user
+      const userId = 'usr_' + Date.now();
+      const userName = name || `Usuario ${appleUserId.substring(0, 6)}`;
+      user = {
+        id: userId,
+        name: userName,
+        email: appleEmail,
+        password: '', // No password for Apple Sign In users
+        role: 'user',
+        emailVerified: true, // Apple verifies email
+        _extra: JSON.stringify({ appleUserId, authProvider: 'apple' }),
+        createdAt: new Date().toISOString(),
+      };
+      store.saveUser(user);
+      console.log(`[auth] New Apple Sign In user: ${userId} (${appleEmail})`);
+    } else {
+      // Update Apple user ID if not set
+      const extra = typeof user._extra === 'string' ? JSON.parse(user._extra || '{}') : (user._extra || {});
+      if (!extra.appleUserId) {
+        extra.appleUserId = appleUserId;
+        extra.authProvider = extra.authProvider || 'apple';
+        user._extra = JSON.stringify(extra);
+        store.saveUser(user);
+      }
+    }
+
+    // Generate JWT token
+    const token = signToken(user);
+    res.json({ token, user: safeUser(user) });
+  } catch (err) {
+    console.error('[auth] Apple Sign In error:', err.message);
+    res.status(500).json({ error: 'Error de autenticacion con Apple' });
+  }
+});
+
+// DELETE /auth/delete-account — permanently delete user account and all associated data
+router.delete('/delete-account', userAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    if (!userId) return res.status(401).json({ error: 'No autenticado' });
+
+    const user = store.getUserById(userId);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Delete user data from database
+    if (store.pool) {
+      await store.pool.query('DELETE FROM conversations WHERE client_id = $1 OR broker_id = $1', [userId]);
+      await store.pool.query('DELETE FROM tours WHERE client_id = $1 OR broker_id = $1', [userId]);
+      await store.pool.query('DELETE FROM applications WHERE client_id = $1 OR broker_id = $1', [userId]);
+      await store.pool.query('DELETE FROM push_subscriptions WHERE userId = $1', [userId]);
+      await store.pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    }
+
+    // Remove from in-memory cache
+    store.deleteUser(userId);
+
+    console.log(`[auth] Account deleted: ${userId} (${user.email})`);
+    res.json({ ok: true, message: 'Cuenta eliminada permanentemente' });
+  } catch (err) {
+    console.error('[auth] Delete account error:', err.message);
+    res.status(500).json({ error: 'Error al eliminar la cuenta' });
+  }
+});
 
 module.exports        = router;
 module.exports.userAuth = userAuth;

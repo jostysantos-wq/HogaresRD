@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Propiedades en Venta — HogaresRD</title>
-  <meta name="description" content="Encuentra apartamentos, casas, villas y terrenos en venta en toda la República Dominicana." />
+  <title>Propiedades en Republica Dominicana — HogaresRD</title>
+  <meta name="description" content="Encuentra apartamentos, casas, villas y terrenos en venta y alquiler en toda la Republica Dominicana." />
   <link rel="stylesheet" href="/css/core.css">
   <style>
     :root {
@@ -93,17 +93,17 @@
     .page-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
     .page-sub { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
 
-    /* FILTERS */
-    .filters-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 68px; z-index: 90; box-shadow: var(--shadow-sm); }
-    .filters-inner { max-width: 1280px; margin: 0 auto; padding: 0.85rem 2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-    .filter-select { padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 18px; padding-right: 2rem; }
-    .filter-select:focus { border-color: var(--accent); }
-    .filter-input { padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.88rem; width: 130px; outline: none; transition: border-color 0.2s; }
-    .filter-input:focus { border-color: var(--accent); }
+    /* FILTERS — Zillow chip-style */
+    .filters-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 68px; z-index: 90; }
+    .filters-inner { max-width: 100%; margin: 0; padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; overflow: visible; }
+    .filter-select { padding: 7px 28px 7px 12px; border: 1px solid var(--border); border-radius: 20px; background: var(--bg-card); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.15s, box-shadow 0.15s; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%234d6a8a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; background-size: 16px; white-space: nowrap; }
+    .filter-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.1); }
+    .filter-input { padding: 7px 12px; border: 1px solid var(--border); border-radius: 20px; background: var(--bg-card); color: var(--text); font-size: 13px; width: 110px; outline: none; transition: border-color 0.15s; }
+    .filter-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.1); }
     .filter-input::placeholder { color: var(--text-muted); }
-    .btn-filter { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.25rem; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn-filter { background: var(--accent); color: #fff; border: none; border-radius: 20px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
     .btn-filter:hover { background: var(--accent-hover); }
-    .btn-reset { background: none; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+    .btn-reset { background: none; color: var(--text-muted); border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
     .btn-reset:hover { color: var(--red); border-color: var(--red); }
 
     /* SAVE SEARCH */
@@ -124,25 +124,37 @@
     .listings-section { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
     .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
 
-    /* PROPERTY CARD */
-    .prop-card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; }
-    .prop-card:hover { box-shadow: 0 12px 40px rgba(0,106,255,0.12); transform: translateY(-4px); border-color: transparent; }
-    .card-img { height: 230px; background: linear-gradient(135deg, #002D62, #004aaa); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; overflow: hidden; }
-    .card-img img { width: 100%; height: 100%; object-fit: cover; }
-    .card-img-placeholder svg { width: 48px; height: 48px; fill: rgba(255,255,255,0.25); }
-    .card-badges { position: absolute; top: 0.75rem; left: 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; }
-    .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 50px; }
-    .badge-venta   { background: var(--green); color: #fff; }
-    .badge-nueva   { background: var(--accent); color: #fff; }
-    .badge-usada   { background: #7a9bbf; color: #fff; }
-    .card-body { padding: 1.1rem 1.25rem; display: flex; flex-direction: column; flex: 1; }
-    .card-price { font-size: 1.3rem; font-weight: 800; color: var(--accent); margin-bottom: 0.3rem; letter-spacing: -0.02em; }
-    .card-title { font-size: 0.92rem; font-weight: 600; line-height: 1.35; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .card-location { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; }
-    .card-location svg { width: 13px; height: 13px; fill: var(--text-muted); flex-shrink: 0; }
-    .card-specs { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); padding-top: 0.75rem; border-top: 1px solid var(--border); margin-top: auto; }
-    .card-spec { display: flex; align-items: center; gap: 0.3rem; }
-    .card-spec svg { width: 13px; height: 13px; fill: var(--text-muted); }
+    /* PROPERTY CARD — Zillow/Redfin inspired */
+    .prop-card { background: var(--bg-card); border-radius: 8px; overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s ease, transform 0.2s ease; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .prop-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); transform: translateY(-2px); }
+    .card-img { height: 200px; background: #e8ecf2; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; overflow: hidden; }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+    .prop-card:hover .card-img img { transform: scale(1.03); }
+    .card-img-placeholder svg { width: 48px; height: 48px; fill: rgba(0,0,0,0.12); }
+    .card-badges { position: absolute; top: 10px; left: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+    .badge { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; }
+    .badge-venta   { background: #16a34a; color: #fff; }
+    .badge-nueva   { background: #2563eb; color: #fff; }
+    .badge-usada   { background: #64748b; color: #fff; }
+    .card-save { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, transform 0.15s; backdrop-filter: blur(4px); }
+    .card-save:hover { background: #fff; transform: scale(1.1); }
+    .card-save svg { width: 18px; height: 18px; fill: none; stroke: #333; stroke-width: 2; }
+    .card-save.saved svg { fill: #e11d48; stroke: #e11d48; }
+    .card-body { padding: 12px 14px; display: flex; flex-direction: column; flex: 1; }
+    .card-price { font-size: 1.2rem; font-weight: 700; color: #111827; margin-bottom: 2px; letter-spacing: -0.02em; }
+    .card-title { font-size: 0.85rem; font-weight: 500; line-height: 1.35; margin-bottom: 4px; color: #374151; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-location { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #6b7280; margin-bottom: 8px; }
+    .card-location svg { width: 12px; height: 12px; fill: #9ca3af; flex-shrink: 0; }
+    .card-specs { display: flex; gap: 12px; font-size: 13px; color: #374151; font-weight: 500; }
+    .card-spec { display: flex; align-items: center; gap: 4px; }
+    .card-spec svg { width: 13px; height: 13px; fill: #9ca3af; }
+    .card-spec-divider { color: #d1d5db; }
+    /* Dark mode card overrides */
+    [data-theme="dark"] .card-price { color: #f9fafb; }
+    [data-theme="dark"] .card-title { color: #e5e7eb; }
+    [data-theme="dark"] .card-specs { color: #d1d5db; }
+    [data-theme="dark"] .card-save { background: rgba(0,0,0,0.6); }
+    [data-theme="dark"] .card-save svg { stroke: #e5e7eb; }
 
     /* EMPTY / SKELETON */
     .empty-state { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
@@ -151,8 +163,9 @@
     .empty-state p { font-size: 0.9rem; }
     .skeleton { background: var(--border); border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .sk-card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-    .sk-img { height: 230px; background: var(--border); animation: pulse 1.4s ease-in-out infinite; }
+    .sk-img { height: 200px; background: var(--border); animation: pulse 1.4s ease-in-out infinite; }
     .sk-body { padding: 1.1rem 1.25rem; }
     .sk-line { height: 14px; border-radius: 6px; margin-bottom: 0.6rem; }
     .sk-line.lg { width: 60%; }
@@ -242,7 +255,7 @@
               <a href="/comprar">Casas en venta</a>
               <a href="/comprar?tipo=apartamento">Apartamentos</a>
               <a href="/comprar?tipo=villa">Villas y Penthouses</a>
-              <a href="/nuevos-proyectos">Proyectos nuevos</a>
+              <a href="/comprar?type=proyecto">Proyectos nuevos</a>
               <a href="/comprar?tipo=terreno">Terrenos</a>
               <a href="/comprar?tipo=comercial">Locales comerciales</a>
               <a href="/comprar" class="nav-see-all">Ver todas las propiedades →</a>
@@ -253,22 +266,22 @@
               <a href="/comparar">Comparar propiedades</a>
               <a href="/blog">Guía del comprador</a>
               <a href="/register-agency">Encontrar un agente</a>
-              <a href="/nuevos-proyectos">Proyectos en pre-venta</a>
+              <a href="/comprar?type=proyecto">Proyectos en pre-venta</a>
             </div>
           </div>
         </div>
 
         <!-- Alquilar -->
         <div class="nav-item">
-          <a class="nav-link" href="/alquilar">Alquilar</a>
+          <a class="nav-link" href="/comprar?type=alquiler">Alquilar</a>
           <div class="nav-dropdown">
             <div class="nav-mega-col">
               <div class="nav-mega-heading">Propiedades en Alquiler</div>
-              <a href="/alquilar">Apartamentos en alquiler</a>
+              <a href="/comprar?type=alquiler">Apartamentos en alquiler</a>
               <a href="/alquilar?tipo=casa">Casas en alquiler</a>
               <a href="/alquilar?tipo=cuarto">Cuartos</a>
               <a href="/alquilar?tipo=comercial">Locales comerciales</a>
-              <a href="/alquilar" class="nav-see-all">Ver todas las propiedades →</a>
+              <a href="/comprar?type=alquiler" class="nav-see-all">Ver todas las propiedades →</a>
             </div>
             <div class="nav-mega-col">
               <div class="nav-mega-heading">Recursos</div>
@@ -323,52 +336,69 @@
       </button>
       <a href="/home" class="mm-link">Inicio</a>
       <a href="/comprar" class="mm-link active">Comprar</a>
-      <a href="/alquilar" class="mm-link">Alquilar</a>
+      <a href="/comprar?type=alquiler" class="mm-link">Alquilar</a>
       <a href="/mapa" class="mm-link">Mapa</a>
-      <a href="/nuevos-proyectos" class="mm-link">Nuevos Proyectos</a>
+      <a href="/comprar?type=proyecto" class="mm-link">Nuevos Proyectos</a>
       <a href="/about" class="mm-link">Nosotros</a>
     </div>
   </div>
 
-  <!-- HEADER -->
-  <div class="page-header">
-    <div class="page-header-shapes">
-      <div class="ph-shape ph-shape-1"></div>
-      <div class="ph-shape ph-shape-2"></div>
-    </div>
-    <div class="page-header-inner">
-      <div class="page-eyebrow">
-        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        En Venta
-      </div>
-      <h1 class="page-title">Propiedades en Venta</h1>
-      <p class="page-sub">Apartamentos, casas, villas y terrenos en toda la República Dominicana.</p>
-    </div>
-  </div>
+  <!-- Apple MapKit JS -->
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin async></script>
 
-  <!-- FILTERS -->
+  <!-- FILTER BAR — Airbnb/App-style chip bar -->
   <div class="filters-bar" id="filtersBar">
-    <button class="filter-toggle-mobile" onclick="document.getElementById('filtersBar').classList.toggle('expanded')">
-      <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-      Filtros
-      <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M7 10l5 5 5-5z"/></svg>
-    </button>
     <div class="filters-inner">
-      <select class="filter-select" id="fProvince">
-        <option value="">Todas las provincias</option>
-        <option>Distrito Nacional</option>
-        <option>Santo Domingo</option>
-        <option>Santiago</option>
-        <option>La Altagracia</option>
-        <option>Puerto Plata</option>
-        <option>La Romana</option>
-        <option>Samaná</option>
-        <option>San Pedro de Macorís</option>
-        <option>Duarte</option>
-        <option>Espaillat</option>
+      <!-- Search input -->
+      <div style="position:relative;flex:0 0 auto;width:280px;">
+        <svg viewBox="0 0 24 24" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;fill:var(--text-muted);pointer-events:none;z-index:2;"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="fSearchLocation" placeholder="Buscar ubicacion..."
+          style="width:100%;padding:8px 30px 8px 34px;border:1px solid var(--border);border-radius:24px;background:var(--bg-card);color:var(--text);font-size:13px;font-weight:500;outline:none;font-family:inherit;transition:border-color 0.15s,box-shadow 0.15s;"
+          onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(0,106,255,0.1)'"
+          onblur="this.style.borderColor='var(--border)';this.style.boxShadow=''"
+          oninput="showLocationSuggestions(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();selectLocation(this.value);}"
+          autocomplete="off" />
+        <button id="clearSearchBtn" onclick="document.getElementById('fSearchLocation').value='';document.getElementById('locationSuggestions').style.display='none';document.getElementById('fProvince').value='';document.getElementById('clearSearchBtn').style.display='none';applyFilters();"
+          style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;z-index:2;">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:var(--text-muted);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <div id="locationSuggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;width:360px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.15);z-index:200;max-height:360px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Divider -->
+      <div style="width:1px;height:24px;background:var(--border);flex-shrink:0;"></div>
+
+      <!-- Listing type chips (Comprar / Alquilar / Proyectos) — like iOS app -->
+      <div class="chip-group" style="display:flex;gap:4px;">
+        <button class="filter-chip-btn active" data-type="venta" onclick="setListingType('venta',this)">Comprar</button>
+        <button class="filter-chip-btn" data-type="alquiler" onclick="setListingType('alquiler',this)">Alquilar</button>
+        <button class="filter-chip-btn" data-type="proyecto" onclick="setListingType('proyecto',this)">Proyectos</button>
+      </div>
+
+      <!-- Divider -->
+      <div style="width:1px;height:24px;background:var(--border);flex-shrink:0;"></div>
+
+      <!-- Filter chips with dropdowns — like iOS BrowseView -->
+      <select class="filter-chip-select" id="fPriceRange" onchange="applyPriceRange()">
+        <option value="">Precio ▾</option>
+        <option value="0-100000">Hasta $100K</option>
+        <option value="100000-250000">$100K–$250K</option>
+        <option value="250000-500000">$250K–$500K</option>
+        <option value="500000-1000000">$500K–$1M</option>
+        <option value="1000000-99999999">$1M+</option>
       </select>
-      <select class="filter-select" id="fPropertyType">
-        <option value="">Tipo de propiedad</option>
+
+      <select class="filter-chip-select" id="fBedrooms" onchange="applyFilters()">
+        <option value="">Hab ▾</option>
+        <option value="1">1+ Hab</option>
+        <option value="2">2+ Hab</option>
+        <option value="3">3+ Hab</option>
+        <option value="4">4+ Hab</option>
+      </select>
+
+      <select class="filter-chip-select" id="fPropertyType" onchange="applyFilters()">
+        <option value="">Tipo ▾</option>
         <option value="apartamento">Apartamento</option>
         <option value="casa">Casa</option>
         <option value="villa">Villa</option>
@@ -376,62 +406,167 @@
         <option value="penthouse">Penthouse</option>
         <option value="local_comercial">Local Comercial</option>
       </select>
-      <select class="filter-select" id="fCondition">
-        <option value="">Cualquier condición</option>
-        <option value="nueva_construccion">Nueva Construcción</option>
+
+      <select class="filter-chip-select" id="fCondition" onchange="applyFilters()">
+        <option value="">Mas ▾</option>
+        <option value="nueva_construccion">Nueva Construccion</option>
         <option value="usada">Usada</option>
         <option value="planos">En Planos</option>
       </select>
-      <select class="filter-select" id="fBedrooms">
-        <option value="">Hab. (cualquiera)</option>
-        <option value="1">1+</option>
-        <option value="2">2+</option>
-        <option value="3">3+</option>
-        <option value="4">4+</option>
+
+      <!-- Hidden inputs for API -->
+      <select id="fProvince" style="display:none;" onchange="applyFilters()">
+        <option value=""></option>
+        <option>Distrito Nacional</option><option>Santo Domingo</option><option>Santiago</option>
+        <option>La Altagracia</option><option>Puerto Plata</option><option>La Romana</option>
+        <option>Samana</option><option>San Pedro de Macoris</option><option>Duarte</option><option>Espaillat</option>
       </select>
-      <input class="filter-input" type="number" id="fPriceMin" placeholder="Precio mín." min="0" />
-      <input class="filter-input" type="number" id="fPriceMax" placeholder="Precio máx." min="0" />
-      <select class="filter-select" id="fAgency">
-        <option value="">Todas las inmobiliarias</option>
-      </select>
-      <button class="btn-filter" onclick="applyFilters()">Buscar</button>
-      <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
+      <input type="hidden" id="fPriceMin" />
+      <input type="hidden" id="fPriceMax" />
+      <input type="hidden" id="fAgency" value="" />
+
+      <button onclick="resetFilters()" style="background:none;border:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;padding:6px 8px;white-space:nowrap;transition:color 0.15s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text-muted)'">Limpiar</button>
     </div>
   </div>
 
   <!-- ACTIVE FILTER CHIPS -->
-  <div class="filter-chips" id="filterChips"></div>
+  <div class="filter-chips" id="filterChips" style="padding:0 16px 4px;"></div>
 
-  <!-- RESULTS -->
-  <div class="results-bar">
-    <div class="results-count" id="resultsCount">Cargando...</div>
-    <div style="display:flex;align-items:center;gap:0.75rem;">
-      <button class="btn-save-search" id="btnSaveSearch" onclick="saveCurrentSearch()" title="Guardar esta búsqueda">
-        <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
-        Guardar búsqueda
+  <style>
+    /* Airbnb-style filter chips */
+    .filter-chip-btn {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .filter-chip-btn:hover { border-color: var(--text); }
+    .filter-chip-btn.active {
+      background: var(--accent, #002D62);
+      color: #fff;
+      border-color: var(--accent, #002D62);
+    }
+    .filter-chip-select {
+      padding: 7px 26px 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%236b7280'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 4px center;
+      background-size: 16px;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .filter-chip-select:hover { border-color: var(--text); }
+    .filter-chip-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.1); }
+    .filter-chip-select.has-value {
+      background-color: var(--accent, #002D62);
+      color: #fff;
+      border-color: var(--accent, #002D62);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%23ffffff'/%3E%3C/svg%3E");
+    }
+    @media (max-width: 768px) {
+      .filters-inner { gap: 6px !important; }
+      .chip-group { display: none !important; }
+      #fSearchLocation { width: 100% !important; }
+    }
+  </style>
+
+  <!-- SPLIT PANEL: Map + Listings -->
+  <div class="split-panel" id="splitPanel">
+    <!-- LEFT: Apple Map -->
+    <div class="map-panel" id="mapPanel">
+      <div id="appleMap" style="width:100%;height:100%;"></div>
+      <div class="map-count-pill" id="mapCountPill">0 propiedades</div>
+      <!-- Search as I move toggle -->
+      <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;">
+        <label style="display:flex;align-items:center;gap:6px;background:var(--bg-card,#fff);padding:6px 14px;border-radius:99px;font-size:0.75rem;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,0.15);cursor:pointer;border:1px solid var(--border,#e2e8f0);">
+          <input type="checkbox" id="searchOnMove" checked style="width:14px;height:14px;accent-color:var(--accent);">
+          Buscar al mover el mapa
+        </label>
+      </div>
+      <!-- Map/List toggle on mobile -->
+      <button id="mobileListToggle" onclick="toggleMobileView('list')" style="display:none;position:absolute;bottom:16px;right:16px;z-index:10;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:0.8rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;vertical-align:middle;margin-right:4px;"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        Lista
       </button>
-      <a href="/mapa" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.4rem 0.9rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:0.85rem;font-weight:600;text-decoration:none;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='var(--accent)';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='var(--accent)'">
-        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-        Ver en mapa
-      </a>
-      <select class="sort-select" id="sortSelect" onchange="applyFilters()">
-        <option value="newest">Más recientes</option>
-        <option value="price_asc">Precio: menor a mayor</option>
-        <option value="price_desc">Precio: mayor a menor</option>
-      </select>
+    </div>
+
+    <!-- RIGHT: Listings -->
+    <div class="listings-panel" id="listingsPanel">
+      <!-- Results bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg-card);position:sticky;top:0;z-index:5;">
+        <div class="results-count" id="resultsCount" style="font-size:0.82rem;font-weight:700;">Cargando...</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <button class="btn-save-search" id="btnSaveSearch" onclick="saveCurrentSearch()" title="Guardar busqueda" style="font-size:0.72rem;padding:4px 10px;">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+            Guardar
+          </button>
+          <select class="sort-select" id="sortSelect" onchange="applyFilters()" style="font-size:0.75rem;padding:4px 8px;">
+            <option value="newest">Recientes</option>
+            <option value="price_asc">Precio ↑</option>
+            <option value="price_desc">Precio ↓</option>
+          </select>
+        </div>
+      </div>
+      <!-- Mobile: back to map button -->
+      <button id="mobileMapToggle" onclick="toggleMobileView('map')" style="display:none;width:100%;padding:8px;background:var(--accent);color:#fff;border:none;font-size:0.8rem;font-weight:700;cursor:pointer;">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;vertical-align:middle;margin-right:4px;"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>
+        Ver mapa
+      </button>
+      <!-- Grid -->
+      <div class="listings-grid" id="listingsGrid" style="padding:0.75rem;">
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+      </div>
+      <div class="pagination" id="pagination" style="padding:0.5rem 1rem;"></div>
     </div>
   </div>
 
-  <!-- GRID -->
-  <div class="listings-section">
-    <div class="listings-grid" id="listingsGrid">
-      <!-- skeletons -->
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-    </div>
-    <div class="pagination" id="pagination"></div>
-  </div>
+  <style>
+    .split-panel { display: flex; height: calc(100vh - 130px); overflow: hidden; }
+    .map-panel { flex: 1; position: relative; min-width: 0; background: var(--bg-card); }
+    .listings-panel { width: 440px; flex-shrink: 0; overflow-y: auto; background: var(--bg); border-left: 1px solid var(--border); }
+    .listings-panel .listings-grid { grid-template-columns: 1fr !important; gap: 0.75rem !important; }
+    .listings-panel .prop-card { transition: transform 0.15s, box-shadow 0.15s, outline 0.15s; }
+    .listings-panel .prop-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .listings-panel .prop-card.map-highlight { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .listings-panel .prop-card .card-img { height: 200px; }
+
+    /* Listing count pill on map */
+    .map-count-pill { position: absolute; top: 12px; left: 12px; z-index: 10; background: var(--bg-card,#fff); padding: 6px 14px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 2px 10px rgba(0,0,0,0.12); border: 1px solid var(--border,#e2e8f0); }
+
+    @media (max-width: 1200px) { .listings-panel { width: 380px; } }
+    @media (max-width: 1024px) { .listings-panel { width: 360px; } }
+    @media (max-width: 768px) {
+      .split-panel { flex-direction: column; height: auto; }
+      .map-panel { height: 50vh; width: 100%; }
+      .listings-panel { width: 100%; height: auto; overflow: visible; border-left: none; }
+      .listings-panel .listings-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; }
+      #mobileListToggle, #mobileMapToggle { display: block !important; }
+      .split-panel.show-list .map-panel { display: none; }
+      .split-panel.show-list .listings-panel { height: auto; }
+      .split-panel:not(.show-list) .listings-panel { display: none; }
+      .split-panel:not(.show-list) .map-panel { height: 100vh; height: 100dvh; }
+    }
+  </style>
 
   <!-- FOOTER -->
   <footer>
@@ -446,8 +581,8 @@
         <h4>Propiedades</h4>
         <ul>
           <li><a href="/comprar">Comprar</a></li>
-          <li><a href="/alquilar">Alquilar</a></li>
-          <li><a href="/nuevos-proyectos">Nuevos Proyectos</a></li>
+          <li><a href="/comprar?type=alquiler">Alquilar</a></li>
+          <li><a href="/comprar?type=proyecto">Nuevos Proyectos</a></li>
           <li><a href="/submit">Publicar</a></li>
         </ul>
       </div>
@@ -557,9 +692,11 @@
               ${esc(l.sector || l.city)}${l.province ? ', ' + esc(l.province) : ''}
             </div>
             <div class="card-specs">
-              ${l.bedrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>${esc(l.bedrooms)} hab.</div>` : ''}
-              ${l.bathrooms ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M7 6h10l1.22-3.66A1 1 0 0 0 17.28 1H6.72a1 1 0 0 0-.94 1.34L7 6zm12 11.5c0 .83-.67 1.5-1.5 1.5S16 18.33 16 17.5V17H8v.5C8 18.33 7.33 19 6.5 19S5 18.33 5 17.5V17a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2v.5z"/></svg>${esc(l.bathrooms)} baños</div>` : ''}
-              ${l.area_const ? `<div class="card-spec"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>${esc(l.area_const)} m²</div>` : ''}
+              ${l.bedrooms ? `<span>${esc(l.bedrooms)} hab</span>` : ''}
+              ${l.bedrooms && l.bathrooms ? '<span class="card-spec-divider">|</span>' : ''}
+              ${l.bathrooms ? `<span>${esc(l.bathrooms)} ba</span>` : ''}
+              ${(l.bedrooms || l.bathrooms) && l.area_const ? '<span class="card-spec-divider">|</span>' : ''}
+              ${l.area_const ? `<span>${esc(l.area_const)} m²</span>` : ''}
             </div>
           </div>
         </a>`;
@@ -586,7 +723,7 @@
 
     function getFilters() {
       return {
-        type:         'venta',
+        type:         currentListingType || 'venta',
         q:            _urlQ,
         province:     document.getElementById('fProvince').value,
         propertyType: document.getElementById('fPropertyType').value,
@@ -608,7 +745,7 @@
         bedroomsMin:  f.bedroomsMin ? f.bedroomsMin + '+ habitaciones' : '',
         priceMin:     f.priceMin ? 'Desde $' + Number(f.priceMin).toLocaleString() : '',
         priceMax:     f.priceMax ? 'Hasta $' + Number(f.priceMax).toLocaleString() : '',
-        agency:       f.agency ? document.getElementById('fAgency').selectedOptions[0]?.text : '',
+        agency:       '',
       };
       const clearMap = {
         province: 'fProvince', propertyType: 'fPropertyType', condition: 'fCondition',
@@ -649,6 +786,7 @@
         const res  = await fetch('/api/listings?' + params.toString());
         const data = await res.json();
         const sorted = sortListings(data.listings || []);
+        allLoadedListings = sorted;
         const total  = data.total || 0;
         const pages  = data.pages || 1;
 
@@ -659,12 +797,18 @@
           grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             <h3>No encontramos propiedades</h3>
-            <p>Intenta ajustar los filtros de búsqueda.</p>
+            <p>Intenta ajustar los filtros de busqueda.</p>
           </div>`;
         } else {
           grid.innerHTML = sorted.map(buildCard).join('');
+          // Add data-listing-id for map interaction
+          grid.querySelectorAll('.prop-card').forEach((card, i) => {
+            if (sorted[i]) card.setAttribute('data-listing-id', sorted[i].id);
+          });
         }
         buildPagination(total, page, pages);
+        // Update map pins
+        updateMapPins(sorted);
       } catch(e) {
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
@@ -685,16 +829,24 @@
       }
     }
     function resetFilters() {
-      ['fProvince','fPropertyType','fCondition','fBedrooms','fAgency'].forEach(id => document.getElementById(id).value = '');
-      ['fPriceMin','fPriceMax'].forEach(id => document.getElementById(id).value = '');
+      ['fProvince','fPropertyType','fCondition','fBedrooms','fPriceRange'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['fPriceMin','fPriceMax','fAgency'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.querySelectorAll('.filter-chip-select').forEach(s => s.classList.remove('has-value'));
+      const searchInput = document.getElementById('fSearchLocation');
+      if (searchInput) searchInput.value = '';
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) clearBtn.style.display = 'none';
+      currentListingType = 'venta';
+      document.querySelectorAll('.filter-chip-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'venta'));
       loadListings(1);
       renderFilterChips();
     }
     function goPage(p) { loadListings(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-    // Populate agency dropdown
+    // Populate agency dropdown (if element exists as select)
     fetch('/api/listings/agencies').then(r => r.json()).then(({ agencies }) => {
       const sel = document.getElementById('fAgency');
+      if (!sel || sel.tagName !== 'SELECT') return;
       agencies.forEach(a => {
         const opt = document.createElement('option');
         opt.value = a.slug;
@@ -771,7 +923,542 @@
       toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
+    // ── Apple MapKit JS ──────────────────────────────────────
+    let appleMap = null;
+    let mapAnnotations = [];
+    let mapInitialized = false;
+    let mapHasFitted = false;
+    let allLoadedListings = []; // Full set from API for viewport filtering
+
+    async function initAppleMap() {
+      if (mapInitialized || typeof mapkit === 'undefined') return;
+      try {
+        const res = await fetch('/api/mapkit-token');
+        const { token } = await res.json();
+        if (!token) { console.warn('[Map] No MapKit token'); return; }
+
+        mapkit.init({ authorizationCallback: done => done(token) });
+
+        appleMap = new mapkit.Map('appleMap', {
+          center: new mapkit.Coordinate(18.48, -69.93), // Santo Domingo
+          showsCompass: mapkit.FeatureVisibility.Hidden,
+          showsZoomControl: true,
+          showsMapTypeControl: false,
+          colorScheme: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light,
+        });
+        appleMap.setCameraDistanceAnimated(15000); // Close neighborhood zoom to show listings immediately
+
+        // Filter listings to match visible map area
+        let regionChangeTimer = null;
+        appleMap.addEventListener('region-change-end', () => {
+          clearTimeout(regionChangeTimer);
+          regionChangeTimer = setTimeout(() => {
+            filterListingsToMapView();
+          }, 300); // debounce 300ms
+        });
+
+        mapInitialized = true;
+        console.log('[Map] Apple MapKit JS initialized');
+      } catch (err) {
+        console.warn('[Map] Init error:', err.message);
+      }
+    }
+
+    function updateMapPins(listings) {
+      if (!appleMap || !mapInitialized) return;
+      // Remove old annotations
+      appleMap.removeAnnotations(mapAnnotations);
+      mapAnnotations = [];
+
+      listings.forEach(l => {
+        const lat = parseFloat(l.lat);
+        const lng = parseFloat(l.lng);
+        if (!lat || !lng) return;
+
+        const coord = new mapkit.Coordinate(lat, lng);
+        const price = Number(l.price) || 0;
+        const priceLabel = price >= 1e6 ? '$' + (price/1e6).toFixed(1) + 'M'
+          : price >= 1e3 ? '$' + Math.round(price/1e3) + 'K'
+          : '$' + price;
+
+        const annotation = new mapkit.MarkerAnnotation(coord, {
+          title: l.title || '',
+          subtitle: priceLabel,
+          glyphText: priceLabel,
+          color: '#002D62',
+          displayPriority: mapkit.Annotation.DisplayPriority.Required,
+          data: { listingId: l.id },
+        });
+
+        annotation.addEventListener('select', () => {
+          const card = document.querySelector(`[data-listing-id="${l.id}"]`);
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.outline = '3px solid var(--accent)';
+            card.style.outlineOffset = '2px';
+            setTimeout(() => { card.style.outline = ''; card.style.outlineOffset = ''; }, 2000);
+          }
+        });
+
+        mapAnnotations.push(annotation);
+      });
+
+      appleMap.addAnnotations(mapAnnotations);
+
+      // On first load: zoom to fit all pins, then center on a random one for variety
+      if (mapAnnotations.length > 0 && !mapHasFitted) {
+        if (mapAnnotations.length <= 3) {
+          // Few pins — just center on one
+          centerMapOnListings();
+        } else {
+          // Many pins — fit all, then after animation zoom into a cluster
+          const padding = new mapkit.Padding({ top: 40, right: 40, bottom: 60, left: 40 });
+          appleMap.showItems(mapAnnotations, { animate: true, padding });
+          // After fit animation, zoom into a random area and filter
+          setTimeout(() => {
+            centerMapOnListings();
+            setTimeout(() => filterListingsToMapView(), 800);
+          }, 1500);
+        }
+        mapHasFitted = true;
+      }
+
+      // Update count pill
+      const pill = document.getElementById('mapCountPill');
+      if (pill) pill.textContent = `${mapAnnotations.length} en el mapa`;
+
+      // Card hover → highlight pin interaction
+      document.querySelectorAll('.prop-card[data-listing-id]').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          const id = card.getAttribute('data-listing-id');
+          const ann = mapAnnotations.find(a => a.data?.listingId === id);
+          if (ann && appleMap) {
+            appleMap.selectedAnnotation = ann;
+            card.classList.add('map-highlight');
+          }
+        });
+        card.addEventListener('mouseleave', () => {
+          if (appleMap) appleMap.selectedAnnotation = null;
+          card.classList.remove('map-highlight');
+        });
+      });
+    }
+
+    // Mobile toggle
+    function toggleMobileView(view) {
+      const panel = document.getElementById('splitPanel');
+      if (view === 'list') panel.classList.add('show-list');
+      else panel.classList.remove('show-list');
+    }
+
+    // Theme change listener — update map color scheme
+    const themeObserver = new MutationObserver(() => {
+      if (appleMap) {
+        appleMap.colorScheme = document.documentElement.getAttribute('data-theme') === 'dark'
+          ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light;
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // Wait for MapKit JS to load, then init
+    function waitForMapKit() {
+      if (typeof mapkit !== 'undefined' && mapkit.init) {
+        initAppleMap().then(() => loadListings(1));
+      } else {
+        // Poll until mapkit is available (max 5 seconds)
+        let attempts = 0;
+        const poller = setInterval(() => {
+          attempts++;
+          if (typeof mapkit !== 'undefined' && mapkit.init) {
+            clearInterval(poller);
+            initAppleMap().then(() => loadListings(1));
+          } else if (attempts > 25) {
+            clearInterval(poller);
+            console.warn('[Map] MapKit JS failed to load — showing listings only');
+            loadListings(1);
+          }
+        }, 200);
+      }
+    }
+    // Load listings first, then center map on them
     loadListings(1);
+    waitForMapKit();
+
+    // ── Location Search using Apple MapKit JS Search (mirrors iOS app) ───
+    let searchService = null;
+
+    function initSearchService() {
+      if (searchService) return;
+      try {
+        if (typeof mapkit === 'undefined' || !mapkit.Search) return;
+        // Restrict search to Dominican Republic bounding box
+        const drRegion = new mapkit.CoordinateRegion(
+          new mapkit.Coordinate(19.0, -70.0),       // Center of DR
+          new mapkit.CoordinateSpan(3.5, 4.0)        // Covers entire DR
+        );
+        searchService = new mapkit.Search({
+          region: drRegion,
+          language: 'es',
+          includeAddresses: true,
+          includePointsOfInterest: true,
+        });
+        console.log('[Search] MapKit Search service initialized (DR only)');
+      } catch(e) {
+        console.warn('[Search] Failed to init search service:', e.message);
+      }
+    }
+
+    // Show suggestions on focus AND click
+    const searchInput = document.getElementById('fSearchLocation');
+    if (searchInput) {
+      searchInput.addEventListener('focus', () => {
+        if (!searchInput.value) showDefaultSuggestions();
+      });
+      searchInput.addEventListener('click', () => {
+        if (!searchInput.value) showDefaultSuggestions();
+      });
+    }
+
+    function showDefaultSuggestions() {
+      const dropdown = document.getElementById('locationSuggestions');
+      const defaults = [
+        { name: 'Santo Domingo', sub: 'Distrito Nacional', lat: 18.4861, lng: -69.9312 },
+        { name: 'Punta Cana', sub: 'La Altagracia', lat: 18.5601, lng: -68.3725 },
+        { name: 'Santiago', sub: 'Santiago', lat: 19.4517, lng: -70.6970 },
+        { name: 'Piantini', sub: 'Santo Domingo, Distrito Nacional', lat: 18.4722, lng: -69.9390 },
+        { name: 'Naco', sub: 'Santo Domingo, Distrito Nacional', lat: 18.4775, lng: -69.9350 },
+        { name: 'Bavaro', sub: 'Punta Cana, La Altagracia', lat: 18.6870, lng: -68.4540 },
+        { name: 'Puerto Plata', sub: 'Puerto Plata', lat: 19.7934, lng: -70.6884 },
+        { name: 'La Romana', sub: 'La Romana', lat: 18.4270, lng: -68.9720 },
+      ];
+      dropdown.innerHTML =
+        `<div style="padding:12px 16px 6px;font-size:0.68rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Busquedas populares</div>` +
+        defaults.map(d => mapSuggestionHTML(d.name, d.sub, d.lat, d.lng)).join('') +
+        `<div style="padding:8px 16px 12px;border-top:1px solid var(--border);margin-top:4px;">
+          <div style="font-size:0.68rem;color:var(--text-muted);text-align:center;">Escribe cualquier direccion, sector o ciudad</div>
+        </div>`;
+      dropdown.style.display = 'block';
+    }
+
+    let searchTimeout = null;
+    function showLocationSuggestions(query) {
+      clearTimeout(searchTimeout);
+      const dropdown = document.getElementById('locationSuggestions');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+      if (!query || query.length < 2) {
+        if (!query) showDefaultSuggestions();
+        else dropdown.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        // Use MapKit JS search directly — works in all versions
+        if (typeof mapkit !== 'undefined' && mapkit.Search) {
+          if (!searchService) initSearchService();
+
+          searchService.search(query, (err, data) => {
+            if (err || !data?.places?.length) {
+              fetchAPISuggestions(query, dropdown);
+              return;
+            }
+
+            // Filter to Dominican Republic only (lat 17.5-20.0, lng -72.0 to -68.0)
+            const drPlaces = data.places.filter(p => {
+              const lat = p.coordinate.latitude;
+              const lng = p.coordinate.longitude;
+              return lat >= 17.5 && lat <= 20.0 && lng >= -72.0 && lng <= -68.0;
+            });
+
+            if (!drPlaces.length) {
+              fetchAPISuggestions(query, dropdown);
+              return;
+            }
+
+            dropdown.innerHTML = drPlaces.slice(0, 8).map(place => {
+              const lat = place.coordinate.latitude;
+              const lng = place.coordinate.longitude;
+              const name = place.name || '';
+              const parts = [];
+              if (place.subLocality) parts.push(place.subLocality);
+              if (place.locality) parts.push(place.locality);
+              if (place.administrativeArea) parts.push(place.administrativeArea);
+              if (!parts.length && place.formattedAddress) parts.push(place.formattedAddress);
+              const sub = parts.join(', ').substring(0, 65);
+              return mapSuggestionHTML(name, sub || 'Republica Dominicana', lat, lng);
+            }).join('');
+            dropdown.style.display = 'block';
+          });
+        } else {
+          // MapKit not loaded — use API fallback
+          fetchAPISuggestions(query, dropdown);
+        }
+      }, 300);
+    }
+
+    // Fallback: use our API suggestions + hardcoded DR locations
+    async function fetchAPISuggestions(query, dropdown) {
+      const q = query.toLowerCase();
+
+      // Hardcoded fallback locations in case API fails
+      const fallbackLocations = [
+        { name: 'Piantini', province: 'Distrito Nacional', lat: 18.4722, lng: -69.939 },
+        { name: 'Naco', province: 'Distrito Nacional', lat: 18.4775, lng: -69.935 },
+        { name: 'Bella Vista', province: 'Distrito Nacional', lat: 18.465, lng: -69.938 },
+        { name: 'Evaristo Morales', province: 'Distrito Nacional', lat: 18.48, lng: -69.931 },
+        { name: 'Santo Domingo', province: 'Distrito Nacional', lat: 18.486, lng: -69.931 },
+        { name: 'Punta Cana', province: 'La Altagracia', lat: 18.56, lng: -68.372 },
+        { name: 'Bavaro', province: 'La Altagracia', lat: 18.687, lng: -68.454 },
+        { name: 'Cap Cana', province: 'La Altagracia', lat: 18.488, lng: -68.37 },
+        { name: 'Santiago', province: 'Santiago', lat: 19.451, lng: -70.697 },
+        { name: 'Puerto Plata', province: 'Puerto Plata', lat: 19.793, lng: -70.688 },
+        { name: 'Cabarete', province: 'Puerto Plata', lat: 19.753, lng: -70.418 },
+        { name: 'La Romana', province: 'La Romana', lat: 18.427, lng: -68.972 },
+        { name: 'Las Terrenas', province: 'Samana', lat: 19.311, lng: -69.538 },
+        { name: 'Samana', province: 'Samana', lat: 19.205, lng: -69.334 },
+        { name: 'Juan Dolio', province: 'San Pedro de Macoris', lat: 18.433, lng: -69.43 },
+        { name: 'Jarabacoa', province: 'La Vega', lat: 19.12, lng: -70.642 },
+        { name: 'Arroyo Hondo', province: 'Distrito Nacional', lat: 18.5, lng: -69.95 },
+        { name: 'Gazcue', province: 'Distrito Nacional', lat: 18.46, lng: -69.92 },
+        { name: 'Los Cacicazgos', province: 'Distrito Nacional', lat: 18.455, lng: -69.945 },
+        { name: 'Malecon', province: 'Distrito Nacional', lat: 18.458, lng: -69.91 },
+        { name: 'Ensanche Paraiso', province: 'Distrito Nacional', lat: 18.458, lng: -69.948 },
+        { name: 'Sosua', province: 'Puerto Plata', lat: 19.755, lng: -70.512 },
+        { name: 'Constanza', province: 'La Vega', lat: 18.91, lng: -70.75 },
+        { name: 'Casa de Campo', province: 'La Romana', lat: 18.415, lng: -68.94 },
+        { name: 'Lucerna', province: 'Santo Domingo', lat: 18.52, lng: -69.87 },
+        { name: 'Los Mina', province: 'Santo Domingo', lat: 18.49, lng: -69.85 },
+        { name: 'Villa Mella', province: 'Santo Domingo Norte', lat: 18.55, lng: -69.90 },
+        { name: 'Herrera', province: 'Santo Domingo', lat: 18.47, lng: -69.97 },
+      ];
+
+      // Try API first
+      let allMatches = [];
+      try {
+        const res = await fetch('/api/search-suggestions');
+        const data = await res.json();
+        allMatches = (data.suggestions || []).filter(loc =>
+          loc.name.toLowerCase().includes(q) ||
+          (loc.city || '').toLowerCase().includes(q) ||
+          (loc.province || '').toLowerCase().includes(q)
+        );
+      } catch (e) {}
+
+      // Merge with fallback locations
+      const fallbackMatches = fallbackLocations.filter(loc =>
+        loc.name.toLowerCase().includes(q) || loc.province.toLowerCase().includes(q)
+      );
+
+      // Combine, deduplicate by name
+      const seen = new Set();
+      const combined = [...allMatches, ...fallbackMatches].filter(loc => {
+        const key = loc.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 8);
+
+      if (!combined.length) {
+        dropdown.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">No se encontraron resultados para "${query}"</div>`;
+      } else {
+        dropdown.innerHTML = combined.map(loc =>
+          mapSuggestionHTML(loc.name, loc.province || loc.city || '', loc.lat || 0, loc.lng || 0)
+        ).join('');
+      }
+      dropdown.style.display = 'block';
+    }
+
+    function mapSuggestionHTML(name, subtitle, lat, lng) {
+      const safeName = (name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const safeSub = (subtitle || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      return `<div onclick="selectMapLocation('${safeName}',${lat},${lng})"
+        style="padding:11px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background 0.12s;"
+        onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
+        <div style="width:36px;height:36px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" style="width:17px;height:17px;fill:#4caf50;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subtitle}</div>
+        </div>
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:var(--text-muted);flex-shrink:0;opacity:0.3;"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      </div>`;
+    }
+
+    // When user clicks an autocomplete suggestion, resolve it to coordinates
+    function searchAndGo(query) {
+      document.getElementById('locationSuggestions').style.display = 'none';
+      const displayName = query.split(',')[0].trim();
+      document.getElementById('fSearchLocation').value = displayName;
+      document.getElementById('clearSearchBtn').style.display = 'block';
+
+      if (searchService) {
+        searchService.search(query, (err, data) => {
+          if (!err && data?.places?.length) {
+            const place = data.places[0];
+            selectMapLocation(place.name || displayName, place.coordinate.latitude, place.coordinate.longitude);
+          }
+        });
+      }
+    }
+
+    function selectMapLocation(name, lat, lng) {
+      document.getElementById('fSearchLocation').value = name;
+      document.getElementById('locationSuggestions').style.display = 'none';
+
+      // Center map on selected location
+      if (appleMap && mapInitialized && lat && lng) {
+        appleMap.setCenterAnimated(new mapkit.Coordinate(lat, lng));
+        appleMap.setCameraDistanceAnimated(8000); // Close neighborhood zoom
+      }
+
+      // Clear province filter — let map viewport handle filtering
+      document.getElementById('fProvince').value = '';
+      applyFilters();
+    }
+
+    function selectLocation(query) {
+      document.getElementById('locationSuggestions').style.display = 'none';
+      if (query && searchService) {
+        searchService.search(query + ', Dominican Republic', (err, data) => {
+          if (!err && data?.places?.length) {
+            const place = data.places[0];
+            selectMapLocation(place.name, place.coordinate.latitude, place.coordinate.longitude);
+          } else {
+            applyFilters();
+          }
+        });
+      } else {
+        applyFilters();
+      }
+    }
+
+    // Close suggestions on click outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#fSearchLocation') && !e.target.closest('#locationSuggestions')) {
+        document.getElementById('locationSuggestions').style.display = 'none';
+      }
+    });
+
+    // Listing type toggle (Comprar/Alquilar/Proyectos)
+    // Read from URL param ?type=alquiler or ?type=proyecto
+    const urlType = new URLSearchParams(window.location.search).get('type');
+    let currentListingType = urlType || 'venta';
+
+    // Pre-select the correct tab on load
+    if (urlType) {
+      document.querySelectorAll('.filter-chip-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === urlType);
+      });
+    }
+
+    function setListingType(type, btn) {
+      currentListingType = type;
+      document.querySelectorAll('.filter-chip-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // Update URL without reload
+      const url = new URL(window.location);
+      if (type === 'venta') url.searchParams.delete('type');
+      else url.searchParams.set('type', type);
+      history.replaceState(null, '', url);
+      applyFilters();
+    }
+
+    // Auto-highlight chip selects when they have a value
+    document.querySelectorAll('.filter-chip-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        sel.classList.toggle('has-value', sel.value !== '');
+      });
+    });
+
+    // Price range dropdown → hidden min/max inputs
+    function applyPriceRange() {
+      const val = document.getElementById('fPriceRange').value;
+      if (val) {
+        const [min, max] = val.split('-');
+        document.getElementById('fPriceMin').value = min;
+        document.getElementById('fPriceMax').value = max;
+      } else {
+        document.getElementById('fPriceMin').value = '';
+        document.getElementById('fPriceMax').value = '';
+      }
+      applyFilters();
+    }
+
+    // Filter listing cards to only show what's visible on the map
+    function filterListingsToMapView() {
+      if (!appleMap || !allLoadedListings.length) return;
+
+      const region = appleMap.region;
+      const centerLat = region.center.latitude;
+      const centerLng = region.center.longitude;
+      const spanLat = region.span.latitudeDelta / 2;
+      const spanLng = region.span.longitudeDelta / 2;
+
+      const north = centerLat + spanLat;
+      const south = centerLat - spanLat;
+      const east = centerLng + spanLng;
+      const west = centerLng - spanLng;
+
+      const visible = allLoadedListings.filter(l => {
+        const lat = parseFloat(l.lat);
+        const lng = parseFloat(l.lng);
+        if (!lat || !lng) return false;
+        return lat >= south && lat <= north && lng >= west && lng <= east;
+      });
+
+      const grid = document.getElementById('listingsGrid');
+      const countEl = document.getElementById('resultsCount');
+
+      if (!visible.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;padding:3rem 1rem;">
+          <svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--border);margin-bottom:0.75rem;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <h3 style="font-size:0.95rem;">Sin propiedades en esta area</h3>
+          <p style="font-size:0.8rem;">Mueve o aleja el mapa para ver mas propiedades.</p>
+        </div>`;
+        countEl.innerHTML = '<strong>0</strong> propiedades en esta area';
+      } else {
+        grid.innerHTML = visible.map(buildCard).join('');
+        // Re-add data-listing-id for map interaction
+        grid.querySelectorAll('.prop-card').forEach((card, i) => {
+          if (visible[i]) card.setAttribute('data-listing-id', visible[i].id);
+        });
+        countEl.innerHTML = `<strong>${visible.length}</strong> propiedad${visible.length !== 1 ? 'es' : ''} en esta area`;
+
+        // Re-bind hover interactions
+        grid.querySelectorAll('.prop-card[data-listing-id]').forEach(card => {
+          card.addEventListener('mouseenter', () => {
+            const id = card.getAttribute('data-listing-id');
+            const ann = mapAnnotations.find(a => a.data?.listingId === id);
+            if (ann && appleMap) {
+              appleMap.selectedAnnotation = ann;
+              card.classList.add('map-highlight');
+            }
+          });
+          card.addEventListener('mouseleave', () => {
+            if (appleMap) appleMap.selectedAnnotation = null;
+            card.classList.remove('map-highlight');
+          });
+        });
+      }
+
+      // Update map count pill
+      const pill = document.getElementById('mapCountPill');
+      if (pill) pill.textContent = `${visible.length} en el mapa`;
+    }
+
+    // After first load, center map on a random listing
+    function centerMapOnListings() {
+      if (!appleMap || !mapAnnotations.length) return;
+      // Pick a random pin to center on — different every visit
+      const randomPin = mapAnnotations[Math.floor(Math.random() * mapAnnotations.length)];
+      if (randomPin) {
+        appleMap.setCenterAnimated(randomPin.coordinate);
+        appleMap.setCameraDistanceAnimated(25000); // Neighborhood-level zoom
+      }
+    }
   </script>
 <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>

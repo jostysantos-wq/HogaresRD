@@ -22,7 +22,7 @@ const fs = require('fs');
 let Resend;
 try { Resend = require('resend').Resend; } catch (_) {}
 
-// Gmail API — loaded lazily to avoid startup cost if not configured
+// Gmail API — cached per-session for the primary delegated user
 let _gmailClient = null;
 
 // ── Department email addresses ──────────────────────────────────────────
@@ -44,15 +44,9 @@ const DEPT_EMAILS = {
   noreply: 'noreply@hogaresrd.com',
 };
 
-// Gmail API delegation: each department has its own Workspace account/alias.
-// The service account impersonates the department's address directly.
-const DEPT_ACCOUNTS = {
-  soporte: 'soporte@hogaresrd.com',
-  legal:   'legal@hogaresrd.com',
-  admin:   'admin@hogaresrd.com',
-  ventas:  'ventas@hogaresrd.com',
-  noreply: 'noreply@hogaresrd.com',
-};
+// Note: Department aliases (soporte@, legal@, admin@, ventas@, noreply@) must
+// be configured as "Send As" addresses in the primary Workspace user's Gmail
+// settings for the From header to be respected by the Gmail API.
 
 // All replies go to the main workspace inbox
 const REPLY_TO = 'Jostysantos@hogaresrd.com';
@@ -85,15 +79,21 @@ function detectDepartment(subject) {
 // ── Gmail API Transport ──────────────────────────────────────────────────
 
 /**
- * Initialize the Gmail API client using a service account with
- * domain-wide delegation. This allows sending as any @hogaresrd.com address.
+ * Get a Gmail API client that impersonates the PRIMARY Workspace user.
  *
- * Required env vars:
- *   GOOGLE_SERVICE_ACCOUNT_KEY — path to the service account JSON key file
- *                                 OR the JSON key contents directly
- *   GOOGLE_DELEGATED_USER     — the Workspace user to impersonate (e.g., soporte@hogaresrd.com)
+ * Important: We always impersonate the primary user (GOOGLE_DELEGATED_USER)
+ * regardless of which department alias we're sending from. The actual "From:"
+ * address is controlled by the raw RFC 2822 message, and Gmail respects it
+ * as long as the alias is configured as a "Send As" address on the primary user.
+ *
+ * Previously we tried impersonating each alias directly, but if they're
+ * aliases (not separate users), the JWT resolves to the primary user and
+ * Gmail overrides the From header.
  */
-async function getGmailClient(senderEmail) {
+async function getGmailClient() {
+  // Return cached client if available
+  if (_gmailClient) return _gmailClient;
+
   const keyEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!keyEnv) return null;
 
@@ -108,14 +108,19 @@ async function getGmailClient(senderEmail) {
       key = JSON.parse(fs.readFileSync(keyEnv, 'utf8'));
     }
 
+    // Always impersonate the primary Workspace user
+    const primaryUser = process.env.GOOGLE_DELEGATED_USER || 'soporte@hogaresrd.com';
+    console.log(`[mailer] Gmail API authenticating as primary user: ${primaryUser}`);
+
     const auth = new google.auth.JWT({
       email:   key.client_email,
       key:     key.private_key,
       scopes:  ['https://www.googleapis.com/auth/gmail.send'],
-      subject: senderEmail || process.env.GOOGLE_DELEGATED_USER || 'soporte@hogaresrd.com',
+      subject: primaryUser,
     });
 
-    return google.gmail({ version: 'v1', auth });
+    _gmailClient = google.gmail({ version: 'v1', auth });
+    return _gmailClient;
   } catch (err) {
     console.warn('[mailer] Gmail API init failed:', err.message);
     return null;
@@ -127,15 +132,16 @@ async function getGmailClient(senderEmail) {
  * Constructs a raw RFC 2822 message and sends via users.messages.send.
  */
 async function sendViaGmailAPI(opts) {
-  const dept = opts._dept || 'soporte';
-  const delegateEmail = DEPT_ACCOUNTS[dept] || DEPT_ACCOUNTS.soporte;
-  const gmail = await getGmailClient(delegateEmail);
+  const gmail = await getGmailClient();
   if (!gmail) return null;
 
   const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];
   const boundary = '----=_Part_' + Date.now().toString(36);
 
+  console.log(`[mailer] Gmail API sending from: ${opts.from} → to: ${toArray.join(', ')}`);
+
   // Build RFC 2822 message
+  // Gmail respects the From header when the address is a "Send As" alias
   const messageParts = [
     `From: ${opts.from}`,
     `To: ${toArray.join(', ')}`,

@@ -627,8 +627,7 @@
           <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
           <input type="text" id="heroSearchInput" class="search-input" placeholder="Ciudad, sector, zona... (ej. Piantini, Punta Cana)" autocomplete="off" style="background:transparent;" />
           <button class="search-btn" id="heroSearchBtn">Buscar</button>
-          <!-- Suggestions dropdown -->
-          <div id="heroSuggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:200;max-height:340px;overflow-y:auto;"></div>
+          <div id="heroSuggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:0 0 12px 12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:50;max-height:260px;overflow-y:auto;"></div>
         </div>
         <div class="search-hints" style="color:rgba(255,255,255,0.6);">
           <span>Popular:</span>
@@ -1359,13 +1358,13 @@
       if (label) label.textContent = next === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
       if (knob) knob.style.left = next === 'dark' ? '18px' : '2px';
     }
-    // Hero search tabs, autocomplete & button
+    // Hero search tabs & autocomplete
     (function() {
       const tabs   = document.querySelectorAll('.search-tab');
       const input  = document.getElementById('heroSearchInput');
       const btn    = document.getElementById('heroSearchBtn');
-      const drop   = document.getElementById('heroSuggestions');
-      if (!tabs.length || !input || !btn || !drop) return;
+      const sugBox = document.getElementById('heroSuggestions');
+      if (!tabs.length || !input || !btn) return;
 
       const placeholders = {
         comprar:   'Ciudad, sector, zona… (ej. Piantini, Punta Cana)',
@@ -1373,11 +1372,7 @@
         proyectos: 'Ciudad o proyecto… (ej. Santo Domingo, Santiago)',
       };
       let activeUrl = '/comprar';
-      let suggestionsCache = null;
-      let debounceTimer = null;
-      let highlightIdx = -1;
 
-      // ── Tab switching ──────────────────────────────────────
       tabs.forEach(tab => {
         tab.addEventListener('click', () => {
           tabs.forEach(t => t.classList.remove('active'));
@@ -1387,144 +1382,44 @@
         });
       });
 
-      // ── Navigate ───────────────────────────────────────────
-      function goSearch(q) {
+      function doSearch() {
+        const q = input.value.trim();
+        if (sugBox) sugBox.style.display = 'none';
         window.location.href = activeUrl + (q ? '?q=' + encodeURIComponent(q) : '');
       }
 
-      btn.addEventListener('click', () => goSearch(input.value.trim()));
+      btn.addEventListener('click', doSearch);
 
-      // ── Fetch suggestions (cached) ─────────────────────────
-      async function fetchSuggestions() {
-        if (suggestionsCache) return suggestionsCache;
-        try {
-          const res = await fetch('/api/search-suggestions');
-          const data = await res.json();
-          suggestionsCache = data.suggestions || [];
-          return suggestionsCache;
-        } catch { return []; }
-      }
-
-      // ── Default popular locations ──────────────────────────
-      const defaults = [
-        { name: 'Santo Domingo', type: 'city', province: 'Distrito Nacional' },
-        { name: 'Punta Cana', type: 'city', province: 'La Altagracia' },
-        { name: 'Santiago', type: 'city', province: 'Santiago' },
-        { name: 'Piantini', type: 'sector', city: 'Santo Domingo', province: 'Distrito Nacional' },
-        { name: 'Naco', type: 'sector', city: 'Santo Domingo', province: 'Distrito Nacional' },
-        { name: 'Bávaro', type: 'sector', city: 'Higüey', province: 'La Altagracia' },
-        { name: 'Puerto Plata', type: 'city', province: 'Puerto Plata' },
-        { name: 'La Romana', type: 'city', province: 'La Romana' },
-      ];
-
-      // ── Render dropdown ────────────────────────────────────
-      function renderSuggestions(items, query) {
-        if (!items.length) { drop.style.display = 'none'; return; }
-
-        const typeIcons = {
-          province: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>',
-          city:     '<path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/>',
-          sector:   '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>',
-        };
-
-        drop.innerHTML = items.map((s, i) => {
-          const icon = typeIcons[s.type] || typeIcons.city;
-          const sub = s.type === 'sector' ? (s.city || s.province || '') :
-                      s.type === 'city'   ? (s.province || '') : 'Provincia';
-          const countBadge = s.count ? `<span style="font-size:0.7rem;color:#8A94A6;margin-left:auto;white-space:nowrap;">${s.count} prop.</span>` : '';
-
-          return `<div class="hero-sug-item" data-idx="${i}"
-            style="display:flex;align-items:center;gap:0.7rem;padding:0.7rem 1rem;cursor:pointer;transition:background 0.15s;${i === 0 ? 'border-radius:14px 14px 0 0;' : ''}${i === items.length - 1 ? 'border-radius:0 0 14px 14px;' : ''}"
-            onmouseenter="this.style.background='#EBF3FF'"
-            onmouseleave="this.style.background='transparent'"
-            onclick="document.getElementById('heroSearchInput').value='${s.name.replace(/'/g, "\\'")}';document.getElementById('heroSuggestions').style.display='none';document.getElementById('heroSearchBtn').click();">
-            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#00A878;flex-shrink:0;opacity:0.8;">${icon}</svg>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:0.92rem;font-weight:600;color:#1A2535;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${highlight(s.name, query)}</div>
-              <div style="font-size:0.72rem;color:#8A94A6;">${sub}</div>
-            </div>
-            ${countBadge}
-          </div>`;
-        }).join('');
-
-        drop.style.display = 'block';
-        highlightIdx = -1;
-      }
-
-      function highlight(text, query) {
-        if (!query) return text;
-        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return text.replace(new RegExp(`(${esc})`, 'gi'), '<span style="color:#006AFF;font-weight:700;">$1</span>');
-      }
-
-      // ── Input events ───────────────────────────────────────
-      input.addEventListener('focus', async () => {
-        if (!input.value.trim()) {
-          renderSuggestions(defaults, '');
-        } else {
-          showFiltered(input.value.trim());
-        }
-      });
-
+      // Autocomplete
+      let _debounce = null;
       input.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
+        clearTimeout(_debounce);
         const q = input.value.trim();
-        if (!q) { renderSuggestions(defaults, ''); return; }
-        if (q.length < 2) { drop.style.display = 'none'; return; }
-        debounceTimer = setTimeout(() => showFiltered(q), 250);
+        if (q.length < 2) { if (sugBox) sugBox.style.display = 'none'; return; }
+        _debounce = setTimeout(async () => {
+          try {
+            const res = await fetch('/api/search-suggestions?q=' + encodeURIComponent(q));
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!sugBox || !data.length) { if (sugBox) sugBox.style.display = 'none'; return; }
+            sugBox.innerHTML = data.map(s =>
+              `<div style="padding:0.65rem 1.2rem;cursor:pointer;font-size:0.92rem;border-bottom:1px solid #f0f0f0;color:#1a2b40;" onmousedown="document.getElementById('heroSearchInput').value='${s.text.replace(/'/g,"\\'")}';document.getElementById('heroSearchBtn').click();">
+                <span style="color:#0038A8;font-weight:600;">${s.text}</span>
+                ${s.count ? '<span style="color:#8A94A6;font-size:0.8rem;margin-left:0.5rem;">(' + s.count + ')</span>' : ''}
+              </div>`
+            ).join('');
+            sugBox.style.display = 'block';
+          } catch {}
+        }, 250);
       });
 
-      async function showFiltered(q) {
-        const all = await fetchSuggestions();
-        const lower = q.toLowerCase();
-        const matched = all.filter(s =>
-          (s.name || '').toLowerCase().includes(lower) ||
-          (s.city || '').toLowerCase().includes(lower) ||
-          (s.province || '').toLowerCase().includes(lower)
-        ).slice(0, 8);
-
-        // Merge with defaults that match (in case API has no data yet)
-        if (matched.length < 4) {
-          const names = new Set(matched.map(m => m.name.toLowerCase()));
-          for (const d of defaults) {
-            if (names.has(d.name.toLowerCase())) continue;
-            if (d.name.toLowerCase().includes(lower)) {
-              matched.push(d);
-              if (matched.length >= 8) break;
-            }
-          }
-        }
-
-        renderSuggestions(matched, q);
-      }
-
-      // ── Keyboard navigation ────────────────────────────────
       input.addEventListener('keydown', e => {
-        const items = drop.querySelectorAll('.hero-sug-item');
-        if (e.key === 'ArrowDown' && items.length) {
-          e.preventDefault();
-          highlightIdx = Math.min(highlightIdx + 1, items.length - 1);
-          items.forEach((it, i) => it.style.background = i === highlightIdx ? '#EBF3FF' : 'transparent');
-          input.value = items[highlightIdx]?.textContent?.trim().split('\n')[0] || input.value;
-        } else if (e.key === 'ArrowUp' && items.length) {
-          e.preventDefault();
-          highlightIdx = Math.max(highlightIdx - 1, 0);
-          items.forEach((it, i) => it.style.background = i === highlightIdx ? '#EBF3FF' : 'transparent');
-          input.value = items[highlightIdx]?.textContent?.trim().split('\n')[0] || input.value;
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          drop.style.display = 'none';
-          goSearch(input.value.trim());
-        } else if (e.key === 'Escape') {
-          drop.style.display = 'none';
-        }
+        if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+        if (e.key === 'Escape' && sugBox) sugBox.style.display = 'none';
       });
 
-      // ── Close on outside click ─────────────────────────────
       document.addEventListener('click', e => {
-        if (!input.contains(e.target) && !drop.contains(e.target)) {
-          drop.style.display = 'none';
-        }
+        if (sugBox && !sugBox.contains(e.target) && e.target !== input) sugBox.style.display = 'none';
       });
     })();
 

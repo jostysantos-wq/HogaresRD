@@ -11,11 +11,10 @@ const { createTransport } = require('./mailer');
 const transporter = createTransport();
 
 function send(to, subject, html) {
-  if (!process.env.EMAIL_USER) return;
   transporter.sendMail({
-    from: `"HogaresRD Soporte" <${process.env.EMAIL_USER}>`,
     to, subject, html,
-  }).catch(() => {});
+    department: 'admin',
+  }).catch(err => console.error('[inmobiliaria] Email error:', err.message));
 }
 
 // ── Access level constants ────────────────────────────────────────────────

@@ -290,10 +290,12 @@ router.post('/', appCreateLimiter, (req, res) => {
   // Find listing to get affiliated broker
   const listing = store.getListingById(listing_id);
   const agencies = listing?.agencies || [];
+
+  // Auto-assign first agency broker (or leave unassigned)
+  // Cascade check: if cascade engine is enabled, defer broker assignment
   const cascadeEngine = require('./cascade-engine');
   const useCascade = cascadeEngine.isEnabled() && agencies.length > 0;
 
-  // Auto-assign first agency broker (or leave unassigned for cascade)
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
   if (!useCascade && agencies.length) {
     const agency = agencies[0];
@@ -409,22 +411,20 @@ router.post('/', appCreateLimiter, (req, res) => {
     </div>`;
   }
 
-  // ── Notifications: cascade vs legacy ──────────────────────────────
   if (useCascade) {
-    // Cascade handles all notifications — just respond and start cascade
+    // Cascade path: send response first, then start cascade in background
     res.status(201).json({ ok: true, id: app.id });
 
-    cascadeEngine.startCascade('application', app.id, listing_id, {
-      name:  app.client?.name  || '',
-      phone: app.client?.phone || '',
-      email: app.client?.email || '',
-    });
+    const buyerInfo = { name: app.client.name, phone: app.client.phone, email: app.client.email };
+    cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo);
   } else {
-    // Legacy: direct broker notification
+    // Standard path: notify broker directly
+    // Notify broker
     if (broker.email) {
       sendNotification(broker.email, `Nueva aplicación — ${app.listing_title}`, newAppHtml(''));
     }
 
+    // Notify inmobiliaria (if broker is affiliated)
     if (inmobiliaria_id) {
       const inmUser = store.getUserById(inmobiliaria_id);
       if (inmUser?.email) {

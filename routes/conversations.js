@@ -129,14 +129,11 @@ router.post('/', requireLogin, (req, res) => {
   // Start cascade if enabled and no refToken assignment
   const cascadeEngine = require('./cascade-engine');
   if (cascadeEngine.isEnabled() && !assignedBrokerId && !inmobiliariaId && propertyId) {
-    cascadeEngine.startCascade('conversation', conv.id, propertyId, {
-      name: user.name || '',
-    });
-    // Cascade handles notifications — skip legacy notification block
+    cascadeEngine.startCascade('conversation', conv.id, propertyId, { name: user.name || '' });
     return res.status(201).json({ id: conv.id, created: true });
   }
 
-  // Push notification to assigned broker or org team (legacy)
+  // Push notification to assigned broker or org team
   const { notify: pushNotify } = require('./push');
   if (assignedBrokerId) {
     pushNotify(assignedBrokerId, {

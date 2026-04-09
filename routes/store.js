@@ -274,35 +274,18 @@ async function _loadCache() {
     await exec(`
       ALTER TABLE submissions ADD COLUMN IF NOT EXISTS creator_user_id TEXT;
       CREATE TABLE IF NOT EXISTS lead_queue (
-        id TEXT PRIMARY KEY,
-        inquiry_type TEXT NOT NULL,
-        inquiry_id TEXT NOT NULL,
-        listing_id TEXT NOT NULL,
-        buyer_name TEXT,
-        buyer_phone TEXT,
-        buyer_email TEXT,
-        current_tier INTEGER DEFAULT 1,
-        status TEXT DEFAULT 'active',
-        claimed_by TEXT,
-        claimed_at TEXT,
-        tier1_notified_at TEXT,
-        tier2_notified_at TEXT,
-        tier3_notified_at TEXT,
-        auto_responded_at TEXT,
-        created_at TEXT NOT NULL,
+        id TEXT PRIMARY KEY, inquiry_type TEXT NOT NULL, inquiry_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL, buyer_name TEXT, buyer_phone TEXT, buyer_email TEXT,
+        current_tier INTEGER DEFAULT 1, status TEXT DEFAULT 'active',
+        claimed_by TEXT, claimed_at TEXT, tier1_notified_at TEXT, tier2_notified_at TEXT,
+        tier3_notified_at TEXT, auto_responded_at TEXT, created_at TEXT NOT NULL,
         _extra JSONB DEFAULT '{}'
       );
       CREATE TABLE IF NOT EXISTS contribution_scores (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        listing_id TEXT NOT NULL,
-        role TEXT DEFAULT 'affiliate',
-        score INTEGER DEFAULT 0,
-        score_breakdown JSONB DEFAULT '{}',
-        avg_response_ms INTEGER,
-        response_count INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL, listing_id TEXT NOT NULL,
+        role TEXT DEFAULT 'affiliate', score INTEGER DEFAULT 0,
+        score_breakdown JSONB DEFAULT '{}', avg_response_ms INTEGER,
+        response_count INTEGER DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
         _extra JSONB DEFAULT '{}'
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_cs_user_listing ON contribution_scores (user_id, listing_id);
@@ -346,7 +329,7 @@ async function _loadCache() {
     _leadQueue = lq;
     _contributionScores = cs;
     _cacheReady = true;
-    console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} queue, ${cs.length} scores`);
+    console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} lead queue, ${cs.length} scores`);
   } catch (err) {
     console.error('[store-pg] Cache load failed:', err.message);
   }
@@ -898,60 +881,96 @@ function appendMetaLead(lead) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// LEAD QUEUE (cascade state machine)
+// LEAD QUEUE (cascade system)
 // ══════════════════════════════════════════════════════════════════════════
 
-function getLeadQueue() { return _leadQueue; }
+function getLeadQueue() { return [..._leadQueue]; }
 
-function getLeadQueueById(id) { return _leadQueue.find(q => q.id === id) || null; }
+function getLeadQueueById(id) {
+  const row = _leadQueue.find(r => r.id === id);
+  if (!row) return null;
+  const obj = { ...row };
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) { if (!(k in obj)) obj[k] = v; }
+  return obj;
+}
 
 function getActiveLeadQueueForListing(listingId) {
-  return _leadQueue.filter(q => q.listing_id === listingId && q.status === 'active');
+  return _leadQueue.filter(r => r.listing_id === listingId && r.status === 'active');
 }
 
 function getActiveLeadQueue() {
-  return _leadQueue.filter(q => q.status === 'active');
+  return _leadQueue.filter(r => r.status === 'active');
 }
 
 function saveLeadQueueItem(item) {
-  const row = { ...item };
-  // Serialize _extra
-  if (row._extra && typeof row._extra !== 'string') row._extra = JSON.stringify(row._extra);
+  const row = {};
+  const extra = {};
+  const LQ_COLS = ['id','inquiry_type','inquiry_id','listing_id','buyer_name','buyer_phone','buyer_email',
+    'current_tier','status','claimed_by','claimed_at','tier1_notified_at','tier2_notified_at',
+    'tier3_notified_at','auto_responded_at','created_at'];
+  for (const [k, v] of Object.entries(item)) {
+    if (LQ_COLS.includes(k)) row[k] = v === undefined ? null : v;
+    else extra[k] = v;
+  }
+  row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('lead_queue', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveLeadQueueItem error:', err.message));
-  // Parse back for cache
-  if (typeof row._extra === 'string') try { row._extra = JSON.parse(row._extra); } catch {}
-  const idx = _leadQueue.findIndex(q => q.id === item.id);
-  if (idx >= 0) _leadQueue[idx] = row;
-  else _leadQueue.push(row);
+  const cacheRow = { ...row, _extra: extra };
+  const idx = _leadQueue.findIndex(r => r.id === item.id);
+  if (idx >= 0) _leadQueue[idx] = cacheRow;
+  else _leadQueue.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// CONTRIBUTION SCORES
+// CONTRIBUTION SCORES (cascade system)
 // ══════════════════════════════════════════════════════════════════════════
 
-function getContributionScores() { return _contributionScores; }
+function getContributionScores() { return [..._contributionScores]; }
 
 function getContributionScoresForListing(listingId) {
-  return _contributionScores.filter(c => c.listing_id === listingId);
+  return _contributionScores.filter(r => r.listing_id === listingId).map(r => {
+    const obj = { ...r };
+    const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
+    delete obj._extra;
+    for (const [k, v] of Object.entries(extra)) { if (!(k in obj)) obj[k] = v; }
+    return obj;
+  });
 }
 
 function getContributionScore(userId, listingId) {
-  return _contributionScores.find(c => c.user_id === userId && c.listing_id === listingId) || null;
+  const row = _contributionScores.find(r => r.user_id === userId && r.listing_id === listingId);
+  if (!row) return null;
+  const obj = { ...row };
+  const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
+  delete obj._extra;
+  for (const [k, v] of Object.entries(extra)) { if (!(k in obj)) obj[k] = v; }
+  return obj;
 }
 
-function saveContributionScore(score) {
-  const row = { ...score };
-  if (row.score_breakdown && typeof row.score_breakdown !== 'string') row.score_breakdown = JSON.stringify(row.score_breakdown);
-  if (row._extra && typeof row._extra !== 'string') row._extra = JSON.stringify(row._extra);
+function saveContributionScore(cs) {
+  const row = {};
+  const extra = {};
+  const CS_COLS = ['id','user_id','listing_id','role','score','score_breakdown','avg_response_ms',
+    'response_count','created_at','updated_at'];
+  for (const [k, v] of Object.entries(cs)) {
+    if (CS_COLS.includes(k)) {
+      if (k === 'score_breakdown') row[k] = typeof v === 'string' ? v : JSON.stringify(v ?? {});
+      else row[k] = v === undefined ? null : v;
+    } else {
+      extra[k] = v;
+    }
+  }
+  row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('contribution_scores', row, 'id');
   pool.query(sql, values).catch(err => console.error('[store-pg] saveContributionScore error:', err.message));
-  // Parse back for cache
-  if (typeof row.score_breakdown === 'string') try { row.score_breakdown = JSON.parse(row.score_breakdown); } catch {}
-  if (typeof row._extra === 'string') try { row._extra = JSON.parse(row._extra); } catch {}
-  const idx = _contributionScores.findIndex(c => c.id === score.id);
-  if (idx >= 0) _contributionScores[idx] = row;
-  else _contributionScores.push(row);
+  const cacheRow = { ...row };
+  if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
+  if (typeof cacheRow.score_breakdown === 'string') { try { cacheRow.score_breakdown = JSON.parse(cacheRow.score_breakdown); } catch { cacheRow.score_breakdown = {}; } }
+  const idx = _contributionScores.findIndex(r => r.id === cs.id);
+  if (idx >= 0) _contributionScores[idx] = cacheRow;
+  else _contributionScores.push(cacheRow);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -980,6 +999,8 @@ module.exports = {
   getConversations, getConversationById, getConversationsByClient,
   getConversationsForBroker, saveConversation,
   getMetaLeads, appendMetaLead,
+  getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
+  getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,
   getUsersByRole, getUsersByInmobiliaria, getSecretariesByInmobiliaria,
   revokeToken, isTokenRevoked,
   getAvailability, getAvailabilityByBroker, saveAvailabilitySlot, deleteAvailabilitySlot,
@@ -995,10 +1016,6 @@ module.exports = {
   getReports, getReportById, saveReport,
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
-  // Lead queue (cascade)
-  getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
-  // Contribution scores
-  getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,
   withTransaction,
   // PostgreSQL pool for direct queries if needed
   pool,
