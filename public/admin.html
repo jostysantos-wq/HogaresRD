@@ -645,6 +645,12 @@
         <span class="nav-tooltip">Reportes</span>
       </button>
 
+      <button class="nav-item" data-page="cascade" onclick="showPage('cascade', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span class="nav-item-label">Cascada</span>
+        <span class="nav-tooltip">Cascada</span>
+      </button>
+
       <button class="nav-item" data-page="errores" onclick="showPage('errores', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         <span class="nav-item-label">Registro de Errores</span>
@@ -1164,6 +1170,73 @@
         </div>
       </div>
 
+      <!-- ── CASCADE PAGE ──────────────────────────────────── -->
+      <div class="page-section" id="page-cascade">
+        <!-- Stats row -->
+        <div class="stats-row" style="grid-template-columns:repeat(5,1fr);">
+          <div class="stat-card" style="border-top:3px solid var(--accent);"><div class="num" id="cscTotal" style="color:var(--accent);">—</div><div class="lbl">Total Cascadas</div></div>
+          <div class="stat-card" style="border-top:3px solid var(--warning);"><div class="num" id="cscActive" style="color:var(--warning);">—</div><div class="lbl">Activas</div></div>
+          <div class="stat-card" style="border-top:3px solid var(--success);"><div class="num" id="cscClaimed" style="color:var(--success);">—</div><div class="lbl">Reclamadas</div></div>
+          <div class="stat-card" style="border-top:3px solid var(--danger);"><div class="num" id="cscAutoResp" style="color:var(--danger);">—</div><div class="lbl">Auto-asignadas</div></div>
+          <div class="stat-card" style="border-top:3px solid var(--purple);"><div class="num" id="cscAvgTime" style="color:var(--purple);">—</div><div class="lbl">Tiempo Promedio</div></div>
+        </div>
+
+        <!-- Tabs: Queue vs Agent Scores vs Per-Listing -->
+        <div class="leads-toolbar" style="margin-bottom:1rem;">
+          <button class="filter-btn active" onclick="setCascadeTab('queue',this)">Cola de Leads</button>
+          <button class="filter-btn" onclick="setCascadeTab('agents',this)">Puntuación Agentes</button>
+          <button class="filter-btn" onclick="setCascadeTab('listings',this)">Por Propiedad</button>
+        </div>
+
+        <!-- Queue tab -->
+        <div id="csc-tab-queue">
+          <div class="leads-table-wrap">
+            <table class="leads-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Propiedad</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Tier</th>
+                  <th>Estado</th>
+                  <th>Reclamado por</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody id="cscQueueBody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:#8A94A6;">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Agent scores tab -->
+        <div id="csc-tab-agents" style="display:none;">
+          <div class="leads-table-wrap">
+            <table class="leads-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Agente</th>
+                  <th>Agencia</th>
+                  <th>Puntos</th>
+                  <th>Creador</th>
+                  <th>Afiliado</th>
+                  <th>Claims</th>
+                  <th>Tiempo Resp.</th>
+                  <th>Propiedades</th>
+                </tr>
+              </thead>
+              <tbody id="cscAgentsBody"><tr><td colspan="8" style="text-align:center;padding:2rem;color:#8A94A6;">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Per-listing scores tab -->
+        <div id="csc-tab-listings" style="display:none;">
+          <div id="cscListingsBody" style="display:flex;flex-direction:column;gap:1rem;">
+            <div style="text-align:center;padding:2rem;color:#8A94A6;">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── ERRORES PAGE ──────────────────────────────────── -->
       <div class="page-section" id="page-errores">
         <div class="error-grid">
@@ -1421,6 +1494,7 @@
     blog:         'Blog / CMS',
     paginas:      'Editor de Páginas',
     reportes:     'Reportes',
+    cascade:      'Sistema de Cascada',
   };
 
   let currentPage = 'dashboard';
@@ -1448,6 +1522,7 @@
     else if (page === 'blog')        { loadBlogPosts(); }
     else if (page === 'paginas')     { loadPageContent(); }
     else if (page === 'reportes')    { loadReports(); }
+    else if (page === 'cascade')     { loadCascade(); }
   }
 
   function refreshCurrent() {
@@ -3272,6 +3347,126 @@
       setTimeout(() => { msg.style.display = 'none'; }, 3000);
       pageContentData[`${page}_${section}`] = data;
     } catch(e) { alert('Error guardando. Intenta de nuevo.'); }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // CASCADE DASHBOARD
+  // ══════════════════════════════════════════════════════════
+  let cascadeData = null;
+
+  function loadCascade() {
+    fetch('/admin/cascade')
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(data => { cascadeData = data; renderCascade(); })
+      .catch(() => {});
+  }
+
+  function renderCascade() {
+    if (!cascadeData) return;
+    const { stats, queue, agents, listings } = cascadeData;
+
+    // Stats
+    document.getElementById('cscTotal').textContent = stats.total;
+    document.getElementById('cscActive').textContent = stats.active;
+    document.getElementById('cscClaimed').textContent = stats.claimed;
+    document.getElementById('cscAutoResp').textContent = stats.auto_responded;
+    document.getElementById('cscAvgTime').textContent = stats.avg_claim_time_ms
+      ? (stats.avg_claim_time_ms / 60000).toFixed(1) + ' min' : '—';
+
+    // Queue table
+    renderCascadeQueue(queue);
+    renderCascadeAgents(agents);
+    renderCascadeListings(listings);
+  }
+
+  function renderCascadeQueue(queue) {
+    const tbody = document.getElementById('cscQueueBody');
+    if (!queue.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#8A94A6;">No hay cascadas registradas.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = queue.map(q => {
+      const tierColors = { 1: 'var(--accent)', 2: 'var(--warning)', 3: 'var(--purple)' };
+      const statusMap = {
+        active: '<span class="status-badge" style="background:#fff3cd;color:#856404;">Activa</span>',
+        claimed: '<span class="status-badge" style="background:#d1f5e3;color:#0a7c4f;">Reclamada</span>',
+        auto_responded: '<span class="status-badge" style="background:#ffe0e3;color:#CF142B;">Auto-asignada</span>',
+      };
+      const typeLabels = { application: 'Aplicación', lead: 'Lead', conversation: 'Mensaje' };
+      const date = q.created_at ? new Date(q.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+      return `<tr>
+        <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${q.listing_title}</td>
+        <td><span style="font-size:0.75rem;padding:0.2rem 0.5rem;border-radius:50px;background:#f0f4f9;color:#4d6a8a;font-weight:600;">${typeLabels[q.inquiry_type] || q.inquiry_type}</span></td>
+        <td>${q.buyer_name}</td>
+        <td><span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${tierColors[q.current_tier] || '#ccc'};color:#fff;font-size:0.75rem;font-weight:800;text-align:center;line-height:24px;">${q.current_tier}</span></td>
+        <td>${statusMap[q.status] || q.status}</td>
+        <td>${q.claimer_name || '<span style="color:#8A94A6;">—</span>'}</td>
+        <td style="font-size:0.8rem;color:#4d6a8a;">${date}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderCascadeAgents(agents) {
+    const tbody = document.getElementById('cscAgentsBody');
+    if (!agents.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:#8A94A6;">No hay agentes con puntuación.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = agents.map((a, i) => {
+      const medal = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
+      const respTime = a.avg_response_ms ? (a.avg_response_ms / 60000).toFixed(1) + ' min' : '—';
+      const scoreColor = a.total_score >= 50 ? 'var(--success)' : a.total_score >= 10 ? 'var(--accent)' : '#8A94A6';
+      return `<tr>
+        <td><strong>${a.name}</strong>${medal}<br><span style="font-size:0.72rem;color:#8A94A6;">${a.email}</span></td>
+        <td>${a.agency || '<span style="color:#8A94A6;">—</span>'}</td>
+        <td><span style="font-size:1.3rem;font-weight:900;color:${scoreColor};">${a.total_score}</span></td>
+        <td style="text-align:center;">${a.creator_count}</td>
+        <td style="text-align:center;">${a.affiliate_count}</td>
+        <td style="text-align:center;">${a.claims}</td>
+        <td>${respTime}</td>
+        <td style="text-align:center;">${a.listings_count}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderCascadeListings(listings) {
+    const wrap = document.getElementById('cscListingsBody');
+    if (!listings.length) {
+      wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#8A94A6;">No hay propiedades con puntuaciones.</div>';
+      return;
+    }
+    wrap.innerHTML = listings.map(l => {
+      const agentRows = l.agents.sort((a, b) => b.score - a.score).map(a => {
+        const roleBadge = a.role === 'creator'
+          ? '<span style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:50px;background:#d1f5e3;color:#0a7c4f;font-weight:700;">CREADOR</span>'
+          : '<span style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:50px;background:#f0f4f9;color:#4d6a8a;font-weight:600;">AFILIADO</span>';
+        const breakdown = Object.entries(a.breakdown || {}).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
+        const respTime = a.avg_response_ms ? (a.avg_response_ms / 60000).toFixed(1) + ' min' : '—';
+        return `<tr>
+          <td>${a.name} ${roleBadge}</td>
+          <td style="font-weight:800;color:var(--accent);">${a.score}</td>
+          <td style="font-size:0.75rem;color:#8A94A6;">${breakdown || '—'}</td>
+          <td>${respTime}</td>
+          <td style="text-align:center;">${a.response_count}</td>
+        </tr>`;
+      }).join('');
+
+      return `<div class="leads-table-wrap" style="overflow:hidden;">
+        <div style="padding:0.8rem 1rem;background:#f0f4f9;font-weight:700;font-size:0.9rem;border-bottom:1px solid #d0dcea;">${l.title} <span style="font-size:0.75rem;color:#8A94A6;font-weight:400;margin-left:0.5rem;">${l.agents.length} agente(s)</span></div>
+        <table class="leads-table" style="width:100%;">
+          <thead><tr><th>Agente</th><th>Puntos</th><th>Desglose</th><th>Resp. Prom.</th><th>Respuestas</th></tr></thead>
+          <tbody>${agentRows}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+  }
+
+  function setCascadeTab(tab, btn) {
+    document.querySelectorAll('#page-cascade .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('csc-tab-queue').style.display = tab === 'queue' ? '' : 'none';
+    document.getElementById('csc-tab-agents').style.display = tab === 'agents' ? '' : 'none';
+    document.getElementById('csc-tab-listings').style.display = tab === 'listings' ? '' : 'none';
   }
 </script>
 <script src="/js/pixel.js" defer></script>

@@ -866,6 +866,122 @@ app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
 
 // ── Newsletter admin ────────────────────────────────────────────────────────
 // ── Admin: Reports ─────────────────────────────────────────────
+// ── Admin Cascade Dashboard ─────────────────────────────────────────────
+app.get('/admin/cascade', adminSessionAuth, (req, res) => {
+  const queue = store.getLeadQueue();
+  const scores = store.getContributionScores();
+  const users = store.getUsers();
+  const listings = store.getAllSubmissions();
+
+  // Build user lookup
+  const userMap = {};
+  for (const u of users) userMap[u.id] = u;
+
+  // Enrich queue items
+  const enrichedQueue = queue.map(q => {
+    const listing = listings.find(l => l.id === q.listing_id);
+    const claimer = q.claimed_by ? userMap[q.claimed_by] : null;
+    return {
+      id: q.id,
+      inquiry_type: q.inquiry_type,
+      listing_id: q.listing_id,
+      listing_title: listing?.title || '—',
+      buyer_name: q.buyer_name || '—',
+      buyer_email: q.buyer_email || '',
+      current_tier: q.current_tier,
+      status: q.status,
+      claimed_by: q.claimed_by,
+      claimer_name: claimer?.name || '',
+      claimed_at: q.claimed_at,
+      auto_responded_at: q.auto_responded_at,
+      created_at: q.created_at,
+    };
+  }).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+  // Aggregate agent scores across all listings
+  const agentScores = {};
+  for (const cs of scores) {
+    if (!agentScores[cs.user_id]) {
+      const user = userMap[cs.user_id];
+      agentScores[cs.user_id] = {
+        user_id: cs.user_id,
+        name: user?.name || '—',
+        email: user?.email || '',
+        role: user?.role || '',
+        agency: user?.agency?.name || user?.inmobiliaria_name || '',
+        total_score: 0,
+        listings_count: 0,
+        creator_count: 0,
+        affiliate_count: 0,
+        avg_response_ms: null,
+        total_responses: 0,
+        claims: 0,
+      };
+    }
+    const a = agentScores[cs.user_id];
+    a.total_score += cs.score || 0;
+    a.listings_count++;
+    if (cs.role === 'creator') a.creator_count++;
+    else a.affiliate_count++;
+    if (cs.response_count) {
+      a.total_responses += cs.response_count;
+      const prevTotal = a.avg_response_ms ? a.avg_response_ms * (a.total_responses - cs.response_count) : 0;
+      a.avg_response_ms = Math.round((prevTotal + (cs.avg_response_ms || 0) * cs.response_count) / a.total_responses);
+    }
+  }
+
+  // Count claims per agent
+  for (const q of queue) {
+    if (q.status === 'claimed' && q.claimed_by && agentScores[q.claimed_by]) {
+      agentScores[q.claimed_by].claims++;
+    }
+  }
+
+  const agents = Object.values(agentScores).sort((a, b) => b.total_score - a.total_score);
+
+  // Summary stats
+  const stats = {
+    total: queue.length,
+    active: queue.filter(q => q.status === 'active').length,
+    claimed: queue.filter(q => q.status === 'claimed').length,
+    auto_responded: queue.filter(q => q.status === 'auto_responded').length,
+    agents_count: agents.length,
+    avg_claim_time_ms: null,
+  };
+
+  const claimedItems = queue.filter(q => q.status === 'claimed' && q.claimed_at);
+  if (claimedItems.length) {
+    const totalMs = claimedItems.reduce((sum, q) => {
+      const tierField = `tier${q.current_tier}_notified_at`;
+      const notified = q[tierField];
+      if (!notified) return sum;
+      return sum + (new Date(q.claimed_at).getTime() - new Date(notified).getTime());
+    }, 0);
+    stats.avg_claim_time_ms = Math.round(totalMs / claimedItems.length);
+  }
+
+  // Per-listing score breakdown
+  const listingScores = {};
+  for (const cs of scores) {
+    if (!listingScores[cs.listing_id]) {
+      const listing = listings.find(l => l.id === cs.listing_id);
+      listingScores[cs.listing_id] = { listing_id: cs.listing_id, title: listing?.title || '—', agents: [] };
+    }
+    const user = userMap[cs.user_id];
+    listingScores[cs.listing_id].agents.push({
+      user_id: cs.user_id,
+      name: user?.name || '—',
+      role: cs.role,
+      score: cs.score,
+      breakdown: cs.score_breakdown || {},
+      avg_response_ms: cs.avg_response_ms,
+      response_count: cs.response_count || 0,
+    });
+  }
+
+  res.json({ stats, queue: enrichedQueue, agents, listings: Object.values(listingScores) });
+});
+
 // Lists all user-submitted reports (listings / agents / inmobiliarias)
 // with duplicate-target grouping so admins can see repeat offenders.
 app.get('/admin/reports', adminSessionAuth, (req, res) => {
