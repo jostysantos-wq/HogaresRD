@@ -22,8 +22,10 @@ struct AuthView: View {
     }
 
     @State private var mode: Mode
+    private let initialMode: Mode
 
     init(initialMode: Mode = .login) {
+        self.initialMode = initialMode
         _mode = State(initialValue: initialMode)
     }
 
@@ -123,6 +125,7 @@ struct AuthView: View {
                 }
             }
             .ignoresSafeArea(edges: .top)
+            .onAppear { mode = initialMode }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -634,7 +637,7 @@ struct RegisterForm: View {
             RoleBadge(icon: "person.fill", title: "Cuenta de Cliente", color: Color.rdBlue)
 
             Text("Gratis. Recibe recomendaciones personalizadas y guarda tus favoritas.")
-                .font(.caption)
+                .font(.caption.bold())
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -676,15 +679,15 @@ struct RegisterForm: View {
 
             // Terms
             Toggle(isOn: $termsAccepted) {
-                Text("He leído y acepto los ")
-                    .font(.caption)
+                Text("He leido y acepto los ")
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
-                + Text("Términos y Condiciones de Uso")
-                    .font(.caption)
+                + Text("Terminos y Condiciones de Uso")
+                    .font(.caption.bold())
                     .foregroundStyle(Color.rdBlue)
                     .underline()
                 + Text(" de HogaresRD.")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .tint(Color.rdBlue)
@@ -692,8 +695,8 @@ struct RegisterForm: View {
 
             // Marketing
             Toggle(isOn: $marketing) {
-                Text("Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electrónico. Puedo cancelar en cualquier momento.")
-                    .font(.caption)
+                Text("Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electronico. Puedo cancelar en cualquier momento.")
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .tint(Color.rdBlue)
@@ -792,7 +795,7 @@ struct BrokerRegisterForm: View {
             RoleBadge(icon: "person.text.rectangle.fill", title: "Agente Broker", color: Color(red: 0.16, green: 0.65, blue: 0.45))
 
             Text("Crea tu cuenta individual de agente. Puedes operar de forma independiente o afiliarte a una inmobiliaria desde tu dashboard.")
-                .font(.caption)
+                .font(.caption.bold())
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -863,8 +866,8 @@ struct BrokerRegisterForm: View {
                     .foregroundStyle(Color(red: 0.16, green: 0.65, blue: 0.45))
                     .font(.callout)
                     .padding(.top, 1)
-                Text("Como agente broker puedes gestionar tus propias aplicaciones. Si estás afiliado a una inmobiliaria, ellos tendrán visibilidad total sobre tus aplicaciones y gestionarán los planes de pago.")
-                    .font(.caption)
+                Text("Como agente broker puedes gestionar tus propias aplicaciones. Si estas afiliado a una inmobiliaria, ellos tendran visibilidad total sobre tus aplicaciones y gestionaran los planes de pago.")
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .padding()
@@ -873,15 +876,15 @@ struct BrokerRegisterForm: View {
 
             // Terms
             Toggle(isOn: $termsAccepted) {
-                Text("He leído y acepto los ")
-                    .font(.caption)
+                Text("He leido y acepto los ")
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
-                + Text("Términos y Condiciones de Agente")
-                    .font(.caption)
+                + Text("Terminos y Condiciones de Agente")
+                    .font(.caption.bold())
                     .foregroundStyle(Color.rdBlue)
                     .underline()
                 + Text(" de HogaresRD.")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .tint(Color.rdBlue)
@@ -950,7 +953,7 @@ struct InmobiliariaRegisterForm: View {
             RoleBadge(icon: "building.2.fill", title: "Inmobiliaria", color: purpleColor)
 
             Text("Registra tu empresa inmobiliaria para supervisar a tu equipo de agentes brokers y gestionar todas las aplicaciones desde un solo lugar.")
-                .font(.caption)
+                .font(.caption.bold())
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1001,15 +1004,15 @@ struct InmobiliariaRegisterForm: View {
 
             // Terms
             Toggle(isOn: $termsAccepted) {
-                Text("He leído y acepto los ")
-                    .font(.caption)
+                Text("He leido y acepto los ")
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
-                + Text("Términos y Condiciones")
-                    .font(.caption)
+                + Text("Terminos y Condiciones")
+                    .font(.caption.bold())
                     .foregroundStyle(Color.rdBlue)
                     .underline()
                 + Text(" de HogaresRD para empresas inmobiliarias.")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .tint(Color.rdBlue)
@@ -1087,7 +1090,7 @@ struct ConstructoraRegisterForm: View {
             RoleBadge(icon: "hammer.fill", title: "Constructora", color: orangeColor)
 
             Text("Registra tu empresa constructora para publicar proyectos, gestionar inventario de unidades y vincular agentes de venta.")
-                .font(.caption)
+                .font(.caption.bold())
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1112,14 +1115,14 @@ struct ConstructoraRegisterForm: View {
 
             Toggle(isOn: $termsAccepted) {
                 Text("He leido y acepto los ")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
                 + Text("Terminos y Condiciones")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(Color.rdBlue)
                     .underline()
                 + Text(" de HogaresRD para constructoras.")
-                    .font(.caption)
+                    .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
             .tint(Color.rdBlue)
@@ -1272,7 +1275,7 @@ struct FloatingField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(Color(.label))
             Group {
                 if isSecure {
