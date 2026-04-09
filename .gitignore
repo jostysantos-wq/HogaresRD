@@ -7,3 +7,4 @@ public/uploads/
 server.log
 ios/build/
 *.p8
+google-service-account.json
