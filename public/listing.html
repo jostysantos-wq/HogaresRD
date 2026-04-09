@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Propiedad — HogaresRD</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin async></script>
   <link rel="stylesheet" href="/css/core.css">
   <style>
     :root {
@@ -896,7 +896,6 @@
 <footer>&copy; 2026 HogaresRD &mdash; Bienes raíces en la República Dominicana</footer>
 
 <script src="/js/auth.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   // ── Theme ──────────────────────────────────────────────────
   const html = document.documentElement;
@@ -1651,15 +1650,41 @@
       }
     }
 
-    // Map
+    // Map (Apple MapKit JS)
     document.getElementById('addressLine').textContent = l.address || '';
     if (l.lat && l.lng) {
       const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
-      window._listingMap = L.map('listingMap', { zoomControl: true }).setView([lat, lng], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19
-      }).addTo(window._listingMap);
-      L.marker([lat, lng]).addTo(window._listingMap).bindPopup(`<strong>${esc(l.title)}</strong><br>${esc(l.address||'')}`, { maxWidth: 220 }).openPopup();
+      async function initListingMap() {
+        if (typeof mapkit === 'undefined') return;
+        try {
+          const res = await fetch('/api/mapkit-token');
+          const { token } = await res.json();
+          if (!token) return;
+          mapkit.init({ authorizationCallback: done => done(token) });
+          window._listingMap = new mapkit.Map('listingMap', {
+            center: new mapkit.Coordinate(lat, lng),
+            showsCompass: mapkit.FeatureVisibility.Hidden,
+            showsZoomControl: true,
+            showsMapTypeControl: false,
+            colorScheme: document.documentElement.getAttribute('data-theme') === 'dark'
+              ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light,
+          });
+          window._listingMap.setCameraDistanceAnimated(3000);
+          const pin = new mapkit.MarkerAnnotation(
+            new mapkit.Coordinate(lat, lng),
+            { color: '#006AFF', title: esc(l.title), subtitle: esc(l.address || l.city || '') }
+          );
+          window._listingMap.addAnnotation(pin);
+          // Theme sync
+          new MutationObserver(() => {
+            if (window._listingMap) window._listingMap.colorScheme =
+              document.documentElement.getAttribute('data-theme') === 'dark'
+                ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light;
+          }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        } catch (err) { console.warn('[listing] MapKit init failed:', err.message); }
+      }
+      if (typeof mapkit !== 'undefined') initListingMap();
+      else document.querySelector('script[src*="mapkit"]')?.addEventListener('load', initListingMap);
     }
 
     // Sidebar price
@@ -1752,7 +1777,7 @@ const tabsHtml = shuffled.map((a, i) =>
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('listingPage').style.display  = '';
       // Map was initialized while hidden — force it to recalculate tile layout
-      if (window._listingMap) window._listingMap.invalidateSize();
+      // MapKit auto-handles resize
 
       // Meta Pixel — ViewContent
       if (window.MetaPixel) {

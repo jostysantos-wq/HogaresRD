@@ -555,7 +555,7 @@
     }
 
     /* ── Map ─────────────────────────────────────────────────── */
-    #locationMap { height: 280px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
+    #locationMap { height: 300px; border-radius: 12px; border: 1.5px solid var(--border); margin-top: 0.75rem; z-index: 0; overflow: hidden; }
     .map-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .map-hint svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
 
@@ -699,8 +699,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin async></script>
   <script src="/js/auth.js"></script>
 </head>
 <body>
@@ -1482,9 +1481,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       // Initialize map when step 3 becomes visible
-      if (n === 3 && map) {
-        setTimeout(() => map.invalidateSize(), 100);
-      }
+      // MapKit auto-handles resize, no invalidateSize needed
     }
 
     function goToStep(n) {
@@ -1623,25 +1620,83 @@
     document.getElementById('type').addEventListener('change', applyFieldVisibility);
     document.getElementById('condition').addEventListener('change', applyFieldVisibility);
 
-    // ── Leaflet map ────────────────────────────────────────────
-    const DR_CENTER = [18.7357, -70.1627];
-    const map = L.map('locationMap').setView(DR_CENTER, 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 18,
-    }).addTo(map);
+    // ── Apple MapKit JS map ───────────────────────────────────────
+    const DR_CENTER = { lat: 18.7357, lng: -70.1627 };
+    let map = null;
+    let marker = null;
+    let mapSearchService = null;
 
-    let marker = L.marker(DR_CENTER, { draggable: true }).addTo(map);
-    marker.on('dragend', () => {
-      const pos = marker.getLatLng();
-      document.getElementById('lat').value = pos.lat.toFixed(6);
-      document.getElementById('lng').value = pos.lng.toFixed(6);
-    });
-    map.on('click', e => {
-      marker.setLatLng(e.latlng);
-      document.getElementById('lat').value = e.latlng.lat.toFixed(6);
-      document.getElementById('lng').value = e.latlng.lng.toFixed(6);
-    });
+    async function initMapKit() {
+      if (typeof mapkit === 'undefined') {
+        console.warn('[submit] MapKit JS not loaded');
+        return;
+      }
+      try {
+        const res = await fetch('/api/mapkit-token');
+        const { token } = await res.json();
+        if (!token) { console.warn('[submit] No MapKit token'); return; }
+
+        mapkit.init({ authorizationCallback: done => done(token) });
+
+        map = new mapkit.Map('locationMap', {
+          center: new mapkit.Coordinate(DR_CENTER.lat, DR_CENTER.lng),
+          showsCompass: mapkit.FeatureVisibility.Hidden,
+          showsZoomControl: true,
+          showsMapTypeControl: false,
+          colorScheme: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light,
+        });
+        map.setCameraDistanceAnimated(500000); // country-level zoom
+
+        // Place initial marker
+        marker = new mapkit.MarkerAnnotation(
+          new mapkit.Coordinate(DR_CENTER.lat, DR_CENTER.lng),
+          { color: '#006AFF', glyphText: '📍', title: 'Ubicación', draggable: true }
+        );
+        map.addAnnotation(marker);
+
+        // Drag end → update lat/lng
+        marker.addEventListener('drag-end', () => {
+          document.getElementById('lat').value = marker.coordinate.latitude.toFixed(6);
+          document.getElementById('lng').value = marker.coordinate.longitude.toFixed(6);
+          document.getElementById('mapError').style.display = 'none';
+        });
+
+        // Tap map → move marker
+        map.addEventListener('single-tap', (event) => {
+          const coord = map.convertPointOnPageToCoordinate(event.pointOnPage);
+          if (!coord) return;
+          marker.coordinate = coord;
+          document.getElementById('lat').value = coord.latitude.toFixed(6);
+          document.getElementById('lng').value = coord.longitude.toFixed(6);
+          document.getElementById('mapError').style.display = 'none';
+        });
+
+        // Init search service for geocoding
+        mapSearchService = new mapkit.Search({
+          region: new mapkit.CoordinateRegion(
+            new mapkit.Coordinate(19.0, -70.0),
+            new mapkit.CoordinateSpan(3.5, 4.0)
+          ),
+          language: 'es',
+          includeAddresses: true,
+        });
+
+        // Theme sync
+        new MutationObserver(() => {
+          if (map) map.colorScheme = document.documentElement.getAttribute('data-theme') === 'dark'
+            ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light;
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        console.log('[submit] Apple MapKit initialized');
+      } catch (err) {
+        console.error('[submit] MapKit init failed:', err.message);
+      }
+    }
+
+    // Initialize when MapKit script loads
+    if (typeof mapkit !== 'undefined') initMapKit();
+    else document.querySelector('script[src*="mapkit"]')?.addEventListener('load', initMapKit);
 
     function geocodeLocation() {
       const address  = document.getElementById('address').value.trim();
@@ -1650,30 +1705,50 @@
       const province = document.getElementById('province').value;
       if (!city && !province && !address) return;
 
-      let url;
-      if (address) {
-        const street = [address, sector].filter(Boolean).join(', ');
-        const params = new URLSearchParams({ street, city: city || province, state: province, country: 'Dominican Republic', format: 'json', limit: '1', addressdetails: '1' });
-        url = `https://nominatim.openstreetmap.org/search?${params}`;
-      } else {
-        const query = [sector, city, province, 'República Dominicana'].filter(Boolean).join(', ');
-        url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=do`;
-      }
+      const query = [address, sector, city, province, 'República Dominicana'].filter(Boolean).join(', ');
+      const cameraDist = address ? 1500 : (city ? 8000 : 80000);
 
-      const zoomLevel = address ? 17 : (city ? 14 : 11);
-      fetch(url)
-        .then(r => { if (!r.ok) throw new Error('geocode ' + r.status); return r.json(); })
+      if (mapSearchService) {
+        mapSearchService.search(query, (err, data) => {
+          if (err || !data?.places?.length) {
+            // Fallback to Nominatim
+            geocodeFallback(query, cameraDist);
+            return;
+          }
+          const place = data.places[0];
+          const coord = place.coordinate;
+          // Verify it's in DR bounds
+          if (coord.latitude < 17.5 || coord.latitude > 20 || coord.longitude < -72 || coord.longitude > -68) {
+            geocodeFallback(query, cameraDist);
+            return;
+          }
+          if (map) map.setCenterAnimated(coord);
+          if (map) map.setCameraDistanceAnimated(cameraDist);
+          if (marker) marker.coordinate = coord;
+          document.getElementById('lat').value = coord.latitude.toFixed(6);
+          document.getElementById('lng').value = coord.longitude.toFixed(6);
+          document.getElementById('mapError').style.display = 'none';
+        });
+      } else {
+        geocodeFallback(query, cameraDist);
+      }
+    }
+
+    function geocodeFallback(query, cameraDist) {
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=do`)
+        .then(r => r.json())
         .then(results => {
-          if (!Array.isArray(results) || results.length === 0) return;
-          const { lat, lon } = results[0];
-          const latlng = [parseFloat(lat), parseFloat(lon)];
-          map.setView(latlng, zoomLevel);
-          marker.setLatLng(latlng);
-          document.getElementById('lat').value = parseFloat(lat).toFixed(6);
-          document.getElementById('lng').value = parseFloat(lon).toFixed(6);
+          if (!Array.isArray(results) || !results.length) return;
+          const lat = parseFloat(results[0].lat);
+          const lng = parseFloat(results[0].lon);
+          const coord = new mapkit.Coordinate(lat, lng);
+          if (map) { map.setCenterAnimated(coord); map.setCameraDistanceAnimated(cameraDist); }
+          if (marker) marker.coordinate = coord;
+          document.getElementById('lat').value = lat.toFixed(6);
+          document.getElementById('lng').value = lng.toFixed(6);
           document.getElementById('mapError').style.display = 'none';
         })
-        .catch(err => console.warn('[submit] geocode failed:', err.message));
+        .catch(err => console.warn('[submit] geocode fallback failed:', err.message));
     }
 
     let geocodeTimer;
@@ -2169,8 +2244,12 @@
           document.getElementById('agenciesEmpty').style.display = 'block';
           agencyCount = 0;
           // Reset map
-          map.setView(DR_CENTER, 7);
-          marker.setLatLng(DR_CENTER);
+          if (map) {
+            const resetCoord = new mapkit.Coordinate(DR_CENTER.lat, DR_CENTER.lng);
+            map.setCenterAnimated(resetCoord);
+            map.setCameraDistanceAnimated(500000);
+            if (marker) marker.coordinate = resetCoord;
+          }
           document.getElementById('lat').value = '';
           document.getElementById('lng').value = '';
           document.getElementById('mapError').style.display = 'none';
