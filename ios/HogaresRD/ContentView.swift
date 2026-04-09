@@ -20,6 +20,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var resendingVerification = false
     @State private var verificationSent = false
+    @State private var verificationError = false
     @State private var dismissedEmailBanner = false
     @State private var dismissedTrialBanner = false
 
@@ -44,16 +45,28 @@ struct ContentView: View {
                         Text("Enviado ✓")
                             .font(.caption2.bold())
                             .foregroundStyle(.white.opacity(0.8))
+                    } else if verificationError {
+                        Text("Error ✗")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.white.opacity(0.8))
                     } else {
                         Button {
                             Task {
                                 resendingVerification = true
-                                try? await api.resendVerificationEmail()
-                                resendingVerification = false
-                                verificationSent = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                    verificationSent = false
+                                verificationError = false
+                                do {
+                                    try await api.resendVerificationEmail()
+                                    verificationSent = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                        verificationSent = false
+                                    }
+                                } catch {
+                                    verificationError = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        verificationError = false
+                                    }
                                 }
+                                resendingVerification = false
                             }
                         } label: {
                             if resendingVerification {

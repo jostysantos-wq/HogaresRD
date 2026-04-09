@@ -1293,7 +1293,11 @@ router.post('/resend-verification', resendLimiter, userAuth, async (req, res, ne
 
     const rawToken = attachVerifyToken(user);
     store.saveUser(user);
-    sendVerificationEmail(user, rawToken);
+    const emailResult = await sendVerificationEmail(user, rawToken);
+    if (!emailResult) {
+      console.warn('[auth] Verification email could not be sent — no transport available');
+      return res.status(503).json({ error: 'No se pudo enviar el correo. Intenta de nuevo más tarde.' });
+    }
     logSec('verification_resent', req, { userId: user.id });
     res.json({ success: true, message: 'Correo de verificación enviado. Revisa tu bandeja de entrada.' });
   } catch (err) { next(err); }
