@@ -12,7 +12,6 @@ struct TasksView: View {
     @State private var showCreate = false
 
     private var filteredTasks: [TaskItem] {
-        let now = ISO8601DateFormatter().string(from: Date())
         switch filter {
         case 1:  return tasks.filter { $0.status == "pendiente" }
         case 2:  return tasks.filter { $0.status == "en_progreso" }

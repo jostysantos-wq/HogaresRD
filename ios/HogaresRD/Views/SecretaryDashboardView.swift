@@ -6,8 +6,7 @@ struct SecretaryDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    // Level 1 secretaries: limited tab set
-    private let tabs = ["Aplicaciones", "Archivo", "Mis Propiedades"]
+    private let tabs = ["Inicio", "Aplicaciones", "Archivo", "Propiedades"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,7 +19,7 @@ struct SecretaryDashboardView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 if i == 0 {
-                                    Image(systemName: "doc.text.fill").font(.system(size: 10))
+                                    Image(systemName: "house.fill").font(.system(size: 10))
                                 }
                                 Text(title)
                             }
@@ -40,13 +39,20 @@ struct SecretaryDashboardView: View {
 
             Divider()
 
-            // Content — maps to the broker dashboard tabs, skipping Ventas(2) and Contabilidad(3)
             TabView(selection: $selectedTab) {
-                DashboardApplicationsTab().tag(0)    // Aplicaciones
-                DashboardAnalyticsTab().tag(1)        // Analíticas
-                DashboardArchiveTab().tag(2)          // Archivo
-                DashboardAuditTab().tag(3)            // Auditoría
-                DashboardListingAnalyticsTab().tag(4)  // Mis Propiedades
+                DashboardHomeView(
+                    showSalesMetrics: false,
+                    onTapTab: { tab in
+                        // Map: 0=Applications→1, 4=Archive→2
+                        if tab == 0 { selectedTab = 1 }
+                        else if tab == 4 { selectedTab = 2 }
+                    },
+                    onTapMessages: {},
+                    onTapTours: {}
+                ).tag(0)
+                DashboardApplicationsTab().tag(1)
+                DashboardArchiveTab().tag(2)
+                DashboardListingAnalyticsTab().tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
@@ -69,7 +75,7 @@ struct SecretaryDashboardView: View {
                     NavigationLink {
                         DashboardSettingsView().environmentObject(api)
                     } label: {
-                        Label("Configuración", systemImage: "gearshape.fill")
+                        Label("Configuracion", systemImage: "gearshape.fill")
                     }
                     Link(destination: URL(string: "https://hogaresrd.com/broker")!) {
                         Label("Abrir en web", systemImage: "safari.fill")

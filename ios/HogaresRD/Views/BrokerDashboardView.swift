@@ -6,7 +6,7 @@ struct BrokerDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    private let tabs = ["Aplicaciones", "Analíticas", "Ventas", "Contabilidad", "Archivo", "Auditoría", "Mis Propiedades"]
+    private let tabs = ["Inicio", "Aplicaciones", "Analiticas", "Ventas", "Contabilidad", "Archivo", "Auditoria", "Propiedades"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,12 +17,18 @@ struct BrokerDashboardView: View {
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
                         } label: {
-                            Text(title)
-                                .font(.caption).bold()
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? Color.rdBlue : Color(.secondarySystemFill))
-                                .foregroundStyle(selectedTab == i ? .white : .primary)
-                                .clipShape(Capsule())
+                            HStack(spacing: 4) {
+                                if i == 0 {
+                                    Image(systemName: "house.fill")
+                                        .font(.system(size: 10))
+                                }
+                                Text(title)
+                                    .font(.caption).bold()
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(selectedTab == i ? Color.rdBlue : Color(.secondarySystemFill))
+                            .foregroundStyle(selectedTab == i ? .white : .primary)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
                     }
@@ -36,13 +42,19 @@ struct BrokerDashboardView: View {
 
             // Content
             TabView(selection: $selectedTab) {
-                DashboardApplicationsTab().tag(0)
-                DashboardAnalyticsTab().tag(1)
-                DashboardSalesTab().tag(2)
-                DashboardAccountingTab().tag(3)
-                DashboardArchiveTab().tag(4)
-                DashboardAuditTab().tag(5)
-                DashboardListingAnalyticsTab().tag(6)
+                DashboardHomeView(
+                    showSalesMetrics: true,
+                    onTapTab: { tab in selectedTab = tab + 1 }, // offset by 1 since Home is at 0
+                    onTapMessages: {},
+                    onTapTours: {}
+                ).tag(0)
+                DashboardApplicationsTab().tag(1)
+                DashboardAnalyticsTab().tag(2)
+                DashboardSalesTab().tag(3)
+                DashboardAccountingTab().tag(4)
+                DashboardArchiveTab().tag(5)
+                DashboardAuditTab().tag(6)
+                DashboardListingAnalyticsTab().tag(7)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)

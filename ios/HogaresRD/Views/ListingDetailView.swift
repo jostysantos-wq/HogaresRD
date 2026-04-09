@@ -72,16 +72,14 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func detailBody(_ l: Listing) -> some View {
         ZStack(alignment: .top) {
-            // Hero image behind everything
-            heroImages(l)
-
-            // Scrollable content that overlaps the image
+            // Main scroll with images INSIDE (not behind)
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Transparent spacer so the image is visible (opacity 0.001 to capture touches)
-                    Color.white.opacity(0.001).frame(height: heroHeight - 30)
+                    // Image carousel — horizontal TabView inside vertical ScrollView
+                    // The .page style handles horizontal swipes independently
+                    heroImages(l)
 
-                    // Content card with rounded top corners
+                    // Content card with rounded top corners — overlaps image bottom
                     VStack(alignment: .leading, spacing: 24) {
                         // Drag indicator
                         RoundedRectangle(cornerRadius: 3)
@@ -290,6 +288,7 @@ struct ListingDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                             .shadow(color: .black.opacity(0.15), radius: 16, y: -6)
                     )
+                    .offset(y: -24) // overlap the image bottom for card effect
                 }
             }
 
@@ -309,37 +308,36 @@ struct ListingDetailView: View {
 
     // MARK: - Hero Images
 
-    /// Vertical scroll gallery — two images visible at once (Zillow-style).
-    /// Each image is ~half the gallery height so users see a peek of the next
-    /// one, encouraging vertical scroll. Tap opens full-screen gallery.
+    /// Horizontal swipeable image gallery — tap to open full-screen.
+    /// Uses TabView with page style for smooth horizontal swiping
+    /// without conflicting with the main vertical ScrollView.
     private let imageSlotHeight: CGFloat = UIScreen.main.bounds.height * 0.27
 
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
         if !l.images.isEmpty {
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 2) {
-                    ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
-                        let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().scaledToFill()
-                            default:
-                                Rectangle().fill(Color(.systemGray6))
-                                    .overlay(Image(systemName: "photo").font(.system(size: 36)).foregroundStyle(Color(.systemGray3)))
-                            }
-                        }
-                        .frame(height: imageSlotHeight)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .onTapGesture {
-                            imageIndex = i
-                            showFullGallery = true
+            TabView(selection: $imageIndex) {
+                ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
+                    let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            Rectangle().fill(Color(.systemGray6))
+                                .overlay(Image(systemName: "photo").font(.system(size: 36)).foregroundStyle(Color(.systemGray3)))
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .onTapGesture {
+                        imageIndex = i
+                        showFullGallery = true
+                    }
+                    .tag(i)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: heroHeight)
         } else {
             Rectangle().fill(Color(.systemGray6)).frame(height: heroHeight)
@@ -364,12 +362,12 @@ struct ListingDetailView: View {
 
             Spacer()
 
-            // Photo count badge
+            // Photo count badge (current / total)
             if l.images.count > 1 {
                 HStack(spacing: 4) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.system(size: 11, weight: .bold))
-                    Text("\(l.images.count)")
+                    Text("\(imageIndex + 1)/\(l.images.count)")
                         .font(.caption.bold())
                 }
                 .foregroundStyle(.white)

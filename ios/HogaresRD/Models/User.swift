@@ -14,8 +14,29 @@ struct User: Codable {
     let refToken: String?
     let access_level: Int?
     let team_title: String?
+    let emailVerified: Bool?
+    let createdAt: String?
+    let subscriptionStatus: String?
+    let trialEndsAt: String?
 
     var firstName: String { name.components(separatedBy: " ").first ?? name }
+
+    var isEmailVerified: Bool { emailVerified ?? false }
+    var isOnTrial: Bool { subscriptionStatus == "trial" }
+
+    var trialDaysRemaining: Int? {
+        guard let endStr = trialEndsAt else { return nil }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var end = fmt.date(from: endStr)
+        if end == nil {
+            fmt.formatOptions = [.withInternetDateTime]
+            end = fmt.date(from: endStr)
+        }
+        guard let endDate = end else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day ?? 0
+        return max(0, days)
+    }
 
     /// Full URL to the avatar image, or nil if not set.
     var avatarImageURL: URL? {

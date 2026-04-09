@@ -1,6 +1,46 @@
 import SwiftUI
+import EventKit
 
-// MARK: - Tour Booking Sheet (Client)
+// MARK: - Time Period Grouping
+private enum TimePeriod: String, CaseIterable {
+    case morning   = "Mañana"
+    case afternoon = "Tarde"
+    case evening   = "Noche"
+
+    var icon: String {
+        switch self {
+        case .morning:   return "sun.max.fill"
+        case .afternoon: return "cloud.sun.fill"
+        case .evening:   return "moon.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .morning:   return .orange
+        case .afternoon: return Color.rdBlue
+        case .evening:   return .indigo
+        }
+    }
+
+    static func from(time: String) -> TimePeriod {
+        let h = Int(time.prefix(2)) ?? 12
+        if h < 12 { return .morning }
+        if h < 17 { return .afternoon }
+        return .evening
+    }
+}
+
+// MARK: - Date Strip Day
+private struct DateStripDay: Identifiable {
+    let id: String       // yyyy-MM-dd
+    let dayName: String  // "Lun"
+    let dayNum: Int
+    let isAvailable: Bool
+    let isToday: Bool
+}
+
+// MARK: - Tour Booking Sheet (Client — Redesigned)
 
 struct TourBookingSheet: View {
     let listing: Listing
@@ -8,7 +48,7 @@ struct TourBookingSheet: View {
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) var dismiss
 
-    @State private var step = 1
+    // Date/time selection
     @State private var availableDates: [String] = []
     @State private var currentMonth = Date()
     @State private var selectedDate: String?
@@ -16,6 +56,8 @@ struct TourBookingSheet: View {
     @State private var selectedTime: String?
     @State private var loadingSlots = false
     @State private var loadingDates = false
+    @State private var showFullCalendar = false
+    @State private var dateStrip: [DateStripDay] = []
 
     // Contact info
     @State private var name      = ""
@@ -26,36 +68,107 @@ struct TourBookingSheet: View {
     @State private var sending   = false
     @State private var sent      = false
     @State private var errorMsg: String?
+    @State private var showContactFields = false
+    @State private var calendarAdded = false
 
     private let dayNames = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"]
     private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                               "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    private var canSubmit: Bool {
+        selectedDate != nil && selectedTime != nil && !name.isEmpty && !phone.isEmpty && !sending
+    }
+
+    private var submitLabel: String {
+        if let d = selectedDate, let t = selectedTime {
+            return "Solicitar · \(formatDateShort(d)) · \(formatTime(t))"
+        }
+        return "Selecciona fecha y hora"
+    }
+
+    private var groupedSlots: [(TimePeriod, [AvailableSlot])] {
+        let groups = Dictionary(grouping: availableSlots) { TimePeriod.from(time: $0.time) }
+        return TimePeriod.allCases.compactMap { period in
+            guard let slots = groups[period], !slots.isEmpty else { return nil }
+            return (period, slots)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             if sent {
                 successView
             } else {
-                VStack(spacing: 0) {
-                    stepIndicator
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            switch step {
-                            case 1: dateStepView
-                            case 2: timeStepView
-                            case 3: contactStepView
-                            default: EmptyView()
-                            }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // ── Listing context card ────────────────────
+                        listingCard
+
+                        // ── Date selection ──────────────────────────
+                        dateSection
+
+                        // ── Time slots ──────────────────────────────
+                        if selectedDate != nil {
+                            timeSlotsSection
                         }
-                        .padding(16)
+
+                        // ── Tour type ───────────────────────────────
+                        if selectedTime != nil {
+                            tourTypeSection
+                        }
+
+                        // ── Contact info ────────────────────────────
+                        if selectedTime != nil {
+                            contactSection
+                        }
+
+                        // ── Notes ───────────────────────────────────
+                        if selectedTime != nil {
+                            notesSection
+                        }
+
+                        if let err = errorMsg {
+                            Text(err)
+                                .font(.caption).foregroundStyle(Color.rdRed)
+                                .padding(.horizontal, 4)
+                        }
+
+                        Color.clear.frame(height: 80)
                     }
+                    .padding(16)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .navigationTitle("Agendar Visita")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cerrar") { dismiss() }
                     }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    // Sticky submit button
+                    Button {
+                        Task { await submitTour() }
+                    } label: {
+                        HStack {
+                            if sending {
+                                ProgressView().tint(.white)
+                            } else {
+                                Image(systemName: "calendar.badge.plus")
+                            }
+                            Text(submitLabel)
+                                .font(.subheadline.bold())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(.white)
+                        .background(canSubmit ? Color.rdBlue : Color(.systemGray4),
+                                    in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .disabled(!canSubmit)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .background(.regularMaterial)
                 }
             }
         }
@@ -65,87 +178,155 @@ struct TourBookingSheet: View {
                 email = user.email
                 if let p = user.phone { phone = p }
             }
+            buildDateStrip()
             loadMonth()
         }
     }
 
-    // MARK: - Step Indicator
+    // MARK: - Listing Context Card
 
-    private var stepIndicator: some View {
-        HStack(spacing: 0) {
-            ForEach(1...3, id: \.self) { s in
-                if s > 1 {
-                    Rectangle()
-                        .fill(s <= step ? Color.rdBlue : Color(.systemGray4))
-                        .frame(height: 2)
-                        .frame(maxWidth: 40)
+    private var listingCard: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: listing.firstImageURL) { phase in
+                switch phase {
+                case .success(let img): img.resizable().scaledToFill()
+                default:
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.rdBlue.opacity(0.08))
+                        .overlay(Image(systemName: "house.fill").foregroundStyle(Color.rdBlue.opacity(0.3)))
                 }
-                ZStack {
-                    Circle()
-                        .fill(s < step ? Color.rdGreen : s == step ? Color.rdBlue : Color(.systemGray5))
-                        .frame(width: 30, height: 30)
-                    if s < step {
-                        Image(systemName: "checkmark")
-                            .font(.caption2.bold()).foregroundStyle(.white)
-                    } else {
-                        Text("\(s)")
-                            .font(.caption2.bold())
-                            .foregroundStyle(s == step ? .white : .secondary)
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(listing.title)
+                    .font(.subheadline.bold())
+                    .lineLimit(2)
+                Text(listing.priceFormatted)
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.rdBlue)
+                if let city = listing.city {
+                    Label(city, systemImage: "mappin.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Date Section
+
+    private var dateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Selecciona una fecha", systemImage: "calendar")
+                .font(.headline)
+
+            if loadingDates && dateStrip.isEmpty {
+                ProgressView("Cargando disponibilidad...")
+                    .frame(maxWidth: .infinity).padding(.vertical, 20)
+            } else {
+                // Horizontal date strip — next 14 days
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(dateStrip) { day in
+                                Button {
+                                    if day.isAvailable {
+                                        withAnimation(.easeOut(duration: 0.15)) {
+                                            selectedDate = day.id
+                                            selectedTime = nil
+                                        }
+                                        loadSlots(day.id)
+                                    }
+                                } label: {
+                                    VStack(spacing: 4) {
+                                        Text(day.dayName)
+                                            .font(.system(size: 11, weight: .medium))
+                                        Text("\(day.dayNum)")
+                                            .font(.system(size: 18, weight: .bold))
+                                        Circle()
+                                            .fill(day.isAvailable ? Color.rdGreen : Color(.systemGray5))
+                                            .frame(width: 6, height: 6)
+                                    }
+                                    .frame(width: 52, height: 70)
+                                    .foregroundStyle(
+                                        selectedDate == day.id ? .white :
+                                        day.isAvailable ? .primary :
+                                        Color(.systemGray4)
+                                    )
+                                    .background(
+                                        selectedDate == day.id ? Color.rdBlue :
+                                        day.isToday ? Color.rdBlue.opacity(0.08) :
+                                        Color(.secondarySystemFill),
+                                        in: RoundedRectangle(cornerRadius: 12)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(day.isToday && selectedDate != day.id ? Color.rdBlue.opacity(0.3) : .clear, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(!day.isAvailable)
+                                .id(day.id)
+                            }
+                        }
                     }
+                    .onAppear {
+                        if let sel = selectedDate {
+                            proxy.scrollTo(sel, anchor: .center)
+                        }
+                    }
+                }
+
+                // Expand to full calendar
+                Button {
+                    withAnimation(.spring(response: 0.3)) {
+                        showFullCalendar.toggle()
+                    }
+                } label: {
+                    Label(
+                        showFullCalendar ? "Ocultar calendario" : "Ver calendario completo",
+                        systemImage: showFullCalendar ? "chevron.up" : "calendar"
+                    )
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.rdBlue)
+                }
+
+                if showFullCalendar {
+                    fullCalendarView
+                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 }
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 40)
     }
 
-    // MARK: - Step 1: Date
+    // MARK: - Full Calendar (expandable)
 
-    private var dateStepView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Selecciona un día")
-                .font(.headline)
-            Text("Los días resaltados tienen horarios disponibles.")
-                .font(.caption).foregroundStyle(.secondary)
-
+    private var fullCalendarView: some View {
+        VStack(spacing: 12) {
             // Month navigation
             HStack {
                 Button { prevMonth() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.caption.bold())
-                        .padding(8)
-                        .background(Color(.systemGray6), in: Circle())
+                    Image(systemName: "chevron.left").font(.caption.bold())
+                        .padding(8).background(Color(.systemGray6), in: Circle())
                 }
                 Spacer()
-                Text(monthLabel)
-                    .font(.subheadline.bold())
+                Text(monthLabel).font(.subheadline.bold())
                 Spacer()
                 Button { nextMonth() } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .padding(8)
-                        .background(Color(.systemGray6), in: Circle())
+                    Image(systemName: "chevron.right").font(.caption.bold())
+                        .padding(8).background(Color(.systemGray6), in: Circle())
                 }
             }
 
-            if loadingDates {
-                ProgressView().frame(maxWidth: .infinity).padding()
-            } else {
-                calendarGrid
-            }
-
-            // Legend
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
-                    Circle().fill(Color.rdGreen.opacity(0.2)).frame(width: 10, height: 10)
-                    Text("Disponible").font(.caption2).foregroundStyle(.secondary)
-                }
-                HStack(spacing: 4) {
-                    Circle().fill(Color(.systemGray5)).frame(width: 10, height: 10)
-                    Text("No disponible").font(.caption2).foregroundStyle(.secondary)
-                }
-            }
+            calendarGrid
         }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private var calendarGrid: some View {
@@ -156,24 +337,13 @@ struct TourBookingSheet: View {
         let firstWeekday = calendar.component(.weekday, from: firstOfMonth) - 1
         let daysInMonth  = calendar.range(of: .day, in: .month, for: firstOfMonth)!.count
         let today = todayString()
-
         let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
         return LazyVGrid(columns: columns, spacing: 4) {
-            // Headers
             ForEach(dayNames, id: \.self) { day in
-                Text(day)
-                    .font(.caption2.bold())
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
+                Text(day).font(.caption2.bold()).foregroundStyle(.secondary).frame(maxWidth: .infinity)
             }
-
-            // Empty cells for padding
-            ForEach(0..<firstWeekday, id: \.self) { _ in
-                Color.clear.frame(height: 40)
-            }
-
-            // Day cells
+            ForEach(0..<firstWeekday, id: \.self) { _ in Color.clear.frame(height: 36) }
             ForEach(1...daysInMonth, id: \.self) { day in
                 let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
                 let isAvail = availableDates.contains(dateStr) && dateStr >= today
@@ -182,209 +352,209 @@ struct TourBookingSheet: View {
 
                 Button {
                     if isAvail {
-                        selectedDate = dateStr
-                        selectedTime = nil
-                        step = 2
+                        selectedDate = dateStr; selectedTime = nil
                         loadSlots(dateStr)
                     }
                 } label: {
                     Text("\(day)")
-                        .font(.callout.bold())
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(
-                            isSelected ? Color.rdBlue :
-                            isAvail ? Color.rdGreen.opacity(0.15) :
-                            Color.clear
-                        )
-                        .foregroundStyle(
-                            isSelected ? .white :
-                            isPast || !isAvail ? Color(.systemGray4) :
-                            .primary
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .font(.caption.bold())
+                        .frame(maxWidth: .infinity).frame(height: 36)
+                        .background(isSelected ? Color.rdBlue : isAvail ? Color.rdGreen.opacity(0.15) : Color.clear)
+                        .foregroundStyle(isSelected ? .white : isPast || !isAvail ? Color(.systemGray4) : .primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .disabled(!isAvail || isPast)
             }
         }
     }
 
-    // MARK: - Step 2: Time
+    // MARK: - Time Slots Section (Grouped by Period)
 
-    private var timeStepView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Selecciona la hora")
-                .font(.headline)
-            if let date = selectedDate {
-                Text(formatDateLabel(date))
-                    .font(.subheadline).foregroundStyle(.secondary)
+    private var timeSlotsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Horarios disponibles", systemImage: "clock")
+                    .font(.headline)
+                Spacer()
+                if let d = selectedDate {
+                    Text(formatDateShort(d))
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.rdBlue)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.rdBlue.opacity(0.08), in: Capsule())
+                }
             }
 
             if loadingSlots {
                 ProgressView("Cargando horarios...")
-                    .frame(maxWidth: .infinity).padding(.vertical, 30)
+                    .frame(maxWidth: .infinity).padding(.vertical, 24)
             } else if availableSlots.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     Image(systemName: "clock.badge.xmark")
-                        .font(.system(size: 36))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 32)).foregroundStyle(.secondary)
                     Text("No hay horarios disponibles para esta fecha.")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity).padding(.vertical, 30)
+                .frame(maxWidth: .infinity).padding(.vertical, 20)
             } else {
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(availableSlots, id: \.time) { slot in
-                        Button {
-                            selectedTime = slot.time
-                            step = 3
-                        } label: {
-                            Text(formatTime(slot.time))
-                                .font(.callout.bold())
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(
-                                    selectedTime == slot.time ? Color.rdBlue : Color(.systemGray6)
-                                )
-                                .foregroundStyle(
-                                    selectedTime == slot.time ? .white : .primary
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                ForEach(groupedSlots, id: \.0) { period, slots in
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Period header
+                        Label(period.rawValue, systemImage: period.icon)
+                            .font(.caption.bold())
+                            .foregroundStyle(period.color)
+
+                        // Slot chips (wrapping flow)
+                        FlowLayout(spacing: 8) {
+                            ForEach(slots, id: \.time) { slot in
+                                Button {
+                                    withAnimation(.easeOut(duration: 0.1)) {
+                                        selectedTime = slot.time
+                                    }
+                                } label: {
+                                    Text(formatTime(slot.time))
+                                        .font(.caption.bold())
+                                        .padding(.horizontal, 14).padding(.vertical, 10)
+                                        .foregroundStyle(selectedTime == slot.time ? .white : .primary)
+                                        .background(
+                                            selectedTime == slot.time ? Color.rdBlue : Color(.secondarySystemFill),
+                                            in: Capsule()
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
+                    .padding(12)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                 }
             }
-
-            Button {
-                step = 1
-            } label: {
-                Label("Cambiar fecha", systemImage: "calendar")
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
-            }
-            .foregroundStyle(.primary)
         }
     }
 
-    // MARK: - Step 3: Contact
+    // MARK: - Tour Type Section
 
-    private var contactStepView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Summary
-            if let date = selectedDate, let time = selectedTime {
+    private var tourTypeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Tipo de visita", systemImage: "person.wave.2")
+                .font(.headline)
+
+            HStack(spacing: 10) {
+                tourTypeCard(
+                    type: "presencial",
+                    icon: "house.fill",
+                    title: "Presencial",
+                    subtitle: "Visita en persona"
+                )
+                tourTypeCard(
+                    type: "virtual",
+                    icon: "video.fill",
+                    title: "Virtual",
+                    subtitle: "Videollamada"
+                )
+            }
+        }
+    }
+
+    private func tourTypeCard(type: String, icon: String, title: String, subtitle: String) -> some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.15)) { tourType = type }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .foregroundStyle(tourType == type ? .white : Color.rdBlue)
+                Text(title)
+                    .font(.caption.bold())
+                    .foregroundStyle(tourType == type ? .white : .primary)
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundStyle(tourType == type ? .white.opacity(0.8) : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                tourType == type ? Color.rdBlue : Color(.secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(tourType == type ? Color.rdBlue : Color(.systemGray4).opacity(0.5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Contact Section
+
+    private var contactSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Tus datos", systemImage: "person.text.rectangle")
+                .font(.headline)
+
+            if !name.isEmpty && !phone.isEmpty && !showContactFields {
+                // Compact summary for logged-in users
                 HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.rdBlue.opacity(0.1))
-                            .frame(width: 50, height: 50)
-                        Image(systemName: "calendar.badge.clock")
-                            .foregroundStyle(Color.rdBlue)
-                    }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(formatDateLabel(date))
-                            .font(.subheadline.bold())
-                        Text(formatTime(time))
-                            .font(.caption).foregroundStyle(.secondary)
+                        Text(name).font(.subheadline.bold())
+                        Text(phone).font(.caption).foregroundStyle(.secondary)
+                        if !email.isEmpty {
+                            Text(email).font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Button {
-                        step = 2
+                        showContactFields = true
                     } label: {
-                        Text("Cambiar")
+                        Text("Editar")
                             .font(.caption.bold())
                             .foregroundStyle(Color.rdBlue)
                     }
                 }
                 .padding(12)
-                .background(Color.rdBlue.opacity(0.04))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            // Tour type
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Tipo de visita")
-                    .font(.headline)
-                Picker("", selection: $tourType) {
-                    Text("Presencial").tag("presencial")
-                    Text("Virtual").tag("virtual")
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(spacing: 10) {
+                    formField("Nombre completo", text: $name, icon: "person.fill")
+                    formField("Teléfono", text: $phone, icon: "phone.fill", keyboard: .phonePad)
+                    formField("Correo electrónico", text: $email, icon: "envelope.fill", keyboard: .emailAddress)
                 }
-                .pickerStyle(.segmented)
-            }
-
-            Text("Tu información")
-                .font(.headline)
-
-            VStack(spacing: 12) {
-                formField("Nombre completo", text: $name, icon: "person.fill")
-                formField("Teléfono", text: $phone, icon: "phone.fill", keyboard: .phonePad)
-                formField("Correo electrónico", text: $email, icon: "envelope.fill", keyboard: .emailAddress)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Notas (opcional)")
-                        .font(.caption).foregroundStyle(.secondary)
-                    TextField("Algo que el agente deba saber...", text: $notes, axis: .vertical)
-                        .lineLimit(3...)
-                        .padding(12)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-
-            if let err = errorMsg {
-                Text(err)
-                    .font(.caption).foregroundStyle(Color.rdRed)
-            }
-
-            Text("El agente deberá confirmar tu solicitud. Recibirás una notificación cuando sea aprobada.")
-                .font(.caption).foregroundStyle(.tertiary)
-
-            HStack(spacing: 10) {
-                Button {
-                    step = 2
-                } label: {
-                    Text("Atrás")
-                        .font(.subheadline).bold()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
-                }
-                .foregroundStyle(.primary)
-
-                Button {
-                    Task { await submitTour() }
-                } label: {
-                    if sending {
-                        ProgressView().frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
-                    } else {
-                        Text("Solicitar Visita")
-                            .font(.subheadline).bold()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .disabled(sending || name.isEmpty || phone.isEmpty)
             }
         }
     }
 
-    // MARK: - Success
+    // MARK: - Notes Section
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Notas (opcional)", systemImage: "note.text")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            TextField("Algo que el agente deba saber...", text: $notes, axis: .vertical)
+                .lineLimit(2...4)
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Text("El agente deberá confirmar tu solicitud. Recibirás una notificación cuando sea aprobada.")
+                .font(.system(size: 10)).foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: - Success View
 
     private var successView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Spacer()
+
             ZStack {
-                Circle().fill(Color.rdGreen.opacity(0.1)).frame(width: 88, height: 88)
+                Circle().fill(Color.rdGreen.opacity(0.1)).frame(width: 100, height: 100)
+                Circle().fill(Color.rdGreen.opacity(0.05)).frame(width: 130, height: 130)
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48)).foregroundStyle(Color.rdGreen)
+                    .font(.system(size: 56)).foregroundStyle(Color.rdGreen)
             }
+
             VStack(spacing: 8) {
                 Text("¡Visita solicitada!")
                     .font(.title2).bold()
@@ -392,26 +562,59 @@ struct TourBookingSheet: View {
                     .font(.subheadline).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center).padding(.horizontal, 24)
             }
+
             if let date = selectedDate, let time = selectedTime {
-                VStack(spacing: 4) {
-                    Text(formatDateLabel(date))
-                        .font(.subheadline.bold())
-                    Text(formatTime(time))
-                        .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 14) {
+                    Image(systemName: tourType == "virtual" ? "video.fill" : "house.fill")
+                        .font(.title3).foregroundStyle(Color.rdBlue)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(formatDateLabel(date)).font(.subheadline.bold())
+                        Text(formatTime(time)).font(.caption).foregroundStyle(.secondary)
+                        Text(tourType == "virtual" ? "Videollamada" : "Presencial")
+                            .font(.caption2).foregroundStyle(Color.rdBlue)
+                    }
                 }
-                .padding(14)
-                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
-            }
-            Spacer()
-            Button("Cerrar") { dismiss() }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.rdBlue)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
                 .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+            }
+
+            Spacer()
+
+            VStack(spacing: 10) {
+                // Add to Calendar button
+                if let date = selectedDate, let time = selectedTime {
+                    Button {
+                        addToCalendar(date: date, time: time)
+                    } label: {
+                        Label(calendarAdded ? "Agregado al Calendario" : "Agregar al Calendario",
+                              systemImage: calendarAdded ? "checkmark" : "calendar.badge.plus")
+                            .font(.subheadline.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(calendarAdded ? Color.rdGreen : Color.rdBlue)
+                            .background(
+                                calendarAdded ? Color.rdGreen.opacity(0.08) : Color.rdBlue.opacity(0.08),
+                                in: RoundedRectangle(cornerRadius: 14)
+                            )
+                    }
+                    .disabled(calendarAdded)
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Cerrar")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(.white)
+                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 14))
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
         }
     }
 
@@ -419,17 +622,51 @@ struct TourBookingSheet: View {
 
     private func formField(_ placeholder: String, text: Binding<String>, icon: String, keyboard: UIKeyboardType = .default) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            Image(systemName: icon).font(.caption).foregroundStyle(.secondary).frame(width: 20)
             TextField(placeholder, text: text)
                 .keyboardType(keyboard)
                 .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
         }
         .padding(12)
-        .background(Color(.systemGray6))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func buildDateStrip() {
+        let cal = Calendar.current
+        let today = Date()
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "es_DO")
+        let dateFmt = DateFormatter()
+        dateFmt.dateFormat = "yyyy-MM-dd"
+
+        dateStrip = (0..<14).compactMap { offset -> DateStripDay? in
+            guard let date = cal.date(byAdding: .day, value: offset, to: today) else { return nil }
+            fmt.dateFormat = "EEE"
+            let dayName = fmt.string(from: date).prefix(3).capitalized
+            let dayNum = cal.component(.day, from: date)
+            let dateStr = dateFmt.string(from: date)
+            return DateStripDay(
+                id: dateStr,
+                dayName: String(dayName),
+                dayNum: dayNum,
+                isAvailable: false, // will be updated when availableDates loads
+                isToday: offset == 0
+            )
+        }
+    }
+
+    private func updateDateStripAvailability() {
+        let today = todayString()
+        dateStrip = dateStrip.map { day in
+            DateStripDay(
+                id: day.id,
+                dayName: day.dayName,
+                dayNum: day.dayNum,
+                isAvailable: availableDates.contains(day.id) && day.id >= today,
+                isToday: day.isToday
+            )
+        }
     }
 
     private func loadMonth() {
@@ -443,10 +680,23 @@ struct TourBookingSheet: View {
                 let dates = try await api.fetchSchedule(brokerId: brokerId, month: monthStr)
                 await MainActor.run {
                     availableDates = dates
+                    updateDateStripAvailability()
                     loadingDates = false
                 }
             } catch {
                 await MainActor.run { loadingDates = false }
+            }
+            // Also load next month for the 14-day strip
+            if let next = cal.date(byAdding: .month, value: 1, to: currentMonth) {
+                let ny = cal.component(.year, from: next)
+                let nm = cal.component(.month, from: next)
+                let nextStr = String(format: "%04d-%02d", ny, nm)
+                if let moreDates = try? await api.fetchSchedule(brokerId: brokerId, month: nextStr) {
+                    await MainActor.run {
+                        availableDates.append(contentsOf: moreDates)
+                        updateDateStripAvailability()
+                    }
+                }
             }
         }
     }
@@ -457,10 +707,7 @@ struct TourBookingSheet: View {
         Task {
             do {
                 let slots = try await api.fetchAvailableSlots(brokerId: brokerId, date: date)
-                await MainActor.run {
-                    availableSlots = slots
-                    loadingSlots = false
-                }
+                await MainActor.run { availableSlots = slots; loadingSlots = false }
             } catch {
                 await MainActor.run { loadingSlots = false }
             }
@@ -468,23 +715,19 @@ struct TourBookingSheet: View {
     }
 
     private func prevMonth() {
-        let cal = Calendar.current
-        let now = Date()
+        let cal = Calendar.current; let now = Date()
         if let prev = cal.date(byAdding: .month, value: -1, to: currentMonth) {
             if cal.component(.year, from: prev) > cal.component(.year, from: now) ||
                (cal.component(.year, from: prev) == cal.component(.year, from: now) &&
                 cal.component(.month, from: prev) >= cal.component(.month, from: now)) {
-                currentMonth = prev
-                loadMonth()
+                currentMonth = prev; loadMonth()
             }
         }
     }
 
     private func nextMonth() {
-        let cal = Calendar.current
-        if let next = cal.date(byAdding: .month, value: 1, to: currentMonth) {
-            currentMonth = next
-            loadMonth()
+        if let next = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) {
+            currentMonth = next; loadMonth()
         }
     }
 
@@ -496,25 +739,27 @@ struct TourBookingSheet: View {
     }
 
     private func todayString() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: Date())
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date())
     }
 
     private func formatDateLabel(_ dateStr: String) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
         guard let date = f.date(from: dateStr) else { return dateStr }
-        f.dateFormat = "EEEE d 'de' MMMM"
-        f.locale = Locale(identifier: "es_DO")
+        f.dateFormat = "EEEE d 'de' MMMM"; f.locale = Locale(identifier: "es_DO")
+        return f.string(from: date).capitalized
+    }
+
+    private func formatDateShort(_ dateStr: String) -> String {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+        guard let date = f.date(from: dateStr) else { return dateStr }
+        f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "es_DO")
         return f.string(from: date).capitalized
     }
 
     private func formatTime(_ time: String) -> String {
         let parts = time.split(separator: ":")
         guard parts.count >= 2, let h = Int(parts[0]) else { return time }
-        let m = parts[1]
-        let ampm = h >= 12 ? "PM" : "AM"
+        let m = parts[1]; let ampm = h >= 12 ? "PM" : "AM"
         let h12 = h > 12 ? h - 12 : (h == 0 ? 12 : h)
         return "\(h12):\(m) \(ampm)"
     }
@@ -535,7 +780,36 @@ struct TourBookingSheet: View {
         }
         sending = false
     }
+
+    private func addToCalendar(date: String, time: String) {
+        let store = EKEventStore()
+        store.requestFullAccessToEvents { granted, _ in
+            guard granted else { return }
+            let event = EKEvent(eventStore: store)
+            event.title = "Visita: \(listing.title)"
+            event.location = listing.city ?? listing.province ?? ""
+
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd HH:mm"
+            if let start = df.date(from: "\(date) \(time)") {
+                event.startDate = start
+                event.endDate = Calendar.current.date(byAdding: .minute, value: 30, to: start) ?? start
+            }
+            event.addAlarm(EKAlarm(relativeOffset: -900)) // 15 min before
+            event.notes = tourType == "virtual" ? "Videollamada con agente" : "Visita presencial"
+            event.calendar = store.defaultCalendarForNewEvents
+
+            do {
+                try store.save(event, span: .thisEvent)
+                DispatchQueue.main.async { calendarAdded = true }
+            } catch {
+                print("[Tour] Calendar save error:", error.localizedDescription)
+            }
+        }
+    }
 }
+
+// FlowLayout is defined in ListingDetailView.swift — reused here for time slot chips
 
 // MARK: - Broker Tours View
 

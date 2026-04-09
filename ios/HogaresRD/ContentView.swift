@@ -17,32 +17,152 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var favAuthSheet: AuthView.Mode? = nil
 
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var resendingVerification = false
+    @State private var verificationSent = false
+    @State private var dismissedEmailBanner = false
+    @State private var dismissedTrialBanner = false
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            FeedView()
-                .tabItem { Label("Feed", systemImage: "newspaper.fill") }
-                .tag(0)
+        VStack(spacing: 0) {
+            // Email verification banner
+            if let user = api.currentUser, !user.isEmailVerified, !dismissedEmailBanner {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.envelope.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Correo no verificado")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Text(user.email)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    if verificationSent {
+                        Text("Enviado ✓")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.white.opacity(0.8))
+                    } else {
+                        Button {
+                            Task {
+                                resendingVerification = true
+                                try? await api.resendVerificationEmail()
+                                resendingVerification = false
+                                verificationSent = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                    verificationSent = false
+                                }
+                            }
+                        } label: {
+                            if resendingVerification {
+                                ProgressView().tint(.white).scaleEffect(0.7)
+                            } else {
+                                Text("Reenviar")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(Color(red: 0.9, green: 0.5, blue: 0))
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(.white, in: Capsule())
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button { dismissedEmailBanner = true } label: {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 10)
+                .background(Color(red: 0.9, green: 0.5, blue: 0))
+            }
 
-            BrowseView()
-                .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
-                .tag(1)
+            // Trial countdown banner (for pro users)
+            if let user = api.currentUser, user.isOnTrial, user.isAgency, !dismissedTrialBanner,
+               let days = user.trialDaysRemaining {
+                HStack(spacing: 8) {
+                    Image(systemName: days <= 3 ? "exclamationmark.triangle.fill" : "clock.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white)
+                    Text(days == 0 ? "Tu periodo de prueba termina hoy" :
+                         days == 1 ? "Te queda 1 dia de prueba" :
+                         "Te quedan \(days) dias de prueba")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Button {
+                        // Navigate to subscription page
+                        selectedTab = 3
+                    } label: {
+                        Text("Ver planes")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(days <= 3 ? Color.rdRed : Color.rdBlue)
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(.white, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    Button { dismissedTrialBanner = true } label: {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(days <= 3 ? Color.rdRed : Color.rdBlue)
+            }
 
-            MessagesTabView()
-                .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
-                .tag(2)
+            TabView(selection: $selectedTab) {
+                FeedView()
+                    .tabItem { Label("Feed", systemImage: "newspaper.fill") }
+                    .tag(0)
 
-            ProfileTabView()
-                .tabItem { Label("Perfil", systemImage: "person.fill") }
-                .tag(3)
+                BrowseView()
+                    .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
+                    .tag(1)
+
+                MessagesTabView()
+                    .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
+                    .tag(2)
+
+                ProfileTabView()
+                    .tabItem { Label("Perfil", systemImage: "person.fill") }
+                    .tag(3)
+            }
         }
         .tint(Color.rdBlue)
         .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
             favAuthSheet = .login
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationTapped)) { notif in
+            handlePushTap(notif.userInfo)
+        }
         .sheet(item: $favAuthSheet) { mode in
             AuthView(initialMode: mode)
                 .environmentObject(api)
                 .id(mode)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, api.currentUser != nil {
+                Task { await api.refreshUser() }
+            }
+        }
+    }
+
+    /// Handle push notification tap — navigate to relevant tab
+    private func handlePushTap(_ userInfo: [AnyHashable: Any]?) {
+        guard let info = userInfo else { return }
+        let type = info["type"] as? String ?? ""
+
+        switch type {
+        case "new_message":
+            selectedTab = 2 // Messages tab
+        case "tour_update", "tour_reminder":
+            selectedTab = 3 // Profile tab (tours are in profile)
+        case "new_application", "status_changed", "payment_approved", "document_reviewed":
+            selectedTab = 3 // Profile tab (applications are in profile)
+        case "saved_search_match", "new_listing":
+            selectedTab = 1 // Browse/Explore tab
+        default:
+            selectedTab = 0 // Feed
         }
     }
 }

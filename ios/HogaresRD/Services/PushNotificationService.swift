@@ -19,6 +19,14 @@ class PushNotificationService: NSObject, ObservableObject {
     /// Call AFTER splash screen to avoid blocking launch.
     func deferredInit() {
         checkAuthorizationStatus()
+        // Always re-register to ensure the server has the latest token
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            if settings.authorizationStatus == .authorized {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
     }
 
     func checkAuthorizationStatus() {
@@ -62,6 +70,7 @@ class PushNotificationService: NSObject, ObservableObject {
 
     func handleDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
+        print("[Push] Device token received: \(token.prefix(16))...")
         DispatchQueue.main.async {
             self.deviceToken = token
         }

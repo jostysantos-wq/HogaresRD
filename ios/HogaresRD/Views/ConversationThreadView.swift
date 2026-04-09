@@ -160,29 +160,57 @@ struct ConversationThreadView: View {
                 .padding(.horizontal, 14).padding(.vertical, 14)
                 .background(Color(.systemBackground))
             } else {
-                HStack(spacing: 10) {
-                    TextField("Escribe un mensaje...", text: $input, axis: .vertical)
-                        .lineLimit(1...4)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    Button {
-                        Task { await send() }
-                    } label: {
-                        Image(systemName: sending ? "clock" : "paperplane.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(canSend ? Color.rdBlue : Color(.systemGray4))
-                            .clipShape(Circle())
+                VStack(spacing: 0) {
+                    // Quick reply chips — shown when input is empty and few messages
+                    if input.isEmpty && messages.count < 6 {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(quickReplies, id: \.self) { reply in
+                                    Button {
+                                        input = reply
+                                    } label: {
+                                        Text(reply)
+                                            .font(.caption)
+                                            .foregroundStyle(Color.rdBlue)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 7)
+                                            .background(Color.rdBlue.opacity(0.08))
+                                            .clipShape(Capsule())
+                                            .overlay(Capsule().stroke(Color.rdBlue.opacity(0.2), lineWidth: 0.5))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                        }
+                        .background(Color(.systemBackground))
                     }
-                    .disabled(!canSend)
+
+                    HStack(spacing: 10) {
+                        TextField("Escribe un mensaje...", text: $input, axis: .vertical)
+                            .lineLimit(1...4)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                        Button {
+                            Task { await send() }
+                        } label: {
+                            Image(systemName: sending ? "clock" : "paperplane.fill")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(canSend ? Color.rdBlue : Color(.systemGray4))
+                                .clipShape(Circle())
+                        }
+                        .disabled(!canSend)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.systemBackground))
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.systemBackground))
             }
             } // end else (claim required check)
         }
@@ -302,6 +330,25 @@ struct ConversationThreadView: View {
 
     private var canSend: Bool {
         !sending && !input.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Context-aware quick reply suggestions
+    private var quickReplies: [String] {
+        if isPro {
+            return [
+                "¡Hola! ¿En qué puedo ayudarte?",
+                "¿Quieres agendar una visita?",
+                "Te comparto más detalles",
+                "¿Cuál es tu presupuesto?",
+            ]
+        } else {
+            return [
+                "¿Está disponible?",
+                "¿Cuál es el precio?",
+                "Me gustaría agendar una visita",
+                "¿Acepta financiamiento?",
+            ]
+        }
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {

@@ -2,6 +2,20 @@ import SwiftUI
 import CoreLocation
 import MapKit
 
+// MARK: - Filter Enums
+enum SortOption: String, CaseIterable, Identifiable {
+    case newest   = "Más Reciente"
+    case priceLow = "Precio ↑"
+    case priceHigh = "Precio ↓"
+    case areaHigh  = "Área ↓"
+    var id: String { rawValue }
+}
+
+enum QuickDropdown: String, Identifiable {
+    case price, beds, type
+    var id: String { rawValue }
+}
+
 // MARK: - BrowseView (Explorar — Zillow-style)
 struct BrowseView: View {
     var initialType: String = "venta"
@@ -32,6 +46,12 @@ struct BrowseView: View {
     @State private var filterMinBathrooms: Int?    = nil
     @State private var filterAmenities:    Set<String> = []
     @State private var filterHomeType:     String? = nil
+    @State private var filterMinArea:      Double? = nil
+    @State private var filterMaxArea:      Double? = nil
+    @State private var sortOption:         SortOption = .newest
+
+    // Quick-filter dropdown visibility
+    @State private var activeDropdown: QuickDropdown? = nil
 
     // Price mode: "range" or "payment"
     @State private var priceMode:        String = "range"
@@ -94,11 +114,29 @@ struct BrowseView: View {
                                 + " " + (listing.tags?.joined(separator: " ") ?? "")).lowercased()
                 if !haystack.contains(ht.lowercased()) { return false }
             }
+            // Area filter
+            if let min = filterMinArea,
+               let a = Double(listing.area_const ?? listing.area_land ?? "0"), a > 0, a < min { return false }
+            if let max = filterMaxArea,
+               let a = Double(listing.area_const ?? listing.area_land ?? "0"), a > 0, a > max { return false }
             if !filterAmenities.isEmpty {
                 let has = Set(listing.amenities.map { $0.lowercased() })
                 for a in filterAmenities { if !has.contains(a.lowercased()) { return false } }
             }
             return true
+        }
+    }
+
+    /// Sorted + filtered listings for display
+    private var sortedFilteredListings: [Listing] {
+        let filtered = filteredListings
+        switch sortOption {
+        case .newest:    return filtered
+        case .priceLow:  return filtered.sorted { (Double($0.price) ?? 0) < (Double($1.price) ?? 0) }
+        case .priceHigh: return filtered.sorted { (Double($0.price) ?? 0) > (Double($1.price) ?? 0) }
+        case .areaHigh:  return filtered.sorted {
+            (Double($0.area_const ?? "0") ?? 0) > (Double($1.area_const ?? "0") ?? 0)
+        }
         }
     }
 
@@ -141,6 +179,19 @@ struct BrowseView: View {
         if filterHomeType != nil  { c += 1 }
         if !filterAmenities.isEmpty { c += 1 }
         if selectedType != "venta" { c += 1 }
+        if filterMinArea != nil { c += 1 }
+        if filterMaxArea != nil { c += 1 }
+        if sortOption != .newest { c += 1 }
+        return c
+    }
+
+    /// Count of filters only shown in "Más filtros" sheet (secondary)
+    private var secondaryFilterCount: Int {
+        var c = 0
+        if filterMinBathrooms != nil { c += 1 }
+        if !filterAmenities.isEmpty { c += 1 }
+        if filterMinArea != nil || filterMaxArea != nil { c += 1 }
+        if sortOption != .newest { c += 1 }
         return c
     }
 
@@ -165,15 +216,14 @@ struct BrowseView: View {
             mapContent
                 .ignoresSafeArea()
 
-            // ── Search bar overlay ───────────────────────────
-            VStack(spacing: 0) {
-                HStack(spacing: 10) {
-                    searchBarButton
-                    filterIconButton
-                }
-                .padding(.top, 56)
-                .padding(.horizontal, 16)
+            // ── Search bar + chip filter bar overlay ─────────
+            VStack(spacing: 8) {
+                searchBarButton
+                    .padding(.horizontal, 16)
+
+                quickFilterBar
             }
+            .padding(.top, 56)
             .zIndex(2)
 
             // ── Bottom area: count bar + horizontal carousel ─
@@ -218,7 +268,7 @@ struct BrowseView: View {
                         }
                         .frame(height: 130)
                         .background(Color(.systemBackground).opacity(0.95))
-                        .onChange(of: selectedListing) { listing in
+                        .onChange(of: selectedListing) { _, listing in
                             if let id = listing?.id {
                                 withAnimation { proxy.scrollTo("card_\(id)", anchor: .center) }
                             }
@@ -229,7 +279,7 @@ struct BrowseView: View {
                     ZStack(alignment: .bottom) {
                     VStack(spacing: 0) {
                         HStack {
-                            Text("\(filteredListings.count) propiedades")
+                            Text("\(sortedFilteredListings.count) propiedades")
                                 .font(.subheadline.bold())
                             Spacer()
                         }
@@ -356,7 +406,9 @@ struct BrowseView: View {
             }
         }
         .onTapGesture {
-            if selectedListing != nil {
+            if activeDropdown != nil {
+                withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil }
+            } else if selectedListing != nil {
                 withAnimation(.spring(response: 0.25)) { selectedListing = nil }
             }
         }
@@ -368,13 +420,13 @@ struct BrowseView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 14) {
-                    ForEach(filteredListings) { listing in
+                    ForEach(sortedFilteredListings) { listing in
                         ListingRow(listing: listing,
                                    isSelected: listing.id == selectedListing?.id)
                         .id("row_\(listing.id)")
                         .onTapGesture { detailListingID = listing.id }
                         .onAppear {
-                            if listing.id == filteredListings.last?.id, page < totalPages {
+                            if listing.id == sortedFilteredListings.last?.id, page < totalPages {
                                 Task { await loadMore() }
                             }
                         }
@@ -384,7 +436,7 @@ struct BrowseView: View {
                 .padding(.horizontal, 14)
                 .padding(.bottom, 20)
             }
-            .onChange(of: selectedListing) { listing in
+            .onChange(of: selectedListing) { _, listing in
                 if let id = listing?.id {
                     withAnimation { proxy.scrollTo("row_\(id)", anchor: .center) }
                 }
@@ -620,103 +672,284 @@ struct BrowseView: View {
         }
     }
 
-    private var filterIconButton: some View {
-        Button { showFilters = true } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(activeFilterCount > 0 ? .white : Color.rdBlue)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        activeFilterCount > 0
-                            ? AnyShapeStyle(Color.rdBlue)
-                            : AnyShapeStyle(Color(.systemBackground).opacity(0.95)),
-                        in: RoundedRectangle(cornerRadius: 12)
-                    )
-                    .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
-
-                if activeFilterCount > 0 {
-                    Text("\(activeFilterCount)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 18, height: 18)
-                        .background(Color.rdRed, in: Circle())
-                        .offset(x: 4, y: -4)
+    // MARK: - Quick Filter Chip Bar (Airbnb/Zillow-style)
+    private var quickFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // ── Listing type chips (segmented) ──
+                ForEach([("venta", "Comprar"), ("alquiler", "Alquilar"), ("proyecto", "Proyectos")],
+                         id: \.0) { val, label in
+                    Button {
+                        selectedType = val
+                        activeDropdown = nil
+                    } label: {
+                        Text(label)
+                            .font(.caption.weight(selectedType == val ? .bold : .medium))
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .foregroundStyle(selectedType == val ? .white : .primary)
+                            .background(selectedType == val ? Color.rdBlue : Color(.systemBackground).opacity(0.95),
+                                        in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
+
+                Divider().frame(height: 20)
+
+                // ── Price chip ──
+                quickChip(
+                    label: priceChipLabel,
+                    isActive: filterMinPrice != nil || filterMaxPrice != nil,
+                    dropdown: .price
+                )
+
+                // ── Beds chip ──
+                quickChip(
+                    label: bedsChipLabel,
+                    isActive: filterMinBedrooms != nil,
+                    dropdown: .beds
+                )
+
+                // ── Type chip ──
+                quickChip(
+                    label: filterHomeType ?? "Tipo",
+                    isActive: filterHomeType != nil,
+                    dropdown: .type
+                )
+
+                // ── Más filtros ──
+                Button {
+                    activeDropdown = nil
+                    showFilters = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Más")
+                            .font(.caption.weight(.medium))
+                        if secondaryFilterCount > 0 {
+                            Text("\(secondaryFilterCount)")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 16, height: 16)
+                                .background(Color.rdRed, in: Circle())
+                        }
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .foregroundStyle(secondaryFilterCount > 0 ? .white : .primary)
+                    .background(secondaryFilterCount > 0 ? Color.rdBlue : Color(.systemBackground).opacity(0.95),
+                                in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+        }
+        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+        .overlay(alignment: .topLeading) {
+            // Dropdown overlays
+            if let dd = activeDropdown {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil } }
+                    .overlay(alignment: .top) {
+                        dropdownContent(for: dd)
+                            .padding(.top, 44)
+                            .padding(.horizontal, 16)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                    }
             }
         }
     }
 
-    // (Lista view removed — listings accessible via swipe-up sheet)
+    private func quickChip(label: String, isActive: Bool, dropdown: QuickDropdown) -> some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.15)) {
+                activeDropdown = activeDropdown == dropdown ? nil : dropdown
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.caption.weight(isActive ? .bold : .medium))
+                    .lineLimit(1)
+                Image(systemName: activeDropdown == dropdown ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .foregroundStyle(isActive ? .white : .primary)
+            .background(isActive ? Color.rdBlue : Color(.systemBackground).opacity(0.95), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
 
-    // MARK: - Filter sheet (comprehensive – no location)
+    private var priceChipLabel: String {
+        if let min = filterMinPrice, let max = filterMaxPrice {
+            return "\(shortCurrency(min))–\(shortCurrency(max))"
+        } else if let min = filterMinPrice {
+            return "\(shortCurrency(min))+"
+        } else if let max = filterMaxPrice {
+            return "–\(shortCurrency(max))"
+        }
+        return "Precio"
+    }
+
+    private var bedsChipLabel: String {
+        if let b = filterMinBedrooms { return "\(b)+ Hab" }
+        return "Hab"
+    }
+
+    private func shortCurrency(_ v: Double) -> String {
+        if v >= 1_000_000 { return String(format: "$%.1fM", v / 1_000_000) }
+        if v >= 1_000     { return String(format: "$%.0fK", v / 1_000) }
+        return "$\(Int(v))"
+    }
+
+    // MARK: - Dropdown content for each quick filter
+    @ViewBuilder
+    private func dropdownContent(for dropdown: QuickDropdown) -> some View {
+        switch dropdown {
+        case .price:
+            VStack(spacing: 12) {
+                Text("Rango de Precio").font(.subheadline.bold())
+                HStack(spacing: 12) {
+                    PriceField(label: "Mínimo", value: $filterMinPrice)
+                    PriceField(label: "Máximo", value: $filterMaxPrice)
+                }
+                HStack(spacing: 12) {
+                    Button {
+                        filterMinPrice = nil; filterMaxPrice = nil
+                    } label: {
+                        Text("Limpiar").font(.caption.bold()).foregroundStyle(Color.rdRed)
+                            .frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    Button {
+                        activeDropdown = nil
+                    } label: {
+                        Text("Aplicar").font(.caption.bold()).foregroundStyle(.white)
+                            .frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+
+        case .beds:
+            VStack(spacing: 10) {
+                Text("Habitaciones").font(.subheadline.bold())
+                HStack(spacing: 8) {
+                    ForEach([nil, 1, 2, 3, 4, 5] as [Int?], id: \.self) { val in
+                        FilterChip(
+                            label: val == nil ? "Todas" : "\(val!)+",
+                            isActive: filterMinBedrooms == val
+                        ) {
+                            filterMinBedrooms = val
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                withAnimation { activeDropdown = nil }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+
+        case .type:
+            let homeTypes: [(String, String)] = [
+                ("Apartamento", "building.2.fill"), ("Casa", "house.fill"),
+                ("Penthouse", "building.fill"),     ("Villa", "house.lodge.fill"),
+                ("Solar", "square.dashed"),          ("Local", "storefront.fill"),
+                ("Oficina", "briefcase.fill"),        ("Finca", "tree.fill"),
+            ]
+            VStack(spacing: 8) {
+                Text("Tipo de Inmueble").font(.subheadline.bold())
+                ForEach(homeTypes, id: \.0) { name, icon in
+                    Button {
+                        filterHomeType = (filterHomeType == name) ? nil : name
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            withAnimation { activeDropdown = nil }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: icon).frame(width: 20)
+                                .foregroundStyle(filterHomeType == name ? .white : Color.rdBlue)
+                            Text(name).font(.subheadline)
+                                .foregroundStyle(filterHomeType == name ? .white : .primary)
+                            Spacer()
+                            if filterHomeType == name {
+                                Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white)
+                            }
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 10)
+                        .background(filterHomeType == name ? Color.rdBlue : Color(.secondarySystemFill),
+                                    in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+                if filterHomeType != nil {
+                    Button {
+                        filterHomeType = nil
+                        withAnimation { activeDropdown = nil }
+                    } label: {
+                        Text("Limpiar selección").font(.caption.bold()).foregroundStyle(Color.rdRed)
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(16)
+            .frame(maxHeight: 400)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+        }
+    }
+
+    // MARK: - Filter sheet (secondary / advanced filters)
     private var filterSheet: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    // ── Listing type ─────────────────────────────────
-                    FilterSection(title: "Tipo de Listado") {
-                        HStack(spacing: 10) {
-                            ForEach([("venta", "Comprar"), ("alquiler", "Alquilar"), ("proyecto", "Proyectos")],
-                                     id: \.0) { val, label in
-                                FilterChip(label: label, isActive: selectedType == val) {
-                                    selectedType = val
-                                }
+                    // ── Bathrooms ─────────────────────────────────────
+                    FilterSection(title: "Baños") {
+                        HStack(spacing: 8) {
+                            ForEach([nil, 1, 2, 3, 4] as [Int?], id: \.self) { val in
+                                FilterChip(
+                                    label: val == nil ? "Todos" : "\(val!)+",
+                                    isActive: filterMinBathrooms == val
+                                ) { filterMinBathrooms = val }
                             }
                         }
                     }
 
-                    // ── Home type ─────────────────────────────────────
-                    FilterSection(title: "Tipo de Inmueble") {
-                        let homeTypes: [(String, String)] = [
-                            ("Apartamento", "building.2.fill"),
-                            ("Casa",        "house.fill"),
-                            ("Penthouse",   "building.fill"),
-                            ("Villa",       "house.lodge.fill"),
-                            ("Solar",       "square.dashed"),
-                            ("Local",       "storefront.fill"),
-                            ("Oficina",     "briefcase.fill"),
-                            ("Finca",       "tree.fill"),
-                        ]
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                            AmenityChip(name: "Todos", icon: "square.grid.2x2.fill",
-                                        isActive: filterHomeType == nil) {
-                                filterHomeType = nil
-                            }
-                            ForEach(homeTypes, id: \.0) { name, icon in
-                                AmenityChip(name: name, icon: icon,
-                                            isActive: filterHomeType == name) {
-                                    filterHomeType = (filterHomeType == name) ? nil : name
-                                }
-                            }
+                    // ── Area (m²) ────────────────────────────────────
+                    FilterSection(title: "Área (m²)") {
+                        HStack(spacing: 12) {
+                            AreaField(label: "Mín m²", value: $filterMinArea)
+                            AreaField(label: "Máx m²", value: $filterMaxArea)
                         }
                     }
 
-                    // ── Price (toggle: range vs payment) ─────────────
-                    FilterSection(title: "Precio") {
+                    // ── Price (range + mortgage calculator) ──────────
+                    FilterSection(title: "Calculadora de Pago") {
                         VStack(spacing: 14) {
-                            // Toggle
                             HStack(spacing: 0) {
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.2)) { priceMode = "range" }
                                 } label: {
                                     Text("Rango de Precio")
                                         .font(.subheadline.weight(priceMode == "range" ? .bold : .regular))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
                                         .foregroundStyle(priceMode == "range" ? .white : .primary)
                                         .background(priceMode == "range" ? Color.rdBlue : Color(.secondarySystemFill),
                                                     in: RoundedRectangle(cornerRadius: 10))
                                 }
                                 .buttonStyle(.plain)
-
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.2)) { priceMode = "payment" }
                                 } label: {
                                     Text("Pago Mensual")
                                         .font(.subheadline.weight(priceMode == "payment" ? .bold : .regular))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
                                         .foregroundStyle(priceMode == "payment" ? .white : .primary)
                                         .background(priceMode == "payment" ? Color.rdBlue : Color(.secondarySystemFill),
                                                     in: RoundedRectangle(cornerRadius: 10))
@@ -740,52 +973,20 @@ struct BrowseView: View {
                                         MortgageField(label: "Años", text: $mortgageYears, icon: "calendar")
                                         MortgageField(label: "Tasa %", text: $mortgageRate, icon: "percent")
                                     }
-
                                     if let mp = monthlyPayment {
                                         VStack(spacing: 4) {
-                                            Text("Pago Mensual Estimado")
-                                                .font(.caption).foregroundStyle(.secondary)
-                                            Text(formatCurrency(mp))
-                                                .font(.title2.bold())
-                                                .foregroundStyle(Color.rdGreen)
+                                            Text("Pago Mensual Estimado").font(.caption).foregroundStyle(.secondary)
+                                            Text(formatCurrency(mp)).font(.title2.bold()).foregroundStyle(Color.rdGreen)
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 14)
-                                        .background(Color.rdGreen.opacity(0.08),
-                                                    in: RoundedRectangle(cornerRadius: 12))
+                                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                        .background(Color.rdGreen.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                                     } else {
                                         Text("Ingresa precio, inicial, años y tasa para calcular")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 12)
+                                            .font(.caption).foregroundStyle(.secondary)
+                                            .frame(maxWidth: .infinity).padding(.vertical, 12)
                                     }
                                 }
                                 .transition(.opacity.combined(with: .move(edge: .trailing)))
-                            }
-                        }
-                    }
-
-                    // ── Bedrooms ──────────────────────────────────────
-                    FilterSection(title: "Habitaciones") {
-                        HStack(spacing: 8) {
-                            ForEach([nil, 1, 2, 3, 4, 5] as [Int?], id: \.self) { val in
-                                FilterChip(
-                                    label: val == nil ? "Todas" : "\(val!)+",
-                                    isActive: filterMinBedrooms == val
-                                ) { filterMinBedrooms = val }
-                            }
-                        }
-                    }
-
-                    // ── Bathrooms ─────────────────────────────────────
-                    FilterSection(title: "Baños") {
-                        HStack(spacing: 8) {
-                            ForEach([nil, 1, 2, 3, 4] as [Int?], id: \.self) { val in
-                                FilterChip(
-                                    label: val == nil ? "Todos" : "\(val!)+",
-                                    isActive: filterMinBathrooms == val
-                                ) { filterMinBathrooms = val }
                             }
                         }
                     }
@@ -820,21 +1021,34 @@ struct BrowseView: View {
                         }
                     }
 
+                    // ── Sort ──────────────────────────────────────────
+                    FilterSection(title: "Ordenar por") {
+                        HStack(spacing: 8) {
+                            ForEach(SortOption.allCases) { opt in
+                                FilterChip(label: opt.rawValue, isActive: sortOption == opt) {
+                                    sortOption = opt
+                                }
+                            }
+                        }
+                    }
+
                     Color.clear.frame(height: 80)
                 }
                 .padding(.horizontal, 16)
             }
-            .navigationTitle("Filtros")
+            .navigationTitle("Más Filtros")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { showFilters = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Limpiar") {
+                    Button("Limpiar todo") {
                         filterMinPrice = nil; filterMaxPrice = nil
                         filterMinBedrooms = nil; filterMinBathrooms = nil
                         filterAmenities = []; filterHomeType = nil
+                        filterMinArea = nil; filterMaxArea = nil
+                        sortOption = .newest
                         selectedType = "venta"; priceMode = "range"
                         mortgagePrice = ""; mortgageDown = ""
                         mortgageYears = "30"; mortgageRate = "9.5"
@@ -845,9 +1059,8 @@ struct BrowseView: View {
             .safeAreaInset(edge: .bottom) {
                 Button {
                     showFilters = false
-                    Task { await load(reset: true) }
                 } label: {
-                    Text("Ver \(filteredListings.count) propiedades")
+                    Text("Ver \(sortedFilteredListings.count) propiedades")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -1320,13 +1533,41 @@ private struct PriceField: View {
             .keyboardType(.numberPad)
             .padding(10)
             .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10))
-            .onChange(of: text) { v in
+            .onChange(of: text) { _, v in
                 let clean = v.filter { $0.isNumber }
                 value = clean.isEmpty ? nil : Double(clean)
             }
             .onAppear {
                 if let v = value { text = String(format: "%.0f", v) }
             }
+    }
+}
+
+private struct AreaField: View {
+    let label: String
+    @Binding var value: Double?
+
+    @State private var text = ""
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "ruler")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.rdBlue)
+                .frame(width: 18)
+            TextField(label, text: $text)
+                .keyboardType(.numberPad)
+                .font(.subheadline)
+        }
+        .padding(10)
+        .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+        .onChange(of: text) { _, v in
+            let clean = v.filter { $0.isNumber }
+            value = clean.isEmpty ? nil : Double(clean)
+        }
+        .onAppear {
+            if let v = value { text = String(format: "%.0f", v) }
+        }
     }
 }
 

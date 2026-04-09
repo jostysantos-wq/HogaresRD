@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Photos
 
 /// Reusable avatar view — shows photo if available, initials fallback.
 /// When `editable` is true, tapping opens the photo library.
@@ -14,11 +15,37 @@ struct AvatarView: View {
     @State private var showPicker = false
     @State private var showError = false
     @State private var errorMsg = ""
+    @State private var showPhotoPermission = false
+    @State private var showSettingsAlert = false
+
+    private func requestPhotoAccess() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized, .limited:
+            showPicker = true
+        case .notDetermined:
+            showPhotoPermission = true
+        case .denied, .restricted:
+            showSettingsAlert = true
+        @unknown default:
+            showPhotoPermission = true
+        }
+    }
+
+    private func handlePermissionResponse() {
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+            DispatchQueue.main.async {
+                if newStatus == .authorized || newStatus == .limited {
+                    showPicker = true
+                }
+            }
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             if editable {
-                Button { showPicker = true } label: {
+                Button { requestPhotoAccess() } label: {
                     avatarContent
                 }
                 .buttonStyle(.plain)
@@ -50,6 +77,22 @@ struct AvatarView: View {
             Button("OK") {}
         } message: {
             Text(errorMsg)
+        }
+        .alert("Acceso a Fotos", isPresented: $showPhotoPermission) {
+            Button("Permitir") { handlePermissionResponse() }
+            Button("No permitir", role: .cancel) {}
+        } message: {
+            Text("HogaresRD necesita acceso a tu galeria de fotos para que puedas actualizar tu foto de perfil.")
+        }
+        .alert("Acceso Denegado", isPresented: $showSettingsAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Abrir Ajustes") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } message: {
+            Text("El acceso a fotos esta desactivado. Puedes habilitarlo en Ajustes > HogaresRD > Fotos.")
         }
     }
 

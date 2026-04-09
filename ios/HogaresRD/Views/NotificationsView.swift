@@ -561,17 +561,37 @@ struct NotificationSettingsView: View {
 
     /// Sync a notification preference to the server so it persists across
     /// platforms. Fire-and-forget — UserDefaults is instant UI truth.
+    /// Maps iOS toggle keys to server push preference keys
+    private static let prefKeyMap: [String: String] = [
+        "notif_newListings":   "new_listing",
+        "notif_priceDrops":    "saved_search_match",
+        "notif_agentMessages": "new_message",
+        "notif_appUpdates":    "status_changed",
+        "notif_similar":       "saved_search_match",
+    ]
+
     private func syncNotifPref(_ key: String, _ value: Bool) {
         Task.detached {
-            guard let url = URL(string: "\(apiBase)/api/user/profile") else { return }
-            var req = URLRequest(url: url)
-            req.httpMethod = "PATCH"
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            if let t = APIService.shared.token {
+            let t = APIService.shared.token ?? ""
+            // Sync to user profile
+            if let url = URL(string: "\(apiBase)/api/user/profile") {
+                var req = URLRequest(url: url)
+                req.httpMethod = "PATCH"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+                req.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
+                _ = try? await URLSession.shared.data(for: req)
             }
-            req.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])
-            _ = try? await URLSession.shared.data(for: req)
+            // Also sync to push preferences so backend notify() respects it
+            if let pushKey = Self.prefKeyMap[key],
+               let url = URL(string: "\(apiBase)/api/push/preferences") {
+                var req = URLRequest(url: url)
+                req.httpMethod = "PUT"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+                req.httpBody = try? JSONSerialization.data(withJSONObject: [pushKey: value])
+                _ = try? await URLSession.shared.data(for: req)
+            }
         }
     }
 

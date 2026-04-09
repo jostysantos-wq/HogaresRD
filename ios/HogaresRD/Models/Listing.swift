@@ -90,7 +90,14 @@ struct Listing: Decodable, Identifiable, Equatable {
         unit_types           = try? c.decode([ListingUnit].self,         forKey: .unit_types)
         construction_company = try? c.decode(ConstructionCompany.self, forKey: .construction_company)
         blueprints           = try? c.decode([String].self,           forKey: .blueprints)
-        images               = (try? c.decode([String].self, forKey: .images))    ?? []
+        // Images can be [String] or [{url, label}] — handle both formats
+        if let strImages = try? c.decode([String].self, forKey: .images) {
+            images = strImages
+        } else if let objImages = try? c.decode([ImageObject].self, forKey: .images) {
+            images = objImages.map { $0.url }
+        } else {
+            images = []
+        }
         amenities            = (try? c.decode([String].self, forKey: .amenities)) ?? []
     }
 
@@ -136,6 +143,12 @@ struct Listing: Decodable, Identifiable, Equatable {
             return URL(string: base + path)
         }
     }
+}
+
+/// Backend may return images as objects with url + label
+private struct ImageObject: Decodable {
+    let url: String
+    let label: String?
 }
 
 struct ListingUnit: Codable {

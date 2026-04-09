@@ -6,14 +6,16 @@ struct InmobiliariaDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
+    @State private var teamForLeaderboard: [TeamBroker] = []
+
     /// Tabs visible based on user's effective access level
     private var tabs: [String] {
         let level = api.currentUser?.effectiveAccessLevel ?? 1
-        var t = ["Aplicaciones"]
-        if level >= 2 { t.append(contentsOf: ["Analíticas", "Ventas", "Contabilidad"]) }
+        var t = ["Inicio", "Aplicaciones"]
+        if level >= 2 { t.append(contentsOf: ["Analiticas", "Ventas", "Contabilidad"]) }
         t.append("Archivo")
-        if level >= 3 { t.append("Auditoría") }
-        t.append("Mis Propiedades")
+        if level >= 3 { t.append("Auditoria") }
+        t.append("Propiedades")
         if level >= 2 { t.append(contentsOf: ["Agentes", "Rendimiento"]) }
         if level >= 3 { t.append(contentsOf: ["Solicitudes", "Secretarias"]) }
         return t
@@ -38,15 +40,17 @@ struct InmobiliariaDashboardView: View {
                             withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
                         } label: {
                             HStack(spacing: 4) {
-                                if i >= 7 {
-                                    Image(systemName: i == 7 ? "person.2.fill" : i == 8 ? "person.badge.plus" : i == 9 ? "chart.bar.fill" : "person.crop.circle.badge.checkmark")
+                                if i == 0 {
+                                    Image(systemName: "house.fill").font(.system(size: 10))
+                                } else if i >= 8 {
+                                    Image(systemName: i == 8 ? "person.2.fill" : i == 9 ? "chart.bar.fill" : i == 10 ? "person.badge.plus" : "person.crop.circle.badge.checkmark")
                                         .font(.system(size: 10))
                                 }
                                 Text(title)
                             }
                             .font(.caption).bold()
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(selectedTab == i ? (i >= 7 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
+                            .background(selectedTab == i ? (i >= 8 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
                             .foregroundStyle(selectedTab == i ? .white : .primary)
                             .clipShape(Capsule())
                         }
@@ -62,19 +66,28 @@ struct InmobiliariaDashboardView: View {
 
             // Content
             TabView(selection: $selectedTab) {
+                // Home overview with leaderboard
+                DashboardHomeView(
+                    showSalesMetrics: (api.currentUser?.effectiveAccessLevel ?? 1) >= 2,
+                    showLeaderboard: (api.currentUser?.effectiveAccessLevel ?? 1) >= 2,
+                    teamMembers: teamForLeaderboard,
+                    onTapTab: { tab in selectedTab = tab + 1 },
+                    onTapMessages: {},
+                    onTapTours: {}
+                ).tag(0)
                 // Reuse broker dashboard tabs
-                DashboardApplicationsTab().tag(0)
-                DashboardAnalyticsTab().tag(1)
-                DashboardSalesTab().tag(2)
-                DashboardAccountingTab().tag(3)
-                DashboardArchiveTab().tag(4)
-                DashboardAuditTab().tag(5)
-                DashboardListingAnalyticsTab().tag(6)
+                DashboardApplicationsTab().tag(1)
+                DashboardAnalyticsTab().tag(2)
+                DashboardSalesTab().tag(3)
+                DashboardAccountingTab().tag(4)
+                DashboardArchiveTab().tag(5)
+                DashboardAuditTab().tag(6)
+                DashboardListingAnalyticsTab().tag(7)
                 // Inmobiliaria-only team tabs
-                TeamMembersTab().tag(7)
-                TeamRequestsTab().tag(8)
-                TeamPerformanceTab().tag(9)
-                TeamSecretariesTab().tag(10)
+                TeamMembersTab().tag(8)
+                TeamRequestsTab().tag(9)
+                TeamPerformanceTab().tag(10)
+                TeamSecretariesTab().tag(11)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
@@ -111,6 +124,11 @@ struct InmobiliariaDashboardView: View {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
                 }
+            }
+        }
+        .task {
+            if let team = try? await api.getTeamBrokers() {
+                teamForLeaderboard = team.brokers
             }
         }
     }

@@ -1,0 +1,128 @@
+{
+  "identifier" : "A1B2C3D4",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6761866373",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "HogaresRDPro",
+      "localizations" : [
+
+      ],
+      "name" : "HogaresRD Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "broker_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Publica propiedades, gestiona clientes, recibe leads prioritarios.",
+              "displayName" : "Broker — Agente Inmobiliario",
+              "locale" : "es_MX"
+            },
+            {
+              "description" : "List properties, manage clients, receive priority leads.",
+              "displayName" : "Broker — Real Estate Agent",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hogaresrd.broker.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Broker Mensual",
+          "subscriptionGroupID" : "HogaresRDPro",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "inmobiliaria_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Administra tu empresa, vincula agentes, supervisa operaciones.",
+              "displayName" : "Inmobiliaria — Empresa Inmobiliaria",
+              "locale" : "es_MX"
+            },
+            {
+              "description" : "Manage your company, link agents, oversee operations.",
+              "displayName" : "Agency — Real Estate Company",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hogaresrd.inmobiliaria.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Inmobiliaria Mensual",
+          "subscriptionGroupID" : "HogaresRDPro",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "constructora_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Publica proyectos, gestiona inventario de unidades, controla entregas.",
+              "displayName" : "Constructora — Desarrolladora",
+              "locale" : "es_MX"
+            },
+            {
+              "description" : "Publish projects, manage unit inventory, track deliveries.",
+              "displayName" : "Developer — Construction Company",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hogaresrd.constructora.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Constructora Mensual",
+          "subscriptionGroupID" : "HogaresRDPro",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

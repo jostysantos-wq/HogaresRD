@@ -7,121 +7,123 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		PRIVACY0000000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */; };
-		COMPARE0000000000000002 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = COMPARE0000000000000001 /* ComparisonView.swift */; };
-		B1F4E7A900000002 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F4E7A900000001 /* NotificationsView.swift */; };
+		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C1 /* HogaresRDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B1 /* HogaresRDApp.swift */; };
 		AA11000000000000000000C2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B2 /* ContentView.swift */; };
 		AA11000000000000000000C3 /* Listing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B3 /* Listing.swift */; };
-		AA22000000000000000000D1 /* SavedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C1 /* SavedStore.swift */; };
-		AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C2 /* AgencyPortfolioView.swift */; };
-		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
 		AA11000000000000000000C4 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B4 /* User.swift */; };
 		AA11000000000000000000C5 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B5 /* APIService.swift */; };
-		B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */; };
-		APPLOCK000000000000000002 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPLOCK000000000000000001 /* AppLockManager.swift */; };
-		LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCKSCR000000000000000001 /* LockScreenView.swift */; };
-		SPLASH0000000000000000B2 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPLASH0000000000000000B1 /* SplashView.swift */; };
-		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
-		INVENT0000000000000000B2 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = INVENT0000000000000000B1 /* InventoryView.swift */; };
-		REPORT0000000000000000B2 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPORT0000000000000000B1 /* ReportView.swift */; };
-		SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000B1 /* SavedSearch.swift */; };
-		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
-		ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCAMPS00000000000000B1 /* AdCampaignsView.swift */; };
-		LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */; };
-		TASKMOD000000000000000B2 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKMOD000000000000000B1 /* Task.swift */; };
-		TASKVIEW00000000000000B2 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKVIEW00000000000000B1 /* TasksView.swift */; };
-		A1B2C3D4E5F60000PUSH0002 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
 		AA11000000000000000000C8 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B8 /* ListingDetailView.swift */; };
 		AA11000000000000000000C9 /* CitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B9 /* CitiesView.swift */; };
 		AA11000000000000000000CA /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BA /* AuthView.swift */; };
 		AA11000000000000000000CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BB /* ProfileView.swift */; };
-		AA55000000000000000001 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000011 /* SubscriptionView.swift */; };
-		AA55000000000000000002 /* StoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000012 /* StoreManager.swift */; };
 		AA11000000000000000000CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BC /* Assets.xcassets */; };
 		AA11000000000000000000CD /* SubmitListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BE /* SubmitListingView.swift */; };
 		AA11000000000000000000CE /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BF /* FeedView.swift */; };
+		AA22000000000000000000D1 /* SavedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C1 /* SavedStore.swift */; };
+		AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C2 /* AgencyPortfolioView.swift */; };
+		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
 		AA33000000000000000000D2 /* AdCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C2 /* AdCard.swift */; };
 		AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA44000000000000000000C1 /* LeadApplicationView.swift */; };
-		AA55000000000000000000C1 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B1 /* Conversation.swift */; };
-		AA55000000000000000000C2 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B2 /* Application.swift */; };
 		AA550000000000000000000000C2 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C1 /* DashboardModels.swift */; };
 		AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C3 /* BrokerDashboardView.swift */; };
 		AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */; };
-		AA880000000000000000000000C2 /* ChatIAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA880000000000000000000000C1 /* ChatIAView.swift */; };
-		AA990000000000000000000000D2 /* Tour.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D1 /* Tour.swift */; };
-		AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D3 /* TourBookingSheet.swift */; };
-		F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */; };
-		E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */; };
+		AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000FF /* DashboardHomeView.swift */; };
+		AA55000000000000000000C1 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B1 /* Conversation.swift */; };
+		AA55000000000000000000C2 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B2 /* Application.swift */; };
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
 		AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B4 /* ConversationThreadView.swift */; };
 		AA55000000000000000000C5 /* ApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B5 /* ApplicationsView.swift */; };
+		AA55000000000000000001 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000011 /* SubscriptionView.swift */; };
+		AA55000000000000000002 /* StoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000012 /* StoreManager.swift */; };
 		AA66000000000000000000C1 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA66000000000000000000B1 /* MapView.swift */; };
 		AA77000000000000000000C1 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA77000000000000000000B1 /* LocationManager.swift */; };
-		AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000FF /* DashboardHomeView.swift */; };
+		AA880000000000000000000000C2 /* ChatIAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA880000000000000000000000C1 /* ChatIAView.swift */; };
+		AA990000000000000000000000D2 /* Tour.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D1 /* Tour.swift */; };
+		AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA990000000000000000000000D3 /* TourBookingSheet.swift */; };
+		ADCAMPS00000000000000B2 /* AdCampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCAMPS00000000000000B1 /* AdCampaignsView.swift */; };
+		APPLOCK000000000000000002 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPLOCK000000000000000001 /* AppLockManager.swift */; };
+		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
+		B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */; };
+		B1F4E7A900000002 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F4E7A900000001 /* NotificationsView.swift */; };
+		B8BE113D2F87AE28000BB5F0 /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */; };
+		COMPARE0000000000000002 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = COMPARE0000000000000001 /* ComparisonView.swift */; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */; };
+		F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */; };
+		INVENT0000000000000000B2 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = INVENT0000000000000000B1 /* InventoryView.swift */; };
+		LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCKSCR000000000000000001 /* LockScreenView.swift */; };
+		LOCSEARCH0000000000000B2 /* LocationSearchCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */; };
+		PRIVACY0000000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */; };
+		REPORT0000000000000000B2 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPORT0000000000000000B1 /* ReportView.swift */; };
+		SPLASH0000000000000000B2 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPLASH0000000000000000B1 /* SplashView.swift */; };
+		SSEARCH000000000000000B2 /* SavedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000B1 /* SavedSearch.swift */; };
+		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
+		TASKMOD000000000000000B2 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKMOD000000000000000B1 /* Task.swift */; };
+		TASKVIEW00000000000000B2 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKVIEW00000000000000B1 /* TasksView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B1F4E7A900000001 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingAnalyticsView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B1 /* HogaresRDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HogaresRDApp.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B3 /* Listing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listing.swift; sourceTree = "<group>"; };
-		AA22000000000000000000C1 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
-		AA22000000000000000000C2 /* AgencyPortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPortfolioView.swift; sourceTree = "<group>"; };
-		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B4 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B5 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
-		C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
-		APPLOCK000000000000000001 /* AppLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockManager.swift; sourceTree = "<group>"; };
-		LOCKSCR000000000000000001 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
-		SPLASH0000000000000000B1 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
-		AVATAR0000000000000000B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
-		INVENT0000000000000000B1 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
-		REPORT0000000000000000B1 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
-		SSEARCH000000000000000B1 /* SavedSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearch.swift; sourceTree = "<group>"; };
-		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
-		ADCAMPS00000000000000B1 /* AdCampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCampaignsView.swift; sourceTree = "<group>"; };
-		LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchCompleter.swift; sourceTree = "<group>"; };
-		TASKMOD000000000000000B1 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
-		TASKVIEW00000000000000B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B8 /* ListingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingDetailView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B9 /* CitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CitiesView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BA /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BB /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
-		AA55000000000000000011 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
-		AA55000000000000000012 /* StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreManager.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA11000000000000000000BD /* HogaresRD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HogaresRD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA11000000000000000000BE /* SubmitListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitListingView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000BF /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C1 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C2 /* AgencyPortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPortfolioView.swift; sourceTree = "<group>"; };
+		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C2 /* AdCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCard.swift; sourceTree = "<group>"; };
 		AA44000000000000000000C1 /* LeadApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadApplicationView.swift; sourceTree = "<group>"; };
-		AA55000000000000000000B1 /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
-		AA55000000000000000000B2 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C1 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C3 /* BrokerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerDashboardView.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InmobiliariaDashboardView.swift; sourceTree = "<group>"; };
-		AA880000000000000000000000C1 /* ChatIAView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatIAView.swift; sourceTree = "<group>"; };
-		AA990000000000000000000000D1 /* Tour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tour.swift; sourceTree = "<group>"; };
-		AA990000000000000000000000D3 /* TourBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourBookingSheet.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingAnalyticsView.swift; sourceTree = "<group>"; };
-		D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretaryDashboardView.swift; sourceTree = "<group>"; };
+		AA550000000000000000000000FF /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B1 /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
+		AA55000000000000000000B2 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B4 /* ConversationThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationThreadView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B5 /* ApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsView.swift; sourceTree = "<group>"; };
+		AA55000000000000000011 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
+		AA55000000000000000012 /* StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreManager.swift; sourceTree = "<group>"; };
 		AA66000000000000000000B1 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AA77000000000000000000B1 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
-		PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA880000000000000000000000C1 /* ChatIAView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatIAView.swift; sourceTree = "<group>"; };
+		AA990000000000000000000000D1 /* Tour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tour.swift; sourceTree = "<group>"; };
+		AA990000000000000000000000D3 /* TourBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourBookingSheet.swift; sourceTree = "<group>"; };
+		ADCAMPS00000000000000B1 /* AdCampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCampaignsView.swift; sourceTree = "<group>"; };
+		APPLOCK000000000000000001 /* AppLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockManager.swift; sourceTree = "<group>"; };
+		AVATAR0000000000000000B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
+		B1F4E7A900000001 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
+		C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		COMPARE0000000000000001 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
+		D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretaryDashboardView.swift; sourceTree = "<group>"; };
 		ENTITLE0000000000000001 /* HogaresRD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HogaresRD.entitlements; sourceTree = "<group>"; };
-		AA550000000000000000000000FF /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		INVENT0000000000000000B1 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
+		LOCKSCR000000000000000001 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
+		LOCSEARCH0000000000000B1 /* LocationSearchCompleter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchCompleter.swift; sourceTree = "<group>"; };
+		PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		REPORT0000000000000000B1 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
+		SPLASH0000000000000000B1 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		SSEARCH000000000000000B1 /* SavedSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearch.swift; sourceTree = "<group>"; };
+		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
+		TASKMOD000000000000000B1 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		TASKVIEW00000000000000B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,14 +148,15 @@
 		AA11000000000000000000A1 /* HogaresRD */ = {
 			isa = PBXGroup;
 			children = (
+				B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */,
 				AA11000000000000000000B1 /* HogaresRDApp.swift */,
 				AA11000000000000000000B2 /* ContentView.swift */,
 				AA11000000000000000000A3 /* Models */,
 				AA11000000000000000000A4 /* Services */,
 				AA11000000000000000000A5 /* Views */,
 				AA11000000000000000000BC /* Assets.xcassets */,
-			PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */,
-			ENTITLE0000000000000001 /* HogaresRD.entitlements */,
+				PRIVACY0000000000000001 /* PrivacyInfo.xcprivacy */,
+				ENTITLE0000000000000001 /* HogaresRD.entitlements */,
 			);
 			path = HogaresRD;
 			sourceTree = "<group>";
@@ -170,7 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				AA11000000000000000000B3 /* Listing.swift */,
-					AA22000000000000000000C1 /* SavedStore.swift */,
+				AA22000000000000000000C1 /* SavedStore.swift */,
 				AA11000000000000000000B4 /* User.swift */,
 				AA33000000000000000000C1 /* Ad.swift */,
 				AA55000000000000000000B1 /* Conversation.swift */,
@@ -221,19 +224,19 @@
 				TASKVIEW00000000000000B1 /* TasksView.swift */,
 				AA11000000000000000000BE /* SubmitListingView.swift */,
 				AA11000000000000000000BF /* FeedView.swift */,
-					AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
-					AA22000000000000000000C3 /* SavedListingsView.swift */,
+				AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
+				AA22000000000000000000C3 /* SavedListingsView.swift */,
 				AA33000000000000000000C2 /* AdCard.swift */,
-			AA44000000000000000000C1 /* LeadApplicationView.swift */,
-			AA55000000000000000000B3 /* ConversationsView.swift */,
-			AA55000000000000000000B4 /* ConversationThreadView.swift */,
-			AA55000000000000000000B5 /* ApplicationsView.swift */,
-			AA66000000000000000000B1 /* MapView.swift */,
-			AA880000000000000000000000C1 /* ChatIAView.swift */,
+				AA44000000000000000000C1 /* LeadApplicationView.swift */,
+				AA55000000000000000000B3 /* ConversationsView.swift */,
+				AA55000000000000000000B4 /* ConversationThreadView.swift */,
+				AA55000000000000000000B5 /* ApplicationsView.swift */,
+				AA66000000000000000000B1 /* MapView.swift */,
+				AA880000000000000000000000C1 /* ChatIAView.swift */,
 				AA990000000000000000000000D3 /* TourBookingSheet.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */,
 				D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */,
-			COMPARE0000000000000001 /* ComparisonView.swift */,
+				COMPARE0000000000000001 /* ComparisonView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -298,6 +301,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA11000000000000000000CC /* Assets.xcassets in Resources */,
+				B8BE113D2F87AE28000BB5F0 /* Configuration.storekit in Resources */,
 				PRIVACY0000000000000002 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -339,29 +343,29 @@
 				AA55000000000000000002 /* StoreManager.swift in Sources */,
 				AA11000000000000000000CD /* SubmitListingView.swift in Sources */,
 				AA11000000000000000000CE /* FeedView.swift in Sources */,
-					AA22000000000000000000D1 /* SavedStore.swift in Sources */,
-					AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
+				AA22000000000000000000D1 /* SavedStore.swift in Sources */,
+				AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
-			AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */,
-					AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
-			AA55000000000000000000C1 /* Conversation.swift in Sources */,
-			AA55000000000000000000C2 /* Application.swift in Sources */,
-			AA550000000000000000000000C2 /* DashboardModels.swift in Sources */,
-			AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */,
+				AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */,
+				AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
+				AA55000000000000000000C1 /* Conversation.swift in Sources */,
+				AA55000000000000000000C2 /* Application.swift in Sources */,
+				AA550000000000000000000000C2 /* DashboardModels.swift in Sources */,
+				AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */,
 				AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */,
-			AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */,
-			AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
-			AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
-			AA55000000000000000000C5 /* ApplicationsView.swift in Sources */,
-			AA66000000000000000000C1 /* MapView.swift in Sources */,
-			AA77000000000000000000C1 /* LocationManager.swift in Sources */,
-			AA880000000000000000000000C2 /* ChatIAView.swift in Sources */,
+				AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */,
+				AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
+				AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
+				AA55000000000000000000C5 /* ApplicationsView.swift in Sources */,
+				AA66000000000000000000C1 /* MapView.swift in Sources */,
+				AA77000000000000000000C1 /* LocationManager.swift in Sources */,
+				AA880000000000000000000000C2 /* ChatIAView.swift in Sources */,
 				AA990000000000000000000000D2 /* Tour.swift in Sources */,
 				AA990000000000000000000000D4 /* TourBookingSheet.swift in Sources */,
 				F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */,
-			COMPARE0000000000000002 /* ComparisonView.swift in Sources */,
+				COMPARE0000000000000002 /* ComparisonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -502,12 +506,12 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HogaresRD necesita acceso a tu calendario para agregar visitas programadas a propiedades.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -538,12 +542,12 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HogaresRD;
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HogaresRD necesita acceso a tu calendario para agregar visitas programadas a propiedades.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HogaresRD necesita acceso a la camara para tomar fotos de tu perfil o propiedades.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "HogaresRD usa Face ID para autenticarte de forma segura y rapida.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HogaresRD usa tu ubicacion para mostrarte propiedades cerca de ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HogaresRD necesita acceso a tus fotos para que puedas actualizar tu foto de perfil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
