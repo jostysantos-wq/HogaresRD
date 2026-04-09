@@ -75,9 +75,7 @@ struct ContentView: View {
 
     private func schedulePopupIfNeeded() {
         guard !popupDismissed, let user = api.currentUser else { return }
-        let needsVerification = !user.isEmailVerified
-        let needsTrialReminder = user.isOnTrial && user.isAgency && (user.trialDaysRemaining ?? 99) <= 7
-        guard needsVerification || needsTrialReminder else { return }
+        guard !user.isEmailVerified else { return }
         // Show after a short delay so the app loads first
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             if !popupDismissed { withAnimation(.spring(response: 0.4)) { showPopup = true } }
@@ -113,99 +111,64 @@ struct ContentView: View {
                 .padding(.bottom, 4)
 
                 // Email verification card
-                if !user.isEmailVerified {
-                    VStack(spacing: 14) {
-                        Image(systemName: "envelope.badge.shield.half.filled")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color(red: 0.9, green: 0.5, blue: 0))
-                        Text("Verifica tu correo")
-                            .font(.title3.bold())
-                        Text("Enviamos un enlace de verificacion a **\(user.email)**. Revisa tu bandeja de entrada o spam.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                VStack(spacing: 14) {
+                    Image(systemName: "envelope.badge.shield.half.filled")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color(red: 0.9, green: 0.5, blue: 0))
+                    Text("Verifica tu correo")
+                        .font(.title3.bold())
+                    Text("Enviamos un enlace de verificacion a **\(user.email)**. Revisa tu bandeja de entrada o spam.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
 
-                        if verificationSent {
-                            Label("Correo enviado", systemImage: "checkmark.circle.fill")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.green)
-                        } else if verificationError {
-                            Label("Error al enviar", systemImage: "xmark.circle.fill")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.red)
-                        } else {
-                            Button {
-                                Task {
-                                    resendingVerification = true
-                                    verificationError = false
-                                    do {
-                                        try await api.resendVerificationEmail()
-                                        verificationSent = true
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                            verificationSent = false
-                                        }
-                                    } catch {
-                                        verificationError = true
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            verificationError = false
-                                        }
-                                    }
-                                    resendingVerification = false
-                                }
-                            } label: {
-                                if resendingVerification {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                } else {
-                                    Text("Reenviar correo")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                        .background(Color(red: 0.9, green: 0.5, blue: 0), in: RoundedRectangle(cornerRadius: 10))
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(20)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-
-                // Trial reminder card
-                if user.isOnTrial, user.isAgency, let days = user.trialDaysRemaining {
-                    VStack(spacing: 14) {
-                        Image(systemName: days <= 3 ? "exclamationmark.triangle.fill" : "clock.badge.exclamationmark")
-                            .font(.system(size: 40))
-                            .foregroundStyle(days <= 3 ? Color.rdRed : Color.rdBlue)
-                        Text(days == 0 ? "Tu prueba termina hoy" :
-                             days == 1 ? "Te queda 1 dia de prueba" :
-                             "Te quedan \(days) dias de prueba")
-                            .font(.title3.bold())
-                        Text("Suscribete para seguir publicando propiedades y recibiendo leads.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                    if verificationSent {
+                        Label("Correo enviado", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.green)
+                    } else if verificationError {
+                        Label("Error al enviar", systemImage: "xmark.circle.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.red)
+                    } else {
                         Button {
-                            dismissPopup()
-                            selectedTab = 3
+                            Task {
+                                resendingVerification = true
+                                verificationError = false
+                                do {
+                                    try await api.resendVerificationEmail()
+                                    verificationSent = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                        verificationSent = false
+                                    }
+                                } catch {
+                                    verificationError = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        verificationError = false
+                                    }
+                                }
+                                resendingVerification = false
+                            }
                         } label: {
-                            Text("Ver planes")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(days <= 3 ? Color.rdRed : Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                            if resendingVerification {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                            } else {
+                                Text("Reenviar correo")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color(red: 0.9, green: 0.5, blue: 0), in: RoundedRectangle(cornerRadius: 10))
+                            }
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(20)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .padding(.top, !user.isEmailVerified ? 12 : 0)
                 }
+                .padding(20)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .padding(24)
             .background(Color(.systemGroupedBackground))
