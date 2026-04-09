@@ -223,7 +223,7 @@ struct BrowseView: View {
 
                 quickFilterBar
             }
-            .padding(.top, 8)
+            .padding(.top, 12)
             .zIndex(2)
 
             // ── Bottom area: count bar + horizontal carousel ─
@@ -313,6 +313,7 @@ struct BrowseView: View {
                 }
             }
         }
+        .ignoresSafeArea(edges: .top)
         .onAppear     { selectedType = initialType }
         .onChange(of: selectedType) { Task { await load(reset: true) } }
         .task         { await load(reset: true) }
