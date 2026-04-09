@@ -55,9 +55,7 @@ struct ProfileView: View {
 
             // ── Subscription ──
             Section("Plan") {
-                NavigationLink {
-                    SubscriptionView().environmentObject(api)
-                } label: {
+                NavigationLink(destination: SubscriptionView().environmentObject(api)) {
                     HStack {
                         Label("Suscripción", systemImage: "crown.fill")
                             .foregroundStyle(.primary)

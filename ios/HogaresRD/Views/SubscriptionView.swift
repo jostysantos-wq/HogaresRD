@@ -7,7 +7,7 @@ import StoreKit
 
 struct SubscriptionView: View {
     @EnvironmentObject var api: APIService
-    @StateObject private var store = StoreManager.shared
+    @ObservedObject private var store = StoreManager.shared
     @Environment(\.dismiss) var dismiss
     @State private var purchasing: String?
     @State private var showSuccess = false

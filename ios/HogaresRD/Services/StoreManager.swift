@@ -183,7 +183,10 @@ class StoreManager: ObservableObject {
     // Notify the backend of subscription changes so it can upgrade/downgrade the user role
 
     private func syncWithServer(transaction: StoreKit.Transaction) async {
-        guard let api = await getAPIService() else { return }
+        guard let api = _api else {
+            print("[StoreManager] No API service set — skipping server sync")
+            return
+        }
         let role = Self.roleMap[transaction.productID] ?? "user"
 
         do {
@@ -198,13 +201,6 @@ class StoreManager: ObservableObject {
         } catch {
             print("[StoreManager] Server sync failed:", error.localizedDescription)
         }
-    }
-
-    @MainActor
-    private func getAPIService() -> APIService? {
-        // Access the shared API service
-        // This is a workaround since StoreManager isn't in the SwiftUI environment
-        return nil // Will be set via setAPIService()
     }
 
     // Injected API reference
