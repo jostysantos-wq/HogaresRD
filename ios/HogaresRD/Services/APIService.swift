@@ -1690,6 +1690,26 @@ struct AgencyDetail: Decodable {
     }
 }
 
+    // MARK: - Contact Timeline CRM
+
+    func getContacts() async throws -> [ContactSummary] {
+        let url = URL(string: "\(apiBase)/api/contacts")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando contactos")
+        return try decoder.decode(ContactsResponse.self, from: data).contacts
+    }
+
+    func getContactTimeline(contactId: String, type: String? = nil) async throws -> ContactTimelineResponse {
+        var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline")!
+        if let type = type { comps.queryItems = [URLQueryItem(name: "type", value: type)] }
+        let req = try authedRequest(comps.url!)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando timeline")
+        return try decoder.decode(ContactTimelineResponse.self, from: data)
+    }
+}
+
 enum APIError: LocalizedError {
     case server(String)
     var errorDescription: String? {

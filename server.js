@@ -286,6 +286,213 @@ app.use('/api/push',              require('./routes/push').router);
 app.use('/api/saved-searches',    savedSearchRouter);
 app.use('/api/tasks',             require('./routes/tasks'));
 
+// ── Contact Timeline CRM ──────────────────────────────────────────────────
+const { userAuth: contactAuth } = require('./routes/auth');
+
+// GET /api/contacts — list all contacts for this agent (deduplicated from apps + conversations)
+app.get('/api/contacts', contactAuth, (req, res) => {
+  const userId = req.user.sub;
+  const apps   = store.getApplicationsByBroker(userId);
+  const convs  = store.getConversationsForBroker(userId);
+  const tours  = store.getToursByBroker(userId);
+
+  // Build unique contact map from all sources
+  const contactMap = new Map();
+
+  for (const a of apps) {
+    const c = a.client || {};
+    const id = c.user_id || c.email || a.id;
+    if (!id) continue;
+    const existing = contactMap.get(id) || { id, name: '', email: '', phone: '', interactions: 0, lastInteraction: null, firstInteraction: null };
+    existing.name  = existing.name || c.name || '';
+    existing.email = existing.email || c.email || '';
+    existing.phone = existing.phone || c.phone || '';
+    existing.interactions++;
+    const ts = a.updated_at || a.created_at;
+    if (ts && (!existing.lastInteraction || ts > existing.lastInteraction)) existing.lastInteraction = ts;
+    if (ts && (!existing.firstInteraction || ts < existing.firstInteraction)) existing.firstInteraction = ts;
+    contactMap.set(id, existing);
+  }
+
+  for (const c of convs) {
+    const id = c.clientId || c.clientEmail;
+    if (!id) continue;
+    const existing = contactMap.get(id) || { id, name: '', email: '', phone: '', interactions: 0, lastInteraction: null, firstInteraction: null };
+    existing.name  = existing.name || c.clientName || '';
+    existing.email = existing.email || c.clientEmail || '';
+    existing.phone = existing.phone || c.clientPhone || '';
+    existing.interactions += (c.messageCount || 1);
+    const ts = c.updatedAt || c.createdAt;
+    if (ts && (!existing.lastInteraction || ts > existing.lastInteraction)) existing.lastInteraction = ts;
+    if (ts && (!existing.firstInteraction || ts < existing.firstInteraction)) existing.firstInteraction = ts;
+    contactMap.set(id, existing);
+  }
+
+  for (const t of tours) {
+    const id = t.client_id || t.client_email;
+    if (!id) continue;
+    const existing = contactMap.get(id) || { id, name: '', email: '', phone: '', interactions: 0, lastInteraction: null, firstInteraction: null };
+    existing.name  = existing.name || t.client_name || '';
+    existing.email = existing.email || t.client_email || '';
+    existing.phone = existing.phone || t.client_phone || '';
+    existing.interactions++;
+    const ts = t.updated_at || t.created_at;
+    if (ts && (!existing.lastInteraction || ts > existing.lastInteraction)) existing.lastInteraction = ts;
+    if (ts && (!existing.firstInteraction || ts < existing.firstInteraction)) existing.firstInteraction = ts;
+    contactMap.set(id, existing);
+  }
+
+  const contacts = Array.from(contactMap.values())
+    .sort((a, b) => (b.lastInteraction || '').localeCompare(a.lastInteraction || ''));
+  res.json({ contacts, total: contacts.length });
+});
+
+// GET /api/contacts/:id/timeline — unified activity feed for a contact
+app.get('/api/contacts/:id/timeline', contactAuth, (req, res) => {
+  const contactId = req.params.id;
+  const typeFilter = req.query.type || null;
+  const events = [];
+
+  // 1. Applications
+  const apps = store.getApplicationsByClient(contactId);
+  for (const a of apps) {
+    // Main application event
+    events.push({
+      id: 'evt_app_' + a.id,
+      type: 'application',
+      timestamp: a.created_at || a.createdAt,
+      title: 'Nueva aplicacion',
+      subtitle: a.listing_title || '',
+      icon: 'doc.text.fill',
+      color: '#0038A8',
+      refId: a.id,
+      status: a.status,
+    });
+    // Status change events from timeline_events
+    const timeline = Array.isArray(a.timeline_events) ? a.timeline_events : [];
+    for (const te of timeline) {
+      const statusLabels = { en_revision: 'En revision', aprobado: 'Aprobada', rechazado: 'Rechazada', completado: 'Completada' };
+      events.push({
+        id: 'evt_appst_' + a.id + '_' + (te.timestamp || Date.now()),
+        type: 'status_change',
+        timestamp: te.timestamp || te.date,
+        title: statusLabels[te.to] || ('Estado: ' + (te.to || '')),
+        subtitle: a.listing_title || '',
+        icon: te.to === 'aprobado' ? 'checkmark.circle.fill' : te.to === 'rechazado' ? 'xmark.circle.fill' : 'arrow.triangle.2.circlepath',
+        color: te.to === 'aprobado' ? '#1B7A3E' : te.to === 'rechazado' ? '#CE1126' : '#0038A8',
+        refId: a.id,
+        status: te.to,
+      });
+    }
+  }
+
+  // 2. Conversations
+  const convs = store.getConversationsByClient(contactId);
+  for (const c of convs) {
+    events.push({
+      id: 'evt_conv_' + c.id,
+      type: 'conversation',
+      timestamp: c.createdAt,
+      title: 'Conversacion iniciada',
+      subtitle: c.propertyTitle || '',
+      icon: 'bubble.left.and.bubble.right.fill',
+      color: '#5B21B6',
+      refId: c.id,
+      status: c.closed ? 'cerrada' : 'activa',
+      messageCount: c.messageCount || (c.messages || []).length,
+      lastMessage: c.lastMessage,
+    });
+    // Last message event (if different from creation)
+    if (c.updatedAt && c.updatedAt !== c.createdAt && c.lastMessage) {
+      events.push({
+        id: 'evt_msg_' + c.id + '_last',
+        type: 'message',
+        timestamp: c.updatedAt,
+        title: 'Ultimo mensaje',
+        subtitle: (c.lastMessage || '').slice(0, 80),
+        icon: 'text.bubble.fill',
+        color: '#5B21B6',
+        refId: c.id,
+        status: null,
+      });
+    }
+  }
+
+  // 3. Tours
+  const tours = store.getToursByClient(contactId);
+  for (const t of tours) {
+    const tourLabels = { pending: 'Visita solicitada', confirmed: 'Visita confirmada', completed: 'Visita completada', rejected: 'Visita rechazada', cancelled: 'Visita cancelada' };
+    events.push({
+      id: 'evt_tour_' + t.id,
+      type: 'tour',
+      timestamp: t.created_at,
+      title: tourLabels[t.status] || 'Visita',
+      subtitle: t.listing_title || '',
+      icon: t.status === 'completed' ? 'checkmark.seal.fill' : t.status === 'confirmed' ? 'calendar.badge.checkmark' : 'calendar.badge.clock',
+      color: t.status === 'completed' ? '#1B7A3E' : t.status === 'cancelled' || t.status === 'rejected' ? '#CE1126' : '#D97706',
+      refId: t.id,
+      status: t.status,
+      tourDate: t.requested_date,
+      tourTime: t.requested_time,
+      tourType: t.tour_type,
+    });
+    // Feedback event
+    if (t.feedback_rating) {
+      events.push({
+        id: 'evt_feedback_' + t.id,
+        type: 'feedback',
+        timestamp: t.completed_at || t.updated_at,
+        title: 'Feedback: ' + t.feedback_rating + '/5',
+        subtitle: t.feedback_comment || '',
+        icon: 'star.fill',
+        color: '#D97706',
+        refId: t.id,
+        status: null,
+      });
+    }
+  }
+
+  // 4. Tasks
+  const tasks = store.getTasksByUser(contactId);
+  for (const t of tasks) {
+    events.push({
+      id: 'evt_task_' + t.id,
+      type: 'task',
+      timestamp: t.created_at || t.createdAt,
+      title: t.title || 'Tarea',
+      subtitle: t.description || '',
+      icon: t.status === 'completada' ? 'checkmark.circle.fill' : 'checklist',
+      color: t.status === 'completada' ? '#1B7A3E' : t.priority === 'alta' ? '#CE1126' : '#4B5563',
+      refId: t.id,
+      status: t.status,
+    });
+  }
+
+  // Filter by type if requested
+  let filtered = events;
+  if (typeFilter) filtered = events.filter(e => e.type === typeFilter);
+
+  // Sort by timestamp descending (newest first)
+  filtered.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+  // Build contact summary
+  const user = store.getUserById(contactId);
+  const contact = {
+    id: contactId,
+    name: user?.name || apps[0]?.client?.name || convs[0]?.clientName || tours[0]?.client_name || '',
+    email: user?.email || apps[0]?.client?.email || convs[0]?.clientEmail || tours[0]?.client_email || '',
+    phone: user?.phone || apps[0]?.client?.phone || convs[0]?.clientPhone || tours[0]?.client_phone || '',
+    createdAt: user?.createdAt || null,
+    totalInteractions: events.length,
+    applications: apps.length,
+    conversations: convs.length,
+    tours: tours.length,
+    tasks: tasks.length,
+  };
+
+  res.json({ contact, events: filtered });
+});
+
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 // MapKit JS token — uses the same .p8 key as APNs
 // Search suggestions — extracts unique locations from approved listings

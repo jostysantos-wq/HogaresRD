@@ -717,4 +717,108 @@ struct TourStatusBreakdown: Decodable {
     var cancelled: Int = 0
 }
 
+// MARK: - Contact Timeline CRM
+
+struct ContactsResponse: Decodable {
+    let contacts: [ContactSummary]
+    let total: Int
+}
+
+struct ContactSummary: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let email: String?
+    let phone: String?
+    let interactions: Int?
+    let lastInteraction: String?
+    let firstInteraction: String?
+
+    var initials: String {
+        name.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined().uppercased()
+    }
+
+    var lastInteractionAgo: String {
+        guard let ts = lastInteraction else { return "" }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = fmt.date(from: ts)
+        if date == nil { fmt.formatOptions = [.withInternetDateTime]; date = fmt.date(from: ts) }
+        guard let d = date else { return "" }
+        let diff = Calendar.current.dateComponents([.day, .hour, .minute], from: d, to: Date())
+        if let days = diff.day, days > 0 { return "hace \(days)d" }
+        if let hrs = diff.hour, hrs > 0 { return "hace \(hrs)h" }
+        if let mins = diff.minute, mins > 0 { return "hace \(mins)m" }
+        return "ahora"
+    }
+}
+
+struct ContactTimelineResponse: Decodable {
+    let contact: ContactSummary
+    let events: [TimelineEvent]
+}
+
+struct TimelineEvent: Decodable, Identifiable {
+    let id: String
+    let type: String
+    let timestamp: String?
+    let title: String
+    let subtitle: String?
+    let icon: String?
+    let color: String?
+    let refId: String?
+    let status: String?
+    let messageCount: Int?
+    let lastMessage: String?
+    let tourDate: String?
+    let tourTime: String?
+    let tourType: String?
+
+    var iconName: String { icon ?? "circle.fill" }
+
+    var iconColor: Color {
+        guard let hex = color else { return .secondary }
+        return Color(hex: hex)
+    }
+
+    var timeAgo: String {
+        guard let ts = timestamp else { return "" }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = fmt.date(from: ts)
+        if date == nil { fmt.formatOptions = [.withInternetDateTime]; date = fmt.date(from: ts) }
+        guard let d = date else { return "" }
+        let diff = Calendar.current.dateComponents([.day, .hour, .minute], from: d, to: Date())
+        if let days = diff.day, days > 0 { return "hace \(days)d" }
+        if let hrs = diff.hour, hrs > 0 { return "hace \(hrs)h" }
+        if let mins = diff.minute, mins > 0 { return "hace \(mins)m" }
+        return "ahora"
+    }
+
+    var formattedDate: String {
+        guard let ts = timestamp else { return "" }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = fmt.date(from: ts)
+        if date == nil { fmt.formatOptions = [.withInternetDateTime]; date = fmt.date(from: ts) }
+        guard let d = date else { return "" }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "es_DO")
+        df.dateFormat = "d MMM, h:mm a"
+        return df.string(from: d)
+    }
+}
+
+// Hex color extension
+extension Color {
+    init(hex: String) {
+        let h = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        var int: UInt64 = 0
+        Scanner(string: h).scanHexInt64(&int)
+        let r = Double((int >> 16) & 0xFF) / 255.0
+        let g = Double((int >> 8) & 0xFF) / 255.0
+        let b = Double(int & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b)
+    }
+}
+
 import SwiftUI

@@ -11,7 +11,7 @@ struct InmobiliariaDashboardView: View {
     /// Tabs visible based on user's effective access level
     private var tabs: [String] {
         let level = api.currentUser?.effectiveAccessLevel ?? 1
-        var t = ["Inicio", "Aplicaciones"]
+        var t = ["Inicio", "Aplicaciones", "Contactos"]
         if level >= 2 { t.append(contentsOf: ["Analiticas", "Ventas", "Contabilidad"]) }
         t.append("Archivo")
         if level >= 3 { t.append("Auditoria") }
@@ -42,15 +42,17 @@ struct InmobiliariaDashboardView: View {
                             HStack(spacing: 4) {
                                 if i == 0 {
                                     Image(systemName: "house.fill").font(.system(size: 10))
-                                } else if i >= 8 {
-                                    Image(systemName: i == 8 ? "person.2.fill" : i == 9 ? "chart.bar.fill" : i == 10 ? "person.badge.plus" : "person.crop.circle.badge.checkmark")
+                                } else if title == "Contactos" {
+                                    Image(systemName: "person.crop.rectangle.stack").font(.system(size: 10))
+                                } else if i >= 9 {
+                                    Image(systemName: title == "Agentes" ? "person.2.fill" : title == "Rendimiento" ? "chart.bar.fill" : title == "Solicitudes" ? "person.badge.plus" : "person.crop.circle.badge.checkmark")
                                         .font(.system(size: 10))
                                 }
                                 Text(title)
                             }
                             .font(.caption).bold()
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(selectedTab == i ? (i >= 8 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
+                            .background(selectedTab == i ? (i >= 9 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
                             .foregroundStyle(selectedTab == i ? .white : .primary)
                             .clipShape(Capsule())
                         }
@@ -77,17 +79,18 @@ struct InmobiliariaDashboardView: View {
                 ).tag(0)
                 // Reuse broker dashboard tabs
                 DashboardApplicationsTab().tag(1)
-                DashboardAnalyticsTab().tag(2)
-                DashboardSalesTab().tag(3)
-                DashboardAccountingTab().tag(4)
-                DashboardArchiveTab().tag(5)
-                DashboardAuditTab().tag(6)
-                DashboardListingAnalyticsTab().tag(7)
+                ContactsListView().tag(2)
+                DashboardAnalyticsTab().tag(3)
+                DashboardSalesTab().tag(4)
+                DashboardAccountingTab().tag(5)
+                DashboardArchiveTab().tag(6)
+                DashboardAuditTab().tag(7)
+                DashboardListingAnalyticsTab().tag(8)
                 // Inmobiliaria-only team tabs
-                TeamMembersTab().tag(8)
-                TeamRequestsTab().tag(9)
+                TeamMembersTab().tag(9)
                 TeamPerformanceTab().tag(10)
-                TeamSecretariesTab().tag(11)
+                TeamRequestsTab().tag(11)
+                TeamSecretariesTab().tag(12)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
