@@ -1711,6 +1711,23 @@ class APIService: ObservableObject {
 
     // MARK: - Payments CRM
 
+    func getApplicationsForPaymentPlan() async throws -> [Application] {
+        var comps = URLComponents(string: "\(apiBase)/api/applications")!
+        comps.queryItems = [URLQueryItem(name: "status", value: "pendiente_pago")]
+        let req = try authedRequest(comps.url!)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando aplicaciones")
+        return try decoder.decode([Application].self, from: data)
+    }
+
+    func createPaymentPlan(applicationId: String, plan: [String: Any]) async throws {
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan")!
+        let body = try JSONSerialization.data(withJSONObject: plan)
+        let req = try authedRequest(url, method: "POST", body: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error creando plan de pago")
+    }
+
     func getPaymentsSummary() async throws -> PaymentsSummaryResponse {
         let url = URL(string: "\(apiBase)/api/payments/summary")!
         let req = try authedRequest(url)

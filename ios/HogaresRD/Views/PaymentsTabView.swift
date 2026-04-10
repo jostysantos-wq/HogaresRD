@@ -9,6 +9,7 @@ struct PaymentsTabView: View {
     @State private var loading = true
     @State private var selectedFilter = "all"
     @State private var sendingReminder: String? = nil
+    @State private var showCreatePlan = false
 
     private var filtered: [PaymentItem] {
         switch selectedFilter {
@@ -35,6 +36,19 @@ struct PaymentsTabView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Create plan button
+                        Button { showCreatePlan = true } label: {
+                            Label("Crear Plan de Pago", systemImage: "plus.circle.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+                        .padding(.top, 4)
+
                         // Stats cards
                         if let s = stats {
                             statsSection(s)
@@ -61,6 +75,11 @@ struct PaymentsTabView: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .sheet(isPresented: $showCreatePlan) {
+            CreatePaymentPlanView()
+                .environmentObject(api)
+                .onDisappear { Task { await load() } }
+        }
     }
 
     private func load() async {
