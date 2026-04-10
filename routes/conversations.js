@@ -51,6 +51,22 @@ router.post('/', requireLogin, (req, res) => {
     return res.status(400).json({ error: 'Propiedad y mensaje requeridos.' });
   }
 
+  // Prevent self-messaging — users can't start a conversation on their own listing
+  const listing = store.getListingById(propertyId);
+  if (listing) {
+    const ownerEmails = new Set();
+    if (listing.email) ownerEmails.add(listing.email.toLowerCase());
+    if (Array.isArray(listing.agencies)) {
+      listing.agencies.forEach(a => { if (a.email) ownerEmails.add(a.email.toLowerCase()); });
+    }
+    const fullUser = store.getUserById(user.sub);
+    const userEmail = (fullUser?.email || '').toLowerCase();
+    const isOwner = listing.creator_user_id === user.sub || (userEmail && ownerEmails.has(userEmail));
+    if (isOwner) {
+      return res.status(400).json({ error: 'No puedes iniciar una conversacion sobre tu propia propiedad.' });
+    }
+  }
+
   // One conversation per client per listing
   const existing = store.getConversations().find(
     c => c.clientId === user.sub && c.propertyId === propertyId

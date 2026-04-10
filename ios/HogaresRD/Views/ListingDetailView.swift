@@ -22,6 +22,20 @@ struct ListingDetailView: View {
 
     private let heroHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
+    /// Check if the current logged-in user owns this listing
+    private func isMyListing(_ l: Listing) -> Bool {
+        guard let me = APIService.shared.currentUser else { return false }
+        let myEmail = me.email.lowercased()
+        // Check if any agency on the listing has my email
+        if let agencies = l.agencies {
+            for a in agencies {
+                if let email = a.email?.lowercased(), email == myEmail { return true }
+                if let uid = a.userId, uid == me.id { return true }
+            }
+        }
+        return false
+    }
+
     var body: some View {
         Group {
             if loading {
@@ -438,9 +452,10 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func stickyCTA(_ l: Listing) -> some View {
         let hasBroker = l.agencies?.first(where: { $0.userId != nil }) != nil
+        let isOwner = isMyListing(l)
 
         HStack(spacing: 8) {
-            if hasBroker {
+            if hasBroker && !isOwner {
                 Button { showTourBooking = true } label: {
                     Label("Visita", systemImage: "calendar.badge.clock")
                         .font(.caption).bold()
@@ -452,14 +467,27 @@ struct ListingDetailView: View {
                 }
             }
 
-            Button { showContactAgent = true } label: {
-                Label("Consultar", systemImage: "bubble.left.fill")
-                    .font(.caption).bold()
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
-                    .foregroundStyle(Color.rdBlue)
+            if !isMyListing(l) {
+                Button { showContactAgent = true } label: {
+                    Label("Consultar", systemImage: "bubble.left.fill")
+                        .font(.caption).bold()
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
+                        .foregroundStyle(Color.rdBlue)
+                }
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(Color.rdGreen)
+                    Text("Tu propiedad")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.rdGreen)
+                }
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(Color.rdGreen.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
 
             Button { showApply = true } label: {

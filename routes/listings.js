@@ -225,6 +225,17 @@ router.post('/:id/inquiry', async (req, res) => {
   if (!name || !phone || !email)
     return res.status(400).json({ error: 'Nombre, teléfono y correo son requeridos' });
 
+  // Prevent self-inquiry — user can't send inquiry to themselves
+  const submitterEmail = email.toLowerCase().trim();
+  const ownerEmails = new Set();
+  if (listing.email) ownerEmails.add(listing.email.toLowerCase());
+  if (Array.isArray(listing.agencies)) {
+    listing.agencies.forEach(a => { if (a.email) ownerEmails.add(a.email.toLowerCase()); });
+  }
+  if (ownerEmails.has(submitterEmail)) {
+    return res.status(400).json({ error: 'No puedes enviar una consulta sobre tu propia propiedad.' });
+  }
+
   // If refToken provided, route to referring agent (or org's agents for inmobiliaria)
   let agencyEmails = [];
   let agencyNames  = 'las inmobiliarias afiliadas';
