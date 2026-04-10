@@ -37,6 +37,7 @@
 		AA55000000000000000000000205 /* PaymentsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000204 /* PaymentsTabView.swift */; };
 		AA55000000000000000000000207 /* CancelSubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000206 /* CancelSubscriptionView.swift */; };
 		AA55000000000000000000000209 /* CreatePaymentPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000208 /* CreatePaymentPlanView.swift */; };
+		AA55000000000000000000000211 /* MyDocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000210 /* MyDocumentsView.swift */; };
 		AA55000000000000000000C1 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B1 /* Conversation.swift */; };
 		AA55000000000000000000C2 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B2 /* Application.swift */; };
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
@@ -103,6 +104,7 @@
 		AA55000000000000000000000204 /* PaymentsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentsTabView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000000206 /* CancelSubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelSubscriptionView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000000208 /* CreatePaymentPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePaymentPlanView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000000210 /* MyDocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyDocumentsView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B1 /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B2 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
@@ -226,6 +228,7 @@
 				AA55000000000000000000000204 /* PaymentsTabView.swift */,
 				AA55000000000000000000000206 /* CancelSubscriptionView.swift */,
 				AA55000000000000000000000208 /* CreatePaymentPlanView.swift */,
+				AA55000000000000000000000210 /* MyDocumentsView.swift */,
 				AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */,
 				AA11000000000000000000BB /* ProfileView.swift */,
 				AA55000000000000000011 /* SubscriptionView.swift */,
@@ -374,6 +377,7 @@
 				AA55000000000000000000000205 /* PaymentsTabView.swift in Sources */,
 				AA55000000000000000000000207 /* CancelSubscriptionView.swift in Sources */,
 				AA55000000000000000000000209 /* CreatePaymentPlanView.swift in Sources */,
+				AA55000000000000000000000211 /* MyDocumentsView.swift in Sources */,
 				AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */,
 				AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
 				AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,

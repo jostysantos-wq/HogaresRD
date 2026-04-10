@@ -1689,6 +1689,78 @@ class APIService: ObservableObject {
         return try decoder.decode(ContactTimelineResponse.self, from: data)
     }
 
+    // MARK: - Buyer Document Upload
+
+    /// Full application details (includes documents_requested, documents_uploaded)
+    func getMyApplicationsFull() async throws -> [[String: Any]] {
+        let url = URL(string: "\(apiBase)/api/applications/my")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando aplicaciones")
+        return (try JSONSerialization.jsonObject(with: data) as? [[String: Any]]) ?? []
+    }
+
+    /// Upload a document for an application
+    func uploadDocument(applicationId: String, requestId: String?, type: String, fileData: Data, filename: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/documents/upload")!
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        // File
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"files\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        let mime = filename.hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        // Type
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"type\"\r\n\r\n\(type)\r\n".data(using: .utf8)!)
+        // Request ID
+        if let rid = requestId {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"request_id\"\r\n\r\n\(rid)\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error subiendo documento")
+    }
+
+    /// Upload payment receipt
+    func uploadPaymentReceipt(applicationId: String, amount: String, notes: String, fileData: Data, filename: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/upload")!
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        let mime = filename.hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"amount\"\r\n\r\n\(amount)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"notes\"\r\n\r\n\(notes)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error subiendo comprobante")
+    }
+
     // MARK: - Cancel / Retention
 
     func getCancelStats() async throws -> CancelStats {
