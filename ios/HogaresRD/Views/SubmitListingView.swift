@@ -264,7 +264,7 @@ struct SubmitListingView: View {
                     if listingType == "proyecto" {
                         FormSection(title: "Datos del Proyecto", icon: "building.2.fill", color: Color.rdGreen) {
                             VStack(spacing: 14) {
-                                FloatingField(label: "Constructora / Empresa", text: $constructionCompany)
+                                FloatingField(label: "Constructora / Empresa (Opcional)", text: $constructionCompany)
                                 HStack(spacing: 12) {
                                     FloatingField(label: "Total de Unidades", text: $unitsTotal)
                                         .keyboardType(.numberPad)
