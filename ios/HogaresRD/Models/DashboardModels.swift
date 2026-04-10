@@ -821,4 +821,94 @@ extension Color {
     }
 }
 
+// MARK: - Payments Summary
+
+struct PaymentsSummaryResponse: Decodable {
+    let stats: PaymentStats
+    let payments: [PaymentItem]
+    let total: Int
+}
+
+struct PaymentStats: Decodable {
+    let overdue: Int
+    let dueSoon: Int
+    let pendingReview: Int
+    let approvedMonth: Int
+    let totalPending: Double
+}
+
+struct PaymentItem: Decodable, Identifiable {
+    let id: String
+    let applicationId: String?
+    let installmentId: String?
+    let clientName: String?
+    let clientEmail: String?
+    let listingTitle: String?
+    let listingId: String?
+    let amount: Double?
+    let currency: String?
+    let dueDate: String?
+    let daysUntilDue: Int?
+    let status: String?
+    let installmentNumber: Int?
+    let installmentLabel: String?
+    let proofUploaded: Bool?
+    let proofUploadedAt: String?
+    let reviewedAt: String?
+    let reviewNotes: String?
+    let reminderSent: Bool?
+    let reminderSentAt: String?
+    let paymentMethod: String?
+    let type: String? // "single" or "installment"
+
+    var formattedAmount: String {
+        let cur = currency ?? "DOP"
+        let amt = amount ?? 0
+        return "\(cur) $\(amt.formatted(.number.grouping(.automatic)))"
+    }
+
+    var formattedDueDate: String {
+        guard let ds = dueDate else { return "—" }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = fmt.date(from: ds)
+        if date == nil { fmt.formatOptions = [.withInternetDateTime]; date = fmt.date(from: ds) }
+        guard let d = date else { return ds }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "es_DO")
+        df.dateFormat = "d MMM yyyy"
+        return df.string(from: d)
+    }
+
+    var isOverdue: Bool {
+        guard let d = daysUntilDue else { return false }
+        return d < 0 && status == "pending"
+    }
+
+    var isDueSoon: Bool {
+        guard let d = daysUntilDue else { return false }
+        return d >= 0 && d <= 7 && status == "pending"
+    }
+
+    var statusLabel: String {
+        switch status {
+        case "pending": return isOverdue ? "Vencido" : "Pendiente"
+        case "proof_uploaded": return "En revision"
+        case "approved": return "Aprobado"
+        case "rejected": return "Rechazado"
+        default: return status?.capitalized ?? "—"
+        }
+    }
+
+    var statusColor: Color {
+        switch status {
+        case "pending": return isOverdue ? .rdRed : .orange
+        case "proof_uploaded": return .rdBlue
+        case "approved": return .rdGreen
+        case "rejected": return .rdRed
+        default: return .secondary
+        }
+    }
+}
+
 import SwiftUI

@@ -1700,6 +1700,21 @@ struct AgencyDetail: Decodable {
         return try decoder.decode(ContactsResponse.self, from: data).contacts
     }
 
+    func getPaymentsSummary() async throws -> PaymentsSummaryResponse {
+        let url = URL(string: "\(apiBase)/api/payments/summary")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando pagos")
+        return try decoder.decode(PaymentsSummaryResponse.self, from: data)
+    }
+
+    func sendPaymentReminder(applicationId: String, installmentId: String) async throws {
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/notify")!
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error enviando recordatorio")
+    }
+
     func getContactTimeline(contactId: String, type: String? = nil) async throws -> ContactTimelineResponse {
         var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline")!
         if let type = type { comps.queryItems = [URLQueryItem(name: "type", value: type)] }

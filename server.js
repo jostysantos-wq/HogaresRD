@@ -493,6 +493,112 @@ app.get('/api/contacts/:id/timeline', contactAuth, (req, res) => {
   res.json({ contact, events: filtered });
 });
 
+// ── Payments Summary (CRM) ────────────────────────────────────────────────
+app.get('/api/payments/summary', contactAuth, (req, res) => {
+  const userId = req.user.sub;
+  const user   = store.getUserById(userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Get applications this user can see
+  let apps;
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') {
+    apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id || userId);
+  } else if (user.role === 'secretary') {
+    apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
+  } else {
+    apps = store.getApplicationsByBroker(userId);
+  }
+
+  const now = new Date();
+  const items = [];
+
+  for (const app of apps) {
+    const plan = app.payment_plan;
+    const client = app.client || {};
+
+    // Single-payment apps (no plan)
+    if (!plan && app.payment && app.payment.verification_status !== 'none') {
+      items.push({
+        id: 'pay_' + app.id,
+        applicationId: app.id,
+        clientName: client.name || '',
+        clientEmail: client.email || '',
+        listingTitle: app.listing_title || '',
+        listingId: app.listing_id || '',
+        amount: app.payment.amount || 0,
+        currency: app.payment.currency || 'DOP',
+        dueDate: null,
+        status: app.payment.verification_status,
+        installmentNumber: null,
+        installmentLabel: 'Pago unico',
+        proofUploaded: !!app.payment.receipt_path,
+        proofUploadedAt: app.payment.receipt_uploaded_at,
+        reminderSent: false,
+        type: 'single',
+      });
+      continue;
+    }
+
+    // Payment plan installments
+    if (!plan || !Array.isArray(plan.installments)) continue;
+
+    for (const inst of plan.installments) {
+      const dueDate = inst.due_date ? new Date(inst.due_date) : null;
+      const daysUntilDue = dueDate ? Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24)) : null;
+
+      items.push({
+        id: 'pay_' + app.id + '_' + inst.id,
+        applicationId: app.id,
+        installmentId: inst.id,
+        clientName: client.name || '',
+        clientEmail: client.email || '',
+        listingTitle: app.listing_title || '',
+        listingId: app.listing_id || '',
+        amount: inst.amount || 0,
+        currency: plan.currency || 'DOP',
+        dueDate: inst.due_date,
+        daysUntilDue,
+        status: inst.status || 'pending',
+        installmentNumber: inst.number,
+        installmentLabel: inst.label || ('Cuota ' + inst.number),
+        proofUploaded: !!inst.proof_path,
+        proofUploadedAt: inst.proof_uploaded_at,
+        reviewedAt: inst.reviewed_at,
+        reviewNotes: inst.review_notes,
+        reminderSent: !!inst.notification_sent,
+        reminderSentAt: inst.notification_sent_at,
+        paymentMethod: plan.payment_method,
+        type: 'installment',
+      });
+    }
+  }
+
+  // Sort: overdue first, then by due date ascending
+  items.sort((a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+
+  // Stats
+  const overdue       = items.filter(i => i.daysUntilDue !== null && i.daysUntilDue < 0 && i.status === 'pending').length;
+  const dueSoon       = items.filter(i => i.daysUntilDue !== null && i.daysUntilDue >= 0 && i.daysUntilDue <= 7 && i.status === 'pending').length;
+  const pendingReview = items.filter(i => i.status === 'proof_uploaded').length;
+  const approvedMonth = items.filter(i => {
+    if (i.status !== 'approved' || !i.reviewedAt) return false;
+    const d = new Date(i.reviewedAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const totalPending  = items.filter(i => i.status === 'pending' || i.status === 'proof_uploaded').reduce((s, i) => s + (i.amount || 0), 0);
+
+  res.json({
+    stats: { overdue, dueSoon, pendingReview, approvedMonth, totalPending },
+    payments: items,
+    total: items.length,
+  });
+});
+
 // ── Public config endpoint (pixel ID is intentionally public) ─────────────
 // MapKit JS token — uses the same .p8 key as APNs
 // Search suggestions — extracts unique locations from approved listings
@@ -1628,6 +1734,135 @@ cron.schedule('*/30 * * * *', () => {
     if (sent > 0) console.log(`[Cron] Sent ${sent} tour reminder(s)`);
   } catch (e) {
     console.error('[Cron] Tour reminder error:', e.message);
+  }
+}, { timezone: 'America/Santo_Domingo' });
+
+// ── Payment reminders — runs daily at 8 AM DR time ────────────────────────
+cron.schedule('0 8 * * *', () => {
+  try {
+    const allApps = store.getApplications();
+    const now = new Date();
+    const mailTransport = require('./routes/mailer').createTransport();
+    let sent = 0;
+
+    for (const app of allApps) {
+      const plan = app.payment_plan;
+      if (!plan || !Array.isArray(plan.installments)) continue;
+      const client = app.client || {};
+      if (!client.email) continue;
+
+      for (const inst of plan.installments) {
+        if (inst.status !== 'pending' || !inst.due_date) continue;
+
+        const dueDate = new Date(inst.due_date);
+        const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+
+        // Skip if already reminded today
+        if (inst.notification_sent_at) {
+          const lastReminder = new Date(inst.notification_sent_at);
+          if (now - lastReminder < 20 * 60 * 60 * 1000) continue; // less than 20h ago
+        }
+
+        let subject = null;
+        let urgency = '';
+
+        if (daysUntil === 3) {
+          subject = `Recordatorio: Pago en 3 dias — ${inst.label || 'Cuota ' + inst.number}`;
+          urgency = 'Tu pago esta programado para dentro de 3 dias.';
+        } else if (daysUntil === 0) {
+          subject = `Pago vence hoy — ${inst.label || 'Cuota ' + inst.number}`;
+          urgency = 'Tu pago vence HOY. Por favor sube tu comprobante lo antes posible.';
+        } else if (daysUntil === -1) {
+          subject = `Pago vencido — ${inst.label || 'Cuota ' + inst.number}`;
+          urgency = 'Tu pago esta vencido. Por favor realiza el pago y sube el comprobante.';
+        }
+
+        if (!subject) continue;
+
+        const firstName = (client.name || '').split(' ')[0] || 'Cliente';
+        const formattedAmount = (inst.amount || 0).toLocaleString('es-DO');
+        const formattedDate = new Date(inst.due_date).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        mailTransport.sendMail({
+          to: client.email,
+          subject: subject + ' — HogaresRD',
+          department: 'noreply',
+          html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+            <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
+            <h2 style="color:#1a1a1a;margin-bottom:16px;">${subject}</h2>
+            <p>Hola ${firstName},</p>
+            <p>${urgency}</p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Propiedad</td><td style="padding:8px;border:1px solid #e2e8f0;">${app.listing_title || '—'}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Cuota</td><td style="padding:8px;border:1px solid #e2e8f0;">${inst.label || 'Cuota ' + inst.number}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Monto</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700;color:#002D62;">${plan.currency || 'DOP'} $${formattedAmount}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Fecha limite</td><td style="padding:8px;border:1px solid #e2e8f0;">${formattedDate}</td></tr>
+              ${plan.payment_method ? `<tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Metodo de pago</td><td style="padding:8px;border:1px solid #e2e8f0;">${plan.payment_method}${plan.method_details ? ' — ' + plan.method_details : ''}</td></tr>` : ''}
+            </table>
+            <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/my-applications" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Ver mis pagos</a>
+            <p style="margin-top:24px;color:#666;font-size:0.85rem;">Si ya realizaste el pago, puedes ignorar este mensaje.</p>
+          </div>`,
+        }).catch(err => console.error('[Cron] Payment reminder email error:', err.message));
+
+        // Mark reminder sent
+        inst.notification_sent = true;
+        inst.notification_sent_at = now.toISOString();
+        sent++;
+      }
+
+      // Save if any installments were updated
+      if (sent > 0) store.saveApplication(app);
+    }
+
+    if (sent > 0) console.log(`[Cron] Payment reminders sent: ${sent}`);
+  } catch (e) {
+    console.error('[Cron] Payment reminder error:', e.message);
+  }
+}, { timezone: 'America/Santo_Domingo' });
+
+// Also send reminders on 1st of month for all pending payments
+cron.schedule('0 9 1 * *', () => {
+  try {
+    const allApps = store.getApplications();
+    const mailTransport = require('./routes/mailer').createTransport();
+    let sent = 0;
+
+    for (const app of allApps) {
+      const plan = app.payment_plan;
+      if (!plan || !Array.isArray(plan.installments)) continue;
+      const client = app.client || {};
+      if (!client.email) continue;
+
+      const pendingInstallments = plan.installments.filter(i => i.status === 'pending' && i.due_date);
+      if (pendingInstallments.length === 0) continue;
+
+      const firstName = (client.name || '').split(' ')[0] || 'Cliente';
+      const rows = pendingInstallments.map(i => {
+        const d = new Date(i.due_date).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
+        return `<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">${i.label || 'Cuota ' + i.number}</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-weight:600;">${plan.currency || 'DOP'} $${(i.amount || 0).toLocaleString('es-DO')}</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">${d}</td></tr>`;
+      }).join('');
+
+      mailTransport.sendMail({
+        to: client.email,
+        subject: `Resumen mensual de pagos pendientes — HogaresRD`,
+        department: 'noreply',
+        html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+          <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
+          <h2 style="color:#1a1a1a;">Resumen de pagos pendientes</h2>
+          <p>Hola ${firstName}, este es tu resumen de pagos pendientes para <strong>${app.listing_title || 'tu propiedad'}</strong>:</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <tr style="background:#f7fafc;"><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Cuota</th><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Monto</th><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Vence</th></tr>
+            ${rows}
+          </table>
+          <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/my-applications" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Ir a mis pagos</a>
+        </div>`,
+      }).catch(err => console.error('[Cron] Monthly payment summary error:', err.message));
+      sent++;
+    }
+
+    if (sent > 0) console.log(`[Cron] Monthly payment summaries sent: ${sent}`);
+  } catch (e) {
+    console.error('[Cron] Monthly payment summary error:', e.message);
   }
 }, { timezone: 'America/Santo_Domingo' });
 

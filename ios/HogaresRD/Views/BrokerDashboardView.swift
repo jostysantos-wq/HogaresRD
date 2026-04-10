@@ -6,7 +6,7 @@ struct BrokerDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    private let tabs = ["Inicio", "Aplicaciones", "Contactos", "Analiticas", "Ventas", "Contabilidad", "Archivo", "Auditoria", "Propiedades"]
+    private let tabs = ["Inicio", "Aplicaciones", "Contactos", "Pagos", "Analiticas", "Ventas", "Contabilidad", "Archivo", "Auditoria", "Propiedades"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,12 +50,13 @@ struct BrokerDashboardView: View {
                 ).tag(0)
                 DashboardApplicationsTab().tag(1)
                 ContactsListView().tag(2)
-                DashboardAnalyticsTab().tag(3)
-                DashboardSalesTab().tag(4)
-                DashboardAccountingTab().tag(5)
-                DashboardArchiveTab().tag(6)
-                DashboardAuditTab().tag(7)
-                DashboardListingAnalyticsTab().tag(8)
+                PaymentsTabView().tag(3)
+                DashboardAnalyticsTab().tag(4)
+                DashboardSalesTab().tag(5)
+                DashboardAccountingTab().tag(6)
+                DashboardArchiveTab().tag(7)
+                DashboardAuditTab().tag(8)
+                DashboardListingAnalyticsTab().tag(9)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)

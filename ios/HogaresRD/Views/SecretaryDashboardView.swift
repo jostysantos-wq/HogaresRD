@@ -6,7 +6,7 @@ struct SecretaryDashboardView: View {
     @EnvironmentObject var api: APIService
     @State private var selectedTab = 0
 
-    private let tabs = ["Inicio", "Aplicaciones", "Contactos", "Archivo", "Propiedades"]
+    private let tabs = ["Inicio", "Aplicaciones", "Contactos", "Pagos", "Archivo", "Propiedades"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,17 +43,18 @@ struct SecretaryDashboardView: View {
                 DashboardHomeView(
                     showSalesMetrics: false,
                     onTapTab: { tab in
-                        // Map: 0=Applications→1, 4=Archive→3
+                        // Map: 0=Applications→1, 4=Archive→4
                         if tab == 0 { selectedTab = 1 }
-                        else if tab == 4 { selectedTab = 3 }
+                        else if tab == 4 { selectedTab = 4 }
                     },
                     onTapMessages: {},
                     onTapTours: {}
                 ).tag(0)
                 DashboardApplicationsTab().tag(1)
                 ContactsListView().tag(2)
-                DashboardArchiveTab().tag(3)
-                DashboardListingAnalyticsTab().tag(4)
+                PaymentsTabView().tag(3)
+                DashboardArchiveTab().tag(4)
+                DashboardListingAnalyticsTab().tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .environmentObject(api)
