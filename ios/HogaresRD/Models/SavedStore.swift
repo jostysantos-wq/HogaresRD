@@ -1,9 +1,15 @@
 import Foundation
+import UserNotifications
 
 extension Notification.Name {
     /// Broadcast when an unauthenticated user tries to favorite a listing.
     /// ContentView listens and presents the auth sheet.
     static let authRequiredForFavorite = Notification.Name("rd.authRequiredForFavorite")
+
+    /// Broadcast when a high-intent action happens and we should offer to
+    /// enable push notifications (contextual soft ask pattern).
+    /// ContentView listens and presents PushPermissionPrimer overlay.
+    static let pushSoftAskTriggered = Notification.Name("rd.pushSoftAskTriggered")
 }
 
 @MainActor
@@ -11,6 +17,11 @@ class SavedStore: ObservableObject {
     static let shared = SavedStore()
 
     @Published private(set) var savedIDs: Set<String>
+
+    // Soft-ask cooldown (3 days) — if user taps "Not now" we respect it
+    // for this many seconds before offering again.
+    static let SOFT_ASK_DISMISSED_KEY: String = "push_soft_ask_dismissed_ts"
+    static let SOFT_ASK_COOLDOWN: TimeInterval = 3 * 24 * 60 * 60
 
     private init() {
         let arr = UserDefaults.standard.stringArray(forKey: "saved_listing_ids") ?? []
@@ -45,7 +56,32 @@ class SavedStore: ObservableObject {
                 try? await APIService.shared.removeFavorite(listingId: id)
             }
         }
+
+        // Trigger contextual push permission soft ask on ADD only
+        if wasAdding {
+            Task { @MainActor in
+                await Self.maybeTriggerPushSoftAsk()
+            }
+        }
         return true
+    }
+
+    /// Check if we should show the push permission soft ask, and if so,
+    /// post the notification after a short delay. Only fires when:
+    /// 1. System authorization is still .notDetermined
+    /// 2. User hasn't dismissed the primer in the last 3 days
+    @MainActor
+    static func maybeTriggerPushSoftAsk() async {
+        let status = await PushNotificationService.shared.refreshAuthorizationStatus()
+        guard status == .notDetermined else { return }
+
+        let dismissed = UserDefaults.standard.double(forKey: SOFT_ASK_DISMISSED_KEY)
+        let now = Date().timeIntervalSince1970
+        if dismissed > 0 && (now - dismissed) < SOFT_ASK_COOLDOWN { return }
+
+        // Small delay so the heart/card animation finishes first
+        try? await Task.sleep(for: .milliseconds(400))
+        NotificationCenter.default.post(name: .pushSoftAskTriggered, object: nil)
     }
 
     /// Wipe local favorites — call on logout so a later guest can't see

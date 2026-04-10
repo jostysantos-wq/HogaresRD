@@ -91,6 +91,21 @@ class PushNotificationService: NSObject, ObservableObject {
             print("Failed to register push token: \(error)")
         }
     }
+
+    /// Enable all in-app notification category preferences. Called after
+    /// the user grants permission via the soft-ask primer so every channel
+    /// is on by default (they can still disable individual ones from the
+    /// Notifications settings screen).
+    @MainActor
+    func enableAllPreferences() {
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: "push_user_enabled")
+        defaults.set(true, forKey: "notif_newListings")
+        defaults.set(true, forKey: "notif_priceDrops")
+        defaults.set(true, forKey: "notif_similar")
+        defaults.set(true, forKey: "notif_agentMessages")
+        defaults.set(true, forKey: "notif_appUpdates")
+    }
 }
 
 extension Notification.Name {

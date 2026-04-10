@@ -18,11 +18,13 @@ struct ContentView: View {
     @State private var favAuthSheet: AuthView.Mode? = nil
 
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject var pushService: PushNotificationService
     @State private var resendingVerification = false
     @State private var verificationSent = false
     @State private var verificationError = false
     @State private var showPopup = false
     @State private var popupDismissed = false
+    @State private var showPushPrimer = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -46,10 +48,19 @@ struct ContentView: View {
         .overlay {
             if showPopup, let user = api.currentUser {
                 reminderPopup(user)
+            } else if showPushPrimer {
+                PushPermissionPrimer(isPresented: $showPushPrimer)
+                    .environmentObject(pushService)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
             favAuthSheet = .login
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pushSoftAskTriggered)) { _ in
+            // Only show if not already showing the email verification popup
+            if !showPopup {
+                withAnimation(.easeInOut(duration: 0.25)) { showPushPrimer = true }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .pushNotificationTapped)) { notif in
             handlePushTap(notif.userInfo)
