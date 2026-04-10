@@ -170,6 +170,27 @@
     .btn-complete:hover { background: var(--accent-hover); transform: translateY(-1px); }
     .btn-complete:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+    /* UPLOAD SECTION */
+    .task-upload {
+      margin-top: 0.75rem; padding: 0.85rem 1rem; background: color-mix(in srgb, var(--accent) 6%, transparent);
+      border: 1.5px dashed var(--accent); border-radius: 10px;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .task-upload svg { width: 24px; height: 24px; fill: var(--accent); flex-shrink: 0; }
+    .task-upload-info { flex: 1; min-width: 0; }
+    .task-upload-info strong { font-size: 0.85rem; color: var(--text); display: block; margin-bottom: 2px; }
+    .task-upload-info span { font-size: 0.75rem; color: var(--text-muted); }
+    .btn-upload {
+      background: var(--accent); color: #fff; border: none; font-size: 0.8rem; font-weight: 700;
+      padding: 0.5rem 1.1rem; border-radius: 8px; cursor: pointer; white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-upload:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-upload.payment { background: #002D62; }
+    .btn-upload.payment:hover { background: #001a3d; }
+    .upload-success { color: #16a34a; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
+
     /* FOOTER */
     footer { background: var(--bg-card); border-top: 1px solid var(--border); padding: 3rem 2rem 2rem; margin-top: auto; }
     .footer-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 2rem; }
@@ -468,6 +489,32 @@
           ? `<button class="btn-complete" onclick="completeTask('${task.id}', this)">Completar</button>`
           : `<span style="color:var(--accent);font-weight:700;font-size:0.82rem;">&#10003; Completada</span>`;
 
+        // Upload section for document/payment tasks
+        const docEvents = ['documents_requested', 'documents_insufficient'];
+        const payEvents = ['payment_required', 'payment_rejected'];
+        const sourceEvent = task.source_event || '';
+        const needsUpload = task.status !== 'completada' && task.application_id && (docEvents.includes(sourceEvent) || payEvents.includes(sourceEvent));
+        const isPayment = payEvents.includes(sourceEvent);
+
+        let uploadHTML = '';
+        if (needsUpload) {
+          const uploadId = 'upload_' + task.id;
+          uploadHTML = `
+            <div class="task-upload" id="uploadSection_${task.id}">
+              <svg viewBox="0 0 24 24"><path d="${isPayment
+                ? 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z'
+                : 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z'}"/></svg>
+              <div class="task-upload-info">
+                <strong>${isPayment ? 'Subir comprobante de pago' : 'Subir documento'}</strong>
+                <span>${isPayment ? 'Foto o PDF del comprobante' : 'Foto de tu documento (cedula, comprobante, etc.)'}</span>
+              </div>
+              <input type="file" id="${uploadId}" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;" onchange="handleTaskUpload('${task.id}', '${task.application_id}', '${isPayment ? 'payment' : 'document'}', this)" />
+              <button class="btn-upload ${isPayment ? 'payment' : ''}" onclick="document.getElementById('${uploadId}').click()">
+                Subir archivo
+              </button>
+            </div>`;
+        }
+
         return `
           <div class="task-card">
             <div class="priority-dot ${priorityClass}" title="Prioridad: ${priorityClass}"></div>
@@ -479,6 +526,7 @@
                 ${dueDateHTML}
                 ${appLink}
               </div>
+              ${uploadHTML}
             </div>
             <div class="task-actions">
               ${completeBtn}
@@ -517,6 +565,57 @@
         btn.disabled = false;
         btn.textContent = 'Completar';
       }
+    }
+
+    /* ── Upload for task ── */
+    async function handleTaskUpload(taskId, applicationId, uploadType, fileInput) {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const section = document.getElementById('uploadSection_' + taskId);
+      const btn = section?.querySelector('.btn-upload');
+      if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
+
+      const fd = new FormData();
+      if (uploadType === 'payment') {
+        fd.append('receipt', file);
+        fd.append('amount', '0');
+        fd.append('notes', '');
+      } else {
+        fd.append('files', file);
+        fd.append('type', 'other');
+      }
+
+      try {
+        const endpoint = uploadType === 'payment'
+          ? `/api/applications/${applicationId}/payment/upload`
+          : `/api/applications/${applicationId}/documents/upload`;
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Error al subir');
+        }
+
+        // Show success
+        if (section) {
+          section.innerHTML = `
+            <div class="upload-success">
+              <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#16a34a;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              Archivo subido correctamente — en revision
+            </div>`;
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Subir archivo'; }
+      }
+
+      fileInput.value = '';
     }
 
     /* ── Load Tasks ── */
