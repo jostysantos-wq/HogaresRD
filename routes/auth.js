@@ -1268,6 +1268,24 @@ router.get('/verify-email', emailVerifyLimiter, (req, res) => {
   store.saveUser(user);
 
   logSec('email_verified', req, { userId: user.id });
+
+  // ── Auto-login on successful verification ───────────────────────────────
+  // Email ownership is proven at this point (they received and clicked the
+  // link), so we sign them in by issuing the JWT cookie. This lets the
+  // verify-email.html landing page check subscription status and route
+  // paywalled pro users to /subscribe without a manual login step.
+  try {
+    const authToken = signToken(user);
+    res.cookie(COOKIE_NAME, authToken, {
+      httpOnly: true,
+      secure:   IS_PROD,
+      sameSite: 'lax',
+      maxAge:   14 * 24 * 60 * 60 * 1000,
+    });
+  } catch (e) {
+    console.error('[verify-email] auto-login cookie error:', e.message);
+  }
+
   res.redirect(`${BASE_URL}/verify-email?status=success`);
 });
 

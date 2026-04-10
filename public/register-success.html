@@ -260,7 +260,11 @@
           <div class="step-num">2</div>
           <div class="step-text"><strong>Haz clic en "Verificar mi correo"</strong> dentro del mensaje para activar tu cuenta.</div>
         </div>
-        <div class="step">
+        <div class="step" id="stepPayment" style="display:none;">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Agrega un método de pago</strong> para comenzar tu prueba gratuita de 14 días. No se cobra nada hasta el día 15 — cancela cuando quieras.</div>
+        </div>
+        <div class="step" id="stepDashboard">
           <div class="step-num">3</div>
           <div class="step-text"><strong>Inicia sesión</strong> y accede a tu dashboard profesional.</div>
         </div>
@@ -304,9 +308,25 @@
       broker:        '¡Cuenta de Agente Broker creada!',
       agency:        '¡Cuenta de Agente creada!',
       inmobiliaria:  '¡Cuenta de Inmobiliaria creada!',
+      constructora:  '¡Cuenta de Constructora creada!',
       user:          '¡Cuenta creada exitosamente!',
     };
     if (titles[role]) document.getElementById('headerTitle').textContent = titles[role];
+
+    // Pro roles get paywalled — show the extra "add payment method" step.
+    const proRoles = ['broker','agency','inmobiliaria','constructora'];
+    if (proRoles.includes(role)) {
+      const stepPayment   = document.getElementById('stepPayment');
+      const stepDashboard = document.getElementById('stepDashboard');
+      if (stepPayment)   stepPayment.style.display   = '';
+      if (stepDashboard) {
+        stepDashboard.querySelector('.step-num').textContent = '4';
+        stepDashboard.querySelector('.step-text').innerHTML  =
+          '<strong>Accede a tu dashboard</strong> una vez que tu método de pago esté configurado.';
+      }
+      const headerSub = document.getElementById('headerSub');
+      if (headerSub) headerSub.textContent = 'Verifica tu correo, agrega una tarjeta y comienza tu prueba gratuita de 14 días.';
+    }
 
     // ── Resend ─────────────────────────────────────────────────────────────
     async function resend() {
