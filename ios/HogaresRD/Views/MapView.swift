@@ -60,14 +60,14 @@ struct NativeMapView: UIViewRepresentable {
         // Store weak reference so MapStateStore can call convert(_:toPointTo:)
         mapState.mapView = map
 
-        // Initial camera — Santo Domingo at a fixed altitude. Using a camera
-        // (altitude in meters) rather than setRegion(latitudinalMeters:)
-        // avoids the "zoom jump" you see when the map's frame is laid out
-        // AFTER the initial setRegion call — camera altitude is independent
-        // of the view's aspect ratio.
-        let center = CLLocationCoordinate2D(latitude: 18.486, longitude: -69.931)
+        // Initial camera — centered on DR with altitude wide enough to show
+        // the whole country (Santo Domingo + Santiago + Puerto Plata +
+        // Punta Cana + Barahona). Previously used 60km altitude which only
+        // showed Santo Domingo metro — listings in Bani, Puerto Plata, etc
+        // were off-screen until user manually zoomed out.
+        let center = CLLocationCoordinate2D(latitude: 18.735, longitude: -70.163)
         map.camera = MKMapCamera(lookingAtCenter: center,
-                                 fromDistance: 60_000, // altitude in meters
+                                 fromDistance: 400_000, // 400km altitude — shows entire DR
                                  pitch: 0, heading: 0)
         return map
     }
