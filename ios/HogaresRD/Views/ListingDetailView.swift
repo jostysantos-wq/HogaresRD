@@ -328,34 +328,50 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
-        if !l.images.isEmpty {
-            TabView(selection: $imageIndex) {
-                ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
-                    let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            Rectangle().fill(Color(.systemGray6))
-                                .overlay(Image(systemName: "photo").font(.system(size: 36)).foregroundStyle(Color(.systemGray3)))
+        Group {
+            if !l.images.isEmpty {
+                TabView(selection: $imageIndex) {
+                    ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
+                        let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
+                        ZStack {
+                            // Opaque background prevents bleed-through during swipe
+                            Color(.systemGray6)
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                default:
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 36))
+                                        .foregroundStyle(Color(.systemGray3))
+                                }
+                            }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            imageIndex = i
+                            showFullGallery = true
+                        }
+                        .tag(i)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                    .onTapGesture {
-                        imageIndex = i
-                        showFullGallery = true
-                    }
-                    .tag(i)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            } else {
+                Rectangle()
+                    .fill(Color(.systemGray6))
+                    .overlay(
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 50))
+                            .foregroundStyle(Color(.systemGray3))
+                    )
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: heroHeight)
-        } else {
-            Rectangle().fill(Color(.systemGray6)).frame(height: heroHeight)
-                .overlay(Image(systemName: "house.fill").font(.system(size: 50)).foregroundStyle(Color(.systemGray3)))
         }
+        .frame(height: heroHeight)
+        .clipped()
     }
 
     // MARK: - Hero Overlay Bar
