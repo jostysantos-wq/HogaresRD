@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: - Tasks list
 
@@ -10,6 +11,7 @@ struct TasksView: View {
     @State private var errorMsg: String?
     @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Completadas, 4=Vencidas
     @State private var showCreate = false
+    @State private var selectedTask: TaskItem? = nil
 
     private var filteredTasks: [TaskItem] {
         switch filter {
@@ -96,22 +98,28 @@ struct TasksView: View {
                             if !activeTasks.isEmpty {
                                 Section("Activas (\(activeTasks.count))") {
                                     ForEach(activeTasks) { task in
-                                        TaskRow(task: task)
-                                            .swipeActions(edge: .leading) {
-                                                Button {
-                                                    Task { await completeTask(task) }
-                                                } label: {
-                                                    Label("Completar", systemImage: "checkmark.circle.fill")
-                                                }
-                                                .tint(Color.rdGreen)
+                                        Button { selectedTask = task } label: {
+                                            TaskRow(task: task)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .swipeActions(edge: .leading) {
+                                            Button {
+                                                Task { await completeTask(task) }
+                                            } label: {
+                                                Label("Completar", systemImage: "checkmark.circle.fill")
                                             }
+                                            .tint(Color.rdGreen)
+                                        }
                                     }
                                 }
                             }
                             if !completedTasks.isEmpty {
                                 Section("Completadas (\(completedTasks.count))") {
                                     ForEach(completedTasks) { task in
-                                        TaskRow(task: task)
+                                        Button { selectedTask = task } label: {
+                                            TaskRow(task: task)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
@@ -138,6 +146,12 @@ struct TasksView: View {
         .sheet(isPresented: $showCreate) {
             CreateTaskSheet(onCreated: { newTask in
                 tasks.insert(newTask, at: 0)
+            })
+            .environmentObject(api)
+        }
+        .sheet(item: $selectedTask) { task in
+            TaskDetailSheet(task: task, onComplete: {
+                Task { await load() }
             })
             .environmentObject(api)
         }
@@ -299,6 +313,303 @@ struct TaskRow: View {
         }
         .padding(.vertical, 4)
         .opacity(task.status == "completada" ? 0.6 : 1)
+    }
+}
+
+// MARK: - Task Detail Sheet (with upload capability)
+
+struct TaskDetailSheet: View {
+    let task: TaskItem
+    var onComplete: () -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+    @State private var showPicker = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var uploading = false
+    @State private var completing = false
+    @State private var uploadSuccess = false
+    @State private var errorMsg: String?
+
+    /// Does this task require a file upload?
+    private var needsUpload: Bool {
+        guard task.status != "completada" else { return false }
+        let uploadEvents = ["documents_requested", "documents_insufficient", "payment_required", "payment_rejected"]
+        return task.applicationId != nil && uploadEvents.contains(task.sourceEvent ?? "")
+    }
+
+    /// Is this a payment-related task?
+    private var isPaymentTask: Bool {
+        ["payment_required", "payment_rejected"].contains(task.sourceEvent ?? "")
+    }
+
+    private var uploadLabel: String {
+        if isPaymentTask { return "Subir comprobante de pago" }
+        return "Subir documento"
+    }
+
+    private var uploadIcon: String {
+        if isPaymentTask { return "creditcard.fill" }
+        return "doc.badge.arrow.up.fill"
+    }
+
+    private var taskIcon: String {
+        switch task.sourceEvent {
+        case "documents_requested", "documents_insufficient": return "doc.text.fill"
+        case "payment_required", "payment_rejected": return "creditcard.fill"
+        case "payment_uploaded": return "checkmark.seal.fill"
+        case "tour_scheduled": return "calendar.badge.clock"
+        default: return "checklist"
+        }
+    }
+
+    private var taskColor: Color {
+        switch task.sourceEvent {
+        case "documents_requested", "documents_insufficient": return .orange
+        case "payment_required", "payment_rejected": return Color.rdBlue
+        case "payment_uploaded": return Color.rdGreen
+        default: return Color.rdBlue
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Icon header
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(taskColor.opacity(0.12))
+                                .frame(width: 72, height: 72)
+                            Image(systemName: taskIcon)
+                                .font(.system(size: 30))
+                                .foregroundStyle(taskColor)
+                        }
+
+                        Text(task.title)
+                            .font(.title3.bold())
+                            .multilineTextAlignment(.center)
+
+                        // Status + priority
+                        HStack(spacing: 8) {
+                            Text(task.statusLabel)
+                                .font(.caption.bold())
+                                .foregroundStyle(task.status == "completada" ? Color.rdGreen : task.status == "en_progreso" ? Color.rdBlue : .orange)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background((task.status == "completada" ? Color.rdGreen : task.status == "en_progreso" ? Color.rdBlue : Color.orange).opacity(0.1))
+                                .clipShape(Capsule())
+
+                            Text(task.priorityLabel)
+                                .font(.caption.bold())
+                                .foregroundStyle(task.priority == "alta" ? Color.rdRed : task.priority == "baja" ? Color.rdGreen : .orange)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background((task.priority == "alta" ? Color.rdRed : task.priority == "baja" ? Color.rdGreen : Color.orange).opacity(0.1))
+                                .clipShape(Capsule())
+
+                            if task.isOverdue {
+                                Label("Vencida", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.rdRed)
+                                    .padding(.horizontal, 10).padding(.vertical, 4)
+                                    .background(Color.rdRed.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+
+                    // Description
+                    if let desc = task.description, !desc.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Descripcion")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                            Text(desc)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Details
+                    VStack(spacing: 10) {
+                        if let due = task.dueDate {
+                            detailRow(icon: "calendar", label: "Vence", value: formatDate(due))
+                        }
+                        if task.source == "auto" {
+                            detailRow(icon: "gear", label: "Origen", value: "Generada automaticamente")
+                        }
+                        if let created = task.createdAt {
+                            detailRow(icon: "clock", label: "Creada", value: formatDate(created))
+                        }
+                    }
+                    .padding(14)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Upload section (for document/payment tasks)
+                    if needsUpload {
+                        VStack(spacing: 14) {
+                            Divider()
+
+                            Image(systemName: uploadIcon)
+                                .font(.system(size: 32))
+                                .foregroundStyle(taskColor)
+
+                            Text(isPaymentTask ? "Sube tu comprobante de pago" : "Sube los documentos solicitados")
+                                .font(.subheadline.bold())
+                                .multilineTextAlignment(.center)
+
+                            Text(isPaymentTask
+                                 ? "Toma una foto o selecciona el comprobante de tu galeria."
+                                 : "Toma una foto de tu documento o selecciona de tu galeria. Formatos: JPG, PNG, PDF.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+
+                            if uploadSuccess {
+                                Label("Documento subido correctamente", systemImage: "checkmark.circle.fill")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.rdGreen)
+                            } else {
+                                Button { showPicker = true } label: {
+                                    HStack {
+                                        if uploading {
+                                            ProgressView().tint(.white)
+                                        } else {
+                                            Image(systemName: "arrow.up.circle.fill")
+                                        }
+                                        Text(uploading ? "Subiendo..." : uploadLabel)
+                                            .font(.subheadline.bold())
+                                    }
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(taskColor, in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(uploading)
+                            }
+                        }
+                        .padding(16)
+                        .background(taskColor.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    if let err = errorMsg {
+                        Label(err, systemImage: "exclamationmark.circle")
+                            .font(.caption)
+                            .foregroundStyle(Color.rdRed)
+                    }
+
+                    // Complete button (for non-upload tasks or after upload)
+                    if task.status != "completada" && (!needsUpload || uploadSuccess) {
+                        Button {
+                            Task { await markComplete() }
+                        } label: {
+                            HStack {
+                                if completing { ProgressView().tint(.white) }
+                                Text("Marcar como completada")
+                                    .font(.subheadline.bold())
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.rdGreen, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(completing)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+            }
+            .navigationTitle("Detalle de Tarea")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+            .photosPicker(isPresented: $showPicker, selection: $selectedPhotos, maxSelectionCount: 5, matching: .any(of: [.images]))
+            .onChange(of: selectedPhotos) {
+                guard let item = selectedPhotos.first else { return }
+                Task { await handleUpload(item: item) }
+                selectedPhotos = []
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func detailRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            Text(label)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.caption)
+        }
+    }
+
+    private func formatDate(_ iso: String) -> String {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = fmt.date(from: iso)
+        if date == nil { fmt.formatOptions = [.withInternetDateTime]; date = fmt.date(from: iso) }
+        guard let d = date else { return iso }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "es_DO")
+        df.dateFormat = "d MMM yyyy"
+        return df.string(from: d)
+    }
+
+    // MARK: - Actions
+
+    private func handleUpload(item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let appId = task.applicationId else { return }
+        let filename = "upload_\(Date().timeIntervalSince1970).jpg"
+
+        uploading = true
+        errorMsg = nil
+        do {
+            if isPaymentTask {
+                try await api.uploadPaymentReceipt(
+                    applicationId: appId, amount: "0", notes: task.title,
+                    fileData: data, filename: filename
+                )
+            } else {
+                try await api.uploadDocument(
+                    applicationId: appId, requestId: nil,
+                    type: "other", fileData: data, filename: filename
+                )
+            }
+            withAnimation { uploadSuccess = true }
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        uploading = false
+    }
+
+    private func markComplete() async {
+        completing = true
+        do {
+            try await api.completeTask(id: task.id)
+            onComplete()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        completing = false
     }
 }
 

@@ -548,11 +548,6 @@ struct ProfileTabView: View {
                 Label("Mis aplicaciones", systemImage: "doc.text.fill")
             }
             NavigationLink {
-                MyDocumentsView().environmentObject(api)
-            } label: {
-                Label("Mis documentos", systemImage: "folder.fill.badge.person.crop")
-            }
-            NavigationLink {
                 TasksView().environmentObject(api)
             } label: {
                 Label("Mis tareas", systemImage: "checklist")
