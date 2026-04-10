@@ -257,25 +257,10 @@ async function sendSearchAlertEmail(user, search, newListings, totalNew) {
   const firstName = user.name.split(' ')[0];
   const filterDesc = describeFilters(search.filters);
 
-  const listingCards = newListings.map(l => {
-    const loc = [l.sector, l.city].filter(Boolean).join(', ');
-    const specs = [
-      l.bedrooms   ? `${l.bedrooms} hab.`     : '',
-      l.bathrooms  ? `${l.bathrooms} baños`    : '',
-      l.area_const ? `${l.area_const} m²`      : '',
-    ].filter(Boolean).join(' · ');
-
-    return `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid #dce8f5;">
-      <tr><td style="padding:16px 20px;background:#fff;">
-        <div style="font-size:1.1rem;font-weight:800;color:#002D62;margin-bottom:2px;">${formatPrice(l.price)}</div>
-        <div style="font-size:0.9rem;font-weight:600;color:#1a2b40;margin-bottom:4px;">${l.title}</div>
-        <div style="font-size:0.78rem;color:#7a9bbf;margin-bottom:${specs ? '6px' : '12px'};">📍 ${loc}</div>
-        ${specs ? `<div style="font-size:0.75rem;color:#4d6a8a;margin-bottom:12px;">${specs}</div>` : ''}
-        <a href="${BASE_URL}/listing/${l.id}" style="display:inline-block;background:#002D62;color:#fff;font-size:0.8rem;font-weight:700;padding:8px 18px;border-radius:8px;text-decoration:none;">Ver propiedad →</a>
-      </td></tr>
-    </table>`;
-  }).join('');
+  // Use the shared hero-image listing card so saved-search alerts show
+  // the actual property photo with price overlay, matching the newsletter.
+  const { listingCard: sharedListingCard } = require('../utils/email-templates');
+  const listingCards = newListings.map(sharedListingCard).join('');
 
   const moreText = totalNew > newListings.length
     ? `<p style="font-size:0.85rem;color:#7a9bbf;text-align:center;margin-top:8px;">...y ${totalNew - newListings.length} más</p>`

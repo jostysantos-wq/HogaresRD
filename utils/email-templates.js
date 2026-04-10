@@ -170,20 +170,84 @@ function quote(text) {
   return `<blockquote style="margin:14px 0;padding:14px 18px;background:${C.bg};border-left:4px solid ${C.red};border-radius:4px;font-size:0.88rem;color:${C.text};font-style:italic;line-height:1.5;">${text}</blockquote>`;
 }
 
-/** Listing card for newsletters/alerts */
+/** Listing card for transactional emails (match alerts, saved-search results, etc.)
+ *  — hero image with price overlay, spec pills, red CTA. Uses VML fallback so the
+ *  image+overlay combo renders in Outlook 2007+.
+ */
 function listingCard(listing) {
-  const price = listing.price ? `$${Number(listing.price).toLocaleString('en-US')}` : '';
-  const img = listing.image || listing.images?.[0];
-  const imgUrl = img ? (img.startsWith('http') ? img : `${BASE_URL}${img}`) : '';
-  const url = `${BASE_URL}/listing/${listing.id}`;
+  const priceNum = Number(listing.price);
+  const formatted = !listing.price ? 'Consultar'
+    : priceNum >= 1_000_000 ? '$' + (priceNum / 1_000_000).toFixed(priceNum % 1_000_000 === 0 ? 0 : 1) + 'M'
+    : priceNum >= 1_000     ? '$' + Math.round(priceNum / 1_000) + 'K'
+    : '$' + priceNum.toLocaleString('en-US');
+  const price = formatted + (listing.type === 'alquiler' ? '/mes' : '');
 
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;border:1px solid ${C.border};border-radius:8px;overflow:hidden;">
-  ${imgUrl ? `<tr><td><img src="${imgUrl}" alt="" style="width:100%;height:140px;object-fit:cover;display:block;" /></td></tr>` : ''}
-  <tr><td style="padding:14px 16px;">
-    <div style="font-size:1.05rem;font-weight:800;color:${C.navy};margin-bottom:4px;">${price}</div>
-    <div style="font-size:0.88rem;font-weight:700;color:${C.text};margin-bottom:4px;">${esc(listing.title)}</div>
-    <div style="font-size:0.78rem;color:${C.muted};">${esc(listing.city || '')}${listing.province ? ', ' + esc(listing.province) : ''}</div>
-    <div style="margin-top:12px;"><a href="${url}" style="font-size:0.82rem;font-weight:700;color:${C.red};text-decoration:none;">Ver propiedad &rarr;</a></div>
+  let img = null;
+  if (Array.isArray(listing.images) && listing.images.length > 0) {
+    img = typeof listing.images[0] === 'object' ? (listing.images[0].url || null) : listing.images[0];
+  }
+  if (!img) img = listing.image || listing.cover || null;
+  const imgUrl = img ? (img.startsWith('http') ? img : `${BASE_URL}${img}`) : '';
+
+  const typeInfo = listing.type === 'alquiler'
+    ? { label: 'EN ALQUILER', color: '#0066cc' }
+    : listing.type === 'venta_alquiler'
+    ? { label: 'VENTA / ALQUILER', color: '#7c3aed' }
+    : { label: 'EN VENTA', color: C.green };
+
+  const url = `${BASE_URL}/listing/${listing.id}`;
+  const location = [listing.sector, listing.city, listing.province].filter(Boolean).join(', ');
+
+  const specs = [];
+  if (listing.bedrooms)   specs.push(`🛏 ${listing.bedrooms} hab.`);
+  if (listing.bathrooms)  specs.push(`🚿 ${listing.bathrooms} baños`);
+  if (listing.area_const) specs.push(`📐 ${listing.area_const} m²`);
+  const specRow = specs.length
+    ? `<div style="margin-top:10px;font-size:12px;color:${C.muted};font-family:Arial,sans-serif;">${specs.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>`
+    : '';
+
+  const heroCell = imgUrl
+    ? `<a href="${url}" style="text-decoration:none;display:block;">
+         <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+           <tr>
+             <td background="${imgUrl}" bgcolor="#0a1829" valign="bottom"
+                 style="background:url('${imgUrl}') center/cover no-repeat;background-color:#0a1829;height:180px;border-radius:8px 8px 0 0;padding:14px;">
+               <!--[if gte mso 9]>
+               <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="mso-width-percent:1000;height:180px;">
+                 <v:fill type="frame" src="${imgUrl}" color="#0a1829" />
+                 <v:textbox inset="0,0,0,0">
+               <![endif]-->
+               <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                 <tr><td align="left" valign="top" style="padding-bottom:90px;">
+                   <span style="display:inline-block;background:${typeInfo.color};color:#ffffff;font-size:10px;font-weight:800;letter-spacing:1px;padding:5px 11px;border-radius:20px;text-transform:uppercase;font-family:Arial,sans-serif;">${typeInfo.label}</span>
+                 </td></tr>
+                 <tr><td align="left" valign="bottom">
+                   <div style="display:inline-block;background:rgba(0,0,0,0.72);padding:9px 14px;border-radius:8px;">
+                     <div style="font-size:20px;font-weight:800;color:#ffffff;font-family:Arial,sans-serif;line-height:1;">${price}</div>
+                   </div>
+                 </td></tr>
+               </table>
+               <!--[if gte mso 9]></v:textbox></v:rect><![endif]-->
+             </td>
+           </tr>
+         </table>
+       </a>`
+    : `<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+         <tr><td bgcolor="${C.navy}" style="background:${C.navy};height:110px;border-radius:8px 8px 0 0;padding:24px;text-align:center;">
+           <div style="display:inline-block;background:${typeInfo.color};color:#ffffff;font-size:10px;font-weight:800;letter-spacing:1px;padding:5px 11px;border-radius:20px;text-transform:uppercase;font-family:Arial,sans-serif;margin-bottom:8px;">${typeInfo.label}</div>
+           <div style="font-size:22px;font-weight:800;color:#ffffff;font-family:Arial,sans-serif;">${price}</div>
+         </td></tr>
+       </table>`;
+
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border:1px solid ${C.border};border-radius:10px;overflow:hidden;background:#ffffff;">
+  <tr><td style="padding:0;">${heroCell}</td></tr>
+  <tr><td style="padding:14px 16px 16px;background:#ffffff;">
+    <div style="font-size:15px;font-weight:800;color:${C.navy};margin-bottom:4px;line-height:1.3;font-family:Arial,sans-serif;">${esc(listing.title)}</div>
+    <div style="font-size:12px;color:${C.muted};font-family:Arial,sans-serif;"><span style="color:${C.red};">📍</span> ${esc(location || 'República Dominicana')}</div>
+    ${specRow}
+    <div style="margin-top:14px;">
+      <a href="${url}" style="display:inline-block;background:${C.navy};color:#ffffff;font-size:12px;font-weight:700;padding:9px 18px;border-radius:6px;text-decoration:none;font-family:Arial,sans-serif;border-bottom:2px solid ${C.red};">Ver propiedad →</a>
+    </div>
   </td></tr>
 </table>`;
 }

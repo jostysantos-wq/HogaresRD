@@ -407,40 +407,11 @@ router.post('/register', authLimiter, async (req, res, next) => {
       .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 3);
 
-    function formatPrice(p) {
-      if (!p) return 'Consultar';
-      const n = Number(p);
-      if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
-      if (n >= 1000)    return '$' + (n / 1000).toFixed(0) + 'K';
-      return '$' + n.toLocaleString('es-DO');
-    }
-
-    function listingCard(l) {
-      const price    = formatPrice(l.price);
-      const location = [l.sector, l.city].filter(Boolean).join(', ');
-      const badge    = l.type === 'alquiler' ? 'EN ALQUILER' : 'EN VENTA';
-      const badgeClr = l.type === 'alquiler' ? '#0066cc' : '#1a7a4a';
-      const specs    = [
-        l.bedrooms  ? `🛏 ${l.bedrooms} hab.`  : '',
-        l.bathrooms ? `🚿 ${l.bathrooms} baños` : '',
-        l.area_const ? `📐 ${l.area_const} m²`  : '',
-      ].filter(Boolean).join('&nbsp;&nbsp;');
-      return `
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-          <tr>
-            <td style="padding:18px 20px;background:#ffffff;">
-              <div style="margin-bottom:8px;">
-                <span style="display:inline-block;background:${badgeClr};color:#fff;font-size:0.65rem;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;text-transform:uppercase;">${badge}</span>
-              </div>
-              <div style="font-size:1.15rem;font-weight:800;color:#002D62;margin-bottom:4px;">${price}</div>
-              <div style="font-size:0.9rem;font-weight:600;color:#1a2b40;margin-bottom:6px;line-height:1.3;">${l.title}</div>
-              <div style="font-size:0.8rem;color:#7a9bbf;margin-bottom:10px;">📍 ${location}</div>
-              ${specs ? `<div style="font-size:0.78rem;color:#4d6a8a;margin-bottom:14px;">${specs}</div>` : ''}
-              <a href="${BASE_URL}/listing/${l.id}" style="display:inline-block;background:#eef3fa;color:#002D62;font-size:0.82rem;font-weight:700;padding:8px 18px;border-radius:8px;text-decoration:none;">Ver propiedad →</a>
-            </td>
-          </tr>
-        </table>`;
-    }
+    // Reuse the shared hero-image listing card so the welcome email's
+    // trending section shows actual property photos instead of a text-only
+    // card. The helper ensures image URLs are absolute and handles Outlook's
+    // VML fallback automatically.
+    const { listingCard } = require('../utils/email-templates');
 
     const trendingHTML = trending.length
       ? `
