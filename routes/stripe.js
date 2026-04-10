@@ -137,6 +137,107 @@ router.get('/status', requireAuth, (req, res) => {
   });
 });
 
+// ── GET /api/stripe/cancel-stats ─────────────────────────────────────────
+// Returns platform usage stats for the retention screen.
+router.get('/cancel-stats', requireAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const apps     = store.getApplicationsByBroker(req.user.sub);
+  const convs    = store.getConversationsForBroker(req.user.sub);
+  const tours    = store.getToursByBroker(req.user.sub);
+  const listings = store.getAllSubmissions().filter(s =>
+    s.creator_user_id === req.user.sub || s.email === user.email
+  );
+  const totalViews = listings.reduce((s, l) => s + (l.views || 0), 0);
+
+  res.json({
+    listings: listings.length,
+    applications: apps.length,
+    conversations: convs.length,
+    tours: tours.length,
+    totalViews,
+    memberSince: user.createdAt || null,
+  });
+});
+
+// ── POST /api/stripe/cancel-feedback ────────────────────────────────────
+// Processes cancellation feedback and applies retention offers.
+router.post('/cancel-feedback', requireAuth, requireStripe, async (req, res) => {
+  try {
+    const user = store.getUserById(req.user.sub);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const { reason, feedback, accepted_offer } = req.body;
+
+    // Store cancellation feedback
+    if (!user._extra || typeof user._extra !== 'object') user._extra = {};
+    user._extra.cancelFeedback = {
+      reason: reason || '',
+      feedback: feedback || '',
+      accepted_offer: accepted_offer || null,
+      timestamp: new Date().toISOString(),
+    };
+    store.saveUser(user);
+
+    console.log(`[Stripe] Cancel feedback from ${user.email}: reason="${reason}", offer="${accepted_offer}"`);
+
+    // Handle accepted offers
+    if (accepted_offer === 'pause' && user.stripeSubscriptionId) {
+      // Pause subscription for 1 month
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        pause_collection: {
+          behavior: 'void',
+          resumes_at: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
+        },
+      });
+      user.subscriptionStatus = 'paused';
+      store.saveUser(user);
+      console.log(`[Stripe] Subscription paused for user ${user.id}`);
+      return res.json({ action: 'paused', message: 'Tu suscripcion ha sido pausada por 1 mes. Se reactivara automaticamente.' });
+    }
+
+    if (accepted_offer === 'discount' && user.stripeSubscriptionId) {
+      // Create a 30% off coupon for 3 months
+      let coupon;
+      try {
+        coupon = await stripe.coupons.create({
+          percent_off: 30,
+          duration: 'repeating',
+          duration_in_months: 3,
+          name: 'Retencion - 30% por 3 meses',
+        });
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          coupon: coupon.id,
+        });
+      } catch (e) {
+        console.error('[Stripe] Coupon error:', e.message);
+        return res.status(500).json({ error: 'Error al aplicar descuento' });
+      }
+      console.log(`[Stripe] 30% discount applied for user ${user.id}`);
+      return res.json({ action: 'discounted', message: 'Hemos aplicado un 30% de descuento por los proximos 3 meses.' });
+    }
+
+    // No offer accepted — create portal session for actual cancellation
+    if (user.stripeCustomerId) {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${BASE_URL}/subscription`,
+        flow_data: {
+          type: 'subscription_cancel',
+          subscription_cancel: { subscription: user.stripeSubscriptionId },
+        },
+      });
+      return res.json({ action: 'portal', url: session.url });
+    }
+
+    res.json({ action: 'none', message: 'No se encontro suscripcion activa.' });
+  } catch (err) {
+    console.error('[Stripe] cancel-feedback error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────
 // NOTE: This route needs the RAW request body — mounted in server.js
 // BEFORE express.json() with express.raw({ type: 'application/json' }).
@@ -201,8 +302,33 @@ router.post('/webhook', (req, res) => {
       const user = findUser(sub);
       if (user) {
         user.subscriptionStatus = 'canceled';
+        user.canceledAt = new Date().toISOString();
         store.saveUser(user);
         console.log(`[Stripe] Subscription cancelled → user ${user.id}`);
+
+        // Send win-back email (fire-and-forget)
+        setImmediate(async () => {
+          try {
+            const { createTransport } = require('./mailer');
+            const mailer = createTransport();
+            const firstName = (user.name || '').split(' ')[0] || 'Agente';
+            await mailer.sendMail({
+              to: user.email,
+              subject: 'Te extranaremos — HogaresRD',
+              department: 'ventas',
+              html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+                <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
+                <h2 style="color:#1a1a1a;">Hola ${firstName}, lamentamos verte ir</h2>
+                <p style="color:#333;line-height:1.7;">Tu suscripcion ha sido cancelada. Tus propiedades y datos se mantendran en nuestra plataforma por 90 dias.</p>
+                <p style="color:#333;line-height:1.7;">Si cambias de opinion, puedes reactivar tu cuenta en cualquier momento con un <strong>30% de descuento por 3 meses</strong>.</p>
+                <a href="${BASE_URL}/subscribe" style="display:inline-block;background:#002D62;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;margin:20px 0;">Reactivar mi cuenta</a>
+                <p style="color:#666;font-size:0.85rem;">Esta oferta es valida por 14 dias.</p>
+              </div>`,
+            });
+          } catch (e) {
+            console.error('[Stripe] Win-back email error:', e.message);
+          }
+        });
       }
       break;
     }

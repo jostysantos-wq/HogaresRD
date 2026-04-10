@@ -11,6 +11,7 @@ struct PlansView: View {
     @Environment(\.dismiss) var dismiss
     @State private var purchasing: String?
     @State private var showSuccess = false
+    @State private var showCancelFlow = false
 
     var body: some View {
         NavigationStack {
@@ -101,12 +102,27 @@ struct PlansView: View {
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                    .padding(.bottom, 24)
+
+                    // Cancel button
+                    if !store.purchasedProductIDs.isEmpty || api.currentUser?.subscriptionStatus == "active" {
+                        Button { showCancelFlow = true } label: {
+                            Text("Cancelar suscripcion")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 8)
+                    }
+
+                    Spacer().frame(height: 24)
                 }
                 .padding(.horizontal)
             }
             .navigationTitle("Planes")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showCancelFlow) {
+                CancelSubscriptionView()
+                    .environmentObject(api)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }

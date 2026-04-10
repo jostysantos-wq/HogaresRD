@@ -1689,6 +1689,26 @@ class APIService: ObservableObject {
         return try decoder.decode(ContactTimelineResponse.self, from: data)
     }
 
+    // MARK: - Cancel / Retention
+
+    func getCancelStats() async throws -> CancelStats {
+        let url = URL(string: "\(apiBase)/api/stripe/cancel-stats")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando estadisticas")
+        return try decoder.decode(CancelStats.self, from: data)
+    }
+
+    func submitCancelFeedback(reason: String, feedback: String, acceptedOffer: String?) async throws -> CancelFeedbackResponse {
+        let url = URL(string: "\(apiBase)/api/stripe/cancel-feedback")!
+        var body: [String: Any] = ["reason": reason, "feedback": feedback]
+        if let offer = acceptedOffer { body["accepted_offer"] = offer }
+        let req = try authedRequest(url, method: "POST", body: try JSONSerialization.data(withJSONObject: body))
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error procesando solicitud")
+        return try decoder.decode(CancelFeedbackResponse.self, from: data)
+    }
+
     // MARK: - Payments CRM
 
     func getPaymentsSummary() async throws -> PaymentsSummaryResponse {

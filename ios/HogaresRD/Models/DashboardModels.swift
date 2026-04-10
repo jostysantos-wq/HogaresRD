@@ -911,4 +911,21 @@ struct PaymentItem: Decodable, Identifiable {
     }
 }
 
+// MARK: - Cancel Stats (Retention)
+
+struct CancelStats: Decodable {
+    let listings: Int?
+    let applications: Int?
+    let conversations: Int?
+    let tours: Int?
+    let totalViews: Int?
+    let memberSince: String?
+}
+
+struct CancelFeedbackResponse: Decodable {
+    let action: String?
+    let message: String?
+    let url: String?
+}
+
 import SwiftUI

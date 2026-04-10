@@ -235,12 +235,18 @@
           </a>` : ''}
         </div>
 
+        <div style="margin-top:12px;">
+          <button class="btn-manage" id="cancelBtn" style="background:transparent;color:var(--text-muted);border:1px solid var(--border);font-size:0.82rem;">
+            Cancelar suscripcion
+          </button>
+        </div>
+
         <div class="secure-note">
           <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>
-          Facturación gestionada de forma segura por Stripe
+          Facturacion gestionada de forma segura por Stripe
         </div>`;
 
-      // Portal button handler
+      // Portal button handler (for card changes only)
       document.getElementById('portalBtn')?.addEventListener('click', async function() {
         this.disabled = true;
         this.textContent = 'Abriendo portal…';
@@ -254,11 +260,201 @@
           if (data.url) window.location.href = data.url;
           else alert(data.error || 'Error al abrir el portal.');
         } catch(e) {
-          alert('Error de conexión.');
+          alert('Error de conexion.');
         }
         this.disabled = false;
-        this.textContent = 'Administrar suscripción';
+        this.textContent = 'Administrar suscripcion';
       });
+
+      // ── Cancellation Retention Flow ─────────────────────────────────
+      document.getElementById('cancelBtn')?.addEventListener('click', () => showCancelModal());
+
+      let cancelStats = null;
+
+      async function showCancelModal() {
+        // Fetch usage stats
+        try {
+          const r = await fetch('/api/stripe/cancel-stats', {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include',
+          });
+          cancelStats = await r.json();
+        } catch { cancelStats = {}; }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'cancelOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML = `<div id="cancelModal" style="background:var(--bg-card,#fff);border-radius:16px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);padding:32px;">
+          ${cancelStep1()}
+        </div>`;
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeCancelModal(); });
+        document.body.appendChild(overlay);
+      }
+
+      function closeCancelModal() {
+        document.getElementById('cancelOverlay')?.remove();
+      }
+
+      function setCancelStep(html) {
+        const modal = document.getElementById('cancelModal');
+        if (modal) modal.innerHTML = html;
+      }
+
+      // Step 1: What you'll lose
+      function cancelStep1() {
+        const s = cancelStats || {};
+        return `
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5rem;margin-bottom:8px;">⚠️</div>
+            <h2 style="margin:0 0 8px;font-size:1.3rem;font-weight:800;">Esto es lo que perderas</h2>
+            <p style="color:var(--text-muted,#666);font-size:0.9rem;">Al cancelar, perderas acceso a todas estas herramientas y datos.</p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;">
+            <div style="background:var(--bg,#f7fafc);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:800;color:#002D62;">${s.listings || 0}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">Propiedades</div>
+            </div>
+            <div style="background:var(--bg,#f7fafc);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:800;color:#002D62;">${s.applications || 0}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">Aplicaciones</div>
+            </div>
+            <div style="background:var(--bg,#f7fafc);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:800;color:#002D62;">${s.totalViews || 0}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">Vistas totales</div>
+            </div>
+            <div style="background:var(--bg,#f7fafc);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:800;color:#002D62;">${s.conversations || 0}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">Conversaciones</div>
+            </div>
+          </div>
+          <button onclick="setCancelStep(cancelStep2())" style="width:100%;padding:12px;background:#CE1126;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.95rem;">Continuar con la cancelacion</button>
+          <button onclick="closeCancelModal()" style="width:100%;padding:12px;background:none;border:none;color:var(--text-muted);cursor:pointer;margin-top:8px;font-size:0.9rem;">Mejor no, quiero quedarme</button>
+        `;
+      }
+
+      // Step 2: Pause option
+      function cancelStep2() {
+        return `
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5rem;margin-bottom:8px;">⏸️</div>
+            <h2 style="margin:0 0 8px;font-size:1.3rem;font-weight:800;">Pausa en vez de cancelar?</h2>
+            <p style="color:var(--text-muted,#666);font-size:0.9rem;">Puedes pausar tu suscripcion por 1 mes sin costo. Tus datos y propiedades se mantienen.</p>
+          </div>
+          <button onclick="acceptOffer('pause')" style="width:100%;padding:14px;background:#002D62;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.95rem;margin-bottom:10px;">Pausar por 1 mes (gratis)</button>
+          <button onclick="setCancelStep(cancelStep3())" style="width:100%;padding:12px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:10px;color:var(--text,#333);cursor:pointer;font-size:0.9rem;">No, quiero cancelar</button>
+        `;
+      }
+
+      // Step 3: Reason
+      function cancelStep3() {
+        return `
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5rem;margin-bottom:8px;">💬</div>
+            <h2 style="margin:0 0 8px;font-size:1.3rem;font-weight:800;">Cuentanos por que</h2>
+            <p style="color:var(--text-muted,#666);font-size:0.9rem;">Tu feedback nos ayuda a mejorar para agentes como tu.</p>
+          </div>
+          <select id="cancelReason" style="width:100%;padding:12px;border:1px solid var(--border,#e2e8f0);border-radius:10px;font-size:0.9rem;margin-bottom:12px;background:var(--bg-card,#fff);color:var(--text,#333);">
+            <option value="">Selecciona un motivo...</option>
+            <option value="expensive">Muy caro para mi presupuesto</option>
+            <option value="no_leads">No estoy recibiendo suficientes leads</option>
+            <option value="competitor">Encontre otra plataforma</option>
+            <option value="business_pause">Mi negocio esta en pausa temporal</option>
+            <option value="missing_features">Le faltan funciones que necesito</option>
+            <option value="other">Otro motivo</option>
+          </select>
+          <textarea id="cancelFeedback" placeholder="Comentarios adicionales (opcional)" style="width:100%;padding:12px;border:1px solid var(--border,#e2e8f0);border-radius:10px;font-size:0.85rem;min-height:70px;resize:vertical;margin-bottom:16px;font-family:inherit;background:var(--bg-card,#fff);color:var(--text,#333);"></textarea>
+          <button onclick="submitCancelReason()" style="width:100%;padding:12px;background:#CE1126;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.95rem;">Continuar</button>
+          <button onclick="closeCancelModal()" style="width:100%;padding:12px;background:none;border:none;color:var(--text-muted);cursor:pointer;margin-top:8px;font-size:0.9rem;">Cancelar</button>
+        `;
+      }
+
+      // Step 4: Targeted offer or final cancel
+      function cancelStep4(reason) {
+        const offers = {
+          expensive: { title: '30% de descuento por 3 meses', desc: 'Entendemos. Te ofrecemos un 30% de descuento por los proximos 3 meses para que sigas creciendo.', offer: 'discount', btnText: 'Aplicar descuento', btnColor: '#002D62' },
+          no_leads: { title: 'Mejora tu visibilidad', desc: 'Nuestro equipo puede ayudarte a optimizar tus listados para recibir mas leads. Ademas, te ofrecemos 30% de descuento.', offer: 'discount', btnText: 'Aplicar descuento y optimizar', btnColor: '#002D62' },
+          business_pause: { title: 'Pausa gratuita de 1 mes', desc: 'Perfecto para una pausa temporal. Tus datos se mantienen y puedes reactivar cuando quieras.', offer: 'pause', btnText: 'Pausar suscripcion', btnColor: '#002D62' },
+          competitor: { title: 'Antes de irte...', desc: 'Nos encantaria saber que funciones ofrece la otra plataforma. Tu feedback nos ayuda a competir mejor. Te ofrecemos 30% off.', offer: 'discount', btnText: 'Quedarme con 30% off', btnColor: '#002D62' },
+          missing_features: { title: 'Estamos mejorando constantemente', desc: 'Tu feedback es valioso. Te ofrecemos 30% de descuento mientras trabajamos en nuevas funciones.', offer: 'discount', btnText: 'Aplicar descuento', btnColor: '#002D62' },
+        };
+        const o = offers[reason] || null;
+
+        if (o) {
+          return `
+            <div style="text-align:center;margin-bottom:20px;">
+              <div style="font-size:2.5rem;margin-bottom:8px;">🎁</div>
+              <h2 style="margin:0 0 8px;font-size:1.3rem;font-weight:800;">${o.title}</h2>
+              <p style="color:var(--text-muted,#666);font-size:0.9rem;">${o.desc}</p>
+            </div>
+            <button onclick="acceptOffer('${o.offer}')" style="width:100%;padding:14px;background:${o.btnColor};color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.95rem;margin-bottom:10px;">${o.btnText}</button>
+            <button onclick="finalCancel()" style="width:100%;padding:12px;background:none;border:1px solid #CE1126;border-radius:10px;color:#CE1126;cursor:pointer;font-size:0.9rem;">No gracias, cancelar definitivamente</button>
+          `;
+        }
+
+        // No targeted offer — final confirmation
+        return `
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5rem;margin-bottom:8px;">👋</div>
+            <h2 style="margin:0 0 8px;font-size:1.3rem;font-weight:800;">Confirmar cancelacion</h2>
+            <p style="color:var(--text-muted,#666);font-size:0.9rem;">Tu suscripcion se cancelara al final del periodo de facturacion actual. Tus datos se mantendran por 90 dias.</p>
+          </div>
+          <button onclick="finalCancel()" style="width:100%;padding:14px;background:#CE1126;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.95rem;">Cancelar suscripcion</button>
+          <button onclick="closeCancelModal()" style="width:100%;padding:12px;background:none;border:none;color:var(--text-muted);cursor:pointer;margin-top:8px;font-size:0.9rem;">Mejor no</button>
+        `;
+      }
+
+      function submitCancelReason() {
+        const reason = document.getElementById('cancelReason')?.value;
+        if (!reason) { alert('Por favor selecciona un motivo.'); return; }
+        setCancelStep(cancelStep4(reason));
+      }
+
+      async function acceptOffer(offer) {
+        const reason   = document.getElementById('cancelReason')?.value || '';
+        const feedback = document.getElementById('cancelFeedback')?.value || '';
+        setCancelStep('<div style="text-align:center;padding:40px 0;"><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:#002D62;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px;"></div><p>Procesando...</p></div>');
+        try {
+          const r = await fetch('/api/stripe/cancel-feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            credentials: 'include',
+            body: JSON.stringify({ reason, feedback, accepted_offer: offer }),
+          });
+          const d = await r.json();
+          setCancelStep(`
+            <div style="text-align:center;padding:20px 0;">
+              <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+              <h2 style="margin:0 0 12px;font-size:1.3rem;font-weight:800;">Listo!</h2>
+              <p style="color:var(--text-muted);font-size:0.9rem;">${d.message || 'Tu solicitud ha sido procesada.'}</p>
+              <button onclick="closeCancelModal();location.reload();" style="margin-top:20px;padding:12px 28px;background:#002D62;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Cerrar</button>
+            </div>
+          `);
+        } catch(e) {
+          setCancelStep('<div style="text-align:center;padding:20px;"><p style="color:#CE1126;">Error al procesar. Intenta de nuevo.</p><button onclick="closeCancelModal()" style="margin-top:12px;padding:10px 24px;background:#002D62;color:#fff;border:none;border-radius:10px;cursor:pointer;">Cerrar</button></div>');
+        }
+      }
+
+      async function finalCancel() {
+        const reason   = document.getElementById('cancelReason')?.value || 'other';
+        const feedback = document.getElementById('cancelFeedback')?.value || '';
+        setCancelStep('<div style="text-align:center;padding:40px 0;"><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:#CE1126;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px;"></div><p>Procesando cancelacion...</p></div>');
+        try {
+          const r = await fetch('/api/stripe/cancel-feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            credentials: 'include',
+            body: JSON.stringify({ reason, feedback, accepted_offer: null }),
+          });
+          const d = await r.json();
+          if (d.url) window.location.href = d.url;
+          else {
+            setCancelStep('<div style="text-align:center;padding:20px;"><p>' + (d.message || 'Cancelacion procesada.') + '</p><button onclick="closeCancelModal();location.reload();" style="margin-top:12px;padding:10px 24px;background:#002D62;color:#fff;border:none;border-radius:10px;cursor:pointer;">Cerrar</button></div>');
+          }
+        } catch(e) {
+          alert('Error de conexion.');
+          closeCancelModal();
+        }
+      }
     })();
   </script>
 <script src="/js/pixel.js" defer></script>
