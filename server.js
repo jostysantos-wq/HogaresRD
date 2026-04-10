@@ -898,6 +898,27 @@ app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
   const body = req.body;
   const isClaim = body.submission_type === 'agency_claim';
 
+  // Paywall: if a logged-in pro user submits a new property, they must
+  // have an active subscription. Guests and agency claims are allowed.
+  if (req.user?.sub && !isClaim) {
+    const user = store.getUserById(req.user.sub);
+    const proRoles = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+    if (user && proRoles.includes(user.role)) {
+      const status = user.subscriptionStatus || 'none';
+      const paywallRequired = user.paywallRequired === true;
+      const trialActive = status === 'trial' && user.trialEndsAt &&
+                          new Date(user.trialEndsAt) > new Date();
+      const legacyOk = !paywallRequired && trialActive;
+      const paidOk = ['active', 'trialing'].includes(status);
+      if (!legacyOk && !paidOk) {
+        return res.status(402).json({
+          error: 'Necesitas una suscripcion activa para publicar propiedades.',
+          needsSubscription: true,
+        });
+      }
+    }
+  }
+
   const submission = {
     id:              generateListingId(),
     creator_user_id: req.user?.sub || null,

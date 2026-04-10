@@ -2751,6 +2751,21 @@
   }
 
   if (!currentUser) { location.href = '/login'; return; }
+
+  // ── Subscription paywall check ─────────────────────────────
+  // New users without active/trialing subscription must add a card before
+  // accessing the dashboard. Legacy trial users (grandfathered) pass through.
+  try {
+    const statusRes = await fetch('/api/stripe/status', { credentials: 'include' });
+    if (statusRes.ok) {
+      const subStatus = await statusRes.json();
+      if (subStatus.required && !subStatus.canAccessDashboard) {
+        location.href = '/subscribe';
+        return;
+      }
+    }
+  } catch(e) { /* fail open if status check errors */ }
+
   // Expose after auth so external script blocks can read the user.
   window.currentUser = currentUser;
 

@@ -136,12 +136,16 @@
       `;
     }
 
-    function renderSuccess() {
-      // Determine where to redirect based on stored role
+    async function renderSuccess() {
+      // Determine where to redirect based on stored role AND subscription status
       let dashLink = '/home';
+      let proRole = false;
       try {
         const u = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-        if (u && ['agency','broker','inmobiliaria'].includes(u.role)) dashLink = '/broker';
+        if (u && ['agency','broker','inmobiliaria','constructora'].includes(u.role)) {
+          proRole = true;
+          dashLink = '/broker';
+        }
       } catch {}
 
       // Update emailVerified in localStorage so the banner disappears immediately
@@ -150,9 +154,24 @@
         if (u) { u.emailVerified = true; localStorage.setItem('hogaresrd_user', JSON.stringify(u)); }
       } catch {}
 
+      // For pro roles, check subscription status — paywalled users must
+      // go to /subscribe before they can access the dashboard.
+      if (proRole) {
+        try {
+          const r = await fetch('/api/stripe/status', { credentials: 'include' });
+          const status = await r.json();
+          if (status.required && !status.canAccessDashboard) {
+            dashLink = '/subscribe';
+          }
+        } catch {}
+      }
+
+      const buttonLabel = dashLink === '/subscribe' ? 'Activar mi cuenta →' : 'Ir a mi cuenta →';
       render('✅', '¡Correo verificado!',
-        'Tu dirección de correo electrónico ha sido confirmada. Ya tienes acceso completo a tu cuenta.',
-        `<a href="${dashLink}" class="btn">Ir a mi cuenta →</a>`
+        dashLink === '/subscribe'
+          ? 'Tu correo ha sido confirmado. Para activar tu cuenta, completa el pago de tu suscripcion.'
+          : 'Tu dirección de correo electrónico ha sido confirmada. Ya tienes acceso completo a tu cuenta.',
+        `<a href="${dashLink}" class="btn">${buttonLabel}</a>`
       );
     }
 
@@ -217,7 +236,7 @@
       const status = params.get('status');
       const token  = params.get('token');
 
-      if (status === 'success') { renderSuccess(); return; }
+      if (status === 'success') { await renderSuccess(); return; }
       if (status === 'expired') { renderExpired(); return; }
       if (status === 'invalid') { renderInvalid(); return; }
 

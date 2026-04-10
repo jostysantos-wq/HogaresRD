@@ -222,7 +222,11 @@
       document.getElementById('planAmount').textContent = plan.amount;
       document.getElementById('planFeatures').innerHTML = plan.features.map(f => `<li>${f}</li>`).join('');
 
-      // Show trial banner if applicable
+      // Paywalled new signups see a different UI — no skip link, clear
+      // messaging that they need to enter card to start trial.
+      const isPaywalled = status?.paywallRequired === true;
+
+      // Show trial banner if applicable (legacy trial users)
       if (status?.trialEndsAt) {
         const trialEnd  = new Date(status.trialEndsAt);
         const daysLeft  = Math.max(0, Math.ceil((trialEnd - Date.now()) / 86400000));
@@ -230,7 +234,8 @@
           document.getElementById('trialDaysLeft').textContent = daysLeft;
           document.getElementById('trialBanner').style.display = 'flex';
           document.getElementById('expiredBanner').style.display = 'none';
-          document.getElementById('skipLink').style.display = 'block';
+          // Skip link only for legacy (non-paywalled) trial users
+          document.getElementById('skipLink').style.display = isPaywalled ? 'none' : 'block';
         } else {
           // Trial expired
           document.getElementById('expiredBanner').style.display = 'flex';
@@ -241,10 +246,15 @@
           document.getElementById('pageSub').textContent   = 'Activa tu plan para continuar usando todas las funciones de HogaresRD.';
         }
       } else {
-        // Fresh registration — show trial note
+        // Fresh registration — show trial note, NO skip link for paywalled users
         document.getElementById('trialBanner').style.display = 'flex';
         document.getElementById('trialDaysLeft').textContent = '14';
         document.getElementById('expiredBanner').style.display = 'none';
+        document.getElementById('skipLink').style.display = 'none';
+        if (isPaywalled) {
+          document.getElementById('pageTitle').textContent = 'Completa tu registro';
+          document.getElementById('pageSub').textContent   = 'Agrega tu metodo de pago para comenzar tu prueba gratuita de 14 dias. No se cobra nada hasta el dia 15 — cancela cuando quieras.';
+        }
       }
 
       // If already active, redirect to broker dashboard

@@ -598,8 +598,9 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
-      subscriptionStatus: 'trial',
-      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      subscriptionStatus: 'pending_payment',  // card required before trial starts
+      trialEndsAt:     null,                    // trial not started until checkout
+      paywallRequired: true,                    // new signups are paywalled
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
     };
@@ -724,8 +725,9 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
-      subscriptionStatus: 'trial',
-      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      subscriptionStatus: 'pending_payment',  // card required before trial starts
+      trialEndsAt:     null,                    // trial not started until checkout
+      paywallRequired: true,                    // new signups are paywalled
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
       // inmobiliaria_id is NEVER set at registration — only after the inmobiliaria approves
@@ -852,8 +854,9 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
-      subscriptionStatus: 'trial',
-      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      subscriptionStatus: 'pending_payment',  // card required before trial starts
+      trialEndsAt:     null,                    // trial not started until checkout
+      paywallRequired: true,                    // new signups are paywalled
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
       join_requests:   [],
@@ -990,8 +993,9 @@ router.post('/register/constructora', authLimiter, async (req, res, next) => {
       resetToken:      null,
       resetTokenExpiry: null,
       marketingOptIn:  true,
-      subscriptionStatus: 'trial',
-      trialEndsAt:     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      subscriptionStatus: 'pending_payment',  // card required before trial starts
+      trialEndsAt:     null,                    // trial not started until checkout
+      paywallRequired: true,                    // new signups are paywalled
       stripeCustomerId:    null,
       stripeSubscriptionId: null,
       join_requests:   [],
@@ -1829,6 +1833,11 @@ router.post('/apple-subscription', userAuth, async (req, res) => {
     // Update user role
     const previousRole = user.role;
     user.role = role;
+
+    // Apple IAP is a paid subscription — satisfies the paywall. Apple
+    // handles trials on their side, so we mark as active.
+    user.subscriptionStatus = 'active';
+    user.paywallRequired    = false;
 
     // Store subscription info in _extra
     const extra = typeof user._extra === 'string' ? (function() { try { return JSON.parse(user._extra); } catch { return {}; } })() : (user._extra || {});

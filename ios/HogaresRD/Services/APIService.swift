@@ -1814,6 +1814,28 @@ class APIService: ObservableObject {
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error enviando recordatorio")
     }
+
+    // MARK: - Subscription Status
+
+    func getSubscriptionStatus() async throws -> SubscriptionStatus {
+        let url = URL(string: "\(apiBase)/api/stripe/status")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error verificando suscripcion")
+        return try decoder.decode(SubscriptionStatus.self, from: data)
+    }
+}
+
+struct SubscriptionStatus: Decodable {
+    let required: Bool
+    let status: String?
+    let trialEndsAt: String?
+    let isActive: Bool?
+    let canAccessDashboard: Bool?
+    let paywallRequired: Bool?
+    let isLegacyTrial: Bool?
+    let planName: String?
+    let hasPaymentMethod: Bool?
 }
 
 struct AgencyDetail: Decodable {

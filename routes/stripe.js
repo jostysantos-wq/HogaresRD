@@ -122,17 +122,27 @@ router.get('/status', requireAuth, (req, res) => {
 
   const status      = user.subscriptionStatus || 'none';
   const trialEndsAt = user.trialEndsAt   || null;
-  const isActive    = ['active', 'trialing'].includes(status);
+  const paywallRequired = user.paywallRequired === true;
 
   // Check if trial expired client-side
   const trialExpired = trialEndsAt && new Date(trialEndsAt) < new Date() && status === 'trial';
 
+  // Legacy trial users (paywallRequired=false) have free access until their trial expires
+  const isLegacyTrial = !paywallRequired && status === 'trial' && !trialExpired;
+  // Stripe-managed trialing/active users
+  const isPaidOrTrialing = ['active', 'trialing'].includes(status);
+
+  const canAccessDashboard = isLegacyTrial || isPaidOrTrialing;
+
   res.json({
-    required:     true,
-    status:       trialExpired ? 'expired' : status,
+    required:         true,
+    status:           trialExpired ? 'expired' : status,
     trialEndsAt,
-    isActive:     isActive && !trialExpired,
-    planName:     (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
+    isActive:         canAccessDashboard,
+    canAccessDashboard,
+    paywallRequired,
+    isLegacyTrial,
+    planName:         (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
     hasPaymentMethod: !!user.stripeCustomerId,
   });
 });

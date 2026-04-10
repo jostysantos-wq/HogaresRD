@@ -21,6 +21,34 @@ router.use(userAuth, (req, res, next) => {
   next();
 });
 
+// Subscription gate — new signups must have paid before accessing any
+// broker-dashboard endpoint. Legacy trial users (paywallRequired=false)
+// retain access until their trial expires naturally.
+router.use((req, res, next) => {
+  const user = req.brokerUser;
+  if (!user) return next();
+
+  // Secretaries inherit from their inmobiliaria (they don't pay individually)
+  if (user.role === 'secretary') return next();
+
+  const status = user.subscriptionStatus || 'none';
+  const paywallRequired = user.paywallRequired === true;
+
+  // Legacy trial users — active trial and not flagged for paywall
+  const trialActive = status === 'trial' && user.trialEndsAt &&
+                      new Date(user.trialEndsAt) > new Date();
+  if (!paywallRequired && trialActive) return next();
+
+  // Stripe-managed trialing/active users
+  if (['active', 'trialing'].includes(status)) return next();
+
+  // Everyone else is blocked
+  return res.status(402).json({
+    error: 'Se requiere suscripcion activa',
+    needsSubscription: true,
+  });
+});
+
 // ── Helpers ──────────────────────────────────────────────────────
 // Returns applications scoped to the caller's role:
 //   inmobiliaria → all apps whose broker was affiliated at the time

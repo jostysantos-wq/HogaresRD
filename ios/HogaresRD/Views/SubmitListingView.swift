@@ -20,6 +20,7 @@ struct UnitType: Identifiable {
 struct SubmitListingView: View {
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) var dismiss
+    @Environment(\.openURL) var openURL
 
     // Transaction type
     @State private var listingType = "venta"
@@ -91,6 +92,10 @@ struct SubmitListingView: View {
     @State private var error: String?
     @State private var success = false
 
+    // Paywall gating
+    @State private var checkingSubscription = true
+    @State private var paywallBlocked = false
+
     // Options
     private let listingTypes   = [("venta","En Venta"),("alquiler","En Alquiler"),("proyecto","Proyecto")]
     private let propertyTypes  = ["Casa","Apartamento","Villa","Penthouse","Solar / Terreno","Local Comercial","Finca"]
@@ -159,7 +164,16 @@ struct SubmitListingView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if success { successView } else { formView }
+                if checkingSubscription {
+                    ProgressView("Verificando suscripción…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if paywallBlocked {
+                    paywallView
+                } else if success {
+                    successView
+                } else {
+                    formView
+                }
             }
             .navigationTitle("Publicar Propiedad")
             .navigationBarTitleDisplayMode(.inline)
@@ -175,6 +189,65 @@ struct SubmitListingView: View {
                 contactEmail = user.email
             }
         }
+        .task { await checkSubscription() }
+    }
+
+    // MARK: - Paywall
+
+    private func checkSubscription() async {
+        checkingSubscription = true
+        defer { checkingSubscription = false }
+        do {
+            let status = try await api.getSubscriptionStatus()
+            if status.required && (status.canAccessDashboard != true) {
+                paywallBlocked = true
+            } else {
+                paywallBlocked = false
+            }
+        } catch {
+            // If the check fails, let the user continue — server will still
+            // enforce the paywall on /submit, so we fail open here.
+            paywallBlocked = false
+        }
+    }
+
+    private var paywallView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "lock.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Color.rdBlue)
+            Text("Completa tu pago para publicar")
+                .font(.title2).bold()
+                .multilineTextAlignment(.center)
+            Text("Para publicar propiedades necesitas activar tu suscripción con un método de pago. Tu prueba de 14 días empieza al agregar la tarjeta y no se cobra nada hasta el día 15.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+
+            Button {
+                if let url = URL(string: "\(apiBase)/subscribe") { openURL(url) }
+            } label: {
+                Text("Activar mi suscripción")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.rdBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 8)
+
+            Button("Cerrar") { dismiss() }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+
+            Spacer()
+        }
+        .padding()
     }
 
     // MARK: - Form
