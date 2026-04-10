@@ -365,22 +365,33 @@ router.put('/:id', userAuth, (req, res) => {
 
   // ── Whitelist of editable fields ────────────────────────────────
   // Anything outside this list is ignored, so clients can't flip
-  // ownership, status, or other admin-controlled flags.
+  // ownership, status, or other admin-controlled flags. Field names
+  // match the POST /submit handler so the edit form can reuse its
+  // exact payload shape.
   const FIELDS = [
+    // Basic
     'title', 'description', 'type', 'propertyType', 'condition',
+    // Pricing
     'price', 'currency', 'priceDOP',
-    'bedrooms', 'bathrooms', 'parking', 'floors', 'floorNumber',
-    'area_const', 'area_land', 'yearBuilt',
+    // Specs
+    'bedrooms', 'bathrooms', 'parking',
+    'area_const', 'area_land',
+    'floors', 'floor_num', 'yearBuilt',
+    // Location
     'province', 'city', 'sector', 'address', 'referencePoint',
     'lat', 'lng',
+    // Lists
     'amenities', 'tags', 'images', 'blueprints',
+    // Project
     'construction_company', 'units_total', 'units_available',
     'delivery_date', 'project_stage', 'unit_types',
-    'contactName', 'contactEmail', 'contactPhone', 'contactPref',
+    // Agencies
+    'agencies',
+    // Submitter contact (matches POST /submit: name/email/phone/role)
+    'name', 'email', 'phone', 'role', 'contact_pref',
   ];
 
   const incoming = req.body || {};
-  const updated  = 0;
   const changes  = [];
   for (const key of FIELDS) {
     if (Object.prototype.hasOwnProperty.call(incoming, key)) {

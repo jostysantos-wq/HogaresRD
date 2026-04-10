@@ -2282,13 +2282,19 @@
         email: entry.querySelector('[name="agency_email[]"]').value.trim(),
       })).filter(a => a.name);
 
-      // In edit mode, merge existing image URLs (that weren't removed)
-      // with the newly uploaded ones.
+      // In edit mode, merge existing image/blueprint URLs (that weren't
+      // removed) with the newly uploaded ones. This ensures the owner
+      // can edit metadata without having to re-upload all photos/plans.
       if (IS_EDIT_MODE) {
-        const keptExistingUrls = Array.from(
+        const keptPhotoUrls = Array.from(
           document.querySelectorAll('#photoSlots .photo-slot.existing')
         ).map(el => el.dataset.existingUrl).filter(Boolean);
-        body.images = [...keptExistingUrls, ...(body.images || [])];
+        body.images = [...keptPhotoUrls, ...(body.images || [])];
+
+        const keptBlueprintUrls = Array.from(
+          document.querySelectorAll('#blueprintPreviews .existing-blueprint')
+        ).map(el => el.dataset.existingUrl).filter(Boolean);
+        body.blueprints = [...keptBlueprintUrls, ...(body.blueprints || [])];
       }
 
       try {
@@ -2375,66 +2381,97 @@
         const listing = await r.json();
         __editListing = listing;
 
-        // Show edit banner with reason (if sent back for edits)
+        // ── Edit banner with admin note (if sent back for edits) ────
         if (listing.status === 'edits_requested' && listing.editsReason) {
           const banner = document.createElement('div');
-          banner.style.cssText = 'background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:1rem 1.2rem;margin:1rem 0 1.5rem;color:#7c2d12;';
+          banner.style.cssText = 'background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:1rem 1.2rem;margin:1rem 0 1.5rem;color:#7c2d12;max-width:780px;margin-left:auto;margin-right:auto;';
           banner.innerHTML = `
-            <div style="font-weight:800;font-size:0.95rem;margin-bottom:0.4rem;">
-              <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#d97706;vertical-align:-3px;margin-right:4px;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div style="font-weight:800;font-size:0.95rem;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem;">
+              <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#d97706;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
               El administrador solicitó ediciones
             </div>
             <div style="font-size:0.88rem;line-height:1.55;white-space:pre-wrap;">${(listing.editsReason || '').replace(/</g,'&lt;')}</div>
+            <div style="margin-top:0.55rem;font-size:0.76rem;color:#9a3412;opacity:0.9;">Actualiza los campos necesarios y pulsa <strong>Guardar y Reenviar</strong>. Tu propiedad regresará automáticamente a la cola de revisión.</div>
           `;
           const form = document.getElementById('propertyForm');
           form.parentNode.insertBefore(banner, form);
         }
 
-        // Change page title + submit button label
+        // ── Change page chrome ───────────────────────────────
         document.title = 'Editar Propiedad — HogaresRD';
         const pageTitle = document.querySelector('h1');
         if (pageTitle) pageTitle.textContent = 'Editar Propiedad';
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) submitBtn.innerHTML = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Guardar y Reenviar';
 
-        // Pre-fill basic fields
+        // Helper: set value + trigger change event
         const setVal = (id, val) => {
           const el = document.getElementById(id);
-          if (el != null && val != null) el.value = val;
+          if (el == null || val == null) return;
+          el.value = val;
         };
+        const setValAndNotify = (id, val) => {
+          const el = document.getElementById(id);
+          if (el == null || val == null) return;
+          el.value = val;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        // ── Step 1 · Basic info ──────────────────────────────
         setVal('title',        listing.title);
         setVal('description',  listing.description);
-        setVal('type',         listing.type);
-        // Trigger change event on select so conditional fields refresh
-        document.getElementById('type')?.dispatchEvent(new Event('change'));
-        setVal('propertyType', listing.propertyType);
-        document.getElementById('propertyType')?.dispatchEvent(new Event('change'));
+        setValAndNotify('type', listing.type);
+        setValAndNotify('propertyType', listing.propertyType);
         setVal('condition',    listing.condition);
-        setVal('price',        listing.price);
-        setVal('currency',     listing.currency);
-        setVal('bedrooms',     listing.bedrooms);
-        setVal('bathrooms',    listing.bathrooms);
-        setVal('parking',      listing.parking);
-        setVal('area_const',   listing.area_const);
-        setVal('area_land',    listing.area_land);
-        setVal('floors',       listing.floors);
-        setVal('floor_num',    listing.floorNumber);
-        setVal('yearBuilt',    listing.yearBuilt);
-        setVal('province',     listing.province);
-        document.getElementById('province')?.dispatchEvent(new Event('change'));
-        setVal('city',         listing.city);
-        setVal('sector',       listing.sector);
-        setVal('address',      listing.address);
-        setVal('referencePoint', listing.referencePoint);
-        setVal('lat',          listing.lat);
-        setVal('lng',          listing.lng);
-        setVal('construction_company', listing.construction_company);
-        setVal('units_total',     listing.units_total);
-        setVal('units_available', listing.units_available);
-        setVal('delivery_date',   listing.delivery_date);
-        setVal('project_stage',   listing.project_stage);
 
-        // Amenities + tags (checkboxes)
+        // ── Step 2 · Specs & pricing ─────────────────────────
+        setVal('price',      listing.price);
+        setVal('currency',   listing.currency);
+        setVal('bedrooms',   listing.bedrooms);
+        setVal('bathrooms',  listing.bathrooms);
+        setVal('parking',    listing.parking);
+        setVal('area_const', listing.area_const);
+        setVal('area_land',  listing.area_land);
+        setVal('floors',     listing.floors);
+        setVal('floor_num',  listing.floorNumber);
+        setVal('yearBuilt',  listing.yearBuilt);
+
+        // ── Step 3 · Location ────────────────────────────────
+        setValAndNotify('province', listing.province);
+        // City depends on province — set after province change listener
+        // has had a tick to populate the dropdown.
+        setTimeout(() => {
+          setVal('city', listing.city);
+          const cityEl = document.getElementById('city');
+          if (cityEl) cityEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }, 50);
+        setVal('sector',         listing.sector);
+        setVal('address',        listing.address);
+        setVal('referencePoint', listing.referencePoint);
+        setVal('lat', listing.lat);
+        setVal('lng', listing.lng);
+
+        // Move the map marker to the saved coordinates once MapKit loads.
+        const applyMarker = () => {
+          if (!window.mapkit || !map || !marker) return false;
+          const lat = parseFloat(listing.lat);
+          const lng = parseFloat(listing.lng);
+          if (!isFinite(lat) || !isFinite(lng)) return true;
+          const coord = new mapkit.Coordinate(lat, lng);
+          marker.coordinate = coord;
+          map.setCenterAnimated(coord);
+          map.setCameraDistanceAnimated(6000);
+          return true;
+        };
+        if (!applyMarker()) {
+          // Poll for map init (it loads async via /api/mapkit-token)
+          const mapPoll = setInterval(() => {
+            if (applyMarker()) clearInterval(mapPoll);
+          }, 250);
+          setTimeout(() => clearInterval(mapPoll), 12000);
+        }
+
+        // ── Step 4 · Amenities + Tags (checkbox groups) ──────
         const amens = Array.isArray(listing.amenities) ? listing.amenities : [];
         document.querySelectorAll('input[name="amenities"]').forEach(cb => {
           cb.checked = amens.includes(cb.value);
@@ -2444,32 +2481,128 @@
           cb.checked = tags.includes(cb.value);
         });
 
-        // Show existing photos as previews so the user knows they are kept.
-        // The upload widget only uploads NEW files; existing URLs are sent
-        // back untouched in the PUT payload.
+        // ── Step 4 · Project fields (only if proyecto) ───────
+        setVal('construction_company', listing.construction_company);
+        setVal('units_total',     listing.units_total);
+        setVal('units_available', listing.units_available);
+        setVal('delivery_date',   listing.delivery_date);
+        setVal('project_stage',   listing.project_stage);
+
+        // Unit types repeater — clear and rebuild rows with values
+        const unitTypes = Array.isArray(listing.unit_types) ? listing.unit_types : [];
+        if (unitTypes.length && typeof addUnitType === 'function') {
+          // Wipe any existing (empty) rows just in case
+          document.querySelectorAll('#unitTypesList .unit-table-row').forEach(r => r.remove());
+          unitTypes.forEach(u => {
+            addUnitType();
+            const row = document.querySelector('#unitTypesList .unit-table-row:last-child');
+            if (!row) return;
+            const set = (sel, val) => {
+              const el = row.querySelector(sel);
+              if (el && val != null) el.value = val;
+            };
+            set('[name="unit_name[]"]',      u.name);
+            set('[name="unit_bedrooms[]"]',  u.bedrooms);
+            set('[name="unit_bathrooms[]"]', u.bathrooms);
+            set('[name="unit_area[]"]',      u.area);
+            set('[name="unit_price[]"]',     u.price);
+            set('[name="unit_available[]"]', u.available);
+            set('[name="unit_phase[]"]',     u.phase);
+            if (Array.isArray(u.unitIds) && u.unitIds.length) {
+              set('[name="unit_ids[]"]', u.unitIds.join('\n'));
+              const availEl = row.querySelector('[name="unit_available[]"]');
+              if (availEl && typeof toggleUnitIds === 'function') toggleUnitIds(availEl);
+            }
+          });
+        }
+
+        // ── Step 5 · Photos ──────────────────────────────────
+        // Replace the empty placeholder slots with "existing photo" cards
+        // that carry the original URL and are kept on submit unless removed.
         const existingPhotos = Array.isArray(listing.images) ? listing.images : [];
-        if (existingPhotos.length && typeof createPhotoSlot === 'function') {
-          const container = document.getElementById('photoSlots');
-          if (container) {
-            existingPhotos.forEach((url, i) => {
-              const slot = document.createElement('div');
-              slot.className = 'photo-slot existing';
-              slot.dataset.existingUrl = url;
-              slot.innerHTML = `
-                <img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" />
-                <button type="button" class="photo-remove" onclick="this.parentElement.remove()" style="position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;border:none;cursor:pointer;font-size:16px;">×</button>
-              `;
-              slot.style.position = 'relative';
-              container.appendChild(slot);
-            });
+        const photoContainer = document.getElementById('photoSlots');
+        if (photoContainer) {
+          photoContainer.innerHTML = '';
+          slotFiles.length = 0;
+          slotCount = 0;
+          existingPhotos.forEach((url, i) => {
+            const slot = document.createElement('div');
+            slot.className = 'photo-slot existing';
+            slot.dataset.existingUrl = url;
+            slot.style.cssText = 'position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;border:2px solid var(--green);background:var(--bg-section);';
+            slot.innerHTML = `
+              <img src="${url}" alt="Foto existente" style="width:100%;height:100%;object-fit:cover;display:block;" />
+              <div style="position:absolute;top:6px;left:6px;background:rgba(34,197,94,0.92);color:#fff;font-size:0.7rem;font-weight:800;padding:3px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:0.4px;">Actual</div>
+              <button type="button" aria-label="Eliminar foto" onclick="this.parentElement.remove()" style="position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.72);color:#fff;border:none;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>
+            `;
+            photoContainer.appendChild(slot);
+          });
+          // Always keep at least one empty upload slot visible so the user
+          // can still add new photos without manually clicking "Agregar".
+          if (typeof createPhotoSlot === 'function') {
+            createPhotoSlot(existingPhotos.length);
           }
         }
 
-        // Auto-accept the TOS toggle in edit mode
+        // Blueprints — show existing as kept previews (below the upload zone)
+        const existingBlueprints = Array.isArray(listing.blueprints) ? listing.blueprints : [];
+        if (existingBlueprints.length) {
+          const bpWrap = document.getElementById('blueprintPreviews');
+          const bpStatus = document.getElementById('blueprintStatus');
+          if (bpWrap) {
+            bpWrap.style.display = 'block';
+            bpWrap.innerHTML = existingBlueprints.map(url => `
+              <div class="existing-blueprint" data-existing-url="${url}" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-section);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin:4px 4px 0 0;font-size:0.78rem;">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:var(--accent);"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM13 9V3.5L18.5 9H13z"/></svg>
+                <a href="${url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;">${url.split('/').pop() || 'plano'}</a>
+                <button type="button" aria-label="Quitar plano" onclick="this.closest('.existing-blueprint').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;font-weight:700;">×</button>
+              </div>
+            `).join('');
+          }
+          if (bpStatus) bpStatus.textContent = `${existingBlueprints.length} plano(s) actual(es). Sube nuevos para reemplazarlos o mantén los existentes.`;
+        }
+
+        // ── Step 6 · Agencies repeater ───────────────────────
+        const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
+        if (agencies.length && typeof addAgency === 'function') {
+          // The "autoFillAgency" IIFE may have pre-added one for the
+          // current user. Remove everything and re-add from listing data
+          // to avoid duplicates.
+          document.querySelectorAll('#agenciesList .agency-entry').forEach(e => e.remove());
+          agencyCount = 0;
+          document.getElementById('agenciesEmpty').style.display = 'none';
+          agencies.forEach(a => {
+            addAgency();
+            const entry = document.querySelector('#agenciesList .agency-entry:last-child');
+            if (!entry) return;
+            const set = (name, val) => {
+              const el = entry.querySelector(`[name="${name}"]`);
+              if (el && val != null) el.value = val;
+            };
+            set('agency_name[]',  a.name);
+            set('agency_agent[]', a.agent || a.contact);
+            set('agency_phone[]', a.phone);
+            set('agency_email[]', a.email);
+          });
+        }
+
+        // ── Step 6 · Contact & role ──────────────────────────
+        setVal('name',         listing.name || listing.contactName);
+        setVal('email',        listing.email || listing.contactEmail);
+        setVal('phone',        listing.phone || listing.contactPhone);
+        setVal('contact_pref', listing.contact_pref || listing.contactPref);
+        setVal('role',         listing.role);
+
+        // ── TOS · already accepted when editing ──────────────
         const tc = document.getElementById('tcAccept');
         if (tc) {
           tc.disabled = false;
-          tc.checked = true;
+          tc.checked  = true;
+        }
+        const tcHint = document.getElementById('tcHint');
+        if (tcHint) {
+          tcHint.textContent = 'Términos ya aceptados al publicar originalmente.';
+          tcHint.style.color = 'var(--text-muted)';
         }
       } catch (err) {
         alert('Error cargando la propiedad: ' + err.message);
