@@ -1222,83 +1222,18 @@
             </ol>
           </div>
 
-          <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">
-            Cada foto aparecerá en la galería. Puedes editar la etiqueta para describir cada imagen.
+          <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:0.5rem;">
+            Cada foto aparecera en la galeria. Puedes editar la etiqueta para describir cada imagen.
+            <strong>Maximo 30 fotos.</strong>
           </p>
+          <p id="photoCount" style="font-size:0.78rem;font-weight:700;color:var(--accent);margin-bottom:1rem;">0 / 30 fotos</p>
           <div class="photo-slots" id="photoSlots">
-            <!-- Slot 0: required cover -->
-            <div class="photo-slot">
-              <div class="photo-slot-header">
-                <span class="slot-num">1</span>
-                <input type="text" class="slot-label-input" id="slotLabel0" value="Vista Exterior" placeholder="Ej. Fachada…">
-                <span class="slot-required-badge">Portada</span>
-              </div>
-              <label class="slot-upload-area" id="slotArea0" for="slotFile0">
-                <img class="slot-preview" id="slotPreview0" alt="Vista previa" />
-                <button type="button" class="slot-clear-btn" id="slotClear0">&#10005;</button>
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                <span class="slot-upload-label">Clic o arrastra</span>
-                <input type="file" id="slotFile0" accept="image/jpeg,image/png,image/webp" />
-              </label>
-              <p class="photo-slot-err" id="slotErr0">La foto de portada es requerida.</p>
-            </div>
-            <!-- Slot 1 -->
-            <div class="photo-slot">
-              <div class="photo-slot-header">
-                <span class="slot-num">2</span>
-                <input type="text" class="slot-label-input" id="slotLabel1" value="Área Social / Lobby" placeholder="Ej. Sala, Lobby…">
-              </div>
-              <label class="slot-upload-area" id="slotArea1" for="slotFile1">
-                <img class="slot-preview" id="slotPreview1" alt="Vista previa" />
-                <button type="button" class="slot-clear-btn" id="slotClear1">&#10005;</button>
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                <span class="slot-upload-label">Clic o arrastra</span>
-                <input type="file" id="slotFile1" accept="image/jpeg,image/png,image/webp" />
-              </label>
-            </div>
-            <!-- Slot 2 -->
-            <div class="photo-slot">
-              <div class="photo-slot-header">
-                <span class="slot-num">3</span>
-                <input type="text" class="slot-label-input" id="slotLabel2" value="Interior — Habitaciones" placeholder="Ej. Cocina, Habitación…">
-              </div>
-              <label class="slot-upload-area" id="slotArea2" for="slotFile2">
-                <img class="slot-preview" id="slotPreview2" alt="Vista previa" />
-                <button type="button" class="slot-clear-btn" id="slotClear2">&#10005;</button>
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                <span class="slot-upload-label">Clic o arrastra</span>
-                <input type="file" id="slotFile2" accept="image/jpeg,image/png,image/webp" />
-              </label>
-            </div>
-            <!-- Slot 3 -->
-            <div class="photo-slot">
-              <div class="photo-slot-header">
-                <span class="slot-num">4</span>
-                <input type="text" class="slot-label-input" id="slotLabel3" value="Áreas Comunes" placeholder="Ej. Piscina, Gym…">
-              </div>
-              <label class="slot-upload-area" id="slotArea3" for="slotFile3">
-                <img class="slot-preview" id="slotPreview3" alt="Vista previa" />
-                <button type="button" class="slot-clear-btn" id="slotClear3">&#10005;</button>
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                <span class="slot-upload-label">Clic o arrastra</span>
-                <input type="file" id="slotFile3" accept="image/jpeg,image/png,image/webp" />
-              </label>
-            </div>
-            <!-- Slot 4 -->
-            <div class="photo-slot">
-              <div class="photo-slot-header">
-                <span class="slot-num">5</span>
-                <input type="text" class="slot-label-input" id="slotLabel4" value="Vista Panorámica" placeholder="Ej. Rooftop…">
-              </div>
-              <label class="slot-upload-area" id="slotArea4" for="slotFile4">
-                <img class="slot-preview" id="slotPreview4" alt="Vista previa" />
-                <button type="button" class="slot-clear-btn" id="slotClear4">&#10005;</button>
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                <span class="slot-upload-label">Clic o arrastra</span>
-                <input type="file" id="slotFile4" accept="image/jpeg,image/png,image/webp" />
-              </label>
-            </div>
+            <!-- Slots are generated dynamically by JS -->
           </div>
+          <button type="button" id="addPhotoBtn" onclick="addPhotoSlot()" style="display:flex;align-items:center;gap:8px;margin-top:0.75rem;padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Agregar mas fotos
+          </button>
         </div>
 
         <!-- Blueprints -->
@@ -1954,20 +1889,52 @@
       document.getElementById('tipsBox').classList.toggle('open');
     }
 
-    // ── Labeled photo slots ────────────────────────────────────
-    const SLOT_COUNT = 5;
-    const slotFiles  = new Array(SLOT_COUNT).fill(null);
+    // ── Dynamic photo slots (up to 30) ──────────────────────────
+    const MAX_PHOTOS = 30;
+    const INITIAL_SLOTS = 5;
+    const slotFiles = [];
+    let slotCount = 0;
 
-    for (let i = 0; i < SLOT_COUNT; i++) {
-      const input    = document.getElementById(`slotFile${i}`);
-      const preview  = document.getElementById(`slotPreview${i}`);
-      const clearBtn = document.getElementById(`slotClear${i}`);
-      const area     = document.getElementById(`slotArea${i}`);
+    const defaultLabels = ['Vista Exterior','Area Social / Lobby','Interior — Habitaciones','Areas Comunes','Vista Panoramica'];
+
+    function createPhotoSlot(index) {
+      const isCover = index === 0;
+      const label = defaultLabels[index] || '';
+      const placeholder = isCover ? 'Ej. Fachada…' : 'Ej. Sala, Cocina…';
+
+      const div = document.createElement('div');
+      div.className = 'photo-slot';
+      div.id = `photoSlot${index}`;
+      div.innerHTML = `
+        <div class="photo-slot-header">
+          <span class="slot-num">${index + 1}</span>
+          <input type="text" class="slot-label-input" id="slotLabel${index}" value="${label}" placeholder="${placeholder}">
+          ${isCover ? '<span class="slot-required-badge">Portada</span>' : `<button type="button" class="slot-remove-btn" onclick="removePhotoSlot(${index})" title="Eliminar" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:2px 6px;">✕</button>`}
+        </div>
+        <label class="slot-upload-area" id="slotArea${index}" for="slotFile${index}">
+          <img class="slot-preview" id="slotPreview${index}" alt="Vista previa" />
+          <button type="button" class="slot-clear-btn" id="slotClear${index}">&#10005;</button>
+          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          <span class="slot-upload-label">Clic o arrastra</span>
+          <input type="file" id="slotFile${index}" accept="image/jpeg,image/png,image/webp" />
+        </label>
+        ${isCover ? '<p class="photo-slot-err" id="slotErr0">La foto de portada es requerida.</p>' : ''}
+      `;
+
+      document.getElementById('photoSlots').appendChild(div);
+      slotFiles[index] = null;
+      slotCount++;
+
+      // Attach listeners
+      const input = document.getElementById(`slotFile${index}`);
+      const preview = document.getElementById(`slotPreview${index}`);
+      const clearBtn = document.getElementById(`slotClear${index}`);
+      const area = document.getElementById(`slotArea${index}`);
 
       input.addEventListener('change', function() {
         const file = this.files[0];
         if (!file) return;
-        slotFiles[i] = file;
+        slotFiles[index] = file;
         const reader = new FileReader();
         reader.onload = e => {
           preview.src = e.target.result;
@@ -1975,8 +1942,9 @@
           clearBtn.classList.add('visible');
           area.classList.add('has-image');
           area.classList.remove('input-error');
-          const errEl = document.getElementById(`slotErr${i}`);
+          const errEl = document.getElementById(`slotErr${index}`);
           if (errEl) errEl.style.display = 'none';
+          updatePhotoCount();
         };
         reader.readAsDataURL(file);
       });
@@ -1984,24 +1952,60 @@
       clearBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        slotFiles[i] = null;
+        slotFiles[index] = null;
         preview.src = '';
         preview.classList.remove('visible');
         clearBtn.classList.remove('visible');
         area.classList.remove('has-image');
         input.value = '';
+        updatePhotoCount();
       });
+
+      updatePhotoCount();
+      updateAddButton();
     }
+
+    function removePhotoSlot(index) {
+      if (index === 0) return; // Can't remove cover
+      const el = document.getElementById(`photoSlot${index}`);
+      if (el) el.remove();
+      slotFiles[index] = null;
+      slotCount--;
+      updatePhotoCount();
+      updateAddButton();
+    }
+
+    function addPhotoSlot() {
+      if (slotCount >= MAX_PHOTOS) return;
+      // Find next available index
+      let nextIndex = 0;
+      while (document.getElementById(`photoSlot${nextIndex}`)) nextIndex++;
+      createPhotoSlot(nextIndex);
+    }
+
+    function updatePhotoCount() {
+      const filled = slotFiles.filter(f => f !== null && f !== undefined).length;
+      const el = document.getElementById('photoCount');
+      if (el) el.textContent = `${filled} / ${MAX_PHOTOS} fotos`;
+    }
+
+    function updateAddButton() {
+      const btn = document.getElementById('addPhotoBtn');
+      if (btn) btn.style.display = slotCount >= MAX_PHOTOS ? 'none' : 'flex';
+    }
+
+    // Initialize with 5 slots
+    for (let i = 0; i < INITIAL_SLOTS; i++) createPhotoSlot(i);
 
     async function uploadPhotos() {
       const results = [];
-      for (let i = 0; i < SLOT_COUNT; i++) {
-        const file  = slotFiles[i];
-        const label = (document.getElementById(`slotLabel${i}`)?.value || '').trim();
+      for (let i = 0; i < slotFiles.length; i++) {
+        const file = slotFiles[i];
         if (!file) continue;
+        const label = (document.getElementById(`slotLabel${i}`)?.value || '').trim();
         const fd = new FormData();
         fd.append('photos', file);
-        const res  = await fetch('/api/upload/photos', { method: 'POST', body: fd });
+        const res = await fetch('/api/upload/photos', { method: 'POST', body: fd });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al subir foto ' + (i + 1));
         results.push({ url: data.urls[0], label });
@@ -2274,17 +2278,10 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.reset();
           // Reset photo slots
-          for (let i = 0; i < SLOT_COUNT; i++) {
-            slotFiles[i] = null;
-            const preview = document.getElementById(`slotPreview${i}`);
-            const clearBtn = document.getElementById(`slotClear${i}`);
-            const area = document.getElementById(`slotArea${i}`);
-            if (preview)  { preview.src = ''; preview.classList.remove('visible'); }
-            if (clearBtn) clearBtn.classList.remove('visible');
-            if (area)     area.classList.remove('has-image', 'input-error');
-            const fileInput = document.getElementById(`slotFile${i}`);
-            if (fileInput) fileInput.value = '';
-          }
+          document.getElementById('photoSlots').innerHTML = '';
+          slotFiles.length = 0;
+          slotCount = 0;
+          for (let i = 0; i < INITIAL_SLOTS; i++) createPhotoSlot(i);
           // Reset units
           document.getElementById('unitTypesList').querySelectorAll('.unit-table-row').forEach(e => e.remove());
           document.getElementById('unitTableHeader').style.display = 'none';

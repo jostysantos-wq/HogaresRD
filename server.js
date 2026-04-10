@@ -98,7 +98,7 @@ const photoStorage = multer.diskStorage({
 });
 const photoUpload = multer({
   storage: photoStorage,
-  limits:  { fileSize: 5 * 1024 * 1024, files: 5 },
+  limits:  { fileSize: 5 * 1024 * 1024, files: 30 },
   fileFilter: (req, file, cb) => {
     if (/\.(jpe?g|png|webp)$/i.test(path.extname(file.originalname))) return cb(null, true);
     cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
@@ -669,7 +669,7 @@ app.get('/api/config/meta', (req, res) => {
 // EXIF (GPS coords, device serial, etc.) and cap dimensions at 1920px.
 // This protects user privacy (no home-GPS leaking from a property
 // photo) and trims bandwidth on view.
-app.post('/api/upload/photos', photoUpload.array('photos', 5), async (req, res) => {
+app.post('/api/upload/photos', photoUpload.array('photos', 30), async (req, res) => {
   if (!req.files || !req.files.length)
     return res.status(400).json({ error: 'No se recibieron imágenes.' });
 
