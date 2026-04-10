@@ -859,12 +859,17 @@
           </div>
           <div class="grid-3">
             <div class="field">
-              <label for="price" id="priceLabel">Precio (USD)</label>
-              <div class="price-wrap">
-                <span class="currency">$</span>
-                <input type="number" id="price" name="price" placeholder="250000" min="0" required />
+              <label for="price" id="priceLabel">Precio</label>
+              <div style="display:flex;gap:8px;align-items:stretch;">
+                <select id="currency" name="currency" style="width:90px;padding:0.65rem 0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.9rem;font-weight:700;">
+                  <option value="USD" selected>USD $</option>
+                  <option value="DOP">DOP RD$</option>
+                </select>
+                <div class="price-wrap" style="flex:1;">
+                  <input type="number" id="price" name="price" placeholder="250000" min="0" required style="padding-left:0.75rem;" />
+                </div>
               </div>
-              <p class="price-from-note" id="priceFromNote">Si el proyecto tiene varios tipos de unidades, ingresa el precio más bajo (precio desde).</p>
+              <p class="price-from-note" id="priceFromNote">Si el proyecto tiene varios tipos de unidades, ingresa el precio mas bajo (precio desde).</p>
             </div>
             <div class="field">
               <label for="area_const">Área Construida (m²)</label>

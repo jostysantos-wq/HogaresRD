@@ -32,6 +32,7 @@ struct SubmitListingView: View {
 
     // Price & size
     @State private var price     = ""
+    @State private var currency  = "USD"
     @State private var areaConst = ""
     @State private var areaLand  = ""
 
@@ -290,8 +291,16 @@ struct SubmitListingView: View {
                                 Text("Ingresa el precio más bajo (precio desde) si el proyecto tiene varios tipos de unidades.")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
-                            FloatingField(label: "Precio (USD) *", text: $price)
-                                .keyboardType(.numberPad)
+                            HStack(spacing: 12) {
+                                Picker("Moneda", selection: $currency) {
+                                    Text("USD $").tag("USD")
+                                    Text("DOP RD$").tag("DOP")
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 160)
+                                FloatingField(label: "Precio *", text: $price)
+                                    .keyboardType(.numberPad)
+                            }
                             HStack(spacing: 12) {
                                 FloatingField(label: "Área Construida (m²)", text: $areaConst)
                                     .keyboardType(.numberPad)
@@ -555,6 +564,7 @@ struct SubmitListingView: View {
             "condition":       condition,
             "description":     description,
             "price":           price,
+            "currency":        currency,
             "area_const":      areaConst,
             "area_land":       areaLand,
             "bedrooms":        bedrooms,
