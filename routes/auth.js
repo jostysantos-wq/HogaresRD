@@ -1884,3 +1884,4 @@ router.post('/apple-subscription', userAuth, async (req, res) => {
 module.exports        = router;
 module.exports.userAuth = userAuth;
 module.exports.optionalAuth = optionalAuth;
+module.exports.verifyJWT = verifyJWT;

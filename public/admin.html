@@ -237,6 +237,7 @@
     .status-pending  { background: #fff3cd; color: #856404; }
     .status-approved { background: #d1f5e3; color: #0a7c4f; }
     .status-rejected { background: #ffe0e3; color: #a81022; }
+    .status-edits_requested { background: #ffedd5; color: #9a3412; }
 
     .sub-card-body { padding: 1.1rem 1.4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
     .sub-field label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; display: block; margin-bottom: 0.2rem; }
@@ -256,6 +257,9 @@
     .btn-reject { background: #fff; border: 1.5px solid var(--danger); color: var(--danger); padding: 0.55rem 1.2rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
     .btn-reject:hover { background: var(--danger); color: #fff; transform: translateY(-1px); }
     .btn-reject svg { width: 15px; height: 15px; fill: currentColor; }
+    .btn-edits { background: #fff; border: 1.5px solid #D97706; color: #D97706; padding: 0.55rem 1.2rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-edits:hover { background: #D97706; color: #fff; transform: translateY(-1px); }
+    .btn-edits svg { width: 15px; height: 15px; fill: currentColor; }
     .btn-disabled { opacity: 0.4; pointer-events: none; }
 
     .empty-state { text-align: center; padding: 4rem 2rem; color: #4d6a8a; }
@@ -767,6 +771,7 @@
           <h2>Propiedades Enviadas</h2>
           <div class="filters" id="subFilters">
             <button class="filter-btn active" onclick="setFilter('pending', this)">Pendientes</button>
+            <button class="filter-btn" onclick="setFilter('edits_requested', this)">Esperando Ediciones</button>
             <button class="filter-btn" onclick="setFilter('approved', this)">Aprobadas</button>
             <button class="filter-btn" onclick="setFilter('rejected', this)">Rechazadas</button>
             <button class="filter-btn" onclick="setFilter('agency_claim', this)">Solicitudes Agencia</button>
@@ -1607,9 +1612,10 @@
   function renderAll() {
     const props    = allSubmissions.filter(s => s.submission_type !== 'agency_claim');
     const claims   = allSubmissions.filter(s => s.submission_type === 'agency_claim');
-    const pending  = props.filter(s => s.status === 'pending').length;
-    const approved = props.filter(s => s.status === 'approved').length;
-    const rejected = props.filter(s => s.status === 'rejected').length;
+    const pending        = props.filter(s => s.status === 'pending').length;
+    const editsRequested = props.filter(s => s.status === 'edits_requested').length;
+    const approved       = props.filter(s => s.status === 'approved').length;
+    const rejected       = props.filter(s => s.status === 'rejected').length;
     const claimPending = claims.filter(s => s.status === 'pending').length;
 
     document.getElementById('statPending').textContent  = pending;
@@ -1618,9 +1624,10 @@
     document.getElementById('statTotal').textContent    = props.length;
     document.getElementById('statClaims').textContent   = claimPending;
 
-    // Show badge on sidebar pill
+    // Sidebar pill counts actionable work: fresh pending + waiting-for-resubmit
     const pill = document.getElementById('pendingPill');
-    if (pending > 0) { pill.textContent = pending; pill.style.display = ''; }
+    const actionable = pending + editsRequested;
+    if (actionable > 0) { pill.textContent = actionable; pill.style.display = ''; }
     else { pill.style.display = 'none'; }
 
     renderList();
@@ -1698,8 +1705,20 @@
       const amenities = Array.isArray(s.amenities) ? s.amenities : (s.amenities ? s.amenities.split(',') : []);
       const amenityTags = amenities.map(a => `<span class="amenity-tag">${a.trim()}</span>`).join('');
       const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
-      const isPending = s.status === 'pending';
-      const statusLabel = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada' }[s.status];
+      // "isPending" gates admin actions — applies to both fresh pending
+      // submissions AND edits_requested listings the admin is waiting on.
+      const isPending = s.status === 'pending' || s.status === 'edits_requested';
+      const statusLabel = {
+        pending:          'Pendiente',
+        approved:         'Aprobada',
+        rejected:         'Rechazada',
+        edits_requested:  'Esperando Ediciones',
+      }[s.status] || s.status;
+      const editsNoteHTML = (s.status === 'edits_requested' && s.editsReason)
+        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:0.6rem 0.8rem;margin:0.5rem 0;font-size:0.78rem;color:#7c2d12;line-height:1.5;">
+             <strong>Nota enviada al agente:</strong><br>${String(s.editsReason).replace(/</g,'&lt;').replace(/\n/g,'<br>')}
+           </div>`
+        : '';
       const agencies = Array.isArray(s.agencies) ? s.agencies : [];
       const agencyHTML = agencies.length > 0
         ? `<div class="sub-agencies">
@@ -1803,6 +1822,7 @@
           })()}
           ${agencyHTML}
           ${mapHTML}
+          ${editsNoteHTML}
           ${renderAIReview(s)}
           <div class="sub-card-footer">
             <div class="contact-info">
@@ -1813,6 +1833,10 @@
               <button class="btn-approve ${isPending ? '' : 'btn-disabled'}" onclick="approve('${s.id}')">
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 Aprobar
+              </button>
+              <button class="btn-edits ${isPending ? '' : 'btn-disabled'}" onclick="requestEdits('${s.id}')">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                Solicitar Ediciones
               </button>
               <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -1864,6 +1888,49 @@
         if (sub) sub.status = 'rejected';
         renderAll();
       });
+  }
+
+  // Send a submission back to the owner for edits with a required note.
+  // Much nicer than a hard reject when the issue is minor (wrong price
+  // format, missing photos, typo) — the owner edits and resubmits instead
+  // of starting from scratch.
+  function requestEdits(id) {
+    const sub = allSubmissions.find(s => s.id === id);
+    const title = sub?.title || 'esta propiedad';
+    const reason = prompt(
+      `¿Qué debe editar el agente en "${title}"?\n\n` +
+      `Ejemplos:\n` +
+      `• Las fotos están borrosas — vuelva a tomarlas\n` +
+      `• Falta el número de habitaciones\n` +
+      `• El precio parece incorrecto\n\n` +
+      `Esta nota se envía al agente por correo.`
+    );
+    if (reason == null) return;               // user cancelled
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      alert('La nota es requerida para solicitar ediciones.');
+      return;
+    }
+    fetch(`/admin/submissions/${id}/request-edits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: trimmed }),
+    })
+      .then(async r => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || 'Error');
+        return data;
+      })
+      .then(() => {
+        if (sub) {
+          sub.status = 'edits_requested';
+          sub.editsReason = trimmed;
+          sub.editsRequestedAt = new Date().toISOString();
+        }
+        renderAll();
+        alert('Se envió la solicitud de ediciones al agente.');
+      })
+      .catch(err => alert('Error: ' + err.message));
   }
 
   // ── Bulk submission actions ────────────────────────────────────

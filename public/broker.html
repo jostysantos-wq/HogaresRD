@@ -1485,6 +1485,13 @@
 
   <!-- Section: Mis Propiedades (Listing Analytics) -->
   <div class="section-pane" id="section-mis-propiedades">
+
+    <!-- Publicaciones en revisión (pending / edits_requested / rejected) -->
+    <div id="pendingListingsWrap" style="display:none;margin-bottom:1.5rem;">
+      <h3 class="section-title" style="margin:0 0 0.75rem;">Publicaciones en Revisión</h3>
+      <div id="pendingListingsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0.9rem;"></div>
+    </div>
+
     <div class="la-range-row">
       <button class="la-range-btn active" data-range="all">Todo</button>
       <button class="la-range-btn" data-range="7d">7 días</button>
@@ -4954,11 +4961,21 @@
     if (preload) preload.remove();
     const hash = location.hash.slice(1);
     if (hash && VALID_PAGES.includes(hash)) showPage(hash);
+    // Shortcut: /broker#pending-listings → open the Mis Propiedades
+    // section and let loadPendingListings() render the review cards.
+    if (hash === 'pending-listings') {
+      showPage('dashboard');
+      showSection('mis-propiedades');
+    }
   }, 0);
   // Browser back/forward navigates between sections
   window.addEventListener('popstate', () => {
     const hash = location.hash.slice(1);
     if (hash && VALID_PAGES.includes(hash) && hash !== currentPage) showPage(hash);
+    if (hash === 'pending-listings') {
+      showPage('dashboard');
+      showSection('mis-propiedades');
+    }
   });
 
   // ── Dashboard Section Nav (internal tabs) ──────────────────
@@ -6081,7 +6098,77 @@
     loadListingAnalytics();
   });
 
+  // ── Pending / Edit-requested listings ─────────────────────────
+  // Shows the owner their own submissions that are NOT yet approved,
+  // with a prominent banner when the admin sent a listing back for
+  // edits, plus an "Editar" button that opens /submit?edit=<id>.
+  async function loadPendingListings() {
+    try {
+      const data = await API('/api/user/listings');
+      const all = data.listings || [];
+      const nonApproved = all.filter(l =>
+        l.status === 'pending' ||
+        l.status === 'edits_requested' ||
+        l.status === 'rejected'
+      );
+
+      const wrap = document.getElementById('pendingListingsWrap');
+      const list = document.getElementById('pendingListingsList');
+      if (!wrap || !list) return;
+
+      if (!nonApproved.length) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+
+      const STATUS_META = {
+        pending:          { label: 'Pendiente de revisión', color: '#d97706', bg: '#fff7ed' },
+        edits_requested:  { label: 'Ediciones solicitadas',  color: '#c2410c', bg: '#ffedd5' },
+        rejected:         { label: 'Rechazada',              color: '#b91c1c', bg: '#fef2f2' },
+      };
+
+      list.innerHTML = nonApproved.map(l => {
+        const m = STATUS_META[l.status];
+        const img = Array.isArray(l.images) && l.images.length
+          ? `<img src="${l.images[0]}" style="width:100%;height:140px;object-fit:cover;border-radius:12px 12px 0 0;" alt="">`
+          : `<div style="width:100%;height:140px;background:var(--bg-section);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.8rem;">Sin imagen</div>`;
+        const noteBlock = (l.status === 'edits_requested' && l.editsReason)
+          ? `<div style="background:${m.bg};border:1px solid ${m.color}33;border-radius:8px;padding:0.6rem 0.75rem;margin:0.55rem 0;font-size:0.78rem;color:${m.color};line-height:1.5;">
+               <strong>Nota del admin:</strong><br>${String(l.editsReason).replace(/</g,'&lt;').replace(/\n/g,'<br>')}
+             </div>`
+          : '';
+        const canEdit = l.status === 'edits_requested' || l.status === 'pending';
+        const editBtn = canEdit
+          ? `<a href="/submit?edit=${encodeURIComponent(l.id)}" style="flex:1;padding:0.6rem;background:var(--accent);color:#fff;border-radius:8px;text-align:center;font-weight:700;font-size:0.82rem;text-decoration:none;">
+               ${l.status === 'edits_requested' ? 'Editar y reenviar →' : 'Editar →'}
+             </a>`
+          : `<button disabled style="flex:1;padding:0.6rem;background:var(--bg-section);color:var(--text-muted);border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:not-allowed;">No editable</button>`;
+        return `
+          <div style="background:var(--bg-card);border:1.5px solid ${m.color}33;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            ${img}
+            <div style="padding:0.85rem 1rem;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.4rem;">
+                <div style="font-weight:800;font-size:0.92rem;color:var(--text);line-height:1.3;">${(l.title || '').replace(/</g,'&lt;')}</div>
+                <span style="font-size:0.66rem;font-weight:800;padding:0.22rem 0.55rem;border-radius:99px;background:${m.bg};color:${m.color};text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;">${m.label}</span>
+              </div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.3rem;">${(l.city || '')}${l.city && l.province ? ', ' : ''}${(l.province || '')}</div>
+              <div style="font-size:0.82rem;color:var(--accent);font-weight:700;">$${Number(l.price || 0).toLocaleString()}</div>
+              ${noteBlock}
+              <div style="display:flex;gap:0.5rem;margin-top:0.7rem;">
+                ${editBtn}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (e) {
+      console.error('[pending-listings]', e);
+    }
+  }
+
   async function loadListingAnalytics() {
+    // Load pending listings first (above the analytics block)
+    loadPendingListings();
     try {
       const sort = document.getElementById('laSortBy')?.value || 'views';
       const rangeQ = laCurrentRange !== 'all' ? `&range=${laCurrentRange}` : '';

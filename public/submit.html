@@ -1383,6 +1383,15 @@
   <script>
     requireAuth();
 
+    // ── Edit mode ────────────────────────────────────────────
+    // /submit?edit=<listing_id> loads an existing listing for editing.
+    // When editing, the form submits via PUT /api/listings/:id instead
+    // of the normal POST /submit, and the success message changes.
+    const __editParams = new URLSearchParams(window.location.search);
+    const EDIT_LISTING_ID = __editParams.get('edit') || null;
+    const IS_EDIT_MODE    = !!EDIT_LISTING_ID;
+    let   __editListing   = null; // populated in loadForEdit()
+
     // ── Theme ────────────────────────────────────────────────
     const html = document.documentElement;
     function getSaved() { try { return localStorage.getItem('theme') || 'light'; } catch(e) { return 'light'; } }
@@ -2273,10 +2282,22 @@
         email: entry.querySelector('[name="agency_email[]"]').value.trim(),
       })).filter(a => a.name);
 
+      // In edit mode, merge existing image URLs (that weren't removed)
+      // with the newly uploaded ones.
+      if (IS_EDIT_MODE) {
+        const keptExistingUrls = Array.from(
+          document.querySelectorAll('#photoSlots .photo-slot.existing')
+        ).map(el => el.dataset.existingUrl).filter(Boolean);
+        body.images = [...keptExistingUrls, ...(body.images || [])];
+      }
+
       try {
-        const res = await fetch('/submit', {
-          method: 'POST',
+        const url = IS_EDIT_MODE ? `/api/listings/${EDIT_LISTING_ID}` : '/submit';
+        const method = IS_EDIT_MODE ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(body),
         });
         if (!res.ok) {
@@ -2286,11 +2307,23 @@
         }
         const data = await res.json();
         if (data.success) {
-          document.getElementById('successText').textContent = isClaim
-            ? 'Solicitud enviada. El equipo de HogaresRD verificará tu agencia.'
-            : 'Propiedad enviada exitosamente. Está pendiente de aprobación.';
+          document.getElementById('successText').textContent = IS_EDIT_MODE
+            ? (data.requeued
+                ? 'Cambios guardados. Tu propiedad volvió a la cola de revisión.'
+                : 'Cambios guardados exitosamente.')
+            : isClaim
+              ? 'Solicitud enviada. El equipo de HogaresRD verificará tu agencia.'
+              : 'Propiedad enviada exitosamente. Está pendiente de aprobación.';
           document.getElementById('successMsg').style.display = 'block';
           window.scrollTo({ top: 0, behavior: 'smooth' });
+
+          // In edit mode, skip the form reset and bounce back to the
+          // broker dashboard so the user can see the updated status.
+          if (IS_EDIT_MODE) {
+            setTimeout(() => { window.location.href = '/broker#pending-listings'; }, 1500);
+            return;
+          }
+
           this.reset();
           // Reset photo slots
           document.getElementById('photoSlots').innerHTML = '';
@@ -2332,6 +2365,117 @@
     // Initialize progress on load
     updateProgress();
     window.addEventListener('resize', updateProgress);
+
+    // ── Load existing listing for edit mode ──────────────────
+    async function loadForEdit() {
+      if (!IS_EDIT_MODE) return;
+      try {
+        const r = await fetch(`/api/listings/${EDIT_LISTING_ID}`, { credentials: 'include' });
+        if (!r.ok) throw new Error('No se pudo cargar la propiedad para editar.');
+        const listing = await r.json();
+        __editListing = listing;
+
+        // Show edit banner with reason (if sent back for edits)
+        if (listing.status === 'edits_requested' && listing.editsReason) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:1rem 1.2rem;margin:1rem 0 1.5rem;color:#7c2d12;';
+          banner.innerHTML = `
+            <div style="font-weight:800;font-size:0.95rem;margin-bottom:0.4rem;">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#d97706;vertical-align:-3px;margin-right:4px;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+              El administrador solicitó ediciones
+            </div>
+            <div style="font-size:0.88rem;line-height:1.55;white-space:pre-wrap;">${(listing.editsReason || '').replace(/</g,'&lt;')}</div>
+          `;
+          const form = document.getElementById('propertyForm');
+          form.parentNode.insertBefore(banner, form);
+        }
+
+        // Change page title + submit button label
+        document.title = 'Editar Propiedad — HogaresRD';
+        const pageTitle = document.querySelector('h1');
+        if (pageTitle) pageTitle.textContent = 'Editar Propiedad';
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) submitBtn.innerHTML = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Guardar y Reenviar';
+
+        // Pre-fill basic fields
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el != null && val != null) el.value = val;
+        };
+        setVal('title',        listing.title);
+        setVal('description',  listing.description);
+        setVal('type',         listing.type);
+        // Trigger change event on select so conditional fields refresh
+        document.getElementById('type')?.dispatchEvent(new Event('change'));
+        setVal('propertyType', listing.propertyType);
+        document.getElementById('propertyType')?.dispatchEvent(new Event('change'));
+        setVal('condition',    listing.condition);
+        setVal('price',        listing.price);
+        setVal('currency',     listing.currency);
+        setVal('bedrooms',     listing.bedrooms);
+        setVal('bathrooms',    listing.bathrooms);
+        setVal('parking',      listing.parking);
+        setVal('area_const',   listing.area_const);
+        setVal('area_land',    listing.area_land);
+        setVal('floors',       listing.floors);
+        setVal('floor_num',    listing.floorNumber);
+        setVal('yearBuilt',    listing.yearBuilt);
+        setVal('province',     listing.province);
+        document.getElementById('province')?.dispatchEvent(new Event('change'));
+        setVal('city',         listing.city);
+        setVal('sector',       listing.sector);
+        setVal('address',      listing.address);
+        setVal('referencePoint', listing.referencePoint);
+        setVal('lat',          listing.lat);
+        setVal('lng',          listing.lng);
+        setVal('construction_company', listing.construction_company);
+        setVal('units_total',     listing.units_total);
+        setVal('units_available', listing.units_available);
+        setVal('delivery_date',   listing.delivery_date);
+        setVal('project_stage',   listing.project_stage);
+
+        // Amenities + tags (checkboxes)
+        const amens = Array.isArray(listing.amenities) ? listing.amenities : [];
+        document.querySelectorAll('input[name="amenities"]').forEach(cb => {
+          cb.checked = amens.includes(cb.value);
+        });
+        const tags = Array.isArray(listing.tags) ? listing.tags : [];
+        document.querySelectorAll('input[name="tags"]').forEach(cb => {
+          cb.checked = tags.includes(cb.value);
+        });
+
+        // Show existing photos as previews so the user knows they are kept.
+        // The upload widget only uploads NEW files; existing URLs are sent
+        // back untouched in the PUT payload.
+        const existingPhotos = Array.isArray(listing.images) ? listing.images : [];
+        if (existingPhotos.length && typeof createPhotoSlot === 'function') {
+          const container = document.getElementById('photoSlots');
+          if (container) {
+            existingPhotos.forEach((url, i) => {
+              const slot = document.createElement('div');
+              slot.className = 'photo-slot existing';
+              slot.dataset.existingUrl = url;
+              slot.innerHTML = `
+                <img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" />
+                <button type="button" class="photo-remove" onclick="this.parentElement.remove()" style="position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;border:none;cursor:pointer;font-size:16px;">×</button>
+              `;
+              slot.style.position = 'relative';
+              container.appendChild(slot);
+            });
+          }
+        }
+
+        // Auto-accept the TOS toggle in edit mode
+        const tc = document.getElementById('tcAccept');
+        if (tc) {
+          tc.disabled = false;
+          tc.checked = true;
+        }
+      } catch (err) {
+        alert('Error cargando la propiedad: ' + err.message);
+      }
+    }
+    loadForEdit();
   </script>
 <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>

@@ -1160,6 +1160,83 @@ app.post('/admin/submissions/:id/reject', adminSessionAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Admin: Request edits on a submission ───────────────────────────────
+// Instead of rejecting outright, the admin can send a listing back to the
+// owner with a note explaining what needs to be fixed. The owner sees it
+// in their broker dashboard, edits the fields, and resubmits (which flips
+// status back to 'pending' for re-review).
+app.post('/admin/submissions/:id/request-edits', adminSessionAuth, (req, res) => {
+  const sub = store.getListingById(req.params.id);
+  if (!sub) return res.status(404).json({ error: 'No encontrado' });
+
+  const reason = (req.body?.reason || '').toString().trim().slice(0, 1000);
+  if (!reason) {
+    return res.status(400).json({ error: 'Se requiere una nota explicando qué debe editarse' });
+  }
+
+  sub.status            = 'edits_requested';
+  sub.editsRequestedAt  = new Date().toISOString();
+  sub.editsReason       = reason;
+  sub.editsHistory      = Array.isArray(sub.editsHistory) ? sub.editsHistory : [];
+  sub.editsHistory.push({
+    at:     sub.editsRequestedAt,
+    reason,
+    by:     'admin',
+  });
+
+  store.saveListing(sub);
+  res.json({ success: true });
+
+  // Notify the owner by email (fire-and-forget)
+  try {
+    const ownerUserId = sub.creator_user_id || null;
+    const owner = ownerUserId ? store.getUserById(ownerUserId) : null;
+    const ownerEmail = owner?.email || sub.email;
+    if (ownerEmail && transporter) {
+      const safeReason = reason.replace(/</g,'&lt;').replace(/\n/g,'<br>');
+      const subject = `HogaresRD — Se solicitaron ediciones en tu propiedad`;
+      const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
+          <tr><td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
+              <tr><td style="background:linear-gradient(135deg,#D97706 0%,#F59E0B 100%);padding:32px 40px;color:#fff;">
+                <div style="font-size:1rem;font-weight:900;">🏠 HogaresRD</div>
+                <div style="margin-top:8px;font-size:1.4rem;font-weight:800;">Se solicitaron ediciones</div>
+              </td></tr>
+              <tr><td style="padding:28px 40px;">
+                <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
+                  Revisamos tu publicación <strong>${(sub.title || 'sin título').replace(/</g,'&lt;')}</strong> y necesitamos que hagas algunos ajustes antes de publicarla:
+                </p>
+                <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:0.9rem;color:#7c2d12;line-height:1.55;">
+                  ${safeReason}
+                </div>
+                <p style="margin:0 0 16px;font-size:0.88rem;color:#4d6a8a;line-height:1.55;">
+                  Ingresa a tu panel, edita los campos necesarios y vuelve a enviar la publicación. La pondremos en la cola de revisión automáticamente.
+                </p>
+                <div style="text-align:center;margin-top:22px;">
+                  <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/broker#pending-listings"
+                     style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;">Editar mi propiedad →</a>
+                </div>
+              </td></tr>
+              <tr><td style="padding:14px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
+                <p style="margin:0;font-size:0.75rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD</p>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>`;
+      transporter.sendMail({
+        department: 'soporte',
+        to: ownerEmail,
+        subject,
+        html,
+      }).catch(e => console.error('[request-edits] email error:', e.message));
+    }
+  } catch (e) {
+    console.error('[request-edits] notify error:', e.message);
+  }
+});
+
 app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => {
   const claim = store.getListingById(req.params.id);
   if (!claim) return res.status(404).json({ error: 'Solicitud no encontrada' });

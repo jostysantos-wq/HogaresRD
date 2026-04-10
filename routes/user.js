@@ -202,4 +202,27 @@ router.patch('/profile', userAuth, (req, res) => {
   }});
 });
 
+// GET /api/user/listings — the authenticated user's own submissions
+// Returns ALL statuses (approved, pending, rejected, edits_requested) so
+// the owner can see and manage listings that haven't been published yet.
+router.get('/listings', userAuth, (req, res) => {
+  const userId = req.user.sub;
+  const all = store.getAllSubmissions();
+  const mine = all.filter(s => {
+    if (s.creator_user_id && s.creator_user_id === userId) return true;
+    // Fallback: some legacy listings only record the contact email
+    const user = store.getUserById(userId);
+    if (user && s.email && s.email.toLowerCase() === user.email.toLowerCase()) return true;
+    return false;
+  });
+  // Strip nothing; sort by most recent first so pending/edits_requested
+  // rise naturally if the client doesn't explicitly group them.
+  mine.sort((a, b) => {
+    const ta = new Date(a.editsRequestedAt || a.submittedAt || a.createdAt || 0).getTime();
+    const tb = new Date(b.editsRequestedAt || b.submittedAt || b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+  res.json({ listings: mine });
+});
+
 module.exports = router;

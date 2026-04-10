@@ -1,6 +1,7 @@
 const express      = require('express');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
+const { userAuth } = require('./auth');
 const router       = express.Router();
 
 // Cache favorite counts (refreshed every 60s to avoid scanning all users per request)
@@ -189,10 +190,38 @@ router.get('/agencies/:slug', (req, res) => {
 });
 
 // GET /api/listings/:id
+// Approved listings are visible to everyone. Non-approved listings
+// (pending / edits_requested / rejected) are only returned to their
+// owner or an admin so the owner can re-edit & resubmit them.
 router.get('/:id', (req, res) => {
   const listing = store.getListingById(req.params.id);
-  if (!listing || listing.status !== 'approved')
+  if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  if (listing.status === 'approved') {
+    return res.json(listing);
+  }
+
+  // Non-approved: require auth and ownership (or admin)
+  const { verifyJWT } = require('./auth');
+  let user = null;
+  try {
+    const token = req.cookies?.hrdt || (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (token) {
+      const payload = verifyJWT(token);
+      user = store.getUserById(payload.sub);
+    }
+  } catch {}
+
+  if (!user) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  const isOwner = listing.creator_user_id === user.id
+               || (listing.email && listing.email.toLowerCase() === (user.email || '').toLowerCase());
+  const isAdmin = user.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
     return res.status(404).json({ error: 'Propiedad no encontrada' });
+  }
+
   res.json(listing);
 });
 
@@ -306,6 +335,95 @@ router.post('/:id/inquiry', async (req, res) => {
   }
 
   res.json({ success: true });
+});
+
+// ── PUT /api/listings/:id  — Owner edits their own listing ──────────────
+// Allowed states for editing: 'pending', 'edits_requested', or 'approved'.
+// - pending / edits_requested → after save, status flips to 'pending' so
+//   the admin picks it back up in the moderation queue.
+// - approved → saves in place; the change is live immediately. We still
+//   log it in editsHistory so admins can audit.
+router.put('/:id', userAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  const isAdmin  = user.role === 'admin';
+  const isOwner  = listing.creator_user_id === user.id
+                || (listing.email && user.email && listing.email.toLowerCase() === user.email.toLowerCase());
+
+  if (!isOwner && !isAdmin) {
+    return res.status(403).json({ error: 'No autorizado para editar esta propiedad' });
+  }
+
+  const editableStates = ['pending', 'edits_requested', 'approved'];
+  if (!editableStates.includes(listing.status)) {
+    return res.status(400).json({ error: `No se puede editar una propiedad en estado '${listing.status}'` });
+  }
+
+  // ── Whitelist of editable fields ────────────────────────────────
+  // Anything outside this list is ignored, so clients can't flip
+  // ownership, status, or other admin-controlled flags.
+  const FIELDS = [
+    'title', 'description', 'type', 'propertyType', 'condition',
+    'price', 'currency', 'priceDOP',
+    'bedrooms', 'bathrooms', 'parking', 'floors', 'floorNumber',
+    'area_const', 'area_land', 'yearBuilt',
+    'province', 'city', 'sector', 'address', 'referencePoint',
+    'lat', 'lng',
+    'amenities', 'tags', 'images', 'blueprints',
+    'construction_company', 'units_total', 'units_available',
+    'delivery_date', 'project_stage', 'unit_types',
+    'contactName', 'contactEmail', 'contactPhone', 'contactPref',
+  ];
+
+  const incoming = req.body || {};
+  const updated  = 0;
+  const changes  = [];
+  for (const key of FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(incoming, key)) {
+      const newVal = incoming[key];
+      if (JSON.stringify(listing[key]) !== JSON.stringify(newVal)) {
+        listing[key] = newVal;
+        changes.push(key);
+      }
+    }
+  }
+
+  if (changes.length === 0) {
+    return res.status(400).json({ error: 'No hay cambios que guardar' });
+  }
+
+  listing.updatedAt = new Date().toISOString();
+  listing.editsHistory = Array.isArray(listing.editsHistory) ? listing.editsHistory : [];
+  listing.editsHistory.push({
+    at:      listing.updatedAt,
+    by:      isAdmin ? 'admin' : user.id,
+    byRole:  user.role,
+    changes,
+    fromStatus: listing.status,
+  });
+
+  const wasInReview = listing.status === 'edits_requested' || listing.status === 'pending';
+  if (wasInReview) {
+    // Resubmitting: go back into the admin queue and clear the edits note
+    listing.status           = 'pending';
+    listing.resubmittedAt    = listing.updatedAt;
+    listing.rejectedAt       = null;
+    // Keep editsReason for history but clear the "active" reminder so the
+    // owner's banner disappears after resubmit.
+    listing.editsReasonActive = false;
+  }
+
+  store.saveListing(listing);
+  res.json({
+    success: true,
+    listing,
+    requeued: wasInReview,
+    changes,
+  });
 });
 
 module.exports = router;
