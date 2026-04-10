@@ -62,10 +62,9 @@ struct MyDocumentsView: View {
                     .padding(.bottom, 32)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation { successMessage = nil }
-                    }
+                .task {
+                    try? await Task.sleep(for: .seconds(3))
+                    withAnimation { successMessage = nil }
                 }
             }
         }

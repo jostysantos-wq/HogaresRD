@@ -77,13 +77,14 @@ struct ContentView: View {
         guard !popupDismissed, let user = api.currentUser else { return }
         guard !user.isEmailVerified else { return }
         // Show after a short delay so the app loads first
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            if !popupDismissed { withAnimation(.spring(response: 0.4)) { showPopup = true } }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            if !popupDismissed { withAnimation(.easeInOut(duration: 0.25)) { showPopup = true } }
         }
     }
 
     private func dismissPopup() {
-        withAnimation(.spring(response: 0.3)) { showPopup = false }
+        withAnimation(.easeInOut(duration: 0.25)) { showPopup = false }
         popupDismissed = true
     }
 
@@ -138,14 +139,10 @@ struct ContentView: View {
                                 do {
                                     try await api.resendVerificationEmail()
                                     verificationSent = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                        verificationSent = false
-                                    }
+                                    Task { @MainActor in try? await Task.sleep(for: .seconds(5)); verificationSent = false }
                                 } catch {
                                     verificationError = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        verificationError = false
-                                    }
+                                    Task { @MainActor in try? await Task.sleep(for: .seconds(3)); verificationError = false }
                                 }
                                 resendingVerification = false
                             }

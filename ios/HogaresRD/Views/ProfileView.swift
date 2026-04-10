@@ -1308,10 +1308,9 @@ struct MyListingCard: View {
                         Button {
                             let url = "https://hogaresrd.com/listing/\(listing.id)?ref=\(ref)"
                             UIPasteboard.general.string = url
-                            let impact = UIImpactFeedbackGenerator(style: .light)
-                            impact.impactOccurred()
+                            // Haptic feedback removed for performance
                             copied = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                            Task { @MainActor in try? await Task.sleep(for: .seconds(2)); copied = false }
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: copied ? "checkmark" : "link")

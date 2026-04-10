@@ -110,7 +110,7 @@ struct SplashView: View {
         }
         .onAppear {
             // Logo entrance
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.7)) {
+            withAnimation(.easeInOut(duration: 0.25)) {
                 logoScale = 1.0
                 logoOpacity = 1.0
             }

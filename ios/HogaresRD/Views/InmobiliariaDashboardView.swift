@@ -218,9 +218,8 @@ struct TeamMembersTab: View {
                     Button {
                         UIPasteboard.general.string = "https://hogaresrd.com/register-agency"
                         copiedLink = true
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copiedLink = false }
+                        // Haptic feedback removed for performance
+                        Task { @MainActor in try? await Task.sleep(for: .seconds(2)); copiedLink = false }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: copiedLink ? "checkmark" : "doc.on.doc")
@@ -815,20 +814,20 @@ struct BrokerDetailSheet: View {
         savingNotes = true; notesSaved = false
         try? await api.saveBrokerNotes(brokerId: broker.id, notes: notes)
         savingNotes = false; notesSaved = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { notesSaved = false }
+        Task { @MainActor in try? await Task.sleep(for: .seconds(2)); notesSaved = false }
     }
 
     private func saveRole() async {
         savingRole = true; roleSaved = false
         try? await api.updateTeamMemberRole(userId: broker.id, accessLevel: editAccessLevel, teamTitle: editTeamTitle)
         savingRole = false; roleSaved = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { roleSaved = false }
+        Task { @MainActor in try? await Task.sleep(for: .seconds(2)); roleSaved = false }
     }
 
     private func resetPassword() async {
         try? await api.sendBrokerPasswordReset(brokerId: broker.id)
         actionMessage = "Enlace de reset enviado a \(broker.email)"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { actionMessage = nil }
+        Task { @MainActor in try? await Task.sleep(for: .seconds(3)); actionMessage = nil }
     }
 
     private func removeBroker() async {

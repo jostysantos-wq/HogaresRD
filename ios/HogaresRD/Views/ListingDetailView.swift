@@ -112,8 +112,7 @@ struct ListingDetailView: View {
                             Spacer()
                             // Heart + saved count
                             Button {
-                                let impact = UIImpactFeedbackGenerator(style: .medium)
-                                impact.impactOccurred()
+                                // Haptic feedback removed for performance
                                 saved.toggle(l.id)
                             } label: {
                                 VStack(spacing: 2) {

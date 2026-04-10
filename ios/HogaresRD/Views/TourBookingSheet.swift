@@ -284,7 +284,7 @@ struct TourBookingSheet: View {
 
                 // Expand to full calendar
                 Button {
-                    withAnimation(.spring(response: 0.3)) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         showFullCalendar.toggle()
                     }
                 } label: {

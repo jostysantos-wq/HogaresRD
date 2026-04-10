@@ -589,8 +589,7 @@ struct ReelCard: View {
     /// Save/Guardar button (bookmark) — adds to "Propiedades guardadas".
     /// Requires auth; guests see login sheet.
     private func toggleSave() {
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
+        // Haptic feedback removed for performance
         let didToggle = saved.toggle(listing.id)
         if didToggle {
             onSaveTap()

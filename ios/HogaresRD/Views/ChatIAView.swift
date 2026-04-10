@@ -212,8 +212,9 @@ struct ChatIAView: View {
     }
 
     private func scrollToBottom() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.easeOut(duration: 0.3)) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            withAnimation(.easeOut(duration: 0.2)) {
                 if sending {
                     scrollProxy?.scrollTo("typing", anchor: .bottom)
                 } else if let last = messages.last {

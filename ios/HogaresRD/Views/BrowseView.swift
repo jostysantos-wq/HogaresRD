@@ -238,7 +238,7 @@ struct BrowseView: View {
                             .foregroundStyle(.white)
                         Spacer()
                         Button {
-                            withAnimation(.spring(response: 0.35)) { showFullList = true }
+                            withAnimation(.easeInOut(duration: 0.25)) { showFullList = true }
                         } label: {
                             Label("Lista", systemImage: "list.bullet")
                                 .font(.caption.bold())
@@ -295,7 +295,7 @@ struct BrowseView: View {
 
                     // Floating Mapa button — centered at bottom, easy thumb reach
                     Button {
-                        withAnimation(.spring(response: 0.35)) { showFullList = false }
+                        withAnimation(.easeInOut(duration: 0.25)) { showFullList = false }
                     } label: {
                         Label("Mapa", systemImage: "map.fill")
                             .font(.subheadline.bold())
@@ -411,7 +411,7 @@ struct BrowseView: View {
             if activeDropdown != nil {
                 withAnimation(.easeOut(duration: 0.15)) { activeDropdown = nil }
             } else if selectedListing != nil {
-                withAnimation(.spring(response: 0.25)) { selectedListing = nil }
+                withAnimation(.easeInOut(duration: 0.25)) { selectedListing = nil }
             }
         }
     }
@@ -457,7 +457,7 @@ struct BrowseView: View {
                 )
                 .position(x: point.x, y: point.y - 17)
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.25)) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         selectedListing = (selectedListing?.id == listing.id) ? nil : listing
                     }
                 }
@@ -502,7 +502,7 @@ struct BrowseView: View {
                         HStack {
                             Spacer()
                             Button {
-                                withAnimation(.spring(response: 0.25)) { selectedListing = nil }
+                                withAnimation(.easeInOut(duration: 0.25)) { selectedListing = nil }
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 22))
