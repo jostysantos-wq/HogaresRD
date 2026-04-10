@@ -260,6 +260,24 @@ router.post('/', appCreateLimiter, (req, res) => {
     listing_id, listing_title, listing_price, listing_type,
     name, phone, email, user_id,
     financing, pre_approved, contact_method, budget, timeline, intent, notes,
+    // ── Extended fields (all optional) ───────────────────────────────
+    id_type,             // 'cedula' | 'passport'
+    id_number,           // digits/alphanum, validated loosely below
+    nationality,         // e.g. 'Dominicano', 'Estadounidense'
+    current_address,     // free text
+    date_of_birth,       // YYYY-MM-DD
+    employment_status,   // 'employed' | 'self_employed' | 'retired' | 'student' | 'unemployed'
+    employer_name,       // company name
+    job_title,           // position
+    monthly_income,      // numeric string
+    income_currency,     // 'USD' | 'DOP'
+    // ── Co-applicant (optional) ──────────────────────────────────────
+    co_applicant,        // { name, phone, email, id_number, monthly_income } or null
+    // ── Deferred documents ───────────────────────────────────────────
+    // Array of { type, label } for documents the applicant will upload
+    // later from /my-applications. These are added as `pending` requests
+    // on the application so the broker sees what's still outstanding.
+    deferred_documents,
     _hp, // honeypot — must be absent or empty (bots fill all fields)
   } = req.body;
 
@@ -328,6 +346,58 @@ router.post('/', appCreateLimiter, (req, res) => {
     }
   }
 
+  // ── Sanitize extended fields ─────────────────────────────────────
+  const safeStr  = (v, max = 120) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+  const safeEnum = (v, allowed, fallback = '') => (allowed.includes(v) ? v : fallback);
+
+  const clientExtended = {
+    id_type:           safeEnum(id_type, ['cedula', 'passport', '']),
+    id_number:         safeStr(id_number, 30),
+    nationality:       safeStr(nationality, 60),
+    current_address:   safeStr(current_address, 250),
+    date_of_birth:     /^\d{4}-\d{2}-\d{2}$/.test(date_of_birth || '') ? date_of_birth : '',
+    employment_status: safeEnum(employment_status, ['employed','self_employed','retired','student','unemployed',''], ''),
+    employer_name:     safeStr(employer_name, 120),
+    job_title:         safeStr(job_title, 80),
+    monthly_income:    safeStr(String(monthly_income || ''), 20),
+    income_currency:   safeEnum(income_currency, ['USD','DOP',''], 'DOP'),
+  };
+
+  // Co-applicant (if provided as object)
+  let coApplicant = null;
+  if (co_applicant && typeof co_applicant === 'object') {
+    const coName  = safeStr(co_applicant.name, 120);
+    const coPhone = safeStr(co_applicant.phone, 20);
+    if (coName || coPhone) {
+      coApplicant = {
+        name:           coName,
+        phone:          coPhone,
+        email:          safeStr(co_applicant.email, 120),
+        id_number:      safeStr(co_applicant.id_number, 30),
+        monthly_income: safeStr(String(co_applicant.monthly_income || ''), 20),
+      };
+    }
+  }
+
+  // Deferred documents — add as `pending` requests so broker can track them
+  const deferredDocs = [];
+  if (Array.isArray(deferred_documents)) {
+    for (const d of deferred_documents.slice(0, 15)) {
+      if (!d || typeof d !== 'object') continue;
+      const type = safeStr(d.type, 50);
+      if (!type) continue;
+      deferredDocs.push({
+        id:           uuid(),
+        type,
+        label:        safeStr(d.label, 120) || DOCUMENT_TYPES[type] || 'Documento',
+        required:     d.required !== false,
+        requested_at: new Date().toISOString(),
+        status:       'pending',
+        deferred:     true, // flag so UI can show "Cliente subirá después"
+      });
+    }
+  }
+
   const app = {
     id:             uuid(),
     listing_id:     listing_id || '',
@@ -339,7 +409,9 @@ router.post('/', appCreateLimiter, (req, res) => {
       phone:   phoneTrimmed,
       email:   emailTrimmed,
       user_id: user_id || null,
+      ...clientExtended,
     },
+    co_applicant:   coApplicant,
     broker,
     status:         'aplicado',
     status_reason:  '',
@@ -350,7 +422,7 @@ router.post('/', appCreateLimiter, (req, res) => {
     intent:         intent || 'comprar',
     contact_method: contact_method || 'whatsapp',
     notes:          (notes || '').trim(),
-    documents_requested: [],
+    documents_requested: deferredDocs,
     documents_uploaded:  [],
     tours:               [],
     payment: {
@@ -377,6 +449,26 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',
     { from: null, to: 'aplicado' });
+
+  // If the applicant deferred documents, log it and create an auto-task
+  if (deferredDocs.length > 0) {
+    addEvent(app, 'documents_requested',
+      `El cliente indicó que subirá ${deferredDocs.length} documento(s) más tarde: ${deferredDocs.map(d => d.label).join(', ')}`,
+      'system', 'Sistema',
+      { documents: deferredDocs.map(d => d.label), deferred: true });
+
+    if (app.client.user_id) {
+      createAutoTask({
+        title:          `Sube los documentos pendientes para ${app.listing_title || 'tu aplicación'}`,
+        description:    deferredDocs.map(d => d.label).join(', '),
+        assigned_to:    app.client.user_id,
+        assigned_by:    'system',
+        application_id: app.id,
+        listing_id:     app.listing_id,
+        source_event:   'documents_requested',
+      });
+    }
+  }
 
   store.saveApplication(app);
 
@@ -706,6 +798,67 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   }
 
   res.json(app);
+});
+
+// ── POST /:id/initial-upload  — Public: attach documents right after creation
+// Accepts multipart uploads from anonymous/guest users during initial apply.
+// Only usable within 10 minutes of creation and limited to 10 files total per app.
+router.post('/:id/initial-upload', appCreateLimiter, docUpload.array('files', 10), async (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  // Time-box the public upload window to 10 minutes after creation
+  const ageMs = Date.now() - new Date(app.created_at).getTime();
+  if (ageMs > 10 * 60 * 1000) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(403).json({ error: 'Ventana de subida inicial expirada. Inicia sesión en tu cuenta para subir documentos.' });
+  }
+
+  // Hard cap: no more than 10 uploads via this public endpoint
+  if ((app.documents_uploaded || []).filter(d => d.via_initial).length >= 10) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(429).json({ error: 'Límite de subida inicial alcanzado.' });
+  }
+
+  if (!req.files || !req.files.length)
+    return res.status(400).json({ error: 'No se recibieron archivos' });
+
+  // Validate MIME types on every file
+  for (const f of req.files) {
+    const ok = await validateMime(f.path);
+    if (!ok) {
+      req.files.forEach(x => { if (x.path !== f.path) fs.unlink(x.path, () => {}); });
+      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Solo se aceptan imágenes y PDF.` });
+    }
+  }
+
+  const docType   = (req.body.type  || 'other').toString().slice(0, 50);
+  const docLabel  = (req.body.label || DOCUMENT_TYPES[docType] || 'Documento').toString().slice(0, 120);
+
+  const uploaded = req.files.map(f => ({
+    id:            uuid(),
+    request_id:    null,
+    type:          docType,
+    label:         docLabel,
+    filename:      f.filename,
+    path:          f.path,
+    original_name: f.originalname,
+    size:          f.size,
+    uploaded_at:   new Date().toISOString(),
+    via_initial:   true,
+    review_status: 'pending',
+    review_note:   '',
+    reviewed_at:   null,
+    reviewed_by:   null,
+  }));
+
+  app.documents_uploaded.push(...uploaded);
+  addEvent(app, 'document_uploaded',
+    `${uploaded.length} documento(s) adjunto(s) durante la aplicación: ${uploaded.map(d => d.original_name).join(', ')}`,
+    'system', app.client?.name || 'Cliente', { files: uploaded.map(d => d.original_name), initial: true });
+  store.saveApplication(app);
+
+  res.json({ ok: true, uploaded: uploaded.length });
 });
 
 // ── POST /:id/documents/upload  — Client uploads documents ──────

@@ -173,6 +173,101 @@ class APIService: ObservableObject {
         return true
     }
 
+    /// Submit a full application to /api/applications with extended fields
+    /// (personal data, employment, co-applicant, deferred documents).
+    /// Returns the created application id on success.
+    func submitApplication(
+        listing: Listing,
+        payload: [String: Any]
+    ) async throws -> String {
+        guard let url = URL(string: "\(apiBase)/api/applications") else {
+            throw APIError.server("URL inválida")
+        }
+        var body = payload
+        body["listing_id"]    = listing.id
+        body["listing_title"] = listing.title
+        body["listing_price"] = listing.price
+        body["listing_type"]  = listing.type
+        if let me = currentUser { body["user_id"] = me.id }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = self.token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse else {
+            throw APIError.server("Respuesta inválida")
+        }
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        if http.statusCode >= 400 {
+            let msg = (json?["error"] as? String) ?? "Error al enviar la aplicación"
+            throw APIError.server(msg)
+        }
+        guard let id = json?["id"] as? String, !id.isEmpty else {
+            throw APIError.server("Respuesta sin id")
+        }
+        return id
+    }
+
+    /// Upload a document during the initial apply window (no auth required
+    /// for the first 10 minutes after application creation).
+    func uploadInitialDocument(
+        applicationId: String,
+        type: String,
+        label: String,
+        fileURL: URL? = nil,
+        data: Data? = nil,
+        filename: String
+    ) async throws {
+        guard let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/initial-upload") else { return }
+
+        let fileData: Data
+        if let d = data { fileData = d }
+        else if let fileURL { fileData = try Data(contentsOf: fileURL) }
+        else { throw APIError.server("Archivo inválido") }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        func append(_ s: String) { body.append(s.data(using: .utf8)!) }
+
+        for (name, value) in [("type", type), ("label", label)] {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
+            append("\(value)\r\n")
+        }
+
+        let mime: String = {
+            let ext = (filename as NSString).pathExtension.lowercased()
+            switch ext {
+            case "pdf":  return "application/pdf"
+            case "png":  return "image/png"
+            case "heic": return "image/heic"
+            case "gif":  return "image/gif"
+            case "webp": return "image/webp"
+            default:     return "image/jpeg"
+            }
+        }()
+
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"files\"; filename=\"\(filename)\"\r\n")
+        append("Content-Type: \(mime)\r\n\r\n")
+        body.append(fileData)
+        append("\r\n--\(boundary)--\r\n")
+
+        req.httpBody = body
+        let (respData, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: respData) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error subiendo archivo")
+        }
+    }
+
     func trackAdClick(_ adID: String) {
         guard let url = URL(string: "\(apiBase)/api/ads/\(adID)/click") else { return }
         var req = URLRequest(url: url)

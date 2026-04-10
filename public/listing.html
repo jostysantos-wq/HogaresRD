@@ -287,6 +287,79 @@
     .modal-success { text-align: center; padding: 1rem 0; }
     .modal-success-icon { width: 52px; height: 52px; background: color-mix(in srgb, var(--green) 15%, transparent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
     .modal-success-icon svg { width: 26px; height: 26px; fill: var(--green); }
+
+    /* ── APPLY MODAL (wider + multi-step) ─────────────────────── */
+    .apply-modal { max-width: 620px !important; padding: 0 !important; overflow: hidden; max-height: 92vh; display: flex; flex-direction: column; }
+    .apply-header { padding: 1.5rem 1.75rem 1rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent) 0%, transparent 100%); }
+    .apply-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .apply-header h2 { font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 0 0 0.2rem; }
+    .apply-header p { font-size: 0.82rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
+    .apply-stepper { display: flex; align-items: center; gap: 0.4rem; }
+    .apply-step-dot { flex: 1; height: 5px; border-radius: 99px; background: var(--border); transition: background 0.25s; }
+    .apply-step-dot.active { background: var(--accent); }
+    .apply-step-dot.done   { background: var(--green); }
+    .apply-step-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.6rem; }
+
+    .apply-body { padding: 1.5rem 1.75rem; overflow-y: auto; flex: 1; min-height: 0; }
+    .apply-step { display: none; }
+    .apply-step.active { display: block; animation: applyFade 0.18s ease-out; }
+    @keyframes applyFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .apply-section-title { font-size: 0.78rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 0.6rem; }
+    .apply-section-title:not(:first-child) { margin-top: 1.35rem; }
+
+    .apply-grid { display: grid; gap: 0.75rem; }
+    .apply-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .apply-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 560px) { .apply-grid.cols-2, .apply-grid.cols-3 { grid-template-columns: 1fr; } }
+
+    .apply-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .apply-field input, .apply-field select, .apply-field textarea { width: 100%; padding: 0.68rem 0.85rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
+    .apply-field input:focus, .apply-field select:focus, .apply-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.12); }
+    .apply-field textarea { resize: vertical; min-height: 76px; }
+    .apply-field .apply-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+    .apply-checkbox { display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.75rem 0.9rem; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .apply-checkbox:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 3%, transparent); }
+    .apply-checkbox input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .apply-checkbox-text { font-size: 0.82rem; color: var(--text); line-height: 1.35; }
+    .apply-checkbox-text small { display: block; color: var(--text-muted); font-size: 0.72rem; margin-top: 0.15rem; }
+
+    /* Document rows — one row per doc type with attach/defer/skip */
+    .apply-doc-row { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.85rem 0.95rem; border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 0.65rem; background: var(--bg); transition: border-color 0.15s, background 0.15s; }
+    .apply-doc-row.state-attached { border-color: var(--green); background: color-mix(in srgb, var(--green) 5%, transparent); }
+    .apply-doc-row.state-deferred { border-color: #d97706; background: color-mix(in srgb, #d97706 6%, transparent); }
+    .apply-doc-row.state-skipped  { opacity: 0.55; }
+    .apply-doc-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .apply-doc-title { display: flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .apply-doc-title svg { width: 18px; height: 18px; fill: var(--accent); flex-shrink: 0; }
+    .apply-doc-required { font-size: 0.68rem; color: var(--red); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .apply-doc-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .apply-doc-chip { font-size: 0.72rem; font-weight: 700; padding: 0.4rem 0.7rem; border: 1.5px solid var(--border); border-radius: 99px; background: var(--bg-card); color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .apply-doc-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .apply-doc-chip.active.attach { border-color: var(--green); background: var(--green); color: #fff; }
+    .apply-doc-chip.active.defer  { border-color: #d97706; background: #d97706; color: #fff; }
+    .apply-doc-chip.active.skip   { border-color: var(--text-muted); background: var(--text-muted); color: #fff; }
+    .apply-doc-file { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+    .apply-doc-file strong { color: var(--text); }
+    .apply-doc-clear { background: none; border: none; color: var(--red); font-size: 0.7rem; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; }
+
+    /* Footer */
+    .apply-footer { padding: 1rem 1.75rem; border-top: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-shrink: 0; }
+    .apply-footer .apply-btn-secondary { padding: 0.7rem 1.2rem; background: transparent; color: var(--text); border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: border-color 0.15s; }
+    .apply-footer .apply-btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .apply-footer .apply-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .apply-footer .apply-btn-primary { padding: 0.75rem 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; font-family: inherit; transition: background 0.15s; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .apply-footer .apply-btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .apply-footer .apply-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .apply-error { font-size: 0.78rem; color: var(--red); flex: 1; text-align: center; }
+
+    .apply-listing-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.9rem; background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 12px; margin-bottom: 1rem; }
+    .apply-listing-pill .pill-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .apply-listing-pill .pill-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .apply-listing-pill .pill-text { flex: 1; min-width: 0; }
+    .apply-listing-pill .pill-title { font-size: 0.85rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .apply-listing-pill .pill-price { font-size: 0.78rem; color: var(--accent); font-weight: 700; }
     .modal-success h3 { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.4rem; }
     .modal-success p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
 
@@ -846,96 +919,246 @@
 
 <!-- APPLY MODAL -->
 <div class="modal-backdrop" id="applyModal" onclick="closeApplyOnBackdrop(event)">
-  <div class="modal" style="max-width:500px;">
-    <button class="modal-back" style="display:none"></button>
+  <div class="modal apply-modal">
     <div id="applyFormWrap">
-      <div class="modal-title">Aplicar para esta Propiedad</div>
-      <div class="modal-sub" style="margin-bottom:1.25rem;color:var(--text-muted);font-size:0.88rem;">
-        Completa el formulario y nos comunicaremos contigo para coordinar los próximos pasos.
+      <!-- Header with stepper -->
+      <div class="apply-header">
+        <div class="apply-header-row">
+          <div>
+            <h2 id="applyStepTitle">Aplicar para esta Propiedad</h2>
+            <p id="applyStepSub">Completa este formulario para iniciar tu aplicación.</p>
+          </div>
+          <button class="modal-close" onclick="closeApplyModal()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div id="applyListingPill" class="apply-listing-pill" style="display:none;">
+          <div class="pill-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <div class="pill-text">
+            <div class="pill-title" id="applyListingTitle"></div>
+            <div class="pill-price" id="applyListingPrice"></div>
+          </div>
+        </div>
+        <div class="apply-stepper">
+          <div class="apply-step-dot active" data-step="1"></div>
+          <div class="apply-step-dot" data-step="2"></div>
+          <div class="apply-step-dot" data-step="3"></div>
+        </div>
+        <div class="apply-step-label"><span id="applyStepCounter">Paso 1 de 3</span> · <span id="applyStepName">Contacto e intención</span></div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.85rem;">
-        <div class="modal-field">
-          <label class="modal-label">Nombre completo *</label>
-          <input class="modal-input" id="applyName" placeholder="Tu nombre" />
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div class="modal-field">
-            <label class="modal-label">Teléfono *</label>
-            <input class="modal-input" id="applyPhone" placeholder="809-555-0000" type="tel"/>
+
+      <!-- Body -->
+      <div class="apply-body">
+
+        <!-- ── STEP 1 · Contacto & intención ── -->
+        <div class="apply-step active" data-step="1">
+          <div class="apply-section-title">Tus datos de contacto</div>
+          <div class="apply-grid">
+            <div class="apply-field">
+              <label>Nombre completo *</label>
+              <input id="applyName" placeholder="Nombre y apellido" />
+            </div>
+            <div class="apply-grid cols-2">
+              <div class="apply-field">
+                <label>Teléfono *</label>
+                <input id="applyPhone" placeholder="809-555-0000" type="tel"/>
+              </div>
+              <div class="apply-field">
+                <label>Correo electrónico</label>
+                <input id="applyEmail" placeholder="tu@email.com" type="email"/>
+              </div>
+            </div>
           </div>
-          <div class="modal-field">
-            <label class="modal-label">Email</label>
-            <input class="modal-input" id="applyEmail" placeholder="tu@email.com" type="email"/>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div class="modal-field">
-            <label class="modal-label">Intención</label>
-            <select class="modal-input" id="applyIntent" style="cursor:pointer;">
-              <option value="comprar">Comprar</option>
-              <option value="alquilar">Alquilar</option>
-              <option value="invertir">Invertir</option>
-            </select>
-          </div>
-          <div class="modal-field">
-            <label class="modal-label">Plazo estimado</label>
-            <select class="modal-input" id="applyTimeline" style="cursor:pointer;">
-              <option value="Inmediato">Inmediato</option>
-              <option value="1-3 meses">1–3 meses</option>
-              <option value="3-6 meses">3–6 meses</option>
-              <option value="6-12 meses">6–12 meses</option>
-              <option value="+1 año">+1 año</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div class="modal-field">
-            <label class="modal-label">Método de financiamiento</label>
-            <select class="modal-input" id="applyFinancing" style="cursor:pointer;">
-              <option value="">Seleccionar...</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="banco">Financiamiento bancario</option>
-              <option value="desarrollador">Financiamiento del desarrollador</option>
-              <option value="vendedor">Financiamiento del vendedor</option>
-            </select>
-          </div>
-          <div class="modal-field">
-            <label class="modal-label">Contacto preferido</label>
-            <select class="modal-input" id="applyContactMethod" style="cursor:pointer;">
-              <option value="whatsapp">WhatsApp</option>
-              <option value="llamada">Llamada</option>
-              <option value="email">Email</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div class="modal-field">
-            <label class="modal-label">Presupuesto máximo (USD)</label>
-            <input class="modal-input" id="applyBudget" placeholder="ej. 150,000" type="text"/>
-          </div>
-          <div class="modal-field" style="display:flex;align-items:center;gap:0.6rem;padding-top:1.4rem;">
-            <input type="checkbox" id="applyPreApproved" style="width:18px;height:18px;cursor:pointer;accent-color:var(--green);" />
-            <label for="applyPreApproved" style="font-size:0.84rem;cursor:pointer;">Pre-aprobado por el banco</label>
+
+          <div class="apply-section-title">¿Qué te interesa?</div>
+          <div class="apply-grid cols-2">
+            <div class="apply-field">
+              <label>Intención</label>
+              <select id="applyIntent">
+                <option value="comprar">Comprar</option>
+                <option value="alquilar">Alquilar</option>
+                <option value="invertir">Invertir</option>
+              </select>
+            </div>
+            <div class="apply-field">
+              <label>Plazo estimado</label>
+              <select id="applyTimeline">
+                <option value="Inmediato">Inmediato</option>
+                <option value="1-3 meses">1–3 meses</option>
+                <option value="3-6 meses">3–6 meses</option>
+                <option value="6-12 meses">6–12 meses</option>
+                <option value="+1 año">Más de un año</option>
+              </select>
+            </div>
+            <div class="apply-field">
+              <label>Presupuesto (USD)</label>
+              <input id="applyBudget" placeholder="ej. 150,000" type="text"/>
+            </div>
+            <div class="apply-field">
+              <label>Contacto preferido</label>
+              <select id="applyContactMethod">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="llamada">Llamada</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="modal-field">
-          <label class="modal-label">Notas adicionales</label>
-          <textarea class="modal-input" id="applyNotes" rows="3" placeholder="Algo que debamos saber…" style="resize:vertical;"></textarea>
+
+        <!-- ── STEP 2 · Datos personales y financieros ── -->
+        <div class="apply-step" data-step="2">
+          <div class="apply-section-title">Datos personales</div>
+          <div class="apply-grid cols-2">
+            <div class="apply-field">
+              <label>Tipo de identificación</label>
+              <select id="applyIdType">
+                <option value="">Seleccionar...</option>
+                <option value="cedula">Cédula dominicana</option>
+                <option value="passport">Pasaporte</option>
+              </select>
+            </div>
+            <div class="apply-field">
+              <label>Número de identificación</label>
+              <input id="applyIdNumber" placeholder="000-0000000-0" />
+            </div>
+            <div class="apply-field">
+              <label>Nacionalidad</label>
+              <input id="applyNationality" placeholder="Dominicano" />
+            </div>
+            <div class="apply-field">
+              <label>Fecha de nacimiento</label>
+              <input id="applyDob" type="date" />
+            </div>
+            <div class="apply-field" style="grid-column: 1 / -1;">
+              <label>Dirección actual</label>
+              <input id="applyAddress" placeholder="Calle, sector, ciudad" />
+            </div>
+          </div>
+
+          <div class="apply-section-title">Información laboral</div>
+          <div class="apply-grid cols-2">
+            <div class="apply-field">
+              <label>Situación laboral</label>
+              <select id="applyEmpStatus">
+                <option value="">Seleccionar...</option>
+                <option value="employed">Empleado</option>
+                <option value="self_employed">Independiente / negocio propio</option>
+                <option value="retired">Jubilado</option>
+                <option value="student">Estudiante</option>
+                <option value="unemployed">Sin empleo actualmente</option>
+              </select>
+            </div>
+            <div class="apply-field">
+              <label>Empresa / Empleador</label>
+              <input id="applyEmployer" placeholder="Nombre de la empresa" />
+            </div>
+            <div class="apply-field">
+              <label>Puesto</label>
+              <input id="applyJobTitle" placeholder="ej. Gerente" />
+            </div>
+            <div class="apply-field">
+              <label>Ingreso mensual</label>
+              <div style="display:flex;gap:0.35rem;">
+                <input id="applyIncome" placeholder="ej. 85,000" type="text" style="flex:1;" />
+                <select id="applyIncomeCurrency" style="width:88px;">
+                  <option value="DOP">DOP</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="apply-section-title">Financiamiento</div>
+          <div class="apply-grid cols-2">
+            <div class="apply-field">
+              <label>Método</label>
+              <select id="applyFinancing">
+                <option value="">Seleccionar...</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="banco">Financiamiento bancario</option>
+                <option value="desarrollador">Financiamiento del desarrollador</option>
+                <option value="vendedor">Financiamiento del vendedor</option>
+              </select>
+            </div>
+            <label class="apply-checkbox" style="align-self:flex-end;">
+              <input type="checkbox" id="applyPreApproved" />
+              <div class="apply-checkbox-text">
+                Pre-aprobado por el banco
+                <small>Si ya tienes una carta de pre-aprobación</small>
+              </div>
+            </label>
+          </div>
+
+          <div class="apply-section-title" style="margin-top:1.5rem;">Co-aplicante (opcional)</div>
+          <label class="apply-checkbox" style="margin-bottom:0.75rem;">
+            <input type="checkbox" id="applyHasCoapp" onchange="toggleCoapp()" />
+            <div class="apply-checkbox-text">
+              Aplicar junto con otra persona
+              <small>Cónyuge, pareja o co-propietario</small>
+            </div>
+          </label>
+          <div id="applyCoappWrap" style="display:none;">
+            <div class="apply-grid cols-2">
+              <div class="apply-field">
+                <label>Nombre del co-aplicante</label>
+                <input id="applyCoappName" placeholder="Nombre y apellido" />
+              </div>
+              <div class="apply-field">
+                <label>Teléfono</label>
+                <input id="applyCoappPhone" placeholder="809-555-0000" type="tel" />
+              </div>
+              <div class="apply-field">
+                <label>Cédula / Pasaporte</label>
+                <input id="applyCoappId" placeholder="000-0000000-0" />
+              </div>
+              <div class="apply-field">
+                <label>Ingreso mensual</label>
+                <input id="applyCoappIncome" placeholder="ej. 60,000" />
+              </div>
+            </div>
+          </div>
+
+          <div class="apply-field" style="margin-top:1rem;">
+            <label>Notas adicionales</label>
+            <textarea id="applyNotes" rows="2" placeholder="Algo que debamos saber…"></textarea>
+          </div>
         </div>
-        <p style="font-size:0.78rem;color:var(--text-muted);">
-          Al aplicar, HogaresRD coordinará el proceso con la inmobiliaria afiliada. Puedes recibir comunicación de nuestra parte y del agente asignado.
-        </p>
-        <button class="modal-submit" id="applySubmitBtn" onclick="submitApply()">Enviar Aplicación</button>
-        <div id="applyError" style="color:var(--red);font-size:0.84rem;min-height:1rem;"></div>
+
+        <!-- ── STEP 3 · Documentos ── -->
+        <div class="apply-step" data-step="3">
+          <div class="apply-section-title">Documentos de aplicación</div>
+          <p style="font-size:0.82rem;color:var(--text-muted);margin:-0.25rem 0 1rem;line-height:1.5;">
+            Para cada documento puedes <strong>adjuntar ahora</strong>, <strong>marcar para subir después</strong> desde tu panel, o <strong>omitir</strong> si no aplica.
+          </p>
+          <div id="applyDocList"></div>
+
+          <div style="background:color-mix(in srgb, var(--accent) 5%, transparent); border:1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius:10px; padding:0.8rem 0.95rem; font-size:0.78rem; color:var(--text-muted); line-height:1.55; margin-top:0.75rem;">
+            <strong style="color:var(--text);">Privacidad:</strong> tus documentos se comparten solo con la inmobiliaria afiliada al listing y con HogaresRD. Nunca los publicamos.
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="apply-footer">
+        <button class="apply-btn-secondary" id="applyBackBtn" onclick="applyStep(-1)" disabled>← Atrás</button>
+        <div class="apply-error" id="applyError"></div>
+        <button class="apply-btn-primary" id="applyNextBtn" onclick="applyStep(1)">Continuar →</button>
       </div>
     </div>
-    <div id="applySuccessWrap" style="display:none;text-align:center;padding:1rem 0;">
-      
-      <h3 style="margin-bottom:0.5rem;">¡Aplicación enviada!</h3>
-      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">El broker se pondrá en contacto contigo. Puedes rastrear el progreso de tu aplicación en cualquier momento.</p>
+
+    <!-- Success state -->
+    <div id="applySuccessWrap" style="display:none;padding:2.5rem 2rem;text-align:center;">
+      <div class="modal-success-icon" style="margin:0 auto 1rem;">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+      <h3 style="margin-bottom:0.5rem;font-weight:800;">¡Aplicación enviada!</h3>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.5;">
+        El broker se pondrá en contacto contigo pronto.
+        <span id="applySuccessDeferred" style="display:none;"> Recuerda subir los documentos pendientes desde tu panel para avanzar más rápido.</span>
+      </p>
       <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
-        <a id="applyTrackLink" href="/my-applications" style="display:none;background:var(--accent);color:#fff;font-weight:700;padding:0.65rem 1.4rem;border-radius:10px;text-decoration:none;font-size:0.92rem;">Rastrear mi aplicación →</a>
-        <button class="modal-submit" style="background:var(--bg-section);color:var(--text);" onclick="closeApplyModal()">Cerrar</button>
+        <a id="applyTrackLink" href="/my-applications" style="display:none;background:var(--accent);color:#fff;font-weight:700;padding:0.7rem 1.4rem;border-radius:10px;text-decoration:none;font-size:0.9rem;">Rastrear mi aplicación →</a>
+        <button class="apply-btn-secondary" onclick="closeApplyModal()">Cerrar</button>
       </div>
     </div>
   </div>
@@ -1458,10 +1681,60 @@
   }
 
   // ── Apply modal ────────────────────────────────────────────
+  // ── Apply modal state ──────────────────────────────────────────
+  let applyCurrentStep = 1;
+  const APPLY_STEP_COUNT = 3;
+  const APPLY_STEP_NAMES = {
+    1: 'Contacto e intención',
+    2: 'Datos personales y financieros',
+    3: 'Documentos',
+  };
+  // List of standard application documents — each row is a file slot
+  // the user can Attach / Defer / Skip.
+  const APPLY_DOC_TYPES = [
+    { type: 'cedula',            label: 'Cédula de Identidad o Pasaporte', required: true  },
+    { type: 'income_proof',      label: 'Comprobante de Ingresos',          required: true  },
+    { type: 'employment_letter', label: 'Carta de Trabajo',                 required: false },
+    { type: 'bank_statement',    label: 'Estado de Cuenta Bancario (3 meses)', required: false },
+    { type: 'pre_approval',      label: 'Carta de Pre-Aprobación Bancaria', required: false },
+    { type: 'tax_return',        label: 'Declaración de Impuestos',         required: false },
+  ];
+  // Per-row state: { [type]: { state: 'attached'|'deferred'|'skipped', file: File|null } }
+  const applyDocState = {};
+
   function openApply() {
     document.getElementById('applyFormWrap').style.display    = 'block';
     document.getElementById('applySuccessWrap').style.display = 'none';
     document.getElementById('applyError').textContent         = '';
+    // Reset to step 1
+    applyCurrentStep = 1;
+    applyRenderStep();
+    // Listing pill
+    const listing = window._currentListing || {};
+    if (listing.title) {
+      document.getElementById('applyListingPill').style.display = 'flex';
+      document.getElementById('applyListingTitle').textContent  = listing.title;
+      if (listing.price) {
+        const priceNum = Number(listing.price);
+        document.getElementById('applyListingPrice').textContent = priceNum > 0
+          ? '$' + priceNum.toLocaleString() + (listing.type === 'alquiler' ? '/mes' : '')
+          : '';
+      }
+    }
+    // Pre-fill name/email from logged-in user
+    const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    if (me) {
+      if (me.name  && !document.getElementById('applyName').value)  document.getElementById('applyName').value  = me.name;
+      if (me.email && !document.getElementById('applyEmail').value) document.getElementById('applyEmail').value = me.email;
+      if (me.phone && !document.getElementById('applyPhone').value) document.getElementById('applyPhone').value = me.phone;
+    }
+    // Reset doc state + render rows
+    Object.keys(applyDocState).forEach(k => delete applyDocState[k]);
+    APPLY_DOC_TYPES.forEach(d => {
+      applyDocState[d.type] = { state: 'skipped', file: null };
+    });
+    applyRenderDocList();
+
     document.getElementById('applyModal').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -1475,9 +1748,129 @@
     if (e.target === document.getElementById('applyModal')) closeApplyModal();
   }
 
+  function toggleCoapp() {
+    const wrap = document.getElementById('applyCoappWrap');
+    wrap.style.display = document.getElementById('applyHasCoapp').checked ? '' : 'none';
+  }
+
+  // ── Step navigation ─────────────────────────────────────────────
+  function applyRenderStep() {
+    document.querySelectorAll('.apply-step').forEach(el => {
+      el.classList.toggle('active', Number(el.dataset.step) === applyCurrentStep);
+    });
+    document.querySelectorAll('.apply-step-dot').forEach(el => {
+      const n = Number(el.dataset.step);
+      el.classList.toggle('active', n === applyCurrentStep);
+      el.classList.toggle('done',   n <  applyCurrentStep);
+    });
+    document.getElementById('applyStepCounter').textContent = `Paso ${applyCurrentStep} de ${APPLY_STEP_COUNT}`;
+    document.getElementById('applyStepName').textContent    = APPLY_STEP_NAMES[applyCurrentStep];
+    document.getElementById('applyBackBtn').disabled = applyCurrentStep === 1;
+    const nextBtn = document.getElementById('applyNextBtn');
+    nextBtn.innerHTML = applyCurrentStep === APPLY_STEP_COUNT ? 'Enviar Aplicación' : 'Continuar →';
+    document.getElementById('applyError').textContent = '';
+    // Scroll body to top
+    document.querySelector('.apply-body').scrollTop = 0;
+  }
+
+  function applyValidateStep(step) {
+    const errEl = document.getElementById('applyError');
+    if (step === 1) {
+      const name  = document.getElementById('applyName').value.trim();
+      const phone = document.getElementById('applyPhone').value.trim();
+      if (!name || name.length < 2) { errEl.textContent = 'Ingresa tu nombre.'; return false; }
+      if (!phone) { errEl.textContent = 'El teléfono es obligatorio.'; return false; }
+      if (!/^\+?[\d\s\-().]{7,20}$/.test(phone)) { errEl.textContent = 'Número de teléfono inválido.'; return false; }
+      const email = document.getElementById('applyEmail').value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Correo inválido.'; return false; }
+    }
+    return true;
+  }
+
+  function applyStep(delta) {
+    if (delta > 0) {
+      if (!applyValidateStep(applyCurrentStep)) return;
+      if (applyCurrentStep === APPLY_STEP_COUNT) {
+        submitApply();
+        return;
+      }
+      applyCurrentStep++;
+    } else {
+      if (applyCurrentStep === 1) return;
+      applyCurrentStep--;
+    }
+    applyRenderStep();
+  }
+
+  // ── Document rows ───────────────────────────────────────────────
+  function applyRenderDocList() {
+    const list = document.getElementById('applyDocList');
+    list.innerHTML = '';
+    APPLY_DOC_TYPES.forEach(doc => {
+      const s = applyDocState[doc.type] || { state: 'skipped', file: null };
+      const row = document.createElement('div');
+      row.className = 'apply-doc-row state-' + s.state;
+      row.dataset.type = doc.type;
+      const fileLine = (s.state === 'attached' && s.file)
+        ? `<div class="apply-doc-file">✅ <strong>${escapeHtml(s.file.name)}</strong> (${(s.file.size/1024).toFixed(0)} KB) <button type="button" class="apply-doc-clear" onclick="applySetDoc('${doc.type}','skipped')">Quitar</button></div>`
+        : (s.state === 'deferred')
+          ? `<div class="apply-doc-file" style="color:#d97706;">🕐 Lo subirás más tarde desde tu panel</div>`
+          : '';
+      row.innerHTML = `
+        <div class="apply-doc-head">
+          <div class="apply-doc-title">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+            ${escapeHtml(doc.label)}
+            ${doc.required ? '<span class="apply-doc-required">Requerido</span>' : ''}
+          </div>
+          <div class="apply-doc-actions">
+            <button type="button" class="apply-doc-chip attach ${s.state==='attached'?'active':''}" onclick="applyPickFile('${doc.type}')">Adjuntar</button>
+            <button type="button" class="apply-doc-chip defer  ${s.state==='deferred'?'active':''}" onclick="applySetDoc('${doc.type}','deferred')">Subir después</button>
+            <button type="button" class="apply-doc-chip skip   ${s.state==='skipped'?'active':''}"  onclick="applySetDoc('${doc.type}','skipped')">Omitir</button>
+          </div>
+        </div>
+        ${fileLine}
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function applySetDoc(type, state) {
+    if (!applyDocState[type]) applyDocState[type] = { state: 'skipped', file: null };
+    applyDocState[type].state = state;
+    if (state !== 'attached') applyDocState[type].file = null;
+    applyRenderDocList();
+  }
+
+  function applyPickFile(type) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      // 10 MB limit (matches server)
+      if (f.size > 10 * 1024 * 1024) {
+        document.getElementById('applyError').textContent = 'El archivo supera el límite de 10 MB.';
+        return;
+      }
+      applyDocState[type] = { state: 'attached', file: f };
+      applyRenderDocList();
+    };
+    input.click();
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────
   let applyInFlight = false;
-  function submitApply() {
+  async function submitApply() {
     if (applyInFlight) return;
+    const errEl = document.getElementById('applyError');
+    errEl.textContent = '';
+
     const name           = document.getElementById('applyName').value.trim();
     const phone          = document.getElementById('applyPhone').value.trim();
     const email          = document.getElementById('applyEmail').value.trim();
@@ -1488,58 +1881,109 @@
     const budget         = document.getElementById('applyBudget').value.trim();
     const pre_approved   = document.getElementById('applyPreApproved').checked;
     const notes          = document.getElementById('applyNotes').value.trim();
-    const errEl          = document.getElementById('applyError');
+    const id_type        = document.getElementById('applyIdType').value;
+    const id_number      = document.getElementById('applyIdNumber').value.trim();
+    const nationality    = document.getElementById('applyNationality').value.trim();
+    const date_of_birth  = document.getElementById('applyDob').value;
+    const current_address= document.getElementById('applyAddress').value.trim();
+    const employment_status = document.getElementById('applyEmpStatus').value;
+    const employer_name  = document.getElementById('applyEmployer').value.trim();
+    const job_title      = document.getElementById('applyJobTitle').value.trim();
+    const monthly_income = document.getElementById('applyIncome').value.trim();
+    const income_currency= document.getElementById('applyIncomeCurrency').value;
 
-    if (!name || !phone) { errEl.textContent = 'Nombre y teléfono son requeridos.'; return; }
-    errEl.textContent = '';
+    let co_applicant = null;
+    if (document.getElementById('applyHasCoapp').checked) {
+      co_applicant = {
+        name:           document.getElementById('applyCoappName').value.trim(),
+        phone:          document.getElementById('applyCoappPhone').value.trim(),
+        id_number:      document.getElementById('applyCoappId').value.trim(),
+        monthly_income: document.getElementById('applyCoappIncome').value.trim(),
+      };
+    }
 
-    const btn = document.getElementById('applySubmitBtn');
+    // Collect deferred docs
+    const deferred_documents = APPLY_DOC_TYPES
+      .filter(d => applyDocState[d.type]?.state === 'deferred')
+      .map(d => ({ type: d.type, label: d.label, required: d.required }));
+
+    // Collect files to upload after create
+    const toUpload = APPLY_DOC_TYPES
+      .filter(d => applyDocState[d.type]?.state === 'attached' && applyDocState[d.type]?.file)
+      .map(d => ({ type: d.type, label: d.label, file: applyDocState[d.type].file }));
+
+    const nextBtn = document.getElementById('applyNextBtn');
     applyInFlight = true;
-    btn.disabled = true; btn.textContent = 'Enviando…';
+    nextBtn.disabled = true; nextBtn.textContent = 'Enviando…';
 
     const listing = window._currentListing || {};
     const token   = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
     const me      = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch('/api/applications', {
-      method:  'POST',
-      headers,
-      credentials: 'include',
-      body:    JSON.stringify({
-        listing_id:    listing.id    || '',
-        listing_title: listing.title || document.title,
-        listing_price: listing.price || '',
-        listing_type:  listing.type  || '',
-        user_id:       me?.id || null,
-        name, phone, email, budget, timeline, intent,
-        financing, pre_approved, contact_method, notes,
-      })
-    })
-    .then(async r => {
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || `Error ${r.status}: No se pudo enviar la aplicación.`);
-      return data;
-    })
-    .then(data => {
-      if (data.error) throw new Error(data.error);
-      window._lastAppId = data.id;
+    try {
+      const res = await fetch('/api/applications', {
+        method:  'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          listing_id:    listing.id    || '',
+          listing_title: listing.title || document.title,
+          listing_price: listing.price || '',
+          listing_type:  listing.type  || '',
+          user_id:       me?.id || null,
+          name, phone, email, budget, timeline, intent,
+          financing, pre_approved, contact_method, notes,
+          id_type, id_number, nationality, date_of_birth, current_address,
+          employment_status, employer_name, job_title, monthly_income, income_currency,
+          co_applicant,
+          deferred_documents,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}: No se pudo enviar la aplicación.`);
+      const appId = data.id;
+      window._lastAppId = appId;
+
+      // Upload attached files sequentially to avoid hammering the server
+      for (const doc of toUpload) {
+        try {
+          const fd = new FormData();
+          fd.append('files', doc.file);
+          fd.append('type',  doc.type);
+          fd.append('label', doc.label);
+          await fetch(`/api/applications/${appId}/initial-upload`, {
+            method: 'POST',
+            body: fd,
+            credentials: 'include',
+          });
+        } catch (upErr) {
+          console.warn('[apply] upload failed', doc.type, upErr);
+        }
+      }
+
+      // Show success screen
       document.getElementById('applyFormWrap').style.display    = 'none';
       document.getElementById('applySuccessWrap').style.display = 'block';
-      // Meta Pixel — Lead (deduplicated with CAPI via eventId)
+      if (deferred_documents.length > 0) {
+        document.getElementById('applySuccessDeferred').style.display = 'inline';
+      }
       if (window.MetaPixel) {
         window.MetaPixel.track('Lead', {
           content_name: window._currentListing?.title || document.title,
           content_ids:  [listing?.id || listingId],
-        }, `lead_${data.id}`);
+        }, `lead_${appId}`);
       }
       const trackLink = document.getElementById('applyTrackLink');
       if (trackLink) trackLink.style.display = token ? 'inline-block' : 'none';
-    })
-    .catch(err => { errEl.textContent = err.message || 'Error al enviar. Inténtalo de nuevo.'; })
-    .finally(() => { applyInFlight = false; btn.disabled = false; btn.textContent = 'Enviar Aplicación'; });
+    } catch (err) {
+      errEl.textContent = err.message || 'Error al enviar. Inténtalo de nuevo.';
+    } finally {
+      applyInFlight = false;
+      nextBtn.disabled = false;
+      nextBtn.innerHTML = applyCurrentStep === APPLY_STEP_COUNT ? 'Enviar Aplicación' : 'Continuar →';
+    }
   }
 
   // ── Share ──────────────────────────────────────────────────
