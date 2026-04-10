@@ -882,12 +882,24 @@ app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/subscription',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscription.html')));
 app.get('/mensajes',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'mensajes.html')));
 
+// Generate professional listing ID: 2 uppercase letters + 4 digits (e.g., MR3456, KP8901)
+function generateListingId() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O to avoid confusion with 1 and 0
+  const l1 = letters[Math.floor(Math.random() * letters.length)];
+  const l2 = letters[Math.floor(Math.random() * letters.length)];
+  const num = Math.floor(1000 + Math.random() * 9000); // 4-digit number, 1000-9999
+  const id = `${l1}${l2}${num}`;
+  // Check for collision (extremely unlikely but safe)
+  if (store.getListingById(id)) return generateListingId();
+  return id;
+}
+
 app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
   const body = req.body;
   const isClaim = body.submission_type === 'agency_claim';
 
   const submission = {
-    id:              Date.now().toString(),
+    id:              generateListingId(),
     creator_user_id: req.user?.sub || null,
     submission_type: isClaim ? 'agency_claim' : 'new_property',
     // Agency claim fields

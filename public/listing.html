@@ -322,8 +322,8 @@
     .sidebar-utils button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.4rem; background: none; border: 1px solid var(--border); border-radius: 8px; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s; font-family: inherit; }
     .sidebar-utils button:hover { border-color: var(--accent); color: var(--accent); }
     .sidebar-utils button svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
-    .sidebar-apply-link { display: block; text-align: center; font-size: 0.78rem; color: var(--accent); font-weight: 600; margin-top: 0.5rem; cursor: pointer; text-decoration: none; padding: 0.3rem; }
-    .sidebar-apply-link:hover { text-decoration: underline; }
+    .sidebar-apply-link { display: flex; width: 100%; text-align: center; padding: 0.75rem; background: none; border: 2px solid var(--accent); color: var(--accent); border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer; text-decoration: none; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; margin-top: 0.6rem; }
+    .sidebar-apply-link:hover { background: var(--accent); color: #fff; }
     .affiliate-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #fff; padding: 0.65rem 1.25rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 1000; white-space: nowrap; }
     .affiliate-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .modal-ref-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 10px; padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
@@ -1748,21 +1748,50 @@
           const res = await fetch('/api/mapkit-token');
           const { token } = await res.json();
           if (!token) return;
-          mapkit.init({ authorizationCallback: done => done(token) });
+
+          // Only init mapkit once — it may already be initialized from a previous page
+          if (!mapkit.maps || mapkit.maps.length === 0) {
+            mapkit.init({ authorizationCallback: done => done(token) });
+          }
+
           window._listingMap = new mapkit.Map('listingMap', {
             center: new mapkit.Coordinate(lat, lng),
             showsCompass: mapkit.FeatureVisibility.Hidden,
             showsZoomControl: true,
             showsMapTypeControl: false,
+            isScrollEnabled: true,
+            isZoomEnabled: true,
             colorScheme: document.documentElement.getAttribute('data-theme') === 'dark'
               ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light,
           });
           window._listingMap.setCameraDistanceAnimated(3000);
           const pin = new mapkit.MarkerAnnotation(
             new mapkit.Coordinate(lat, lng),
-            { color: '#006AFF', title: esc(l.title), subtitle: esc(l.address || l.city || '') }
+            { color: '#006AFF', title: esc(l.title), subtitle: esc(l.address || l.city || ''),
+              displayPriority: mapkit.Annotation.DisplayPriority.Required }
           );
           window._listingMap.addAnnotation(pin);
+
+          // Force map to redraw after a short delay (handles containers not yet visible)
+          setTimeout(() => {
+            if (window._listingMap) {
+              window._listingMap.setCenterAnimated(new mapkit.Coordinate(lat, lng), false);
+              window._listingMap.setCameraDistanceAnimated(3000);
+            }
+          }, 500);
+
+          // Also observe when the map container scrolls into view
+          const mapEl = document.getElementById('listingMap');
+          if (mapEl && typeof IntersectionObserver !== 'undefined') {
+            const observer = new IntersectionObserver((entries) => {
+              if (entries[0].isIntersecting && window._listingMap) {
+                window._listingMap.setCenterAnimated(new mapkit.Coordinate(lat, lng), false);
+                observer.disconnect();
+              }
+            }, { threshold: 0.1 });
+            observer.observe(mapEl);
+          }
+
           // Theme sync
           new MutationObserver(() => {
             if (window._listingMap) window._listingMap.colorScheme =
