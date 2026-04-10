@@ -11,29 +11,37 @@ struct SecretaryDashboardView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Tab bar
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
-                        } label: {
-                            HStack(spacing: 4) {
-                                if i == 0 {
-                                    Image(systemName: "house.fill").font(.system(size: 10))
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    if i == 0 {
+                                        Image(systemName: "house.fill").font(.system(size: 10))
+                                    }
+                                    Text(title)
                                 }
-                                Text(title)
+                                .font(.caption).bold()
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(selectedTab == i ? Color(red: 0.18, green: 0.55, blue: 0.34) : Color(.secondarySystemFill))
+                                .foregroundStyle(selectedTab == i ? .white : .primary)
+                                .clipShape(Capsule())
                             }
-                            .font(.caption).bold()
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(selectedTab == i ? Color(red: 0.18, green: 0.55, blue: 0.34) : Color(.secondarySystemFill))
-                            .foregroundStyle(selectedTab == i ? .white : .primary)
-                            .clipShape(Capsule())
+                            .buttonStyle(.plain)
+                            .id(i)
                         }
-                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                }
+                .onChange(of: selectedTab) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(selectedTab, anchor: .center)
                     }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
             }
             .background(Color(.systemBackground))
 
