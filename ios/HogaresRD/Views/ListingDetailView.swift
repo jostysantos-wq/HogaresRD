@@ -1,6 +1,15 @@
 import SwiftUI
 import MapKit
 
+/// PreferenceKey used by ListingDetailView to observe vertical scroll offset,
+/// so the floating hero overlay bar can fade out as the user scrolls past.
+private struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ListingDetailView: View {
     let id: String
     @EnvironmentObject var saved: SavedStore
@@ -19,6 +28,23 @@ struct ListingDetailView: View {
     @State private var mcDownPercent: Double = 30
     @State private var mcRate:        Double = 12
     @State private var mcTermYears:   Int    = 20
+
+    // Scroll offset for fading the hero overlay bar as user scrolls past
+    @State private var scrollOffset: CGFloat = 0
+
+    /// Opacity of the floating overlay bar. Full alpha while the hero image
+    /// is visible, fades to 0 as the user scrolls past it so the overlay
+    /// doesn't hang over the body content.
+    private var heroOverlayOpacity: Double {
+        // scrollOffset is 0 at rest, becomes more negative as user scrolls down.
+        let scrolled = max(0, -scrollOffset)
+        let fadeStart: CGFloat = heroHeight * 0.35   // start fading a bit before end of hero
+        let fadeEnd:   CGFloat = heroHeight * 0.65   // fully hidden once past the hero
+        if scrolled <= fadeStart { return 1 }
+        if scrolled >= fadeEnd   { return 0 }
+        let t = (scrolled - fadeStart) / (fadeEnd - fadeStart)
+        return Double(1 - t)
+    }
 
     private let heroHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
@@ -89,6 +115,16 @@ struct ListingDetailView: View {
             // Main scroll with images INSIDE (not behind)
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
+                    // Invisible probe that emits scroll offset via preference key.
+                    // Placed above the hero so its minY tracks the scroll origin.
+                    GeometryReader { geo in
+                        Color.clear.preference(
+                            key: ScrollOffsetKey.self,
+                            value: geo.frame(in: .named("listingScroll")).minY
+                        )
+                    }
+                    .frame(height: 0)
+
                     // Image carousel — horizontal TabView inside vertical ScrollView
                     // The .page style handles horizontal swipes independently
                     heroImages(l)
@@ -304,9 +340,16 @@ struct ListingDetailView: View {
                     .offset(y: -24) // overlap the image bottom for card effect
                 }
             }
+            .coordinateSpace(name: "listingScroll")
+            .onPreferenceChange(ScrollOffsetKey.self) { value in
+                scrollOffset = value
+            }
 
             // Floating top bar (back, share, image counter)
+            // Fades out as user scrolls past the hero image.
             heroOverlayBar(l)
+                .opacity(heroOverlayOpacity)
+                .allowsHitTesting(heroOverlayOpacity > 0.2)
 
             // Sticky CTA at the bottom
             if listing != nil {
@@ -579,19 +622,19 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func specsSection(_ l: Listing) -> some View {
-        let hasSpecs = [l.bedrooms, l.bathrooms, l.parking, l.area_const, l.area_land]
-            .contains { $0 != nil && $0 != "" }
-            || l.floors != nil || l.delivery_date != nil
+        // NOTE: Habitaciones, Baños, Parqueo and Área Const. are shown in
+        // the quickStatsBar above — don't duplicate them here. Only render
+        // the extra specs that aren't in the quick stats row.
+        let hasExtraSpecs =
+            (l.area_land?.isEmpty == false) ||
+            l.floors != nil ||
+            (l.delivery_date?.isEmpty == false)
 
-        if hasSpecs {
+        if hasExtraSpecs {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                if let b = l.bedrooms,     b != "" { SpecCard(icon: "bed.double.fill",    label: "Habitaciones", value: b) }
-                if let b = l.bathrooms,    b != "" { SpecCard(icon: "shower.fill",         label: "Baños",        value: b) }
-                if let p = l.parking,      p != "" { SpecCard(icon: "car.fill",            label: "Parqueo",      value: p) }
-                if let a = l.area_const,   a != "" { SpecCard(icon: "square.split.2x2",   label: "Área Const.",  value: "\(a) m²") }
-                if let a = l.area_land,    a != "" { SpecCard(icon: "leaf.fill",           label: "Terreno",      value: "\(a) m²") }
-                if let f = l.floors               { SpecCard(icon: "building.2.fill",     label: "Pisos",        value: "\(f)") }
-                if let d = l.delivery_date, d != "" { SpecCard(icon: "calendar",          label: "Entrega",      value: d) }
+                if let a = l.area_land,    a != "" { SpecCard(icon: "leaf.fill",       label: "Terreno", value: "\(a) m²") }
+                if let f = l.floors               { SpecCard(icon: "building.2.fill", label: "Pisos",   value: "\(f)") }
+                if let d = l.delivery_date, d != "" { SpecCard(icon: "calendar",      label: "Entrega", value: d) }
             }
         }
     }
@@ -1038,41 +1081,48 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func agencySection(_ agencies: [Agency], listing: Listing) -> some View {
-        sectionBlock("Agencia") {
+        // Like the web: we never expose raw phone/email. Users press
+        // "Contactar Agente" and the inquiry is routed + tracked through
+        // the inquiry system so we can attribute leads and notify the agent.
+        let isOwner = isMyListing(listing)
+
+        return sectionBlock("Agencia") {
             VStack(spacing: 10) {
                 ForEach(Array(agencies.enumerated()), id: \.offset) { _, agency in
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                            Image(systemName: "building.2.fill").foregroundStyle(Color.rdBlue)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            if let name = agency.name {
-                                Text(name).font(.subheadline).bold()
+                    VStack(spacing: 10) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
+                                Image(systemName: "building.2.fill").foregroundStyle(Color.rdBlue)
                             }
-                            HStack(spacing: 12) {
-                                if let phone = agency.phone, !phone.isEmpty,
-                                   let url = URL(string: "tel:\(phone.filter { $0.isNumber })") {
-                                    Link(destination: url) {
-                                        Label(phone, systemImage: "phone.fill")
-                                            .font(.caption).foregroundStyle(Color.rdGreen)
-                                    }
+                            VStack(alignment: .leading, spacing: 2) {
+                                if let name = agency.name, !name.isEmpty {
+                                    Text(name).font(.subheadline).bold()
                                 }
-                                if let email = agency.email, !email.isEmpty,
-                                   let url = URL(string: "mailto:\(email)") {
-                                    Link(destination: url) {
-                                        Label(email, systemImage: "envelope.fill")
-                                            .font(.caption).foregroundStyle(Color.rdBlue)
-                                    }
+                                Text("Agente verificado")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if let slug = agency.slug {
+                                NavigationLink { AgencyPortfolioView(slug: slug) } label: {
+                                    Text("Ver todo")
+                                        .font(.caption).bold()
+                                        .foregroundStyle(Color.rdBlue)
                                 }
                             }
                         }
-                        Spacer()
-                        if let slug = agency.slug {
-                            NavigationLink { AgencyPortfolioView(slug: slug) } label: {
-                                Text("Ver todo")
-                                    .font(.caption).bold()
-                                    .foregroundStyle(Color.rdBlue)
+
+                        if !isOwner {
+                            Button {
+                                showContactAgent = true
+                            } label: {
+                                Label("Contactar Agente", systemImage: "bubble.left.fill")
+                                    .font(.subheadline.bold())
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(.white)
                             }
                         }
                     }
