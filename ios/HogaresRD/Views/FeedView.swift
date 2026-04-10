@@ -304,10 +304,10 @@ struct ReelCard: View {
     var onSaveTap:   (() -> Void)       = { }      // called alongside heart toggle
 
     @EnvironmentObject var saved: SavedStore
+    @StateObject private var likes = LikesStore.shared
     @State private var imageIndex = 0
     @State private var heartScale: CGFloat = 1.0
     @State private var doubleTapHeart = false
-    @State private var localFavCount: Int = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -376,79 +376,60 @@ struct ReelCard: View {
                         .frame(width: geo.size.width, height: geo.size.height)
                 }
 
-                // ── Top-right controls (like + save + share) ──────────────
+                // ── Top-right photo counter only ──────────────────────
+                if listing.images.count > 1 {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Text("\(imageIndex + 1) / \(listing.images.count)")
+                                .font(.caption2).bold()
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(.ultraThinMaterial)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                                .padding(.top, 54)
+                                .padding(.trailing, 14)
+                        }
+                        Spacer()
+                    }
+                }
+
+                // ── Bottom-right action rail (TikTok/Reels style) ─────
+                // Like, Save and Share live here so they sit directly
+                // above the user's thumb on a modern phone.
                 VStack {
+                    Spacer()
                     HStack {
                         Spacer()
-                        VStack(spacing: 10) {
-                            if listing.images.count > 1 {
-                                Text("\(imageIndex + 1) / \(listing.images.count)")
-                                    .font(.caption2).bold()
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(.ultraThinMaterial)
-                                    .foregroundStyle(.white)
-                                    .clipShape(Capsule())
-                            }
-                            // Like button (heart) + count
-                            Button {
-                                toggleLike()
-                            } label: {
-                                VStack(spacing: 3) {
-                                    Image(systemName: localFavCount > 0 ? "heart.fill" : "heart")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(localFavCount > 0 ? Color.rdRed : .white)
-                                        .shadow(color: .black.opacity(0.5), radius: 4)
-                                        .scaleEffect(heartScale)
-                                    Text("\(localFavCount)")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 2)
-                                }
-                                .frame(width: 48)
-                                .frame(minHeight: 44)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .onAppear { localFavCount = listing.favoriteCount ?? 0 }
-
-                            // Save/Guardar button (bookmark)
-                            Button {
-                                toggleSave()
-                            } label: {
-                                VStack(spacing: 3) {
-                                    Image(systemName: saved.isSaved(listing.id) ? "bookmark.fill" : "bookmark")
-                                        .font(.system(size: 22, weight: .semibold))
-                                        .foregroundStyle(saved.isSaved(listing.id) ? Color.rdBlue : .white)
-                                        .shadow(color: .black.opacity(0.5), radius: 4)
-                                    Text("Guardar")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 2)
-                                }
-                                .frame(width: 48)
-                                .frame(minHeight: 44)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            // Share button
-                            Button {
-                                shareListing()
-                            } label: {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .shadow(color: .black.opacity(0.5), radius: 4)
-                                    .frame(width: 48, height: 44)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+                        VStack(spacing: 18) {
+                            feedActionButton(
+                                icon:        isLiked ? "heart.fill" : "heart",
+                                label:       formattedLikeCount,
+                                active:      isLiked,
+                                activeColor: Color.rdRed,
+                                scale:       heartScale,
+                                action:      toggleLike
+                            )
+                            feedActionButton(
+                                icon:        saved.isSaved(listing.id) ? "bookmark.fill" : "bookmark",
+                                label:       "Guardar",
+                                active:      saved.isSaved(listing.id),
+                                activeColor: Color.rdBlue,
+                                action:      toggleSave
+                            )
+                            feedActionButton(
+                                icon:        "paperplane.fill",
+                                label:       "Compartir",
+                                active:      false,
+                                activeColor: .white,
+                                action:      shareListing
+                            )
                         }
-                        .padding(.top, 48)
-                        .padding(.trailing, 4)
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 170) // clear the text overlay + tab bar
                     }
-                    Spacer()
                 }
+                .allowsHitTesting(true)
 
                 // ── Image dot indicators ─────────────────────────────
                 if listing.images.count > 1 {
@@ -559,7 +540,8 @@ struct ReelCard: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.leading, 20)
+                .padding(.trailing, 90) // leave room for the bottom-right action rail
                 .padding(.bottom, 90)
             }
             .contentShape(Rectangle())
@@ -573,34 +555,58 @@ struct ReelCard: View {
         .ignoresSafeArea()
     }
 
+    // MARK: - Like state derived from LikesStore
+
+    private var isLiked: Bool { likes.isLiked(listing.id) }
+
+    private var currentLikeCount: Int {
+        likes.count(for: listing.id, fallback: listing.likeCount ?? 0)
+    }
+
+    private var formattedLikeCount: String {
+        let n = currentLikeCount
+        if n <= 0     { return "Me gusta" }
+        if n >= 1000  { return String(format: "%.1fK", Double(n) / 1000.0) }
+        return "\(n)"
+    }
+
     // MARK: - Actions
 
-    /// Like button (heart) — visual engagement counter. Does NOT save
-    /// the listing to "Propiedades guardadas". Just bumps the like count.
+    /// Like button (heart) — per-user toggle persisted via LikesStore +
+    /// `POST /api/listings/:id/like`. Replaces the old "infinity likes"
+    /// local-counter bump and now enforces one like per user per listing.
     private func toggleLike() {
-        localFavCount += 1
-        withAnimation(.easeOut(duration: 0.15)) { heartScale = 1.2 }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(150))
-            withAnimation(.easeOut(duration: 0.1)) { heartScale = 1.0 }
+        let didToggle = likes.toggle(listing.id, currentServerCount: listing.likeCount ?? 0)
+        if didToggle {
+            withAnimation(.easeOut(duration: 0.15)) { heartScale = 1.25 }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(160))
+                withAnimation(.easeOut(duration: 0.1)) { heartScale = 1.0 }
+            }
         }
     }
 
     /// Save/Guardar button (bookmark) — adds to "Propiedades guardadas".
     /// Requires auth; guests see login sheet.
     private func toggleSave() {
-        // Haptic feedback removed for performance
         let didToggle = saved.toggle(listing.id)
         if didToggle {
             onSaveTap()
         }
     }
 
+    /// Double-tap the card → like (Instagram-style). Only flips to liked
+    /// state; double-tapping again does nothing (unlike uses the heart
+    /// button explicitly).
     private func doubleTapLike() {
-        localFavCount += 1
+        // Show the floating heart animation regardless of current state,
+        // but only actually toggle when the user isn't already liking.
         withAnimation(.easeOut(duration: 0.2)) {
             doubleTapHeart = true
-            heartScale = 1.2
+            heartScale = 1.25
+        }
+        if !isLiked {
+            _ = likes.toggle(listing.id, currentServerCount: listing.likeCount ?? 0)
         }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(600))
@@ -609,6 +615,41 @@ struct ReelCard: View {
                 heartScale = 1.0
             }
         }
+    }
+
+    // MARK: - Feed action button (reusable for like / save / share)
+
+    @ViewBuilder
+    private func feedActionButton(
+        icon: String,
+        label: String,
+        active: Bool,
+        activeColor: Color,
+        scale: CGFloat = 1.0,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack {
+                    Circle()
+                        .fill(.black.opacity(0.32))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(active ? activeColor : .white)
+                        .shadow(color: .black.opacity(0.4), radius: 3)
+                        .scaleEffect(scale)
+                }
+                Text(label)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 2)
+                    .lineLimit(1)
+            }
+            .frame(width: 58)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func shareListing() {

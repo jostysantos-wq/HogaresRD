@@ -37,6 +37,7 @@ struct Listing: Decodable, Identifiable, Equatable {
     let status:      String?
     let views:          Int?
     let favoriteCount:  Int?
+    let likeCount:      Int?
     let unitInventory:  [UnitInventoryItem]?
     let submittedAt:    String?
     let approvedAt:     String?
@@ -45,7 +46,7 @@ struct Listing: Decodable, Identifiable, Equatable {
         case id, title, type, condition, description, price,
              area_const, area_land, bedrooms, bathrooms, parking,
              province, city, sector, address, images, amenities,
-             tags, agencies, status, views, favoriteCount, submittedAt, approvedAt,
+             tags, agencies, status, views, favoriteCount, likeCount, submittedAt, approvedAt,
              project_stage, delivery_date, floors, units_available,
              units_total, unit_types, construction_company, blueprints,
              lat, lng
@@ -74,6 +75,7 @@ struct Listing: Decodable, Identifiable, Equatable {
         approvedAt           = try? c.decode(String.self, forKey: .approvedAt)
         views                = try? c.decode(Int.self,    forKey: .views)
         favoriteCount        = try? c.decode(Int.self,    forKey: .favoriteCount)
+        likeCount            = try? c.decode(Int.self,    forKey: .likeCount)
         unitInventory        = (try? c.decode([Safe<UnitInventoryItem>].self, forKey: .unitInventory))?.compactMap { $0.value } ?? []
         floors               = try? c.decode(Int.self,    forKey: .floors)
         units_available      = try? c.decode(Int.self,    forKey: .units_available)

@@ -1657,6 +1657,24 @@ class APIService: ObservableObject {
         _ = try? await session.data(for: req)
     }
 
+    /// Toggle the current user's like on a listing.
+    /// Returns the fresh server-side like count on success, or nil on failure
+    /// (so the caller can keep its optimistic count).
+    @discardableResult
+    func toggleLike(listingId: String, liked: Bool) async throws -> Int? {
+        guard let t = token else { return nil }
+        guard let url = URL(string: "\(apiBase)/api/listings/\(listingId)/like") else { return nil }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["liked": liked])
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode < 400 else { return nil }
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return json?["likeCount"] as? Int
+    }
+
     func changePassword(current: String, newPassword: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         let url = URL(string: "\(apiBase)/api/auth/change-password")!

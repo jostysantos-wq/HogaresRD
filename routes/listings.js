@@ -244,6 +244,57 @@ router.post('/:id/view', (req, res) => {
   res.json({ views: listing.views || 0 });
 });
 
+// POST /api/listings/:id/like — toggle like for the authenticated user.
+// One like per user per listing (prevents the "infinity likes" bug where
+// the iOS feed card was only incrementing a local counter). The per-user
+// set of liked listing IDs is stored on the user record alongside favorites.
+// Body: { liked: true|false }  (optional — defaults to toggle)
+router.post('/:id/like', userAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing || listing.status !== 'approved')
+    return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  if (!Array.isArray(user.likedListings)) user.likedListings = [];
+  const idx = user.likedListings.indexOf(listing.id);
+  const alreadyLiked = idx >= 0;
+
+  // Respect explicit liked:true/false when provided, otherwise toggle.
+  let shouldLike;
+  if (typeof req.body?.liked === 'boolean') {
+    shouldLike = req.body.liked;
+  } else {
+    shouldLike = !alreadyLiked;
+  }
+
+  if (shouldLike && !alreadyLiked) {
+    user.likedListings.push(listing.id);
+    listing.likeCount = (listing.likeCount || 0) + 1;
+  } else if (!shouldLike && alreadyLiked) {
+    user.likedListings.splice(idx, 1);
+    listing.likeCount = Math.max(0, (listing.likeCount || 0) - 1);
+  }
+
+  store.saveUser(user);
+  store.saveListing(listing);
+
+  res.json({
+    liked:     shouldLike,
+    likeCount: listing.likeCount || 0,
+  });
+});
+
+// GET /api/listings/:id/like — return current like state for the authed user
+router.get('/:id/like', userAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Not found' });
+  const user = store.getUserById(req.user.sub);
+  const liked = Array.isArray(user?.likedListings) && user.likedListings.includes(listing.id);
+  res.json({ liked, likeCount: listing.likeCount || 0 });
+});
+
 // POST /api/listings/:id/inquiry — send client inquiry to all affiliated agencies
 router.post('/:id/inquiry', async (req, res) => {
   const listing = store.getListingById(req.params.id);
