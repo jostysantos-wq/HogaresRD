@@ -425,7 +425,15 @@ function getListingById(id) {
 function getListings(filters = {}) {
   let items = _submissions.filter(s => s.status === 'approved').map(hydrateSubmission);
 
-  if (filters.type)       items = items.filter(i => i.type === filters.type);
+  if (filters.type) {
+    if (filters.type === 'proyecto') {
+      // "proyecto" is a virtual type — matches listings by project conditions
+      const projectConditions = ['En planos', 'Nueva construcción', 'Nueva construccion', 'proyecto_nuevo', 'planos', 'construccion', 'En construcción', 'En construccion'];
+      items = items.filter(i => projectConditions.includes(i.condition));
+    } else {
+      items = items.filter(i => i.type === filters.type);
+    }
+  }
   if (filters.condition)  items = items.filter(i => i.condition === filters.condition);
   if (filters.province)   items = items.filter(i => i.province === filters.province);
   if (filters.city)       items = items.filter(i => i.city === filters.city);
