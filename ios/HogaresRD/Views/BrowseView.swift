@@ -314,9 +314,11 @@ struct BrowseView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .onAppear     { selectedType = initialType }
+        .task {
+            if selectedType != initialType { selectedType = initialType }
+            await load(reset: true)
+        }
         .onChange(of: selectedType) { Task { await load(reset: true) } }
-        .task         { await load(reset: true) }
         .sheet(isPresented: $showFilters) { filterSheet }
         .fullScreenCover(isPresented: $showSearchPage) {
             SearchPageView(

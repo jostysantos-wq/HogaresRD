@@ -578,18 +578,11 @@ struct ReelCard: View {
     /// Like button (heart) — visual engagement counter. Does NOT save
     /// the listing to "Propiedades guardadas". Just bumps the like count.
     private func toggleLike() {
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
-            heartScale = 1.3
-        }
-        // TODO: wire to a dedicated /api/listings/:id/like endpoint if
-        // server-side like tracking is needed. For now, optimistic local.
         localFavCount += 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                heartScale = 1.0
-            }
+        withAnimation(.easeOut(duration: 0.15)) { heartScale = 1.2 }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            withAnimation(.easeOut(duration: 0.1)) { heartScale = 1.0 }
         }
     }
 
@@ -605,23 +598,15 @@ struct ReelCard: View {
     }
 
     private func doubleTapLike() {
-        let impact = UIImpactFeedbackGenerator(style: .heavy)
-        impact.impactOccurred()
-
-        // Always show the heart animation
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
-            doubleTapHeart = true
-            heartScale = 1.3
-        }
-
-        // Bump the like count
         localFavCount += 1
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            withAnimation(.easeOut(duration: 0.3)) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            doubleTapHeart = true
+            heartScale = 1.2
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            withAnimation(.easeOut(duration: 0.2)) {
                 doubleTapHeart = false
-            }
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 heartScale = 1.0
             }
         }

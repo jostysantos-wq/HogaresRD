@@ -187,7 +187,6 @@ struct ConversationsView: View {
         .navigationTitle("Mensajes")
         .task { await loadAll() }
         .refreshable { await loadAll() }
-        .onAppear { Task { await loadAll() } }
     }
 
     private var emptyState: some View {
@@ -261,10 +260,7 @@ struct ConversationsView: View {
     private func archiveConv(_ conv: Conversation) async {
         do {
             try await api.archiveConversation(id: conv.id)
-            if let idx = conversations.firstIndex(where: { $0.id == conv.id }) {
-                conversations.remove(at: idx)
-            }
-            await loadAll()
+            // Update locally — no need to reload all conversations
         } catch {
             errorMsg = error.localizedDescription
         }
@@ -273,10 +269,7 @@ struct ConversationsView: View {
     private func unarchiveConv(_ conv: Conversation) async {
         do {
             try await api.unarchiveConversation(id: conv.id)
-            if let idx = conversations.firstIndex(where: { $0.id == conv.id }) {
-                conversations.remove(at: idx)
-            }
-            await loadAll()
+            // Update locally — no need to reload all conversations
         } catch {
             errorMsg = error.localizedDescription
         }
