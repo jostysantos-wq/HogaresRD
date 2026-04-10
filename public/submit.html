@@ -805,8 +805,17 @@
               <input type="text" id="title" name="title" placeholder="Ej. Hermosa villa en Las Terrenas con piscina" required />
             </div>
             <div class="field">
-              <label for="type">Tipo de Propiedad</label>
+              <label for="type">Tipo de Listado <span class="req">*</span></label>
               <select id="type" name="type" required>
+                <option value="" disabled selected>Seleccionar</option>
+                <option value="venta">En Venta</option>
+                <option value="alquiler">En Alquiler</option>
+                <option value="venta_alquiler">Venta o Alquiler</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="property_type">Tipo de Propiedad <span class="req">*</span></label>
+              <select id="property_type" name="property_type" required>
                 <option value="" disabled selected>Seleccionar</option>
                 <option>Casa</option>
                 <option>Apartamento</option>
@@ -818,7 +827,7 @@
               </select>
             </div>
             <div class="field">
-              <label for="condition">Condición</label>
+              <label for="condition">Condicion</label>
               <select id="condition" name="condition" required>
                 <option value="" disabled selected>Seleccionar</option>
                 <option>Nueva construcción</option>
@@ -2077,9 +2086,10 @@
 
     // ── Required field setup (asterisks + error spans) ─────────
     const REQUIRED_FIELDS = [
-      { id: 'title',       msg: 'El título es requerido.' },
-      { id: 'type',        msg: 'Selecciona el tipo de propiedad.' },
-      { id: 'condition',   msg: 'Selecciona la condición.' },
+      { id: 'title',       msg: 'El titulo es requerido.' },
+      { id: 'type',        msg: 'Selecciona si es venta o alquiler.' },
+      { id: 'property_type', msg: 'Selecciona el tipo de propiedad.' },
+      { id: 'condition',   msg: 'Selecciona la condicion.' },
       { id: 'description', msg: 'La descripción es requerida.' },
       { id: 'price',       msg: 'El precio es requerido.' },
       { id: 'province',    msg: 'Selecciona la provincia.' },
