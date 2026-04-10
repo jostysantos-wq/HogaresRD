@@ -647,7 +647,7 @@ app.get('/api/mapkit-token', (req, res) => {
 
     const key = require('fs').readFileSync(keyPath, 'utf8');
     const token = require('jsonwebtoken').sign(
-      { iss: teamId, iat: Math.floor(Date.now() / 1000), origin: `${req.protocol}://${req.get('host')}` },
+      { iss: teamId, iat: Math.floor(Date.now() / 1000), origin: process.env.NODE_ENV === 'production' ? (process.env.BASE_URL || `https://${req.get('host')}`) : `${req.protocol}://${req.get('host')}` },
       key,
       { algorithm: 'ES256', expiresIn: '1h', header: { alg: 'ES256', kid: keyId, typ: 'JWT' } }
     );

@@ -1749,9 +1749,11 @@
           const { token } = await res.json();
           if (!token) return;
 
-          // Only init mapkit once — it may already be initialized from a previous page
-          if (!mapkit.maps || mapkit.maps.length === 0) {
+          // Always init with fresh token — mapkit handles re-initialization
+          try {
             mapkit.init({ authorizationCallback: done => done(token) });
+          } catch (initErr) {
+            console.warn('[listing] MapKit re-init:', initErr.message);
           }
 
           window._listingMap = new mapkit.Map('listingMap', {
