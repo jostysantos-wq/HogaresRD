@@ -391,6 +391,10 @@ struct ConversationThreadView: View {
         if !toAdd.isEmpty {
             messages.append(contentsOf: toAdd)
             lastTimestamp = toAdd.last?.timestamp
+            // New messages arrived while the thread is open — clear the
+            // unread badge on the server so it doesn't show up again when
+            // the user backs out and comes back.
+            await markRead()
         }
     }
 

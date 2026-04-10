@@ -381,12 +381,18 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
   const { text } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Mensaje vacío.' });
 
-  const isBroker = PRO_ROLES.includes(user.role);
+  // Determine sender's "side" based on conversation membership, not global role.
+  // A pro user can also BE the client in a conversation they started.
   const isClient = conv.clientId === user.sub;
   const isOwner  = conv.brokerId === user.sub;
-  // Pros can only post in conversations they're assigned to, OR unassigned
-  // ones (which they claim on first reply).
-  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
+  const isPro    = PRO_ROLES.includes(user.role);
+  // Pros can post in unclaimed conversations (and claim them on first reply).
+  const brokerHasAccess = isPro && !isClient && (isOwner || !conv.brokerId);
+  // The message is sent AS the broker only when the user is the assigned
+  // broker OR is claiming an unassigned conversation — not just because
+  // they have a pro role. This fixes the case where a pro user replies
+  // to their own inquiry (they're the client in that conv).
+  const isBroker = brokerHasAccess;
 
   if (!isClient && !brokerHasAccess) {
     return res.status(403).json({ error: 'Sin acceso.' });
@@ -632,27 +638,52 @@ router.put('/:id/unarchive', requireLogin, (req, res) => {
 });
 
 // ── PUT /api/conversations/:id/read ──────────────────────────────────────
+//
+// Clears the unread counter for the side the caller is on.
+//
+// IMPORTANT: "which side" is determined by the user's membership in THIS
+// conversation, NOT by their global role. A pro user (inmobiliaria / agency /
+// broker / constructora) can also be the CLIENT of a conversation when they
+// inquire on another agent's listing. Before this fix the endpoint always
+// cleared `unreadBroker` for any pro user, even when they were reading as
+// a client — so `unreadClient` was never cleared and the badge came back on
+// the next app launch.
 router.put('/:id/read', requireLogin, (req, res) => {
   const user = getUser(req);
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  const isBroker = PRO_ROLES.includes(user.role);
-  const isClient = conv.clientId === user.sub;
-  const isOwner  = conv.brokerId === user.sub;
-  const brokerHasAccess = isBroker && (isOwner || !conv.brokerId);
-  if (!isClient && !brokerHasAccess) {
+  const isClientSide = conv.clientId === user.sub;
+  const isAssignedBroker = conv.brokerId && conv.brokerId === user.sub;
+
+  // A pro user with access to an UNCLAIMED org conversation (brokerId still
+  // null, inmobiliariaId matches their org) is acting as the broker here.
+  const isPro = PRO_ROLES.includes(user.role);
+  let hasOrgAccess = false;
+  if (isPro && !conv.brokerId && conv.inmobiliariaId) {
+    const fullUser = store.getUserById(user.sub);
+    const orgId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+      ? fullUser.id
+      : fullUser?.inmobiliaria_id;
+    hasOrgAccess = orgId === conv.inmobiliariaId;
+  }
+
+  const isBrokerSide = isAssignedBroker || hasOrgAccess;
+  // Admins can act as either side; fall back to broker-side clearing.
+  const isAdmin = user.role === 'admin';
+
+  if (!isClientSide && !isBrokerSide && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
-  if (isBroker) {
-    conv.unreadBroker = 0;
-  } else {
-    conv.unreadClient = 0;
-  }
+  // Clear BOTH counters when the user is ambiguously both (e.g. a pro user
+  // who both owns the broker side AND is the client id — shouldn't happen
+  // in practice but we don't want stuck badges).
+  if (isClientSide) conv.unreadClient = 0;
+  if (isBrokerSide || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
 
   store.saveConversation(conv);
-  res.json({ ok: true });
+  res.json({ ok: true, unreadClient: conv.unreadClient || 0, unreadBroker: conv.unreadBroker || 0 });
 });
 
 module.exports = router;
