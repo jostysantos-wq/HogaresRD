@@ -245,18 +245,24 @@ struct ContactTimelineView: View {
     // MARK: - Status Badge
 
     private func statusBadge(_ status: String) -> some View {
-        let (label, color): (String, Color) = {
-            switch status {
-            case "aprobado", "completada", "completed", "confirmed": return (status.capitalized, .rdGreen)
-            case "rechazado", "rejected", "cancelled", "cancelada": return (status.capitalized, .rdRed)
-            case "en_revision", "pending", "pendiente": return ("Pendiente", .orange)
-            case "activa": return ("Activa", .rdBlue)
-            case "cerrada": return ("Cerrada", .secondary)
-            default: return (status.capitalized, .secondary)
-            }
-        }()
+        let label: String
+        let color: Color
+        switch status {
+        case "aprobado", "completada", "completed", "confirmed":
+            label = status.capitalized; color = .rdGreen
+        case "rechazado", "rejected", "cancelled", "cancelada":
+            label = status.capitalized; color = .rdRed
+        case "en_revision", "pending", "pendiente":
+            label = "Pendiente"; color = .orange
+        case "activa":
+            label = "Activa"; color = .rdBlue
+        case "cerrada":
+            label = "Cerrada"; color = .secondary
+        default:
+            label = status.capitalized; color = .secondary
+        }
 
-        Text(label)
+        return Text(label)
             .font(.system(size: 10, weight: .bold))
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 3)

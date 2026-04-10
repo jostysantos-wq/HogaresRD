@@ -1669,6 +1669,42 @@ class APIService: ObservableObject {
         UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
         UserDefaults.standard.set(token, forKey: "rd_token")
     }
+
+    // MARK: - Contact Timeline CRM
+
+    func getContacts() async throws -> [ContactSummary] {
+        let url = URL(string: "\(apiBase)/api/contacts")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando contactos")
+        return try decoder.decode(ContactsResponse.self, from: data).contacts
+    }
+
+    func getContactTimeline(contactId: String, type: String? = nil) async throws -> ContactTimelineResponse {
+        var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline")!
+        if let type = type { comps.queryItems = [URLQueryItem(name: "type", value: type)] }
+        let req = try authedRequest(comps.url!)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando timeline")
+        return try decoder.decode(ContactTimelineResponse.self, from: data)
+    }
+
+    // MARK: - Payments CRM
+
+    func getPaymentsSummary() async throws -> PaymentsSummaryResponse {
+        let url = URL(string: "\(apiBase)/api/payments/summary")!
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando pagos")
+        return try decoder.decode(PaymentsSummaryResponse.self, from: data)
+    }
+
+    func sendPaymentReminder(applicationId: String, installmentId: String) async throws {
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/notify")!
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error enviando recordatorio")
+    }
 }
 
 struct AgencyDetail: Decodable {
@@ -1687,41 +1723,6 @@ struct AgencyDetail: Decodable {
         total  = try c.decode(Int.self,    forKey: .total)
         pages  = try c.decode(Int.self,    forKey: .pages)
         listings = (try? c.decode([Safe<Listing>].self, forKey: .listings))?.compactMap { $0.value } ?? []
-    }
-}
-
-    // MARK: - Contact Timeline CRM
-
-    func getContacts() async throws -> [ContactSummary] {
-        let url = URL(string: "\(apiBase)/api/contacts")!
-        let req = try authedRequest(url)
-        let (data, resp) = try await session.data(for: req)
-        try throwIfErr(data, resp, fallback: "Error cargando contactos")
-        return try decoder.decode(ContactsResponse.self, from: data).contacts
-    }
-
-    func getPaymentsSummary() async throws -> PaymentsSummaryResponse {
-        let url = URL(string: "\(apiBase)/api/payments/summary")!
-        let req = try authedRequest(url)
-        let (data, resp) = try await session.data(for: req)
-        try throwIfErr(data, resp, fallback: "Error cargando pagos")
-        return try decoder.decode(PaymentsSummaryResponse.self, from: data)
-    }
-
-    func sendPaymentReminder(applicationId: String, installmentId: String) async throws {
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/notify")!
-        let req = try authedRequest(url, method: "POST")
-        let (data, resp) = try await session.data(for: req)
-        try throwIfErr(data, resp, fallback: "Error enviando recordatorio")
-    }
-
-    func getContactTimeline(contactId: String, type: String? = nil) async throws -> ContactTimelineResponse {
-        var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline")!
-        if let type = type { comps.queryItems = [URLQueryItem(name: "type", value: type)] }
-        let req = try authedRequest(comps.url!)
-        let (data, resp) = try await session.data(for: req)
-        try throwIfErr(data, resp, fallback: "Error cargando timeline")
-        return try decoder.decode(ContactTimelineResponse.self, from: data)
     }
 }
 

@@ -205,15 +205,15 @@ struct PaymentsTabView: View {
                             if days < 0 {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 10))
-                                    .foregroundStyle(.rdRed)
+                                    .foregroundStyle(Color.rdRed)
                             }
                             Text(p.formattedDueDate)
                                 .font(.subheadline.bold())
-                                .foregroundStyle(days < 0 ? .rdRed : days <= 3 ? .orange : .primary)
+                                .foregroundStyle(days < 0 ? Color.rdRed : days <= 3 ? Color.orange : Color.primary)
                         }
                         Text(days == 0 ? "Hoy" : days == 1 ? "Manana" : days < 0 ? "Hace \(abs(days))d" : "En \(days)d")
                             .font(.caption2.bold())
-                            .foregroundStyle(days < 0 ? .rdRed : days <= 3 ? .orange : .secondary)
+                            .foregroundStyle(days < 0 ? Color.rdRed : days <= 3 ? Color.orange : Color.secondary)
                     } else {
                         Text("—")
                             .font(.subheadline)
@@ -251,7 +251,7 @@ struct PaymentsTabView: View {
                     if p.proofUploaded == true {
                         Label("Comprobante subido", systemImage: "doc.fill")
                             .font(.caption2.bold())
-                            .foregroundStyle(.rdBlue)
+                            .foregroundStyle(Color.rdBlue)
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color.rdBlue.opacity(0.08))
                             .clipShape(Capsule())

@@ -32,6 +32,9 @@
 		AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C3 /* BrokerDashboardView.swift */; };
 		AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */; };
 		AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000FF /* DashboardHomeView.swift */; };
+		AA55000000000000000000000201 /* ContactsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000200 /* ContactsListView.swift */; };
+		AA55000000000000000000000203 /* ContactTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000202 /* ContactTimelineView.swift */; };
+		AA55000000000000000000000205 /* PaymentsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000000204 /* PaymentsTabView.swift */; };
 		AA55000000000000000000C1 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B1 /* Conversation.swift */; };
 		AA55000000000000000000C2 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B2 /* Application.swift */; };
 		AA55000000000000000000C3 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA55000000000000000000B3 /* ConversationsView.swift */; };
@@ -93,6 +96,9 @@
 		AA550000000000000000000000C3 /* BrokerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerDashboardView.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InmobiliariaDashboardView.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000FF /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000000200 /* ContactsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsListView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000000202 /* ContactTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTimelineView.swift; sourceTree = "<group>"; };
+		AA55000000000000000000000204 /* PaymentsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentsTabView.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B1 /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B2 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		AA55000000000000000000B3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
@@ -211,6 +217,9 @@
 				AA11000000000000000000BA /* AuthView.swift */,
 				AA550000000000000000000000C3 /* BrokerDashboardView.swift */,
 				AA550000000000000000000000FF /* DashboardHomeView.swift */,
+				AA55000000000000000000000200 /* ContactsListView.swift */,
+				AA55000000000000000000000202 /* ContactTimelineView.swift */,
+				AA55000000000000000000000204 /* PaymentsTabView.swift */,
 				AA550000000000000000000000C5 /* InmobiliariaDashboardView.swift */,
 				AA11000000000000000000BB /* ProfileView.swift */,
 				AA55000000000000000011 /* SubscriptionView.swift */,
@@ -354,6 +363,9 @@
 				AA550000000000000000000000C2 /* DashboardModels.swift in Sources */,
 				AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */,
 				AA55000000000000000000000100 /* DashboardHomeView.swift in Sources */,
+				AA55000000000000000000000201 /* ContactsListView.swift in Sources */,
+				AA55000000000000000000000203 /* ContactTimelineView.swift in Sources */,
+				AA55000000000000000000000205 /* PaymentsTabView.swift in Sources */,
 				AA550000000000000000000000C6 /* InmobiliariaDashboardView.swift in Sources */,
 				AA55000000000000000000C3 /* ConversationsView.swift in Sources */,
 				AA55000000000000000000C4 /* ConversationThreadView.swift in Sources */,
