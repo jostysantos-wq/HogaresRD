@@ -2192,6 +2192,26 @@ class APIService: ObservableObject {
         return try decoder.decode(SubscriptionStatus.self, from: data)
     }
 
+    // MARK: - Application state poll
+
+    /// Lightweight GET /:id/state — returns a ~200-byte envelope with
+    /// just enough fields to decide "do I need to re-fetch the full
+    /// detail?". Intended for periodic polling while a detail view is
+    /// open. Returns nil on any error so the caller can just ignore it.
+    func getApplicationState(id: String) async -> ApplicationState? {
+        guard let t = token else { return nil }
+        guard let url = URL(string: "\(apiBase)/api/applications/\(id)/state") else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, resp) = try await session.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 { return nil }
+            return try? decoder.decode(ApplicationState.self, from: data)
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Document Review (archive tab)
 
     /// PUT /api/applications/:id/documents/:docId/review
@@ -2322,6 +2342,49 @@ class APIService: ObservableObject {
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error actualizando propiedad")
+    }
+}
+
+// MARK: - Application state poll payload
+
+/// Lightweight envelope returned by GET /api/applications/:id/state.
+/// iOS uses the `version` string as an etag: if it differs from the
+/// last seen version, the caller re-fetches the full detail.
+struct ApplicationState: Decodable, Equatable {
+    let id: String
+    let status: String
+    let lastEventAt: String?
+    let lastEventType: String?
+    let docCount: Int
+    let docPendingReview: Int
+    let paymentStatus: String
+    let installmentCount: Int
+    let installmentPendingReview: Int
+    let version: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, version
+        case lastEventAt             = "last_event_at"
+        case lastEventType           = "last_event_type"
+        case docCount                = "doc_count"
+        case docPendingReview        = "doc_pending_review"
+        case paymentStatus           = "payment_status"
+        case installmentCount        = "installment_count"
+        case installmentPendingReview = "installment_pending_review"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id                       = (try? c.decode(String.self, forKey: .id)) ?? ""
+        status                   = (try? c.decode(String.self, forKey: .status)) ?? ""
+        lastEventAt              = try? c.decode(String.self, forKey: .lastEventAt)
+        lastEventType            = try? c.decode(String.self, forKey: .lastEventType)
+        docCount                 = (try? c.decode(Int.self, forKey: .docCount)) ?? 0
+        docPendingReview         = (try? c.decode(Int.self, forKey: .docPendingReview)) ?? 0
+        paymentStatus            = (try? c.decode(String.self, forKey: .paymentStatus)) ?? "none"
+        installmentCount         = (try? c.decode(Int.self, forKey: .installmentCount)) ?? 0
+        installmentPendingReview = (try? c.decode(Int.self, forKey: .installmentPendingReview)) ?? 0
+        version                  = (try? c.decode(String.self, forKey: .version)) ?? ""
     }
 }
 

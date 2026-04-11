@@ -28,6 +28,13 @@ struct ApplicationDetailView: View {
     @State private var showMessageSheet  = false
     @State private var showCommissionSheet = false
 
+    // Workflow action bar state
+    @State private var workflowBusy      = false
+    @State private var workflowError: String?
+
+    // Polling state
+    @State private var lastStateVersion: String?
+
     enum DetailTab: String, CaseIterable, Identifiable {
         case resumen    = "Resumen"
         case documentos = "Documentos"
@@ -71,6 +78,11 @@ struct ApplicationDetailView: View {
             }
         }
         .task { await load() }
+        .task {
+            // Polls /:id/state every ~20s while the view is on screen.
+            // Automatically cancelled when the view disappears.
+            await startStatePolling()
+        }
         .refreshable { await load() }
         // Re-fetch every time the app comes back to the foreground so the
         // broker never acts on a detail that's older than the last time
@@ -188,6 +200,15 @@ struct ApplicationDetailView: View {
 
     @ViewBuilder
     private func resumenSection(_ d: ApplicationDetail) -> some View {
+        // Primary action bar — the broker's single most important
+        // "next thing" based on the current workflow stage.
+        primaryActionBar(for: d)
+
+        // Progress checklist — linear view of the workflow showing
+        // where the application currently is and what's blocked on
+        // whom.
+        workflowChecklistView(for: d)
+
         // Client info
         infoBlock(title: "Información del Cliente") {
             infoRow("Nombre",        d.client.name)
@@ -471,6 +492,286 @@ struct ApplicationDetailView: View {
         }
     }
 
+    // MARK: - Workflow Checklist + Primary Action Bar
+
+    @ViewBuilder
+    private func primaryActionBar(for d: ApplicationDetail) -> some View {
+        if let step = WorkflowChecklist.primaryAction(for: d.status) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Context line
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(step.actor.color)
+                        .frame(width: 6, height: 6)
+                    Text("Siguiente paso · \(step.actor.label)")
+                        .font(.caption2).bold()
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                }
+
+                Text(step.title)
+                    .font(.headline)
+                Text(step.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                // Primary + optional secondary action
+                HStack(spacing: 8) {
+                    if let label = step.actionLabel, let action = step.action {
+                        Button {
+                            handleWorkflowAction(action, on: d)
+                        } label: {
+                            HStack {
+                                if workflowBusy { ProgressView().tint(.white) }
+                                Image(systemName: step.icon)
+                                Text(label)
+                            }
+                            .font(.subheadline.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(step.actor == .client ? Color.orange : Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(workflowBusy)
+                    }
+
+                    if let secondary = WorkflowChecklist.secondaryAction(for: d.status),
+                       let sLabel = secondary.actionLabel,
+                       let sAction = secondary.action {
+                        Button {
+                            handleWorkflowAction(sAction, on: d)
+                        } label: {
+                            HStack {
+                                Image(systemName: secondary.icon)
+                                Text(sLabel)
+                            }
+                            .font(.subheadline.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .foregroundStyle(Color.rdBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(workflowBusy)
+                    }
+                }
+
+                if let err = workflowError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.rdBlue.opacity(0.25), lineWidth: 1)
+            )
+        } else if d.status == "completado" {
+            workflowBanner(icon: "checkmark.seal.fill",
+                           color: .green,
+                           title: "Aplicación completada",
+                           subtitle: "Registra la comisión si aún no lo has hecho.")
+        } else if d.status == "rechazado" {
+            workflowBanner(icon: "xmark.octagon.fill",
+                           color: .red,
+                           title: "Aplicación rechazada",
+                           subtitle: d.status_reason ?? "Puedes reabrir esta aplicación desde el menú.")
+        }
+    }
+
+    private func workflowBanner(icon: String, color: Color, title: String, subtitle: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.bold())
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func workflowChecklistView(for d: ApplicationDetail) -> some View {
+        let steps = WorkflowChecklist.steps(for: d.status)
+
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Label("Progreso", systemImage: "list.bullet.clipboard")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Text("\(completedStepCount(steps, status: d.status)) de \(steps.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 8)
+
+            VStack(spacing: 0) {
+                ForEach(Array(steps.enumerated()), id: \.element.id) { idx, step in
+                    checklistRow(step: step,
+                                 status: d.status,
+                                 isFirst: idx == 0,
+                                 isLast: idx == steps.count - 1)
+                }
+            }
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func completedStepCount(_ steps: [WorkflowStep], status: String) -> Int {
+        steps.filter { WorkflowChecklist.rowState(for: $0, status: status) == .done }.count
+    }
+
+    @ViewBuilder
+    private func checklistRow(step: WorkflowStep,
+                              status: String,
+                              isFirst: Bool,
+                              isLast: Bool) -> some View {
+        let state = WorkflowChecklist.rowState(for: step, status: status)
+
+        HStack(alignment: .top, spacing: 12) {
+            // Left: indicator + connector line
+            VStack(spacing: 0) {
+                ZStack {
+                    Circle()
+                        .fill(indicatorFill(state))
+                        .frame(width: 24, height: 24)
+                    Image(systemName: indicatorIcon(state))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(indicatorIconColor(state))
+                }
+                if !isLast {
+                    Rectangle()
+                        .fill(state == .done ? Color.green.opacity(0.35) : Color(.separator))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+            }
+            .frame(width: 24)
+
+            // Right: title + subtitle + actor chip
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(step.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(titleColor(state))
+                    if state == .active || state == .waiting {
+                        Text(state == .waiting ? "ESPERANDO" : "ACTUAL")
+                            .font(.system(size: 8, weight: .heavy))
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(state == .waiting ? Color.orange : Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
+                }
+                Text(step.subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(state == .future ? .tertiary : .secondary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, isFirst || isLast ? 6 : 8)
+    }
+
+    private func indicatorFill(_ state: WorkflowChecklist.RowState) -> Color {
+        switch state {
+        case .done:    return .green
+        case .active:  return .rdBlue
+        case .waiting: return .orange
+        case .future:  return Color(.tertiarySystemFill)
+        }
+    }
+    private func indicatorIcon(_ state: WorkflowChecklist.RowState) -> String {
+        switch state {
+        case .done:    return "checkmark"
+        case .active:  return "play.fill"
+        case .waiting: return "hourglass"
+        case .future:  return "circle"
+        }
+    }
+    private func indicatorIconColor(_ state: WorkflowChecklist.RowState) -> Color {
+        switch state {
+        case .done, .active, .waiting: return .white
+        case .future: return .secondary
+        }
+    }
+    private func titleColor(_ state: WorkflowChecklist.RowState) -> Color {
+        switch state {
+        case .done:    return .primary
+        case .active:  return .primary
+        case .waiting: return .primary
+        case .future:  return .secondary
+        }
+    }
+
+    // MARK: - Workflow Action Handler
+
+    private func handleWorkflowAction(_ action: WorkflowAction, on d: ApplicationDetail) {
+        workflowError = nil
+        switch action {
+        case .setStatus(let newStatus, let reasonRequired):
+            if reasonRequired {
+                // Open the status sheet so the broker can enter a reason.
+                showStatusSheet = true
+            } else {
+                Task { await changeStatus(to: newStatus) }
+            }
+        case .openDocumentRequest:
+            showDocsSheet = true
+        case .reviewDocuments:
+            selectedTab = .documentos
+        case .reviewPayment:
+            // Route to the payments tab of the parent dashboard — for
+            // now we open the ChangeStatusSheet which will surface the
+            // waiting explanation. A future pass can deep-link straight
+            // into ReviewPaymentSheet.
+            showStatusSheet = true
+        case .contactClient:
+            showMessageSheet = true
+        case .openCommission:
+            showCommissionSheet = true
+        case .remindClient:
+            showMessageSheet = true
+        }
+    }
+
+    private func changeStatus(to newStatus: String) async {
+        workflowBusy = true
+        defer { workflowBusy = false }
+        do {
+            let updated = try await api.updateApplicationStatus(
+                id: id,
+                newStatus: newStatus,
+                reason: ""
+            )
+            detail = updated
+        } catch {
+            if case .server(let s)? = error as? APIError {
+                workflowError = s
+                // On stale state errors, refresh so the UI catches up.
+                if s.contains("Transición no válida") || s.contains("automáticamente") {
+                    await load()
+                }
+            } else {
+                workflowError = "Error al actualizar el estado"
+            }
+        }
+    }
+
     // MARK: - Load
 
     private func load() async {
@@ -478,11 +779,36 @@ struct ApplicationDetailView: View {
         errorMsg = nil
         do {
             detail = try await api.fetchApplicationDetail(id: id)
+            lastStateVersion = nil  // reset the poll baseline
         } catch {
             if case .server(let s)? = error as? APIError { errorMsg = s }
             else { errorMsg = "No se pudo cargar la aplicación" }
         }
         loading = false
+    }
+
+    // MARK: - Lightweight state polling
+
+    /// Polls /:id/state every ~20s while the detail view is visible.
+    /// Only re-fetches the full detail if the server's state `version`
+    /// has changed — so 99% of polls are a single cheap round trip.
+    private func startStatePolling() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 20_000_000_000)
+            if Task.isCancelled { break }
+            let state = await api.getApplicationState(id: id)
+            guard let state = state else { continue }
+            if let last = lastStateVersion, last == state.version { continue }
+            lastStateVersion = state.version
+            // First poll after load — just record the baseline.
+            if detail?.status != state.status {
+                await load()
+            } else {
+                // Even if status didn't change, other signals could
+                // have (new doc, new payment). Refresh the detail.
+                await load()
+            }
+        }
     }
 
     // MARK: - Small helpers

@@ -944,6 +944,56 @@ router.get('/:id', userAuth, (req, res) => {
   res.json(app);
 });
 
+// ── GET /:id/state  — Lightweight state poll ─────────────────────
+// Returns just enough to reconcile a cached detail without re-fetching
+// the whole application. Intended for periodic polling from iOS/web
+// while a detail view is open. Response body is ~200 bytes.
+//
+// The `version` is a monotonically increasing counter the client can
+// use to decide "do I need to re-fetch?" — it bumps on any status
+// change, new timeline event, or document/payment update.
+router.get('/:id/state', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const isClient = app.client.user_id === req.user.sub ||
+                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+  const admin = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  // Compute a cheap version key from the fields that matter. Any
+  // change to the status, last timeline event, uploaded doc count,
+  // or payment state bumps the hash, so the client can compare and
+  // decide whether to re-fetch the full detail.
+  const lastEvent = (app.timeline_events || []).slice(-1)[0];
+  const lastEventAt = lastEvent?.created_at || app.updated_at || app.created_at || '';
+  const docCount    = (app.documents_uploaded || []).length;
+  const docPending  = (app.documents_uploaded || []).filter(d => !d.review_status || d.review_status === 'pending').length;
+  const payStatus   = app.payment?.verification_status || 'none';
+  const installmentCount = app.payment_plan?.installments?.length || 0;
+  const installmentPending = (app.payment_plan?.installments || []).filter(i => i.status === 'proof_uploaded').length;
+
+  res.json({
+    id:                 app.id,
+    status:             app.status,
+    last_event_at:      lastEventAt,
+    last_event_type:    lastEvent?.type || null,
+    updated_at:         app.updated_at || null,
+    doc_count:          docCount,
+    doc_pending_review: docPending,
+    payment_status:     payStatus,
+    installment_count:  installmentCount,
+    installment_pending_review: installmentPending,
+    // Monotonic-ish key — iOS compares as a string.
+    version: `${app.status}|${lastEventAt}|${docCount}|${docPending}|${payStatus}|${installmentPending}`,
+  });
+});
+
 // ══════════════════════════════════════════════════════════════════
 // ── PUT /:id/status  — Change status ─────────────────────────────
 // ══════════════════════════════════════════════════════════════════

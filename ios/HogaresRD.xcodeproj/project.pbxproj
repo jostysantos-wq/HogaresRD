@@ -26,6 +26,7 @@
 		AA22000000000000000000E1 /* LikesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000E0 /* LikesStore.swift */; };
 		AA22000000000000000000F1 /* Commission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000F0 /* Commission.swift */; };
 		AA2200000000000000000101 /* ApplicationDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000100 /* ApplicationDetail.swift */; };
+		AA2200000000000000000121 /* WorkflowChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000120 /* WorkflowChecklist.swift */; };
 		AA2200000000000000000111 /* ApplicationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000110 /* ApplicationDetailView.swift */; };
 		AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C2 /* AgencyPortfolioView.swift */; };
 		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
@@ -98,6 +99,7 @@
 		AA22000000000000000000E0 /* LikesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikesStore.swift; sourceTree = "<group>"; };
 		AA22000000000000000000F0 /* Commission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Commission.swift; sourceTree = "<group>"; };
 		AA2200000000000000000100 /* ApplicationDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDetail.swift; sourceTree = "<group>"; };
+		AA2200000000000000000120 /* WorkflowChecklist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowChecklist.swift; sourceTree = "<group>"; };
 		AA2200000000000000000110 /* ApplicationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDetailView.swift; sourceTree = "<group>"; };
 		AA22000000000000000000C2 /* AgencyPortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPortfolioView.swift; sourceTree = "<group>"; };
 		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
@@ -199,6 +201,7 @@
 				AA22000000000000000000E0 /* LikesStore.swift */,
 				AA22000000000000000000F0 /* Commission.swift */,
 				AA2200000000000000000100 /* ApplicationDetail.swift */,
+				AA2200000000000000000120 /* WorkflowChecklist.swift */,
 				AA11000000000000000000B4 /* User.swift */,
 				AA33000000000000000000C1 /* Ad.swift */,
 				AA55000000000000000000B1 /* Conversation.swift */,
@@ -380,6 +383,7 @@
 				AA22000000000000000000E1 /* LikesStore.swift in Sources */,
 				AA22000000000000000000F1 /* Commission.swift in Sources */,
 				AA2200000000000000000101 /* ApplicationDetail.swift in Sources */,
+				AA2200000000000000000121 /* WorkflowChecklist.swift in Sources */,
 				AA2200000000000000000111 /* ApplicationDetailView.swift in Sources */,
 				AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
