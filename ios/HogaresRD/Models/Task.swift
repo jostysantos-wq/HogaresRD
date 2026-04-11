@@ -14,6 +14,10 @@ struct TaskItem: Decodable, Identifiable {
     let listingId: String?
     let source: String?
     let sourceEvent: String?
+    // Related listing metadata enriched by the server
+    let listingTitle: String?
+    let listingImage: String?
+    let listingCity: String?
     // Approval workflow fields
     let approvalStatus: String?   // null | pending_review | approved | rejected
     let reviewNotes: String?
@@ -33,6 +37,9 @@ struct TaskItem: Decodable, Identifiable {
         case applicationId  = "application_id"
         case listingId      = "listing_id"
         case sourceEvent    = "source_event"
+        case listingTitle   = "listing_title"
+        case listingImage   = "listing_image"
+        case listingCity    = "listing_city"
         case approvalStatus = "approval_status"
         case reviewNotes    = "review_notes"
         case reviewedAt     = "reviewed_at"
@@ -58,6 +65,9 @@ struct TaskItem: Decodable, Identifiable {
         listingId      = try? c.decode(String.self, forKey: .listingId)
         source         = try? c.decode(String.self, forKey: .source)
         sourceEvent    = try? c.decode(String.self, forKey: .sourceEvent)
+        listingTitle   = try? c.decode(String.self, forKey: .listingTitle)
+        listingImage   = try? c.decode(String.self, forKey: .listingImage)
+        listingCity    = try? c.decode(String.self, forKey: .listingCity)
         approvalStatus = try? c.decode(String.self, forKey: .approvalStatus)
         reviewNotes    = try? c.decode(String.self, forKey: .reviewNotes)
         reviewedAt     = try? c.decode(String.self, forKey: .reviewedAt)

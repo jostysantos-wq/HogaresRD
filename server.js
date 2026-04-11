@@ -931,6 +931,10 @@ app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
     condition:   isClaim ? '' : (body.condition    || ''),
     description: isClaim ? '' : (body.description  || ''),
     price:       isClaim ? '' : (body.price        || ''),
+    // Optional upper bound — lets projects advertise a price RANGE
+    // ("from $90,000 to $150,000") without locking in a single price.
+    // Empty string when the listing is a single unit with one price.
+    priceMax:    isClaim ? '' : (body.priceMax     || ''),
     area_const:  isClaim ? '' : (body.area_const   || ''),
     area_land:   isClaim ? '' : (body.area_land    || ''),
     bedrooms:    isClaim ? '' : (body.bedrooms     || ''),
@@ -1090,13 +1094,18 @@ app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
       const baseName = (ut.name || 'Unidad').trim();
       // Use custom unit IDs if the broker provided them, otherwise auto-generate
       const customIds = Array.isArray(ut.unitIds) ? ut.unitIds.filter(Boolean) : [];
+      // Floors can either be a single number applied to every unit
+      // in this type, or a per-unit array matching customIds length.
+      const floorArr = Array.isArray(ut.floors) ? ut.floors : [];
+      const floorSingle = ut.floor || '';
       for (let i = 1; i <= count; i++) {
         const label = customIds[i - 1] || `${baseName}-${String(i).padStart(2, '0')}`;
+        const unitFloor = floorArr[i - 1] || floorSingle || '';
         inventory.push({
           id:            'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           label,
           type:          `${baseName}${ut.bedrooms ? ' · ' + ut.bedrooms + ' hab.' : ''}${ut.area ? ' · ' + ut.area + ' m²' : ''}`,
-          floor:         '',
+          floor:         String(unitFloor || ''),
           notes:         ut.price ? `Precio: $${Number(ut.price).toLocaleString()}` : '',
           status:        'available',
           applicationId: null,

@@ -145,6 +145,39 @@ router.get('/agencies', (req, res) => {
   res.json({ agencies });
 });
 
+// GET /api/inmobiliarias — list all REGISTERED inmobiliaria users.
+// Unlike /api/agencies (which aggregates names across existing
+// listings), this one queries the user table so the submit form can
+// surface actual accounts in a searchable dropdown — letting brokers
+// link a new listing to a specific inmobiliaria that has a user.
+router.get('/inmobiliarias', (req, res) => {
+  const inm   = store.getUsersByRole ? store.getUsersByRole('inmobiliaria') : [];
+  const cons  = store.getUsersByRole ? store.getUsersByRole('constructora') : [];
+  const users = [...(inm || []), ...(cons || [])];
+  const q = (req.query.q || '').toString().trim().toLowerCase();
+  const list = users
+    .map(u => ({
+      id:          u.id,
+      name:        u.name || u.companyName || u.email || '',
+      companyName: u.companyName || u.agencyName || u.name || '',
+      email:       u.email || '',
+      phone:       u.phone || '',
+      logo:        u.logoUrl || u.avatarUrl || null,
+      role:        u.role,
+    }))
+    .filter(u => u.name); // drop anonymous records
+  // Fuzzy filter by q if provided
+  const filtered = q
+    ? list.filter(u => {
+        const hay = `${u.name} ${u.companyName} ${u.email}`.toLowerCase();
+        return hay.includes(q);
+      })
+    : list;
+  // Sort alphabetically for a stable dropdown
+  filtered.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  res.json({ inmobiliarias: filtered });
+});
+
 // GET /api/listings/constructoras — list all construction companies with listing counts
 router.get('/constructoras', (req, res) => {
   const listings = store.getListings();
@@ -422,8 +455,8 @@ router.put('/:id', userAuth, (req, res) => {
   const FIELDS = [
     // Basic
     'title', 'description', 'type', 'propertyType', 'condition',
-    // Pricing
-    'price', 'currency', 'priceDOP',
+    // Pricing — priceMax is the upper bound for price-range listings
+    'price', 'priceMax', 'currency', 'priceDOP',
     // Specs
     'bedrooms', 'bathrooms', 'parking',
     'area_const', 'area_land',

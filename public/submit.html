@@ -568,7 +568,7 @@
     .unit-types-section { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }
     .unit-types-label { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
     .unit-table { width: 100%; margin-bottom: 0.5rem; overflow-x: auto; }
-    .unit-table-header, .unit-table-row { display: grid; grid-template-columns: 2fr 0.7fr 0.7fr 1fr 1.5fr 1fr 0.7fr 36px; gap: 0.5rem; align-items: center; min-width: 0; }
+    .unit-table-header, .unit-table-row { display: grid; grid-template-columns: 1.6fr 0.6fr 0.6fr 0.6fr 0.9fr 1.3fr 0.9fr 0.6fr 36px; gap: 0.5rem; align-items: center; min-width: 0; }
     .unit-table-header { padding: 0 0 0.4rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
     .unit-table-header span { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .unit-table-row { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
@@ -673,7 +673,7 @@
       .btn { padding: 0.75rem 1.5rem; font-size: 0.9rem; }
       .review-grid { grid-template-columns: 1fr; }
       main { padding: 0 1rem; }
-      .unit-table-header, .unit-table-row { grid-template-columns: 1.5fr 0.6fr 0.6fr 0.8fr 1.2fr 0.8fr 0.6fr 28px; gap: 0.3rem; }
+      .unit-table-header, .unit-table-row { grid-template-columns: 1.3fr 0.5fr 0.5fr 0.5fr 0.7fr 1fr 0.7fr 0.5fr 28px; gap: 0.3rem; }
       .unit-table-row input { padding: 0.45rem 0.35rem; font-size: 0.78rem; }
     }
     @media (max-width: 400px) {
@@ -867,18 +867,30 @@
             Precio y Área
           </div>
           <div class="grid-3">
-            <div class="field">
-              <label for="price" id="priceLabel">Precio</label>
+            <div class="field" style="grid-column:span 3;">
+              <!-- Price-range toggle — when checked, a second input appears
+                   so the submitter can advertise "from X to Y" instead of
+                   a single fixed price. -->
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+                <label for="priceLabel" style="margin:0;" id="priceLabel">Precio</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:var(--text-muted);cursor:pointer;">
+                  <input type="checkbox" id="priceRangeToggle" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                  Usar rango de precios (desde — hasta)
+                </label>
+              </div>
               <div style="display:flex;gap:8px;align-items:stretch;">
-                <select id="currency" name="currency" style="width:90px;padding:0.65rem 0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.9rem;font-weight:700;">
+                <select id="currency" name="currency" style="width:100px;padding:0.65rem 0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.9rem;font-weight:700;">
                   <option value="USD" selected>USD $</option>
                   <option value="DOP">DOP RD$</option>
                 </select>
                 <div class="price-wrap" style="flex:1;">
                   <input type="number" id="price" name="price" placeholder="250000" min="0" required style="padding-left:0.75rem;" />
                 </div>
+                <div class="price-wrap" id="priceMaxWrap" style="flex:1;display:none;">
+                  <input type="number" id="priceMax" name="priceMax" placeholder="350000" min="0" style="padding-left:0.75rem;" />
+                </div>
               </div>
-              <p class="price-from-note" id="priceFromNote">Si el proyecto tiene varios tipos de unidades, ingresa el precio mas bajo (precio desde).</p>
+              <p class="price-from-note" id="priceFromNote">Si el proyecto tiene varios tipos de unidades, ingresa el precio más bajo (precio desde) y activa el rango.</p>
             </div>
             <div class="field">
               <label for="area_const">Área Construida (m²)</label>
@@ -981,7 +993,7 @@
               <p id="unitTypesHint" style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;">Si el proyecto incluye diferentes tipos de unidades con distintos precios o dimensiones, agrégalos aquí.</p>
               <div class="unit-table">
                 <div class="unit-table-header" id="unitTableHeader" style="display:none;">
-                  <span>Nombre</span><span>Hab.</span><span>Baños</span><span>Área (m²)</span><span>Precio (USD)</span><span>Disponibles</span><span>Fase</span><span></span>
+                  <span>Nombre</span><span>Nivel</span><span>Hab.</span><span>Baños</span><span>Área (m²)</span><span>Precio (USD)</span><span>Disponibles</span><span>Fase</span><span></span>
                 </div>
                 <div id="unitTypesList"></div>
                 <span id="unitRowsAvailError" style="display:none;color:var(--accent-red);font-size:0.8rem;margin-top:0.4rem;"></span>
@@ -1103,6 +1115,23 @@
             <label class="amenity-item"><input type="checkbox" name="amenities" value="vista_mar" /><span>Vista al Mar</span></label>
             <label class="amenity-item"><input type="checkbox" name="amenities" value="frente_mar" /><span>Frente al Mar</span></label>
             <label class="amenity-item"><input type="checkbox" name="amenities" value="cancha" /><span>Cancha Deportiva</span></label>
+          </div>
+
+          <!-- Custom amenities — users can type anything not on the list
+               above. Each one is added as a removable chip and serialized
+               with the checkbox selections on submit. -->
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--border);">
+            <label style="display:block;font-size:0.82rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.5px;">Otra amenidad</label>
+            <div style="display:flex;gap:8px;align-items:stretch;">
+              <input type="text" id="customAmenityInput" placeholder="Ej: Cuarto de servicio, Depósito, Zona pet-friendly..."
+                     style="flex:1;padding:0.65rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;outline:none;"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomAmenity();}">
+              <button type="button" onclick="addCustomAmenity()"
+                      style="padding:0 1.1rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;">
+                + Agregar
+              </button>
+            </div>
+            <div id="customAmenityChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:0.6rem;"></div>
           </div>
         </div>
 
@@ -1288,21 +1317,79 @@
           Contacto y envío
         </div>
 
-        <!-- Agencies -->
+        <!-- Agencies / Inmobiliarias — searchable picker -->
         <div class="card">
           <div class="card-title">
             <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
             Agencias / Inmobiliarias
             <span class="badge">Opcional</span>
           </div>
-          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Si esta propiedad está afiliada a una o más inmobiliarias, agrégalas aquí.</p>
-          <div id="agenciesList">
-            <p class="agencies-empty" id="agenciesEmpty">Ninguna agencia agregada.</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Vincula esta propiedad a una o más inmobiliarias registradas. Si la inmobiliaria aún no tiene cuenta en HogaresRD, puedes agregarla manualmente.</p>
+
+          <!-- Search box — filters the dropdown and narrows to matching
+               registered inmobiliarias. Shows all by default. -->
+          <div style="position:relative;">
+            <input type="text" id="inmSearchInput"
+                   placeholder="Buscar inmobiliaria registrada por nombre o email..."
+                   oninput="filterInmobiliariasDropdown()"
+                   onfocus="openInmobiliariasDropdown()"
+                   autocomplete="off"
+                   style="width:100%;padding:0.7rem 0.9rem 0.7rem 2.4rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text);font-size:0.9rem;outline:none;">
+            <svg viewBox="0 0 24 24" style="position:absolute;left:0.85rem;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:var(--text-muted);pointer-events:none;"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <div id="inmDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:var(--bg-card);border:1.5px solid var(--border);border-radius:10px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+              <div id="inmDropdownList"></div>
+              <button type="button" onclick="openManualAgencyModal()"
+                      style="display:flex;align-items:center;gap:8px;width:100%;padding:0.85rem 1rem;background:var(--accent);color:#fff;border:none;font-size:0.86rem;font-weight:700;cursor:pointer;border-top:1.5px solid var(--border);">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                No encuentro la inmobiliaria — agregar manualmente
+              </button>
+            </div>
           </div>
-          <button type="button" class="add-agency-btn" onclick="addAgency()">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Agregar Inmobiliaria
-          </button>
+
+          <!-- Picked agencies (chips) -->
+          <div id="pickedAgenciesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;"></div>
+          <p id="agenciesEmpty" style="font-size:0.78rem;color:var(--text-muted);margin-top:12px;text-align:center;padding:10px;border:1px dashed var(--border);border-radius:8px;">Ninguna inmobiliaria seleccionada.</p>
+
+          <!-- Hidden legacy container (some other code still references it
+               during edit pre-fill). Kept for back-compat but unused by
+               the new picker. -->
+          <div id="agenciesList" style="display:none;"></div>
+        </div>
+
+        <!-- Manual agency modal -->
+        <div id="manualAgencyModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:1rem;" onclick="if(event.target===this)closeManualAgencyModal()">
+          <div style="background:var(--bg-card);border-radius:16px;padding:1.75rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+              <h3 style="margin:0;font-size:1.05rem;font-weight:800;">Agregar Inmobiliaria Manualmente</h3>
+              <button type="button" onclick="closeManualAgencyModal()" style="background:none;border:none;font-size:1.5rem;line-height:1;color:var(--text-muted);cursor:pointer;">×</button>
+            </div>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 1rem;line-height:1.5;">Úsalo cuando la inmobiliaria aún no tenga cuenta en HogaresRD. El sistema la asociará como texto libre y no recibirá notificaciones automáticas.</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div>
+                <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Nombre de la inmobiliaria *</label>
+                <input type="text" id="manualInmName" placeholder="Ej: Inmobiliaria Del Este" style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;margin-top:4px;">
+              </div>
+              <div>
+                <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Agente / Representante</label>
+                <input type="text" id="manualInmAgent" placeholder="Ej: Juan Pérez" style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;margin-top:4px;">
+              </div>
+              <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Email</label>
+                  <input type="email" id="manualInmEmail" placeholder="contacto@inm.com" style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;margin-top:4px;">
+                </div>
+                <div>
+                  <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Teléfono</label>
+                  <input type="tel" id="manualInmPhone" placeholder="809-555-0000" style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;margin-top:4px;">
+                </div>
+              </div>
+              <p id="manualInmError" style="color:var(--accent-red);font-size:0.78rem;margin:2px 0 0;min-height:0.95rem;"></p>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+              <button type="button" onclick="closeManualAgencyModal()" style="padding:0.6rem 1.2rem;background:var(--bg-secondary);border:1.5px solid var(--border);color:var(--text);border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+              <button type="button" onclick="saveManualAgency()" style="padding:0.6rem 1.2rem;background:var(--accent);border:none;color:#fff;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">Agregar</button>
+            </div>
+          </div>
         </div>
 
         <!-- Contact -->
@@ -1807,6 +1894,232 @@
     // ── Unit types ─────────────────────────────────────────────
     let unitCount = 0;
 
+    // ── Price range toggle ────────────────────────────────────
+    (function() {
+      const toggle = document.getElementById('priceRangeToggle');
+      const wrap   = document.getElementById('priceMaxWrap');
+      const label  = document.getElementById('priceLabel');
+      if (!toggle) return;
+      toggle.addEventListener('change', () => {
+        if (toggle.checked) {
+          wrap.style.display = '';
+          if (label) label.textContent = 'Precio (desde — hasta)';
+          document.getElementById('price').placeholder = 'Desde';
+          document.getElementById('priceMax').placeholder = 'Hasta';
+        } else {
+          wrap.style.display = 'none';
+          if (label) label.textContent = 'Precio';
+          document.getElementById('price').placeholder = '250000';
+          document.getElementById('priceMax').value = '';
+        }
+      });
+    })();
+
+    // ── Custom amenities ──────────────────────────────────────
+    window._customAmenities = [];
+    function addCustomAmenity() {
+      const input = document.getElementById('customAmenityInput');
+      const val = (input.value || '').trim();
+      if (!val) return;
+      if (val.length > 60) {
+        alert('Amenidad demasiado larga (máximo 60 caracteres).');
+        return;
+      }
+      // Dedupe
+      if (window._customAmenities.includes(val)) {
+        input.value = '';
+        return;
+      }
+      window._customAmenities.push(val);
+      input.value = '';
+      renderCustomAmenityChips();
+    }
+
+    function removeCustomAmenity(idx) {
+      window._customAmenities.splice(idx, 1);
+      renderCustomAmenityChips();
+    }
+
+    function renderCustomAmenityChips() {
+      const wrap = document.getElementById('customAmenityChips');
+      if (!wrap) return;
+      wrap.innerHTML = window._customAmenities.map((a, i) => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--accent);color:#fff;border-radius:999px;font-size:0.78rem;font-weight:600;">
+          ${String(a).replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+          <button type="button" onclick="removeCustomAmenity(${i})" style="background:rgba(255,255,255,0.25);border:none;color:#fff;width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:0.78rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">×</button>
+        </span>
+      `).join('');
+    }
+
+    // ── Inmobiliaria searchable picker ────────────────────────
+    window._inmobiliariasCache = [];
+    window._pickedAgencies = [];
+
+    async function loadInmobiliariasList() {
+      try {
+        const res = await fetch('/api/listings/inmobiliarias', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        window._inmobiliariasCache = Array.isArray(data.inmobiliarias) ? data.inmobiliarias : [];
+        // If the dropdown is open when the list arrives, refresh it
+        if (document.getElementById('inmDropdown')?.style.display === 'block') {
+          renderInmobiliariasDropdown(window._inmobiliariasCache);
+        }
+      } catch {}
+    }
+
+    function openInmobiliariasDropdown() {
+      const dd = document.getElementById('inmDropdown');
+      if (!dd) return;
+      dd.style.display = 'block';
+      filterInmobiliariasDropdown();
+    }
+
+    function closeInmobiliariasDropdown() {
+      const dd = document.getElementById('inmDropdown');
+      if (!dd) return;
+      dd.style.display = 'none';
+    }
+
+    // Close the dropdown when the user clicks outside of it
+    document.addEventListener('click', (e) => {
+      const inside = e.target.closest('#inmDropdown') || e.target.closest('#inmSearchInput');
+      if (!inside) closeInmobiliariasDropdown();
+    });
+
+    function filterInmobiliariasDropdown() {
+      const q = (document.getElementById('inmSearchInput')?.value || '').toLowerCase().trim();
+      const list = window._inmobiliariasCache || [];
+      const filtered = q
+        ? list.filter(u => {
+            const hay = `${u.name || ''} ${u.companyName || ''} ${u.email || ''}`.toLowerCase();
+            return hay.includes(q);
+          })
+        : list;
+      renderInmobiliariasDropdown(filtered);
+    }
+
+    function renderInmobiliariasDropdown(list) {
+      const container = document.getElementById('inmDropdownList');
+      if (!container) return;
+      if (!list.length) {
+        container.innerHTML = `<div style="padding:1rem;text-align:center;font-size:0.82rem;color:var(--text-muted);">Sin resultados. Usa el botón de abajo para agregar manualmente.</div>`;
+        return;
+      }
+      const pickedIds = new Set((window._pickedAgencies || []).map(a => a.user_id).filter(Boolean));
+      container.innerHTML = list.slice(0, 50).map(u => {
+        const isPicked = pickedIds.has(u.id);
+        const label = u.companyName || u.name || u.email || '—';
+        const sub = u.email || '';
+        return `
+          <button type="button" onclick="pickInmobiliaria('${u.id}')" ${isPicked ? 'disabled' : ''}
+                  style="display:flex;align-items:center;gap:10px;width:100%;padding:0.7rem 0.95rem;background:${isPicked ? 'var(--bg-secondary)' : 'transparent'};border:none;border-bottom:1px solid var(--border);cursor:${isPicked ? 'default' : 'pointer'};text-align:left;opacity:${isPicked ? '0.55' : '1'};">
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;flex-shrink:0;">
+              ${String(label).charAt(0).toUpperCase()}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.88rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${String(label).replace(/</g,'&lt;')}</div>
+              ${sub ? `<div style="font-size:0.74rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${String(sub).replace(/</g,'&lt;')}</div>` : ''}
+            </div>
+            ${isPicked
+              ? '<span style="font-size:0.7rem;font-weight:700;color:var(--text-muted);">Agregada</span>'
+              : '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:var(--accent);"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>'}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function pickInmobiliaria(id) {
+      const u = (window._inmobiliariasCache || []).find(x => x.id === id);
+      if (!u) return;
+      window._pickedAgencies = window._pickedAgencies || [];
+      if (window._pickedAgencies.some(a => a.user_id === id)) return;
+      window._pickedAgencies.push({
+        name:    u.companyName || u.name,
+        user_id: u.id,
+        email:   u.email,
+        phone:   u.phone,
+        agent:   '',
+        registered: true,
+      });
+      renderPickedAgencies();
+      closeInmobiliariasDropdown();
+      const input = document.getElementById('inmSearchInput');
+      if (input) input.value = '';
+    }
+
+    function removePickedAgency(idx) {
+      window._pickedAgencies.splice(idx, 1);
+      renderPickedAgencies();
+    }
+
+    function renderPickedAgencies() {
+      const list  = document.getElementById('pickedAgenciesList');
+      const empty = document.getElementById('agenciesEmpty');
+      if (!list) return;
+      const picked = window._pickedAgencies || [];
+      if (!picked.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+      list.innerHTML = picked.map((a, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${a.registered ? 'var(--accent)' : 'var(--bg-secondary)'};color:${a.registered ? '#fff' : 'var(--text)'};border:${a.registered ? 'none' : '1.5px solid var(--border)'};border-radius:999px;font-size:0.82rem;font-weight:600;max-width:100%;">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;flex-shrink:0;">
+            ${a.registered
+              ? '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>'
+              : '<path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>'}
+          </svg>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">${String(a.name).replace(/</g,'&lt;')}</span>
+          ${a.registered ? '<span style="font-size:0.62rem;background:rgba(255,255,255,0.25);padding:2px 6px;border-radius:4px;">REGISTRADA</span>' : '<span style="font-size:0.62rem;background:var(--bg-card);padding:2px 6px;border-radius:4px;color:var(--text-muted);">MANUAL</span>'}
+          <button type="button" onclick="removePickedAgency(${i})" style="background:${a.registered ? 'rgba(255,255,255,0.25)' : 'var(--border)'};border:none;color:${a.registered ? '#fff' : 'var(--text)'};width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">×</button>
+        </div>
+      `).join('');
+    }
+
+    // Manual agency modal
+    function openManualAgencyModal() {
+      document.getElementById('manualAgencyModal').style.display = 'flex';
+      document.getElementById('manualInmError').textContent = '';
+      ['manualInmName','manualInmAgent','manualInmEmail','manualInmPhone'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      setTimeout(() => document.getElementById('manualInmName')?.focus(), 50);
+      closeInmobiliariasDropdown();
+    }
+    function closeManualAgencyModal() {
+      document.getElementById('manualAgencyModal').style.display = 'none';
+    }
+    function saveManualAgency() {
+      const name  = (document.getElementById('manualInmName').value || '').trim();
+      const agent = (document.getElementById('manualInmAgent').value || '').trim();
+      const email = (document.getElementById('manualInmEmail').value || '').trim();
+      const phone = (document.getElementById('manualInmPhone').value || '').trim();
+      const err   = document.getElementById('manualInmError');
+      if (!name) { err.textContent = 'El nombre es requerido.'; return; }
+      if (name.length > 100) { err.textContent = 'Nombre demasiado largo.'; return; }
+      window._pickedAgencies = window._pickedAgencies || [];
+      window._pickedAgencies.push({
+        name,
+        user_id: null,
+        email,
+        phone,
+        agent,
+        registered: false,
+      });
+      renderPickedAgencies();
+      closeManualAgencyModal();
+      const input = document.getElementById('inmSearchInput');
+      if (input) input.value = '';
+    }
+
+    // Load the inmobiliarias list on page ready
+    document.addEventListener('DOMContentLoaded', loadInmobiliariasList);
+    // Also trigger immediately in case DOMContentLoaded already fired
+    if (document.readyState !== 'loading') loadInmobiliariasList();
+
     function addUnitType() {
       unitCount++;
       const idx = unitCount;
@@ -1815,6 +2128,7 @@
       row.id = `unit-${idx}`;
       row.innerHTML = `
         <input type="text"   name="unit_name[]"      placeholder="Ej. Penthouse 3BR" />
+        <input type="text"   name="unit_floor[]"     placeholder="3" title="Piso / Nivel" />
         <input type="number" name="unit_bedrooms[]"  placeholder="3"      min="0" />
         <input type="number" name="unit_bathrooms[]" placeholder="2"      min="0" />
         <input type="number" name="unit_area[]"      placeholder="95"     min="1" />
@@ -1852,33 +2166,36 @@
       document.getElementById('priceLabel').textContent = hasUnits ? 'Precio Desde (USD)' : 'Precio (USD)';
     }
 
-    // ── Agencies ───────────────────────────────────────────────
+    // ── Agencies — legacy counter kept for back-compat ────────
+    // The new searchable picker (see inmobiliaria functions above) is
+    // the source of truth. When a logged-in agency user lands on the
+    // page we pre-seed the picker with their own account so they
+    // don't have to search for themselves.
     let agencyCount = 0;
 
     (function autoFillAgency() {
-      const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-      if (!me || me.role !== 'agency') return;
-      agencyCount++;
-      document.getElementById('agenciesEmpty').style.display = 'none';
-      const div = document.createElement('div');
-      div.className = 'agency-entry';
-      div.id = `agency-${agencyCount}`;
-      const idx = agencyCount;
-      div.innerHTML = `
-        <div class="agency-header">
-          <span class="agency-num">Tu agencia (prellenado)</span>
-          <button type="button" class="remove-agency-btn" onclick="removeAgency(${idx})">
-            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            Eliminar
-          </button>
-        </div>
-        <div class="grid-2">
-          <div class="field"><label>Nombre de la Inmobiliaria</label><input type="text" name="agency_name[]" value="${me.agencyName || ''}" placeholder="Ej. Century 21, RE/MAX..." /></div>
-          <div class="field"><label>Nombre del Agente</label><input type="text" name="agency_agent[]" value="${me.name || ''}" placeholder="Ej. María López" /></div>
-          <div class="field"><label>Teléfono / WhatsApp</label><input type="tel" name="agency_phone[]" value="${me.phone || ''}" placeholder="(809) 000-0000" /></div>
-          <div class="field"><label>Correo Electrónico</label><input type="email" name="agency_email[]" value="${me.email || ''}" placeholder="agente@inmobiliaria.com" /></div>
-        </div>`;
-      document.getElementById('agenciesList').appendChild(div);
+      try {
+        const me = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+        if (!me) return;
+        const agencyRoles = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+        if (!agencyRoles.includes(me.role)) return;
+        window._pickedAgencies = window._pickedAgencies || [];
+        if (window._pickedAgencies.length > 0) return; // already populated
+        window._pickedAgencies.push({
+          name:       me.agencyName || me.companyName || me.name || '',
+          user_id:    me.id || null,
+          email:      me.email || '',
+          phone:      me.phone || '',
+          agent:      me.name || '',
+          registered: !!me.id,
+        });
+        // Render once the DOM is ready
+        if (typeof renderPickedAgencies === 'function') {
+          renderPickedAgencies();
+        } else {
+          setTimeout(() => renderPickedAgencies && renderPickedAgencies(), 100);
+        }
+      } catch {}
     })();
 
     function addAgency() {
@@ -2246,6 +2563,37 @@
         }
       });
 
+      // Merge in any custom amenities the user added via the "otra
+      // amenidad" chip list. We store them as {custom:true,label:…}
+      // objects in window._customAmenities; flatten to plain strings
+      // for the submit payload so they're treated identically to
+      // checkbox amenities by the backend.
+      if (Array.isArray(window._customAmenities) && window._customAmenities.length) {
+        const existing = body.amenities ? (Array.isArray(body.amenities) ? body.amenities : [body.amenities]) : [];
+        body.amenities = [...existing, ...window._customAmenities];
+      }
+
+      // Price range: if the toggle is on, attach priceMax; otherwise
+      // make sure it's not carried over from a previous interaction.
+      const priceRangeOn = document.getElementById('priceRangeToggle')?.checked;
+      if (!priceRangeOn) {
+        delete body.priceMax;
+      }
+
+      // Agencies: if the picker stashed structured records, use them
+      // as the source of truth. Each record is either a registered
+      // inmobiliaria (has user_id) or a manual entry (name only).
+      if (Array.isArray(window._pickedAgencies) && window._pickedAgencies.length) {
+        body.agencies = window._pickedAgencies.map(a => ({
+          name:         a.name,
+          user_id:      a.user_id || null,
+          inmobiliaria: a.inmobiliaria || null,
+          email:        a.email || '',
+          phone:        a.phone || '',
+          agent:        a.agent || '',
+        }));
+      }
+
       const isClaim = document.getElementById('submission_type').value === 'agency_claim';
 
       // Collect unit types
@@ -2254,6 +2602,7 @@
         const unitIds = idsText ? idsText.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
         return {
           name:      row.querySelector('[name="unit_name[]"]').value.trim(),
+          floor:     (row.querySelector('[name="unit_floor[]"]')?.value || '').trim(),
           bedrooms:  row.querySelector('[name="unit_bedrooms[]"]').value,
           bathrooms: row.querySelector('[name="unit_bathrooms[]"]').value,
           area:      row.querySelector('[name="unit_area[]"]').value,
@@ -2434,6 +2783,15 @@
         // ── Step 2 · Specs & pricing ─────────────────────────
         setVal('price',      listing.price);
         setVal('currency',   listing.currency);
+        // Re-hydrate the price range toggle if the listing has a max
+        if (listing.priceMax) {
+          const toggle = document.getElementById('priceRangeToggle');
+          if (toggle) {
+            toggle.checked = true;
+            toggle.dispatchEvent(new Event('change'));
+            setVal('priceMax', listing.priceMax);
+          }
+        }
         setVal('bedrooms',   listing.bedrooms);
         setVal('bathrooms',  listing.bathrooms);
         setVal('parking',    listing.parking);
@@ -2509,6 +2867,7 @@
               if (el && val != null) el.value = val;
             };
             set('[name="unit_name[]"]',      u.name);
+            set('[name="unit_floor[]"]',     u.floor);
             set('[name="unit_bedrooms[]"]',  u.bedrooms);
             set('[name="unit_bathrooms[]"]', u.bathrooms);
             set('[name="unit_area[]"]',      u.area);
@@ -2571,26 +2930,19 @@
 
         // ── Step 6 · Agencies repeater ───────────────────────
         const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-        if (agencies.length && typeof addAgency === 'function') {
-          // The "autoFillAgency" IIFE may have pre-added one for the
-          // current user. Remove everything and re-add from listing data
-          // to avoid duplicates.
-          document.querySelectorAll('#agenciesList .agency-entry').forEach(e => e.remove());
-          agencyCount = 0;
-          document.getElementById('agenciesEmpty').style.display = 'none';
-          agencies.forEach(a => {
-            addAgency();
-            const entry = document.querySelector('#agenciesList .agency-entry:last-child');
-            if (!entry) return;
-            const set = (name, val) => {
-              const el = entry.querySelector(`[name="${name}"]`);
-              if (el && val != null) el.value = val;
-            };
-            set('agency_name[]',  a.name);
-            set('agency_agent[]', a.agent || a.contact);
-            set('agency_phone[]', a.phone);
-            set('agency_email[]', a.email);
-          });
+        if (agencies.length) {
+          // Seed the new searchable picker with the existing agencies.
+          // Registered ones keep their user_id; manual ones come back
+          // as free-text entries.
+          window._pickedAgencies = agencies.map(a => ({
+            name:       a.name || '',
+            user_id:    a.user_id || null,
+            email:      a.email || '',
+            phone:      a.phone || '',
+            agent:      a.agent || a.contact || '',
+            registered: !!a.user_id,
+          }));
+          if (typeof renderPickedAgencies === 'function') renderPickedAgencies();
         }
 
         // ── Step 6 · Contact & role ──────────────────────────

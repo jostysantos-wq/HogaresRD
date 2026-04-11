@@ -32,6 +32,10 @@ struct ContentView: View {
     // (via the .pushNotificationTapped notification) so it updates even
     // faster when a message actually arrives.
     @State private var unreadMessages = 0
+    // Actionable task count — tasks either assigned to me that I haven't
+    // completed, or tasks submitted for my review. Drives the badge on
+    // the Profile tab (which is where the Tareas menu lives).
+    @State private var unreadTasks = 0
     @State private var unreadPollTask: Task<Void, Never>?
 
     var body: some View {
@@ -49,8 +53,9 @@ struct ContentView: View {
                 .badge(unreadMessages)
                 .tag(2)
 
-            ProfileTabView()
+            ProfileTabView(unreadTasks: unreadTasks)
                 .tabItem { Label("Perfil", systemImage: "person.fill") }
+                .badge(unreadTasks)
                 .tag(3)
         }
         .tint(Color.rdBlue)
@@ -128,6 +133,7 @@ struct ContentView: View {
             if newId == nil {
                 stopUnreadPolling()
                 unreadMessages = 0
+                unreadTasks = 0
             } else {
                 Task { await refreshUnreadCount() }
                 startUnreadPolling()
@@ -151,11 +157,21 @@ struct ContentView: View {
 
     private func refreshUnreadCount() async {
         guard api.currentUser != nil else {
-            await MainActor.run { unreadMessages = 0 }
+            await MainActor.run {
+                unreadMessages = 0
+                unreadTasks = 0
+            }
             return
         }
-        let count = await api.getConversationsUnreadCount()
-        await MainActor.run { unreadMessages = count }
+        // Fetch both counters in parallel so the two badges update in
+        // lockstep and we don't double the latency on scene activation.
+        async let msgs  = api.getConversationsUnreadCount()
+        async let tasks = api.getTasksBadgeCount()
+        let (m, t) = await (msgs, tasks)
+        await MainActor.run {
+            unreadMessages = m
+            unreadTasks    = t
+        }
     }
 
     private func startUnreadPolling() {
@@ -376,6 +392,10 @@ struct ProfileTabView: View {
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @State private var showPost = false
+    // Red badge count for the Tareas menu row. Propagated down from
+    // ContentView so the same /api/tasks/badge-count poll drives
+    // BOTH the Profile tab badge and the menu row indicator.
+    var unreadTasks: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -621,7 +641,17 @@ struct ProfileTabView: View {
             NavigationLink {
                 TasksView().environmentObject(api)
             } label: {
-                Label("Tareas", systemImage: "checklist")
+                HStack {
+                    Label("Tareas", systemImage: "checklist")
+                    Spacer()
+                    if unreadTasks > 0 {
+                        Text("\(unreadTasks)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Color.red, in: Capsule())
+                    }
+                }
             }
             NavigationLink {
                 AdCampaignsView().environmentObject(api)
@@ -680,7 +710,17 @@ struct ProfileTabView: View {
             NavigationLink {
                 TasksView().environmentObject(api)
             } label: {
-                Label("Mis tareas", systemImage: "checklist")
+                HStack {
+                    Label("Mis tareas", systemImage: "checklist")
+                    Spacer()
+                    if unreadTasks > 0 {
+                        Text("\(unreadTasks)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Color.red, in: Capsule())
+                    }
+                }
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)

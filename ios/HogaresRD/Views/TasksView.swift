@@ -280,12 +280,49 @@ struct TaskRow: View {
                 .frame(width: 8, height: 8)
                 .padding(.top, 6)
 
+            // Listing thumbnail (when the task is tied to a listing).
+            // Falls back to a placeholder icon when the listing has no
+            // image or when the task isn't related to a listing.
+            if let imgUrl = task.listingImage, let url = URL(string: imgUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    case .failure:
+                        ZStack {
+                            Rectangle().fill(Color(.tertiarySystemFill))
+                            Image(systemName: "photo")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    default:
+                        Rectangle().fill(Color(.tertiarySystemFill))
+                    }
+                }
+                .frame(width: 46, height: 46)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.subheadline).bold()
                     .strikethrough(task.status == "completada")
                     .foregroundStyle(task.status == "completada" ? .secondary : .primary)
                     .lineLimit(2)
+
+                // Listing title (when enriched) — helps the user spot
+                // which property a task belongs to without opening it.
+                if let lt = task.listingTitle, !lt.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                        Text(lt)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
 
                 if let desc = task.description, !desc.isEmpty {
                     Text(desc)
@@ -482,6 +519,53 @@ struct TaskDetailSheet: View {
                         }
                     }
                     .padding(.top, 8)
+
+                    // Listing preview card — shown for tasks tied to a
+                    // listing (which is almost always the case for
+                    // auto-generated tasks like "upload cedula" or
+                    // "sube el comprobante").
+                    if let lt = task.listingTitle, !lt.isEmpty {
+                        HStack(spacing: 12) {
+                            if let imgUrl = task.listingImage, let url = URL(string: imgUrl) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let img):
+                                        img.resizable().aspectRatio(contentMode: .fill)
+                                    default:
+                                        Rectangle().fill(Color(.tertiarySystemFill))
+                                    }
+                                }
+                                .frame(width: 72, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            } else {
+                                ZStack {
+                                    Rectangle().fill(Color(.tertiarySystemFill))
+                                    Image(systemName: "house.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(width: 72, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Propiedad relacionada")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(.secondary)
+                                    .textCase(.uppercase)
+                                Text(lt)
+                                    .font(.subheadline.bold())
+                                    .lineLimit(2)
+                                if let city = task.listingCity {
+                                    Text(city)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
 
                     // Rejection banner — shown when an approver sent this
                     // task back for revision. Persistent until the task is

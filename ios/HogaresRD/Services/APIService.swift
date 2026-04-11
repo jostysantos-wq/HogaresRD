@@ -1742,6 +1742,24 @@ class APIService: ObservableObject {
         return try decoder.decode(TasksResponse.self, from: data).tasks
     }
 
+    /// Lightweight count of tasks that need the user's attention. Used
+    /// to drive the red badge on the Tareas menu entry. Returns 0 on
+    /// any error so the UI degrades gracefully.
+    func getTasksBadgeCount() async -> Int {
+        guard let t = token else { return 0 }
+        guard let url = URL(string: "\(apiBase)/api/tasks/badge-count") else { return 0 }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, resp) = try await session.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 { return 0 }
+            struct Wrapper: Decodable { let count: Int }
+            return (try? decoder.decode(Wrapper.self, from: data))?.count ?? 0
+        } catch {
+            return 0
+        }
+    }
+
     /// Mark a task as complete. Behind the scenes the server routes
     /// this to either `/complete` (→ direct completada for self-assigned
     /// tasks) or `/pending_review` (for tasks that require a separate

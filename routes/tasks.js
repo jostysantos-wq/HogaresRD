@@ -40,6 +40,43 @@ const BASE_URL    = process.env.BASE_URL || 'https://hogaresrd.com';
 // assignee submits a task that requires a separate approver sign-off.
 const VALID_STATUSES = ['pendiente', 'en_progreso', 'pending_review', 'completada'];
 
+// Enrich a task object with the listing's cover image and title so
+// iOS / web clients can render a thumbnail next to the row. The store
+// is cheap to query so we do this at response time instead of
+// denormalizing onto the task record.
+function enrichTask(task) {
+  if (!task) return task;
+  // Avoid leaking internal _extra
+  const out = { ...task };
+  if (task.listing_id) {
+    const listing = store.getListingById(task.listing_id);
+    if (listing) {
+      out.listing_title = listing.title || null;
+      // First image is the "cover photo" — same rule the rest of the
+      // site uses when it needs a single thumbnail for a listing.
+      const images = Array.isArray(listing.images) ? listing.images : [];
+      out.listing_image = images[0] || null;
+      out.listing_city  = listing.city || null;
+      out.listing_price = listing.price || null;
+    }
+  }
+  // Same lookup for related application (some tasks only reference the
+  // application, not the listing).
+  if (task.application_id && !out.listing_image) {
+    const app = store.getApplicationById(task.application_id);
+    if (app?.listing_id) {
+      const listing = store.getListingById(app.listing_id);
+      if (listing) {
+        out.listing_title = out.listing_title || listing.title || null;
+        const images = Array.isArray(listing.images) ? listing.images : [];
+        out.listing_image = out.listing_image || images[0] || null;
+        out.listing_city  = out.listing_city || listing.city || null;
+      }
+    }
+  }
+  return out;
+}
+
 // Resolve who should approve a task. Always prefers an explicit
 // approver_id; falls back to assigned_by if that's a real user; if
 // the task was created by 'system', we can't resolve an approver and
@@ -93,7 +130,35 @@ router.get('/', userAuth, (req, res) => {
     tasks = tasks.filter(t => t.due_date && t.due_date < now && t.status !== 'completada');
   }
 
-  res.json({ tasks });
+  // Enrich each task with listing thumbnail + title before returning
+  res.json({ tasks: tasks.map(enrichTask) });
+});
+
+// ── GET /api/tasks/badge-count — unread / actionable count for the user ─────
+// Returns the number of tasks that currently need the user's attention:
+//   - assigned_to user: pendiente / en_progreso (things they haven't done yet)
+//   - approver user:    pending_review (things waiting on their review)
+// Used to drive the red badge on the "Tareas" menu entry.
+router.get('/badge-count', userAuth, (req, res) => {
+  const uid = req.user.sub;
+  const all = store._tasks || [];
+  let count = 0;
+  for (const row of all) {
+    const t = store.getTaskById(row.id);
+    if (!t) continue;
+    if (t.status === 'completada') continue;
+    const approverId = resolveApproverId(t);
+    // Task assigned to me and still actionable
+    if (t.assigned_to === uid && (t.status === 'pendiente' || t.status === 'en_progreso')) {
+      count++;
+      continue;
+    }
+    // Task waiting for my review (as approver, not assignee)
+    if (approverId === uid && t.assigned_to !== uid && t.status === 'pending_review') {
+      count++;
+    }
+  }
+  res.json({ count });
 });
 
 // ── GET /api/tasks/:id — single task ────────────────────────────────────────
@@ -105,7 +170,7 @@ router.get('/:id', userAuth, (req, res) => {
               || task.assigned_by === req.user.sub
               || approverId === req.user.sub;
   if (!canSee) return res.status(403).json({ error: 'Sin acceso a esta tarea' });
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── POST /api/tasks — create a task ─────────────────────────────────────────
@@ -183,7 +248,7 @@ router.post('/', userAuth, (req, res) => {
     sendTaskEmail(assigneeId, creator.name, task).catch(() => {});
   }
 
-  res.status(201).json(task);
+  res.status(201).json(enrichTask(task));
 });
 
 // ── PUT /api/tasks/:id — update task ────────────────────────────────────────
@@ -210,7 +275,7 @@ router.put('/:id', userAuth, (req, res) => {
   task.updated_at = new Date().toISOString();
 
   store.saveTask(task);
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── POST /api/tasks/:id/complete ────────────────────────────────────────────
@@ -244,7 +309,7 @@ router.post('/:id/complete', userAuth, (req, res) => {
         url:   '/broker',
       });
     }
-    return res.json(task);
+    return res.json(enrichTask(task));
   }
 
   // No approval needed — complete immediately
@@ -262,7 +327,7 @@ router.post('/:id/complete', userAuth, (req, res) => {
       url:   '/broker',
     });
   }
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── POST /api/tasks/:id/approve — approver signs off on a submitted task ────
@@ -298,7 +363,7 @@ router.post('/:id/approve', userAuth, (req, res) => {
     url:   '/broker',
   });
 
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── POST /api/tasks/:id/reject — approver sends task back for revision ──────
@@ -338,7 +403,7 @@ router.post('/:id/reject', userAuth, (req, res) => {
     url:   '/broker',
   });
 
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── PUT /api/tasks/:id/approver — reassign who approves this task ───────────
@@ -374,7 +439,7 @@ router.put('/:id/approver', userAuth, (req, res) => {
     url:   '/broker',
   });
 
-  res.json(task);
+  res.json(enrichTask(task));
 });
 
 // ── DELETE /api/tasks/:id ───────────────────────────────────────────────────
