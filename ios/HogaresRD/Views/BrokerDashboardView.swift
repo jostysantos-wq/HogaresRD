@@ -606,103 +606,128 @@ struct DashboardSalesTab: View {
 
 struct DashboardAccountingTab: View {
     @EnvironmentObject var api: APIService
-    @State private var accounting: DashboardAccounting?
-    @State private var loading = true
-    @State private var commissionRate = "3"
+    @State private var loading  = true
+    @State private var response: CommissionsSummaryResponse?
+    @State private var filter:   CommissionFilter = .all
+    @State private var errorMsg: String?
+    @State private var editingRow: CommissionRow?
+    @State private var reviewingRow: CommissionRow?
+
+    enum CommissionFilter: String, CaseIterable, Identifiable {
+        case all             = "Todas"
+        case pending_review  = "Pendientes"
+        case approved        = "Aprobadas"
+        case rejected        = "Rechazadas"
+        var id: String { rawValue }
+        var statusKey: String? {
+            switch self {
+            case .all:             return nil
+            case .pending_review:  return "pending_review"
+            case .approved:        return "approved"
+            case .rejected:        return "rejected"
+            }
+        }
+    }
+
+    private var isInmView: Bool {
+        ["inmobiliaria", "constructora"].contains(response?.role ?? "")
+    }
+
+    private var filteredRows: [CommissionRow] {
+        let rows = response?.commissions ?? []
+        guard let status = filter.statusKey else { return rows }
+        return rows.filter { $0.commission.status == status }
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
                 if loading {
                     ProgressView().padding(.top, 40)
-                } else if let a = accounting {
-                    // Commission rate control
-                    HStack(spacing: 10) {
-                        Text("Tasa de comisión:")
-                            .font(.subheadline)
-                        TextField("3", text: $commissionRate)
-                            .keyboardType(.decimalPad)
-                            .frame(width: 60)
-                            .padding(8)
-                            .background(Color(.secondarySystemFill))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        Text("%")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Aplicar") {
-                            Task { await load() }
-                        }
-                        .font(.caption).bold()
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(Color.rdBlue)
-                        .foregroundStyle(.white)
-                        .clipShape(Capsule())
+                } else if let err = errorMsg, response == nil {
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 32)).foregroundStyle(.orange)
+                        Text(err).font(.subheadline).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.rdBlue)
                     }
-                    .padding(.horizontal)
-
+                    .padding(32)
+                } else if let r = response {
                     // Metric cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        DashStatCard(icon: "dollarsign.circle.fill", label: "Total Ganado", value: formatCurrency(a.totalEarned), color: .green)
-                        DashStatCard(icon: "hourglass", label: "Comisión Pendiente", value: formatCurrency(a.pendingCommission), color: .orange)
-                        DashStatCard(icon: "percent", label: "Tasa de Comisión", value: String(format: "%.1f%%", a.commissionRate * 100), color: .blue)
-                        DashStatCard(icon: "checkmark.seal.fill", label: "Pagos Verificados", value: "\(a.verifiedPayments)", color: .green)
+                        DashStatCard(
+                            icon: "checkmark.seal.fill",
+                            label: "Aprobadas",
+                            value: formatCurrency(r.summary.agent_approved),
+                            color: .green,
+                            subtitle: "Neto al agente"
+                        )
+                        DashStatCard(
+                            icon: "hourglass",
+                            label: "Pendientes",
+                            value: formatCurrency(r.summary.agent_pending),
+                            color: .orange,
+                            subtitle: "\(r.summary.total_pending_count) sin revisar"
+                        )
+                        if isInmView {
+                            DashStatCard(
+                                icon: "building.2.fill",
+                                label: "Cuota Inmobiliaria",
+                                value: formatCurrency(r.summary.inmobiliaria_approved),
+                                color: .blue,
+                                subtitle: "Aprobada del equipo"
+                            )
+                        }
+                        DashStatCard(
+                            icon: "chart.line.uptrend.xyaxis",
+                            label: "Ventas Totales",
+                            value: formatCurrency(r.summary.agent_total_sales),
+                            color: .purple,
+                            subtitle: "Monto aprobado"
+                        )
                     }
                     .padding(.horizontal)
 
-                    // Monthly commissions chart
-                    if !a.monthlyCommissions.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Comisiones Mensuales")
-                                .font(.headline)
-                                .padding(.horizontal)
-
-                            SimpleBarChart(data: a.monthlyCommissions.suffix(12).map { ($0.month, Int($0.commission)) })
-                                .frame(height: 160)
-                                .padding(.horizontal)
-                        }
-                    }
-
-                    // Records
-                    if !a.records.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Registros Financieros")
-                                .font(.headline)
-                                .padding(.horizontal)
-
-                            ForEach(a.records) { record in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(record.property ?? "Propiedad")
-                                            .font(.subheadline).bold()
-                                            .lineLimit(1)
-                                        if let client = record.client {
-                                            Text(client)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    VStack(alignment: .trailing, spacing: 3) {
-                                        if let c = record.commission {
-                                            Text(formatCurrency(c))
-                                                .font(.subheadline).bold()
-                                                .foregroundStyle(.green)
-                                        }
-                                        if let ps = record.paymentStatus {
-                                            StatusBadge(status: ps)
-                                        }
-                                    }
+                    // Filter chips
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(CommissionFilter.allCases) { f in
+                                Button {
+                                    filter = f
+                                } label: {
+                                    Text(f.rawValue)
+                                        .font(.caption).bold()
+                                        .padding(.horizontal, 12).padding(.vertical, 7)
+                                        .background(filter == f ? Color.rdBlue : Color(.secondarySystemFill))
+                                        .foregroundStyle(filter == f ? .white : .primary)
+                                        .clipShape(Capsule())
                                 }
-                                .padding(12)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .padding(.horizontal)
+                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(.horizontal)
                     }
 
-                    if a.records.isEmpty {
-                        emptyState(icon: "banknote", title: "Sin registros", subtitle: "Tus registros financieros aparecerán aquí.")
+                    // Commission rows
+                    if filteredRows.isEmpty {
+                        emptyState(
+                            icon: "banknote",
+                            title: "Sin comisiones",
+                            subtitle: isInmView
+                                ? "Los agentes de tu inmobiliaria todavía no han registrado comisiones."
+                                : "Registra la comisión de tus ventas cerradas desde la aplicación."
+                        )
+                        .padding(.top, 16)
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(filteredRows) { row in
+                                commissionCard(row)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
             }
@@ -710,13 +735,388 @@ struct DashboardAccountingTab: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $editingRow) { row in
+            CommissionFormSheet(row: row, mode: .edit) {
+                Task { await load() }
+            }
+            .environmentObject(api)
+        }
+        .sheet(item: $reviewingRow) { row in
+            CommissionFormSheet(row: row, mode: .review) {
+                Task { await load() }
+            }
+            .environmentObject(api)
+        }
+    }
+
+    // MARK: - Row card
+
+    @ViewBuilder
+    private func commissionCard(_ row: CommissionRow) -> some View {
+        let c = row.commission
+        let iAmAgent = row.agent_user_id == api.currentUser?.id
+        let iAmInmOwner = isInmView
+        let canReview = iAmInmOwner && c.status == "pending_review"
+        let canEdit   = iAmAgent && (c.status == "pending_review" || c.status == "rejected")
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(row.listing_title ?? "Propiedad")
+                        .font(.subheadline).bold()
+                        .lineLimit(2)
+                    if let client = row.client_name, !client.isEmpty {
+                        Text(client)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if isInmView, let agent = row.agent_name, !agent.isEmpty {
+                        Label(agent, systemImage: "person.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                commissionStatusPill(c.status)
+            }
+
+            // Numbers grid
+            VStack(spacing: 6) {
+                commissionRowLine(
+                    label: "Venta",
+                    value: formatCurrency(c.sale_amount),
+                    valueColor: .primary
+                )
+                commissionRowLine(
+                    label: "Comisión agente",
+                    value: "\(pctLabel(c.agent_percent)) · \(formatCurrency(c.agent_amount))",
+                    valueColor: .primary
+                )
+                if c.inmobiliaria_amount > 0 {
+                    commissionRowLine(
+                        label: "Cuota inmobiliaria",
+                        value: "\(pctLabel(c.inmobiliaria_percent)) · \(formatCurrency(c.inmobiliaria_amount))",
+                        valueColor: .blue
+                    )
+                }
+                Divider().padding(.vertical, 2)
+                commissionRowLine(
+                    label: "Neto al agente",
+                    value: formatCurrency(c.agent_net),
+                    valueColor: .green,
+                    bold: true
+                )
+            }
+
+            if let note = c.adjustment_note, !note.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "text.bubble").font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 2)
+            }
+
+            if canReview || canEdit {
+                HStack(spacing: 8) {
+                    if canReview {
+                        Button {
+                            reviewingRow = row
+                        } label: {
+                            Text("Revisar")
+                                .font(.caption).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 9)
+                                .background(Color.rdBlue)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if canEdit {
+                        Button {
+                            editingRow = row
+                        } label: {
+                            Text("Editar")
+                                .font(.caption).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 9)
+                                .background(Color(.secondarySystemFill))
+                                .foregroundStyle(Color.rdBlue)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func commissionRowLine(label: String, value: String, valueColor: Color, bold: Bool = false) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(bold ? .subheadline.bold() : .subheadline)
+                .foregroundStyle(valueColor)
+        }
+    }
+
+    private func commissionStatusPill(_ status: String) -> some View {
+        let (label, bg, fg): (String, Color, Color) = {
+            switch status {
+            case "pending_review": return ("Pendiente", Color.orange.opacity(0.15), .orange)
+            case "approved":       return ("Aprobada",  Color.green.opacity(0.15),  .green)
+            case "rejected":       return ("Rechazada", Color.red.opacity(0.15),    .red)
+            default:               return (status.capitalized, Color.gray.opacity(0.15), .gray)
+            }
+        }()
+        return Text(label)
+            .font(.caption2).bold()
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(bg)
+            .foregroundStyle(fg)
+            .clipShape(Capsule())
+    }
+
+    private func pctLabel(_ n: Double) -> String {
+        if n.truncatingRemainder(dividingBy: 1) == 0 { return "\(Int(n))%" }
+        return String(format: "%.1f%%", n)
     }
 
     private func load() async {
         loading = true
-        let rate = (Double(commissionRate) ?? 3.0) / 100.0
-        accounting = try? await api.getDashboardAccounting(commissionRate: rate)
+        errorMsg = nil
+        do {
+            response = try await api.fetchCommissionsSummary()
+        } catch {
+            if case .server(let msg)? = error as? APIError { errorMsg = msg }
+            else { errorMsg = "Error al cargar comisiones" }
+        }
         loading = false
+    }
+}
+
+// MARK: - Commission Form Sheet (submit / edit / review)
+
+struct CommissionFormSheet: View {
+    enum Mode { case edit, review }
+
+    let row: CommissionRow
+    let mode: Mode
+    let onSaved: () -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var saleAmount  = ""
+    @State private var agentPct    = ""
+    @State private var inmPct      = ""
+    @State private var note        = ""
+    @State private var saving      = false
+    @State private var errorMsg:   String?
+    @State private var showRejectConfirm = false
+
+    private var saleValue: Double {
+        let cleaned = saleAmount.replacingOccurrences(of: ",", with: "").replacingOccurrences(of: "$", with: "")
+        return Double(cleaned.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+    private var agentPctValue: Double { Double(agentPct) ?? 0 }
+    private var inmPctValue:   Double { Double(inmPct)   ?? 0 }
+
+    private var agentAmount: Double  { saleValue * agentPctValue / 100 }
+    private var inmAmount:   Double  { saleValue * inmPctValue / 100 }
+    private var agentNet:    Double  { max(0, agentAmount - inmAmount) }
+
+    private var canSubmit: Bool {
+        saleValue > 0 && agentPctValue > 0 && inmPctValue <= agentPctValue
+    }
+
+    private var title: String {
+        switch mode {
+        case .review: return "Revisar comisión"
+        case .edit:   return row.commission.sale_amount > 0 ? "Editar comisión" : "Registrar comisión"
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(row.listing_title ?? "Propiedad")
+                            .font(.subheadline).bold()
+                        if let client = row.client_name, !client.isEmpty {
+                            Text(client)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        if mode == .review, let agent = row.agent_name, !agent.isEmpty {
+                            Text("Enviado por \(agent)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Detalles de la comisión") {
+                    HStack {
+                        Text("Monto de venta (USD)")
+                        Spacer()
+                        TextField("150000", text: $saleAmount)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    HStack {
+                        Text("% Comisión agente")
+                        Spacer()
+                        TextField("3", text: $agentPct)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 80)
+                    }
+                    HStack {
+                        Text("% Cuota inmobiliaria")
+                        Spacer()
+                        TextField("0", text: $inmPct)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 80)
+                    }
+                }
+
+                Section("Resumen") {
+                    HStack {
+                        Text("Total agente")
+                            .foregroundStyle(.secondary).font(.caption)
+                        Spacer()
+                        Text(formatCurrency(agentAmount)).font(.subheadline.bold())
+                    }
+                    HStack {
+                        Text("Cuota inmobiliaria")
+                            .foregroundStyle(.secondary).font(.caption)
+                        Spacer()
+                        Text(formatCurrency(inmAmount)).font(.subheadline.bold())
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                    HStack {
+                        Text("Neto al agente")
+                            .bold()
+                        Spacer()
+                        Text(formatCurrency(agentNet))
+                            .font(.headline.bold())
+                            .foregroundStyle(.green)
+                    }
+                }
+
+                Section("Nota (opcional)") {
+                    TextField(mode == .review
+                              ? "Motivo del ajuste o rechazo…"
+                              : "Ej: firmado el 2026-04-15",
+                              text: $note, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                if let err = errorMsg {
+                    Section {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "…" : (mode == .review ? "Aprobar" : "Enviar")) {
+                        Task { await save(action: mode == .review ? "adjust" : "submit") }
+                    }
+                    .disabled(!canSubmit || saving)
+                }
+                if mode == .review {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .destructive) {
+                            showRejectConfirm = true
+                        } label: {
+                            Text("Rechazar")
+                                .foregroundStyle(.red)
+                        }
+                        .disabled(saving)
+                    }
+                }
+            }
+            .alert("Rechazar comisión", isPresented: $showRejectConfirm) {
+                Button("Cancelar", role: .cancel) { }
+                Button("Rechazar", role: .destructive) {
+                    Task { await save(action: "reject") }
+                }
+            } message: {
+                Text("Indica una nota en el campo 'Nota' antes de rechazar, para que el agente sepa por qué.")
+            }
+        }
+        .onAppear {
+            let c = row.commission
+            if c.sale_amount > 0 {
+                saleAmount = String(format: "%g", c.sale_amount)
+                agentPct   = String(format: "%g", c.agent_percent)
+                inmPct     = String(format: "%g", c.inmobiliaria_percent)
+            } else if let listingPrice = row.listing_price, listingPrice > 0 {
+                saleAmount = String(format: "%g", listingPrice)
+                agentPct   = "3"
+                inmPct     = "0"
+            } else {
+                agentPct = "3"
+                inmPct   = "0"
+            }
+        }
+    }
+
+    private func save(action: String) async {
+        saving = true
+        errorMsg = nil
+        defer { saving = false }
+
+        do {
+            if mode == .review {
+                if action == "reject" && note.trimmingCharacters(in: .whitespaces).isEmpty {
+                    errorMsg = "Indica una nota para rechazar la comisión."
+                    return
+                }
+                try await api.reviewCommission(
+                    applicationId:       row.application_id,
+                    action:              action,
+                    saleAmount:          action == "adjust" ? saleValue      : nil,
+                    agentPercent:        action == "adjust" ? agentPctValue  : nil,
+                    inmobiliariaPercent: action == "adjust" ? inmPctValue    : nil,
+                    note:                note.trimmingCharacters(in: .whitespaces)
+                )
+            } else {
+                try await api.submitCommission(
+                    applicationId:       row.application_id,
+                    saleAmount:          saleValue,
+                    agentPercent:        agentPctValue,
+                    inmobiliariaPercent: inmPctValue,
+                    note:                note.trimmingCharacters(in: .whitespaces)
+                )
+            }
+            onSaved()
+            dismiss()
+        } catch {
+            if case .server(let msg)? = error as? APIError { errorMsg = msg }
+            else { errorMsg = "Error al guardar" }
+        }
     }
 }
 

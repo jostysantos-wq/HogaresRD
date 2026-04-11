@@ -1205,6 +1205,88 @@ class APIService: ObservableObject {
         return try decoder.decode(DashboardAccounting.self, from: data)
     }
 
+    // MARK: - Commissions (per-sale with inmobiliaria approval flow)
+
+    /// Fetch the aggregated commissions summary for the current user.
+    /// Role-scoped server-side — an agent sees only their own rows;
+    /// an inmobiliaria owner sees the whole team plus their own cut.
+    func fetchCommissionsSummary() async throws -> CommissionsSummaryResponse {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/commissions/summary")!
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al cargar comisiones")
+        }
+        return try decoder.decode(CommissionsSummaryResponse.self, from: data)
+    }
+
+    /// Agent submits (or re-submits) a commission for an application.
+    /// Server will put it in pending_review status.
+    @discardableResult
+    func submitCommission(
+        applicationId: String,
+        saleAmount: Double,
+        agentPercent: Double,
+        inmobiliariaPercent: Double,
+        note: String
+    ) async throws -> Commission {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/commission")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "sale_amount":          saleAmount,
+            "agent_percent":        agentPercent,
+            "inmobiliaria_percent": inmobiliariaPercent,
+            "note":                 note,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al registrar comisión")
+        }
+        struct Wrapper: Decodable { let commission: Commission }
+        return try decoder.decode(Wrapper.self, from: data).commission
+    }
+
+    /// Inmobiliaria owner reviews a pending commission.
+    /// action: "approve" | "adjust" | "reject"
+    /// For "adjust", pass the new numbers; otherwise they're ignored.
+    @discardableResult
+    func reviewCommission(
+        applicationId: String,
+        action: String,
+        saleAmount: Double? = nil,
+        agentPercent: Double? = nil,
+        inmobiliariaPercent: Double? = nil,
+        note: String
+    ) async throws -> Commission {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/commission/review")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = ["action": action, "note": note]
+        if let s = saleAmount          { body["sale_amount"] = s }
+        if let a = agentPercent        { body["agent_percent"] = a }
+        if let i = inmobiliariaPercent { body["inmobiliaria_percent"] = i }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al revisar comisión")
+        }
+        struct Wrapper: Decodable { let commission: Commission }
+        return try decoder.decode(Wrapper.self, from: data).commission
+    }
+
     func getDashboardDocuments(status: String? = nil, type: String? = nil, search: String? = nil, page: Int = 1) async throws -> DashboardDocuments {
         guard let t = token else { throw APIError.server("No autenticado") }
         var comps = URLComponents(string: "\(apiBase)/api/broker/documents/archive")!

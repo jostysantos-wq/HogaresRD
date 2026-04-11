@@ -24,6 +24,7 @@
 		AA11000000000000000000CE /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000BF /* FeedView.swift */; };
 		AA22000000000000000000D1 /* SavedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C1 /* SavedStore.swift */; };
 		AA22000000000000000000E1 /* LikesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000E0 /* LikesStore.swift */; };
+		AA22000000000000000000F1 /* Commission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000F0 /* Commission.swift */; };
 		AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C2 /* AgencyPortfolioView.swift */; };
 		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
@@ -93,6 +94,7 @@
 		AA11000000000000000000BF /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		AA22000000000000000000C1 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
 		AA22000000000000000000E0 /* LikesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikesStore.swift; sourceTree = "<group>"; };
+		AA22000000000000000000F0 /* Commission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Commission.swift; sourceTree = "<group>"; };
 		AA22000000000000000000C2 /* AgencyPortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPortfolioView.swift; sourceTree = "<group>"; };
 		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
@@ -191,6 +193,7 @@
 				AA11000000000000000000B3 /* Listing.swift */,
 				AA22000000000000000000C1 /* SavedStore.swift */,
 				AA22000000000000000000E0 /* LikesStore.swift */,
+				AA22000000000000000000F0 /* Commission.swift */,
 				AA11000000000000000000B4 /* User.swift */,
 				AA33000000000000000000C1 /* Ad.swift */,
 				AA55000000000000000000B1 /* Conversation.swift */,
@@ -369,6 +372,7 @@
 				AA11000000000000000000CE /* FeedView.swift in Sources */,
 				AA22000000000000000000D1 /* SavedStore.swift in Sources */,
 				AA22000000000000000000E1 /* LikesStore.swift in Sources */,
+				AA22000000000000000000F1 /* Commission.swift in Sources */,
 				AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
