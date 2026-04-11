@@ -2642,10 +2642,17 @@
       // removed) with the newly uploaded ones. This ensures the owner
       // can edit metadata without having to re-upload all photos/plans.
       if (IS_EDIT_MODE) {
-        const keptPhotoUrls = Array.from(
+        // Collect kept photos as {url, label} objects to match the
+        // shape produced by uploadPhotos(). Consistency here means the
+        // backend always receives a clean array of objects — no mixed
+        // strings/objects and no "[object Object]" garbage.
+        const keptPhotos = Array.from(
           document.querySelectorAll('#photoSlots .photo-slot.existing')
-        ).map(el => el.dataset.existingUrl).filter(Boolean);
-        body.images = [...keptPhotoUrls, ...(body.images || [])];
+        ).map(el => ({
+          url:   el.dataset.existingUrl || '',
+          label: el.dataset.existingLabel || '',
+        })).filter(p => p.url);
+        body.images = [...keptPhotos, ...(body.images || [])];
 
         const keptBlueprintUrls = Array.from(
           document.querySelectorAll('#blueprintPreviews .existing-blueprint')
@@ -2885,19 +2892,33 @@
         // ── Step 5 · Photos ──────────────────────────────────
         // Replace the empty placeholder slots with "existing photo" cards
         // that carry the original URL and are kept on submit unless removed.
-        const existingPhotos = Array.isArray(listing.images) ? listing.images : [];
+        //
+        // CRITICAL: listing.images can be EITHER an array of URL strings
+        // (legacy format) OR an array of {url, label} objects (current
+        // format from /api/upload/photos). Previously this code treated
+        // every entry as a string, so objects stringified to "[object Object]"
+        // and when the user resubmitted the edit form the garbage strings
+        // overwrote the real URLs in the database. Always normalize to a
+        // plain URL string before using.
+        const rawExistingPhotos = Array.isArray(listing.images) ? listing.images : [];
+        const existingPhotos = rawExistingPhotos.map(p => {
+          if (typeof p === 'string') return { url: p, label: '' };
+          if (p && typeof p === 'object') return { url: p.url || '', label: p.label || '' };
+          return { url: '', label: '' };
+        }).filter(p => p.url);
         const photoContainer = document.getElementById('photoSlots');
         if (photoContainer) {
           photoContainer.innerHTML = '';
           slotFiles.length = 0;
           slotCount = 0;
-          existingPhotos.forEach((url, i) => {
+          existingPhotos.forEach((photo, i) => {
             const slot = document.createElement('div');
             slot.className = 'photo-slot existing';
-            slot.dataset.existingUrl = url;
+            slot.dataset.existingUrl   = photo.url;
+            slot.dataset.existingLabel = photo.label || '';
             slot.style.cssText = 'position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;border:2px solid var(--green);background:var(--bg-section);';
             slot.innerHTML = `
-              <img src="${url}" alt="Foto existente" style="width:100%;height:100%;object-fit:cover;display:block;" />
+              <img src="${photo.url}" alt="${photo.label || 'Foto existente'}" style="width:100%;height:100%;object-fit:cover;display:block;" />
               <div style="position:absolute;top:6px;left:6px;background:rgba(34,197,94,0.92);color:#fff;font-size:0.7rem;font-weight:800;padding:3px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:0.4px;">Actual</div>
               <button type="button" aria-label="Eliminar foto" onclick="this.parentElement.remove()" style="position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.72);color:#fff;border:none;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>
             `;

@@ -476,6 +476,44 @@ router.put('/:id', userAuth, (req, res) => {
   ];
 
   const incoming = req.body || {};
+
+  // Defensive normalization for image arrays. The submit form stores
+  // photos as {url, label} objects, but a serialization bug in the
+  // edit form previously stringified objects into "[object Object]"
+  // strings and overwrote the real URLs. Reject anything that doesn't
+  // look like a real URL — plain strings pass through, objects get
+  // flattened to {url, label}, everything else is dropped.
+  const sanitizeMedia = (arr, fieldName) => {
+    if (!Array.isArray(arr)) return arr;
+    const out = [];
+    for (const item of arr) {
+      if (typeof item === 'string') {
+        // Must look like a real path; reject "[object Object]" and friends
+        if (item.startsWith('/') || item.startsWith('http')) {
+          out.push(item);
+        }
+      } else if (item && typeof item === 'object' && typeof item.url === 'string') {
+        if (item.url.startsWith('/') || item.url.startsWith('http')) {
+          out.push({ url: item.url, label: typeof item.label === 'string' ? item.label : '' });
+        }
+      }
+    }
+    return out;
+  };
+  if (Array.isArray(incoming.images)) incoming.images = sanitizeMedia(incoming.images, 'images');
+  if (Array.isArray(incoming.blueprints)) incoming.blueprints = sanitizeMedia(incoming.blueprints, 'blueprints');
+
+  // Extra safety: if the sanitized images array is EMPTY but the
+  // existing listing had images, block the update. This prevents a
+  // buggy client from accidentally wiping all photos.
+  if (Array.isArray(incoming.images) && incoming.images.length === 0
+      && Array.isArray(listing.images) && listing.images.length > 0) {
+    return res.status(400).json({
+      error: 'No se puede eliminar todas las fotos de una propiedad. Sube al menos una foto válida.',
+      code:  'images_cannot_be_empty',
+    });
+  }
+
   const changes  = [];
   for (const key of FIELDS) {
     if (Object.prototype.hasOwnProperty.call(incoming, key)) {
