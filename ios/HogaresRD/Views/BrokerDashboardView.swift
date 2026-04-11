@@ -472,11 +472,11 @@ struct DashboardAnalyticsTab: View {
                             .padding(.horizontal)
 
                         VStack(spacing: 8) {
-                            pipelineRow("Enviadas", count: a.pipeline.submitted, color: .gray)
-                            pipelineRow("En Revisión", count: a.pipeline.reviewing, color: .orange)
-                            pipelineRow("Aprobadas", count: a.pipeline.approved, color: .green)
-                            pipelineRow("Rechazadas", count: a.pipeline.rejected, color: .red)
-                            pipelineRow("Cerradas", count: a.pipeline.closed, color: .blue)
+                            pipelineRow("Enviadas", count: a.enviadas, color: .gray)
+                            pipelineRow("En Revisión", count: a.enRevision, color: .orange)
+                            pipelineRow("Aprobadas", count: a.aprobadas, color: .green)
+                            pipelineRow("Rechazadas", count: a.rechazadas, color: .red)
+                            pipelineRow("Cerradas", count: a.cerradas, color: .blue)
                         }
                         .padding(.horizontal)
                     }
@@ -613,8 +613,8 @@ struct DashboardSalesTab: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                         DashStatCard(icon: "dollarsign.circle.fill", label: "Ingresos Totales", value: formatCurrency(s.totalRevenue), color: .green)
                         DashStatCard(icon: "chart.bar.fill", label: "Total Ventas", value: "\(s.totalSales)", color: .blue)
-                        DashStatCard(icon: "tag.fill", label: "Precio Promedio", value: formatCurrency(s.avgPrice), color: .purple)
-                        DashStatCard(icon: "hourglass", label: "Valor Pipeline", value: formatCurrency(s.pipelineValue), color: .orange)
+                        DashStatCard(icon: "tag.fill", label: "Precio Promedio", value: formatCurrency(s.avgSalePrice), color: .purple)
+                        DashStatCard(icon: "hourglass", label: "Valor Pipeline", value: formatCurrency(s.activePipelineValue), color: .orange)
                     }
                     .padding(.horizontal)
 
@@ -650,13 +650,13 @@ struct DashboardSalesTab: View {
                     }
 
                     // Recent sales
-                    if !s.recentSales.isEmpty {
+                    if !s.completedSales.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Ventas Recientes")
                                 .font(.headline)
                                 .padding(.horizontal)
 
-                            ForEach(s.recentSales) { sale in
+                            ForEach(s.completedSales) { sale in
                                 HStack {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(sale.property ?? "Propiedad")

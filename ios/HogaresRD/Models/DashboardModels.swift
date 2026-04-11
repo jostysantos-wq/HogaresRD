@@ -2,49 +2,69 @@ import Foundation
 
 // MARK: - Analytics
 
+// Matches the backend /api/broker/analytics payload exactly. The backend
+// sends status counts inside a dynamic `pipeline` map keyed by Spanish
+// status names (aplicado, en_revision, etc), and iOS derives the rollups
+// it displays via helper computed properties.
 struct DashboardAnalytics: Decodable {
     let totalApps: Int
-    let enRevision: Int
-    let docsPendientes: Int
-    let aprobadas: Int
-    let rechazadas: Int
+    let newThisWeek: Int
+    let newThisMonth: Int
     let conversionRate: Double
     let avgDaysToClose: Double
-    let newThisMonth: Int
     let appsPerDay: [DayCount]
     let appsPerMonth: [MonthCount]
-    let pipeline: PipelineCounts
+    let pipeline: [String: Int]
     let topListings: [TopListing]
 
     enum CodingKeys: String, CodingKey {
-        case totalApps = "total_apps"
-        case enRevision = "en_revision"
-        case docsPendientes = "docs_pendientes"
-        case aprobadas, rechazadas
+        case total
+        case newThisWeek  = "new_this_week"
+        case newThisMonth = "new_this_month"
         case conversionRate = "conversion_rate"
         case avgDaysToClose = "avg_days_to_close"
-        case newThisMonth = "new_this_month"
-        case appsPerDay = "apps_per_day"
-        case appsPerMonth = "apps_per_month"
+        case appsPerDay   = "applications_by_day"
+        case appsPerMonth = "applications_by_month"
         case pipeline
-        case topListings = "top_listings"
+        case topListings  = "top_listings"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        totalApps       = (try? c.decode(Int.self, forKey: .totalApps)) ?? 0
-        enRevision      = (try? c.decode(Int.self, forKey: .enRevision)) ?? 0
-        docsPendientes  = (try? c.decode(Int.self, forKey: .docsPendientes)) ?? 0
-        aprobadas       = (try? c.decode(Int.self, forKey: .aprobadas)) ?? 0
-        rechazadas      = (try? c.decode(Int.self, forKey: .rechazadas)) ?? 0
+        totalApps       = (try? c.decode(Int.self, forKey: .total)) ?? 0
+        newThisWeek     = (try? c.decode(Int.self, forKey: .newThisWeek)) ?? 0
+        newThisMonth    = (try? c.decode(Int.self, forKey: .newThisMonth)) ?? 0
         conversionRate  = (try? c.decode(Double.self, forKey: .conversionRate)) ?? 0
         avgDaysToClose  = (try? c.decode(Double.self, forKey: .avgDaysToClose)) ?? 0
-        newThisMonth    = (try? c.decode(Int.self, forKey: .newThisMonth)) ?? 0
         appsPerDay      = (try? c.decode([DayCount].self, forKey: .appsPerDay)) ?? []
         appsPerMonth    = (try? c.decode([MonthCount].self, forKey: .appsPerMonth)) ?? []
-        pipeline        = (try? c.decode(PipelineCounts.self, forKey: .pipeline)) ?? PipelineCounts()
+        pipeline        = (try? c.decode([String: Int].self, forKey: .pipeline)) ?? [:]
         topListings     = (try? c.decode([TopListing].self, forKey: .topListings)) ?? []
     }
+
+    // ── Rollups derived from the pipeline dict ─────────────────────
+    var enviadas: Int    { pipeline["aplicado"] ?? 0 }
+    var enRevision: Int {
+        (pipeline["en_revision"] ?? 0) +
+        (pipeline["documentos_requeridos"] ?? 0) +
+        (pipeline["documentos_enviados"] ?? 0) +
+        (pipeline["documentos_insuficientes"] ?? 0)
+    }
+    var docsPendientes: Int {
+        (pipeline["documentos_requeridos"] ?? 0) +
+        (pipeline["documentos_enviados"] ?? 0) +
+        (pipeline["documentos_insuficientes"] ?? 0)
+    }
+    var aprobadas: Int {
+        (pipeline["en_aprobacion"] ?? 0) +
+        (pipeline["reservado"] ?? 0) +
+        (pipeline["aprobado"] ?? 0) +
+        (pipeline["pendiente_pago"] ?? 0) +
+        (pipeline["pago_enviado"] ?? 0) +
+        (pipeline["pago_aprobado"] ?? 0)
+    }
+    var rechazadas: Int  { pipeline["rechazado"] ?? 0 }
+    var cerradas: Int    { pipeline["completado"] ?? 0 }
 }
 
 struct DayCount: Decodable, Identifiable {
@@ -59,28 +79,18 @@ struct MonthCount: Decodable, Identifiable {
     let count: Int
 }
 
-struct PipelineCounts: Decodable {
-    let submitted: Int
-    let reviewing: Int
-    let approved: Int
-    let rejected: Int
-    let closed: Int
-
-    init() { submitted = 0; reviewing = 0; approved = 0; rejected = 0; closed = 0 }
-}
-
 struct TopListing: Decodable, Identifiable {
     var id: String { listingId }
     let listingId: String
     let title: String
-    let location: String?
+    let location: String?  // not sent by backend yet — keep nullable
     let price: String?
     let appCount: Int
 
     enum CodingKeys: String, CodingKey {
         case listingId = "listing_id"
         case title, location, price
-        case appCount = "app_count"
+        case count
     }
 
     init(from decoder: Decoder) throws {
@@ -89,40 +99,51 @@ struct TopListing: Decodable, Identifiable {
         title     = (try? c.decode(String.self, forKey: .title)) ?? "—"
         location  = try? c.decode(String.self, forKey: .location)
         price     = try? c.decode(String.self, forKey: .price)
-        appCount  = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
+        appCount  = (try? c.decode(Int.self, forKey: .count)) ?? 0
     }
 }
 
 // MARK: - Sales
 
+// Matches the backend /api/broker/sales payload exactly.
 struct DashboardSales: Decodable {
     let totalRevenue: Double
     let totalSales: Int
-    let avgPrice: Double
-    let pipelineValue: Double
-    let monthlySales: [MonthlySale]
+    let avgSalePrice: Double
+    let activePipelineValue: Double
+    let activeCount: Int
+    let monthlyRevenue: [MonthlySale]
     let salesByType: [SaleByType]
-    let recentSales: [SaleRecord]
+    let completedSales: [SaleRecord]
 
     enum CodingKeys: String, CodingKey {
-        case totalRevenue = "total_revenue"
-        case totalSales = "total_sales"
-        case avgPrice = "avg_price"
-        case pipelineValue = "pipeline_value"
-        case monthlySales = "monthly_sales"
-        case salesByType = "sales_by_type"
-        case recentSales = "recent_sales"
+        case totalRevenue        = "total_revenue"
+        case totalSales          = "total_sales"
+        case avgSalePrice        = "avg_sale_price"
+        case activePipelineValue = "active_pipeline_value"
+        case activeCount         = "active_count"
+        case monthlyRevenue      = "monthly_revenue"
+        case salesByType         = "sales_by_type"
+        case completedSales      = "completed_sales"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        totalRevenue  = (try? c.decode(Double.self, forKey: .totalRevenue)) ?? 0
-        totalSales    = (try? c.decode(Int.self, forKey: .totalSales)) ?? 0
-        avgPrice      = (try? c.decode(Double.self, forKey: .avgPrice)) ?? 0
-        pipelineValue = (try? c.decode(Double.self, forKey: .pipelineValue)) ?? 0
-        monthlySales  = (try? c.decode([MonthlySale].self, forKey: .monthlySales)) ?? []
-        salesByType   = (try? c.decode([SaleByType].self, forKey: .salesByType)) ?? []
-        recentSales   = (try? c.decode([SaleRecord].self, forKey: .recentSales)) ?? []
+        totalRevenue        = (try? c.decode(Double.self, forKey: .totalRevenue)) ?? 0
+        totalSales          = (try? c.decode(Int.self, forKey: .totalSales)) ?? 0
+        avgSalePrice        = (try? c.decode(Double.self, forKey: .avgSalePrice)) ?? 0
+        activePipelineValue = (try? c.decode(Double.self, forKey: .activePipelineValue)) ?? 0
+        activeCount         = (try? c.decode(Int.self, forKey: .activeCount)) ?? 0
+        monthlyRevenue      = (try? c.decode([MonthlySale].self, forKey: .monthlyRevenue)) ?? []
+        // Backend sends sales_by_type as an object {type: count}. Decode as dict
+        // and flatten into an array of SaleByType so existing views can iterate.
+        if let dict = try? c.decode([String: Int].self, forKey: .salesByType) {
+            salesByType = dict.map { SaleByType(type: $0.key, count: $0.value, revenue: 0) }
+                              .sorted { $0.count > $1.count }
+        } else {
+            salesByType = []
+        }
+        completedSales      = (try? c.decode([SaleRecord].self, forKey: .completedSales)) ?? []
     }
 }
 
@@ -133,7 +154,7 @@ struct MonthlySale: Decodable, Identifiable {
     let count: Int
 }
 
-struct SaleByType: Decodable, Identifiable {
+struct SaleByType: Identifiable {
     var id: String { type }
     let type: String
     let count: Int
@@ -142,29 +163,39 @@ struct SaleByType: Decodable, Identifiable {
 
 struct SaleRecord: Decodable, Identifiable {
     let id: String
-    let client: String?
-    let property: String?
-    let price: Double?
-    let date: String?
+    let clientName: String?
+    let listingTitle: String?
+    let listingPrice: Double?
+    let completedAt: String?
     let paymentStatus: String?
 
+    // Convenience aliases for old view code
+    var client: String? { clientName }
+    var property: String? { listingTitle }
+    var price: Double? { listingPrice }
+    var date: String? { completedAt }
+
     enum CodingKeys: String, CodingKey {
-        case id, client, property, price, date
+        case id
+        case clientName    = "client_name"
+        case listingTitle  = "listing_title"
+        case listingPrice  = "listing_price"
+        case completedAt   = "completed_at"
         case paymentStatus = "payment_status"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id            = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
-        client        = try? c.decode(String.self, forKey: .client)
-        property      = try? c.decode(String.self, forKey: .property)
-        price         = try? c.decode(Double.self, forKey: .price)
-        date          = try? c.decode(String.self, forKey: .date)
+        clientName    = try? c.decode(String.self, forKey: .clientName)
+        listingTitle  = try? c.decode(String.self, forKey: .listingTitle)
+        listingPrice  = try? c.decode(Double.self, forKey: .listingPrice)
+        completedAt   = try? c.decode(String.self, forKey: .completedAt)
         paymentStatus = try? c.decode(String.self, forKey: .paymentStatus)
     }
 
     var priceFormatted: String {
-        guard let p = price, p > 0 else { return "—" }
+        guard let p = listingPrice, p > 0 else { return "—" }
         let f = NumberFormatter()
         f.numberStyle = .currency; f.currencyCode = "USD"; f.maximumFractionDigits = 0
         return f.string(from: NSNumber(value: p)) ?? "$\(Int(p))"
@@ -172,32 +203,61 @@ struct SaleRecord: Decodable, Identifiable {
 }
 
 // MARK: - Accounting
+// Matches the backend /api/broker/accounting payload — a top-level object
+// with nested { summary, payments, monthly_commissions, all_financial }.
 
 struct DashboardAccounting: Decodable {
-    let totalEarned: Double
+    // Flattened summary fields (from backend `summary` subobject)
+    let totalCompletedValue: Double
+    let totalPendingValue: Double
+    let estimatedCommission: Double
     let pendingCommission: Double
     let commissionRate: Double
-    let verifiedPayments: Int
-    let monthlyCommissions: [MonthlyCommission]
-    let records: [AccountingRecord]
+    let totalApps: Int
+    let completedCount: Int
+    let pendingCount: Int
 
-    enum CodingKeys: String, CodingKey {
-        case totalEarned = "total_earned"
-        case pendingCommission = "pending_commission"
-        case commissionRate = "commission_rate"
-        case verifiedPayments = "verified_payments"
+    // Collections
+    let payments: [AccountingPayment]
+    let monthlyCommissions: [MonthlyCommission]
+    let allFinancial: [AccountingRecord]
+
+    // Back-compat computed
+    var totalEarned: Double { estimatedCommission }
+    var verifiedPayments: Int { payments.filter { ($0.paymentStatus ?? "") == "approved" }.count }
+    var records: [AccountingRecord] { allFinancial }
+
+    enum TopKeys: String, CodingKey {
+        case summary, payments
         case monthlyCommissions = "monthly_commissions"
-        case records
+        case allFinancial       = "all_financial"
+    }
+    enum SummaryKeys: String, CodingKey {
+        case totalCompletedValue = "total_completed_value"
+        case totalPendingValue   = "total_pending_value"
+        case estimatedCommission = "estimated_commission"
+        case pendingCommission   = "pending_commission"
+        case commissionRate      = "commission_rate"
+        case totalApps           = "total_apps"
+        case completedCount      = "completed_count"
+        case pendingCount        = "pending_count"
     }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        totalEarned        = (try? c.decode(Double.self, forKey: .totalEarned)) ?? 0
-        pendingCommission  = (try? c.decode(Double.self, forKey: .pendingCommission)) ?? 0
-        commissionRate     = (try? c.decode(Double.self, forKey: .commissionRate)) ?? 0.03
-        verifiedPayments   = (try? c.decode(Int.self, forKey: .verifiedPayments)) ?? 0
-        monthlyCommissions = (try? c.decode([MonthlyCommission].self, forKey: .monthlyCommissions)) ?? []
-        records            = (try? c.decode([AccountingRecord].self, forKey: .records)) ?? []
+        let c = try decoder.container(keyedBy: TopKeys.self)
+        let s = try? c.nestedContainer(keyedBy: SummaryKeys.self, forKey: .summary)
+        totalCompletedValue = (try? s?.decode(Double.self, forKey: .totalCompletedValue)) ?? 0
+        totalPendingValue   = (try? s?.decode(Double.self, forKey: .totalPendingValue))   ?? 0
+        estimatedCommission = (try? s?.decode(Double.self, forKey: .estimatedCommission)) ?? 0
+        pendingCommission   = (try? s?.decode(Double.self, forKey: .pendingCommission))   ?? 0
+        commissionRate      = (try? s?.decode(Double.self, forKey: .commissionRate))      ?? 0.03
+        totalApps           = (try? s?.decode(Int.self,    forKey: .totalApps))           ?? 0
+        completedCount      = (try? s?.decode(Int.self,    forKey: .completedCount))      ?? 0
+        pendingCount        = (try? s?.decode(Int.self,    forKey: .pendingCount))        ?? 0
+
+        payments            = (try? c.decode([AccountingPayment].self, forKey: .payments)) ?? []
+        monthlyCommissions  = (try? c.decode([MonthlyCommission].self, forKey: .monthlyCommissions)) ?? []
+        allFinancial        = (try? c.decode([AccountingRecord].self, forKey: .allFinancial)) ?? []
     }
 }
 
@@ -205,32 +265,97 @@ struct MonthlyCommission: Decodable, Identifiable {
     var id: String { month }
     let month: String
     let commission: Double
+    let completedValue: Double
+    let count: Int
+
+    enum CodingKeys: String, CodingKey {
+        case month, commission, count
+        case completedValue = "completed_value"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        month          = (try? c.decode(String.self, forKey: .month)) ?? ""
+        commission     = (try? c.decode(Double.self, forKey: .commission)) ?? 0
+        completedValue = (try? c.decode(Double.self, forKey: .completedValue)) ?? 0
+        count          = (try? c.decode(Int.self, forKey: .count)) ?? 0
+    }
+}
+
+struct AccountingPayment: Decodable, Identifiable {
+    let id: String
+    let clientName: String?
+    let listingTitle: String?
+    let paymentAmount: Double?
+    let commission: Double?
+    let paymentStatus: String?
+    let appStatus: String?
+    let receiptUploadedAt: String?
+    let verifiedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id                = "app_id"
+        case clientName        = "client_name"
+        case listingTitle      = "listing_title"
+        case paymentAmount     = "payment_amount"
+        case commission
+        case paymentStatus     = "payment_status"
+        case appStatus         = "app_status"
+        case receiptUploadedAt = "receipt_uploaded_at"
+        case verifiedAt        = "verified_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id                = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        clientName        = try? c.decode(String.self, forKey: .clientName)
+        listingTitle      = try? c.decode(String.self, forKey: .listingTitle)
+        paymentAmount     = try? c.decode(Double.self, forKey: .paymentAmount)
+        commission        = try? c.decode(Double.self, forKey: .commission)
+        paymentStatus     = try? c.decode(String.self, forKey: .paymentStatus)
+        appStatus         = try? c.decode(String.self, forKey: .appStatus)
+        receiptUploadedAt = try? c.decode(String.self, forKey: .receiptUploadedAt)
+        verifiedAt        = try? c.decode(String.self, forKey: .verifiedAt)
+    }
 }
 
 struct AccountingRecord: Decodable, Identifiable {
     let id: String
-    let client: String?
-    let property: String?
-    let price: Double?
+    let clientName: String?
+    let listingTitle: String?
+    let listingPrice: Double?
+    let status: String?
     let commission: Double?
     let paymentStatus: String?
-    let date: String?
+    let createdAt: String?
+
+    // Back-compat aliases
+    var client: String?  { clientName }
+    var property: String? { listingTitle }
+    var price: Double? { listingPrice }
+    var date: String? { createdAt }
 
     enum CodingKeys: String, CodingKey {
-        case id, client, property, price, commission
+        case id            = "app_id"
+        case clientName    = "client_name"
+        case listingTitle  = "listing_title"
+        case listingPrice  = "listing_price"
+        case status
+        case commission
         case paymentStatus = "payment_status"
-        case date
+        case createdAt     = "created_at"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id            = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
-        client        = try? c.decode(String.self, forKey: .client)
-        property      = try? c.decode(String.self, forKey: .property)
-        price         = try? c.decode(Double.self, forKey: .price)
+        clientName    = try? c.decode(String.self, forKey: .clientName)
+        listingTitle  = try? c.decode(String.self, forKey: .listingTitle)
+        listingPrice  = try? c.decode(Double.self, forKey: .listingPrice)
+        status        = try? c.decode(String.self, forKey: .status)
         commission    = try? c.decode(Double.self, forKey: .commission)
         paymentStatus = try? c.decode(String.self, forKey: .paymentStatus)
-        date          = try? c.decode(String.self, forKey: .date)
+        createdAt     = try? c.decode(String.self, forKey: .createdAt)
     }
 }
 
@@ -763,8 +888,37 @@ struct ContactSummary: Decodable, Identifiable {
     let email: String?
     let phone: String?
     let interactions: Int?
+    let applications: Int?
+    let conversations: Int?
+    let tours: Int?
+    let tasks: Int?
     let lastInteraction: String?
     let firstInteraction: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone
+        // Accept both `interactions` (list endpoint) and `totalInteractions`
+        // (contact-detail endpoint).
+        case interactions, totalInteractions
+        case applications, conversations, tours, tasks
+        case lastInteraction, firstInteraction
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id               = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        name             = (try? c.decode(String.self, forKey: .name)) ?? ""
+        email            = try? c.decode(String.self, forKey: .email)
+        phone            = try? c.decode(String.self, forKey: .phone)
+        interactions     = (try? c.decode(Int.self, forKey: .interactions))
+                        ?? (try? c.decode(Int.self, forKey: .totalInteractions))
+        applications     = try? c.decode(Int.self, forKey: .applications)
+        conversations    = try? c.decode(Int.self, forKey: .conversations)
+        tours            = try? c.decode(Int.self, forKey: .tours)
+        tasks            = try? c.decode(Int.self, forKey: .tasks)
+        lastInteraction  = try? c.decode(String.self, forKey: .lastInteraction)
+        firstInteraction = try? c.decode(String.self, forKey: .firstInteraction)
+    }
 
     var initials: String {
         name.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined().uppercased()

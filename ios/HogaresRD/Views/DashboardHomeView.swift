@@ -33,7 +33,12 @@ struct DashboardHomeView: View {
     }
 
     private var pendingApps: Int { analytics?.enRevision ?? 0 }
-    private var pendingDocs: Int { analytics?.docsPendientes ?? 0 }
+    private var pendingDocs: Int {
+        // docs_requeridos + docs_enviados + docs_insuficientes
+        (analytics?.pipeline["documentos_requeridos"] ?? 0) +
+        (analytics?.pipeline["documentos_enviados"]   ?? 0) +
+        (analytics?.pipeline["documentos_insuficientes"] ?? 0)
+    }
     private var unreadMessages: Int {
         let myId = api.currentUser?.id ?? ""
         return conversations.filter { conv in
@@ -195,7 +200,7 @@ struct DashboardHomeView: View {
                         trend: analytics?.newThisMonth ?? 0 > 0 ? "+\(analytics?.newThisMonth ?? 0) este mes" : nil,
                         trendPositive: true, color: Color.rdBlue)
                 KPICard(icon: "arrow.triangle.2.circlepath", label: "Tasa Conversion",
-                        value: String(format: "%.1f%%", analytics?.conversionRate ?? 0),
+                        value: String(format: "%.1f%%", (analytics?.conversionRate ?? 0) * 100),
                         trend: nil, trendPositive: true, color: .orange)
                 if showSalesMetrics {
                     KPICard(icon: "dollarsign.circle.fill", label: "Ingresos",
@@ -218,15 +223,15 @@ struct DashboardHomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    pipelineStage("Enviadas", count: analytics?.pipeline.submitted ?? 0, color: Color.rdBlue, status: "submitted")
+                    pipelineStage("Enviadas", count: analytics?.enviadas ?? 0, color: Color.rdBlue, status: "aplicado")
                     pipelineArrow
-                    pipelineStage("Revision", count: analytics?.pipeline.reviewing ?? 0, color: .orange, status: "reviewing")
+                    pipelineStage("Revision", count: analytics?.enRevision ?? 0, color: .orange, status: "en_revision")
                     pipelineArrow
-                    pipelineStage("Aprobadas", count: analytics?.pipeline.approved ?? 0, color: Color.rdGreen, status: "approved")
+                    pipelineStage("Aprobadas", count: analytics?.aprobadas ?? 0, color: Color.rdGreen, status: "aprobado")
                     pipelineArrow
-                    pipelineStage("Rechazadas", count: analytics?.pipeline.rejected ?? 0, color: Color.rdRed, status: "rejected")
+                    pipelineStage("Rechazadas", count: analytics?.rechazadas ?? 0, color: Color.rdRed, status: "rechazado")
                     pipelineArrow
-                    pipelineStage("Cerradas", count: analytics?.pipeline.closed ?? 0, color: .purple, status: "closed")
+                    pipelineStage("Cerradas", count: analytics?.cerradas ?? 0, color: .purple, status: "completado")
                 }
             }
         }

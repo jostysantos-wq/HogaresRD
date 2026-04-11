@@ -134,9 +134,12 @@ struct ContactTimelineView: View {
                 }
             }
 
-            // Stats row
+            // Stats row — four badges matching the web profile
             HStack(spacing: 20) {
-                statBadge(icon: "doc.text.fill", label: "Apps", count: c.interactions ?? 0, color: .rdBlue)
+                statBadge(icon: "doc.text.fill",   label: "Apps",      count: c.applications ?? 0, color: .rdBlue)
+                statBadge(icon: "bubble.left.and.bubble.right.fill", label: "Mensajes", count: c.conversations ?? 0, color: .purple)
+                statBadge(icon: "calendar",        label: "Visitas",   count: c.tours ?? 0, color: .green)
+                statBadge(icon: "checkmark.circle", label: "Tareas",    count: c.tasks ?? 0, color: .orange)
             }
             .padding(.top, 4)
         }

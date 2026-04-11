@@ -666,20 +666,46 @@ struct ChangeStatusSheet: View {
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) private var dismiss
 
+    // Start from the passed-in detail but allow auto-refresh to replace it
+    // with the current server state so we never try an invalid transition.
+    @State private var liveDetail: ApplicationDetail
+    @State private var refreshing = true
     @State private var target: String = ""
     @State private var reason: String = ""
     @State private var saving = false
     @State private var errorMsg: String?
+    @State private var infoMsg: String?
+
+    init(detail: ApplicationDetail, onChanged: @escaping (ApplicationDetail) -> Void) {
+        self.detail = detail
+        self.onChanged = onChanged
+        _liveDetail = State(initialValue: detail)
+    }
+
+    private var currentStatus: String { liveDetail.status }
 
     private var options: [String] {
-        ApplicationStatus.nextOptions(from: detail.status)
+        ApplicationStatus.nextOptions(from: currentStatus)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Estado actual") {
-                    Text(ApplicationStatus.label(for: detail.status))
+                    HStack {
+                        Text(ApplicationStatus.label(for: currentStatus))
+                        Spacer()
+                        if refreshing {
+                            ProgressView().scaleEffect(0.7)
+                        }
+                    }
+                }
+                if let info = infoMsg {
+                    Section {
+                        Text(info)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
                 Section("Nuevo estado") {
                     if options.isEmpty {
@@ -724,9 +750,33 @@ struct ChangeStatusSheet: View {
                     Button(saving ? "…" : "Guardar") {
                         Task { await save() }
                     }
-                    .disabled(target.isEmpty || saving)
+                    .disabled(target.isEmpty || saving || refreshing)
                 }
             }
+            .task {
+                await refreshLive()
+            }
+        }
+    }
+
+    // Re-fetch the application detail so we never let the user pick a
+    // transition against a stale local status (e.g. the client may have
+    // just uploaded a receipt, moving the app to pago_enviado server-side).
+    private func refreshLive() async {
+        refreshing = true
+        defer { refreshing = false }
+        do {
+            let fresh = try await api.fetchApplicationDetail(id: detail.id)
+            if fresh.status != liveDetail.status {
+                infoMsg = "El estado se actualizó a \(ApplicationStatus.label(for: fresh.status)) mientras tanto."
+            }
+            liveDetail = fresh
+            // If the chosen target is no longer valid, clear it so the user
+            // has to re-select an option that matches the current status.
+            if !options.contains(target) { target = "" }
+        } catch {
+            // If refresh fails we silently keep the initial detail — the
+            // user will still see a server-side error on submit if stale.
         }
     }
 
@@ -749,8 +799,16 @@ struct ChangeStatusSheet: View {
             onChanged(updated)
             dismiss()
         } catch {
-            if case .server(let s)? = error as? APIError { errorMsg = s }
-            else { errorMsg = "Error al cambiar el estado" }
+            if case .server(let s)? = error as? APIError {
+                errorMsg = s
+                // If the server rejected because the local state was stale,
+                // refresh again so the user can pick valid options.
+                if s.contains("Transición no válida") {
+                    await refreshLive()
+                }
+            } else {
+                errorMsg = "Error al cambiar el estado"
+            }
         }
     }
 }
