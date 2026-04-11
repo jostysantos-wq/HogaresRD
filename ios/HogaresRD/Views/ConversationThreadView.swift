@@ -22,6 +22,16 @@ struct ConversationThreadView: View {
     @State private var claiming:       Bool   = false
     @State private var claimed:        Bool   = false
 
+    // Transfer state
+    @State private var showTransferSheet: Bool = false
+    @State private var transferTargets:   [TransferTarget] = []
+    @State private var transferLoading:   Bool = false
+    @State private var transferSelected:  TransferTarget?
+    @State private var transferReason:    String = ""
+    @State private var transferSending:   Bool = false
+    @State private var transferError:     String?
+    @State private var transferred:       Bool = false
+
     private var myId: String { api.currentUser?.id ?? "" }
     private var myRole: String { api.currentUser?.role ?? "user" }
     private var isPro: Bool {
@@ -32,6 +42,15 @@ struct ConversationThreadView: View {
         guard isPro else { return false }
         if let bId = conversation.brokerId, !bId.isEmpty { return bId == myId }
         return true
+    }
+
+    /// Pro users can transfer the conversation only if they currently
+    /// own its broker side. The backend double-checks both "ownership"
+    /// and "same inmobiliaria" rules — this is just the UI gate.
+    private var canTransfer: Bool {
+        guard isPro else { return false }
+        if let bId = conversation.brokerId, !bId.isEmpty { return bId == myId }
+        return false
     }
 
     /// Determine if a message is "mine" based on senderId AND senderRole.
@@ -227,21 +246,30 @@ struct ConversationThreadView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            if canToggleClose {
+            if canToggleClose || canTransfer {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        if isClosed {
+                        if canTransfer && !isClosed {
                             Button {
-                                Task { await toggleClose() }
+                                openTransferSheet()
                             } label: {
-                                Label("Reabrir conversación", systemImage: "lock.open")
+                                Label("Transferir a otro agente", systemImage: "person.crop.circle.badge.arrow.right")
                             }
-                        } else {
-                            Button(role: .destructive) {
-                                closeReasonInput = ""
-                                showCloseSheet = true
-                            } label: {
-                                Label("Cerrar conversación", systemImage: "lock")
+                        }
+                        if canToggleClose {
+                            if isClosed {
+                                Button {
+                                    Task { await toggleClose() }
+                                } label: {
+                                    Label("Reabrir conversación", systemImage: "lock.open")
+                                }
+                            } else {
+                                Button(role: .destructive) {
+                                    closeReasonInput = ""
+                                    showCloseSheet = true
+                                } label: {
+                                    Label("Cerrar conversación", systemImage: "lock")
+                                }
                             }
                         }
                     } label: {
@@ -254,6 +282,9 @@ struct ConversationThreadView: View {
         }
         .sheet(isPresented: $showCloseSheet) {
             closeReasonSheet
+        }
+        .sheet(isPresented: $showTransferSheet) {
+            transferSheet
         }
         .alert("Error", isPresented: .constant(toggleError != nil), actions: {
             Button("OK") { toggleError = nil }
@@ -429,6 +460,198 @@ struct ConversationThreadView: View {
     }
 
     // MARK: - Close Reason Sheet
+
+    // MARK: - Transfer sheet
+
+    private var transferSheet: some View {
+        NavigationStack {
+            Form {
+                if transferred {
+                    Section {
+                        HStack(spacing: 10) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.title2)
+                                .foregroundStyle(Color.rdGreen)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Conversación transferida")
+                                    .font(.subheadline.bold())
+                                Text("El nuevo agente ya fue notificado.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } else {
+                    Section {
+                        Text("Al transferir, el nuevo agente verá toda la conversación y pasarás a no recibir más mensajes de esta hilo. Solo puedes transferir a agentes de tu misma inmobiliaria.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if transferLoading {
+                        Section {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        }
+                    } else if transferTargets.isEmpty {
+                        Section {
+                            Text("No hay otros agentes en tu inmobiliaria disponibles para transferir.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.vertical, 8)
+                        }
+                    } else {
+                        Section("Transferir a") {
+                            ForEach(transferTargets) { t in
+                                Button {
+                                    transferSelected = t
+                                    transferError = nil
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        ZStack {
+                                            Circle().fill(Color.rdBlue.opacity(0.12)).frame(width: 36, height: 36)
+                                            Text(String((t.name.first ?? Character("?"))).uppercased())
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(Color.rdBlue)
+                                        }
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(t.name.isEmpty ? "(sin nombre)" : t.name)
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(.primary)
+                                            Text(teammateRoleLabel(t.role)
+                                                 + (t.agencyName?.isEmpty == false ? " · \(t.agencyName!)" : ""))
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        if transferSelected?.id == t.id {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(Color.rdGreen)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        Section("Motivo (opcional)") {
+                            TextField("Ej: me voy de vacaciones, cliente prefiere otro agente…",
+                                      text: $transferReason, axis: .vertical)
+                                .lineLimit(2...4)
+                        }
+                        if let err = transferError {
+                            Section {
+                                Text(err)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        Section {
+                            Button {
+                                Task { await performTransfer() }
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    if transferSending {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Text("Transferir conversación").bold()
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            .disabled(transferSelected == nil || transferSending)
+                            .listRowBackground(transferSelected == nil ? Color(.systemGray5) : Color.rdBlue)
+                            .foregroundStyle(.white)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Transferir conversación")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(transferred ? "Cerrar" : "Cancelar") {
+                        showTransferSheet = false
+                        if transferred { dismiss() }
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .task {
+            if !transferred && transferTargets.isEmpty {
+                await loadTransferTargets()
+            }
+        }
+    }
+
+    private func teammateRoleLabel(_ role: String) -> String {
+        switch role {
+        case "broker":       return "Agente Broker"
+        case "agency":       return "Agente"
+        case "inmobiliaria": return "Inmobiliaria"
+        case "constructora": return "Constructora"
+        default:             return role.capitalized
+        }
+    }
+
+    private func openTransferSheet() {
+        transferSelected = nil
+        transferReason   = ""
+        transferError    = nil
+        transferred      = false
+        transferTargets  = []
+        showTransferSheet = true
+    }
+
+    private func loadTransferTargets() async {
+        transferLoading = true
+        defer { transferLoading = false }
+        do {
+            let list = try await api.fetchTransferTargets(conversationId: conversation.id)
+            await MainActor.run { transferTargets = list }
+        } catch {
+            let msg = (error as? APIError).flatMap { err -> String? in
+                if case .server(let s) = err { return s }
+                return nil
+            } ?? "Error al cargar compañeros"
+            await MainActor.run { transferError = msg }
+        }
+    }
+
+    private func performTransfer() async {
+        guard let target = transferSelected else { return }
+        transferSending = true
+        transferError   = nil
+        defer { transferSending = false }
+        do {
+            _ = try await api.transferConversation(
+                id: conversation.id,
+                targetUserId: target.id,
+                reason: transferReason
+            )
+            await MainActor.run {
+                transferred = true
+            }
+            // Wait briefly so the user sees the success, then close the
+            // sheet AND this thread view (the conversation no longer
+            // belongs to this broker).
+            try? await Task.sleep(for: .seconds(1.5))
+            await MainActor.run {
+                showTransferSheet = false
+                dismiss()
+            }
+        } catch {
+            let msg = (error as? APIError).flatMap { err -> String? in
+                if case .server(let s) = err { return s }
+                return nil
+            } ?? "Error al transferir"
+            await MainActor.run { transferError = msg }
+        }
+    }
 
     private var closeReasonSheet: some View {
         NavigationStack {

@@ -2269,6 +2269,11 @@
             <div id="brkThreadSub" style="font-size:.73rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
           </div>
           <div id="brkClientChip" style="font-size:.72rem;color:var(--text-muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:3px 10px;white-space:nowrap;"></div>
+          <button id="brkTransferBtn" onclick="brkOpenTransfer()" title="Transferir a otro agente de tu inmobiliaria"
+            style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;display:none;">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;vertical-align:-1px;margin-right:3px;"><path d="M16 12c1.66 0 2.99-1.34 2.99-3S17.66 6 16 6s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 6 8 6 5 7.34 5 9s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V20h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            Transferir
+          </button>
           <button id="brkCloseBtn" onclick="brkToggleClose()" title="Cerrar conversacion"
             style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;">Cerrar</button>
         </div>
@@ -2695,6 +2700,29 @@
     <div class="tab-pane" id="pane-tours"></div>
     <div class="tab-pane" id="pane-pago"></div>
     <div class="tab-pane" id="pane-timeline"></div>
+  </div>
+</div>
+
+<!-- Transfer Conversation Modal — move a conversation to another teammate in the same inmobiliaria -->
+<div class="modal-backdrop" id="brkTransferModal">
+  <div class="modal" style="max-width:520px;">
+    <h3 style="margin:0 0 0.25rem;">Transferir conversación</h3>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.45;">
+      Al transferir, el nuevo agente verá toda la conversación y pasarás a no recibir más mensajes.
+      Solo puedes transferir a agentes de tu misma inmobiliaria.
+    </p>
+    <div id="brkTransferSubject" style="padding:0.65rem 0.85rem;background:var(--bg-section);border-radius:8px;margin-bottom:0.9rem;font-size:0.8rem;color:var(--text);line-height:1.45;"></div>
+    <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.35rem;">Transferir a</label>
+    <div id="brkTransferList" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;"></div>
+    <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0.9rem 0 0.35rem;">Motivo (opcional)</label>
+    <textarea id="brkTransferReason" rows="2" maxlength="300"
+              placeholder="Ej: me voy de vacaciones, cliente prefiere otro agente…"
+              style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.85rem;font-family:inherit;resize:vertical;"></textarea>
+    <div id="brkTransferError" style="color:var(--red);font-size:0.78rem;min-height:1rem;margin-top:0.5rem;"></div>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem;">
+      <button class="btn btn-outline" onclick="brkCloseTransfer()">Cancelar</button>
+      <button class="btn btn-primary" id="brkTransferConfirmBtn" disabled onclick="brkConfirmTransfer()">Transferir</button>
+    </div>
   </div>
 </div>
 
@@ -7716,6 +7744,21 @@
     document.getElementById('brkThreadSub').textContent   = `Cliente: ${conv.clientName} · ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
     document.getElementById('brkClientChip').textContent  = conv.clientName;
 
+    // Show the Transfer button only when the current user is the
+    // assigned broker on this conversation AND is in a pro role AND
+    // belongs to an inmobiliaria (sole-agent accounts have no team
+    // to transfer to). Backend double-checks all of this.
+    const iAmAssigned = conv.brokerId === currentUser.id;
+    const proRoles = ['agency','broker','inmobiliaria','constructora'];
+    const iAmPro = proRoles.includes(currentUser.role);
+    const effectiveInm = ['inmobiliaria','constructora'].includes(currentUser.role)
+      ? currentUser.id
+      : (currentUser.inmobiliaria_id || null);
+    const transferBtn = document.getElementById('brkTransferBtn');
+    if (transferBtn) {
+      transferBtn.style.display = (iAmAssigned && iAmPro && effectiveInm) ? 'inline-flex' : 'none';
+    }
+
     brkApplyClosedState(conv);
     brkRenderMsgs(conv.messages);
     if (conv.messages.length) brkLastTs = conv.messages.at(-1).timestamp;
@@ -7839,6 +7882,103 @@
     await fetch(`/api/conversations/${brkActiveConv}/archive`, { method:'PUT', credentials:'include' });
     document.getElementById('brkClosedArchiveRow').style.display = 'none';
     brkLoadList();
+  };
+
+  // ── Transfer conversation (only to same-inmobiliaria teammates) ──
+  let _brkTransferTargets = [];
+  let _brkTransferSelectedId = null;
+  let _brkTransferConvId = null;
+  let _brkTransferClientName = '';
+  let _brkTransferProperty = '';
+
+  window.brkOpenTransfer = async function() {
+    if (!brkActiveConv) return;
+    _brkTransferConvId = brkActiveConv;
+    _brkTransferTargets = [];
+    _brkTransferSelectedId = null;
+    _brkTransferClientName = document.getElementById('brkClientChip').textContent || 'cliente';
+    _brkTransferProperty   = document.getElementById('brkThreadTitle').textContent || 'propiedad';
+    document.getElementById('brkTransferSubject').innerHTML =
+      `<strong>${esc(_brkTransferProperty)}</strong><br><span style="color:var(--text-muted);">Cliente: ${esc(_brkTransferClientName)}</span>`;
+    document.getElementById('brkTransferReason').value = '';
+    document.getElementById('brkTransferError').textContent = '';
+    document.getElementById('brkTransferConfirmBtn').disabled = true;
+    document.getElementById('brkTransferConfirmBtn').textContent = 'Transferir';
+    document.getElementById('brkTransferList').innerHTML =
+      '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">Cargando compañeros...</div>';
+    document.getElementById('brkTransferModal').classList.add('open');
+
+    try {
+      const res = await fetch(`/api/conversations/${_brkTransferConvId}/transfer-targets`, { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al cargar compañeros');
+      _brkTransferTargets = data.targets || [];
+      brkRenderTransferList();
+    } catch (e) {
+      document.getElementById('brkTransferList').innerHTML =
+        `<div style="padding:1rem;text-align:center;color:var(--red);font-size:0.82rem;">${esc(e.message)}</div>`;
+    }
+  };
+
+  function brkRenderTransferList() {
+    const list = document.getElementById('brkTransferList');
+    if (!_brkTransferTargets.length) {
+      list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">No hay otros agentes en tu inmobiliaria disponibles para transferir.</div>';
+      return;
+    }
+    list.innerHTML = _brkTransferTargets.map(t => {
+      const isSelected = t.id === _brkTransferSelectedId;
+      const roleLabel = ({ broker: 'Agente Broker', agency: 'Agente', inmobiliaria: 'Inmobiliaria', constructora: 'Constructora' })[t.role] || t.role;
+      const initial = (t.name || '?').charAt(0).toUpperCase();
+      return `
+        <div onclick="brkSelectTransferTarget('${t.id}')" style="padding:0.7rem 0.9rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:0.7rem;background:${isSelected ? 'rgba(0,56,168,0.08)' : 'transparent'};">
+          <div style="width:34px;height:34px;border-radius:50%;background:rgba(0,56,168,0.12);color:var(--accent);font-weight:800;font-size:0.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${esc(initial)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.88rem;color:var(--text);">${esc(t.name || '(sin nombre)')}</div>
+            <div style="font-size:0.74rem;color:var(--text-muted);">${esc(t.email || '')} · ${esc(roleLabel)}${t.agencyName ? ' · ' + esc(t.agencyName) : ''}</div>
+          </div>
+          ${isSelected ? '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:var(--accent);flex-shrink:0;"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>' : ''}
+        </div>`;
+    }).join('');
+  }
+  window.brkSelectTransferTarget = function(id) {
+    _brkTransferSelectedId = id;
+    document.getElementById('brkTransferConfirmBtn').disabled = false;
+    brkRenderTransferList();
+  };
+  window.brkCloseTransfer = function() {
+    document.getElementById('brkTransferModal').classList.remove('open');
+    _brkTransferSelectedId = null;
+    _brkTransferConvId = null;
+  };
+  window.brkConfirmTransfer = async function() {
+    if (!_brkTransferConvId || !_brkTransferSelectedId) return;
+    const reason = (document.getElementById('brkTransferReason').value || '').trim().slice(0, 300);
+    const btn = document.getElementById('brkTransferConfirmBtn');
+    const err = document.getElementById('brkTransferError');
+    btn.disabled = true; btn.textContent = 'Transfiriendo...';
+    err.textContent = '';
+    try {
+      const res = await fetch(`/api/conversations/${_brkTransferConvId}/transfer`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: _brkTransferSelectedId, reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al transferir');
+
+      // Close modal + success toast + close the thread so the broker
+      // doesn't see new messages from a conversation they no longer own.
+      brkCloseTransfer();
+      toast('Conversación transferida al nuevo agente');
+      brkCloseThread && brkCloseThread();
+      brkLoadList();
+    } catch (e) {
+      err.textContent = e.message;
+      btn.disabled = false;
+      btn.textContent = 'Transferir';
+    }
   };
 
   window.brkToggleClose = function() {

@@ -686,4 +686,216 @@ router.put('/:id/read', requireLogin, (req, res) => {
   res.json({ ok: true, unreadClient: conv.unreadClient || 0, unreadBroker: conv.unreadBroker || 0 });
 });
 
+// ── Transfer helpers ─────────────────────────────────────────────────────
+//
+// A pro user's "effective inmobiliaria id" is:
+//   • their own user id if they ARE the inmobiliaria/constructora
+//   • their inmobiliaria_id field if they're a broker/agency/secretary
+//   • null otherwise
+//
+// Two users are "on the same team" when their effective ids match and
+// neither is null. This is the rule we use to gate conversation
+// transfers — you can never pass a client to an agent outside your
+// inmobiliaria.
+function effectiveInmId(user) {
+  if (!user) return null;
+  if (['inmobiliaria', 'constructora'].includes(user.role)) return user.id;
+  return user.inmobiliaria_id || null;
+}
+function sameTeam(a, b) {
+  const ai = effectiveInmId(a);
+  const bi = effectiveInmId(b);
+  return !!(ai && bi && ai === bi);
+}
+
+// ── GET /api/conversations/:id/transfer-targets ───────────────────────────
+//
+// Returns the list of agents the current user is allowed to transfer
+// this conversation to. Pro users can only pick teammates inside their
+// own inmobiliaria — never someone from another org.
+router.get('/:id/transfer-targets', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const fullUser = store.getUserById(user.sub);
+  if (!fullUser || !PRO_ROLES.includes(fullUser.role)) {
+    return res.status(403).json({ error: 'Solo agentes pueden transferir conversaciones.' });
+  }
+
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  // Caller must currently own the conversation's broker side.
+  const isOwner = conv.brokerId === fullUser.id;
+  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(fullUser.role)
+                    && conv.inmobiliariaId === fullUser.id;
+  if (!isOwner && !isOrgOwner) {
+    return res.status(403).json({ error: 'No eres el agente asignado a esta conversación.' });
+  }
+
+  const inmId = effectiveInmId(fullUser);
+  if (!inmId) {
+    return res.status(400).json({ error: 'No perteneces a ninguna inmobiliaria, no puedes transferir.' });
+  }
+
+  // Team = all brokers/agency under this inmobiliaria + the inmobiliaria owner
+  const team = store.getUsersByInmobiliaria(inmId)
+    .filter(u => ['broker', 'agency'].includes(u.role) && u.id !== fullUser.id);
+  const inmOwner = store.getUserById(inmId);
+  if (inmOwner && inmOwner.id !== fullUser.id) team.unshift(inmOwner);
+
+  // Strip sensitive fields
+  const targets = team.map(u => ({
+    id:          u.id,
+    name:        u.name || '',
+    email:       u.email || '',
+    role:        u.role,
+    agencyName:  u.agencyName || u.companyName || '',
+    avatarUrl:   u.avatarUrl || null,
+  }));
+
+  res.json({ targets });
+});
+
+// ── PUT /api/conversations/:id/transfer ─────────────────────────────────
+//
+// Transfer ownership of the conversation's broker side to another pro
+// user in the SAME inmobiliaria.
+//
+// After transfer:
+//   • conv.brokerId / conv.brokerName → new agent
+//   • transferHistory array tracks from/to/at/by for audit
+//   • A 'system' message is appended so both sides see the hand-off
+//   • Old broker no longer appears in getConversationsForBroker()
+//     results (which filters on brokerId match) — they see the thread
+//     frozen at the pre-transfer state in their own UI because the
+//     conversation simply disappears from their list on next fetch.
+//   • The receiving agent gets a push + email notification.
+router.put('/:id/transfer', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const fullUser = store.getUserById(user.sub);
+  if (!fullUser || !PRO_ROLES.includes(fullUser.role)) {
+    return res.status(403).json({ error: 'Solo agentes pueden transferir conversaciones.' });
+  }
+
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+
+  const { targetUserId, reason } = req.body || {};
+  if (!targetUserId) return res.status(400).json({ error: 'targetUserId requerido.' });
+
+  // Only the current broker (or the org owner) can initiate a transfer.
+  const isOwner = conv.brokerId === fullUser.id;
+  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(fullUser.role)
+                    && conv.inmobiliariaId === fullUser.id;
+  if (!isOwner && !isOrgOwner) {
+    return res.status(403).json({ error: 'No eres el agente asignado a esta conversación.' });
+  }
+
+  const target = store.getUserById(targetUserId);
+  if (!target) return res.status(404).json({ error: 'Usuario objetivo no encontrado.' });
+  if (!PRO_ROLES.includes(target.role)) {
+    return res.status(400).json({ error: 'El destinatario debe ser un agente o inmobiliaria.' });
+  }
+  if (target.id === fullUser.id) {
+    return res.status(400).json({ error: 'No puedes transferir la conversación a ti mismo.' });
+  }
+
+  // Same-team rule — this is the core security check. An agent from
+  // another inmobiliaria can NEVER receive the transfer, even if they
+  // ask for it.
+  if (!sameTeam(fullUser, target)) {
+    return res.status(403).json({
+      error: 'Solo puedes transferir a agentes de tu misma inmobiliaria.',
+    });
+  }
+
+  const now = new Date().toISOString();
+  const fromBroker = {
+    user_id: conv.brokerId || fullUser.id,
+    name:    conv.brokerName || fullUser.name || '',
+  };
+  const toBroker = {
+    user_id: target.id,
+    name:    target.name || '',
+  };
+
+  // Record the transfer
+  conv.brokerId    = target.id;
+  conv.brokerName  = target.name || '';
+  conv.updatedAt   = now;
+  // Reset unreadBroker for the NEW broker so they see it as a fresh thread
+  conv.unreadBroker = Math.max(1, conv.unreadBroker || 0);
+
+  if (!Array.isArray(conv.transferHistory)) conv.transferHistory = [];
+  conv.transferHistory.push({
+    from:       fromBroker,
+    to:         toBroker,
+    at:         now,
+    by:         fullUser.id,
+    byName:     fullUser.name || '',
+    reason:     (reason || '').toString().slice(0, 300),
+  });
+
+  // Append a system message so both client and new agent see the hand-off.
+  const systemMsg = {
+    id:         msgId(),
+    senderId:   'system',
+    senderRole: 'system',
+    senderName: 'HogaresRD',
+    text:       `Conversación transferida de ${fromBroker.name || 'agente anterior'} a ${toBroker.name}. A partir de ahora, ${toBroker.name} será tu punto de contacto.`,
+    timestamp:  now,
+    system:     true,
+    type:       'transfer',
+  };
+  if (!Array.isArray(conv.messages)) conv.messages = [];
+  conv.messages.push(systemMsg);
+  conv.lastMessage = systemMsg.text;
+
+  store.saveConversation(conv);
+
+  // Notify the receiving agent via push + email
+  try {
+    pushNotify(target.id, {
+      type:  'conversation_transferred',
+      title: `📋 Nueva conversación transferida`,
+      body:  `${fullUser.name || 'Un agente'} te transfirió la conversación con ${conv.clientName || 'un cliente'}`,
+      url:   `/mensajes?conv=${conv.id}`,
+    });
+  } catch (_) {}
+  if (target.email) {
+    _sendMail(
+      target.email,
+      `Conversación transferida — ${conv.propertyTitle || 'HogaresRD'}`,
+      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+         <div style="background:#002D62;color:#fff;padding:1.25rem;border-radius:10px 10px 0 0;text-align:center;">
+           <h2 style="margin:0;font-size:1.1rem;">Nueva conversación transferida</h2>
+         </div>
+         <div style="background:#fff;padding:1.25rem 1.5rem;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;">
+           <p style="margin:0 0 10px;color:#1a2b40;">Hola <strong>${(target.name||'').split(' ')[0] || 'agente'}</strong>,</p>
+           <p style="margin:0 0 14px;color:#4d6a8a;font-size:0.92rem;line-height:1.5;">
+             <strong>${fullUser.name || 'Un compañero'}</strong> te transfirió una conversación con
+             <strong>${conv.clientName || 'un cliente'}</strong> sobre
+             <strong>${conv.propertyTitle || 'una propiedad'}</strong>.
+             ${reason ? 'Motivo: <em>' + String(reason).replace(/</g,'&lt;').slice(0,200) + '</em>' : ''}
+           </p>
+           <a href="${BASE_URL}/broker#mensajes" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Abrir conversación →</a>
+         </div>
+       </div>`
+    );
+  }
+
+  // Notify the client that they have a new agent
+  if (conv.clientId) {
+    try {
+      pushNotify(conv.clientId, {
+        type:  'new_message',
+        title: `💬 Nuevo agente asignado`,
+        body:  `${toBroker.name} ahora es tu punto de contacto sobre ${conv.propertyTitle || 'tu propiedad'}`,
+        url:   `/mensajes?conv=${conv.id}`,
+      });
+    } catch (_) {}
+  }
+
+  res.json({ ok: true, conversation: conv });
+});
+
 module.exports = router;

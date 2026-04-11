@@ -1008,6 +1008,43 @@ class APIService: ObservableObject {
         _ = try? await session.data(for: req)
     }
 
+    /// List the teammates in the same inmobiliaria that the current
+    /// broker is allowed to transfer this conversation to.
+    func fetchTransferTargets(conversationId: String) async throws -> [TransferTarget] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(conversationId)/transfer-targets")!
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "No se pudieron cargar los compañeros")
+        }
+        struct Wrapper: Decodable { let targets: [TransferTarget] }
+        return try decoder.decode(Wrapper.self, from: data).targets
+    }
+
+    /// Transfer the conversation's broker side to another teammate.
+    /// Backend enforces the same-inmobiliaria rule — this will 403 if
+    /// the target agent belongs to a different organization.
+    func transferConversation(id: String, targetUserId: String, reason: String) async throws -> Conversation {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/conversations/\(id)/transfer")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: String] = ["targetUserId": targetUserId, "reason": reason]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al transferir la conversación")
+        }
+        struct Wrapper: Decodable { let conversation: Conversation }
+        return try decoder.decode(Wrapper.self, from: data).conversation
+    }
+
     /// Total unread conversations across every thread the authenticated
     /// user has access to. Used to populate the red badge on the iOS
     /// Messages tab bar icon.
@@ -1969,6 +2006,18 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "Error verificando suscripcion")
         return try decoder.decode(SubscriptionStatus.self, from: data)
     }
+}
+
+/// Teammate that a broker can transfer a conversation to. Returned by
+/// GET /api/conversations/:id/transfer-targets — the server only lists
+/// agents in the same inmobiliaria as the caller.
+struct TransferTarget: Decodable, Identifiable, Equatable {
+    let id:         String
+    let name:       String
+    let email:      String
+    let role:       String
+    let agencyName: String?
+    let avatarUrl:  String?
 }
 
 struct SubscriptionStatus: Decodable {
