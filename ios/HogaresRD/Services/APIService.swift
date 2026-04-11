@@ -1742,11 +1742,55 @@ class APIService: ObservableObject {
         return try decoder.decode(TasksResponse.self, from: data).tasks
     }
 
-    func completeTask(id: String) async throws {
+    /// Mark a task as complete. Behind the scenes the server routes
+    /// this to either `/complete` (→ direct completada for self-assigned
+    /// tasks) or `/pending_review` (for tasks that require a separate
+    /// approver to sign off). The returned task object tells the caller
+    /// which branch happened via task.status.
+    func completeTask(id: String) async throws -> TaskItem {
         let url = URL(string: "\(apiBase)/api/tasks/\(id)/complete")!
         let req = try authedRequest(url, method: "POST")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error completando tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    /// Approver signs off on a submitted task. 403 if the caller is the
+    /// assignee. Server sets status → completada.
+    func approveTask(id: String, note: String = "") async throws -> TaskItem {
+        let url = URL(string: "\(apiBase)/api/tasks/\(id)/approve")!
+        let body: [String: Any] = ["note": note]
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "POST", body: json)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error aprobando tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    /// Approver rejects a submitted task and sends it back for revision.
+    /// Note is required. Server sets status → en_progreso and notifies
+    /// the assignee.
+    func rejectTask(id: String, note: String) async throws -> TaskItem {
+        let url = URL(string: "\(apiBase)/api/tasks/\(id)/reject")!
+        let body: [String: Any] = ["note": note]
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "POST", body: json)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error rechazando tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    /// Reassign the approver for a task. Only the current approver (or
+    /// admin) can delegate. New approver cannot be the task assignee —
+    /// server enforces separation of duties.
+    func reassignTaskApprover(id: String, newApproverId: String) async throws -> TaskItem {
+        let url = URL(string: "\(apiBase)/api/tasks/\(id)/approver")!
+        let body: [String: Any] = ["approver_id": newApproverId]
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "PUT", body: json)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error reasignando aprobador")
+        return try decoder.decode(TaskItem.self, from: data)
     }
 
     func createTask(title: String, description: String, priority: String, dueDate: String?, assignedTo: String?) async throws -> TaskItem {

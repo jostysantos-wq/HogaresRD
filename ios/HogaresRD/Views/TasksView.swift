@@ -9,16 +9,19 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Completadas, 4=Vencidas
+    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas, 5=Vencidas
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
+
+    private var currentUserId: String { api.currentUser?.id ?? "" }
 
     private var filteredTasks: [TaskItem] {
         switch filter {
         case 1:  return tasks.filter { $0.status == "pendiente" }
         case 2:  return tasks.filter { $0.status == "en_progreso" }
-        case 3:  return tasks.filter { $0.status == "completada" }
-        case 4:  return tasks.filter { $0.isOverdue }
+        case 3:  return tasks.filter { $0.status == "pending_review" }
+        case 4:  return tasks.filter { $0.status == "completada" }
+        case 5:  return tasks.filter { $0.isOverdue }
         default: return tasks
         }
     }
@@ -39,6 +42,7 @@ struct TasksView: View {
     private var statTotal: Int { tasks.count }
     private var statPending: Int { tasks.filter { $0.status == "pendiente" }.count }
     private var statProgress: Int { tasks.filter { $0.status == "en_progreso" }.count }
+    private var statReview: Int { tasks.filter { $0.status == "pending_review" && $0.approverId == currentUserId }.count }
     private var statDone: Int { tasks.filter { $0.status == "completada" }.count }
     private var statOverdue: Int { tasks.filter { $0.isOverdue }.count }
 
@@ -63,6 +67,9 @@ struct TasksView: View {
                             statPill("Total", value: statTotal, color: .rdBlue)
                             statPill("Pendientes", value: statPending, color: .orange)
                             statPill("En Progreso", value: statProgress, color: .rdBlue)
+                            if statReview > 0 {
+                                statPill("Por Revisar", value: statReview, color: .purple)
+                            }
                             statPill("Completadas", value: statDone, color: .rdGreen)
                             statPill("Vencidas", value: statOverdue, color: .rdRed)
                         }
@@ -76,8 +83,9 @@ struct TasksView: View {
                             filterChip("Todas", tag: 0)
                             filterChip("Pendientes", tag: 1)
                             filterChip("En Progreso", tag: 2)
-                            filterChip("Completadas", tag: 3)
-                            filterChip("Vencidas", tag: 4)
+                            filterChip("Por Revisar", tag: 3)
+                            filterChip("Completadas", tag: 4)
+                            filterChip("Vencidas", tag: 5)
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 8)
@@ -99,16 +107,26 @@ struct TasksView: View {
                                 Section("Activas (\(activeTasks.count))") {
                                     ForEach(activeTasks) { task in
                                         Button { selectedTask = task } label: {
-                                            TaskRow(task: task)
+                                            TaskRow(task: task, currentUserId: currentUserId)
                                         }
                                         .buttonStyle(.plain)
                                         .swipeActions(edge: .leading) {
-                                            Button {
-                                                Task { await completeTask(task) }
-                                            } label: {
-                                                Label("Completar", systemImage: "checkmark.circle.fill")
+                                            // Only show the swipe-to-complete
+                                            // shortcut when the CURRENT user is
+                                            // the assignee AND the task is
+                                            // still actionable. Approvers see
+                                            // review buttons in the detail sheet
+                                            // instead.
+                                            if task.assignedTo == currentUserId
+                                                && (task.status == "pendiente" || task.status == "en_progreso") {
+                                                Button {
+                                                    Task { await completeTask(task) }
+                                                } label: {
+                                                    Label(task.requiresApproval ? "Enviar" : "Completar",
+                                                          systemImage: "checkmark.circle.fill")
+                                                }
+                                                .tint(Color.rdGreen)
                                             }
-                                            .tint(Color.rdGreen)
                                         }
                                     }
                                 }
@@ -117,7 +135,7 @@ struct TasksView: View {
                                 Section("Completadas (\(completedTasks.count))") {
                                     ForEach(completedTasks) { task in
                                         Button { selectedTask = task } label: {
-                                            TaskRow(task: task)
+                                            TaskRow(task: task, currentUserId: currentUserId)
                                         }
                                         .buttonStyle(.plain)
                                     }
@@ -203,7 +221,7 @@ struct TasksView: View {
 
     private func completeTask(_ task: TaskItem) async {
         do {
-            try await api.completeTask(id: task.id)
+            _ = try await api.completeTask(id: task.id)
             await load() // Refresh entire list for correct stats
         } catch {
             errorMsg = error.localizedDescription
@@ -215,6 +233,7 @@ struct TasksView: View {
 
 struct TaskRow: View {
     let task: TaskItem
+    var currentUserId: String = ""
 
     private var priorityColor: Color {
         switch task.priority {
@@ -226,10 +245,19 @@ struct TaskRow: View {
 
     private var statusColor: Color {
         switch task.status {
-        case "en_progreso": return Color.rdBlue
-        case "completada":  return Color.rdGreen
-        default:            return .orange
+        case "en_progreso":    return Color.rdBlue
+        case "pending_review": return .purple
+        case "completada":     return Color.rdGreen
+        default:               return .orange
         }
+    }
+
+    /// True when the current user is the approver AND the task is
+    /// waiting for their review. Used to show a "ACTION NEEDED" banner.
+    private var needsMyReview: Bool {
+        task.status == "pending_review" &&
+        (task.approverId ?? "") == currentUserId &&
+        task.assignedTo != currentUserId
     }
 
     private var dueDateFormatted: String? {
@@ -266,6 +294,21 @@ struct TaskRow: View {
                         .lineLimit(1)
                 }
 
+                // Rejection banner when the task was sent back for revision
+                if task.wasRejected, let note = task.reviewNotes, !note.isEmpty {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "arrow.uturn.left.circle.fill")
+                            .foregroundStyle(.red)
+                        Text("Devuelta: \(note)")
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                            .lineLimit(2)
+                    }
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .background(Color.red.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+
                 HStack(spacing: 6) {
                     // Status badge
                     Text(task.statusLabel)
@@ -275,6 +318,17 @@ struct TaskRow: View {
                         .background(statusColor.opacity(0.15))
                         .foregroundStyle(statusColor)
                         .clipShape(Capsule())
+
+                    // "Tu revisión" chip for the approver
+                    if needsMyReview {
+                        Label("REVISAR", systemImage: "eye.fill")
+                            .font(.system(size: 9, weight: .heavy))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.purple)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
 
                     // Priority badge
                     Text(task.priorityLabel)
@@ -330,6 +384,16 @@ struct TaskDetailSheet: View {
     @State private var completing = false
     @State private var uploadSuccess = false
     @State private var errorMsg: String?
+    @State private var showRejectSheet = false
+    @State private var rejectNote = ""
+    @State private var reviewing = false
+    @State private var showReassignSheet = false
+
+    // The current user, for action-gating
+    private var currentUserId: String { api.currentUser?.id ?? "" }
+    private var isAssignee: Bool { task.assignedTo == currentUserId }
+    private var isApprover: Bool { (task.approverId ?? "") == currentUserId && !isAssignee }
+    private var canReview: Bool { isApprover && task.status == "pending_review" }
 
     /// Does this task require a file upload?
     private var needsUpload: Bool {
@@ -419,6 +483,53 @@ struct TaskDetailSheet: View {
                     }
                     .padding(.top, 8)
 
+                    // Rejection banner — shown when an approver sent this
+                    // task back for revision. Persistent until the task is
+                    // re-submitted (and the server clears review_notes).
+                    if task.wasRejected, let note = task.reviewNotes, !note.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.uturn.left.circle.fill")
+                                    .foregroundStyle(.red)
+                                Text("Devuelta para revisión")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.red)
+                            }
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(.primary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.red.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Pending-review banner — shown when the current user
+                    // has submitted this task and is waiting for approval.
+                    if task.status == "pending_review" && isAssignee {
+                        HStack(spacing: 8) {
+                            Image(systemName: "hourglass")
+                                .foregroundStyle(.purple)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Esperando aprobación")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.purple)
+                                Text("Enviada para revisión · el aprobador recibirá una notificación")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.purple.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
                     // Description
                     if let desc = task.description, !desc.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
@@ -505,23 +616,118 @@ struct TaskDetailSheet: View {
                             .foregroundStyle(Color.rdRed)
                     }
 
-                    // Complete button (for non-upload tasks or after upload)
-                    if task.status != "completada" && (!needsUpload || uploadSuccess) {
+                    // ── Approver actions (separation of duties) ──
+                    // Only rendered when the current user is the approver
+                    // AND the task is sitting in pending_review. The
+                    // assignee cannot approve their own work.
+                    if canReview {
+                        VStack(spacing: 10) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.badge.shield.checkmark.fill")
+                                    .foregroundStyle(.purple)
+                                Text("Acción requerida · Tú eres el aprobador")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.purple)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            HStack(spacing: 10) {
+                                Button {
+                                    Task { await approve() }
+                                } label: {
+                                    HStack {
+                                        if reviewing { ProgressView().tint(.white) }
+                                        Image(systemName: "checkmark.circle.fill")
+                                        Text("Aprobar")
+                                    }
+                                    .font(.subheadline.bold())
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 13)
+                                    .background(Color.rdGreen)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(reviewing)
+
+                                Button {
+                                    showRejectSheet = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "arrow.uturn.left.circle.fill")
+                                        Text("Enviar para revisión")
+                                    }
+                                    .font(.subheadline.bold())
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 13)
+                                    .background(Color.red.opacity(0.12))
+                                    .foregroundStyle(.red)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(reviewing)
+                            }
+
+                            Button {
+                                showReassignSheet = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "person.2.arrow.trianglehead.counterclockwise")
+                                    Text("Reasignar revisor")
+                                }
+                                .font(.caption.bold())
+                                .padding(.vertical, 10).padding(.horizontal, 14)
+                                .foregroundStyle(Color.rdBlue)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(14)
+                        .background(Color.purple.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // ── Assignee "Submit" button ──
+                    // Text changes based on whether the task requires
+                    // approval: "Marcar completada" (direct) vs "Enviar
+                    // para aprobación" (routes through the review loop).
+                    // Hidden when the task is already waiting for review,
+                    // completed, or the user isn't the assignee.
+                    if isAssignee
+                        && task.status != "completada"
+                        && task.status != "pending_review"
+                        && (!needsUpload || uploadSuccess) {
                         Button {
                             Task { await markComplete() }
                         } label: {
                             HStack {
                                 if completing { ProgressView().tint(.white) }
-                                Text("Marcar como completada")
+                                Image(systemName: task.requiresApproval
+                                      ? "paperplane.fill"
+                                      : "checkmark.circle.fill")
+                                Text(task.requiresApproval
+                                     ? "Enviar para aprobación"
+                                     : "Marcar como completada")
                                     .font(.subheadline.bold())
                             }
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.rdGreen, in: RoundedRectangle(cornerRadius: 12))
+                            .background(task.requiresApproval ? Color.rdBlue : Color.rdGreen,
+                                        in: RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
                         .disabled(completing)
+
+                        if task.requiresApproval {
+                            Text("Esta tarea requiere aprobación del creador antes de marcarse como completada.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -539,6 +745,22 @@ struct TaskDetailSheet: View {
                 guard let item = selectedPhotos.first else { return }
                 Task { await handleUpload(item: item) }
                 selectedPhotos = []
+            }
+            .sheet(isPresented: $showRejectSheet) {
+                RejectTaskSheet(
+                    taskTitle: task.title,
+                    note: $rejectNote,
+                    submitting: reviewing,
+                    onSubmit: { Task { await reject() } }
+                )
+            }
+            .sheet(isPresented: $showReassignSheet) {
+                ReassignApproverSheet(task: task, onReassigned: {
+                    showReassignSheet = false
+                    onComplete()
+                    dismiss()
+                })
+                .environmentObject(api)
             }
         }
     }
@@ -602,14 +824,47 @@ struct TaskDetailSheet: View {
 
     private func markComplete() async {
         completing = true
+        errorMsg = nil
         do {
-            try await api.completeTask(id: task.id)
+            _ = try await api.completeTask(id: task.id)
             onComplete()
             dismiss()
         } catch {
             errorMsg = error.localizedDescription
         }
         completing = false
+    }
+
+    private func approve() async {
+        reviewing = true
+        errorMsg = nil
+        do {
+            _ = try await api.approveTask(id: task.id)
+            onComplete()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        reviewing = false
+    }
+
+    private func reject() async {
+        let note = rejectNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !note.isEmpty else {
+            errorMsg = "El motivo es obligatorio"
+            return
+        }
+        reviewing = true
+        errorMsg = nil
+        do {
+            _ = try await api.rejectTask(id: task.id, note: note)
+            showRejectSheet = false
+            onComplete()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        reviewing = false
     }
 }
 
@@ -751,3 +1006,224 @@ struct CreateTaskSheet: View {
         saving = false
     }
 }
+
+// MARK: - Reject Task Sheet
+//
+// Presented when the approver clicks "Enviar para revisión". Requires a
+// reason note — the server enforces non-empty body text. The sheet is a
+// lightweight form with a big textarea, common quick-select phrases, and
+// the destructive red "Enviar" primary action.
+
+struct RejectTaskSheet: View {
+    let taskTitle: String
+    @Binding var note: String
+    let submitting: Bool
+    let onSubmit: () -> Void
+
+    @Environment(\.dismiss) var dismiss
+
+    private let quickReasons = [
+        "Documentos faltantes",
+        "Archivos ilegibles o borrosos",
+        "Información incompleta",
+        "Fecha o monto incorrecto",
+        "No corresponde a lo solicitado",
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    // Context
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Enviar para revisión")
+                            .font(.title3.bold())
+                        Text(taskTitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Quick-select chips
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Motivos comunes")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        FlowLayout(spacing: 8) {
+                            ForEach(quickReasons, id: \.self) { reason in
+                                Button {
+                                    note = note.isEmpty ? reason : "\(note)\n\(reason)"
+                                } label: {
+                                    Text(reason)
+                                        .font(.caption.bold())
+                                        .padding(.horizontal, 12).padding(.vertical, 7)
+                                        .background(Color(.tertiarySystemGroupedBackground))
+                                        .foregroundStyle(.primary)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    // Note field
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Motivo del rechazo")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        TextEditor(text: $note)
+                            .frame(minHeight: 140)
+                            .padding(10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color(.separator), lineWidth: 0.5)
+                            )
+                        Text("El asignado recibirá este mensaje y podrá corregir la tarea.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Button {
+                        onSubmit()
+                    } label: {
+                        HStack {
+                            if submitting { ProgressView().tint(.white) }
+                            Image(systemName: "paperplane.fill")
+                            Text("Enviar para revisión")
+                        }
+                        .font(.subheadline.bold())
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.red)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(submitting || note.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                .padding(20)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Enviar para Revisión")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Reassign Approver Sheet
+//
+// The current approver can delegate review rights to another team member
+// (e.g. a secretary). The server enforces that the new approver isn't the
+// same person as the assignee.
+
+struct ReassignApproverSheet: View {
+    let task: TaskItem
+    var onReassigned: () -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+
+    @State private var teamMembers: [TeamMember] = []
+    @State private var selectedId: String = ""
+    @State private var saving = false
+    @State private var errorMsg: String?
+
+    private var eligible: [TeamMember] {
+        teamMembers.filter { $0.id != task.assignedTo && $0.id != (api.currentUser?.id ?? "") }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Reasigna esta tarea a otra persona para que la revise y apruebe. El asignado no puede ser el aprobador.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Equipo") {
+                    if eligible.isEmpty {
+                        Text("No hay otros miembros disponibles.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(eligible) { member in
+                            Button {
+                                selectedId = member.id
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(member.name)
+                                            .foregroundStyle(.primary)
+                                        if let e = member.email {
+                                            Text(e)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    Spacer()
+                                    if selectedId == member.id {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Color.rdBlue)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                if let e = errorMsg {
+                    Section { Text(e).font(.caption).foregroundStyle(.red) }
+                }
+            }
+            .navigationTitle("Reasignar Revisor")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "…" : "Reasignar") {
+                        Task { await reassign() }
+                    }
+                    .disabled(selectedId.isEmpty || saving)
+                }
+            }
+            .task { await loadTeam() }
+        }
+    }
+
+    private func loadTeam() async {
+        do {
+            let resp = try await api.getTeamBrokers()
+            teamMembers = resp.brokers.map { TeamMember(id: $0.id, name: $0.name, email: $0.email.isEmpty ? nil : $0.email) }
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+    }
+
+    private func reassign() async {
+        saving = true
+        errorMsg = nil
+        do {
+            _ = try await api.reassignTaskApprover(id: task.id, newApproverId: selectedId)
+            onReassigned()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        saving = false
+    }
+}
+
+// FlowLayout is already defined in ListingDetailView.swift

@@ -415,6 +415,28 @@
     .modal-close:hover { color:var(--text); }
     .modal-body { padding:1.3rem;overflow-y:auto;flex:1;min-height:0; }
     .modal-footer { padding:0.95rem 1.3rem;border-top:1px solid var(--border);flex-shrink:0; }
+    .edits-chip {
+      background:var(--bg-section);
+      color:var(--text);
+      border:1.5px solid var(--border);
+      border-radius:999px;
+      padding:0.45rem 0.85rem;
+      font-size:0.78rem;
+      font-weight:600;
+      cursor:pointer;
+      transition:all 0.15s;
+      font-family:inherit;
+    }
+    .edits-chip:hover {
+      border-color:#F97316;
+      background:rgba(249,115,22,0.1);
+      color:#F97316;
+    }
+    .edits-chip.selected {
+      background:#F97316;
+      color:#fff;
+      border-color:#F97316;
+    }
     /* ── Blog editor modal ── */
     .blog-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:1.5rem; }
     .blog-modal-overlay.open { display:flex; }
@@ -993,6 +1015,68 @@
               <tr><td colspan="8" class="leads-empty">Cargando aplicaciones...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- ── SOLICITAR EDICIONES MODAL ───────────────────────
+           Modern form replacing the old prompt() dialog. Shows a
+           summary of the listing, a set of quick-select issue chips,
+           a note textarea with character count, and validation. -->
+      <div id="editsModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeEditsModal()">
+        <div class="modal" style="max-width:600px;">
+          <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:0.7rem;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+              <div>
+                <div class="modal-title">Solicitar Ediciones</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);font-weight:500;">El agente recibirá tu nota y podrá editar la propiedad</div>
+              </div>
+            </div>
+            <button class="modal-close" onclick="closeEditsModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <!-- Listing summary card -->
+            <div id="editsListingSummary" style="background:var(--bg-section);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.1rem;display:flex;gap:0.85rem;align-items:center;"></div>
+
+            <!-- Quick-select issue chips -->
+            <label style="display:block;font-size:0.72rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:0.5rem;">Problemas comunes</label>
+            <div id="editsQuickChips" style="display:flex;flex-wrap:wrap;gap:0.45rem;margin-bottom:1.1rem;">
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">📸 Fotos borrosas o pocas</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">💲 Precio incorrecto</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">📍 Ubicación incompleta</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">📝 Descripción vacía</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">🛏️ Faltan habitaciones/baños</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">📐 Falta área en m²</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">📞 Datos de contacto incompletos</button>
+              <button type="button" class="edits-chip" onclick="addEditsChip(this)">🏷️ Categoría/tipo incorrecto</button>
+            </div>
+
+            <!-- Note textarea -->
+            <label style="display:flex;align-items:center;justify-content:space-between;font-size:0.72rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:0.5rem;">
+              <span>Nota para el agente <span style="color:var(--danger);">*</span></span>
+              <span id="editsNoteCount" style="font-weight:600;letter-spacing:0;text-transform:none;">0 / 1000</span>
+            </label>
+            <textarea id="editsNoteInput" rows="5"
+                      placeholder="Describe con detalle qué debe corregir el agente. Ejemplo: 'Las fotos principales están borrosas, el precio parece USD pero debe estar en DOP, y falta el número de parqueos.'"
+                      oninput="updateEditsCharCount()"
+                      style="width:100%;padding:0.75rem 0.9rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text);font-size:0.9rem;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+
+            <div style="display:flex;gap:0.5rem;align-items:flex-start;margin-top:0.85rem;padding:0.7rem 0.85rem;background:rgba(59,130,246,0.08);border-radius:8px;border-left:3px solid #3B82F6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span style="font-size:0.78rem;color:var(--text);line-height:1.5;">El agente recibirá un correo con tu nota y un enlace directo para editar la propiedad. La propiedad pasará a estado "Ediciones Solicitadas" hasta que sea reenviada.</span>
+            </div>
+
+            <p id="editsError" style="color:var(--danger);font-size:0.82rem;margin-top:0.6rem;min-height:1rem;"></p>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:0.6rem;justify-content:flex-end;">
+            <button class="btn-secondary" onclick="closeEditsModal()">Cancelar</button>
+            <button class="btn-primary" id="editsSubmitBtn" onclick="submitEditsRequest()" style="background:#F97316;border-color:#F97316;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Enviar Solicitud
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1926,47 +2010,139 @@
   }
 
   // Send a submission back to the owner for edits with a required note.
-  // Much nicer than a hard reject when the issue is minor (wrong price
-  // format, missing photos, typo) — the owner edits and resubmits instead
-  // of starting from scratch.
+  // Opens the dedicated modal (see #editsModal). Nicer than a prompt() —
+  // supports quick-select issue chips, character count, and validation.
+  let currentEditsListingId = null;
+
   function requestEdits(id) {
     const sub = allSubmissions.find(s => s.id === id);
-    const title = sub?.title || 'esta propiedad';
-    const reason = prompt(
-      `¿Qué debe editar el agente en "${title}"?\n\n` +
-      `Ejemplos:\n` +
-      `• Las fotos están borrosas — vuelva a tomarlas\n` +
-      `• Falta el número de habitaciones\n` +
-      `• El precio parece incorrecto\n\n` +
-      `Esta nota se envía al agente por correo.`
-    );
-    if (reason == null) return;               // user cancelled
-    const trimmed = reason.trim();
+    if (!sub) return;
+    currentEditsListingId = id;
+
+    // Populate the listing summary card
+    const summary = document.getElementById('editsListingSummary');
+    const thumb = (sub.images && sub.images[0]) ? sub.images[0] : '';
+    const location = [sub.sector, sub.city, sub.province].filter(Boolean).join(', ') || '—';
+    const priceStr = sub.price ? `$${Number(sub.price).toLocaleString('en-US')}` : '—';
+    summary.innerHTML = `
+      ${thumb ? `<img src="${thumb}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(sub.title || 'Sin título')}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(location)} · ${priceStr}</div>
+      </div>
+    `;
+
+    // Reset form state
+    document.getElementById('editsNoteInput').value = '';
+    document.getElementById('editsError').textContent = '';
+    updateEditsCharCount();
+    document.querySelectorAll('.edits-chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('editsSubmitBtn').disabled = false;
+
+    // Show modal
+    const modal = document.getElementById('editsModal');
+    modal.style.display = 'flex';
+
+    // Focus the textarea after the modal fades in
+    setTimeout(() => document.getElementById('editsNoteInput').focus(), 100);
+  }
+
+  function closeEditsModal() {
+    document.getElementById('editsModal').style.display = 'none';
+    currentEditsListingId = null;
+  }
+
+  // Click a quick-select chip → appends its label to the note textarea
+  // (if not already present) and toggles the chip's selected state.
+  function addEditsChip(btn) {
+    const textarea = document.getElementById('editsNoteInput');
+    const label = btn.textContent.trim().replace(/^[^\s]+\s/, ''); // strip the leading emoji
+    const current = textarea.value.trim();
+    const bullet = `• ${label}`;
+    if (btn.classList.contains('selected')) {
+      btn.classList.remove('selected');
+      // Remove the bullet from the textarea
+      const lines = current.split('\n').filter(l => l.trim() !== bullet);
+      textarea.value = lines.join('\n');
+    } else {
+      btn.classList.add('selected');
+      textarea.value = current ? `${current}\n${bullet}` : bullet;
+    }
+    updateEditsCharCount();
+    textarea.focus();
+  }
+
+  function updateEditsCharCount() {
+    const textarea = document.getElementById('editsNoteInput');
+    const len = textarea.value.length;
+    const counter = document.getElementById('editsNoteCount');
+    counter.textContent = `${len} / 1000`;
+    counter.style.color = len > 1000 ? 'var(--danger)' : 'var(--text-muted)';
+    if (len > 1000) textarea.value = textarea.value.slice(0, 1000);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  async function submitEditsRequest() {
+    const id = currentEditsListingId;
+    if (!id) return;
+    const textarea = document.getElementById('editsNoteInput');
+    const errorEl = document.getElementById('editsError');
+    const btn = document.getElementById('editsSubmitBtn');
+    const trimmed = textarea.value.trim();
+
+    errorEl.textContent = '';
     if (!trimmed) {
-      alert('La nota es requerida para solicitar ediciones.');
+      errorEl.textContent = 'La nota es requerida — describe qué debe corregir el agente.';
+      textarea.focus();
       return;
     }
-    fetch(`/admin/submissions/${id}/request-edits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: trimmed }),
-    })
-      .then(async r => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.error || 'Error');
-        return data;
-      })
-      .then(() => {
-        if (sub) {
-          sub.status = 'edits_requested';
-          sub.editsReason = trimmed;
-          sub.editsRequestedAt = new Date().toISOString();
-        }
-        renderAll();
-        alert('Se envió la solicitud de ediciones al agente.');
-      })
-      .catch(err => alert('Error: ' + err.message));
+    if (trimmed.length < 15) {
+      errorEl.textContent = 'Por favor, escribe una nota más descriptiva (mínimo 15 caracteres).';
+      textarea.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    try {
+      const r = await fetch(`/admin/submissions/${id}/request-edits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: trimmed }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Error al enviar la solicitud');
+
+      const sub = allSubmissions.find(s => s.id === id);
+      if (sub) {
+        sub.status = 'edits_requested';
+        sub.editsReason = trimmed;
+        sub.editsRequestedAt = new Date().toISOString();
+      }
+      renderAll();
+      closeEditsModal();
+    } catch (err) {
+      errorEl.textContent = err.message || 'Error desconocido';
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar Solicitud`;
+    }
   }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('editsModal')?.style.display === 'flex') {
+      closeEditsModal();
+    }
+  });
 
   // ── Bulk submission actions ────────────────────────────────────
   function updateSubBulkBar() {
