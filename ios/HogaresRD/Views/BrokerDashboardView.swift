@@ -72,36 +72,123 @@ struct BrokerDashboardView: View {
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    NavigationLink {
-                        ChatIAView().environmentObject(api)
-                    } label: {
-                        Label("Chat IA", systemImage: "brain.head.profile.fill")
-                    }
-                    NavigationLink {
-                        ConversationsView().environmentObject(api)
-                    } label: {
-                        Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    NavigationLink {
-                        DashboardSettingsView().environmentObject(api)
-                    } label: {
-                        Label("Configuración", systemImage: "gearshape.fill")
-                    }
-                    NavigationLink {
-                        SubmitListingView()
-                    } label: {
-                        Label("Publicar propiedad", systemImage: "plus.circle.fill")
-                    }
-                    Link(destination: URL(string: "https://hogaresrd.com/broker")!) {
-                        Label("Abrir en web", systemImage: "safari.fill")
-                    }
+            ToolbarItem(placement: .navigationBarLeading) {
+                // Quick access to messages with the existing red unread
+                // badge behavior driven by ContentView's poll loop.
+                NavigationLink {
+                    ConversationsView().environmentObject(api)
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.title3)
                 }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                brokerMoreMenu
+            }
+        }
+    }
+
+    /// The "Más" menu mirrors the web broker dashboard sidebar: it
+    /// exposes every page/view that the web sidebar has so iOS-only
+    /// users never have to reach for a computer. Sections are:
+    ///   1. Communication  — Chat IA, Mensajes, Notificaciones
+    ///   2. Workflow       — Tareas, Tours, Disponibilidad
+    ///   3. Marketing      — Publicidad
+    ///   4. Team mgmt      — only shown to inmobiliaria/constructora
+    ///   5. Settings       — Publicar, Configuración, Abrir en web
+    @ViewBuilder
+    private var brokerMoreMenu: some View {
+        let role = api.currentUser?.role ?? ""
+        let isInmOwner = ["inmobiliaria", "constructora"].contains(role)
+
+        Menu {
+            // ── Communication ──
+            Section("Comunicación") {
+                NavigationLink {
+                    ChatIAView().environmentObject(api)
+                } label: {
+                    Label("Chat IA", systemImage: "brain.head.profile.fill")
+                }
+                NavigationLink {
+                    ConversationsView().environmentObject(api)
+                } label: {
+                    Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                NavigationLink {
+                    NotificationsView().environmentObject(api)
+                } label: {
+                    Label("Notificaciones", systemImage: "bell.fill")
+                }
+            }
+
+            // ── Workflow ──
+            Section("Trabajo") {
+                NavigationLink {
+                    TasksView().environmentObject(api)
+                } label: {
+                    Label("Tareas", systemImage: "checklist")
+                }
+                NavigationLink {
+                    BrokerToursView().environmentObject(api)
+                } label: {
+                    Label("Solicitudes de visita", systemImage: "calendar.badge.clock")
+                }
+                NavigationLink {
+                    BrokerAvailabilityView().environmentObject(api)
+                } label: {
+                    Label("Disponibilidad", systemImage: "clock.badge.checkmark")
+                }
+            }
+
+            // ── Marketing ──
+            Section("Marketing") {
+                NavigationLink {
+                    AdCampaignsView().environmentObject(api)
+                } label: {
+                    Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
+                }
+            }
+
+            // ── Team management (inmobiliaria owners only) ──
+            if isInmOwner {
+                Section("Gestión de Equipo") {
+                    NavigationLink {
+                        InmobiliariaTeamListView().environmentObject(api)
+                    } label: {
+                        Label("Mis agentes", systemImage: "person.2.fill")
+                    }
+                    NavigationLink {
+                        InmobiliariaRequestsListView().environmentObject(api)
+                    } label: {
+                        Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
+                    }
+                    NavigationLink {
+                        InmobiliariaPerformanceListView().environmentObject(api)
+                    } label: {
+                        Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                }
+            }
+
+            // ── Property & settings ──
+            Section {
+                NavigationLink {
+                    SubmitListingView()
+                } label: {
+                    Label("Publicar propiedad", systemImage: "plus.circle.fill")
+                }
+                NavigationLink {
+                    DashboardSettingsView().environmentObject(api)
+                } label: {
+                    Label("Configuración", systemImage: "gearshape.fill")
+                }
+                Link(destination: URL(string: "https://hogaresrd.com/broker")!) {
+                    Label("Abrir en web", systemImage: "safari.fill")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
         }
     }
 }
@@ -202,7 +289,21 @@ struct DashboardApplicationsTab: View {
 
     private var filtered: [Application] {
         if filterStatus == "all" { return applications }
-        return applications.filter { $0.status.lowercased() == filterStatus }
+        // Filter groups mirror the web dashboard's filter pills. Each
+        // entry maps a group key to the set of backend status values
+        // it covers (so "Documentos" captures both requested + sent +
+        // insufficient variants in one tap).
+        let groups: [String: Set<String>] = [
+            "aplicado":      ["aplicado"],
+            "en_revision":   ["en_revision"],
+            "documentos":    ["documentos_requeridos", "documentos_enviados", "documentos_insuficientes"],
+            "en_aprobacion": ["en_aprobacion", "reservado"],
+            "aprobado":      ["aprobado", "pendiente_pago", "pago_enviado", "pago_aprobado"],
+            "completado":    ["completado"],
+            "rechazado":     ["rechazado"],
+        ]
+        let keys = groups[filterStatus] ?? [filterStatus]
+        return applications.filter { keys.contains($0.status) }
     }
 
     var body: some View {
@@ -227,14 +328,19 @@ struct DashboardApplicationsTab: View {
                     }
                 }
 
-                // Filter pills
+                // Filter pills — values match the backend status keys
+                // so the filter actually matches rows. The set of pills
+                // mirrors the web dashboard's filter row order.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        filterPill("Todas", value: "all")
-                        filterPill("En Revisión", value: "reviewing")
-                        filterPill("Aprobadas", value: "approved")
-                        filterPill("Rechazadas", value: "rejected")
-                        filterPill("Cerradas", value: "closed")
+                        filterPill("Todas",         value: "all")
+                        filterPill("Aplicadas",     value: "aplicado")
+                        filterPill("En Revisión",   value: "en_revision")
+                        filterPill("Documentos",    value: "documentos")
+                        filterPill("En Aprobación", value: "en_aprobacion")
+                        filterPill("Aprobadas",     value: "aprobado")
+                        filterPill("Completadas",   value: "completado")
+                        filterPill("Rechazadas",    value: "rechazado")
                     }
                     .padding(.horizontal)
                 }
