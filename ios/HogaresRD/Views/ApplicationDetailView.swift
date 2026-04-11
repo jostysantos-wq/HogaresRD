@@ -79,9 +79,10 @@ struct ApplicationDetailView: View {
         }
         .task { await load() }
         .task {
-            // Polls /:id/state every ~20s while the view is on screen.
-            // Automatically cancelled when the view disappears.
-            await startStatePolling()
+            // Subscribes to the SSE stream for zero-lag updates and
+            // automatically falls back to /state polling if the stream
+            // fails. Auto-cancelled when the view disappears.
+            await startLiveUpdates()
         }
         .refreshable { await load() }
         // Re-fetch every time the app comes back to the foreground so the
@@ -787,27 +788,64 @@ struct ApplicationDetailView: View {
         loading = false
     }
 
-    // MARK: - Lightweight state polling
+    // MARK: - Live state updates (SSE + polling fallback)
 
-    /// Polls /:id/state every ~20s while the detail view is visible.
-    /// Only re-fetches the full detail if the server's state `version`
-    /// has changed — so 99% of polls are a single cheap round trip.
+    /// Primary path: subscribe to the backend SSE stream and reload the
+    /// full detail whenever a new state envelope arrives with a version
+    /// we haven't seen. If the stream errors (network blip, Nginx reap,
+    /// older backend) we back off exponentially and retry; after a few
+    /// failures we fall back to plain polling so the broker always gets
+    /// at least eventual consistency.
+    private func startLiveUpdates() async {
+        var backoff: UInt64 = 1_000_000_000 // 1s
+        var sseFailures = 0
+
+        while !Task.isCancelled {
+            let stream = ApplicationEventStream(applicationId: id, api: api)
+            do {
+                for try await state in stream.states() {
+                    if Task.isCancelled { return }
+                    // Successful event → reset the backoff.
+                    backoff = 1_000_000_000
+                    sseFailures = 0
+                    await applyLiveState(state)
+                }
+            } catch {
+                sseFailures += 1
+                if Task.isCancelled { return }
+
+                // After several consecutive SSE failures, assume the
+                // endpoint is unreachable and switch to polling for the
+                // rest of this view session. This keeps the broker
+                // informed even if an intermediate proxy strips SSE.
+                if sseFailures >= 3 {
+                    await startStatePolling()
+                    return
+                }
+                // Exponential backoff before reconnecting.
+                try? await Task.sleep(nanoseconds: backoff)
+                backoff = min(backoff * 2, 30_000_000_000) // cap at 30s
+            }
+        }
+    }
+
+    private func applyLiveState(_ state: ApplicationState) async {
+        if let last = lastStateVersion, last == state.version { return }
+        lastStateVersion = state.version
+        // First event after load just records the baseline.
+        if detail != nil {
+            await load()
+        }
+    }
+
+    /// Fallback when SSE is unavailable — polls /:id/state every ~20s
+    /// and only re-fetches the full detail if the version changed.
     private func startStatePolling() async {
         while !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 20_000_000_000)
             if Task.isCancelled { break }
-            let state = await api.getApplicationState(id: id)
-            guard let state = state else { continue }
-            if let last = lastStateVersion, last == state.version { continue }
-            lastStateVersion = state.version
-            // First poll after load — just record the baseline.
-            if detail?.status != state.status {
-                await load()
-            } else {
-                // Even if status didn't change, other signals could
-                // have (new doc, new payment). Refresh the detail.
-                await load()
-            }
+            guard let state = await api.getApplicationState(id: id) else { continue }
+            await applyLiveState(state)
         }
     }
 

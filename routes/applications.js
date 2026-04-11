@@ -11,6 +11,7 @@ const { logSec } = require('./security-log');
 const { createAutoTask, autoCompleteTasksByEvent } = require('./tasks');
 const notify     = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
+const appEvents  = require('./app-events');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
@@ -942,6 +943,114 @@ router.get('/:id', userAuth, (req, res) => {
     return res.status(403).json({ error: 'No autorizado' });
 
   res.json(app);
+});
+
+// ── GET /:id/events — SSE stream of application state changes ────
+// Long-lived Server-Sent Events stream that pushes a fresh state
+// envelope every time the application is saved. Clients subscribe
+// once and get near-zero-latency updates instead of polling.
+//
+// The client authenticates via the `?token=` fallback (same as the
+// document/receipt file endpoints) because SFSafariViewController
+// and EventSource can't set a custom Authorization header on GET.
+//
+// Headers:
+//   Content-Type: text/event-stream
+//   Cache-Control: no-cache
+//   X-Accel-Buffering: no  (disables Nginx proxy buffering)
+//   Connection: keep-alive
+//
+// Wire format:
+//   event: state
+//   data: {"id":"…","status":"…","version":"…"}
+//
+//   event: ping
+//   data: {}
+router.get('/:id/events', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const isClient = app.client.user_id === req.user.sub ||
+                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+  const admin = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type':      'text/event-stream',
+    'Cache-Control':     'no-cache, no-transform',
+    'Connection':        'keep-alive',
+    'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*',
+  });
+  // Flush headers immediately so clients that buffer until first byte
+  // (some SSE polyfills) start consuming.
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  // Build an envelope that matches the /state endpoint response so
+  // iOS can decode both with the same Decodable.
+  const buildEnvelope = (a) => {
+    const lastEvent = (a.timeline_events || []).slice(-1)[0];
+    const lastEventAt = lastEvent?.created_at || a.updated_at || a.created_at || '';
+    const docCount    = (a.documents_uploaded || []).length;
+    const docPending  = (a.documents_uploaded || []).filter(d => !d.review_status || d.review_status === 'pending').length;
+    const payStatus   = a.payment?.verification_status || 'none';
+    const installmentCount = a.payment_plan?.installments?.length || 0;
+    const installmentPending = (a.payment_plan?.installments || []).filter(i => i.status === 'proof_uploaded').length;
+    return {
+      id:                 a.id,
+      status:             a.status,
+      last_event_at:      lastEventAt,
+      last_event_type:    lastEvent?.type || null,
+      updated_at:         a.updated_at || null,
+      doc_count:          docCount,
+      doc_pending_review: docPending,
+      payment_status:     payStatus,
+      installment_count:  installmentCount,
+      installment_pending_review: installmentPending,
+      version: `${a.status}|${lastEventAt}|${docCount}|${docPending}|${payStatus}|${installmentPending}`,
+    };
+  };
+
+  const send = (event, payload) => {
+    try {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    } catch (e) {
+      // Client disconnected mid-write — let the close handler clean up
+    }
+  };
+
+  // 1) Initial state so the client immediately has a baseline
+  send('state', buildEnvelope(app));
+
+  // 2) Subscribe to in-process change notifications
+  const unsubscribe = appEvents.subscribe(req.params.id, () => {
+    const fresh = store.getApplicationById(req.params.id);
+    if (fresh) send('state', buildEnvelope(fresh));
+  });
+
+  // 3) Heartbeat every 20s — Nginx's /api/ proxy_read_timeout is 30s,
+  //    so we need to emit at least one byte more often than that. 20s
+  //    leaves a safety margin for network jitter. Clients also use
+  //    these pings to detect a dead connection.
+  const heartbeat = setInterval(() => {
+    send('ping', { t: Date.now() });
+  }, 20_000);
+
+  // 4) Cleanup on disconnect
+  const cleanup = () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+    try { res.end(); } catch {}
+  };
+  req.on('close', cleanup);
+  req.on('error', cleanup);
 });
 
 // ── GET /:id/state  — Lightweight state poll ─────────────────────

@@ -14,6 +14,7 @@
 'use strict';
 
 const { Pool } = require('pg');
+const appEvents = require('./app-events');
 
 // ── Connection ───────────────────────────────────────────────────────────
 // Strip sslmode from URL — pg driver treats sslmode=require as verify-full
@@ -528,6 +529,9 @@ function saveApplication(app) {
   const idx = _applications.findIndex(a => a.id === app.id);
   if (idx >= 0) _applications[idx] = cacheRow;
   else _applications.push(cacheRow);
+  // Notify any open SSE streams subscribed to this application.
+  // Fire-and-forget — the bus is in-process and never blocks.
+  appEvents.publish(app.id);
 }
 
 // ══════════════════════════════════════════════════════════════════════════

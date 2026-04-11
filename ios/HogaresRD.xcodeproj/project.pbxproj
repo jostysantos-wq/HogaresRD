@@ -13,6 +13,7 @@
 		AA11000000000000000000C3 /* Listing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B3 /* Listing.swift */; };
 		AA11000000000000000000C4 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B4 /* User.swift */; };
 		AA11000000000000000000C5 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B5 /* APIService.swift */; };
+		SSE0000000000000000000002 /* ApplicationEventStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSE0000000000000000000001 /* ApplicationEventStream.swift */; };
 		AA11000000000000000000C6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B6 /* HomeView.swift */; };
 		AA11000000000000000000C7 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B7 /* BrowseView.swift */; };
 		AA11000000000000000000C8 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11000000000000000000B8 /* ListingDetailView.swift */; };
@@ -85,6 +86,7 @@
 		AA11000000000000000000B3 /* Listing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Listing.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B4 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B5 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		SSE0000000000000000000001 /* ApplicationEventStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationEventStream.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B6 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B7 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
 		AA11000000000000000000B8 /* ListingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingDetailView.swift; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 			isa = PBXGroup;
 			children = (
 				AA11000000000000000000B5 /* APIService.swift */,
+				SSE0000000000000000000001 /* ApplicationEventStream.swift */,
 				AA55000000000000000012 /* StoreManager.swift */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */,
 				APPLOCK000000000000000001 /* AppLockManager.swift */,
@@ -355,6 +358,7 @@
 				AA11000000000000000000C3 /* Listing.swift in Sources */,
 				AA11000000000000000000C4 /* User.swift in Sources */,
 				AA11000000000000000000C5 /* APIService.swift in Sources */,
+				SSE0000000000000000000002 /* ApplicationEventStream.swift in Sources */,
 				B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */,
 				APPLOCK000000000000000002 /* AppLockManager.swift in Sources */,
 				LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */,
