@@ -3,8 +3,17 @@ node_modules/
 data/documents/
 data/hogaresrd.db-wal
 data/hogaresrd.db-shm
+data/backups/
+data/errors.log
 public/uploads/
 server.log
 ios/build/
 *.p8
 google-service-account.json
+
+# Xcode user-specific state (not shared)
+**/xcuserdata/
+**/*.xcuserstate
+
+# Misc binaries tracked outside of git
+HogaresRD_Pitch_Deck.pptx
