@@ -290,7 +290,13 @@ router.post('/', appCreateLimiter, (req, res) => {
   if (!name || !phone || !listing_id)
     return res.status(400).json({ error: 'name, phone y listing_id son requeridos' });
 
-  // ── Input validation (Sprint 3, Item 11) ─────────────────────────
+  // ── Input validation (Sprint 3, Item 11 + incomplete-submission fix) ─────
+  //
+  // A "complete" application is the MINIMUM set of fields a broker needs
+  // to actually work the lead. Before this was tightened, users could
+  // submit with just name+phone and the agent would get a useless entry.
+  // Every additional field below is rejected with a clear message pointing
+  // at which step of the form is missing data.
   const nameTrimmed  = name.trim();
   const phoneTrimmed = phone.trim();
   const emailTrimmed = (email || '').trim();
@@ -302,8 +308,129 @@ router.post('/', appCreateLimiter, (req, res) => {
   if (!/^\+?[\d\s\-().]{7,20}$/.test(phoneTrimmed))
     return res.status(400).json({ error: 'Número de teléfono inválido' });
 
-  if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrimmed))
-    return res.status(400).json({ error: 'Correo electrónico inválido' });
+  // ── Step 1 required fields ──────────────────────────────────────
+  if (!emailTrimmed)
+    return res.status(400).json({ error: 'El correo electrónico es obligatorio (paso 1).' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrimmed))
+    return res.status(400).json({ error: 'Correo electrónico inválido (paso 1).' });
+
+  const VALID_INTENTS   = ['comprar', 'alquilar', 'invertir'];
+  const VALID_TIMELINES = ['Inmediato', '1-3 meses', '3-6 meses', '6-12 meses', '+1 año'];
+  const VALID_CONTACT   = ['whatsapp', 'llamada', 'email'];
+
+  if (!intent || !VALID_INTENTS.includes(intent))
+    return res.status(400).json({ error: 'Selecciona una intención válida (paso 1).' });
+  if (!timeline || !VALID_TIMELINES.includes(timeline))
+    return res.status(400).json({ error: 'Selecciona un plazo estimado (paso 1).' });
+  if (!contact_method || !VALID_CONTACT.includes(contact_method))
+    return res.status(400).json({ error: 'Selecciona un método de contacto preferido (paso 1).' });
+
+  const budgetTrimmed = String(budget || '').trim();
+  if (!budgetTrimmed)
+    return res.status(400).json({ error: 'El presupuesto es obligatorio (paso 1).' });
+  const budgetDigits = Number(budgetTrimmed.replace(/[^\d.]/g, ''));
+  if (!isFinite(budgetDigits) || budgetDigits <= 0)
+    return res.status(400).json({ error: 'El presupuesto debe ser un número válido mayor a 0 (paso 1).' });
+
+  // ── Step 2 required fields ──────────────────────────────────────
+  const VALID_ID_TYPES    = ['cedula', 'passport'];
+  const VALID_EMP_STATUS  = ['employed', 'self_employed', 'retired', 'student', 'unemployed'];
+  const VALID_FINANCING   = ['efectivo', 'banco', 'desarrollador', 'vendedor'];
+
+  const idTypeRaw    = String(id_type || '').trim();
+  const idNumberRaw  = String(id_number || '').trim();
+  const dobRaw       = String(date_of_birth || '').trim();
+  const addressRaw   = String(current_address || '').trim();
+  const empStatusRaw = String(employment_status || '').trim();
+  const incomeRaw    = String(monthly_income || '').trim();
+  const financingRaw = String(financing || '').trim();
+
+  if (!VALID_ID_TYPES.includes(idTypeRaw))
+    return res.status(400).json({ error: 'Selecciona un tipo de identificación (paso 2).' });
+  if (!idNumberRaw || idNumberRaw.length < 5)
+    return res.status(400).json({ error: 'Número de identificación inválido (paso 2).' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dobRaw))
+    return res.status(400).json({ error: 'Fecha de nacimiento es obligatoria y debe tener formato YYYY-MM-DD (paso 2).' });
+  // Basic age sanity (must be 18+ and not in the future)
+  const dob = new Date(dobRaw);
+  const today = new Date();
+  if (isNaN(dob.getTime()) || dob > today)
+    return res.status(400).json({ error: 'Fecha de nacimiento inválida (paso 2).' });
+  const ageYears = (today - dob) / (365.25 * 24 * 60 * 60 * 1000);
+  if (ageYears < 18)
+    return res.status(400).json({ error: 'Debes ser mayor de edad para aplicar (paso 2).' });
+
+  if (!addressRaw || addressRaw.length < 5)
+    return res.status(400).json({ error: 'La dirección actual es obligatoria (paso 2).' });
+  if (!VALID_EMP_STATUS.includes(empStatusRaw))
+    return res.status(400).json({ error: 'Selecciona una situación laboral (paso 2).' });
+
+  // Employer & job title required only when the user reports being employed
+  if (['employed', 'self_employed'].includes(empStatusRaw)) {
+    const employerRaw = String(employer_name || '').trim();
+    const jobTitleRaw = String(job_title || '').trim();
+    if (!employerRaw)
+      return res.status(400).json({ error: 'Indica el nombre de tu empleador o empresa (paso 2).' });
+    if (!jobTitleRaw)
+      return res.status(400).json({ error: 'Indica tu puesto o cargo (paso 2).' });
+  }
+
+  const incomeDigits = Number(incomeRaw.replace(/[^\d.]/g, ''));
+  if (!incomeRaw || !isFinite(incomeDigits) || incomeDigits <= 0)
+    return res.status(400).json({ error: 'Ingreso mensual es obligatorio y debe ser mayor a 0 (paso 2).' });
+
+  if (!VALID_FINANCING.includes(financingRaw))
+    return res.status(400).json({ error: 'Selecciona un método de financiamiento (paso 2).' });
+
+  // ── Co-applicant validation (if the applicant opted in) ─────────
+  if (co_applicant && typeof co_applicant === 'object') {
+    const coName  = String(co_applicant.name  || '').trim();
+    const coPhone = String(co_applicant.phone || '').trim();
+    const coId    = String(co_applicant.id_number || '').trim();
+    const coIncome = String(co_applicant.monthly_income || '').trim();
+    // Only enforce when the object has ANY content — an empty object = no
+    // co-applicant (UI sometimes sends the key even when unchecked).
+    const hasAny = coName || coPhone || coId || coIncome;
+    if (hasAny) {
+      if (!coName || coName.length < 2)
+        return res.status(400).json({ error: 'Nombre del co-aplicante es obligatorio (paso 2).' });
+      if (!/^\+?[\d\s\-().]{7,20}$/.test(coPhone))
+        return res.status(400).json({ error: 'Teléfono del co-aplicante inválido (paso 2).' });
+      if (!coId || coId.length < 5)
+        return res.status(400).json({ error: 'Cédula/Pasaporte del co-aplicante es obligatorio (paso 2).' });
+      const coIncomeNum = Number(coIncome.replace(/[^\d.]/g, ''));
+      if (!coIncome || !isFinite(coIncomeNum) || coIncomeNum <= 0)
+        return res.status(400).json({ error: 'Ingreso mensual del co-aplicante es obligatorio (paso 2).' });
+    }
+  }
+
+  // ── Step 3 documents ────────────────────────────────────────────
+  // The two "core" documents must either be attached in this request
+  // (tracked separately via /initial-upload after create) OR deferred
+  // via the deferred_documents list. An applicant may not submit with
+  // both skipped. The frontend should enforce this too but we guard
+  // server-side so API clients can't bypass it.
+  {
+    const deferredTypes = new Set(
+      Array.isArray(deferred_documents)
+        ? deferred_documents.map(d => String(d?.type || '')).filter(Boolean)
+        : []
+    );
+    const attachedTypes = new Set(
+      Array.isArray(req.body.attached_document_types)
+        ? req.body.attached_document_types.map(t => String(t || '')).filter(Boolean)
+        : []
+    );
+    const requiredDocs = ['cedula', 'income_proof'];
+    const missingDocs = requiredDocs.filter(t => !deferredTypes.has(t) && !attachedTypes.has(t));
+    if (missingDocs.length) {
+      const labels = { cedula: 'Cédula/Pasaporte', income_proof: 'Comprobante de Ingresos' };
+      return res.status(400).json({
+        error: 'Debes adjuntar o marcar para subir después los siguientes documentos: ' +
+               missingDocs.map(t => labels[t] || t).join(', ') + ' (paso 3).',
+      });
+    }
+  }
 
   // Find listing to get affiliated broker
   const listing = store.getListingById(listing_id);

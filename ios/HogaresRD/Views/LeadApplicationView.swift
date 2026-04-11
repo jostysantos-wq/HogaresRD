@@ -538,6 +538,8 @@ struct LeadApplicationView: View {
     private func handleNext() {
         errorMsg = ""
         if currentStep == 1 && !validateStep1() { return }
+        if currentStep == 2 && !validateStep2() { return }
+        if currentStep == 3 && !validateStep3() { return }
         if currentStep < stepCount {
             currentStep += 1
             return
@@ -545,17 +547,84 @@ struct LeadApplicationView: View {
         Task { await submit() }
     }
 
+    private func trimmed(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func isValidEmail(_ s: String) -> Bool {
+        s.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"#, options: .regularExpression) != nil
+    }
+
+    private func isValidPhone(_ s: String) -> Bool {
+        s.range(of: #"^\+?[\d\s\-().]{7,20}$"#, options: .regularExpression) != nil
+    }
+
+    private func parseMoney(_ s: String) -> Double? {
+        let cleaned = s.replacingOccurrences(of: ",", with: "")
+                       .replacingOccurrences(of: "$", with: "")
+                       .trimmingCharacters(in: .whitespaces)
+        return Double(cleaned)
+    }
+
     private func validateStep1() -> Bool {
-        if name.trimmingCharacters(in: .whitespaces).count < 2 {
-            errorMsg = "Ingresa tu nombre."
-            return false
+        if trimmed(name).count < 2           { errorMsg = "Ingresa tu nombre completo."; return false }
+        if trimmed(phone).isEmpty             { errorMsg = "El teléfono es obligatorio."; return false }
+        if !isValidPhone(phone)               { errorMsg = "Número de teléfono inválido."; return false }
+        if trimmed(email).isEmpty             { errorMsg = "El correo electrónico es obligatorio."; return false }
+        if !isValidEmail(email)               { errorMsg = "Correo electrónico inválido."; return false }
+        if trimmed(intent).isEmpty            { errorMsg = "Selecciona tu intención."; return false }
+        if trimmed(timeline).isEmpty          { errorMsg = "Selecciona un plazo estimado."; return false }
+        if trimmed(contactMethod).isEmpty     { errorMsg = "Selecciona un método de contacto."; return false }
+        guard let b = parseMoney(budget), b > 0 else {
+            errorMsg = "Ingresa un presupuesto válido."; return false
         }
-        if phone.trimmingCharacters(in: .whitespaces).isEmpty {
-            errorMsg = "El teléfono es obligatorio."
-            return false
+        return true
+    }
+
+    private func validateStep2() -> Bool {
+        if trimmed(idType).isEmpty            { errorMsg = "Selecciona un tipo de identificación."; return false }
+        if trimmed(idNumber).count < 5        { errorMsg = "Número de identificación inválido."; return false }
+        if !dobSet {
+            errorMsg = "La fecha de nacimiento es obligatoria."; return false
         }
-        if !email.isEmpty && !email.contains("@") {
-            errorMsg = "Correo inválido."
+        // Age 18+ check
+        let years = Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 0
+        if years < 18 {
+            errorMsg = "Debes ser mayor de edad para aplicar."; return false
+        }
+        if trimmed(currentAddress).count < 5 { errorMsg = "Ingresa tu dirección actual."; return false }
+        if trimmed(employmentStatus).isEmpty { errorMsg = "Selecciona tu situación laboral."; return false }
+        if ["employed", "self_employed"].contains(employmentStatus) {
+            if trimmed(employer).isEmpty      { errorMsg = "Indica el nombre de tu empleador."; return false }
+            if trimmed(jobTitle).isEmpty      { errorMsg = "Indica tu puesto."; return false }
+        }
+        guard let inc = parseMoney(monthlyIncome), inc > 0 else {
+            errorMsg = "Ingresa un ingreso mensual válido."; return false
+        }
+        if trimmed(financing).isEmpty         { errorMsg = "Selecciona un método de financiamiento."; return false }
+
+        if hasCoapp {
+            if trimmed(coappName).count < 2   { errorMsg = "Nombre del co-aplicante es obligatorio."; return false }
+            if !isValidPhone(coappPhone)      { errorMsg = "Teléfono del co-aplicante inválido."; return false }
+            if trimmed(coappId).count < 5     { errorMsg = "Cédula/Pasaporte del co-aplicante es obligatorio."; return false }
+            guard let coInc = parseMoney(coappIncome), coInc > 0 else {
+                errorMsg = "Ingreso del co-aplicante es obligatorio."; return false
+            }
+        }
+        return true
+    }
+
+    private func validateStep3() -> Bool {
+        // cedula and income_proof must be attached OR deferred (not skipped)
+        let required: [String] = ["cedula", "income_proof"]
+        let labels = ["cedula": "Cédula/Pasaporte", "income_proof": "Comprobante de Ingresos"]
+        let missing = required.filter { type in
+            let st = docStates[type] ?? .skipped
+            return st == .skipped
+        }
+        if !missing.isEmpty {
+            let names = missing.compactMap { labels[$0] }.joined(separator: ", ")
+            errorMsg = "Debes adjuntar o marcar para subir después: \(names)."
             return false
         }
         return true
@@ -575,6 +644,14 @@ struct LeadApplicationView: View {
                 "required": $0.required,
             ] as [String: Any] }
 
+        // Tell the server which required docs will arrive as initial-uploads
+        // right after create — otherwise the create would reject with a
+        // "missing required docs" error before we get a chance to upload.
+        let attachedTypes: [String] = docSlots.compactMap { slot in
+            if case .attached = docStates[slot.type] { return slot.type }
+            return nil
+        }
+
         // Build payload
         var payload: [String: Any] = [
             "name":  name, "phone": phone, "email": email,
@@ -590,6 +667,7 @@ struct LeadApplicationView: View {
             "monthly_income": monthlyIncome,
             "income_currency": incomeCurrency,
             "deferred_documents": deferred,
+            "attached_document_types": attachedTypes,
         ]
         if dobSet {
             let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"

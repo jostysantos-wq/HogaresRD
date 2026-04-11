@@ -314,6 +314,7 @@
     @media (max-width: 560px) { .apply-grid.cols-2, .apply-grid.cols-3 { grid-template-columns: 1fr; } }
 
     .apply-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .required-star { color: var(--red); font-weight: 800; margin-left: 2px; }
     .apply-field input, .apply-field select, .apply-field textarea { width: 100%; padding: 0.68rem 0.85rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box; }
     .apply-field input:focus, .apply-field select:focus, .apply-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,106,255,0.12); }
     .apply-field textarea { resize: vertical; min-height: 76px; }
@@ -955,16 +956,16 @@
           <div class="apply-section-title">Tus datos de contacto</div>
           <div class="apply-grid">
             <div class="apply-field">
-              <label>Nombre completo *</label>
+              <label>Nombre completo <span class="required-star">*</span></label>
               <input id="applyName" placeholder="Nombre y apellido" />
             </div>
             <div class="apply-grid cols-2">
               <div class="apply-field">
-                <label>Teléfono *</label>
+                <label>Teléfono <span class="required-star">*</span></label>
                 <input id="applyPhone" placeholder="809-555-0000" type="tel"/>
               </div>
               <div class="apply-field">
-                <label>Correo electrónico</label>
+                <label>Correo electrónico <span class="required-star">*</span></label>
                 <input id="applyEmail" placeholder="tu@email.com" type="email"/>
               </div>
             </div>
@@ -973,16 +974,18 @@
           <div class="apply-section-title">¿Qué te interesa?</div>
           <div class="apply-grid cols-2">
             <div class="apply-field">
-              <label>Intención</label>
+              <label>Intención <span class="required-star">*</span></label>
               <select id="applyIntent">
+                <option value="">Seleccionar...</option>
                 <option value="comprar">Comprar</option>
                 <option value="alquilar">Alquilar</option>
                 <option value="invertir">Invertir</option>
               </select>
             </div>
             <div class="apply-field">
-              <label>Plazo estimado</label>
+              <label>Plazo estimado <span class="required-star">*</span></label>
               <select id="applyTimeline">
+                <option value="">Seleccionar...</option>
                 <option value="Inmediato">Inmediato</option>
                 <option value="1-3 meses">1–3 meses</option>
                 <option value="3-6 meses">3–6 meses</option>
@@ -991,12 +994,13 @@
               </select>
             </div>
             <div class="apply-field">
-              <label>Presupuesto (USD)</label>
+              <label>Presupuesto (USD) <span class="required-star">*</span></label>
               <input id="applyBudget" placeholder="ej. 150,000" type="text"/>
             </div>
             <div class="apply-field">
-              <label>Contacto preferido</label>
+              <label>Contacto preferido <span class="required-star">*</span></label>
               <select id="applyContactMethod">
+                <option value="">Seleccionar...</option>
                 <option value="whatsapp">WhatsApp</option>
                 <option value="llamada">Llamada</option>
                 <option value="email">Email</option>
@@ -1010,7 +1014,7 @@
           <div class="apply-section-title">Datos personales</div>
           <div class="apply-grid cols-2">
             <div class="apply-field">
-              <label>Tipo de identificación</label>
+              <label>Tipo de identificación <span class="required-star">*</span></label>
               <select id="applyIdType">
                 <option value="">Seleccionar...</option>
                 <option value="cedula">Cédula dominicana</option>
@@ -1018,7 +1022,7 @@
               </select>
             </div>
             <div class="apply-field">
-              <label>Número de identificación</label>
+              <label>Número de identificación <span class="required-star">*</span></label>
               <input id="applyIdNumber" placeholder="000-0000000-0" />
             </div>
             <div class="apply-field">
@@ -1026,11 +1030,11 @@
               <input id="applyNationality" placeholder="Dominicano" />
             </div>
             <div class="apply-field">
-              <label>Fecha de nacimiento</label>
+              <label>Fecha de nacimiento <span class="required-star">*</span></label>
               <input id="applyDob" type="date" />
             </div>
             <div class="apply-field" style="grid-column: 1 / -1;">
-              <label>Dirección actual</label>
+              <label>Dirección actual <span class="required-star">*</span></label>
               <input id="applyAddress" placeholder="Calle, sector, ciudad" />
             </div>
           </div>
@@ -1038,7 +1042,7 @@
           <div class="apply-section-title">Información laboral</div>
           <div class="apply-grid cols-2">
             <div class="apply-field">
-              <label>Situación laboral</label>
+              <label>Situación laboral <span class="required-star">*</span></label>
               <select id="applyEmpStatus">
                 <option value="">Seleccionar...</option>
                 <option value="employed">Empleado</option>
@@ -1049,15 +1053,15 @@
               </select>
             </div>
             <div class="apply-field">
-              <label>Empresa / Empleador</label>
+              <label>Empresa / Empleador <span class="required-if-employed" style="color:var(--red);">*</span></label>
               <input id="applyEmployer" placeholder="Nombre de la empresa" />
             </div>
             <div class="apply-field">
-              <label>Puesto</label>
+              <label>Puesto <span class="required-if-employed" style="color:var(--red);">*</span></label>
               <input id="applyJobTitle" placeholder="ej. Gerente" />
             </div>
             <div class="apply-field">
-              <label>Ingreso mensual</label>
+              <label>Ingreso mensual <span class="required-star">*</span></label>
               <div style="display:flex;gap:0.35rem;">
                 <input id="applyIncome" placeholder="ej. 85,000" type="text" style="flex:1;" />
                 <select id="applyIncomeCurrency" style="width:88px;">
@@ -1071,7 +1075,7 @@
           <div class="apply-section-title">Financiamiento</div>
           <div class="apply-grid cols-2">
             <div class="apply-field">
-              <label>Método</label>
+              <label>Método <span class="required-star">*</span></label>
               <select id="applyFinancing">
                 <option value="">Seleccionar...</option>
                 <option value="efectivo">Efectivo</option>
@@ -1773,16 +1777,107 @@
     document.querySelector('.apply-body').scrollTop = 0;
   }
 
+  // Highlight a field as invalid and focus it so the user can fix it.
+  function applyFlagField(id, errMsg) {
+    const errEl = document.getElementById('applyError');
+    if (errEl) errEl.textContent = errMsg;
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.borderColor = 'var(--red)';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus();
+      el.addEventListener('input', function clear() {
+        el.style.borderColor = '';
+        el.removeEventListener('input', clear);
+      });
+    }
+    return false;
+  }
+
   function applyValidateStep(step) {
     const errEl = document.getElementById('applyError');
+    errEl.textContent = '';
+
     if (step === 1) {
       const name  = document.getElementById('applyName').value.trim();
       const phone = document.getElementById('applyPhone').value.trim();
-      if (!name || name.length < 2) { errEl.textContent = 'Ingresa tu nombre.'; return false; }
-      if (!phone) { errEl.textContent = 'El teléfono es obligatorio.'; return false; }
-      if (!/^\+?[\d\s\-().]{7,20}$/.test(phone)) { errEl.textContent = 'Número de teléfono inválido.'; return false; }
       const email = document.getElementById('applyEmail').value.trim();
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Correo inválido.'; return false; }
+      const intent = document.getElementById('applyIntent').value;
+      const timeline = document.getElementById('applyTimeline').value;
+      const budget = document.getElementById('applyBudget').value.trim();
+      const contact = document.getElementById('applyContactMethod').value;
+
+      if (!name || name.length < 2) return applyFlagField('applyName', 'Ingresa tu nombre completo.');
+      if (!phone) return applyFlagField('applyPhone', 'El teléfono es obligatorio.');
+      if (!/^\+?[\d\s\-().]{7,20}$/.test(phone)) return applyFlagField('applyPhone', 'Número de teléfono inválido.');
+      if (!email) return applyFlagField('applyEmail', 'El correo electrónico es obligatorio.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return applyFlagField('applyEmail', 'Correo electrónico inválido.');
+      if (!intent) return applyFlagField('applyIntent', 'Selecciona tu intención.');
+      if (!timeline) return applyFlagField('applyTimeline', 'Selecciona un plazo estimado.');
+      const budgetNum = Number(budget.replace(/[^\d.]/g, ''));
+      if (!budget || !isFinite(budgetNum) || budgetNum <= 0) return applyFlagField('applyBudget', 'Ingresa un presupuesto válido.');
+      if (!contact) return applyFlagField('applyContactMethod', 'Selecciona un método de contacto.');
+    }
+
+    if (step === 2) {
+      const idType    = document.getElementById('applyIdType').value;
+      const idNumber  = document.getElementById('applyIdNumber').value.trim();
+      const dob       = document.getElementById('applyDob').value;
+      const address   = document.getElementById('applyAddress').value.trim();
+      const empStatus = document.getElementById('applyEmpStatus').value;
+      const income    = document.getElementById('applyIncome').value.trim();
+      const financing = document.getElementById('applyFinancing').value;
+
+      if (!idType) return applyFlagField('applyIdType', 'Selecciona un tipo de identificación.');
+      if (!idNumber || idNumber.length < 5) return applyFlagField('applyIdNumber', 'Número de identificación inválido.');
+      if (!dob) return applyFlagField('applyDob', 'La fecha de nacimiento es obligatoria.');
+      // Age check (must be 18+)
+      const dobDate = new Date(dob);
+      const today = new Date();
+      if (isNaN(dobDate.getTime()) || dobDate > today) return applyFlagField('applyDob', 'Fecha de nacimiento inválida.');
+      const ageYears = (today - dobDate) / (365.25 * 24 * 60 * 60 * 1000);
+      if (ageYears < 18) return applyFlagField('applyDob', 'Debes ser mayor de edad para aplicar.');
+
+      if (!address || address.length < 5) return applyFlagField('applyAddress', 'Ingresa tu dirección actual.');
+      if (!empStatus) return applyFlagField('applyEmpStatus', 'Selecciona tu situación laboral.');
+
+      if (['employed','self_employed'].includes(empStatus)) {
+        const employer = document.getElementById('applyEmployer').value.trim();
+        const jobTitle = document.getElementById('applyJobTitle').value.trim();
+        if (!employer) return applyFlagField('applyEmployer', 'Indica el nombre de tu empleador.');
+        if (!jobTitle) return applyFlagField('applyJobTitle', 'Indica tu puesto.');
+      }
+
+      const incomeNum = Number(income.replace(/[^\d.]/g, ''));
+      if (!income || !isFinite(incomeNum) || incomeNum <= 0) return applyFlagField('applyIncome', 'Ingresa un ingreso mensual válido.');
+      if (!financing) return applyFlagField('applyFinancing', 'Selecciona un método de financiamiento.');
+
+      // Co-applicant (only if checkbox is ON)
+      if (document.getElementById('applyHasCoapp').checked) {
+        const coName   = document.getElementById('applyCoappName').value.trim();
+        const coPhone  = document.getElementById('applyCoappPhone').value.trim();
+        const coId     = document.getElementById('applyCoappId').value.trim();
+        const coIncome = document.getElementById('applyCoappIncome').value.trim();
+        if (!coName) return applyFlagField('applyCoappName', 'Nombre del co-aplicante es obligatorio.');
+        if (!coPhone || !/^\+?[\d\s\-().]{7,20}$/.test(coPhone)) return applyFlagField('applyCoappPhone', 'Teléfono del co-aplicante inválido.');
+        if (!coId || coId.length < 5) return applyFlagField('applyCoappId', 'Cédula/Pasaporte del co-aplicante es obligatorio.');
+        const coIncomeNum = Number(coIncome.replace(/[^\d.]/g, ''));
+        if (!coIncome || !isFinite(coIncomeNum) || coIncomeNum <= 0) return applyFlagField('applyCoappIncome', 'Ingreso del co-aplicante es obligatorio.');
+      }
+    }
+
+    if (step === 3) {
+      // Required documents: cedula and income_proof must be attached OR deferred.
+      const requiredDocs = ['cedula', 'income_proof'];
+      const labels = { cedula: 'Cédula/Pasaporte', income_proof: 'Comprobante de Ingresos' };
+      const missing = requiredDocs.filter(t => {
+        const s = applyDocState[t];
+        return !s || s.state === 'skipped';
+      });
+      if (missing.length) {
+        errEl.textContent = `Debes adjuntar o marcar para subir después: ${missing.map(t => labels[t]).join(', ')}.`;
+        return false;
+      }
     }
     return true;
   }
@@ -1912,6 +2007,11 @@
       .filter(d => applyDocState[d.type]?.state === 'attached' && applyDocState[d.type]?.file)
       .map(d => ({ type: d.type, label: d.label, file: applyDocState[d.type].file }));
 
+    // Tell the server which required docs are arriving as initial-uploads
+    // so it doesn't reject the create with "missing docs" when the file
+    // hasn't been uploaded yet (file upload happens AFTER create returns).
+    const attached_document_types = toUpload.map(d => d.type);
+
     const nextBtn = document.getElementById('applyNextBtn');
     applyInFlight = true;
     nextBtn.disabled = true; nextBtn.textContent = 'Enviando…';
@@ -1939,6 +2039,7 @@
           employment_status, employer_name, job_title, monthly_income, income_currency,
           co_applicant,
           deferred_documents,
+          attached_document_types,
         }),
       });
       const data = await res.json().catch(() => ({}));
