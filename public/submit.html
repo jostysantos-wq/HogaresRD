@@ -1516,13 +1516,20 @@
       }
 
       // Step 4 (amenities/tags) — no required fields
-      // Step 5 (photos) — cover photo required
+      // Step 5 (photos) — at least one cover photo required. In edit
+      // mode, existing photos are rendered as DOM cards with the
+      // `.photo-slot.existing` class (their URLs live in data-existing-url
+      // and NOT in the slotFiles array), so we have to count those as
+      // well — otherwise an agent who just wants to fix a typo gets
+      // stuck because validation demands a fresh upload.
       if (currentStep === 5) {
-        if (!slotFiles[0]) {
+        const existingPhotoCount = document.querySelectorAll('#photoSlots .photo-slot.existing').length;
+        const hasAnyPhoto = !!slotFiles[0] || existingPhotoCount > 0;
+        if (!hasAnyPhoto) {
           const area0 = document.getElementById('slotArea0');
           const err0  = document.getElementById('slotErr0');
-          area0.classList.add('input-error');
-          if (err0) err0.style.display = 'block';
+          if (area0) area0.classList.add('input-error');
+          if (err0)  err0.style.display = 'block';
           if (!firstError) firstError = area0;
         }
       }

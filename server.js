@@ -1065,6 +1065,16 @@ app.get('/admin/submissions', adminSessionAuth, (req, res) => {
 app.post('/admin/submissions/:id/approve', adminSessionAuth, (req, res) => {
   const sub = store.getListingById(req.params.id);
   if (!sub) return res.status(404).json({ error: 'No encontrado' });
+  // Guard: a listing that's currently waiting on agent edits should
+  // NOT be approvable — the admin explicitly asked for corrections
+  // and approving now would skip the review loop. Force the agent to
+  // resubmit first (which will flip the status back to 'pending').
+  if (sub.status === 'edits_requested') {
+    return res.status(400).json({
+      error: 'No se puede aprobar una propiedad con ediciones solicitadas. Espera a que el agente reenvíe las correcciones.',
+      code:  'listing_awaiting_edits',
+    });
+  }
   sub.status     = 'approved';
   sub.approvedAt = new Date().toISOString();
 

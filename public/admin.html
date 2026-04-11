@@ -1824,9 +1824,15 @@
       const amenities = Array.isArray(s.amenities) ? s.amenities : (s.amenities ? s.amenities.split(',') : []);
       const amenityTags = amenities.map(a => `<span class="amenity-tag">${a.trim()}</span>`).join('');
       const date = new Date(s.submittedAt).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
-      // "isPending" gates admin actions — applies to both fresh pending
-      // submissions AND edits_requested listings the admin is waiting on.
-      const isPending = s.status === 'pending' || s.status === 'edits_requested';
+      // Gate each admin action by status. Fresh submissions are the
+      // only thing the admin can APPROVE — once edits have been
+      // requested the ball is in the agent's court, and approving
+      // without waiting for the resubmission would skip the very
+      // review loop the admin asked for. We still let the admin
+      // reject outright or re-send the edits request with a new note.
+      const isApprovable = s.status === 'pending';
+      const isEditsRequested = s.status === 'edits_requested';
+      const isActionable = isApprovable || isEditsRequested;
       const statusLabel = {
         pending:          'Pendiente',
         approved:         'Aprobada',
@@ -1834,8 +1840,13 @@
         edits_requested:  'Esperando Ediciones',
       }[s.status] || s.status;
       const editsNoteHTML = (s.status === 'edits_requested' && s.editsReason)
-        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:0.6rem 0.8rem;margin:0.5rem 0;font-size:0.78rem;color:#7c2d12;line-height:1.5;">
-             <strong>Nota enviada al agente:</strong><br>${String(s.editsReason).replace(/</g,'&lt;').replace(/\n/g,'<br>')}
+        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:0.8rem 1rem;margin:0.6rem 0;font-size:0.82rem;color:#7c2d12;line-height:1.5;">
+             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+               <strong style="color:#92400E;">Esperando al agente</strong>
+             </div>
+             <div style="margin-bottom:0.3rem;"><strong>Nota enviada:</strong> ${String(s.editsReason).replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+             <div style="font-size:0.72rem;color:#92400E;font-style:italic;">El botón "Aprobar" se habilitará cuando el agente reenvíe la propiedad.</div>
            </div>`
         : '';
       const agencies = Array.isArray(s.agencies) ? s.agencies : [];
@@ -1949,15 +1960,22 @@
               ${s.email} &nbsp;·&nbsp; ${s.phone} &nbsp;·&nbsp; ${s.role || ''}
             </div>
             <div class="card-actions">
-              <button class="btn-approve ${isPending ? '' : 'btn-disabled'}" onclick="approve('${s.id}')">
+              <button class="btn-approve ${isApprovable ? '' : 'btn-disabled'}"
+                      ${isApprovable ? '' : 'disabled'}
+                      title="${isEditsRequested ? 'Esperando que el agente reenvíe la propiedad con las correcciones solicitadas' : ''}"
+                      onclick="approve('${s.id}')">
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 Aprobar
               </button>
-              <button class="btn-edits ${isPending ? '' : 'btn-disabled'}" onclick="requestEdits('${s.id}')">
+              <button class="btn-edits ${isActionable ? '' : 'btn-disabled'}"
+                      ${isActionable ? '' : 'disabled'}
+                      onclick="requestEdits('${s.id}')">
                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                Solicitar Ediciones
+                ${isEditsRequested ? 'Actualizar Nota' : 'Solicitar Ediciones'}
               </button>
-              <button class="btn-reject ${isPending ? '' : 'btn-disabled'}" onclick="reject('${s.id}')">
+              <button class="btn-reject ${isActionable ? '' : 'btn-disabled'}"
+                      ${isActionable ? '' : 'disabled'}
+                      onclick="reject('${s.id}')">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 Rechazar
               </button>
@@ -1991,6 +2009,13 @@
       });
   }
   function approve(id) {
+    const sub = allSubmissions.find(s => s.id === id);
+    // Guard against approving a listing that's still waiting on the
+    // agent to resubmit with corrections.
+    if (sub && sub.status === 'edits_requested') {
+      alert('No puedes aprobar esta propiedad — está esperando que el agente reenvíe las correcciones. Usa "Actualizar Nota" si necesitas cambiar las instrucciones.');
+      return;
+    }
     fetch(`/admin/submissions/${id}/approve`, { method: 'POST', headers: {} })
       .then(r => r.json())
       .then(() => {
@@ -2158,8 +2183,24 @@
     updateSubBulkBar();
   }
   function bulkSubAction(action) {
-    const ids = [...document.querySelectorAll('.sub-bulk-cb:checked')].map(cb => cb.dataset.id);
+    let ids = [...document.querySelectorAll('.sub-bulk-cb:checked')].map(cb => cb.dataset.id);
     if (!ids.length) return;
+
+    // Never bulk-approve listings that are currently in edits_requested —
+    // the admin asked the agent for corrections, approving would skip
+    // that loop entirely. Filter them out and warn the user.
+    if (action === 'approve') {
+      const skipped = ids.filter(id => {
+        const sub = allSubmissions.find(s => s.id === id);
+        return sub && sub.status === 'edits_requested';
+      });
+      ids = ids.filter(id => !skipped.includes(id));
+      if (skipped.length > 0) {
+        alert(`${skipped.length} propiedad(es) están esperando ediciones del agente y no se aprobarán. Se procederán las ${ids.length} restantes.`);
+      }
+      if (!ids.length) return;
+    }
+
     if (!confirm(`¿${action === 'approve' ? 'Aprobar' : 'Rechazar'} ${ids.length} propiedad(es)?`)) return;
     const endpoint = action === 'approve' ? 'approve' : 'reject';
     Promise.all(ids.map(id => fetch(`/admin/submissions/${id}/${endpoint}`, { method: 'POST' })))
