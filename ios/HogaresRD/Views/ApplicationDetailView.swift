@@ -15,6 +15,7 @@ struct ApplicationDetailView: View {
 
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var loading = true
     @State private var detail: ApplicationDetail?
@@ -71,6 +72,14 @@ struct ApplicationDetailView: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        // Re-fetch every time the app comes back to the foreground so the
+        // broker never acts on a detail that's older than the last time
+        // they switched away. Belt-and-suspenders with push notifications.
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && detail != nil {
+                Task { await load() }
+            }
+        }
         .sheet(isPresented: $showStatusSheet) {
             if let d = detail {
                 ChangeStatusSheet(detail: d) { updated in
@@ -684,8 +693,36 @@ struct ChangeStatusSheet: View {
 
     private var currentStatus: String { liveDetail.status }
 
+    // Only show the broker-settable transitions. Client-automated
+    // (pago_enviado, documentos_enviados) and review-automated
+    // (pago_aprobado, documentos_insuficientes) statuses are hidden
+    // because they're set by dedicated flows elsewhere in the app.
     private var options: [String] {
-        ApplicationStatus.nextOptions(from: currentStatus)
+        ApplicationStatus.manualNextOptions(from: currentStatus)
+    }
+
+    // Gives the user a heads-up if there ARE next steps, but none of
+    // them are manual (e.g. pendiente_pago → pago_enviado only, which
+    // is driven by the client uploading a receipt).
+    private var waitingOnOther: Bool {
+        !ApplicationStatus.nextOptions(from: currentStatus).isEmpty && options.isEmpty
+    }
+
+    private var waitingExplanation: String {
+        switch currentStatus {
+        case "pendiente_pago":
+            return "Esperando que el cliente suba el comprobante de pago."
+        case "documentos_requeridos":
+            return "Esperando que el cliente suba los documentos solicitados."
+        case "pago_enviado":
+            return "Usa \"Revisar Pago\" para aprobar o rechazar el comprobante."
+        case "documentos_enviados":
+            return "Revisa cada documento desde la pestaña Documentos."
+        case "pago_aprobado":
+            return "Pago aprobado — marca como Completado cuando corresponda."
+        default:
+            return "Este estado se actualiza automáticamente por otro flujo."
+        }
     }
 
     var body: some View {
@@ -709,8 +746,22 @@ struct ChangeStatusSheet: View {
                 }
                 Section("Nuevo estado") {
                     if options.isEmpty {
-                        Text("No hay transiciones disponibles desde el estado actual.")
-                            .font(.caption).foregroundStyle(.secondary)
+                        if waitingOnOther {
+                            // Specific explanation when the next step is
+                            // client- or review-driven and can't be set manually.
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label(waitingExplanation, systemImage: "hourglass")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Text("Este paso se actualizará solo cuando la otra persona complete su acción.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                        } else {
+                            Text("No hay transiciones disponibles desde el estado actual.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     } else {
                         ForEach(options, id: \.self) { opt in
                             Button {

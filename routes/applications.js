@@ -84,6 +84,41 @@ const STATUS_FLOW = {
   rechazado:               ['aplicado'],
 };
 
+// ── Status ownership ──────────────────────────────────────────────
+// Classifies each status by who legitimately sets it. The generic
+// PUT /:id/status endpoint is for BROKER-driven transitions only.
+// Everything else is set as a side effect of a domain-specific
+// endpoint (document upload, receipt upload, payment verification,
+// document review) and MUST NOT be settable from the manual API —
+// otherwise the broker races the client's automation and you end up
+// with "pago_enviado → pago_enviado" transition errors when the UI
+// is one tick behind.
+//   - broker:      broker can set manually via PUT /:id/status
+//   - client_auto: set automatically when the CLIENT uploads something
+//   - review_auto: set as a side effect of a broker REVIEW action
+//                  (doc review, payment verify)
+const STATUS_OWNERSHIP = {
+  aplicado:                 'broker',       // reset from rechazado, or initial create
+  en_revision:              'broker',
+  documentos_requeridos:    'broker',
+  documentos_enviados:      'client_auto',  // auto on /documents/upload
+  documentos_insuficientes: 'review_auto',  // auto on /documents/:docId/review reject
+  en_aprobacion:            'broker',
+  reservado:                'broker',
+  aprobado:                 'broker',
+  pendiente_pago:           'broker',
+  pago_enviado:             'client_auto',  // auto on /payment/upload
+  pago_aprobado:            'review_auto',  // auto on /payment/verify approve
+  completado:               'broker',
+  rechazado:                'broker',
+};
+
+// Statuses the broker can legitimately set through PUT /:id/status.
+// Anything else is blocked with a clear error.
+function isBrokerSettable(status) {
+  return STATUS_OWNERSHIP[status] === 'broker';
+}
+
 // ── File upload (documents & receipts) ────────────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'data', 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
@@ -882,7 +917,12 @@ router.get('/my', userAuth, (req, res) => {
 
 // ── GET /statuses  — Available statuses ──────────────────────────
 router.get('/statuses', (req, res) => {
-  res.json({ statuses: STATUS_LABELS, flow: STATUS_FLOW, documentTypes: DOCUMENT_TYPES });
+  res.json({
+    statuses: STATUS_LABELS,
+    flow: STATUS_FLOW,
+    ownership: STATUS_OWNERSHIP,
+    documentTypes: DOCUMENT_TYPES,
+  });
 });
 
 // ── GET /:id  — Single application detail ────────────────────────
@@ -921,6 +961,36 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   const { status, reason } = req.body;
   if (!status) return res.status(400).json({ error: 'status es requerido' });
+
+  // ── Idempotency: no-op if already in the requested state ─────
+  // This used to throw "Transición no válida: X → X" whenever the
+  // broker's UI was one tick behind the server (e.g. the client had
+  // just uploaded a receipt, auto-advancing to pago_enviado). Now
+  // we just return the current application so the client reconciles.
+  if (app.status === status) {
+    return res.json(app);
+  }
+
+  // ── Ownership gate: broker can only set broker-owned statuses.
+  // Client-automated (pago_enviado, documentos_enviados) and review-
+  // automated (pago_aprobado, documentos_insuficientes) statuses are
+  // set via their own domain endpoints — never via the generic
+  // status-change API. Blocking them here means the broker cannot
+  // accidentally race the client's automation.
+  if (!isBrokerSettable(status)) {
+    const ownership = STATUS_OWNERSHIP[status] || 'unknown';
+    const explain = {
+      client_auto: 'Este estado se establece automáticamente cuando el cliente sube el comprobante o los documentos.',
+      review_auto: 'Este estado se establece como resultado de una revisión (aprobar pago o revisar documentos).',
+      unknown:     'Este estado no es válido.',
+    }[ownership];
+    return res.status(400).json({
+      error: explain,
+      code: 'status_not_broker_settable',
+      status,
+      ownership,
+    });
+  }
 
   const allowed = STATUS_FLOW[app.status];
   if (!allowed || !allowed.includes(status))

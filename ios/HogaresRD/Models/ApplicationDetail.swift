@@ -213,12 +213,48 @@ enum ApplicationStatus {
         "rechazado":               ["aplicado"],
     ]
 
+    /// Status ownership — mirrors the server STATUS_OWNERSHIP map in
+    /// routes/applications.js. Only `broker` statuses should appear in
+    /// the manual "Cambiar estado" sheet — the others are side effects
+    /// of dedicated flows (client uploads a receipt / docs, or broker
+    /// completes a review) and the server will 400 any attempt to set
+    /// them manually.
+    static let ownership: [String: String] = [
+        "aplicado":                 "broker",
+        "en_revision":              "broker",
+        "documentos_requeridos":    "broker",
+        "documentos_enviados":      "client_auto",
+        "documentos_insuficientes": "review_auto",
+        "en_aprobacion":            "broker",
+        "reservado":                "broker",
+        "aprobado":                 "broker",
+        "pendiente_pago":           "broker",
+        "pago_enviado":             "client_auto",
+        "pago_aprobado":            "review_auto",
+        "completado":               "broker",
+        "rechazado":                "broker",
+    ]
+
     static func label(for key: String) -> String {
         labels[key] ?? key.capitalized
     }
 
+    /// Raw next options from the flow map (includes auto statuses).
+    /// Used internally — prefer `manualNextOptions(from:)` for UI.
     static func nextOptions(from key: String) -> [String] {
         flow[key] ?? []
+    }
+
+    /// Next statuses a broker can legitimately PICK manually from the
+    /// "Cambiar estado" sheet. Filters out client-auto and review-auto
+    /// statuses that are set as side effects of other workflows, so the
+    /// broker can't race the client's automation or bypass a review.
+    static func manualNextOptions(from key: String) -> [String] {
+        nextOptions(from: key).filter { ownership[$0] == "broker" }
+    }
+
+    static func isBrokerSettable(_ key: String) -> Bool {
+        ownership[key] == "broker"
     }
 }
 
