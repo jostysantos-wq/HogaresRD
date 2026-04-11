@@ -26,6 +26,14 @@ struct ContentView: View {
     @State private var popupDismissed = false
     @State private var showPushPrimer = false
 
+    // Red unread-message badge on the Messages tab bar icon. Polled on
+    // scenePhase .active, on login, and every 30s while the app is in
+    // foreground. Also kicked by incoming new_message push payloads
+    // (via the .pushNotificationTapped notification) so it updates even
+    // faster when a message actually arrives.
+    @State private var unreadMessages = 0
+    @State private var unreadPollTask: Task<Void, Never>?
+
     var body: some View {
         TabView(selection: $selectedTab) {
             FeedView()
@@ -38,6 +46,7 @@ struct ContentView: View {
 
             MessagesTabView()
                 .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
+                .badge(unreadMessages)
                 .tag(2)
 
             ProfileTabView()
@@ -65,6 +74,15 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .pushNotificationTapped)) { notif in
             handlePushTap(notif.userInfo)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationReceived)) { notif in
+            // Foreground push arrived — refresh the unread badge right
+            // away instead of waiting for the next 30s poll. We don't
+            // navigate on a receive (only on tap).
+            let type = (notif.userInfo?["type"] as? String) ?? ""
+            if type == "new_message" {
+                Task { await refreshUnreadCount() }
+            }
+        }
         .sheet(item: $favAuthSheet) { mode in
             AuthView(initialMode: mode)
                 .environmentObject(api)
@@ -82,6 +100,19 @@ struct ContentView: View {
                         }
                     }
                 }
+                // Immediate unread refresh + restart the poll timer
+                Task { await refreshUnreadCount() }
+                startUnreadPolling()
+            } else if phase == .background || phase == .inactive {
+                stopUnreadPolling()
+            }
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            // Opening the Messages tab clears the badge optimistically
+            // (the thread read endpoint will clear it server-side once
+            // the user opens a specific conversation).
+            if newTab == 2 {
+                Task { await refreshUnreadCount() }
             }
         }
         .onChange(of: api.currentUser?.emailVerified) { _, newValue in
@@ -90,9 +121,17 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.25)) { showPopup = false }
             }
         }
-        .onChange(of: api.currentUser?.id) {
+        .onChange(of: api.currentUser?.id) { _, newId in
             // Show popup shortly after login if needed
             schedulePopupIfNeeded()
+            // Start/stop the unread poll when the user logs in or out
+            if newId == nil {
+                stopUnreadPolling()
+                unreadMessages = 0
+            } else {
+                Task { await refreshUnreadCount() }
+                startUnreadPolling()
+            }
         }
         .onAppear {
             // Refresh first so the stored user isn't stale — then decide.
@@ -100,7 +139,39 @@ struct ContentView: View {
                 if api.currentUser != nil { await api.refreshUser() }
                 await MainActor.run { schedulePopupIfNeeded() }
             }
+            if api.currentUser != nil {
+                Task { await refreshUnreadCount() }
+                startUnreadPolling()
+            }
         }
+        .onDisappear { stopUnreadPolling() }
+    }
+
+    // MARK: - Unread message badge polling
+
+    private func refreshUnreadCount() async {
+        guard api.currentUser != nil else {
+            await MainActor.run { unreadMessages = 0 }
+            return
+        }
+        let count = await api.getConversationsUnreadCount()
+        await MainActor.run { unreadMessages = count }
+    }
+
+    private func startUnreadPolling() {
+        stopUnreadPolling()
+        unreadPollTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                if Task.isCancelled { return }
+                await refreshUnreadCount()
+            }
+        }
+    }
+
+    private func stopUnreadPolling() {
+        unreadPollTask?.cancel()
+        unreadPollTask = nil
     }
 
     // MARK: - Popup Logic
@@ -233,6 +304,13 @@ struct ContentView: View {
         guard let info = userInfo else { return }
         let type = info["type"] as? String ?? ""
 
+        // Any message-related push should also kick the unread refresh
+        // so the red badge on the Messages tab updates without waiting
+        // for the next 30s poll.
+        if type == "new_message" {
+            Task { await refreshUnreadCount() }
+        }
+
         switch type {
         case "new_message":
             selectedTab = 2 // Messages tab
@@ -240,6 +318,10 @@ struct ContentView: View {
             selectedTab = 3 // Profile tab (tours are in profile)
         case "new_application", "status_changed", "payment_approved", "document_reviewed":
             selectedTab = 3 // Profile tab (applications are in profile)
+        case "task_assigned", "task_requested":
+            // Tasks live under Profile → Tareas. Route there so the
+            // client lands directly on the work the agent asked for.
+            selectedTab = 3
         case "saved_search_match", "new_listing":
             selectedTab = 1 // Browse/Explore tab
         default:

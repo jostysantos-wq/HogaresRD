@@ -88,10 +88,35 @@ const STATUS_FLOW = {
 const DOCS_DIR = path.join(__dirname, '..', 'data', 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 
-// Allowed MIME types for uploaded documents / receipts / proofs
+// Allowed MIME types for uploaded documents / receipts / proofs.
+// Expanded to cover real-world task uploads — the original allowlist
+// was rejecting things clients commonly send (Word docs, Excel
+// financial statements, HEIF/HEIC from iPhone, TIFF scans, BMP,
+// plain text, CSV, RTF). Every entry here is also matched by an
+// extension in the `docUpload.fileFilter` below so uploads are
+// double-gated (extension + magic-byte MIME sniff).
 const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
+  // Images
+  'image/jpeg', 'image/pjpeg',
+  'image/png', 'image/gif', 'image/webp',
+  'image/heic', 'image/heif',
+  'image/tiff', 'image/bmp',
+  // PDF
   'application/pdf',
+  // Office — Word / Excel
+  'application/msword',                                                       // .doc
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',   // .docx
+  'application/vnd.ms-excel',                                                 // .xls
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',         // .xlsx
+  // Office — LibreOffice / OpenDocument
+  'application/vnd.oasis.opendocument.text',                                  // .odt
+  'application/vnd.oasis.opendocument.spreadsheet',                           // .ods
+  // Text
+  'text/plain',
+  'text/csv',
+  'application/rtf', 'text/rtf',
+  // Common compressed wrappers clients sometimes use
+  'application/zip',
 ]);
 
 // Validate a file's actual MIME type (magic bytes) after multer saves it.
@@ -136,9 +161,11 @@ const docStorage = multer.diskStorage({
 });
 const docUpload = multer({
   storage: docStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB (was 10 — accommodate photos of paper docs)
   fileFilter: (req, file, cb) => {
-    const ok = /\.(jpg|jpeg|png|pdf|gif|webp|heic)$/i.test(file.originalname);
+    // Extension allowlist matches ALLOWED_MIME_TYPES above. Anything that
+    // passes here still has to pass the magic-byte sniff in validateMime().
+    const ok = /\.(jpg|jpeg|png|gif|webp|heic|heif|tif|tiff|bmp|pdf|doc|docx|xls|xlsx|odt|ods|txt|csv|rtf|zip)$/i.test(file.originalname);
     cb(null, ok);
   },
 });
@@ -1008,7 +1035,7 @@ router.post('/:id/initial-upload', appCreateLimiter, docUpload.array('files', 10
     const ok = await validateMime(f.path);
     if (!ok) {
       req.files.forEach(x => { if (x.path !== f.path) fs.unlink(x.path, () => {}); });
-      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Solo se aceptan imágenes y PDF.` });
+      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.` });
     }
   }
 
@@ -1061,7 +1088,7 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
     if (!ok) {
       // Delete the rest of the batch files too
       req.files.forEach(x => { if (x.path !== f.path) fs.unlink(x.path, () => {}); });
-      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Solo se aceptan imágenes (JPG, PNG, WEBP, GIF) y PDF.` });
+      return res.status(400).json({ error: `Tipo de archivo no permitido: ${f.originalname}. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.` });
     }
   }
 
@@ -1336,7 +1363,7 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
 
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
-    return res.status(400).json({ error: 'Tipo de archivo no permitido. Solo se aceptan imágenes y PDF.' });
+    return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
 
   app.payment.receipt_path = req.file.path;
   app.payment.receipt_filename = req.file.filename;
@@ -1506,6 +1533,140 @@ router.post('/:id/message', userAuth, (req, res) => {
   res.json(app);
 });
 
+// ── POST /:id/contact-client — Broker starts or continues an in-app
+//      conversation with the applicant ───────────────────────────
+//
+// Before this existed, a broker could only contact the client via email
+// (see the /:id/message endpoint above). This creates or reuses a proper
+// Conversation row in the messaging system so the client sees a red
+// unread badge on the iOS Messages tab and can reply back through the
+// app.
+router.post('/:id/contact-client', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  // Authorization: broker assigned to this app, the inmobiliaria owning
+  // the broker, a secretary in the same inmobiliaria, or an admin.
+  const isBroker = app.broker?.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user.role) && app.inmobiliaria_id === user.id;
+  const isSecretary    = user.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin          = user.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin) {
+    return res.status(403).json({ error: 'No autorizado para contactar este cliente' });
+  }
+
+  const { message } = req.body || {};
+  const text = (message || '').trim();
+  if (!text) return res.status(400).json({ error: 'El mensaje es obligatorio' });
+  if (text.length > 2000) {
+    return res.status(400).json({ error: 'El mensaje es demasiado largo (máximo 2000 caracteres)' });
+  }
+
+  // Resolve the client's user id. Guest applications don't have one, so
+  // fall back to looking them up by email.
+  let clientId = app.client?.user_id || null;
+  if (!clientId && app.client?.email) {
+    const clientUser = store.getUserByEmail(app.client.email);
+    if (clientUser) {
+      clientId = clientUser.id;
+      // Back-fill the id on the application so later calls don't re-query
+      app.client.user_id = clientUser.id;
+      store.saveApplication(app);
+    }
+  }
+  if (!clientId) {
+    return res.status(400).json({
+      error: 'Este cliente aplicó como invitado y no tiene una cuenta en la app. Contáctalo por correo o teléfono.',
+    });
+  }
+
+  // Self-contact guard — a pro user can also be the client of their own
+  // testing apps; don't create a self-conversation.
+  if (clientId === req.user.sub) {
+    return res.status(400).json({ error: 'No puedes enviarte un mensaje a ti mismo.' });
+  }
+
+  // Find or create the conversation — one per (client, property) pair.
+  let conv = store.getConversations().find(
+    c => c.clientId === clientId && c.propertyId === app.listing_id
+  );
+
+  const msgObj = {
+    id:         'msg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    senderId:   req.user.sub,
+    senderRole: 'broker',
+    senderName: user.name || 'Agente',
+    text,
+    timestamp:  new Date().toISOString(),
+  };
+
+  if (conv) {
+    // Continue existing thread. Don't reassign the broker if the
+    // conversation already belongs to someone else.
+    conv.messages.push(msgObj);
+    conv.lastMessage  = text;
+    conv.updatedAt    = new Date().toISOString();
+    conv.unreadClient = (conv.unreadClient || 0) + 1;
+    if (!conv.brokerId) { conv.brokerId = req.user.sub; conv.brokerName = user.name; }
+    store.saveConversation(conv);
+  } else {
+    conv = {
+      id:             'conv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      propertyId:     app.listing_id || '',
+      propertyTitle:  app.listing_title || 'Propiedad',
+      propertyImage:  null,
+      clientId,
+      clientName:     app.client?.name || 'Cliente',
+      brokerId:       req.user.sub,
+      brokerName:     user.name || 'Agente',
+      inmobiliariaId: app.inmobiliaria_id || null,
+      createdAt:      new Date().toISOString(),
+      updatedAt:      new Date().toISOString(),
+      lastMessage:    text,
+      unreadBroker:   0,
+      unreadClient:   1,
+      messages:       [msgObj],
+    };
+    store.saveConversation(conv);
+  }
+
+  // Log on the application timeline so both sides have an audit trail
+  addEvent(app, 'message', 'Mensaje enviado al cliente por la app: ' + text,
+    req.user.sub, user.name || 'Broker',
+    { role: 'broker', conversationId: conv.id, via: 'app' });
+  store.saveApplication(app);
+
+  // Push notification to the client's device
+  pushNotify(clientId, {
+    type:  'new_message',
+    title: `💬 ${user.name || 'Agente'}`,
+    body:  text.slice(0, 120) + (text.length > 120 ? '…' : ''),
+    url:   `/mensajes?conv=${conv.id}`,
+  });
+
+  // Email fallback so they get it even without the app installed
+  if (app.client?.email) {
+    sendNotification(app.client.email,
+      `HogaresRD — Nuevo mensaje sobre ${app.listing_title}`,
+      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+         <div style="background:#002D62;color:#fff;padding:1.25rem 1.5rem;border-radius:10px 10px 0 0;">
+           <h2 style="margin:0;font-size:1.1rem;">Nuevo mensaje de ${user.name || 'tu agente'}</h2>
+         </div>
+         <div style="background:#fff;padding:1.25rem 1.5rem;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;">
+           <p style="margin:0 0 12px;color:#4d6a8a;font-size:0.9rem;">Sobre tu aplicación para <strong>${app.listing_title}</strong>:</p>
+           <blockquote style="margin:0 0 14px;padding:0.75rem 1rem;background:#f0f6ff;border-left:3px solid #0038A8;border-radius:6px;color:#1a2b40;font-size:0.92rem;line-height:1.5;">${text.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</blockquote>
+           <a href="${BASE_URL}/mensajes" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Responder en la app →</a>
+         </div>
+       </div>`
+    );
+  }
+
+  res.json({ success: true, conversation: conv });
+});
+
 // ── POST /:id/checklist-event  — Log checklist audit entry ──────
 router.post('/:id/checklist-event', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
@@ -1639,7 +1800,7 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
 
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
-    return res.status(400).json({ error: 'Tipo de archivo no permitido. Solo se aceptan imágenes y PDF.' });
+    return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
   inst.proof_path        = req.file.path;
   inst.proof_filename    = req.file.filename;
   inst.proof_original    = req.file.originalname;

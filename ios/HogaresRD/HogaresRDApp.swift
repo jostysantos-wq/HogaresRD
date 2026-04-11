@@ -24,6 +24,18 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async
         -> UNNotificationPresentationOptions {
+        // Fire a lightweight "received" signal so ContentView can refresh
+        // its unread-message badge immediately instead of waiting for the
+        // next 30s poll — the user sees the red dot appear the instant
+        // the push banner drops down.
+        let userInfo = notification.request.content.userInfo
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: .pushNotificationReceived,
+                object: nil,
+                userInfo: userInfo
+            )
+        }
         return [.banner, .badge, .sound]
     }
 

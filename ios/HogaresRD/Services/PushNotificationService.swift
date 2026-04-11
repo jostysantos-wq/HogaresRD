@@ -110,4 +110,8 @@ class PushNotificationService: NSObject, ObservableObject {
 
 extension Notification.Name {
     static let pushNotificationTapped = Notification.Name("pushNotificationTapped")
+    /// Fired by willPresent when a push arrives while the app is in the
+    /// foreground. Used by ContentView to refresh the unread-message
+    /// badge without waiting for the next 30s poll.
+    static let pushNotificationReceived = Notification.Name("pushNotificationReceived")
 }

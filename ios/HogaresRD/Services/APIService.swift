@@ -1008,6 +1008,24 @@ class APIService: ObservableObject {
         _ = try? await session.data(for: req)
     }
 
+    /// Total unread conversations across every thread the authenticated
+    /// user has access to. Used to populate the red badge on the iOS
+    /// Messages tab bar icon.
+    func getConversationsUnreadCount() async -> Int {
+        guard let t = token else { return 0 }
+        guard let url = URL(string: "\(apiBase)/api/conversations/unread") else { return 0 }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, resp) = try await session.data(for: req)
+            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { return 0 }
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            return (json?["count"] as? Int) ?? 0
+        } catch {
+            return 0
+        }
+    }
+
     /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
     /// conversation so no further messages can be sent from either side.
     func closeConversation(id: String, reason: String) async throws -> Conversation {

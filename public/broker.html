@@ -2665,6 +2665,12 @@
       <p id="detailSubtitle">--</p>
     </div>
     <div id="detailBadge"></div>
+    <button class="btn btn-primary" id="contactClientBtn" onclick="openContactClient()"
+            style="display:none;align-items:center;gap:0.4rem;padding:0.55rem 1rem;font-size:0.82rem;"
+            title="Enviar mensaje en la app al cliente">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      Contactar
+    </button>
     <button class="detail-close" id="detailClose">
       <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
@@ -2689,6 +2695,25 @@
     <div class="tab-pane" id="pane-tours"></div>
     <div class="tab-pane" id="pane-pago"></div>
     <div class="tab-pane" id="pane-timeline"></div>
+  </div>
+</div>
+
+<!-- Contact Client Modal — sends an in-app message via /api/applications/:id/contact-client -->
+<div class="modal-backdrop" id="contactClientModal">
+  <div class="modal" style="max-width:520px;">
+    <h3 style="margin:0 0 0.25rem;">Contactar al Cliente</h3>
+    <p id="contactClientSub" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;"></p>
+    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.35rem;">Mensaje</label>
+    <textarea id="contactClientText" rows="5" placeholder="Hola, soy tu agente. Quisiera hablar contigo sobre..."
+              style="width:100%;padding:0.75rem 0.9rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.9rem;font-family:inherit;resize:vertical;"></textarea>
+    <div id="contactClientError" style="color:var(--red);font-size:0.8rem;min-height:1rem;margin-top:0.5rem;"></div>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem;">
+      <button class="btn btn-outline" onclick="closeContactClient()">Cancelar</button>
+      <button class="btn btn-primary" id="sendContactClientBtn" onclick="sendContactClient()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="#fff" style="margin-right:0.35rem;vertical-align:-2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        Enviar mensaje
+      </button>
+    </div>
   </div>
 </div>
 
@@ -3206,6 +3231,13 @@
     document.getElementById('detailSubtitle').textContent = listing.title || 'Propiedad';
     document.getElementById('detailBadge').innerHTML = badgeHTML(a.status, true);
 
+    // Show "Contactar" button when we can reach the client in-app.
+    // Clients without a user_id (guest applications) can't get app
+    // messages, so the button stays hidden for those.
+    const canContact = !!(client.user_id || client.email);
+    const contactBtn = document.getElementById('contactClientBtn');
+    if (contactBtn) contactBtn.style.display = canContact ? 'inline-flex' : 'none';
+
     renderWorkflowStrip(a.status);
     renderResumen(a, client, listing);
     renderEstado(a);
@@ -3473,6 +3505,56 @@
       ${!requested.length && !uploaded.length ? '<div class="empty-state"><p>No hay documentos todavia.</p></div>' : ''}
     `;
   }
+
+  // ── Contact client modal ─────────────────────────────
+  // Opens a simple composer that POSTs to /api/applications/:id/contact-client
+  // which creates or reuses the broker↔client conversation in the
+  // messaging system. The client sees it on their iOS Messages tab
+  // with a red unread badge and can reply back through the app.
+  window.openContactClient = function() {
+    if (!currentApp) return;
+    const client = currentApp.client || {};
+    const listing = currentApp.listing || {};
+    document.getElementById('contactClientSub').textContent =
+      `Enviarás un mensaje a ${client.name || 'el cliente'} sobre "${currentApp.listing_title || listing.title || 'la propiedad'}".`;
+    document.getElementById('contactClientText').value = '';
+    document.getElementById('contactClientError').textContent = '';
+    const btn = document.getElementById('sendContactClientBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#fff" style="margin-right:0.35rem;vertical-align:-2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Enviar mensaje';
+    document.getElementById('contactClientModal').classList.add('open');
+    setTimeout(() => document.getElementById('contactClientText').focus(), 100);
+  };
+  window.closeContactClient = function() {
+    document.getElementById('contactClientModal').classList.remove('open');
+  };
+  window.sendContactClient = async function() {
+    const text = document.getElementById('contactClientText').value.trim();
+    const errEl = document.getElementById('contactClientError');
+    errEl.textContent = '';
+    if (!text) { errEl.textContent = 'Escribe un mensaje.'; return; }
+    if (text.length > 2000) { errEl.textContent = 'Máximo 2000 caracteres.'; return; }
+    const btn = document.getElementById('sendContactClientBtn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    try {
+      const appId = currentApp._id || currentApp.id;
+      await API(`/api/applications/${appId}/contact-client`, {
+        method: 'POST',
+        body:   { message: text },
+      });
+      toast('Mensaje enviado al cliente en la app');
+      closeContactClient();
+      // Refresh timeline so the new entry appears
+      const data = await API(`/api/applications/${appId}`);
+      currentApp = data.application || data;
+      renderTimeline(currentApp);
+    } catch (e) {
+      errEl.textContent = e.message || 'Error al enviar';
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#fff" style="margin-right:0.35rem;vertical-align:-2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Enviar mensaje';
+    }
+  };
 
   // Doc request modal
   window.openDocModal = function() {
