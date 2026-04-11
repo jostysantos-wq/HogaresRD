@@ -468,17 +468,53 @@ router.post('/', appCreateLimiter, (req, res) => {
   const cascadeEngine = require('./cascade-engine');
   const useCascade = cascadeEngine.isEnabled() && agencies.length > 0;
 
+  // Helper: try to resolve an agency contact to a registered user
+  // so we can populate broker.user_id. Listings with agency cards
+  // that were submitted BEFORE the agent registered (or without
+  // linking them to a user account) end up with agency.user_id = null.
+  // We recover by looking up the registered user by email, then by
+  // phone — whichever matches first. This makes the application
+  // visible in that agent's dashboard instead of orphaning it.
+  function resolveAgencyToUser(agency) {
+    if (!agency) return null;
+    if (agency.user_id) {
+      const u = store.getUserById(agency.user_id);
+      if (u) return u;
+    }
+    if (agency.email) {
+      const u = store.getUserByEmail(agency.email);
+      if (u) return u;
+    }
+    // Best-effort phone lookup (no dedicated helper — linear scan is fine at this scale)
+    if (agency.phone) {
+      const cleanPhone = String(agency.phone).replace(/\D/g, '');
+      if (cleanPhone.length >= 7) {
+        const match = (store.getUsers() || []).find(u => {
+          const up = String(u.phone || '').replace(/\D/g, '');
+          return up && up.endsWith(cleanPhone.slice(-7));
+        });
+        if (match) return match;
+      }
+    }
+    return null;
+  }
+
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
   if (!useCascade && agencies.length) {
     const agency = agencies[0];
+    const resolved = resolveAgencyToUser(agency);
     broker = {
-      user_id: agency.user_id || null,
-      name:    agency.contact || agency.name || '',
+      user_id: agency.user_id || resolved?.id || null,
+      name:    agency.contact || agency.name || resolved?.name || '',
       agency_name: agency.name || '',
-      email:   agency.email || '',
-      phone:   agency.phone || '',
+      email:   agency.email || resolved?.email || '',
+      phone:   agency.phone || resolved?.phone || '',
     };
   } else if (useCascade) {
+    // Even when cascade is used, pre-resolve the first agency's user
+    // so we can fall back to them if cascade returns null later.
+    // broker.user_id stays null for now but will be populated in the
+    // fallback branch if needed.
     broker = { user_id: null, name: 'Pendiente de asignación', agency_name: '', email: '', phone: '' };
   }
 
@@ -670,10 +706,44 @@ router.post('/', appCreateLimiter, (req, res) => {
 
     if (!cascadeResult) {
       console.warn('[applications] Cascade returned null — falling back to direct agency notifications for app', app.id);
-      // Fallback: notify every agency contact by email. Also send WhatsApp
-      // + push to any registered user whose email or phone matches one
-      // of those contacts, so the owner still gets pinged even when their
-      // agency card wasn't linked to a user account at listing time.
+
+      // Fallback: try to resolve the first agency contact to a
+      // registered user. If we can, ASSIGN them as the broker on
+      // this application (so it shows up in their dashboard). If
+      // not, we still email every agency contact as a last-resort.
+      let assignedUser = null;
+      for (const agency of agencies) {
+        const resolved = resolveAgencyToUser(agency);
+        if (resolved) { assignedUser = resolved; break; }
+      }
+
+      if (assignedUser) {
+        app.broker = {
+          user_id:     assignedUser.id,
+          name:        assignedUser.name || (agencies[0]?.contact || agencies[0]?.name || ''),
+          agency_name: agencies[0]?.name || '',
+          email:       assignedUser.email || agencies[0]?.email || '',
+          phone:       assignedUser.phone || agencies[0]?.phone || '',
+        };
+        // Pick up any inmobiliaria affiliation the resolved user has
+        if (assignedUser.inmobiliaria_id) {
+          app.inmobiliaria_id   = assignedUser.inmobiliaria_id;
+          app.inmobiliaria_name = assignedUser.inmobiliaria_name || null;
+        } else if (['inmobiliaria','constructora'].includes(assignedUser.role)) {
+          app.inmobiliaria_id   = assignedUser.id;
+          app.inmobiliaria_name = assignedUser.companyName || assignedUser.name || null;
+        }
+        app.updated_at = new Date().toISOString();
+        addEvent(app, 'status_change',
+          `Agente auto-asignado: ${assignedUser.name || assignedUser.email}`,
+          'system', 'Sistema',
+          { from: null, to: assignedUser.id, via: 'cascade-fallback' });
+        store.saveApplication(app);
+      }
+
+      // Notifications — email every agency card + push/WhatsApp to
+      // any resolvable user (not just the first one, so multi-agency
+      // listings still broadcast).
       for (const agency of agencies) {
         if (agency.email) {
           sendNotification(agency.email,
@@ -681,8 +751,7 @@ router.post('/', appCreateLimiter, (req, res) => {
             newAppHtml(agency.name ? `Para ${agency.name}` : ''));
         }
 
-        // Match-by-email to reach the user's inbox (push, WhatsApp)
-        const contactUser = agency.email ? store.getUserByEmail(agency.email) : null;
+        const contactUser = resolveAgencyToUser(agency);
         if (contactUser) {
           pushNotify(contactUser.id, {
             type:  'new_application',
@@ -705,14 +774,17 @@ router.post('/', appCreateLimiter, (req, res) => {
         }
       }
 
-      // Also notify the inmobiliaria if we can resolve one from the creator
-      if (inmobiliaria_id) {
-        const inmUser = store.getUserById(inmobiliaria_id);
+      // Also notify the inmobiliaria if we can resolve one from the app
+      if (app.inmobiliaria_id) {
+        const inmUser = store.getUserById(app.inmobiliaria_id);
         if (inmUser?.email) {
           sendNotification(
             inmUser.email,
-            `Nueva aplicación pendiente — ${app.listing_title}`,
-            newAppHtml(`Sin agente asignado — por favor reasignar`));
+            assignedUser
+              ? `Nueva aplicación asignada a ${assignedUser.name} — ${app.listing_title}`
+              : `Nueva aplicación pendiente — ${app.listing_title}`,
+            newAppHtml(assignedUser ? `Agente: ${assignedUser.name}` : 'Sin agente asignado — por favor reasignar')
+          );
         }
       }
     }

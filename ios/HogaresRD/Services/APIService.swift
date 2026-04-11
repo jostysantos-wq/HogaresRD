@@ -1146,16 +1146,40 @@ class APIService: ObservableObject {
 
     // MARK: - Applications
 
+    /// Fetch applications visible to the current user.
+    ///
+    /// Role-scoped by the backend at GET /api/applications:
+    ///   • admin                    → every application
+    ///   • inmobiliaria/constructora → applications assigned to any
+    ///     broker on their team
+    ///   • secretary                → parent inmobiliaria's applications
+    ///   • agency/broker            → applications where they're the
+    ///     assigned broker
+    ///
+    /// Before this fix, the broker dashboard was calling the wrong
+    /// endpoint (/api/applications/my), which returns applications
+    /// where the CURRENT USER IS THE CLIENT (a buyer). That's why
+    /// agents saw no applications on the iOS dashboard even though
+    /// clients were submitting them — the agent was querying the
+    /// wrong side of the relationship.
     func getApplications() async throws -> [Application] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/my")!)
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await session.data(for: req)
-        // Backend returns { applications: [...] }
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al cargar aplicaciones")
+        }
+        // The /api/applications endpoint returns a raw array.
+        if let arr = try? decoder.decode([Application].self, from: data) {
+            return arr
+        }
+        // Legacy wrapper fallback — some older endpoints returned { applications: [...] }
         if let wrapper = try? decoder.decode(ApplicationsResponse.self, from: data) {
             return wrapper.applications
         }
-        return (try? decoder.decode([Application].self, from: data)) ?? []
+        return []
     }
 
     // MARK: - Submit Listing
