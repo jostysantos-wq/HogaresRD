@@ -1319,6 +1319,126 @@ app.delete('/admin/catalogue/:id', adminSessionAuth, (req, res) => {
   res.json({ success: true, deleted: { id: req.params.id, title: listing.title } });
 });
 
+// ══════════════════════════════════════════════════════════════════
+// ── Admin: Applications oversight ────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+//
+// Admins get an unfiltered view of every application in the database
+// plus the ability to reassign one to a different broker. This is
+// useful when:
+//   - a cascade fallback didn't reach the right agent
+//   - a broker leaves the platform and their apps need to be handed off
+//   - a client requests a specific agent
+
+// GET /admin/applications — list every application
+app.get('/admin/applications', adminSessionAuth, (req, res) => {
+  const apps = store.getApplications() || [];
+  // Optional status filter (?status=aplicado for example)
+  const { status, q } = req.query;
+  let filtered = apps;
+  if (status) filtered = filtered.filter(a => a.status === status);
+  if (q) {
+    const needle = String(q).toLowerCase();
+    filtered = filtered.filter(a =>
+      (a.client?.name || '').toLowerCase().includes(needle) ||
+      (a.client?.email || '').toLowerCase().includes(needle) ||
+      (a.listing_title || '').toLowerCase().includes(needle) ||
+      (a.broker?.name || '').toLowerCase().includes(needle) ||
+      (a.id || '').toLowerCase().includes(needle)
+    );
+  }
+  // Newest first
+  filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  res.json(filtered);
+});
+
+// PUT /admin/applications/:id/reassign — reassign to a different broker
+// body: { user_id: "usr_xxx" }  (required)
+app.put('/admin/applications/:id/reassign', adminSessionAuth, (req, res) => {
+  const app_ = store.getApplicationById(req.params.id);
+  if (!app_) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const { user_id } = req.body || {};
+  if (!user_id) return res.status(400).json({ error: 'user_id requerido' });
+
+  const newBroker = store.getUserById(user_id);
+  if (!newBroker) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const proRoles = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+  if (!proRoles.includes(newBroker.role)) {
+    return res.status(400).json({ error: 'El usuario seleccionado no es un agente/inmobiliaria' });
+  }
+
+  const oldBroker = { ...(app_.broker || {}) };
+  app_.broker = {
+    user_id:     newBroker.id,
+    name:        newBroker.name || '',
+    email:       newBroker.email || '',
+    phone:       newBroker.phone || '',
+    agency_name: newBroker.agencyName || newBroker.companyName || '',
+  };
+
+  // Inherit inmobiliaria affiliation from the new broker
+  app_.inmobiliaria_id   = newBroker.inmobiliaria_id || (['inmobiliaria','constructora'].includes(newBroker.role) ? newBroker.id : null);
+  app_.inmobiliaria_name = newBroker.inmobiliaria_name || (['inmobiliaria','constructora'].includes(newBroker.role) ? (newBroker.companyName || newBroker.name) : null);
+  app_.updated_at        = new Date().toISOString();
+
+  // Log the reassignment in the timeline
+  if (!Array.isArray(app_.timeline_events)) app_.timeline_events = [];
+  app_.timeline_events.push({
+    id:          'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    type:        'reassigned',
+    description: `Reasignada por el administrador: de ${oldBroker.name || 'sin asignar'} a ${newBroker.name}`,
+    actor:       'admin',
+    actor_name:  'Administrador',
+    data:        { from: oldBroker.user_id || null, to: newBroker.id },
+    created_at:  app_.updated_at,
+  });
+
+  store.saveApplication(app_);
+
+  // Fire-and-forget notifications
+  try {
+    const transporter = _createMailTransport();
+    const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
+    const htmlTo = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+      <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
+        <h2 style="margin:0;">Nueva Aplicación Asignada</h2>
+      </div>
+      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
+        <p>Te hemos asignado una aplicación:</p>
+        <p style="font-size:1.1rem;font-weight:700;">${app_.listing_title} — $${Number(app_.listing_price || 0).toLocaleString()}</p>
+        <p><strong>Cliente:</strong> ${app_.client.name}</p>
+        <p>📞 ${app_.client.phone} · ✉️ ${app_.client.email || 'N/A'}</p>
+        <a href="${BASE_URL}/broker" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver en Dashboard</a>
+      </div>
+    </div>`;
+    if (newBroker.email && transporter?.sendMail) {
+      transporter.sendMail({
+        department: 'admin',
+        to:         newBroker.email,
+        subject:    `Te asignaron una aplicación — ${app_.listing_title}`,
+        html:       htmlTo,
+      }).catch(e => console.error('[reassign] notify-new error:', e.message));
+    }
+    // Best-effort push notification
+    try {
+      const { notify: pushNotify } = require('./routes/push');
+      pushNotify(newBroker.id, {
+        type:  'new_application',
+        title: 'Aplicación reasignada',
+        body:  `${app_.client.name} aplicó para ${app_.listing_title}`,
+        url:   '/broker.html',
+      });
+    } catch (_) {}
+  } catch (e) {
+    console.error('[reassign] notify error:', e.message);
+  }
+
+  console.log(`[admin] Reassigned application ${app_.id} → ${newBroker.email}`);
+  res.json({ success: true, application: app_ });
+});
+
 // ── Admin: Bulk delete users ───────────────────────────────────────────
 app.post('/admin/users/bulk-delete', adminSessionAuth, (req, res) => {
   const { ids } = req.body;

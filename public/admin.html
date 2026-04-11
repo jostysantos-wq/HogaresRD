@@ -406,6 +406,15 @@
     .blog-status-badge { display:inline-flex;align-items:center;gap:0.3rem;font-size:0.72rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:50px; }
     .blog-status-badge.published { background:rgba(16,185,129,0.12);color:#059669; }
     .blog-status-badge.draft { background:rgba(245,158,11,0.12);color:#d97706; }
+    /* ── Generic modal (used by reassign) ── */
+    .modal-backdrop { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;padding:1.5rem; }
+    .modal { background:var(--bg-card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:560px;max-height:calc(100vh - 3rem);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.35); }
+    .modal-header { display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.3rem;border-bottom:1px solid var(--border);flex-shrink:0; }
+    .modal-title { font-size:1rem;font-weight:800;color:var(--text); }
+    .modal-close { background:none;border:none;font-size:1.6rem;line-height:1;color:var(--text-muted);cursor:pointer;padding:0 0.2rem; }
+    .modal-close:hover { color:var(--text); }
+    .modal-body { padding:1.3rem;overflow-y:auto;flex:1;min-height:0; }
+    .modal-footer { padding:0.95rem 1.3rem;border-top:1px solid var(--border);flex-shrink:0; }
     /* ── Blog editor modal ── */
     .blog-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:1.5rem; }
     .blog-modal-overlay.open { display:flex; }
@@ -958,7 +967,10 @@
             <div class="lbl">Rechazadas</div>
           </div>
         </div>
-        <div class="leads-toolbar" id="appsToolbar">
+        <div class="leads-toolbar" id="appsToolbar" style="flex-wrap:wrap;gap:0.5rem;">
+          <input type="search" id="appsSearch" placeholder="Buscar cliente, propiedad, broker, ID..."
+                 oninput="onAppsSearch()"
+                 style="flex:1;min-width:220px;padding:0.5rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.85rem;">
           <button class="filter-btn active" onclick="filterApps('all', this)">Todas</button>
           <button class="filter-btn" onclick="filterApps('aplicado', this)">Aplicadas</button>
           <button class="filter-btn" onclick="filterApps('en_revision', this)">En Revisión</button>
@@ -972,15 +984,38 @@
           <table class="leads-table">
             <thead>
               <tr>
-                <th>Cliente</th><th>Propiedad</th><th>Broker</th>
+                <th>Cliente</th><th>Propiedad</th><th>Broker Asignado</th>
                 <th>Estado</th><th>Documentos</th><th>Pago</th>
-                <th>Fecha</th><th>Acciones</th>
+                <th>Fecha</th><th style="text-align:right;">Acciones</th>
               </tr>
             </thead>
             <tbody id="appsTableBody">
               <tr><td colspan="8" class="leads-empty">Cargando aplicaciones...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- ── REASSIGN APPLICATION MODAL ─────────────────────── -->
+      <div id="reassignModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeReassign()">
+        <div class="modal" style="max-width:560px;">
+          <div class="modal-header">
+            <div class="modal-title">Reasignar Aplicación</div>
+            <button class="modal-close" onclick="closeReassign()">×</button>
+          </div>
+          <div class="modal-body">
+            <div id="reassignAppSummary" style="background:var(--bg-section);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.85rem;line-height:1.5;"></div>
+            <label style="display:block;font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Nuevo broker / inmobiliaria</label>
+            <input type="search" id="reassignSearch" placeholder="Buscar por nombre o email..."
+                   oninput="renderReassignList()"
+                   style="width:100%;padding:0.6rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);font-size:0.88rem;margin-bottom:0.6rem;">
+            <div id="reassignList" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;"></div>
+            <p id="reassignError" style="color:var(--danger);font-size:0.82rem;margin-top:0.6rem;min-height:1rem;"></p>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:0.6rem;justify-content:flex-end;">
+            <button class="btn-secondary" onclick="closeReassign()">Cancelar</button>
+            <button class="btn-primary" id="reassignConfirmBtn" disabled onclick="confirmReassign()">Reasignar</button>
+          </div>
         </div>
       </div>
 
@@ -2231,10 +2266,18 @@
     aprobado: '#0a7c4f', pago_aprobado: '#0a7c4f', completado: '#0a7c4f',
     pendiente_pago: '#0038A8', pago_enviado: '#0038A8', rechazado: '#CF142B',
   };
+  let currentAppSearch = '';
+  let _appsSearchTimer = null;
+
   function loadApps() {
-    fetch('/api/applications').then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => {
+    fetch('/admin/applications').then(r => {
+      if (handleUnauth(r)) throw new Error();
+      if (!r.ok) throw new Error();
+      return r.json();
+    }).then(data => {
+      if (!data) return;
       allApps = data; updateAppStats(data);
-      renderApps(currentAppFilter === 'all' ? data : filterAppList(data, currentAppFilter));
+      renderApps(currentlyFilteredApps());
     }).catch(() => {
       document.getElementById('appsTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Error al cargar aplicaciones.</td></tr>';
     });
@@ -2250,11 +2293,32 @@
     if (filter === 'documentos') return apps.filter(a => a.status.startsWith('documento'));
     return apps.filter(a => a.status === filter);
   }
+  function currentlyFilteredApps() {
+    let out = filterAppList(allApps, currentAppFilter);
+    const q = (currentAppSearch || '').trim().toLowerCase();
+    if (q) {
+      out = out.filter(a =>
+        (a.client?.name || '').toLowerCase().includes(q) ||
+        (a.client?.email || '').toLowerCase().includes(q) ||
+        (a.listing_title || '').toLowerCase().includes(q) ||
+        (a.broker?.name || '').toLowerCase().includes(q) ||
+        (a.id || '').toLowerCase().includes(q)
+      );
+    }
+    return out;
+  }
   function filterApps(filter, btn) {
     currentAppFilter = filter;
     document.querySelectorAll('#appsToolbar .filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    renderApps(filterAppList(allApps, filter));
+    renderApps(currentlyFilteredApps());
+  }
+  function onAppsSearch() {
+    clearTimeout(_appsSearchTimer);
+    _appsSearchTimer = setTimeout(() => {
+      currentAppSearch = document.getElementById('appsSearch').value || '';
+      renderApps(currentlyFilteredApps());
+    }, 180);
   }
   function renderApps(apps) {
     const tbody = document.getElementById('appsTableBody');
@@ -2267,18 +2331,136 @@
       const payStatus = a.payment?.verification_status || 'none';
       const payLabel  = { none:'—', pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[payStatus] || '—';
       const payColor  = { pending:'#c07c1a', approved:'#0a7c4f', rejected:'#CF142B' }[payStatus] || '#4d6a8a';
+      const unassigned = !a.broker?.user_id;
+      const brokerLabel = a.broker?.name || 'Sin asignar';
+      const brokerSub   = a.broker?.email || a.broker?.agency_name || (unassigned ? 'Requiere reasignación' : '');
       return `
-        <tr>
-          <td><div class="lead-name">${a.client?.name || '—'}</div><div class="lead-contact">📞 ${a.client?.phone || '—'}</div>${a.client?.email ? `<div class="lead-contact">✉️ ${a.client.email}</div>` : ''}</td>
-          <td><div class="lead-listing">${a.listing_title || '—'}<small>${a.listing_price ? '$' + Number(a.listing_price).toLocaleString() : ''}</small></div></td>
-          <td><div style="font-weight:600;font-size:0.83rem;">${a.broker?.name || 'Sin asignar'}</div><div style="font-size:0.73rem;color:#7a93b0;">${a.broker?.agency_name || ''}</div></td>
+        <tr${unassigned ? ' style="background:rgba(217,119,6,0.06);"' : ''}>
+          <td><div class="lead-name">${esc(a.client?.name || '—')}</div><div class="lead-contact">📞 ${esc(a.client?.phone || '—')}</div>${a.client?.email ? `<div class="lead-contact">✉️ ${esc(a.client.email)}</div>` : ''}</td>
+          <td><div class="lead-listing">${esc(a.listing_title || '—')}<small>${a.listing_price ? '$' + Number(a.listing_price).toLocaleString() : ''}</small></div></td>
+          <td>
+            <div style="font-weight:600;font-size:0.83rem;${unassigned ? 'color:#d97706;' : ''}">${esc(brokerLabel)}</div>
+            <div style="font-size:0.73rem;color:#7a93b0;">${esc(brokerSub)}</div>
+          </td>
           <td><span class="lead-badge" style="background:${color}15;color:${color};">${APP_STATUS_LABELS[a.status] || a.status}</span></td>
           <td style="font-size:0.8rem;"><div>${docsReq} solicitados</div><div style="color:var(--success);font-weight:600;">${docsUp} subidos</div></td>
           <td><span style="font-size:0.8rem;font-weight:600;color:${payColor};">${payLabel}</span></td>
           <td style="white-space:nowrap;font-size:0.75rem;color:#7a93b0;">${date}</td>
-          <td><a href="/broker" style="font-size:0.8rem;color:var(--accent);font-weight:600;text-decoration:none;">Ver →</a></td>
+          <td style="white-space:nowrap;text-align:right;">
+            <button onclick="openReassign('${a.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;">Reasignar</button>
+          </td>
         </tr>`;
     }).join('');
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Reassign Modal ──────────────────────────────────────
+  let _reassignApp = null;
+  let _reassignSelectedId = null;
+  let _reassignAllUsers = [];
+
+  function openReassign(appId) {
+    _reassignApp = allApps.find(a => a.id === appId);
+    if (!_reassignApp) return;
+    _reassignSelectedId = null;
+    document.getElementById('reassignError').textContent = '';
+    document.getElementById('reassignConfirmBtn').disabled = true;
+    document.getElementById('reassignSearch').value = '';
+    document.getElementById('reassignAppSummary').innerHTML = `
+      <strong>${esc(_reassignApp.client?.name || '')}</strong> · ${esc(_reassignApp.listing_title || '')}<br>
+      <span style="color:var(--text-muted);">Broker actual: ${esc(_reassignApp.broker?.name || 'Sin asignar')}</span>
+    `;
+    document.getElementById('reassignModal').style.display = 'flex';
+
+    // Load users once (cached for subsequent opens)
+    if (_reassignAllUsers.length === 0) {
+      fetch('/admin/users')
+        .then(r => { if (handleUnauth(r)) throw new Error(); if (!r.ok) throw new Error(); return r.json(); })
+        .then(users => {
+          if (!users) return;
+          const proRoles = ['agency','broker','inmobiliaria','constructora'];
+          _reassignAllUsers = users.filter(u => proRoles.includes(u.role));
+          renderReassignList();
+        }).catch(() => {
+          document.getElementById('reassignList').innerHTML = '<div style="padding:1rem;color:var(--danger);font-size:0.82rem;">Error al cargar usuarios.</div>';
+        });
+    } else {
+      renderReassignList();
+    }
+  }
+  function closeReassign() {
+    document.getElementById('reassignModal').style.display = 'none';
+    _reassignApp = null;
+    _reassignSelectedId = null;
+  }
+  function renderReassignList() {
+    const list = document.getElementById('reassignList');
+    const q = (document.getElementById('reassignSearch')?.value || '').trim().toLowerCase();
+    let users = _reassignAllUsers;
+    if (q) {
+      users = users.filter(u =>
+        (u.name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.companyName || '').toLowerCase().includes(q) ||
+        (u.agencyName || '').toLowerCase().includes(q)
+      );
+    }
+    users = users.slice(0, 50);
+    if (!users.length) {
+      list.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:0.82rem;text-align:center;">Sin resultados.</div>';
+      return;
+    }
+    const currentId = _reassignApp?.broker?.user_id;
+    list.innerHTML = users.map(u => {
+      const isCurrent = u.id === currentId;
+      const isSelected = u.id === _reassignSelectedId;
+      const roleLabel = { agency:'Agente', broker:'Agente Broker', inmobiliaria:'Inmobiliaria', constructora:'Constructora' }[u.role] || u.role;
+      return `
+        <div onclick="selectReassignUser('${u.id}')" style="padding:0.7rem 0.9rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:0.7rem;background:${isSelected ? 'rgba(0,56,168,0.08)' : 'transparent'};">
+          <input type="radio" ${isSelected ? 'checked' : ''} ${isCurrent ? 'disabled' : ''} style="pointer-events:none;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.88rem;color:var(--text);">${esc(u.name || '(sin nombre)')}${isCurrent ? ' <span style="font-size:0.7rem;color:var(--text-muted);font-weight:500;">(actual)</span>' : ''}</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">${esc(u.email || '')} · ${esc(roleLabel)}${u.companyName ? ' · ' + esc(u.companyName) : ''}${u.agencyName ? ' · ' + esc(u.agencyName) : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  function selectReassignUser(id) {
+    if (id === _reassignApp?.broker?.user_id) return; // no-op
+    _reassignSelectedId = id;
+    document.getElementById('reassignConfirmBtn').disabled = false;
+    renderReassignList();
+  }
+  function confirmReassign() {
+    if (!_reassignApp || !_reassignSelectedId) return;
+    const btn = document.getElementById('reassignConfirmBtn');
+    const err = document.getElementById('reassignError');
+    btn.disabled = true; btn.textContent = 'Reasignando...';
+    err.textContent = '';
+    fetch(`/admin/applications/${_reassignApp.id}/reassign`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ user_id: _reassignSelectedId }),
+    })
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Error al reasignar');
+        return d;
+      })
+      .then(d => {
+        // Update local cache + re-render
+        const idx = allApps.findIndex(a => a.id === _reassignApp.id);
+        if (idx >= 0 && d.application) allApps[idx] = d.application;
+        renderApps(currentlyFilteredApps());
+        closeReassign();
+      })
+      .catch(e => {
+        err.textContent = e.message;
+        btn.disabled = false; btn.textContent = 'Reasignar';
+      });
   }
 
   // ── Reports ───────────────────────────────────────────────────

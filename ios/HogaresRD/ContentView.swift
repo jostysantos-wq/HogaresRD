@@ -105,22 +105,31 @@ struct ContentView: View {
 
     // MARK: - Popup Logic
     //
-    // Trigger rules (fixed after the "popup shows on verified users" bug):
-    //  • Only show when emailVerified is EXPLICITLY false. A nil value means
-    //    we don't know yet (e.g. cached user from an older login response)
-    //    and we must NOT assume unverified — that's how users with a
-    //    verified email were getting the popup.
-    //  • After the 1.5s delay, re-check the current value. refreshUser()
-    //    runs on scenePhase .active and may have set emailVerified to true
-    //    in the meantime, in which case we cancel the popup.
+    // Security-first: treat `emailVerified == nil` as unverified.
+    // Rationale: if we don't know, ask — safer than silently assuming the
+    // user is verified. We compensate for false positives by:
+    //   1. Always calling refreshUser() BEFORE deciding (onAppear). The
+    //      server always returns a concrete boolean, so nil is resolved.
+    //   2. Re-checking the value after the 1.5s animation delay so a late
+    //      refresh can cancel the queued popup.
+    //   3. Observing currentUser.emailVerified with .onChange so the popup
+    //      auto-dismisses the moment the server flips the flag to true
+    //      (e.g. after a successful /api/auth/me that revealed the user
+    //      was already verified all along).
+    //
+    // If the initial refresh fails (network down) and the field stays nil,
+    // the popup will show. When the user taps "Reenviar", the server will
+    // either send a new link or report "already verified" — both resolve
+    // the unknown state in a follow-up refresh, and the popup closes.
     private func schedulePopupIfNeeded() {
         guard !popupDismissed, let user = api.currentUser else { return }
-        guard user.emailVerified == false else { return }
+        // Only SKIP when we have explicit proof of verification.
+        guard user.emailVerified != true else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.5))
             guard !popupDismissed else { return }
-            // Re-check — refreshUser() may have updated the field
-            guard api.currentUser?.emailVerified == false else { return }
+            // Re-check — refreshUser() may have updated the field to true
+            guard api.currentUser?.emailVerified != true else { return }
             withAnimation(.easeInOut(duration: 0.25)) { showPopup = true }
         }
     }
