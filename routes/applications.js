@@ -1667,6 +1667,354 @@ router.post('/:id/contact-client', userAuth, (req, res) => {
   res.json({ success: true, conversation: conv });
 });
 
+// ══════════════════════════════════════════════════════════════════
+// ── COMMISSIONS ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+//
+// Flow:
+//   1. Agent (broker/agency) submits the commission for a sale via
+//      POST /:id/commission. Status becomes 'pending_review'.
+//   2. The inmobiliaria owner (or the agent themselves if they are
+//      independent — no inmobiliaria_id) reviews via
+//      PUT /:id/commission/review with action 'approve' | 'adjust'
+//      | 'reject'. Adjusting reopens the submission with new numbers
+//      and tracks the delta in the history audit trail.
+//   3. GET /commissions returns an aggregated summary scoped to the
+//      caller's role — agents see their own; inmobiliaria owners
+//      see the whole team plus their own "inmobiliaria cut" totals.
+//
+// Data shape stored on the application under `commission`:
+// {
+//   sale_amount, agent_percent, agent_amount,
+//   inmobiliaria_percent, inmobiliaria_amount, agent_net,
+//   status: 'pending_review' | 'approved' | 'rejected',
+//   submitted_by, submitted_at,
+//   reviewed_by,  reviewed_at, reviewer_name,
+//   adjustment_note,
+//   history: [{ at, by, byName, action, snapshot, note }]
+// }
+
+function safePercent(value, fallback = 0) {
+  const n = Number(value);
+  if (!isFinite(n) || n < 0 || n > 100) return fallback;
+  return Math.round(n * 100) / 100;
+}
+function safeAmount(value) {
+  const n = Number(String(value || '').replace(/[^\d.]/g, ''));
+  return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+}
+function commissionComputed({ sale_amount, agent_percent, inmobiliaria_percent }) {
+  const sale  = safeAmount(sale_amount);
+  const ap    = safePercent(agent_percent);
+  const ip    = safePercent(inmobiliaria_percent);
+  const agent_amount        = Math.round((sale * ap / 100) * 100) / 100;
+  const inmobiliaria_amount = Math.round((sale * ip / 100) * 100) / 100;
+  // The inmobiliaria cut is taken FROM the agent's commission — that's
+  // how DR real-estate offices typically split it. agent_net = what the
+  // agent ends up with after the office takes their share.
+  const agent_net = Math.max(0, Math.round((agent_amount - inmobiliaria_amount) * 100) / 100);
+  return {
+    sale_amount:          sale,
+    agent_percent:        ap,
+    agent_amount,
+    inmobiliaria_percent: ip,
+    inmobiliaria_amount,
+    agent_net,
+  };
+}
+
+// POST /:id/commission — agent submits commission for a sale
+router.post('/:id/commission', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  const isBroker = app.broker?.user_id === req.user.sub;
+  const isAdmin  = user.role === 'admin';
+  if (!isBroker && !isAdmin) {
+    return res.status(403).json({ error: 'Solo el agente asignado puede registrar la comisión.' });
+  }
+
+  // Only allow commission entry when the sale is essentially done.
+  const allowed = ['aprobado', 'pendiente_pago', 'pago_enviado', 'pago_aprobado', 'completado'];
+  if (!allowed.includes(app.status)) {
+    return res.status(400).json({
+      error: 'Solo puedes registrar la comisión cuando la aplicación esté aprobada o en fase de pago.',
+    });
+  }
+
+  const payload = commissionComputed(req.body || {});
+  if (payload.sale_amount <= 0) {
+    return res.status(400).json({ error: 'Monto de venta es obligatorio y debe ser mayor a 0.' });
+  }
+  if (payload.agent_percent <= 0) {
+    return res.status(400).json({ error: 'El porcentaje de comisión debe ser mayor a 0.' });
+  }
+  if (payload.inmobiliaria_amount > payload.agent_amount) {
+    return res.status(400).json({
+      error: 'La comisión de la inmobiliaria no puede ser mayor que la comisión del agente.',
+    });
+  }
+
+  const now = new Date().toISOString();
+  const prev = app.commission ? { ...app.commission } : null;
+
+  app.commission = {
+    ...payload,
+    status:         'pending_review',
+    submitted_by:   user.id,
+    submitted_name: user.name || '',
+    submitted_at:   now,
+    reviewed_by:    null,
+    reviewer_name:  '',
+    reviewed_at:    null,
+    adjustment_note: '',
+    history: Array.isArray(prev?.history) ? prev.history.slice() : [],
+  };
+  app.commission.history.push({
+    at:       now,
+    by:       user.id,
+    byName:   user.name || '',
+    action:   prev ? 'resubmitted' : 'submitted',
+    snapshot: { ...payload },
+    note:     (req.body?.note || '').toString().slice(0, 300),
+  });
+  app.updated_at = now;
+
+  addEvent(app, 'commission_submitted',
+    `Comisión registrada: $${payload.agent_amount.toLocaleString()} (${payload.agent_percent}%)` +
+    (payload.inmobiliaria_amount > 0
+      ? ` — inmobiliaria $${payload.inmobiliaria_amount.toLocaleString()}`
+      : ''),
+    user.id, user.name || 'Agente', { commission: payload });
+  store.saveApplication(app);
+
+  // Notify the inmobiliaria owner if the broker belongs to one.
+  if (app.inmobiliaria_id) {
+    const inmUser = store.getUserById(app.inmobiliaria_id);
+    if (inmUser?.email) {
+      sendNotification(
+        inmUser.email,
+        `HogaresRD — Nueva comisión para revisar: ${app.listing_title}`,
+        `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+           <div style="background:#002D62;color:#fff;padding:1.25rem;border-radius:10px 10px 0 0;text-align:center;">
+             <h2 style="margin:0;font-size:1.1rem;">Comisión pendiente de aprobación</h2>
+           </div>
+           <div style="background:#fff;padding:1.25rem 1.5rem;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;">
+             <p>El agente <strong>${user.name || ''}</strong> registró una comisión sobre:</p>
+             <p style="font-size:1.05rem;font-weight:700;">${app.listing_title}</p>
+             <table style="font-size:0.88rem;color:#1a2b40;width:100%;max-width:280px;">
+               <tr><td style="color:#7a9bbf;padding:4px 0;">Venta:</td><td style="text-align:right;font-weight:700;">$${payload.sale_amount.toLocaleString()}</td></tr>
+               <tr><td style="color:#7a9bbf;padding:4px 0;">Comisión del agente:</td><td style="text-align:right;font-weight:700;">${payload.agent_percent}% · $${payload.agent_amount.toLocaleString()}</td></tr>
+               <tr><td style="color:#7a9bbf;padding:4px 0;">Cuota inmobiliaria:</td><td style="text-align:right;font-weight:700;">${payload.inmobiliaria_percent}% · $${payload.inmobiliaria_amount.toLocaleString()}</td></tr>
+               <tr><td style="color:#7a9bbf;padding:4px 0;">Neto al agente:</td><td style="text-align:right;font-weight:700;">$${payload.agent_net.toLocaleString()}</td></tr>
+             </table>
+             <div style="margin-top:20px;">
+               <a href="${BASE_URL}/broker#contabilidad" style="display:inline-block;background:#002D62;color:#fff;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Revisar comisión →</a>
+             </div>
+           </div>
+         </div>`
+      );
+    }
+    pushNotify(app.inmobiliaria_id, {
+      type:  'commission_submitted',
+      title: 'Nueva comisión para revisar',
+      body:  `${user.name || 'Un agente'} registró una comisión de $${payload.agent_amount.toLocaleString()} sobre ${app.listing_title}`,
+      url:   '/broker#contabilidad',
+    });
+  }
+
+  res.json({ success: true, commission: app.commission });
+});
+
+// PUT /:id/commission/review — inmobiliaria owner approves / adjusts / rejects
+router.put('/:id/commission/review', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  // Only the inmobiliaria owner tied to this application (or an admin)
+  // can review commissions. Independent agents can't review their own
+  // submissions — if they have no inmobiliaria, their submission is
+  // auto-approved on creation (see auto-approve branch further down).
+  const isInmOwner = ['inmobiliaria', 'constructora'].includes(user.role)
+                     && app.inmobiliaria_id === user.id;
+  const isAdmin    = user.role === 'admin';
+  if (!isInmOwner && !isAdmin) {
+    return res.status(403).json({
+      error: 'Solo la inmobiliaria dueña de este agente puede aprobar comisiones.',
+    });
+  }
+
+  if (!app.commission) return res.status(400).json({ error: 'No hay comisión registrada.' });
+
+  const action = (req.body?.action || '').toString();
+  if (!['approve', 'adjust', 'reject'].includes(action)) {
+    return res.status(400).json({ error: 'Acción inválida.' });
+  }
+
+  const now = new Date().toISOString();
+  const snapshotBefore = { ...app.commission };
+
+  if (action === 'reject') {
+    app.commission.status          = 'rejected';
+    app.commission.reviewed_by     = user.id;
+    app.commission.reviewer_name   = user.name || '';
+    app.commission.reviewed_at     = now;
+    app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+  } else if (action === 'approve') {
+    app.commission.status          = 'approved';
+    app.commission.reviewed_by     = user.id;
+    app.commission.reviewer_name   = user.name || '';
+    app.commission.reviewed_at     = now;
+    app.commission.adjustment_note = '';
+  } else if (action === 'adjust') {
+    const recomputed = commissionComputed(req.body || {});
+    if (recomputed.sale_amount <= 0 || recomputed.agent_percent <= 0) {
+      return res.status(400).json({ error: 'Monto o porcentaje inválido.' });
+    }
+    if (recomputed.inmobiliaria_amount > recomputed.agent_amount) {
+      return res.status(400).json({
+        error: 'La comisión de la inmobiliaria no puede ser mayor que la del agente.',
+      });
+    }
+    Object.assign(app.commission, recomputed);
+    app.commission.status          = 'approved';
+    app.commission.reviewed_by     = user.id;
+    app.commission.reviewer_name   = user.name || '';
+    app.commission.reviewed_at     = now;
+    app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+  }
+
+  if (!Array.isArray(app.commission.history)) app.commission.history = [];
+  app.commission.history.push({
+    at:       now,
+    by:       user.id,
+    byName:   user.name || '',
+    action,
+    snapshotBefore,
+    snapshotAfter: { ...app.commission },
+    note:     (req.body?.note || '').toString().slice(0, 300),
+  });
+  app.updated_at = now;
+
+  addEvent(app, 'commission_' + action,
+    action === 'approve' ? `Comisión aprobada por ${user.name || 'inmobiliaria'}` :
+    action === 'adjust'  ? `Comisión ajustada por ${user.name || 'inmobiliaria'}` :
+                           `Comisión rechazada por ${user.name || 'inmobiliaria'}`,
+    user.id, user.name || '', { commission: app.commission });
+
+  store.saveApplication(app);
+
+  // Notify the submitting agent
+  const agentUser = app.commission.submitted_by
+    ? store.getUserById(app.commission.submitted_by)
+    : null;
+  if (agentUser) {
+    pushNotify(agentUser.id, {
+      type:  'commission_reviewed',
+      title: action === 'reject' ? 'Comisión rechazada'
+           : action === 'adjust' ? 'Comisión ajustada'
+                                 : 'Comisión aprobada',
+      body:  `${user.name || 'Inmobiliaria'} ${action === 'reject' ? 'rechazó' : action === 'adjust' ? 'ajustó' : 'aprobó'} tu comisión sobre ${app.listing_title}`,
+      url:   '/broker#contabilidad',
+    });
+    if (agentUser.email) {
+      sendNotification(
+        agentUser.email,
+        `HogaresRD — Tu comisión fue ${action === 'reject' ? 'rechazada' : action === 'adjust' ? 'ajustada' : 'aprobada'}`,
+        `<p>Hola <strong>${(agentUser.name || '').split(' ')[0]}</strong>,</p>
+         <p>${user.name || 'La inmobiliaria'} revisó tu comisión sobre <strong>${app.listing_title}</strong>.</p>
+         <table style="font-size:0.88rem;color:#1a2b40;">
+           <tr><td style="color:#7a9bbf;padding:4px 10px 4px 0;">Estado:</td><td style="font-weight:700;">${app.commission.status === 'approved' ? 'Aprobada' : 'Rechazada'}</td></tr>
+           <tr><td style="color:#7a9bbf;padding:4px 10px 4px 0;">Comisión agente:</td><td style="font-weight:700;">${app.commission.agent_percent}% · $${app.commission.agent_amount.toLocaleString()}</td></tr>
+           <tr><td style="color:#7a9bbf;padding:4px 10px 4px 0;">Neto al agente:</td><td style="font-weight:700;">$${app.commission.agent_net.toLocaleString()}</td></tr>
+         </table>
+         ${app.commission.adjustment_note ? '<p><em>Nota: ' + String(app.commission.adjustment_note).replace(/</g,'&lt;') + '</em></p>' : ''}
+         <a href="${BASE_URL}/broker#contabilidad">Ver detalle →</a>`
+      );
+    }
+  }
+
+  res.json({ success: true, commission: app.commission });
+});
+
+// GET /commissions/summary — per-user aggregated view
+router.get('/commissions/summary', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  const proRoles = ['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'];
+  if (!proRoles.includes(user.role) && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias tienen comisiones.' });
+  }
+
+  // Scope
+  let apps;
+  if (['inmobiliaria', 'constructora'].includes(user.role)) {
+    apps = store.getApplicationsByInmobiliaria(user.id);
+  } else if (user.role === 'secretary') {
+    apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
+  } else if (user.role === 'admin') {
+    apps = store.getApplications();
+  } else {
+    apps = store.getApplicationsByBroker(user.id);
+  }
+
+  const withCommission = apps.filter(a => a.commission && a.commission.sale_amount > 0);
+
+  let agent_pending = 0;
+  let agent_approved = 0;
+  let agent_total_sales = 0;
+  let inmobiliaria_pending = 0;
+  let inmobiliaria_approved = 0;
+
+  const rows = withCommission.map(a => {
+    const c = a.commission;
+    if (c.status === 'pending_review') {
+      agent_pending += c.agent_net || 0;
+      inmobiliaria_pending += c.inmobiliaria_amount || 0;
+    }
+    if (c.status === 'approved') {
+      agent_approved += c.agent_net || 0;
+      inmobiliaria_approved += c.inmobiliaria_amount || 0;
+      agent_total_sales += c.sale_amount || 0;
+    }
+    return {
+      application_id: a.id,
+      listing_title:  a.listing_title,
+      listing_price:  Number(a.listing_price) || 0,
+      client_name:    a.client?.name || '',
+      agent_user_id:  a.broker?.user_id || null,
+      agent_name:     a.broker?.name || '',
+      commission:     c,
+      status:         a.status,
+      created_at:     a.created_at,
+      updated_at:     a.updated_at,
+    };
+  });
+
+  rows.sort((x, y) => new Date(y.updated_at || 0) - new Date(x.updated_at || 0));
+
+  res.json({
+    role: user.role,
+    summary: {
+      agent_pending,
+      agent_approved,
+      agent_total_sales,
+      inmobiliaria_pending,
+      inmobiliaria_approved,
+      total_pending_count:  rows.filter(r => r.commission.status === 'pending_review').length,
+      total_approved_count: rows.filter(r => r.commission.status === 'approved').length,
+    },
+    commissions: rows,
+  });
+});
+
 // ── POST /:id/checklist-event  — Log checklist audit entry ──────
 router.post('/:id/checklist-event', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);

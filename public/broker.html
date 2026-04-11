@@ -1455,31 +1455,48 @@
     <div class="pagination" id="auditPagination"></div>
   </div>
 
-  <!-- Section: Contabilidad -->
+  <!-- Section: Contabilidad — per-sale commissions with approval workflow -->
   <div class="section-pane" id="section-contabilidad">
-    <div class="commission-input-row">
-      <label>Tasa de Comision (%):</label>
-      <input type="number" id="commissionRate" value="3" min="0" max="100" step="0.5">
-      <button class="btn btn-primary btn-sm" id="applyCommissionRate">Aplicar</button>
+    <!-- Role-specific metric row. The server scopes everything to the
+         current user (agent sees their own; inmobiliaria sees their
+         entire team plus their own "cuota inmobiliaria"). -->
+    <div class="summary-grid" id="commissionMetrics">
+      <div class="metric-card"><div class="metric-label">Comisiones Aprobadas</div><div class="metric-value" id="metricCommApproved" style="color:var(--green)">--</div><div class="metric-subtitle">Neto al agente</div></div>
+      <div class="metric-card"><div class="metric-label">Pendientes de Aprobación</div><div class="metric-value" id="metricCommPending" style="color:var(--orange)">--</div><div class="metric-subtitle" id="metricCommPendingCount">--</div></div>
+      <div class="metric-card" id="metricInmCard" style="display:none;"><div class="metric-label">Cuota Inmobiliaria</div><div class="metric-value" id="metricInmEarned" style="color:var(--accent)">--</div><div class="metric-subtitle">Aprobada del equipo</div></div>
+      <div class="metric-card"><div class="metric-label">Ventas Totales</div><div class="metric-value" id="metricCommSales" style="color:var(--purple)">--</div><div class="metric-subtitle">Monto de venta aprobado</div></div>
     </div>
-    <div class="summary-grid" id="accountingMetrics">
-      <div class="metric-card"><div class="metric-label">Total Ganado</div><div class="metric-value" id="metricTotalEarned" style="color:var(--green)">--</div><div class="metric-subtitle">Comisiones cobradas</div></div>
-      <div class="metric-card"><div class="metric-label">Comision Pendiente</div><div class="metric-value" id="metricPendingComm" style="color:var(--orange)">--</div><div class="metric-subtitle">Por cobrar</div></div>
-      <div class="metric-card"><div class="metric-label">Tasa de Comision</div><div class="metric-value" id="metricCommRate" style="color:var(--accent)">3%</div><div class="metric-subtitle">Porcentaje actual</div></div>
-      <div class="metric-card"><div class="metric-label">Pagos Verificados</div><div class="metric-value" id="metricVerifiedPay" style="color:var(--green)">--</div><div class="metric-subtitle">Pagos aprobados</div></div>
+
+    <div style="margin:1.1rem 0 0.75rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+      <h3 class="section-title" style="margin:0;">Comisiones Registradas</h3>
+      <div style="display:flex;gap:0.4rem;">
+        <button class="filter-btn active" onclick="commFilter('all', this)">Todas</button>
+        <button class="filter-btn" onclick="commFilter('pending_review', this)">Pendientes</button>
+        <button class="filter-btn" onclick="commFilter('approved', this)">Aprobadas</button>
+        <button class="filter-btn" onclick="commFilter('rejected', this)">Rechazadas</button>
+      </div>
     </div>
-    <div class="chart-container" style="max-height:360px;"><canvas id="chartMonthlyCommissions"></canvas></div>
-    <div style="margin:1rem 0;text-align:right;">
-      <button class="export-btn" onclick="exportAccountingCSV()">
-        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Exportar CSV
-      </button>
+
+    <div class="leads-table-wrap">
+      <table class="leads-table" id="commTable">
+        <thead>
+          <tr>
+            <th>Propiedad</th>
+            <th>Cliente</th>
+            <th id="commAgentColumn">Agente</th>
+            <th style="text-align:right;">Venta</th>
+            <th style="text-align:right;">Comisión</th>
+            <th style="text-align:right;">Cuota Inm.</th>
+            <th style="text-align:right;">Neto Agente</th>
+            <th>Estado</th>
+            <th style="text-align:right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="commTableBody">
+          <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando comisiones…</td></tr>
+        </tbody>
+      </table>
     </div>
-    <h3 class="section-title">Registros Financieros</h3>
-    <table class="data-table" id="accountingTable">
-      <thead><tr><th>Cliente</th><th>Propiedad</th><th>Precio</th><th>Comision</th><th>Estado Pago</th><th>Fecha</th></tr></thead>
-      <tbody id="accountingTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr></tbody>
-    </table>
   </div>
 
 
@@ -2676,6 +2693,12 @@
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
       Contactar
     </button>
+    <button class="btn btn-outline" id="commissionAppBtn" onclick="openCommissionForm()"
+            style="display:none;align-items:center;gap:0.4rem;padding:0.55rem 1rem;font-size:0.82rem;"
+            title="Registrar o editar comisión">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      Comisión
+    </button>
     <button class="detail-close" id="detailClose">
       <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
@@ -2700,6 +2723,56 @@
     <div class="tab-pane" id="pane-tours"></div>
     <div class="tab-pane" id="pane-pago"></div>
     <div class="tab-pane" id="pane-timeline"></div>
+  </div>
+</div>
+
+<!-- Commission Modal — submit / review / adjust -->
+<div class="modal-backdrop" id="commissionModal">
+  <div class="modal" style="max-width:560px;">
+    <h3 id="commissionModalTitle" style="margin:0 0 0.5rem;">Registrar comisión</h3>
+    <p id="commissionModalSubtitle" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.9rem;line-height:1.5;"></p>
+
+    <div class="apply-grid cols-2" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Monto de venta (USD) <span style="color:var(--red);">*</span></label>
+        <input type="text" id="commSaleAmount" placeholder="ej. 150,000"
+               oninput="commRecalc()"
+               style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">% Comisión agente <span style="color:var(--red);">*</span></label>
+        <input type="number" id="commAgentPercent" placeholder="3" min="0" max="100" step="0.1"
+               oninput="commRecalc()"
+               style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">% Cuota inmobiliaria</label>
+        <input type="number" id="commInmPercent" placeholder="0" min="0" max="100" step="0.1"
+               oninput="commRecalc()"
+               style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Nota (opcional)</label>
+        <input type="text" id="commNote" placeholder="Ej: firmado el 2026-04-15"
+               maxlength="300"
+               style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
+      </div>
+    </div>
+
+    <div id="commPreview" style="margin-top:1rem;background:var(--bg-section);border-radius:10px;padding:0.8rem 1rem;font-size:0.82rem;line-height:1.7;">
+      <div style="display:flex;justify-content:space-between;color:var(--text-muted);"><span>Comisión total del agente:</span> <strong id="commPreviewAgent" style="color:var(--text);">$0</strong></div>
+      <div style="display:flex;justify-content:space-between;color:var(--text-muted);"><span>Cuota de la inmobiliaria:</span> <strong id="commPreviewInm" style="color:var(--text);">$0</strong></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:0.5rem 0;">
+      <div style="display:flex;justify-content:space-between;"><span style="font-weight:700;">Neto al agente:</span> <strong id="commPreviewNet" style="color:var(--green);">$0</strong></div>
+    </div>
+
+    <div id="commissionModalError" style="color:var(--red);font-size:0.78rem;min-height:1rem;margin-top:0.5rem;"></div>
+
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="closeCommissionModal()">Cancelar</button>
+      <button class="btn btn-danger" id="commRejectBtn" onclick="submitCommissionReview('reject')" style="display:none;background:#fff;color:var(--red);border:1.5px solid var(--red);">Rechazar</button>
+      <button class="btn btn-primary" id="commSubmitBtn" onclick="submitCommissionForm()">Registrar comisión</button>
+    </div>
   </div>
 </div>
 
@@ -3265,6 +3338,17 @@
     const canContact = !!(client.user_id || client.email);
     const contactBtn = document.getElementById('contactClientBtn');
     if (contactBtn) contactBtn.style.display = canContact ? 'inline-flex' : 'none';
+
+    // "Comisión" button — only the assigned broker can submit, and
+    // only when the sale is essentially closed (status allows). The
+    // inmobiliaria owner can still open the modal to review/adjust.
+    const commAllowed = ['aprobado', 'pendiente_pago', 'pago_enviado', 'pago_aprobado', 'completado'];
+    const iAmBroker   = a.broker && a.broker.user_id === currentUser.id;
+    const iAmInm      = ['inmobiliaria', 'constructora'].includes(currentUser.role)
+                     && a.inmobiliaria_id === currentUser.id;
+    const showComm = (commAllowed.includes(a.status) && (iAmBroker || iAmInm));
+    const commBtn = document.getElementById('commissionAppBtn');
+    if (commBtn) commBtn.style.display = showComm ? 'inline-flex' : 'none';
 
     renderWorkflowStrip(a.status);
     renderResumen(a, client, listing);
@@ -6105,88 +6189,264 @@
   window._auditPrev = () => { if (auditPage > 1) loadAudit(auditPage - 1); };
   window._auditNext = () => loadAudit(auditPage + 1);
 
-  // ── Accounting ────────────────────────────────────────────
-  document.getElementById('applyCommissionRate').onclick = () => {
-    accountingLoaded = false;
-    loadAccounting();
-  };
+  // ── Commissions (replaces old flat-rate Accounting view) ──────
+  //
+  // New model: per-sale commission with approval workflow.
+  //   1. Agent submits sale amount + % → status pending_review
+  //   2. Inmobiliaria owner approves, adjusts, or rejects
+  //   3. Dashboard shows totals split by status + the inmobiliaria cut
+  //
+  // Role-aware table: agents see only their own rows (backend scopes
+  // the data). Inmobiliaria owners see the whole team with action
+  // buttons to review.
+
+  let commData = [];
+  let commFilterValue = 'all';
 
   async function loadAccounting() {
-    const rate = parseFloat(document.getElementById('commissionRate').value) || 3;
     try {
-      const data = await API(`/api/broker/accounting?commissionRate=${rate}`);
+      const data = await API('/api/applications/commissions/summary');
       accountingLoaded = true;
-      const stats = data.stats || data;
-      accountingData = data.records || stats.records || [];
+      commData = data.commissions || [];
+      const s = data.summary || {};
+      const role = data.role || '';
+      const isInmView = ['inmobiliaria', 'constructora'].includes(role);
 
-      document.getElementById('metricCommRate').textContent = rate + '%';
-      document.getElementById('metricTotalEarned').textContent = fmtPrice(stats.totalEarned || 0);
-      document.getElementById('metricPendingComm').textContent = fmtPrice(stats.pendingCommission || 0);
-      document.getElementById('metricVerifiedPay').textContent = stats.verifiedPayments || 0;
+      document.getElementById('metricCommApproved').textContent    = fmtPrice(s.agent_approved || 0);
+      document.getElementById('metricCommPending').textContent     = fmtPrice(s.agent_pending || 0);
+      document.getElementById('metricCommPendingCount').textContent =
+        (s.total_pending_count || 0) + ' sin revisar';
+      document.getElementById('metricCommSales').textContent       = fmtPrice(s.agent_total_sales || 0);
 
-      const defs = getChartDefaults();
-
-      // Monthly commissions chart
-      const monthlyCom = stats.monthlyCommissions || [];
-      destroyChart('chartMonthlyCommissions');
-      chartInstances['chartMonthlyCommissions'] = new Chart(document.getElementById('chartMonthlyCommissions'), {
-        type: 'bar',
-        data: {
-          labels: monthlyCom.map(d => d.month || d._id),
-          datasets: [{ label: 'Comision', data: monthlyCom.map(d => d.total), backgroundColor: '#0038A8', borderRadius: 4 }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, title: { display: true, text: 'Comisiones Mensuales', color: defs.color } },
-          scales: { x: { ticks: { color: defs.color }, grid: { color: defs.gridColor } }, y: { beginAtZero: true, ticks: { color: defs.color, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: defs.gridColor } } }
-        }
-      });
-
-      // Accounting table
-      const tbody = document.getElementById('accountingTableBody');
-      if (accountingData.length) {
-        tbody.innerHTML = accountingData.map(r => {
-          const client = r.client || r.user || {};
-          const listing = r.listing || {};
-          const price = listing.price || r.price || 0;
-          const commission = r.commission || (price * rate / 100);
-          const payStatus = r.payment_status === 'approved' ? 'pago_aprobado' : r.payment_status === 'pending' ? 'pendiente_pago' : r.payment_status === 'sent' ? 'pago_enviado' : 'aplicado';
-          return `<tr>
-            <td>${esc(client.name || client.full_name || '--')}</td>
-            <td>${esc(listing.title || '--')}</td>
-            <td>${fmtPrice(price)}</td>
-            <td>${fmtPrice(commission)}</td>
-            <td>${badgeHTML(payStatus)}</td>
-            <td>${fmtDate(r.completed_at || r.created_at || r.createdAt)}</td>
-          </tr>`;
-        }).join('');
-      } else {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin registros financieros</td></tr>';
+      // Inmobiliaria cut card only for inmobiliaria owners
+      const inmCard = document.getElementById('metricInmCard');
+      if (inmCard) inmCard.style.display = isInmView ? '' : 'none';
+      if (isInmView) {
+        document.getElementById('metricInmEarned').textContent = fmtPrice(s.inmobiliaria_approved || 0);
       }
-    } catch(e) {
-      toast('Error cargando contabilidad: ' + e.message, 'error');
+
+      // Hide "Agente" column for non-inmobiliaria views (it's always the same person)
+      const agentCol = document.getElementById('commAgentColumn');
+      if (agentCol) agentCol.style.display = isInmView ? '' : 'none';
+
+      renderCommTable();
+    } catch (e) {
+      toast('Error cargando comisiones: ' + e.message, 'error');
     }
   }
 
-  window.exportAccountingCSV = function() {
-    if (!accountingData.length) { toast('No hay datos para exportar', 'error'); return; }
-    const rate = parseFloat(document.getElementById('commissionRate').value) || 3;
-    const rows = [['Cliente','Propiedad','Precio','Comision','Estado Pago','Fecha']];
-    accountingData.forEach(r => {
-      const client = r.client || r.user || {};
-      const listing = r.listing || {};
-      const price = listing.price || r.price || 0;
-      const commission = r.commission || (price * rate / 100);
-      rows.push([
-        client.name || client.full_name || '',
-        listing.title || '',
-        price,
-        commission,
-        r.payment_status || '',
-        r.completed_at || r.created_at || r.createdAt || ''
-      ]);
-    });
-    downloadCSV(rows, 'contabilidad_hogaresrd.csv');
+  window.commFilter = function(val, btn) {
+    commFilterValue = val;
+    document.querySelectorAll('#section-contabilidad .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCommTable();
+  };
+
+  function commStatusBadge(status) {
+    const palette = {
+      pending_review: { bg:'#fff7ed', fg:'#c2410c', label:'Pendiente' },
+      approved:       { bg:'#ecfdf5', fg:'#15803d', label:'Aprobada' },
+      rejected:       { bg:'#fef2f2', fg:'#b91c1c', label:'Rechazada' },
+    };
+    const p = palette[status] || { bg:'#f1f5f9', fg:'#64748b', label: status || '—' };
+    return `<span style="font-size:0.68rem;font-weight:800;padding:0.24rem 0.6rem;border-radius:99px;background:${p.bg};color:${p.fg};text-transform:uppercase;letter-spacing:0.4px;">${p.label}</span>`;
+  }
+
+  function renderCommTable() {
+    const tbody = document.getElementById('commTableBody');
+    const isInmView = ['inmobiliaria', 'constructora'].includes(currentUser.role);
+    const filtered = commFilterValue === 'all'
+      ? commData
+      : commData.filter(r => r.commission?.status === commFilterValue);
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin comisiones registradas todavía.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(r => {
+      const c = r.commission || {};
+      const actions = [];
+      // Agent who submitted OR still owns pending can re-submit
+      const iAmThisAgent = r.agent_user_id === currentUser.id;
+      const iAmInmOwner = isInmView;
+      if (c.status === 'pending_review' && iAmInmOwner) {
+        actions.push(`<button onclick="openCommissionReview('${r.application_id}')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;">Revisar</button>`);
+      }
+      if ((c.status === 'pending_review' || c.status === 'rejected') && iAmThisAgent) {
+        actions.push(`<button onclick="openCommissionFromRow('${r.application_id}')" style="background:#fff;color:var(--accent);border:1.5px solid var(--accent);border-radius:6px;padding:0.3rem 0.65rem;font-size:0.72rem;font-weight:700;cursor:pointer;">Editar</button>`);
+      }
+      const agentCell = isInmView
+        ? `<td><div style="font-weight:600;font-size:0.8rem;">${esc(r.agent_name || '—')}</div></td>`
+        : '';
+      return `
+        <tr>
+          <td><div style="font-weight:600;font-size:0.83rem;">${esc(r.listing_title || '—')}</div></td>
+          <td style="font-size:0.78rem;color:var(--text-muted);">${esc(r.client_name || '—')}</td>
+          ${agentCell}
+          <td style="text-align:right;font-weight:700;">${fmtPrice(c.sale_amount || 0)}</td>
+          <td style="text-align:right;">${c.agent_percent || 0}% · ${fmtPrice(c.agent_amount || 0)}</td>
+          <td style="text-align:right;color:var(--accent);">${c.inmobiliaria_percent || 0}% · ${fmtPrice(c.inmobiliaria_amount || 0)}</td>
+          <td style="text-align:right;color:var(--green);font-weight:700;">${fmtPrice(c.agent_net || 0)}</td>
+          <td>${commStatusBadge(c.status)}</td>
+          <td style="text-align:right;white-space:nowrap;">${actions.join(' ')}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Commission Modal — submit + review + adjust ──────
+  let commCurrentAppId = null;
+  let commCurrentMode  = 'submit'; // 'submit' | 'review'
+
+  // Open commission submission modal from the application detail panel
+  window.openCommissionForm = function() {
+    if (!currentApp) return;
+    commCurrentAppId = currentApp._id || currentApp.id;
+    const existing = currentApp.commission || {};
+    const mode = (['inmobiliaria','constructora'].includes(currentUser.role)
+                  && existing.status === 'pending_review')
+                 ? 'review' : 'submit';
+    commOpenModal(mode, existing, currentApp.listing_title || '', currentApp.listing_price || 0);
+  };
+
+  // Open the same modal from a row in the commissions table — fetch
+  // the application first so we have the latest commission state.
+  window.openCommissionFromRow = async function(appId) {
+    try {
+      const a = await API(`/api/applications/${appId}`);
+      commCurrentAppId = appId;
+      commOpenModal('submit', a.commission || {}, a.listing_title || '', a.listing_price || 0);
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  window.openCommissionReview = async function(appId) {
+    try {
+      const a = await API(`/api/applications/${appId}`);
+      commCurrentAppId = appId;
+      commOpenModal('review', a.commission || {}, a.listing_title || '', a.listing_price || 0);
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  function commOpenModal(mode, existing, listingTitle, listingPrice) {
+    commCurrentMode = mode;
+    document.getElementById('commissionModalTitle').textContent =
+      mode === 'review' ? 'Revisar comisión' : (existing.status ? 'Editar comisión' : 'Registrar comisión');
+    document.getElementById('commissionModalSubtitle').textContent =
+      `${listingTitle}${listingPrice ? ' — precio de listado: ' + fmtPrice(listingPrice) : ''}`;
+
+    // Pre-fill with existing commission or the listing price as sane default
+    document.getElementById('commSaleAmount').value   = existing.sale_amount || listingPrice || '';
+    document.getElementById('commAgentPercent').value = existing.agent_percent || 3;
+    document.getElementById('commInmPercent').value   = existing.inmobiliaria_percent || 0;
+    document.getElementById('commNote').value         = '';
+    document.getElementById('commissionModalError').textContent = '';
+
+    // Show/hide reject button (inmobiliaria review only)
+    document.getElementById('commRejectBtn').style.display =
+      (mode === 'review') ? 'inline-flex' : 'none';
+    document.getElementById('commSubmitBtn').textContent =
+      mode === 'review' ? 'Aprobar / Ajustar' : (existing.status ? 'Actualizar' : 'Registrar comisión');
+
+    commRecalc();
+    document.getElementById('commissionModal').classList.add('open');
+  }
+
+  window.closeCommissionModal = function() {
+    document.getElementById('commissionModal').classList.remove('open');
+    commCurrentAppId = null;
+  };
+
+  window.commRecalc = function() {
+    const sale    = Number(String(document.getElementById('commSaleAmount').value).replace(/[^\d.]/g, '')) || 0;
+    const agentP  = Number(document.getElementById('commAgentPercent').value) || 0;
+    const inmP    = Number(document.getElementById('commInmPercent').value) || 0;
+    const agentA  = Math.round(sale * agentP / 100 * 100) / 100;
+    const inmA    = Math.round(sale * inmP / 100 * 100) / 100;
+    const net     = Math.max(0, agentA - inmA);
+    document.getElementById('commPreviewAgent').textContent = fmtPrice(agentA);
+    document.getElementById('commPreviewInm').textContent   = fmtPrice(inmA);
+    document.getElementById('commPreviewNet').textContent   = fmtPrice(net);
+  };
+
+  window.submitCommissionForm = async function() {
+    if (!commCurrentAppId) return;
+    const saleStr  = String(document.getElementById('commSaleAmount').value).replace(/[^\d.]/g, '');
+    const sale     = Number(saleStr) || 0;
+    const agentP   = Number(document.getElementById('commAgentPercent').value) || 0;
+    const inmP     = Number(document.getElementById('commInmPercent').value) || 0;
+    const note     = document.getElementById('commNote').value.trim().slice(0, 300);
+    const errEl    = document.getElementById('commissionModalError');
+    errEl.textContent = '';
+    if (sale <= 0) { errEl.textContent = 'El monto de venta es obligatorio.'; return; }
+    if (agentP <= 0) { errEl.textContent = 'El porcentaje del agente debe ser mayor a 0.'; return; }
+    if (inmP > agentP) { errEl.textContent = 'La cuota de la inmobiliaria no puede ser mayor al porcentaje del agente.'; return; }
+
+    const btn = document.getElementById('commSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    try {
+      if (commCurrentMode === 'review') {
+        // Inmobiliaria reviewing — decide if they changed anything
+        await API(`/api/applications/${commCurrentAppId}/commission/review`, {
+          method: 'PUT',
+          body:   {
+            action: 'adjust',
+            sale_amount:          sale,
+            agent_percent:        agentP,
+            inmobiliaria_percent: inmP,
+            note,
+          },
+        });
+        toast('Comisión aprobada y ajustada');
+      } else {
+        await API(`/api/applications/${commCurrentAppId}/commission`, {
+          method: 'POST',
+          body:   {
+            sale_amount:          sale,
+            agent_percent:        agentP,
+            inmobiliaria_percent: inmP,
+            note,
+          },
+        });
+        toast('Comisión registrada y enviada a aprobación');
+      }
+      closeCommissionModal();
+      loadAccounting();
+      // If the detail panel is open for this app, refresh it
+      if (currentApp && (currentApp._id || currentApp.id) === commCurrentAppId) {
+        const data = await API(`/api/applications/${commCurrentAppId}`);
+        currentApp = data.application || data;
+        renderDetail();
+      }
+    } catch (e) {
+      errEl.textContent = e.message || 'Error al guardar';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = commCurrentMode === 'review' ? 'Aprobar / Ajustar' : 'Registrar comisión';
+    }
+  };
+
+  window.submitCommissionReview = async function(action) {
+    if (!commCurrentAppId) return;
+    const note = document.getElementById('commNote').value.trim().slice(0, 300);
+    const errEl = document.getElementById('commissionModalError');
+    errEl.textContent = '';
+
+    if (action === 'reject' && !note) {
+      errEl.textContent = 'Indica una nota explicando el rechazo.';
+      return;
+    }
+
+    try {
+      await API(`/api/applications/${commCurrentAppId}/commission/review`, {
+        method: 'PUT',
+        body:   { action, note },
+      });
+      toast(action === 'reject' ? 'Comisión rechazada' : 'Comisión aprobada');
+      closeCommissionModal();
+      loadAccounting();
+    } catch (e) {
+      errEl.textContent = e.message || 'Error';
+    }
   };
 
   // ── Listing Analytics (Mis Propiedades) ─────────────────────
