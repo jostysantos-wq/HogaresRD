@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import SafariServices
 
 // MARK: - Listing Analytics Tab
 
@@ -7,11 +8,14 @@ struct DashboardListingAnalyticsTab: View {
     @EnvironmentObject var api: APIService
     @State private var summary: ListingAnalyticsSummary?
     @State private var listings: [ListingAnalyticsItem] = []
+    @State private var pendingListings: [Listing] = []
     @State private var loading = true
     @State private var range = "all"
     @State private var sort = "views"
     @State private var selectedListing: ListingAnalyticsItem?
     @State private var inventoryListing: ListingAnalyticsItem?
+    @State private var promoForListing: ListingAnalyticsItem?
+    @State private var webViewURL: IdentifiableURL?
 
     private let ranges = [("all", "Todo"), ("7d", "7d"), ("30d", "30d"), ("90d", "90d")]
     private let sorts  = [("views", "Vistas"), ("tours", "Tours"), ("favorites", "Favoritos"),
@@ -20,6 +24,24 @@ struct DashboardListingAnalyticsTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                // Pending / edits_requested / rejected listings (web parity)
+                if !pendingListings.isEmpty {
+                    PendingListingsSection(
+                        listings: pendingListings,
+                        onEdit: { l in
+                            if let url = URL(string: "\(apiBase)/submit?edit=\(l.id)") {
+                                webViewURL = IdentifiableURL(url: url)
+                            }
+                        },
+                        onOpenPublic: { l in
+                            if let url = URL(string: "\(apiBase)/listing/\(l.id)") {
+                                webViewURL = IdentifiableURL(url: url)
+                            }
+                        }
+                    )
+                    .padding(.horizontal)
+                }
+
                 // Range picker
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -140,26 +162,76 @@ struct DashboardListingAnalyticsTab: View {
                                 ListingAnalyticsCard(listing: listing)
                                     .onTapGesture { selectedListing = listing }
 
-                                // Inventory button
-                                Button {
-                                    inventoryListing = listing
-                                } label: {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: "building.2")
-                                            .font(.system(size: 10))
-                                        Text("Gestionar Inventario")
-                                            .font(.system(size: 11, weight: .bold))
+                                // Action row — Promocionar / Inventario / Más
+                                HStack(spacing: 0) {
+                                    // Promocionar
+                                    Button {
+                                        promoForListing = listing
+                                    } label: {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "megaphone.fill")
+                                                .font(.system(size: 10))
+                                            Text("Promocionar")
+                                                .font(.system(size: 11, weight: .bold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .foregroundStyle(Color.rdBlue)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(Color(.secondarySystemGroupedBackground))
-                                    .foregroundStyle(Color.rdBlue)
-                                    .clipShape(RoundedRectangle(cornerRadius: 0))
-                                    .clipShape(
-                                        .rect(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
-                                    )
+                                    .buttonStyle(.plain)
+
+                                    Divider().frame(height: 24)
+
+                                    // Inventario
+                                    Button {
+                                        inventoryListing = listing
+                                    } label: {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "building.2")
+                                                .font(.system(size: 10))
+                                            Text("Inventario")
+                                                .font(.system(size: 11, weight: .bold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .foregroundStyle(Color.rdBlue)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Divider().frame(height: 24)
+
+                                    // More menu — Editar / Ver público
+                                    Menu {
+                                        Button {
+                                            if let url = URL(string: "\(apiBase)/submit?edit=\(listing.id)") {
+                                                webViewURL = IdentifiableURL(url: url)
+                                            }
+                                        } label: {
+                                            Label("Editar Propiedad", systemImage: "pencil")
+                                        }
+                                        Button {
+                                            if let url = URL(string: "\(apiBase)/listing/\(listing.id)") {
+                                                webViewURL = IdentifiableURL(url: url)
+                                            }
+                                        } label: {
+                                            Label("Ver Público", systemImage: "eye")
+                                        }
+                                    } label: {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "ellipsis.circle")
+                                                .font(.system(size: 10))
+                                            Text("Más")
+                                                .font(.system(size: 11, weight: .bold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .foregroundStyle(Color.rdBlue)
+                                    }
                                 }
-                                .buttonStyle(.plain)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(
+                                    .rect(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
+                                )
                             }
                         }
                     }
@@ -187,6 +259,16 @@ struct DashboardListingAnalyticsTab: View {
                     .environmentObject(api)
             }
         }
+        .sheet(item: $promoForListing) { listing in
+            NavigationStack {
+                ListingPromoSheet(listingId: listing.id, listingTitle: listing.title)
+                    .environmentObject(api)
+            }
+        }
+        .sheet(item: $webViewURL) { wrapper in
+            SafariWebView(url: wrapper.url)
+                .ignoresSafeArea()
+        }
     }
 
     private func loadData() async {
@@ -194,13 +276,380 @@ struct DashboardListingAnalyticsTab: View {
         do {
             async let s = api.getListingAnalyticsSummary(range: range)
             async let l = api.getListingAnalyticsList(sort: sort, range: range)
+            async let p = api.getMyListings()
             summary = try await s
             listings = try await l
+            // Only show non-approved listings in the pending section — approved
+            // listings already show up in the analytics cards below.
+            let all = (try? await p) ?? []
+            pendingListings = all.filter { l in
+                let s = (l.status ?? "").lowercased()
+                return s == "pending" || s == "edits_requested" || s == "rejected"
+            }
         } catch {
             print("Listing analytics error: \(error)")
         }
         loading = false
     }
+}
+
+// MARK: - Pending Listings Section
+
+/// Shows submissions that are NOT yet live (pending admin review, sent back
+/// for edits, or outright rejected). Matches the web dashboard's
+/// "Propiedades en Revisión" section.
+struct PendingListingsSection: View {
+    let listings: [Listing]
+    let onEdit: (Listing) -> Void
+    let onOpenPublic: (Listing) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .foregroundStyle(.orange)
+                Text("Propiedades en Revisión")
+                    .font(.subheadline).bold()
+                Spacer()
+                Text("\(listings.count)")
+                    .font(.caption).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.15))
+                    .foregroundStyle(.orange)
+                    .clipShape(Capsule())
+            }
+
+            ForEach(listings) { listing in
+                PendingListingRow(listing: listing,
+                                  onEdit: { onEdit(listing) },
+                                  onOpenPublic: { onOpenPublic(listing) })
+            }
+        }
+        .padding()
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+struct PendingListingRow: View {
+    let listing: Listing
+    let onEdit: () -> Void
+    let onOpenPublic: () -> Void
+
+    private var statusLabel: String {
+        switch (listing.status ?? "").lowercased() {
+        case "pending":         return "En revisión"
+        case "edits_requested": return "Ediciones solicitadas"
+        case "rejected":        return "Rechazada"
+        default:                return listing.status ?? ""
+        }
+    }
+
+    private var statusColor: Color {
+        switch (listing.status ?? "").lowercased() {
+        case "pending":         return .blue
+        case "edits_requested": return .orange
+        case "rejected":        return .red
+        default:                return .gray
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                if let first = listing.images.first, let url = URL(string: first) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            Rectangle().fill(Color(.tertiarySystemFill))
+                        }
+                    }
+                    .frame(width: 60, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Rectangle()
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(width: 60, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(listing.title)
+                        .font(.caption).bold()
+                        .lineLimit(2)
+                    HStack(spacing: 6) {
+                        Text(statusLabel)
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(statusColor.opacity(0.15))
+                            .foregroundStyle(statusColor)
+                            .clipShape(Capsule())
+                        if let city = listing.city {
+                            Text(city)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+
+            // Admin feedback banner for edits_requested
+            if (listing.status ?? "").lowercased() == "edits_requested" {
+                Text("El administrador pidió ajustes. Abre el editor para ver los detalles.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            HStack(spacing: 8) {
+                Button(action: onEdit) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                        Text("Editar y Reenviar")
+                    }
+                    .font(.system(size: 10, weight: .bold))
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Color.rdBlue)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                if (listing.status ?? "").lowercased() != "rejected" {
+                    Button(action: onOpenPublic) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "eye")
+                            Text("Vista Previa")
+                        }
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(Color(.tertiarySystemGroupedBackground))
+                        .foregroundStyle(.primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+// MARK: - Identifiable URL wrapper for sheet(item:)
+
+struct IdentifiableURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
+// MARK: - Safari Web View
+
+struct SafariWebView: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let cfg = SFSafariViewController.Configuration()
+        cfg.barCollapsingEnabled = true
+        return SFSafariViewController(url: url, configuration: cfg)
+    }
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
+}
+
+// MARK: - Promocionar Sheet
+
+/// Loads promo content for the listing and lets the user copy/share per
+/// platform (Facebook, Instagram, WhatsApp, LinkedIn, Google Ads).
+struct ListingPromoSheet: View {
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+    let listingId: String
+    let listingTitle: String
+
+    @State private var content: ListingPromoContent?
+    @State private var loading = true
+    @State private var errorMsg: String?
+    @State private var selectedPlatform = "facebook"
+    @State private var showShareSheet = false
+
+    private let platforms: [(key: String, label: String, icon: String, color: Color)] = [
+        ("facebook",  "Facebook",  "f.square.fill",         .blue),
+        ("instagram", "Instagram", "camera.circle.fill",    .purple),
+        ("whatsapp",  "WhatsApp",  "message.fill",          .green),
+        ("linkedin",  "LinkedIn",  "briefcase.fill",        Color(red: 0.0, green: 0.47, blue: 0.71)),
+        ("google",    "Google",    "globe",                 .orange),
+    ]
+
+    private var activeText: String {
+        guard let c = content else { return "" }
+        switch selectedPlatform {
+        case "facebook":  return c.content.facebook
+        case "instagram": return c.content.instagram
+        case "whatsapp":  return c.content.whatsapp
+        case "linkedin":  return c.content.linkedin
+        case "google":    return c.content.google_business ?? ""
+        default:          return ""
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if loading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                } else if let err = errorMsg {
+                    VStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundStyle(.orange)
+                        Text(err)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+                } else if content != nil {
+                    // Platform picker
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(platforms, id: \.key) { p in
+                                Button {
+                                    selectedPlatform = p.key
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: p.icon)
+                                        Text(p.label)
+                                    }
+                                    .font(.caption).bold()
+                                    .padding(.horizontal, 14).padding(.vertical, 8)
+                                    .background(selectedPlatform == p.key ? p.color : Color(.secondarySystemFill))
+                                    .foregroundStyle(selectedPlatform == p.key ? .white : .primary)
+                                    .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Content preview
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Contenido generado")
+                            .font(.caption).bold()
+                            .foregroundStyle(.secondary)
+                        Text(activeText)
+                            .font(.system(size: 13))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .textSelection(.enabled)
+                    }
+                    .padding(.horizontal)
+
+                    // Action buttons
+                    HStack(spacing: 10) {
+                        Button {
+                            UIPasteboard.general.string = activeText
+                        } label: {
+                            HStack {
+                                Image(systemName: "doc.on.doc.fill")
+                                Text("Copiar")
+                            }
+                            .font(.subheadline).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .foregroundStyle(.primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            showShareSheet = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("Compartir")
+                            }
+                            .font(.subheadline).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal)
+
+                    // Listing URL row
+                    if let url = content?.url {
+                        HStack(spacing: 6) {
+                            Image(systemName: "link")
+                                .foregroundStyle(.secondary)
+                            Text(url)
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Button {
+                                UIPasteboard.general.string = url
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                            }
+                        }
+                        .padding(10)
+                        .background(Color(.tertiarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .padding(.horizontal)
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Promocionar")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Cerrar") { dismiss() }
+            }
+        }
+        .task { await load() }
+        .sheet(isPresented: $showShareSheet) {
+            ShareActivitySheet(items: [activeText])
+        }
+    }
+
+    private func load() async {
+        loading = true
+        errorMsg = nil
+        do {
+            content = try await api.getListingPromoContent(id: listingId)
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        loading = false
+    }
+}
+
+// MARK: - UIActivityViewController wrapper
+
+struct ShareActivitySheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Listing Card

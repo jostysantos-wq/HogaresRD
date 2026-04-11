@@ -254,31 +254,64 @@ struct DashboardDocuments: Decodable {
 }
 
 struct ArchiveDocument: Decodable, Identifiable {
+    // Server sends `doc_id` — we surface it as `id` for SwiftUI ForEach.
     let id: String
+    let appId: String?
+    let docId: String?
     let name: String?
+    let filename: String?
     let type: String?
-    let status: String?
+    let status: String?        // review_status: pending|approved|rejected
     let client: String?
+    let clientEmail: String?
     let property: String?
+    let listingId: String?
     let uploadDate: String?
     let fileSize: String?
+    let reviewNote: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, type, status, client, property
-        case uploadDate = "upload_date"
-        case fileSize = "file_size"
+        case appId        = "app_id"
+        case docId        = "doc_id"
+        case name         = "original_name"
+        case filename     = "filename"
+        case type         = "type"
+        case status       = "review_status"
+        case client       = "client_name"
+        case clientEmail  = "client_email"
+        case property     = "listing_title"
+        case listingId    = "listing_id"
+        case uploadDate   = "uploaded_at"
+        case fileSize     = "size"
+        case reviewNote   = "review_note"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id         = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
-        name       = try? c.decode(String.self, forKey: .name)
-        type       = try? c.decode(String.self, forKey: .type)
-        status     = try? c.decode(String.self, forKey: .status)
-        client     = try? c.decode(String.self, forKey: .client)
-        property   = try? c.decode(String.self, forKey: .property)
-        uploadDate = try? c.decode(String.self, forKey: .uploadDate)
-        fileSize   = try? c.decode(String.self, forKey: .fileSize)
+        docId       = try? c.decode(String.self, forKey: .docId)
+        id          = docId ?? UUID().uuidString
+        appId       = try? c.decode(String.self, forKey: .appId)
+        name        = try? c.decode(String.self, forKey: .name)
+        filename    = try? c.decode(String.self, forKey: .filename)
+        type        = try? c.decode(String.self, forKey: .type)
+        status      = try? c.decode(String.self, forKey: .status)
+        client      = try? c.decode(String.self, forKey: .client)
+        clientEmail = try? c.decode(String.self, forKey: .clientEmail)
+        property    = try? c.decode(String.self, forKey: .property)
+        listingId   = try? c.decode(String.self, forKey: .listingId)
+        uploadDate  = try? c.decode(String.self, forKey: .uploadDate)
+        reviewNote  = try? c.decode(String.self, forKey: .reviewNote)
+        // size arrives as number
+        if let n = try? c.decode(Int.self, forKey: .fileSize) {
+            let kb = Double(n) / 1024.0
+            if kb >= 1024 {
+                fileSize = String(format: "%.1f MB", kb / 1024)
+            } else {
+                fileSize = String(format: "%.0f KB", kb)
+            }
+        } else {
+            fileSize = try? c.decode(String.self, forKey: .fileSize)
+        }
     }
 }
 

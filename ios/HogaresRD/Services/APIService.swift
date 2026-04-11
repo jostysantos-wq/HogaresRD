@@ -2191,6 +2191,170 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "Error verificando suscripcion")
         return try decoder.decode(SubscriptionStatus.self, from: data)
     }
+
+    // MARK: - Document Review (archive tab)
+
+    /// PUT /api/applications/:id/documents/:docId/review
+    /// status must be "approved" or "rejected". Optional note for rejections.
+    func reviewDocument(
+        applicationId: String,
+        documentId: String,
+        status: String,
+        note: String = ""
+    ) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/review")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = [
+            "status": status,
+            "note":   note,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error revisando documento")
+    }
+
+    /// Returns a URL to open an uploaded document in Safari. The server
+    /// validates authorization against the listing owner / admin before
+    /// serving the file. Includes the access token as a query param.
+    func documentDownloadURL(applicationId: String, documentId: String) -> URL? {
+        guard let t = token else { return nil }
+        var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/file")!
+        comps.queryItems = [URLQueryItem(name: "token", value: t)]
+        return comps.url
+    }
+
+    // MARK: - Payment Review (broker verifies client proof)
+
+    /// PUT /api/applications/:id/payment-plan/:iid/review — inmobiliaria reviews
+    /// a single installment's proof. Approved installments auto-advance the
+    /// application to pago_aprobado once ALL installments are approved.
+    func reviewPaymentInstallment(
+        applicationId: String,
+        installmentId: String,
+        approved: Bool,
+        reviewNotes: String = ""
+    ) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/review")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = [
+            "approved": approved,
+            "review_notes": reviewNotes,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error revisando pago")
+    }
+
+    /// PUT /api/applications/:id/payment/verify — broker verifies the
+    /// single-payment flow (not installments). Full amount.
+    func verifySinglePayment(
+        applicationId: String,
+        approved: Bool,
+        notes: String = ""
+    ) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/verify")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = [
+            "approved": approved,
+            "notes": notes,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error verificando pago")
+    }
+
+    /// Returns the authenticated URL to open a receipt in an SFSafariViewController.
+    /// The server redirects to the S3/local file after validating authorization.
+    func paymentReceiptURL(applicationId: String) -> URL? {
+        guard let t = token else { return nil }
+        var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/payment/receipt")!
+        comps.queryItems = [URLQueryItem(name: "token", value: t)]
+        return comps.url
+    }
+
+    // MARK: - My Listings (all statuses)
+
+    /// Fetches ALL listings owned by the current user, regardless of status.
+    /// Used by the broker dashboard's "Mis Propiedades" section to show
+    /// pending/edits_requested/rejected submissions alongside approved ones.
+    func getMyListings() async throws -> [Listing] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/user/listings")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando propiedades")
+        struct Wrapper: Decodable { let listings: [Safe<Listing>] }
+        let wrap = try decoder.decode(Wrapper.self, from: data)
+        return wrap.listings.compactMap { $0.value }
+    }
+
+    // MARK: - Listing Promo Content
+
+    func getListingPromoContent(id: String) async throws -> ListingPromoContent {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/listing-analytics/listing/\(id)/promo")!)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error generando contenido")
+        return try decoder.decode(ListingPromoContent.self, from: data)
+    }
+
+    // MARK: - Update listing (edit)
+
+    /// Sends a PUT to /api/listings/:id. Body may contain any subset of
+    /// editable fields (title, description, price, etc.). Server returns the
+    /// updated record; we ignore the body and just surface errors.
+    func updateListing(id: String, body: [String: Any]) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/listings/\(id)")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error actualizando propiedad")
+    }
+}
+
+// MARK: - Promo content payload
+
+struct ListingPromoContent: Decodable {
+    struct Meta: Decodable {
+        let id: String
+        let title: String
+        let typeLabel: String?
+        let condLabel: String?
+        let city: String?
+        let province: String?
+        let sector: String?
+        let images: [String]?
+    }
+    struct GoogleAds: Decodable {
+        let headlines: [String]
+        let descriptions: [String]
+        let finalUrl: String?
+    }
+    let listing: Meta
+    let url: String
+    let content: PromoContentBody
+}
+
+struct PromoContentBody: Decodable {
+    let facebook: String
+    let instagram: String
+    let whatsapp: String
+    let linkedin: String
+    let google_business: String?
+    let google_ads: ListingPromoContent.GoogleAds?
 }
 
 /// Teammate that a broker can transfer a conversation to. Returned by

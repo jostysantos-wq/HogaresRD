@@ -1,4 +1,5 @@
 import SwiftUI
+import SafariServices
 
 // MARK: - Broker Dashboard (Main)
 
@@ -1244,6 +1245,8 @@ struct DashboardArchiveTab: View {
     @State private var filterType = ""
     @State private var filterStatus = ""
     @State private var currentPage = 1
+    @State private var reviewingDoc: ArchiveDocument?
+    @State private var previewURL: ArchiveDocURL?
 
     private let docTypes = [
         ("", "Todos"),
@@ -1335,35 +1338,53 @@ struct DashboardArchiveTab: View {
                     } else {
                         LazyVStack(spacing: 8) {
                             ForEach(d.documents) { doc in
-                                HStack(spacing: 12) {
-                                    Image(systemName: docIcon(doc.type))
-                                        .font(.title3)
-                                        .foregroundStyle(Color.rdBlue)
-                                        .frame(width: 36)
+                                Button {
+                                    reviewingDoc = doc
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: docIcon(doc.type))
+                                            .font(.title3)
+                                            .foregroundStyle(Color.rdBlue)
+                                            .frame(width: 36)
 
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(doc.name ?? "Documento")
-                                            .font(.subheadline).bold()
-                                            .lineLimit(1)
-                                        HStack(spacing: 8) {
-                                            if let client = doc.client {
-                                                Text(client).font(.caption).foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(doc.name ?? "Documento")
+                                                .font(.subheadline).bold()
+                                                .lineLimit(1)
+                                                .foregroundStyle(.primary)
+                                            HStack(spacing: 8) {
+                                                if let client = doc.client {
+                                                    Text(client).font(.caption).foregroundStyle(.secondary)
+                                                }
+                                                if let prop = doc.property {
+                                                    Text("·").font(.caption).foregroundStyle(.tertiary)
+                                                    Text(prop).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                                }
                                             }
-                                            if let size = doc.fileSize {
-                                                Text(size).font(.caption2).foregroundStyle(.tertiary)
+                                            HStack(spacing: 6) {
+                                                if let size = doc.fileSize {
+                                                    Text(size).font(.caption2).foregroundStyle(.tertiary)
+                                                }
+                                                if let date = doc.uploadDate {
+                                                    Text(formatShort(date)).font(.caption2).foregroundStyle(.tertiary)
+                                                }
                                             }
                                         }
-                                    }
 
-                                    Spacer()
+                                        Spacer()
 
-                                    if let s = doc.status {
-                                        StatusBadge(status: s)
+                                        VStack(alignment: .trailing, spacing: 4) {
+                                            StatusBadge(status: doc.status ?? "pending")
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption2)
+                                                .foregroundStyle(.tertiary)
+                                        }
                                     }
+                                    .padding(12)
+                                    .background(Color(.secondarySystemGroupedBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
-                                .padding(12)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal)
@@ -1397,6 +1418,28 @@ struct DashboardArchiveTab: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $reviewingDoc) { doc in
+            NavigationStack {
+                ReviewDocumentSheet(
+                    doc: doc,
+                    onReviewed: {
+                        reviewingDoc = nil
+                        Task { await load() }
+                    },
+                    onPreview: {
+                        if let appId = doc.appId, let docId = doc.docId,
+                           let url = api.documentDownloadURL(applicationId: appId, documentId: docId) {
+                            previewURL = ArchiveDocURL(url: url)
+                        }
+                    }
+                )
+                .environmentObject(api)
+            }
+        }
+        .sheet(item: $previewURL) { wrap in
+            ArchiveDocPreview(url: wrap.url)
+                .ignoresSafeArea()
+        }
     }
 
     private func load() async {
@@ -1410,6 +1453,18 @@ struct DashboardArchiveTab: View {
         loading = false
     }
 
+    private func formatShort(_ iso: String) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var d = f.date(from: iso)
+        if d == nil { f.formatOptions = [.withInternetDateTime]; d = f.date(from: iso) }
+        guard let date = d else { return "" }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "es_DO")
+        df.dateFormat = "d MMM"
+        return df.string(from: date)
+    }
+
     private func docIcon(_ type: String?) -> String {
         switch type {
         case "cedula", "pasaporte":         return "person.text.rectangle.fill"
@@ -1421,6 +1476,279 @@ struct DashboardArchiveTab: View {
         case "prueba_fondos":              return "banknote.fill"
         default:                           return "doc.fill"
         }
+    }
+}
+
+// MARK: - Identifiable URL wrappers + document preview
+
+struct ArchiveDocURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
+struct ArchiveDocPreview: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
+}
+
+// MARK: - Review Document Sheet
+
+/// Opened from the Archive tab when the broker taps a document. Shows the
+/// metadata, a button to preview the file, and approve/reject actions that
+/// hit the PUT /applications/:id/documents/:docId/review endpoint.
+struct ReviewDocumentSheet: View {
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+    let doc: ArchiveDocument
+    let onReviewed: () -> Void
+    let onPreview: () -> Void
+
+    @State private var note = ""
+    @State private var showReject = false
+    @State private var submitting = false
+    @State private var errorMsg: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        Image(systemName: iconFor(doc.type))
+                            .font(.title)
+                            .foregroundStyle(Color.rdBlue)
+                            .frame(width: 44, height: 44)
+                            .background(Color.rdBlue.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(doc.name ?? "Documento")
+                                .font(.subheadline).bold()
+                                .lineLimit(2)
+                            Text(labelFor(doc.type))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        StatusBadge(status: doc.status ?? "pending")
+                    }
+
+                    Divider()
+
+                    infoRow(label: "Cliente", value: doc.client)
+                    infoRow(label: "Email",   value: doc.clientEmail)
+                    infoRow(label: "Propiedad", value: doc.property)
+                    infoRow(label: "Tamaño",  value: doc.fileSize)
+                    if let date = doc.uploadDate {
+                        infoRow(label: "Subido", value: date)
+                    }
+                    if let existingNote = doc.reviewNote, !existingNote.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Nota previa")
+                                .font(.caption).bold()
+                                .foregroundStyle(.secondary)
+                            Text(existingNote)
+                                .font(.caption)
+                                .padding(8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(.tertiarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                }
+                .padding()
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+
+                // Preview button
+                Button(action: onPreview) {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                        Text("Ver Documento")
+                            .font(.subheadline).bold()
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .foregroundStyle(Color.rdBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+
+                // Rejection note
+                if showReject {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Motivo del rechazo")
+                            .font(.caption).bold()
+                            .foregroundStyle(.secondary)
+                        TextField("Ej: Documento ilegible, fecha vencida, etc.", text: $note, axis: .vertical)
+                            .lineLimit(3...6)
+                            .padding(10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding(.horizontal)
+                }
+
+                if let e = errorMsg {
+                    Text(e)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal)
+                }
+
+                // Actions
+                if doc.status != "approved" && doc.status != "rejected" {
+                    HStack(spacing: 10) {
+                        Button {
+                            if showReject {
+                                showReject = false
+                                note = ""
+                            } else {
+                                showReject = true
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: showReject ? "xmark.circle" : "xmark")
+                                Text(showReject ? "Cancelar" : "Rechazar")
+                            }
+                            .font(.subheadline).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.red.opacity(0.12))
+                            .foregroundStyle(.red)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(submitting)
+
+                        if showReject {
+                            Button {
+                                Task { await submit(status: "rejected") }
+                            } label: {
+                                HStack {
+                                    if submitting {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "paperplane.fill")
+                                        Text("Enviar Rechazo")
+                                    }
+                                }
+                                .font(.subheadline).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.red)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(submitting || note.trimmingCharacters(in: .whitespaces).isEmpty)
+                        } else {
+                            Button {
+                                Task { await submit(status: "approved") }
+                            } label: {
+                                HStack {
+                                    if submitting {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "checkmark.circle.fill")
+                                        Text("Aprobar")
+                                    }
+                                }
+                                .font(.subheadline).bold()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.rdGreen)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(submitting)
+                        }
+                    }
+                    .padding(.horizontal)
+                } else {
+                    Text("Este documento ya fue revisado.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding()
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Revisar Documento")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cerrar") { dismiss() }
+            }
+        }
+    }
+
+    private func infoRow(label: String, value: String?) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 80, alignment: .leading)
+            Text(value?.isEmpty == false ? value! : "—")
+                .font(.caption).bold()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func iconFor(_ type: String?) -> String {
+        switch type {
+        case "cedula", "pasaporte":   return "person.text.rectangle.fill"
+        case "comprobante_ingresos":  return "dollarsign.circle.fill"
+        case "estado_cuenta":         return "building.columns.fill"
+        case "carta_trabajo":         return "briefcase.fill"
+        case "declaracion_impuestos": return "doc.text.fill"
+        case "pre_aprobacion":        return "checkmark.seal.fill"
+        case "prueba_fondos":         return "banknote.fill"
+        default:                      return "doc.fill"
+        }
+    }
+
+    private func labelFor(_ type: String?) -> String {
+        switch type {
+        case "cedula":                return "Cédula de Identidad"
+        case "pasaporte", "passport": return "Pasaporte"
+        case "comprobante_ingresos", "income_proof": return "Comprobante de Ingresos"
+        case "estado_cuenta", "bank_statement":      return "Estado de Cuenta"
+        case "carta_trabajo", "employment_letter":   return "Carta de Trabajo"
+        case "declaracion_impuestos", "tax_return":  return "Declaración de Impuestos"
+        case "pre_aprobacion", "pre_approval":       return "Pre-Aprobación Bancaria"
+        case "prueba_fondos", "proof_of_funds":      return "Prueba de Fondos"
+        default:                                     return type?.capitalized ?? "Documento"
+        }
+    }
+
+    private func submit(status: String) async {
+        guard let appId = doc.appId, let docId = doc.docId else {
+            errorMsg = "Información del documento incompleta"
+            return
+        }
+        submitting = true
+        errorMsg = nil
+        do {
+            try await api.reviewDocument(
+                applicationId: appId,
+                documentId: docId,
+                status: status,
+                note: note.trimmingCharacters(in: .whitespaces)
+            )
+            onReviewed()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        submitting = false
     }
 }
 

@@ -325,7 +325,12 @@ const IS_PROD     = process.env.NODE_ENV === 'production';
 function userAuth(req, res, next) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
   const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
-  const token = cookieToken || headerToken;
+  // Fallback: query-string token. Only honored for GET requests so that POST
+  // bodies cannot bypass CSRF protection. This is what lets native apps
+  // open protected files (receipts, document previews) in SFSafariViewController
+  // which cannot attach custom headers.
+  const queryToken = req.method === 'GET' ? (req.query?.token || '').trim() : '';
+  const token = cookieToken || headerToken || queryToken;
   if (!token) return res.status(401).json({ error: 'No autenticado' });
   try {
     const payload = verifyJWT(token);
