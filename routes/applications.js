@@ -504,11 +504,64 @@ router.post('/', appCreateLimiter, (req, res) => {
   }
 
   if (useCascade) {
-    // Cascade path: send response first, then start cascade in background
+    // Cascade path: send response first, then start cascade in background.
+    // If the cascade engine returns null because NO agents on the listing
+    // are linked to registered users (e.g. the agencies array only has
+    // email/phone contact info), we fall back to emailing every agency
+    // contact directly so the application still reaches a human.
     res.status(201).json({ ok: true, id: app.id });
 
     const buyerInfo = { name: app.client.name, phone: app.client.phone, email: app.client.email };
-    cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo);
+    const cascadeResult = cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo);
+
+    if (!cascadeResult) {
+      console.warn('[applications] Cascade returned null — falling back to direct agency notifications for app', app.id);
+      // Fallback: notify every agency contact by email. Also send WhatsApp
+      // + push to any registered user whose email or phone matches one
+      // of those contacts, so the owner still gets pinged even when their
+      // agency card wasn't linked to a user account at listing time.
+      for (const agency of agencies) {
+        if (agency.email) {
+          sendNotification(agency.email,
+            `Nueva aplicación — ${app.listing_title}`,
+            newAppHtml(agency.name ? `Para ${agency.name}` : ''));
+        }
+
+        // Match-by-email to reach the user's inbox (push, WhatsApp)
+        const contactUser = agency.email ? store.getUserByEmail(agency.email) : null;
+        if (contactUser) {
+          pushNotify(contactUser.id, {
+            type:  'new_application',
+            title: 'Nueva Aplicación',
+            body:  `${app.client.name} aplicó para ${app.listing_title}`,
+            url:   '/broker.html',
+          });
+          if (contactUser.phone || agency.phone) {
+            setImmediate(async () => {
+              try {
+                await notify.notifyBrokerNewApplication({
+                  brokerPhone:   contactUser.phone || agency.phone,
+                  clientName:    app.client.name,
+                  propertyTitle: app.listing_title,
+                  appId:         app.id,
+                });
+              } catch (e) { console.error('[notify-app fallback]', e.message); }
+            });
+          }
+        }
+      }
+
+      // Also notify the inmobiliaria if we can resolve one from the creator
+      if (inmobiliaria_id) {
+        const inmUser = store.getUserById(inmobiliaria_id);
+        if (inmUser?.email) {
+          sendNotification(
+            inmUser.email,
+            `Nueva aplicación pendiente — ${app.listing_title}`,
+            newAppHtml(`Sin agente asignado — por favor reasignar`));
+        }
+      }
+    }
   } else {
     // Standard path: notify broker directly
     // Notify broker

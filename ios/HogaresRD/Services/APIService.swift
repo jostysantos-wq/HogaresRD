@@ -492,15 +492,29 @@ class APIService: ObservableObject {
         }
     }
 
+    /// Ask the server to send a new email verification link.
+    /// Throws a special error if the server reports the email is already
+    /// verified — that way the UI can dismiss the popup instead of pretending
+    /// an email was sent.
     func resendVerificationEmail() async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/resend-verification")!)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let (_, resp) = try await session.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             throw APIError.server("Error al reenviar verificacion")
+        }
+        // The backend returns { success: true, message: 'Tu correo ya está
+        // verificado.' } when the user is actually verified. If we detect
+        // that, refresh the user profile and throw a soft error so the UI
+        // knows to close the popup.
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let msg  = json["message"] as? String,
+           msg.lowercased().contains("ya está verificado") || msg.lowercased().contains("ya esta verificado") {
+            await refreshUser()
+            throw APIError.server("Tu correo ya está verificado")
         }
     }
 

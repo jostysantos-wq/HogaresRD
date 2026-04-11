@@ -72,25 +72,56 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, api.currentUser != nil {
-                Task { await api.refreshUser() }
+                Task {
+                    await api.refreshUser()
+                    // After refresh, if the server says the email is
+                    // verified, make sure any stale popup goes away.
+                    await MainActor.run {
+                        if api.currentUser?.emailVerified == true && showPopup {
+                            withAnimation(.easeInOut(duration: 0.25)) { showPopup = false }
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: api.currentUser?.emailVerified) { _, newValue in
+            // Server flipped the user to verified → hide popup immediately
+            if newValue == true && showPopup {
+                withAnimation(.easeInOut(duration: 0.25)) { showPopup = false }
             }
         }
         .onChange(of: api.currentUser?.id) {
             // Show popup shortly after login if needed
             schedulePopupIfNeeded()
         }
-        .onAppear { schedulePopupIfNeeded() }
+        .onAppear {
+            // Refresh first so the stored user isn't stale — then decide.
+            Task {
+                if api.currentUser != nil { await api.refreshUser() }
+                await MainActor.run { schedulePopupIfNeeded() }
+            }
+        }
     }
 
     // MARK: - Popup Logic
-
+    //
+    // Trigger rules (fixed after the "popup shows on verified users" bug):
+    //  • Only show when emailVerified is EXPLICITLY false. A nil value means
+    //    we don't know yet (e.g. cached user from an older login response)
+    //    and we must NOT assume unverified — that's how users with a
+    //    verified email were getting the popup.
+    //  • After the 1.5s delay, re-check the current value. refreshUser()
+    //    runs on scenePhase .active and may have set emailVerified to true
+    //    in the meantime, in which case we cancel the popup.
     private func schedulePopupIfNeeded() {
         guard !popupDismissed, let user = api.currentUser else { return }
-        guard !user.isEmailVerified else { return }
-        // Show after a short delay so the app loads first
+        guard user.emailVerified == false else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.5))
-            if !popupDismissed { withAnimation(.easeInOut(duration: 0.25)) { showPopup = true } }
+            guard !popupDismissed else { return }
+            // Re-check — refreshUser() may have updated the field
+            guard api.currentUser?.emailVerified == false else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { showPopup = true }
         }
     }
 
