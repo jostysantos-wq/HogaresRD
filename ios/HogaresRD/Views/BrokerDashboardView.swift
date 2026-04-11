@@ -248,7 +248,13 @@ struct DashboardApplicationsTab: View {
                 } else {
                     LazyVStack(spacing: 10) {
                         ForEach(filtered) { app in
-                            ApplicationRow(app: app)
+                            NavigationLink {
+                                ApplicationDetailView(id: app.id)
+                                    .environmentObject(api)
+                            } label: {
+                                ApplicationRow(app: app)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)

@@ -1229,6 +1229,85 @@ class APIService: ObservableObject {
         return try decoder.decode(DashboardAccounting.self, from: data)
     }
 
+    // MARK: - Application detail / workflow (broker-side)
+
+    /// Full application detail for the broker dashboard.
+    /// GET /api/applications/:id
+    func fetchApplicationDetail(id: String) async throws -> ApplicationDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(id)")!
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Aplicación no encontrada")
+        }
+        return try decoder.decode(ApplicationDetail.self, from: data)
+    }
+
+    /// Change an application's status. PUT /api/applications/:id/status
+    /// Backend validates the transition against STATUS_FLOW; reason is
+    /// required when moving to "rechazado".
+    @discardableResult
+    func updateApplicationStatus(id: String, newStatus: String, reason: String = "") async throws -> ApplicationDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(id)/status")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: String] = ["status": newStatus, "reason": reason]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al cambiar el estado")
+        }
+        return try decoder.decode(ApplicationDetail.self, from: data)
+    }
+
+    /// Request one or more documents from the client on an application.
+    /// POST /api/applications/:id/documents/request
+    /// Body: { documents: [{ type, label, required }] }
+    @discardableResult
+    func requestApplicationDocuments(id: String, documents: [(type: String, label: String, required: Bool)]) async throws -> ApplicationDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(id)/documents/request")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let docs: [[String: Any]] = documents.map { d in
+            ["type": d.type, "label": d.label, "required": d.required]
+        }
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["documents": docs])
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error solicitando documentos")
+        }
+        return try decoder.decode(ApplicationDetail.self, from: data)
+    }
+
+    /// Send an in-app message to the application's client from the broker.
+    /// POST /api/applications/:id/contact-client — creates/reuses the
+    /// client↔broker conversation and pushes a notification to the client.
+    func contactApplicationClient(applicationId: String, message: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/contact-client")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["message": message])
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al contactar al cliente")
+        }
+    }
+
     // MARK: - Commissions (per-sale with inmobiliaria approval flow)
 
     /// Fetch the aggregated commissions summary for the current user.
