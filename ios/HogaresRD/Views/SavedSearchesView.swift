@@ -391,7 +391,7 @@ struct SavedSearchDetailView: View {
     }
 
     private func load() async {
-        loading = true
+        if listings.isEmpty { loading = true }
         errorMsg = nil
         do {
             let r = try await api.getSavedSearchResults(id: current.id)
@@ -399,6 +399,7 @@ struct SavedSearchDetailView: View {
             total = r.total ?? listings.count
             current = r.search
             onChange(r.search)
+        } catch is CancellationError {
         } catch {
             errorMsg = error.localizedDescription
         }

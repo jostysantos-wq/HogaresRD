@@ -116,11 +116,12 @@ struct PaymentsTabView: View {
     }
 
     private func load() async {
-        loading = true
+        if payments.isEmpty { loading = true }
         do {
             let result = try await api.getPaymentsSummary()
             payments = result.payments
             stats = result.stats
+        } catch is CancellationError {
         } catch {
             payments = []
             stats = nil

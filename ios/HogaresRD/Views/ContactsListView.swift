@@ -95,9 +95,10 @@ struct ContactsListView: View {
     }
 
     private func load() async {
-        loading = true
+        if contacts.isEmpty { loading = true }
         do {
             contacts = try await api.getContacts()
+        } catch is CancellationError {
         } catch {
             contacts = []
         }

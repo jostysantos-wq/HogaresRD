@@ -776,11 +776,12 @@ struct ApplicationDetailView: View {
     // MARK: - Load
 
     private func load() async {
-        loading = true
+        if detail == nil { loading = true }
         errorMsg = nil
         do {
             detail = try await api.fetchApplicationDetail(id: id)
             lastStateVersion = nil  // reset the poll baseline
+        } catch is CancellationError {
         } catch {
             if case .server(let s)? = error as? APIError { errorMsg = s }
             else { errorMsg = "No se pudo cargar la aplicación" }

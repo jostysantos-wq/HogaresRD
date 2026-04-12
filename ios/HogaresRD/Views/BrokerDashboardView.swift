@@ -388,7 +388,7 @@ struct DashboardApplicationsTab: View {
     }
 
     private func load() async {
-        loading = true
+        if applications.isEmpty { loading = true }
         async let analyticsTask = try? api.getDashboardAnalytics()
         async let appsTask = try? api.getApplications()
         analytics = await analyticsTask
@@ -548,7 +548,7 @@ struct DashboardAnalyticsTab: View {
     }
 
     private func load() async {
-        loading = true
+        if analytics == nil { loading = true }
         analytics = try? await api.getDashboardAnalytics(range: range)
         loading = false
     }
@@ -698,7 +698,7 @@ struct DashboardSalesTab: View {
     }
 
     private func load() async {
-        loading = true
+        if sales == nil { loading = true }
         sales = try? await api.getDashboardSales()
         loading = false
     }
@@ -1006,10 +1006,11 @@ struct DashboardAccountingTab: View {
     }
 
     private func load() async {
-        loading = true
+        if response == nil { loading = true }
         errorMsg = nil
         do {
             response = try await api.fetchCommissionsSummary()
+        } catch is CancellationError {
         } catch {
             if case .server(let msg)? = error as? APIError { errorMsg = msg }
             else { errorMsg = "Error al cargar comisiones" }
@@ -1443,7 +1444,7 @@ struct DashboardArchiveTab: View {
     }
 
     private func load() async {
-        loading = true
+        if docs == nil { loading = true }
         docs = try? await api.getDashboardDocuments(
             status: filterStatus.isEmpty ? nil : filterStatus,
             type: filterType.isEmpty ? nil : filterType,
@@ -1896,7 +1897,7 @@ struct DashboardAuditTab: View {
     }
 
     private func load() async {
-        loading = true
+        if audit == nil { loading = true }
         audit = try? await api.getDashboardAudit(
             search: searchText.isEmpty ? nil : searchText,
             type: filterType.isEmpty ? nil : filterType,

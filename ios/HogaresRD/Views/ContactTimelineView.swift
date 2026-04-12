@@ -90,11 +90,12 @@ struct ContactTimelineView: View {
     }
 
     private func load() async {
-        loading = true
+        if events.isEmpty { loading = true }
         do {
             let result = try await api.getContactTimeline(contactId: contactId, type: selectedFilter)
             contact = result.contact
             events = result.events
+        } catch is CancellationError {
         } catch {
             events = []
         }

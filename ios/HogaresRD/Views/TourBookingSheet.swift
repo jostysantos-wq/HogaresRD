@@ -1018,7 +1018,7 @@ struct BrokerToursView: View {
     }
 
     private func loadTours() async {
-        loading = true
+        if tours.isEmpty { loading = true }
         tours = (try? await api.fetchBrokerTourRequests()) ?? []
         loading = false
     }
@@ -1310,7 +1310,7 @@ struct BrokerAvailabilityView: View {
     }
 
     private func load() async {
-        loading = true
+        if weekly.isEmpty { loading = true }
         if let result = try? await api.fetchBrokerAvailability() {
             weekly = result.weekly; overrides = result.overrides
         }
@@ -2069,7 +2069,7 @@ struct MyToursView: View {
     }
 
     private func load() async {
-        loading = true
+        if tours.isEmpty { loading = true }
         tours = (try? await api.fetchMyTourRequests()) ?? []
         loading = false
     }

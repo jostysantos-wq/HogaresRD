@@ -79,9 +79,10 @@ struct MyDocumentsView: View {
     // MARK: - Load
 
     private func load() async {
-        loading = true
+        if applications.isEmpty { loading = true }
         do {
             applications = try await api.getMyApplicationsFull()
+        } catch is CancellationError {
         } catch {
             applications = []
         }

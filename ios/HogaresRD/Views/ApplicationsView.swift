@@ -54,10 +54,13 @@ struct ApplicationsView: View {
     }
 
     private func load() async {
-        loading = true; errorMsg = nil
+        if applications.isEmpty { loading = true }
+        errorMsg = nil
         do {
             applications = try await api.getApplications()
             applications.sort { $0.createdAt > $1.createdAt }
+        } catch is CancellationError {
+            // Ignore — task was cancelled (e.g. view disappeared during refresh)
         } catch {
             errorMsg = error.localizedDescription
         }
