@@ -1191,8 +1191,7 @@ router.post('/reset-password', async (req, res, next) => {
     const { token, password } = req.body;
     if (!token || !password)
       return res.status(400).json({ error: 'Token y contraseña son requeridos' });
-    if (!validateEmail(email))
-      return res.status(400).json({ error: 'Correo electrónico inválido' });
+    // Password reset is token-based — email validation removed (was referencing undefined variable)
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
 

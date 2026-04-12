@@ -329,7 +329,10 @@ router.get('/:id/like', userAuth, (req, res) => {
 });
 
 // POST /api/listings/:id/inquiry — send client inquiry to all affiliated agencies
-router.post('/:id/inquiry', async (req, res) => {
+const rateLimit = require('express-rate-limit');
+const inquiryLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: false, legacyHeaders: false,
+  message: { error: 'Demasiadas consultas. Intenta de nuevo en una hora.' } });
+router.post('/:id/inquiry', inquiryLimiter, async (req, res) => {
   const listing = store.getListingById(req.params.id);
   if (!listing || listing.status !== 'approved')
     return res.status(404).json({ error: 'Propiedad no encontrada' });

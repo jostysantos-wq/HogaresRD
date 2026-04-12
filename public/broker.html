@@ -7864,10 +7864,10 @@
   });
 
   async function brkLoadList() {
-    // Load both active + archived in parallel
+    // Load both active + archived in parallel (use API() for 401 handling)
     const [activeRes, archivedRes] = await Promise.all([
-      fetch('/api/conversations', { credentials: 'include' }).then(r => r.json()).catch(() => []),
-      fetch('/api/conversations?archived=true', { credentials: 'include' }).then(r => r.json()).catch(() => []),
+      API('/api/conversations').catch(() => []),
+      API('/api/conversations?archived=true').catch(() => []),
     ]);
     brkAllConvs = [...(Array.isArray(activeRes) ? activeRes : []), ...(Array.isArray(archivedRes) ? archivedRes : [])];
     brkRenderConvList();
@@ -7902,7 +7902,11 @@
 
     // Update count badge
     const countBadge = document.getElementById('brkConvCount');
-    const totalUnread = brkAllConvs.filter(c => !c.archived).reduce((n, c) => n + (c.unreadBroker || 0), 0);
+    const myId = JSON.parse(localStorage.getItem('hogaresrd_user') || '{}')?.id;
+    const totalUnread = brkAllConvs.filter(c => !c.archived).reduce((n, c) => {
+      const isClient = c.clientId === myId;
+      return n + (isClient ? (c.unreadClient || 0) : (c.unreadBroker || 0));
+    }, 0);
     if (countBadge) {
       countBadge.textContent = totalUnread;
       countBadge.style.display = totalUnread > 0 ? 'inline' : 'none';
@@ -7910,7 +7914,11 @@
 
     // Update unread tab count
     const unreadTabBtn = document.getElementById('brkConvTabUnread');
-    const unreadConvCount = brkAllConvs.filter(c => !c.archived && (c.unreadBroker || 0) > 0).length;
+    const unreadConvCount = brkAllConvs.filter(c => {
+      if (c.archived) return false;
+      const isClient = c.clientId === myId;
+      return (isClient ? (c.unreadClient || 0) : (c.unreadBroker || 0)) > 0;
+    }).length;
     if (unreadTabBtn) unreadTabBtn.textContent = unreadConvCount > 0 ? `No leidos (${unreadConvCount})` : 'No leidos';
 
     if (!list.length) {
@@ -7927,7 +7935,7 @@
     }
 
     el.innerHTML = list.map(c => {
-      const unread = c.unreadBroker || 0;
+      const unread = (c.clientId === myId) ? (c.unreadClient || 0) : (c.unreadBroker || 0);
       const isActive = c.id === brkActiveConv;
       const closedIcon = c.closed ? ' 🔒' : '';
       const statusTag = !c.brokerId ? '<span style="font-size:.62rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;margin-left:4px;">Nuevo</span>' : '';
@@ -7943,11 +7951,11 @@
         <div style="width:44px;height:44px;border-radius:10px;background:var(--accent-light);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${imgBg}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:4px;">
-            <span style="font-size:.82rem;font-weight:${unread > 0 ? '700' : '600'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${c.clientName}${closedIcon}${statusTag}</span>
+            <span style="font-size:.82rem;font-weight:${unread > 0 ? '700' : '600'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${esc(c.clientName)}${closedIcon}${statusTag}</span>
             <span style="font-size:.65rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</span>
           </div>
-          <div style="font-size:.73rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${c.propertyTitle || 'Propiedad'}</div>
-          <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${previewWeight}">${c.lastMessage || '—'}</div>
+          <div style="font-size:.73rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${esc(c.propertyTitle || 'Propiedad')}</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${previewWeight}">${esc(c.lastMessage || '—')}</div>
         </div>
         ${unread > 0 ? `<span style="background:var(--accent);color:#fff;border-radius:99px;font-size:.68rem;font-weight:700;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 5px;margin-top:2px;">${unread}</span>` : ''}
       </div>`;

@@ -11,7 +11,10 @@ const VALID_STATUSES = ['pendiente', 'en_proceso', 'comprado', 'no_comprado'];
 // POST / is public (moved before adminSessionAuth middleware)
 
 // ── POST /api/leads  (public — user submits lead) ────────────
-router.post('/', (req, res) => {
+const rateLimit = require('express-rate-limit');
+const leadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: false, legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Intenta de nuevo en una hora.' } });
+router.post('/', leadLimiter, (req, res) => {
   const {
     listing_id, listing_title, listing_price, listing_type,
     agencies,
