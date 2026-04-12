@@ -275,30 +275,49 @@
     </div>
   </div>
 
+  <!-- TAB NAVIGATION -->
+  <div id="profileTabs" style="display:none;position:sticky;top:68px;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);">
+    <div style="max-width:1280px;margin:0 auto;padding:0 2rem;display:flex;gap:0;overflow-x:auto;">
+      <button class="profile-tab active" onclick="switchTab('about', this)">Nosotros</button>
+      <button class="profile-tab" onclick="switchTab('listings', this)">Propiedades</button>
+      <button class="profile-tab" onclick="switchTab('team', this)" id="tabTeam" style="display:none;">Equipo</button>
+      <button class="profile-tab" onclick="switchTab('posts', this)" id="tabPosts" style="display:none;">Noticias</button>
+      <button class="profile-tab" onclick="switchTab('reviews', this)" id="tabReviews" style="display:none;">Reseñas</button>
+      <button class="profile-tab" onclick="switchTab('contact', this)">Contacto</button>
+    </div>
+  </div>
+  <style>
+    .profile-tab { padding: 0.85rem 1.5rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+    .profile-tab:hover { color: var(--text); }
+    .profile-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .profile-section { display: none; }
+    .profile-section.active { display: block; }
+  </style>
+
   <!-- PROFILE CONTENT -->
   <div style="max-width:1280px;margin:0 auto;padding:0 2rem;">
 
     <!-- ABOUT -->
-    <section id="sectionAbout" style="display:none;padding:2.5rem 0;">
+    <section id="sectionAbout" class="profile-section active" style="padding:2.5rem 0;">
       <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1rem;">Sobre Nosotros</h2>
       <div id="aboutContent" style="font-size:0.95rem;line-height:1.8;color:var(--text-muted);"></div>
       <div id="aboutMeta" style="display:flex;flex-wrap:wrap;gap:1.5rem;margin-top:1.5rem;"></div>
     </section>
 
     <!-- TEAM -->
-    <section id="sectionTeam" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+    <section id="sectionTeam" class="profile-section" style="padding:2rem 0;">
       <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Nuestro Equipo</h2>
       <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.25rem;"></div>
     </section>
 
     <!-- POSTS -->
-    <section id="sectionPosts" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+    <section id="sectionPosts" class="profile-section" style="padding:2rem 0;">
       <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Publicaciones</h2>
       <div id="postsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;"></div>
     </section>
 
     <!-- REVIEWS -->
-    <section id="sectionReviews" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+    <section id="sectionReviews" class="profile-section" style="padding:2rem 0;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
         <h2 style="font-size:1.3rem;font-weight:800;">Reseñas de Clientes</h2>
         <span style="font-size:0.78rem;color:var(--text-muted);">✅ Solo compradores verificados</span>
@@ -309,7 +328,7 @@
     </section>
 
     <!-- LISTINGS PORTFOLIO -->
-    <section style="padding:2rem 0;border-top:1px solid var(--border);">
+    <section id="sectionListings" class="profile-section" style="padding:2rem 0;">
       <div class="results-bar" id="resultsBar" style="display:none">
         <div class="results-count" id="resultsCount"></div>
       </div>
@@ -322,7 +341,7 @@
     </section>
 
     <!-- CONTACT -->
-    <section id="sectionContact" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+    <section id="sectionContact" class="profile-section" style="padding:2rem 0;">
       <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Contacto</h2>
       <div id="contactInfo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;"></div>
     </section>
@@ -495,7 +514,16 @@
             (p.yearsInBusiness ? ` · ${p.yearsInBusiness} años de experiencia` : '');
           document.title = `${data.name} — HogaresRD`;
           document.getElementById('agencyHero').style.display = '';
+          document.getElementById('profileTabs').style.display = '';
           document.getElementById('resultsBar').style.display  = '';
+
+          // Add count badges to tabs
+          const listingsTab = document.querySelector('[onclick*="switchTab(\'listings\'"]');
+          if (listingsTab && data.total) listingsTab.innerHTML = `Propiedades <span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">${data.total}</span>`;
+          if (data.posts?.length) {
+            const postsTab = document.getElementById('tabPosts');
+            if (postsTab) postsTab.innerHTML = `Noticias <span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">${data.posts.length}</span>`;
+          }
 
           // Reviews badge in hero
           if (data.reviews && data.reviews.count > 0) {
@@ -505,15 +533,19 @@
           }
 
           // About section
+          // About section — always show as default tab
           if (p.companyDescription) {
             document.getElementById('aboutContent').innerHTML = p.companyDescription;
-            const meta = [];
-            if (p.yearsInBusiness) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${p.yearsInBusiness}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Años de experiencia</span></div>`);
-            if ((p.certifications || []).length) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${p.certifications.length}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Certificaciones</span></div>`);
-            meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${data.total}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Propiedades</span></div>`);
-            document.getElementById('aboutMeta').innerHTML = meta.join('');
-            document.getElementById('sectionAbout').style.display = '';
+          } else {
+            document.getElementById('aboutContent').innerHTML = `<p>${esc(data.name)} es una inmobiliaria afiliada a HogaresRD con ${data.total} propiedad${data.total !== 1 ? 'es' : ''} en su portafolio.</p>`;
           }
+          const meta = [];
+          if (p.yearsInBusiness) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;">${p.yearsInBusiness}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Años de experiencia</span></div>`);
+          if ((p.certifications || []).length) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;">${p.certifications.length}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Certificaciones</span></div>`);
+          meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;">${data.total}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Propiedades</span></div>`);
+          if (data.team?.length) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;">${data.team.length}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Agentes</span></div>`);
+          if (data.reviews?.count) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;color:#FFD700;">★ ${data.reviews.average}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">${data.reviews.count} Reseña${data.reviews.count !== 1 ? 's' : ''}</span></div>`);
+          document.getElementById('aboutMeta').innerHTML = meta.join('');
 
           // Team section
           if (data.team && data.team.length) {
@@ -524,7 +556,7 @@
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">${esc(m.jobTitle || 'Agente')}</div>
               </div>
             `).join('');
-            document.getElementById('sectionTeam').style.display = '';
+            document.getElementById('tabTeam').style.display = '';
           }
 
           // Posts section
@@ -539,7 +571,7 @@
                 </div>
               </div>
             `).join('');
-            document.getElementById('sectionPosts').style.display = '';
+            document.getElementById('tabPosts').style.display = '';
           }
 
           // Reviews section
@@ -565,7 +597,10 @@
                 </div>
               `).join('');
             }
-            document.getElementById('sectionReviews').style.display = '';
+            document.getElementById('tabReviews').style.display = '';
+            if (data.reviews.count > 0) {
+              document.getElementById('tabReviews').innerHTML = `Reseñas <span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">${data.reviews.count}</span>`;
+            }
           }
 
           // Contact section
@@ -585,7 +620,7 @@
           }
           if (contactItems.length) {
             document.getElementById('contactInfo').innerHTML = contactItems.join('');
-            document.getElementById('sectionContact').style.display = '';
+            // Contact info populated (tab is always visible)
           }
         }
 
@@ -616,6 +651,27 @@
     function goPage(p) { loadPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
     let _inmId = slug;
+
+    // Tab switching
+    function switchTab(tab, btn) {
+      // Hide all sections
+      document.querySelectorAll('.profile-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.profile-tab').forEach(b => b.classList.remove('active'));
+      // Show target
+      const sectionMap = {
+        about: 'sectionAbout', listings: 'sectionListings', team: 'sectionTeam',
+        posts: 'sectionPosts', reviews: 'sectionReviews', contact: 'sectionContact',
+      };
+      const section = document.getElementById(sectionMap[tab]);
+      if (section) section.classList.add('active');
+      if (btn) btn.classList.add('active');
+      // Load listings on first visit to that tab
+      if (tab === 'listings' && !document.getElementById('listingsGrid').dataset.loaded) {
+        document.getElementById('listingsGrid').dataset.loaded = '1';
+        loadPage(1);
+      }
+    }
+    window.switchTab = switchTab;
 
     loadPage(1);
   </script>
