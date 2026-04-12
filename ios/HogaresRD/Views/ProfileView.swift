@@ -686,6 +686,7 @@ struct PrivacySettingsView: View {
         "priv_showOnlineStatus": true,
         "priv_shareActivity": false,
         "priv_allowAnalytics": true,
+        "priv_doNotSell": false,
     ]
     private static func loadBool(_ key: String) -> Bool {
         if UserDefaults.standard.object(forKey: key) == nil {
@@ -698,6 +699,7 @@ struct PrivacySettingsView: View {
     @State private var showOnlineStatus  = Self.loadBool("priv_showOnlineStatus")
     @State private var shareActivity     = Self.loadBool("priv_shareActivity")
     @State private var allowAnalytics    = Self.loadBool("priv_allowAnalytics")
+    @State private var doNotSell        = Self.loadBool("priv_doNotSell")
     @State private var showDeleteAlert = false
 
     var body: some View {
@@ -754,6 +756,23 @@ struct PrivacySettingsView: View {
                 }
             }
 
+            Section {
+                Toggle(isOn: $doNotSell) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No vender mis datos")
+                            .font(.subheadline).bold()
+                        Text("Opta por no compartir ni vender tu información personal a terceros (CCPA)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .tint(Color.rdRed)
+            } header: {
+                Text("Venta de datos personales")
+            } footer: {
+                Text("HogaresRD no vende datos personales. Esta opción garantiza tu derecho bajo la Ley de Privacidad del Consumidor de California (CCPA) y leyes similares.")
+                    .font(.caption2)
+            }
+
             Section("Tus datos") {
                 NavigationLink {
                     // Placeholder
@@ -801,6 +820,7 @@ struct PrivacySettingsView: View {
         .onChange(of: showOnlineStatus) { _, v in UserDefaults.standard.set(v, forKey: "priv_showOnlineStatus"); syncPrivacy("showOnlineStatus", v) }
         .onChange(of: shareActivity)    { _, v in UserDefaults.standard.set(v, forKey: "priv_shareActivity"); syncPrivacy("shareActivity", v) }
         .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics"); syncPrivacy("allowAnalytics", v) }
+        .onChange(of: doNotSell)        { _, v in UserDefaults.standard.set(v, forKey: "priv_doNotSell"); syncPrivacy("doNotSell", v) }
         .alert("¿Eliminar tu cuenta?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Eliminar permanentemente", role: .destructive) {

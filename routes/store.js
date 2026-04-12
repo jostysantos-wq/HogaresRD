@@ -96,7 +96,7 @@ async function exec(sql, params = []) {
 // ── Hydration (simplified for PostgreSQL — JSONB auto-parsed) ────────────
 
 const USER_JSON_COLS  = ['favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile', '_extra'];
-const USER_BOOL_COLS  = ['emailVerified', 'marketingOptIn', 'twoFAEnabled'];
+const USER_BOOL_COLS  = ['emailVerified', 'marketingOptIn', 'twoFAEnabled', 'doNotSell'];
 
 function hydrateUser(row) {
   if (!row) return null;
@@ -119,7 +119,7 @@ const USER_KNOWN_COLS = [
   'refToken', 'stripeCustomerId', 'inmobiliaria_id', 'inmobiliaria_name',
   'inmobiliaria_join_status', 'inmobiliaria_joined_at', 'inmobiliaria_pending_id',
   'inmobiliaria_pending_name', 'loginAttempts', 'loginLockedUntil', 'lockedUntil',
-  'jobTitle', 'notes', 'twoFAEnabled', 'biometricTokenHash',
+  'jobTitle', 'notes', 'twoFAEnabled', 'biometricTokenHash', 'doNotSell',
   'favorites', 'agency', 'join_requests', 'secretary_invites', 'subscription', 'profile',
 ];
 
@@ -301,6 +301,7 @@ async function _loadCache() {
     // Ensure cascade tables exist (idempotent)
     await exec(`
       ALTER TABLE submissions ADD COLUMN IF NOT EXISTS creator_user_id TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS "doNotSell" INTEGER DEFAULT 0;
       CREATE TABLE IF NOT EXISTS lead_queue (
         id TEXT PRIMARY KEY, inquiry_type TEXT NOT NULL, inquiry_id TEXT NOT NULL,
         listing_id TEXT NOT NULL, buyer_name TEXT, buyer_phone TEXT, buyer_email TEXT,

@@ -176,6 +176,8 @@ router.patch('/profile', userAuth, (req, res) => {
   if (showOnlineStatus !== undefined) user.showOnlineStatus = !!showOnlineStatus;
   if (shareActivity !== undefined)    user.shareActivity    = !!shareActivity;
   if (allowAnalytics !== undefined)   user.allowAnalytics   = !!allowAnalytics;
+  // CCPA / Do Not Sell — opt out of any future data sharing
+  if (req.body.doNotSell !== undefined) user.doNotSell = !!req.body.doNotSell;
   // Notification preferences — synced across platforms
   if (notif_newListings !== undefined)   user.notif_newListings   = !!notif_newListings;
   if (notif_priceDrops !== undefined)    user.notif_priceDrops    = !!notif_priceDrops;
