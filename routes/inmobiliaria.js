@@ -627,11 +627,12 @@ router.patch('/profile', userAuth, (req, res) => {
     return res.status(403).json({ error: 'Solo el dueño puede editar el perfil de empresa' });
 
   const profile = typeof user.profile === 'string' ? JSON.parse(user.profile || '{}') : (user.profile || {});
-  const { companyDescription, tagline, website, social, yearsInBusiness,
+  const { companyDescription, tagline, coverImage, website, social, yearsInBusiness,
           officeAddress, officeHours, certifications } = req.body;
 
   if (companyDescription !== undefined) profile.companyDescription = String(companyDescription).slice(0, 5000);
   if (tagline !== undefined)            profile.tagline = String(tagline).slice(0, 200);
+  if (coverImage !== undefined)         profile.coverImage = String(coverImage).slice(0, 500);
   if (website !== undefined)            profile.website = String(website).slice(0, 200);
   if (social !== undefined)             profile.social = {
     facebook:  String(social.facebook  || '').slice(0, 200),

@@ -79,7 +79,9 @@
     .btn-nav-primary:hover { background: var(--accent-hover); }
 
     /* HERO */
-    .agency-hero { background: linear-gradient(135deg, #001840 0%, #002D62 55%, #003d88 100%); padding: 4rem 2rem 3.5rem; position: relative; overflow: hidden; }
+    .agency-hero { background: linear-gradient(135deg, #001840 0%, #002D62 55%, #003d88 100%); padding: 4rem 2rem 3.5rem; position: relative; overflow: hidden; transition: padding 0.3s; }
+    .agency-hero.has-cover { padding: 6rem 2rem 5rem; background-size: cover; background-position: center; }
+    .agency-hero.has-cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,20,60,0.85) 0%, rgba(0,20,60,0.4) 50%, rgba(0,20,60,0.2) 100%); }
     .agency-hero-shapes { position: absolute; inset: 0; pointer-events: none; }
     .ah-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
     .ah-shape-1 { width: 400px; height: 400px; top: -180px; right: -80px; }
@@ -513,7 +515,13 @@
             `${data.total} propiedad${data.total !== 1 ? 'es' : ''} listada${data.total !== 1 ? 's' : ''}` +
             (p.yearsInBusiness ? ` · ${p.yearsInBusiness} años de experiencia` : '');
           document.title = `${data.name} — HogaresRD`;
-          document.getElementById('agencyHero').style.display = '';
+          const heroEl = document.getElementById('agencyHero');
+          heroEl.style.display = '';
+          // Apply cover/banner image if set
+          if (p.coverImage) {
+            heroEl.style.backgroundImage = `url('${p.coverImage}')`;
+            heroEl.classList.add('has-cover');
+          }
           document.getElementById('profileTabs').style.display = '';
           document.getElementById('resultsBar').style.display  = '';
 
@@ -557,6 +565,7 @@
               </div>
             `).join('');
             document.getElementById('tabTeam').style.display = '';
+            document.getElementById('tabTeam').innerHTML = `Agentes <span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">${data.team.length}</span>`;
           }
 
           // Posts section

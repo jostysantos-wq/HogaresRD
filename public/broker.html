@@ -2263,6 +2263,12 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:1.5rem;">
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:.5rem;">Imagen de Portada</h3>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem;">Sube una foto de tu equipo o tu oficina. Se mostrará como banner en tu perfil público. Recomendado: 1200×400px o más ancha.</p>
+          <input type="url" id="empCoverImage" placeholder="URL de la imagen de portada" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.85rem;">
+          <img id="empCoverPreview" style="width:100%;aspect-ratio:3/1;object-fit:cover;border-radius:8px;margin-top:.5rem;display:none;" onerror="this.style.display='none'">
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
           <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Redes Sociales</h3>
           <div style="display:flex;flex-direction:column;gap:.75rem;">
             <div><label style="font-size:.78rem;font-weight:600;">Facebook</label><input type="url" id="empFacebook" placeholder="https://facebook.com/..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
@@ -4989,6 +4995,12 @@
       document.getElementById('empWebsite').value = p.website || '';
       document.getElementById('empAddress').value = p.officeAddress || '';
       document.getElementById('empHours').value = p.officeHours || '';
+      document.getElementById('empCoverImage').value = p.coverImage || '';
+      if (p.coverImage) { const prev = document.getElementById('empCoverPreview'); prev.src = p.coverImage; prev.style.display = ''; }
+      document.getElementById('empCoverImage').addEventListener('input', function() {
+        const prev = document.getElementById('empCoverPreview');
+        if (this.value) { prev.src = this.value; prev.style.display = ''; } else { prev.style.display = 'none'; }
+      });
       document.getElementById('empFacebook').value = p.social?.facebook || '';
       document.getElementById('empInstagram').value = p.social?.instagram || '';
       document.getElementById('empLinkedin').value = p.social?.linkedin || '';
@@ -5004,6 +5016,7 @@
         body: {
           tagline: document.getElementById('empTagline').value,
           companyDescription: document.getElementById('empDescription').value,
+          coverImage: document.getElementById('empCoverImage').value,
           yearsInBusiness: document.getElementById('empYears').value,
           website: document.getElementById('empWebsite').value,
           officeAddress: document.getElementById('empAddress').value,
