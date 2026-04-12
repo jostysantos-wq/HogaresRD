@@ -191,9 +191,15 @@ router.get('/', requireLogin, (req, res) => {
   if (user.role === 'user') {
     convs = store.getConversationsByClient(user.sub);
   } else if (PRO_ROLES.includes(user.role)) {
+    // Pro users see: conversations where they're the broker + where they're the client
     convs = store.getConversationsForBroker(user.sub);
+    // Also include conversations where this pro user is the CLIENT
+    // (e.g. a broker who inquired about another agent's listing)
+    const clientConvs = store.getConversationsByClient(user.sub);
+    for (const cc of clientConvs) {
+      if (!convs.some(x => x.id === cc.id)) convs.push(cc);
+    }
     // Also include UNCLAIMED org conversations (inmobiliariaId matches, brokerId still null)
-    // Once a conversation is claimed by any agent, only that agent sees it
     const fullUser = store.getUserById(user.sub);
     const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
       ? fullUser.id : fullUser?.inmobiliaria_id;
@@ -253,6 +259,11 @@ router.get('/unread', requireLogin, (req, res) => {
 
   if (PRO_ROLES.includes(user.role)) {
     convs = store.getConversationsForBroker(user.sub);
+    // Include conversations where this pro user is the client
+    const clientConvs = store.getConversationsByClient(user.sub);
+    for (const cc of clientConvs) {
+      if (!convs.some(x => x.id === cc.id)) convs.push(cc);
+    }
     // Include unclaimed org conversations in unread count
     const fullUser = store.getUserById(user.sub);
     const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
@@ -263,7 +274,11 @@ router.get('/unread', requireLogin, (req, res) => {
       );
       convs = convs.concat(orgConvs);
     }
-    const count = convs.reduce((n, c) => n + (c.unreadBroker || 0), 0);
+    // Sum both broker and client unreads — pro users can be on either side
+    const count = convs.reduce((n, c) => {
+      const isClient = c.clientId === user.sub;
+      return n + (isClient ? (c.unreadClient || 0) : (c.unreadBroker || 0));
+    }, 0);
     return res.json({ count });
   }
 
