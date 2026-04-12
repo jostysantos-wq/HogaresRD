@@ -79,9 +79,11 @@ struct TaskItem: Decodable, Identifiable {
     }
 
     var isOverdue: Bool {
-        guard let due = dueDate, status != "completada" else { return false }
+        guard let due = dueDate, status != "completada", status != "no_aplica" else { return false }
         return due < ISO8601DateFormatter().string(from: Date())
     }
+
+    var isNotApplicable: Bool { status == "no_aplica" }
 
     /// True when this task was submitted by the assignee and is waiting
     /// for the approver to review it.
@@ -115,6 +117,7 @@ struct TaskItem: Decodable, Identifiable {
         case "en_progreso":    return "En Progreso"
         case "pending_review": return "Pendiente Revisión"
         case "completada":     return "Completada"
+        case "no_aplica":      return "No Aplica"
         default:               return "Pendiente"
         }
     }

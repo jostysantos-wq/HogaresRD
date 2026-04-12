@@ -479,10 +479,12 @@ class APIService: ObservableObject {
     }
 
     /// Refresh user profile from server — updates emailVerified, subscription status, etc.
+    /// Always bypasses cache to ensure fresh auth state.
     func refreshUser() async {
         guard let t = token else { return }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/me")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.cachePolicy = .reloadIgnoringLocalCacheData
         guard let (data, resp) = try? await session.data(for: req),
               let http = resp as? HTTPURLResponse, http.statusCode == 200,
               let user = try? decoder.decode(User.self, from: data) else { return }
@@ -1801,6 +1803,18 @@ class APIService: ObservableObject {
         let req = try authedRequest(url, method: "POST", body: json)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error rechazando tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    /// Mark a task as not applicable. Either the assignee or the approver
+    /// can dismiss tasks that don't apply to the situation.
+    func markTaskNotApplicable(id: String, note: String = "") async throws -> TaskItem {
+        let url = URL(string: "\(apiBase)/api/tasks/\(id)/not-applicable")!
+        let body: [String: Any] = ["note": note]
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(url, method: "POST", body: json)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error marcando tarea como no aplica")
         return try decoder.decode(TaskItem.self, from: data)
     }
 

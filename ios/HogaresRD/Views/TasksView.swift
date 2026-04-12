@@ -9,11 +9,13 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas, 5=Vencidas
+    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas, 5=Vencidas, 6=No Aplica
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
 
     private var currentUserId: String { api.currentUser?.id ?? "" }
+
+    private static let finishedStatuses: Set<String> = ["completada", "no_aplica"]
 
     private var filteredTasks: [TaskItem] {
         switch filter {
@@ -22,16 +24,17 @@ struct TasksView: View {
         case 3:  return tasks.filter { $0.status == "pending_review" }
         case 4:  return tasks.filter { $0.status == "completada" }
         case 5:  return tasks.filter { $0.isOverdue }
+        case 6:  return tasks.filter { $0.status == "no_aplica" }
         default: return tasks
         }
     }
 
     private var activeTasks: [TaskItem] {
-        filteredTasks.filter { $0.status != "completada" }
+        filteredTasks.filter { !Self.finishedStatuses.contains($0.status) }
     }
 
     private var completedTasks: [TaskItem] {
-        filteredTasks.filter { $0.status == "completada" }
+        filteredTasks.filter { Self.finishedStatuses.contains($0.status) }
     }
 
     private var canCreate: Bool {
@@ -45,6 +48,7 @@ struct TasksView: View {
     private var statReview: Int { tasks.filter { $0.status == "pending_review" && $0.approverId == currentUserId }.count }
     private var statDone: Int { tasks.filter { $0.status == "completada" }.count }
     private var statOverdue: Int { tasks.filter { $0.isOverdue }.count }
+    private var statNA: Int { tasks.filter { $0.status == "no_aplica" }.count }
 
     var body: some View {
         Group {
@@ -72,6 +76,9 @@ struct TasksView: View {
                             }
                             statPill("Completadas", value: statDone, color: .rdGreen)
                             statPill("Vencidas", value: statOverdue, color: .rdRed)
+                            if statNA > 0 {
+                                statPill("No Aplica", value: statNA, color: .gray)
+                            }
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 10)
@@ -86,6 +93,7 @@ struct TasksView: View {
                             filterChip("Por Revisar", tag: 3)
                             filterChip("Completadas", tag: 4)
                             filterChip("Vencidas", tag: 5)
+                            filterChip("No Aplica", tag: 6)
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 8)
@@ -111,12 +119,6 @@ struct TasksView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .swipeActions(edge: .leading) {
-                                            // Only show the swipe-to-complete
-                                            // shortcut when the CURRENT user is
-                                            // the assignee AND the task is
-                                            // still actionable. Approvers see
-                                            // review buttons in the detail sheet
-                                            // instead.
                                             if task.assignedTo == currentUserId
                                                 && (task.status == "pendiente" || task.status == "en_progreso") {
                                                 Button {
@@ -128,11 +130,23 @@ struct TasksView: View {
                                                 .tint(Color.rdGreen)
                                             }
                                         }
+                                        .swipeActions(edge: .trailing) {
+                                            if task.assignedTo == currentUserId
+                                                && task.status != "completada"
+                                                && task.status != "no_aplica" {
+                                                Button {
+                                                    Task { await markTaskNA(task) }
+                                                } label: {
+                                                    Label("No Aplica", systemImage: "minus.circle")
+                                                }
+                                                .tint(.gray)
+                                            }
+                                        }
                                     }
                                 }
                             }
                             if !completedTasks.isEmpty {
-                                Section("Completadas (\(completedTasks.count))") {
+                                Section("Finalizadas (\(completedTasks.count))") {
                                     ForEach(completedTasks) { task in
                                         Button { selectedTask = task } label: {
                                             TaskRow(task: task, currentUserId: currentUserId)
@@ -222,7 +236,16 @@ struct TasksView: View {
     private func completeTask(_ task: TaskItem) async {
         do {
             _ = try await api.completeTask(id: task.id)
-            await load() // Refresh entire list for correct stats
+            await load()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+    }
+
+    private func markTaskNA(_ task: TaskItem) async {
+        do {
+            _ = try await api.markTaskNotApplicable(id: task.id)
+            await load()
         } catch {
             errorMsg = error.localizedDescription
         }
@@ -248,6 +271,7 @@ struct TaskRow: View {
         case "en_progreso":    return Color.rdBlue
         case "pending_review": return .purple
         case "completada":     return Color.rdGreen
+        case "no_aplica":      return .gray
         default:               return .orange
         }
     }
@@ -306,8 +330,8 @@ struct TaskRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.subheadline).bold()
-                    .strikethrough(task.status == "completada")
-                    .foregroundStyle(task.status == "completada" ? .secondary : .primary)
+                    .strikethrough(task.status == "completada" || task.status == "no_aplica")
+                    .foregroundStyle(task.status == "completada" || task.status == "no_aplica" ? .secondary : .primary)
                     .lineLimit(2)
 
                 // Listing title (when enriched) — helps the user spot
@@ -403,7 +427,7 @@ struct TaskRow: View {
             }
         }
         .padding(.vertical, 4)
-        .opacity(task.status == "completada" ? 0.6 : 1)
+        .opacity(task.status == "completada" || task.status == "no_aplica" ? 0.6 : 1)
     }
 }
 
@@ -425,6 +449,9 @@ struct TaskDetailSheet: View {
     @State private var rejectNote = ""
     @State private var reviewing = false
     @State private var showReassignSheet = false
+    @State private var showNASheet = false
+    @State private var naNote = ""
+    @State private var markingNA = false
 
     // The current user, for action-gating
     private var currentUserId: String { api.currentUser?.id ?? "" }
@@ -813,6 +840,27 @@ struct TaskDetailSheet: View {
                                 .multilineTextAlignment(.center)
                         }
                     }
+
+                    // ── "No Aplica" button ──
+                    // Shown for assignee or approver when the task is still
+                    // active — lets them dismiss tasks that aren't relevant.
+                    if (isAssignee || isApprover)
+                        && task.status != "completada"
+                        && task.status != "no_aplica" {
+                        Button { showNASheet = true } label: {
+                            HStack {
+                                Image(systemName: "minus.circle")
+                                Text("No Aplica")
+                                    .font(.subheadline.bold())
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(.secondarySystemFill),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
@@ -845,6 +893,42 @@ struct TaskDetailSheet: View {
                     dismiss()
                 })
                 .environmentObject(api)
+            }
+            .sheet(isPresented: $showNASheet) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            Text("¿Estás seguro de que esta tarea no aplica a tu situación?")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Section("Motivo (opcional)") {
+                            TextField("Explica por qué no aplica...", text: $naNote, axis: .vertical)
+                                .lineLimit(3...6)
+                        }
+                        Section {
+                            Button {
+                                Task { await markNotApplicable() }
+                            } label: {
+                                HStack {
+                                    if markingNA { ProgressView() }
+                                    Text("Confirmar — No Aplica")
+                                        .font(.subheadline.bold())
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .disabled(markingNA)
+                        }
+                    }
+                    .navigationTitle("No Aplica")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancelar") { showNASheet = false }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
             }
         }
     }
@@ -930,6 +1014,20 @@ struct TaskDetailSheet: View {
             errorMsg = error.localizedDescription
         }
         reviewing = false
+    }
+
+    private func markNotApplicable() async {
+        markingNA = true
+        errorMsg = nil
+        do {
+            _ = try await api.markTaskNotApplicable(id: task.id, note: naNote)
+            showNASheet = false
+            onComplete()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        markingNA = false
     }
 
     private func reject() async {

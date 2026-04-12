@@ -36,9 +36,10 @@ const uuid        = () => crypto.randomUUID();
 const PRO_ROLES   = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 const BASE_URL    = process.env.BASE_URL || 'https://hogaresrd.com';
 
-// All permitted status values. `pending_review` is new — set when the
+// All permitted status values. `pending_review` is set when the
 // assignee submits a task that requires a separate approver sign-off.
-const VALID_STATUSES = ['pendiente', 'en_progreso', 'pending_review', 'completada'];
+// `no_aplica` lets the assignee dismiss a task that doesn't apply.
+const VALID_STATUSES = ['pendiente', 'en_progreso', 'pending_review', 'completada', 'no_aplica'];
 
 // Enrich a task object with the listing's cover image and title so
 // iOS / web clients can render a thumbnail next to the row. The store
@@ -146,7 +147,7 @@ router.get('/badge-count', userAuth, (req, res) => {
   for (const row of all) {
     const t = store.getTaskById(row.id);
     if (!t) continue;
-    if (t.status === 'completada') continue;
+    if (t.status === 'completada' || t.status === 'no_aplica') continue;
     const approverId = resolveApproverId(t);
     // Task assigned to me and still actionable
     if (t.assigned_to === uid && (t.status === 'pendiente' || t.status === 'en_progreso')) {
@@ -403,6 +404,44 @@ router.post('/:id/reject', userAuth, (req, res) => {
     url:   '/broker',
   });
 
+  res.json(enrichTask(task));
+});
+
+// ── POST /api/tasks/:id/not-applicable — mark a task as not applicable ──────
+// Either the assignee or the approver can mark a task as N/A.
+router.post('/:id/not-applicable', userAuth, (req, res) => {
+  const task = store.getTaskById(req.params.id);
+  if (!task) return res.status(404).json({ error: 'Tarea no encontrada' });
+
+  const isAssignee = task.assigned_to === req.user.sub;
+  const approverId = resolveApproverId(task);
+  const isApprover = approverId && approverId === req.user.sub;
+  if (!isAssignee && !isApprover)
+    return res.status(403).json({ error: 'Solo el asignado o el aprobador pueden marcar como no aplica' });
+  if (task.status === 'completada' || task.status === 'no_aplica')
+    return res.status(400).json({ error: 'La tarea ya fue finalizada' });
+
+  const now  = new Date().toISOString();
+  const note = (req.body?.note || '').toString().trim().slice(0, 1000);
+  task.status          = 'no_aplica';
+  task.approval_status = 'not_applicable';
+  task.review_notes    = note || null;
+  task.reviewed_by     = req.user.sub;
+  task.reviewed_at     = now;
+  task.completed_at    = now;
+  task.updated_at      = now;
+  store.saveTask(task);
+
+  // Notify the other party
+  const notifyId = isAssignee ? (approverId || task.assigned_by) : task.assigned_to;
+  if (notifyId && notifyId !== req.user.sub && notifyId !== 'system') {
+    pushNotify(notifyId, {
+      type:  'task_not_applicable',
+      title: 'Tarea marcada como no aplica',
+      body:  task.title.slice(0, 80),
+      url:   '/broker',
+    });
+  }
   res.json(enrichTask(task));
 });
 

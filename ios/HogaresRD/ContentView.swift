@@ -227,6 +227,9 @@ struct ContentView: View {
             guard !popupDismissed else { return }
             // Re-check — refreshUser() may have updated the field to true
             guard api.currentUser?.emailVerified != true else { return }
+            // One final server check to avoid false positives from stale cache
+            await api.refreshUser()
+            guard api.currentUser?.emailVerified != true else { return }
             withAnimation(.easeInOut(duration: 0.25)) { showPopup = true }
         }
     }
