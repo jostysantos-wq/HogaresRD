@@ -725,24 +725,48 @@ router.get('/:inmId/reviews', (req, res) => {
   res.json({ reviews, average: avg ? parseFloat(avg) : null, count: reviews.length });
 });
 
-// Public: submit a review
-router.post('/:inmId/reviews', reviewLimiter, (req, res) => {
-  const { reviewer_name, reviewer_email, rating, comment } = req.body;
-  if (!reviewer_name || !rating) return res.status(400).json({ error: 'Nombre y calificación requeridos' });
+// Submit a review — only authenticated users with a completed purchase
+router.post('/:inmId/reviews', reviewLimiter, userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  // Verify this user has a completed application with this inmobiliaria
+  const apps = store.getApplications().filter(a =>
+    a.status === 'completado' &&
+    a.inmobiliaria_id === req.params.inmId &&
+    (a.client?.user_id === user.id || (a.client?.email && a.client.email.toLowerCase() === user.email.toLowerCase()))
+  );
+  if (!apps.length) {
+    return res.status(403).json({
+      error: 'Solo clientes con una compra completada pueden dejar reseñas.',
+      code: 'no_completed_purchase',
+    });
+  }
+
+  // Prevent duplicate reviews
+  const existing = store.getInmobReviews(req.params.inmId).find(r =>
+    r.reviewer_email && r.reviewer_email.toLowerCase() === user.email.toLowerCase()
+  );
+  if (existing) {
+    return res.status(400).json({ error: 'Ya dejaste una reseña para esta inmobiliaria.' });
+  }
+
+  const { rating, comment } = req.body;
+  if (!rating) return res.status(400).json({ error: 'Calificación requerida' });
   const r = Math.max(1, Math.min(5, Number(rating) || 0));
 
   const review = {
     id:               'irev_' + crypto.randomBytes(8).toString('hex'),
     inmobiliaria_id:  req.params.inmId,
-    reviewer_name:    String(reviewer_name).slice(0, 100),
-    reviewer_email:   String(reviewer_email || '').slice(0, 120),
+    reviewer_name:    user.name,
+    reviewer_email:   user.email,
     rating:           r,
     comment:          String(comment || '').slice(0, 1000),
     status:           'pending',
     created_at:       new Date().toISOString(),
   };
   store.saveInmobReview(review);
-  res.status(201).json({ success: true, message: 'Tu reseña ha sido enviada y será revisada pronto.' });
+  res.status(201).json({ success: true, message: 'Tu reseña ha sido enviada y será revisada por la inmobiliaria.' });
 });
 
 // Authenticated: manage reviews (approve/reject)
