@@ -301,27 +301,11 @@
     <section id="sectionReviews" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
         <h2 style="font-size:1.3rem;font-weight:800;">Reseñas de Clientes</h2>
-        <button onclick="openReviewForm()" style="background:var(--accent);color:#fff;border:none;padding:0.5rem 1.25rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">Escribir Reseña</button>
+        <span style="font-size:0.78rem;color:var(--text-muted);">✅ Solo compradores verificados</span>
       </div>
       <div id="reviewSummary" style="margin-bottom:1.25rem;"></div>
       <div id="reviewsList"></div>
-      <!-- Review form -->
-      <div id="reviewForm" style="display:none;margin-top:1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
-        <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Deja tu reseña</h3>
-        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">✅ Solo clientes con una compra completada pueden dejar reseñas verificadas.</p>
-        <div style="margin-bottom:1rem;">
-          <label style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;display:block;">Calificación *</label>
-          <div id="starPicker" style="font-size:1.5rem;cursor:pointer;">
-            <span onclick="pickStar(1)">☆</span><span onclick="pickStar(2)">☆</span><span onclick="pickStar(3)">☆</span><span onclick="pickStar(4)">☆</span><span onclick="pickStar(5)">☆</span>
-          </div>
-        </div>
-        <textarea id="revComment" placeholder="Comparte tu experiencia..." style="width:100%;padding:0.6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);min-height:80px;resize:vertical;"></textarea>
-        <div style="display:flex;gap:0.5rem;margin-top:1rem;">
-          <button onclick="submitReview()" style="background:var(--accent);color:#fff;border:none;padding:0.6rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;">Enviar Reseña</button>
-          <button onclick="document.getElementById('reviewForm').style.display='none'" style="background:none;border:1px solid var(--border);padding:0.6rem 1.5rem;border-radius:8px;cursor:pointer;color:var(--text-muted);">Cancelar</button>
-        </div>
-        <p id="reviewMsg" style="display:none;margin-top:0.75rem;font-size:0.85rem;font-weight:600;"></p>
-      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-top:1rem;">Las reseñas son enviadas por invitación a compradores verificados después de completar una compra.</p>
     </section>
 
     <!-- LISTINGS PORTFOLIO -->
@@ -631,52 +615,7 @@
 
     function goPage(p) { loadPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-    // Reviews
     let _inmId = slug;
-    let _selectedRating = 0;
-
-    window.openReviewForm = function() {
-      const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
-      if (!token) {
-        alert('Debes iniciar sesión para dejar una reseña. Solo clientes con compras completadas pueden opinar.');
-        window.location.href = '/login';
-        return;
-      }
-      document.getElementById('reviewForm').style.display = '';
-    };
-
-    window.pickStar = function(n) {
-      _selectedRating = n;
-      const spans = document.querySelectorAll('#starPicker span');
-      spans.forEach((s, i) => { s.textContent = i < n ? '★' : '☆'; s.style.color = i < n ? '#FFD700' : 'var(--text-muted)'; });
-    };
-
-    window.submitReview = async function() {
-      const comment = document.getElementById('revComment').value.trim();
-      const msg = document.getElementById('reviewMsg');
-      if (!_selectedRating) { msg.textContent = 'Selecciona una calificación.'; msg.style.color = 'red'; msg.style.display = ''; return; }
-      const token = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
-      try {
-        const r = await fetch(`/api/inmobiliaria/${encodeURIComponent(_inmId)}/reviews`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          credentials: 'include',
-          body: JSON.stringify({ rating: _selectedRating, comment }),
-        });
-        const d = await r.json();
-        if (r.ok) {
-          msg.textContent = '✅ ' + (d.message || 'Reseña enviada');
-          msg.style.color = 'green';
-        } else if (d.code === 'no_completed_purchase') {
-          msg.textContent = '⚠️ Solo clientes con una compra completada pueden dejar reseñas.';
-          msg.style.color = '#b45309';
-        } else {
-          msg.textContent = d.error || 'Error';
-          msg.style.color = 'red';
-        }
-      } catch { msg.textContent = 'Error de conexión'; msg.style.color = 'red'; }
-      msg.style.display = '';
-    };
 
     loadPage(1);
   </script>

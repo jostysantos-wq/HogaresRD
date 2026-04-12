@@ -4969,6 +4969,15 @@
     window.open(img.src, '_blank');
   };
 
+  // ── Review Invitation ───────────────────────────────────────
+  window.sendReviewInvite = async function(appId) {
+    if (!confirm('¿Enviar invitación de reseña al cliente por email?')) return;
+    try {
+      const r = await API('/api/inmobiliaria/reviews/invite', { method: 'POST', body: { application_id: appId } });
+      alert('✅ ' + (r.message || 'Invitación enviada'));
+    } catch (e) { alert(e.message || 'Error al enviar'); }
+  };
+
   // ── Company Profile Page ────────────────────────────────────
   async function loadEmpresaPage() {
     try {

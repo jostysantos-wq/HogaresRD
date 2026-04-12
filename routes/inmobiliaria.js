@@ -725,48 +725,122 @@ router.get('/:inmId/reviews', (req, res) => {
   res.json({ reviews, average: avg ? parseFloat(avg) : null, count: reviews.length });
 });
 
-// Submit a review — only authenticated users with a completed purchase
-router.post('/:inmId/reviews', reviewLimiter, userAuth, (req, res) => {
-  const user = store.getUserById(req.user.sub);
-  if (!user) return res.status(401).json({ error: 'No autenticado' });
+// Submit a review — via email invitation token OR authenticated with completed purchase
+router.post('/:inmId/reviews', reviewLimiter, (req, res) => {
+  const { rating, comment, token, app: appId, reviewer_name } = req.body;
+  if (!rating) return res.status(400).json({ error: 'Calificación requerida' });
+  const r = Math.max(1, Math.min(5, Number(rating) || 0));
 
-  // Verify this user has a completed application with this inmobiliaria
-  const apps = store.getApplications().filter(a =>
-    a.status === 'completado' &&
-    a.inmobiliaria_id === req.params.inmId &&
-    (a.client?.user_id === user.id || (a.client?.email && a.client.email.toLowerCase() === user.email.toLowerCase()))
-  );
-  if (!apps.length) {
-    return res.status(403).json({
-      error: 'Solo clientes con una compra completada pueden dejar reseñas.',
-      code: 'no_completed_purchase',
-    });
+  let name = '';
+  let email = '';
+
+  // Path 1: Token-based review (from email invitation)
+  if (token && appId) {
+    const application = store.getApplicationById(appId);
+    if (!application) return res.status(404).json({ error: 'Aplicación no encontrada' });
+    if (application.review_token !== token) return res.status(403).json({ error: 'Enlace de reseña inválido o ya utilizado.' });
+    if (application.inmobiliaria_id !== req.params.inmId) return res.status(403).json({ error: 'Enlace no corresponde a esta inmobiliaria.' });
+    if (application.status !== 'completado') return res.status(400).json({ error: 'La compra no está completada.' });
+
+    name = application.client?.name || reviewer_name || 'Cliente';
+    email = application.client?.email || '';
+
+    // Invalidate the token (single use)
+    application.review_token = null;
+    application.review_submitted_at = new Date().toISOString();
+    store.saveApplication(application);
+  }
+  // Path 2: Authenticated user with completed purchase
+  else {
+    const { userAuth } = require('./auth');
+    // Manual auth check since middleware can't be conditional
+    const cookieToken = req.cookies?.hrdt;
+    const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    const jwt = cookieToken || headerToken;
+    if (!jwt) return res.status(401).json({ error: 'Inicia sesión o usa el enlace de invitación para dejar una reseña.' });
+
+    let payload;
+    try { const { verifyJWT } = require('./auth'); payload = verifyJWT(jwt); } catch { return res.status(401).json({ error: 'Sesión expirada' }); }
+
+    const user = store.getUserById(payload.sub);
+    if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+    const apps = store.getApplications().filter(a =>
+      a.status === 'completado' && a.inmobiliaria_id === req.params.inmId &&
+      (a.client?.user_id === user.id || (a.client?.email && a.client.email.toLowerCase() === user.email.toLowerCase()))
+    );
+    if (!apps.length) return res.status(403).json({ error: 'Solo clientes con una compra completada pueden dejar reseñas.', code: 'no_completed_purchase' });
+
+    name = user.name;
+    email = user.email;
   }
 
   // Prevent duplicate reviews
-  const existing = store.getInmobReviews(req.params.inmId).find(r =>
-    r.reviewer_email && r.reviewer_email.toLowerCase() === user.email.toLowerCase()
-  );
-  if (existing) {
-    return res.status(400).json({ error: 'Ya dejaste una reseña para esta inmobiliaria.' });
+  if (email) {
+    const existing = store.getInmobReviews(req.params.inmId).find(r =>
+      r.reviewer_email && r.reviewer_email.toLowerCase() === email.toLowerCase()
+    );
+    if (existing) return res.status(400).json({ error: 'Ya dejaste una reseña para esta inmobiliaria.' });
   }
-
-  const { rating, comment } = req.body;
-  if (!rating) return res.status(400).json({ error: 'Calificación requerida' });
-  const r = Math.max(1, Math.min(5, Number(rating) || 0));
 
   const review = {
     id:               'irev_' + crypto.randomBytes(8).toString('hex'),
     inmobiliaria_id:  req.params.inmId,
-    reviewer_name:    user.name,
-    reviewer_email:   user.email,
+    reviewer_name:    String(name).slice(0, 100),
+    reviewer_email:   email,
     rating:           r,
     comment:          String(comment || '').slice(0, 1000),
     status:           'pending',
     created_at:       new Date().toISOString(),
   };
   store.saveInmobReview(review);
-  res.status(201).json({ success: true, message: 'Tu reseña ha sido enviada y será revisada por la inmobiliaria.' });
+  res.status(201).json({ success: true, message: 'Tu reseña ha sido enviada y será revisada por la inmobiliaria. ¡Gracias!' });
+});
+
+// Send review invitation email to a client with a completed purchase
+router.post('/reviews/invite', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user || !['inmobiliaria', 'constructora'].includes(user.role))
+    return res.status(403).json({ error: 'Solo inmobiliarias pueden enviar invitaciones de reseña' });
+
+  const { application_id } = req.body;
+  if (!application_id) return res.status(400).json({ error: 'ID de aplicación requerido' });
+
+  const app = store.getApplicationById(application_id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+  if (app.inmobiliaria_id !== user.id) return res.status(403).json({ error: 'No autorizado' });
+  if (app.status !== 'completado') return res.status(400).json({ error: 'Solo se pueden solicitar reseñas de compras completadas' });
+  if (!app.client?.email) return res.status(400).json({ error: 'El cliente no tiene email registrado' });
+
+  // Generate a unique review token
+  const reviewToken = crypto.randomBytes(16).toString('hex');
+  const reviewUrl = `${BASE_URL}/resena/${user.id}?token=${reviewToken}&app=${application_id}`;
+
+  // Store the token on the application for verification
+  if (!app._extra) app._extra = {};
+  app.review_token = reviewToken;
+  app.review_invited_at = new Date().toISOString();
+  store.saveApplication(app);
+
+  // Send email
+  send(app.client.email, `${user.name} te invita a dejar una reseña — HogaresRD`, `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+      <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
+        <h2 style="margin:0;">⭐ ¿Cómo fue tu experiencia?</h2>
+      </div>
+      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
+        <p>Hola <strong>${app.client.name || ''}</strong>,</p>
+        <p><strong>${user.name}</strong> te invita a compartir tu experiencia sobre la compra de <strong>${app.listing_title || 'tu propiedad'}</strong>.</p>
+        <p>Tu opinión ayuda a otros compradores a tomar mejores decisiones.</p>
+        <div style="text-align:center;margin:1.5rem 0;">
+          <a href="${reviewUrl}" style="display:inline-block;background:#0038A8;color:#fff;padding:0.8rem 2rem;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;">Dejar mi reseña →</a>
+        </div>
+        <p style="font-size:0.85rem;color:#666;">Este enlace es personal y de uso único.</p>
+      </div>
+    </div>
+  `);
+
+  res.json({ success: true, message: `Invitación enviada a ${app.client.email}` });
 });
 
 // Authenticated: manage reviews (approve/reject)

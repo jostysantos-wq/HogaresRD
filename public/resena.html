@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dejar Reseña — HogaresRD</title>
+  <link rel="stylesheet" href="/css/core.css">
+  <style>
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .review-card { max-width: 480px; width: 100%; margin: 2rem; background: var(--bg-card, #fff); border: 1px solid var(--border, #e0e0e0); border-radius: 16px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+    .review-card h1 { font-size: 1.5rem; margin-bottom: 0.5rem; text-align: center; }
+    .review-card .subtitle { text-align: center; color: var(--text-muted, #666); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .stars { text-align: center; font-size: 2.5rem; cursor: pointer; margin: 1rem 0; user-select: none; }
+    .stars span { transition: color 0.15s; }
+    .stars span:hover, .stars span.active { color: #FFD700; }
+    textarea { width: 100%; padding: 0.8rem; border: 1.5px solid var(--border, #ddd); border-radius: 10px; background: var(--bg, #f8f9fa); color: var(--text); font-size: 0.95rem; min-height: 100px; resize: vertical; margin-bottom: 1rem; }
+    .submit-btn { width: 100%; padding: 0.9rem; background: #0038A8; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { text-align: center; margin-top: 1rem; font-weight: 600; font-size: 0.9rem; }
+    .success-view { text-align: center; padding: 2rem 0; }
+    .success-view .icon { font-size: 4rem; margin-bottom: 1rem; }
+    .verified-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #dcfce7; color: #166534; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin: 0 auto 1rem; }
+  </style>
+</head>
+<body>
+  <div class="review-card" id="formView">
+    <div style="text-align:center;margin-bottom:1rem;">
+      <a href="/home" style="text-decoration:none;font-size:1.3rem;font-weight:800;color:var(--text);">Hogares<span style="color:#0038A8;">RD</span></a>
+    </div>
+    <h1>⭐ Deja tu reseña</h1>
+    <p class="subtitle" id="reviewSubtitle">Comparte tu experiencia de compra</p>
+    <div class="verified-badge">✅ Compra verificada</div>
+
+    <div class="stars" id="starPicker">
+      <span onclick="pick(1)">☆</span>
+      <span onclick="pick(2)">☆</span>
+      <span onclick="pick(3)">☆</span>
+      <span onclick="pick(4)">☆</span>
+      <span onclick="pick(5)">☆</span>
+    </div>
+
+    <textarea id="comment" placeholder="¿Cómo fue tu experiencia? ¿Recomendarías a esta inmobiliaria?"></textarea>
+
+    <button class="submit-btn" id="submitBtn" onclick="submit()">Enviar Reseña</button>
+    <p class="msg" id="msg" style="display:none;"></p>
+  </div>
+
+  <div class="review-card" id="successView" style="display:none;">
+    <div class="success-view">
+      <div class="icon">🎉</div>
+      <h1>¡Gracias por tu reseña!</h1>
+      <p class="subtitle">Tu opinión ayuda a otros compradores a tomar mejores decisiones.</p>
+      <a href="/home" style="display:inline-block;margin-top:1rem;color:#0038A8;font-weight:700;text-decoration:none;">Volver a HogaresRD →</a>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const appId = params.get('app');
+    const inmId = location.pathname.split('/').pop();
+    let rating = 0;
+
+    function pick(n) {
+      rating = n;
+      document.querySelectorAll('#starPicker span').forEach((s, i) => {
+        s.textContent = i < n ? '★' : '☆';
+        s.className = i < n ? 'active' : '';
+      });
+    }
+
+    async function submit() {
+      if (!rating) { showMsg('Selecciona una calificación', 'red'); return; }
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.textContent = 'Enviando...';
+
+      try {
+        const body = { rating, comment: document.getElementById('comment').value.trim() };
+        if (token) { body.token = token; body.app = appId; }
+        const headers = { 'Content-Type': 'application/json' };
+        // If user is logged in, also send auth header
+        const jwt = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+        if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+
+        const r = await fetch(`/api/inmobiliaria/${encodeURIComponent(inmId)}/reviews`, {
+          method: 'POST', headers, credentials: 'include', body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (r.ok) {
+          document.getElementById('formView').style.display = 'none';
+          document.getElementById('successView').style.display = '';
+        } else {
+          showMsg(d.error || 'Error', 'red');
+          btn.disabled = false; btn.textContent = 'Enviar Reseña';
+        }
+      } catch {
+        showMsg('Error de conexión', 'red');
+        btn.disabled = false; btn.textContent = 'Enviar Reseña';
+      }
+    }
+
+    function showMsg(text, color) {
+      const el = document.getElementById('msg');
+      el.textContent = text; el.style.color = color; el.style.display = '';
+    }
+
+    // If no token, this is a direct visit — check if user is logged in
+    if (!token) {
+      const jwt = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
+      if (!jwt) {
+        document.getElementById('formView').innerHTML = `
+          <div style="text-align:center;padding:2rem 0;">
+            <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+            <h2>Enlace de invitación requerido</h2>
+            <p style="color:var(--text-muted);margin-top:0.5rem;">Las reseñas solo pueden ser enviadas a través del enlace de invitación que recibes por email después de completar una compra.</p>
+            <a href="/home" style="display:inline-block;margin-top:1.5rem;color:#0038A8;font-weight:700;">Volver a HogaresRD →</a>
+          </div>`;
+      }
+    }
+  </script>
+</body>
+</html>
