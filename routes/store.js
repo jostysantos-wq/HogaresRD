@@ -438,8 +438,66 @@ function saveUser(user) {
 }
 
 function deleteUser(id) {
-  pool.query('DELETE FROM users WHERE id = $1', [id]).catch(err => console.error('[store-pg] deleteUser error:', err.message));
+  pool.query('DELETE FROM users WHERE id = $1', [id]).catch(err => _dbWriteError('deleteUser', err));
   _users = _users.filter(u => u.id !== id);
+}
+
+/**
+ * Delete a user and ALL associated data from both DB and cache.
+ * Returns a summary of what was deleted.
+ */
+async function deleteUserCascade(userId) {
+  const summary = { conversations: 0, tours: 0, tasks: 0, savedSearches: 0, pushSubs: 0, availability: 0 };
+
+  // 1. Conversations (camelCase columns in DB)
+  const userConvs = _conversations.filter(c => {
+    const h = hydrateConversation(c);
+    return h && (h.clientId === userId || h.brokerId === userId);
+  });
+  for (const c of userConvs) {
+    pool.query('DELETE FROM conversations WHERE id = $1', [c.id]).catch(err => _dbWriteError('deleteConv', err));
+  }
+  _conversations = _conversations.filter(c => !userConvs.some(uc => uc.id === c.id));
+  summary.conversations = userConvs.length;
+
+  // 2. Tours (snake_case columns)
+  const userTours = _tours.filter(t => t.client_id === userId || t.broker_id === userId);
+  for (const t of userTours) {
+    pool.query('DELETE FROM tours WHERE id = $1', [t.id]).catch(err => _dbWriteError('deleteTour', err));
+  }
+  _tours = _tours.filter(t => !userTours.some(ut => ut.id === t.id));
+  summary.tours = userTours.length;
+
+  // 3. Tasks
+  const userTasks = getTasksByUser(userId);
+  for (const t of userTasks) deleteTask(t.id);
+  summary.tasks = userTasks.length;
+
+  // 4. Saved searches
+  const userSearches = getSavedSearchesByUser(userId);
+  for (const s of userSearches) deleteSavedSearch(s.id);
+  summary.savedSearches = userSearches.length;
+
+  // 5. Push subscriptions (camelCase column)
+  pool.query('DELETE FROM push_subscriptions WHERE "userId" = $1', [userId]).catch(err => _dbWriteError('deletePushSubs', err));
+  _pushSubs = _pushSubs.filter(s => s.userId !== userId);
+  summary.pushSubs = 1;
+
+  // 6. Availability slots
+  pool.query('DELETE FROM availability_slots WHERE broker_id = $1', [userId]).catch(err => _dbWriteError('deleteAvail', err));
+  _availability = _availability.filter(s => s.broker_id !== userId);
+  summary.availability = 1;
+
+  // 7. 2FA sessions
+  _twofa = _twofa.filter(s => {
+    const data = typeof s.data === 'string' ? _jsonParse(s.data, {}) : (s.data || {});
+    return data.userId !== userId;
+  });
+
+  // 8. User record
+  deleteUser(userId);
+
+  return summary;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1068,7 +1126,7 @@ function deleteDeletionRequest(id) {
 // ══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
-  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser, deleteUser,
+  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser, deleteUser, deleteUserCascade,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing, deleteListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,

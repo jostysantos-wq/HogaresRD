@@ -1851,19 +1851,10 @@ router.delete('/delete-account', userAuth, async (req, res) => {
     const user = store.getUserById(userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    // Delete user data from database
-    if (store.pool) {
-      await store.pool.query('DELETE FROM conversations WHERE client_id = $1 OR broker_id = $1', [userId]);
-      await store.pool.query('DELETE FROM tours WHERE client_id = $1 OR broker_id = $1', [userId]);
-      await store.pool.query('DELETE FROM applications WHERE client_id = $1 OR broker_id = $1', [userId]);
-      await store.pool.query('DELETE FROM push_subscriptions WHERE userId = $1', [userId]);
-      await store.pool.query('DELETE FROM users WHERE id = $1', [userId]);
-    }
+    // Delete user and ALL associated data (conversations, tours, tasks, etc.)
+    const summary = await store.deleteUserCascade(userId);
 
-    // Remove from in-memory cache
-    store.deleteUser(userId);
-
-    console.log(`[auth] Account deleted: ${userId} (${user.email})`);
+    console.log(`[auth] Account self-deleted: ${userId} (${user.email}) — ${JSON.stringify(summary)}`);
     res.json({ ok: true, message: 'Cuenta eliminada permanentemente' });
   } catch (err) {
     console.error('[auth] Delete account error:', err.message);

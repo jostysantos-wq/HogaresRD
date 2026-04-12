@@ -1314,37 +1314,13 @@ app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
 });
 
 // ── Admin: Delete user account ──────────────────────────────────────────
-app.delete('/admin/users/:id', adminSessionAuth, (req, res) => {
+app.delete('/admin/users/:id', adminSessionAuth, async (req, res) => {
   const user = store.getUserById(req.params.id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  const uid = req.params.id;
-  // Clean up ALL related data
-  const apps = store.getApplicationsByClient(uid);
-  const conversations = store.getConversations().filter(c => c.clientId === uid || c.brokerId === uid);
-  const tours = [...store.getToursByClient(uid), ...store.getToursByBroker(uid)];
-  const tasks = store.getTasksByUser(uid);
-  const savedSearches = store.getSavedSearchesByUser(uid);
-
-  // Delete all related records
-  for (const s of savedSearches) store.deleteSavedSearch(s.id);
-  for (const t of tasks) store.deleteTask(t.id);
-  // Delete conversations from DB
-  for (const c of conversations) {
-    store.pool.query('DELETE FROM conversations WHERE id = $1', [c.id]).catch(() => {});
-  }
-  // Delete tours from DB
-  for (const t of tours) {
-    store.pool.query('DELETE FROM tours WHERE id = $1', [t.id]).catch(() => {});
-  }
-  // Delete push subscriptions
-  store.pool.query('DELETE FROM push_subscriptions WHERE "userId" = $1', [uid]).catch(() => {});
-  // Delete availability slots
-  store.pool.query('DELETE FROM availability_slots WHERE broker_id = $1', [uid]).catch(() => {});
-
-  store.deleteUser(uid);
-  const summary = { user: user.email, apps: apps.length, conversations: conversations.length, tours: tours.length, tasks: tasks.length, savedSearches: savedSearches.length };
-  console.log(`[admin] Deleted user ${user.email} (${user.role}) — cleaned up ${JSON.stringify(summary)}`);
+  const summary = await store.deleteUserCascade(req.params.id);
+  summary.user = user.email;
+  console.log(`[admin] Deleted user ${user.email} (${user.role}) — ${JSON.stringify(summary)}`);
   res.json({ success: true, deleted: summary });
 });
 
@@ -1356,26 +1332,15 @@ app.get('/admin/deletion-requests', adminSessionAuth, (req, res) => {
   res.json(requests);
 });
 
-app.post('/admin/deletion-requests/:id/process', adminSessionAuth, (req, res) => {
+app.post('/admin/deletion-requests/:id/process', adminSessionAuth, async (req, res) => {
   const dr = store.getDeletionRequestById(req.params.id);
   if (!dr) return res.status(404).json({ error: 'Solicitud no encontrada' });
   if (dr.status === 'completed') return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
 
-  // Delete the user and all their data
+  // Delete the user and all their data via unified cascade function
   const user = store.getUserById(dr.user_id);
   if (user) {
-    const uid = dr.user_id;
-    const convs = store.getConversations().filter(c => c.clientId === uid || c.brokerId === uid);
-    const tours = [...(store.getToursByClient(uid) || []), ...(store.getToursByBroker(uid) || [])];
-    const tasks = store.getTasksByUser(uid) || [];
-    const searches = store.getSavedSearchesByUser(uid) || [];
-    for (const s of searches) store.deleteSavedSearch(s.id);
-    for (const t of tasks) store.deleteTask(t.id);
-    for (const c of convs) store.pool.query('DELETE FROM conversations WHERE id = $1', [c.id]).catch(() => {});
-    for (const t of tours) store.pool.query('DELETE FROM tours WHERE id = $1', [t.id]).catch(() => {});
-    store.pool.query('DELETE FROM push_subscriptions WHERE "userId" = $1', [uid]).catch(() => {});
-    store.pool.query('DELETE FROM availability_slots WHERE broker_id = $1', [uid]).catch(() => {});
-    store.deleteUser(uid);
+    await store.deleteUserCascade(dr.user_id);
     console.log(`[admin] Processed deletion request ${dr.id} for ${dr.user_email}`);
   }
 
