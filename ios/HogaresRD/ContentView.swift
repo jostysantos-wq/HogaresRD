@@ -10,6 +10,11 @@ extension Color {
 
 // MARK: - Lazy Tab Helper
 
+/// Wrapper for deep link listing ID to satisfy Identifiable requirement
+struct DeepLinkID: Identifiable {
+    let id: String
+}
+
 /// Defers a tab's body evaluation until the view first appears.
 /// Prevents SwiftUI's TabView from initializing all 4 tabs up front.
 struct LazyView<Content: View>: View {
@@ -35,6 +40,9 @@ struct ContentView: View {
     @State private var showPopup = false
     @State private var popupDismissed = false
     @State private var showPushPrimer = false
+
+    // Deep link state — set when a Universal Link opens the app to a listing
+    @State private var deepLinkListingID: String?
 
     // Red unread-message badge on the Messages tab bar icon. Polled on
     // scenePhase .active, on login, and every 30s while the app is in
@@ -97,6 +105,26 @@ struct ContentView: View {
             if type == "new_message" {
                 Task { await refreshUnreadCount() }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkListing)) { notif in
+            if let id = notif.userInfo?["listingId"] as? String {
+                deepLinkListingID = id
+            }
+        }
+        .fullScreenCover(item: Binding(
+            get: { deepLinkListingID.map { DeepLinkID(id: $0) } },
+            set: { deepLinkListingID = $0?.id }
+        )) { item in
+            NavigationStack {
+                ListingDetailView(id: item.id)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cerrar") { deepLinkListingID = nil }
+                        }
+                    }
+            }
+            .environmentObject(api)
+            .environmentObject(saved)
         }
         .sheet(item: $favAuthSheet) { mode in
             AuthView(initialMode: mode)

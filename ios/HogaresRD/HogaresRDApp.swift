@@ -111,6 +111,7 @@ struct HogaresRDApp: App {
                     UNUserNotificationCenter.current().setBadgeCount(0)
                 }
             }
+            .onOpenURL { url in handleDeepLink(url) }
             .task {
                 try? await Task.sleep(for: .seconds(0.8))
                 showSplash = false
@@ -118,6 +119,50 @@ struct HogaresRDApp: App {
                 // AFTER splash, not during app init (avoids main-thread stall).
                 pushService.deferredInit()
             }
+        }
+    }
+
+    // MARK: - Universal Link Handler
+
+    /// Parses incoming URLs from Universal Links and affiliate share links.
+    /// Supported patterns:
+    ///   /listing/{id}?ref={token}
+    ///   /r/{token}/{listingId}
+    ///   /r/{token}
+    private func handleDeepLink(_ url: URL) {
+        let path = url.path
+        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let refToken = comps?.queryItems?.first(where: { $0.name == "ref" })?.value
+
+        // Store affiliate ref token for lead attribution
+        if let ref = refToken, !ref.isEmpty {
+            APIService.shared.pendingRefToken = ref
+        }
+
+        let segments = path.split(separator: "/").map(String.init)
+
+        if segments.first == "listing", let listingId = segments.dropFirst().first {
+            // /listing/{id} — open listing detail
+            NotificationCenter.default.post(
+                name: .deepLinkListing,
+                object: nil,
+                userInfo: ["listingId": listingId]
+            )
+        } else if segments.first == "r", segments.count >= 1 {
+            // /r/{token} or /r/{token}/{listingId}
+            let token = segments.count >= 2 ? segments[1] : nil
+            if let t = token, !t.isEmpty { APIService.shared.pendingRefToken = t }
+
+            if segments.count >= 3 {
+                // /r/{token}/{listingId}
+                let listingId = segments[2]
+                NotificationCenter.default.post(
+                    name: .deepLinkListing,
+                    object: nil,
+                    userInfo: ["listingId": listingId]
+                )
+            }
+            // /r/{token} alone — just stores the ref, app opens to default screen
         }
     }
 }

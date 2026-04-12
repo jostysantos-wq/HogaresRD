@@ -224,6 +224,12 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(errorTracker.requestTimer);
 app.use(express.urlencoded({ extended: true }));
+// ── Apple App Site Association — must be served with application/json ──
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(path.join(__dirname, 'public', '.well-known', 'apple-app-site-association'));
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'deny',
   index: false,

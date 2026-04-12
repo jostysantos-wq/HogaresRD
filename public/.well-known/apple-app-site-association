@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "H2F8GB5825.com.josty.hogaresrd",
+        "paths": [
+          "/listing/*",
+          "/r/*",
+          "/comprar"
+        ]
+      }
+    ]
+  }
+}

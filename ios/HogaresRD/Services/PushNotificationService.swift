@@ -114,4 +114,7 @@ extension Notification.Name {
     /// foreground. Used by ContentView to refresh the unread-message
     /// badge without waiting for the next 30s poll.
     static let pushNotificationReceived = Notification.Name("pushNotificationReceived")
+    /// Fired when a Universal Link opens the app with a listing ID.
+    /// ContentView navigates to the listing detail.
+    static let deepLinkListing = Notification.Name("rd.deepLinkListing")
 }

@@ -44,6 +44,11 @@ class APIService: ObservableObject {
     @Published var currentUser: User?
     @Published var token: String?
 
+    /// Affiliate ref token from a deep link. Set when the app opens via
+    /// a Universal Link with ?ref=TOKEN. Included in conversation and
+    /// application requests so the lead is attributed to the sharing agent.
+    var pendingRefToken: String?
+
     private let cache = ResponseCache.shared
 
     private let decoder: JSONDecoder = {
@@ -975,11 +980,15 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        let body: [String: String] = [
+        var body: [String: String] = [
             "propertyId":    propertyId,
             "propertyTitle": propertyTitle,
             "message":       message
         ]
+        // Include affiliate ref token if the app was opened via a deep link
+        if let ref = pendingRefToken, !ref.isEmpty {
+            body["refToken"] = ref
+        }
         req.httpBody = try JSONEncoder().encode(body)
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
@@ -988,6 +997,8 @@ class APIService: ObservableObject {
             throw APIError.server("Error al iniciar la conversación")
         }
         let result = try decoder.decode(ConversationResponse.self, from: data)
+        // Clear the ref token after first use — it's been attributed
+        pendingRefToken = nil
         return result.conversation
     }
 
