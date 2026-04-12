@@ -21,6 +21,8 @@ struct ConversationThreadView: View {
     @State private var toggleError:    String?
     @State private var claiming:       Bool   = false
     @State private var claimed:        Bool   = false
+    @State private var loadError:      String?
+    @State private var messagesLoaded: Bool   = false
 
     // Transfer state
     @State private var showTransferSheet: Bool = false
@@ -127,10 +129,35 @@ struct ConversationThreadView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
 
+            // ── Error banner (visible to user) ──────────────────────
+            if let err = loadError {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(err)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                    Spacer()
+                    Button("Reintentar") { Task { await loadMessages() } }
+                        .font(.caption2).bold()
+                }
+                .padding(10)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 10)
+            }
+
             // ── Message list ────────────────────────────────────────
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        if messagesLoaded && messages.isEmpty {
+                            Text("No hay mensajes aún")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .padding(.top, 40)
+                        }
                         // Date-grouped messages
                         ForEach(groupedMessages, id: \.date) { group in
                             // Date separator
@@ -395,8 +422,14 @@ struct ConversationThreadView: View {
             let conv = try await api.getConversation(id: conversation.id)
             messages      = conv.messages ?? []
             lastTimestamp = messages.last?.timestamp
+            messagesLoaded = true
+            loadError = nil
             syncClosedState(conv)
+            print("[ConvThread] loadMessages OK: \(messages.count) messages for \(conversation.id)")
+        } catch is CancellationError {
+            print("[ConvThread] loadMessages CANCELLED")
         } catch {
+            loadError = "\(error)"
             print("[ConvThread] loadMessages FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "GET /api/conversations/\(conversation.id)", context: "loadMessages")
         }
