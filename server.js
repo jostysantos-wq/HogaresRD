@@ -1715,6 +1715,33 @@ app.post('/admin/newsletter/send', adminSessionAuth, async (req, res) => {
   }
 });
 
+// Admin: subscriber list + manual unsubscribe
+app.get('/admin/newsletter/subscribers', adminSessionAuth, (req, res) => {
+  const users = store.getUsers().map(u => ({
+    id: u.id, email: u.email, name: u.name, role: u.role,
+    marketingOptIn: !!u.marketingOptIn, emailVerified: !!u.emailVerified,
+  }));
+  res.json(users);
+});
+
+app.post('/admin/newsletter/unsubscribe', adminSessionAuth, (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+  const user = store.getUserByEmail(email.trim().toLowerCase());
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  user.marketingOptIn = false;
+  store.saveUser(user);
+  store.appendPrivacyLog({
+    id: 'priv_' + require('crypto').randomBytes(8).toString('hex'),
+    user_id: user.id, user_email: user.email,
+    request_type: 'email_unsubscribe', status: 'completed',
+    source: 'admin_manual', details: {},
+    created_at: new Date().toISOString(), completed_at: new Date().toISOString(),
+  });
+  console.log(`[newsletter] Admin unsubscribed: ${user.email}`);
+  res.json({ success: true });
+});
+
 // ── Tours admin ─────────────────────────────────────────────────────────────
 app.get('/admin/tours', adminSessionAuth, (req, res) => {
   res.json(store.getTours());
@@ -1932,7 +1959,23 @@ app.get('/unsubscribe', (req, res) => {
   if (!user) {
     return res.status(400).send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD</title></head><body style="font-family:sans-serif;text-align:center;padding:80px 20px;color:#1a2b40;"><h2>Enlace inválido o expirado.</h2><p><a href="/home">Volver al inicio</a></p></body></html>`);
   }
-  store.saveUser({ ...user, marketingOptIn: false });
+  user.marketingOptIn = false;
+  store.saveUser(user);
+
+  // Log for CAN-SPAM/CCPA compliance
+  store.appendPrivacyLog({
+    id:           'priv_' + require('crypto').randomBytes(8).toString('hex'),
+    user_id:      user.id,
+    user_email:   user.email,
+    request_type: 'email_unsubscribe',
+    status:       'completed',
+    source:       'email_link',
+    details:      {},
+    created_at:   new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+  });
+  console.log(`[newsletter] Unsubscribed: ${user.email} (email link)`);
+
   res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD — Cancelar suscripción</title></head><body style="font-family:'Segoe UI',sans-serif;text-align:center;padding:80px 20px;background:#eef3fa;color:#1a2b40;"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,45,98,0.10);"><div style="font-size:2.5rem;margin-bottom:16px;">✉️</div><h2 style="font-size:1.4rem;font-weight:800;color:#002D62;margin-bottom:12px;">Suscripción cancelada</h2><p style="color:#4d6a8a;line-height:1.7;margin-bottom:28px;">Has sido eliminado de nuestra lista de correos. Ya no recibirás actualizaciones del mercado inmobiliario de HogaresRD.</p><a href="/home" style="display:inline-block;background:#002D62;color:#fff;font-weight:700;padding:12px 32px;border-radius:8px;text-decoration:none;">Volver al inicio</a></div></body></html>`);
 });
 

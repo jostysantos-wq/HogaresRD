@@ -1256,6 +1256,20 @@
           <strong>Envío automático:</strong> El newsletter se envía automáticamente todos los días a las <strong>8:00 AM</strong> (hora Santo Domingo) a todos los usuarios con la opción de marketing activada.<br>
           <strong>Nota:</strong> El envío manual utiliza los mismos criterios que el envío automático. Se requiere que <code>RESEND_API_KEY</code> esté configurado.
         </div>
+
+        <h3 style="margin-top:2rem;font-size:1rem;font-weight:700;">Gestión de Suscriptores</h3>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">CAN-SPAM requiere honrar solicitudes de cancelación dentro de 10 días hábiles. Las cancelaciones por enlace de email se procesan automáticamente.</p>
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;">
+          <button class="action-btn" onclick="exportSubscribers()" style="font-weight:600;">Exportar CSV</button>
+          <input type="text" id="unsubEmail" placeholder="Cancelar suscripción por email..." style="flex:1;padding:.4rem .8rem;border:1px solid var(--border);border-radius:6px;font-size:.82rem;">
+          <button class="action-btn" onclick="manualUnsub()" style="background:var(--danger);color:#fff;border-color:var(--danger);">Cancelar</button>
+        </div>
+        <div class="error-log-table">
+          <table>
+            <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Suscrito</th><th>Verificado</th><th>Acción</th></tr></thead>
+            <tbody id="subTableBody"><tr><td colspan="6" class="leads-empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- ── TOURS PAGE ────────────────────────────────────── -->
@@ -3209,6 +3223,7 @@
   }
 
   // ── Newsletter ─────────────────────────────────────────────────
+  let _allSubs = [];
   function loadNewsletter() {
     fetch('/admin/newsletter')
       .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
@@ -3219,7 +3234,47 @@
         document.getElementById('nlBrokers').textContent     = data.brokers     || 0;
       })
       .catch(() => {});
+    // Load subscriber table
+    fetch('/admin/newsletter/subscribers')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        _allSubs = data;
+        const tbody = document.getElementById('subTableBody');
+        if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="leads-empty">Sin usuarios.</td></tr>'; return; }
+        tbody.innerHTML = data.filter(u => u.marketingOptIn).concat(data.filter(u => !u.marketingOptIn)).map(u => `<tr style="${u.marketingOptIn ? '' : 'opacity:0.5;'}">
+          <td>${esc(u.email)}</td>
+          <td>${esc(u.name)}</td>
+          <td>${u.role}</td>
+          <td>${u.marketingOptIn ? '<span style="color:var(--success);font-weight:700;">✓ Sí</span>' : '<span style="color:var(--text-muted);">No</span>'}</td>
+          <td>${u.emailVerified ? '✓' : '—'}</td>
+          <td>${u.marketingOptIn ? `<button onclick="adminUnsub('${esc(u.email)}')" style="font-size:.7rem;background:var(--danger);color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">Cancelar</button>` : '<span style="font-size:.7rem;color:var(--text-muted);">Cancelado</span>'}</td>
+        </tr>`).join('');
+      }).catch(() => {});
   }
+
+  window.adminUnsub = function(email) {
+    if (!confirm('¿Cancelar suscripción de ' + email + '?')) return;
+    fetch('/admin/newsletter/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(() => loadNewsletter())
+      .catch(() => alert('Error'));
+  };
+
+  window.manualUnsub = function() {
+    const email = document.getElementById('unsubEmail').value.trim();
+    if (!email) return;
+    adminUnsub(email);
+    document.getElementById('unsubEmail').value = '';
+  };
+
+  window.exportSubscribers = function() {
+    const rows = [['Email','Nombre','Rol','Suscrito','Verificado']];
+    for (const u of _allSubs) rows.push([u.email, u.name, u.role, u.marketingOptIn ? 'Sí' : 'No', u.emailVerified ? 'Sí' : 'No']);
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'suscriptores_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+  };
 
   function sendNewsletter() {
     const btn    = document.getElementById('nlSendBtn');

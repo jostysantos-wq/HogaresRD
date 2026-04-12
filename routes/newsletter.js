@@ -502,12 +502,17 @@ async function sendNewsletter() {
   let sent = 0, failed = 0;
   for (const user of recipients) {
     const html = buildNewsletterHTML(user, { trending, newest, stats });
+    const unsubUrl = `${BASE_URL}/unsubscribe?token=${makeUnsubToken(user.id)}`;
     try {
       await transporter.sendMail({
         department: 'noreply',
         to:      user.email,
         subject: `🏠 Tu resumen del día — ${trending.length} propiedades en tendencia`,
         html,
+        headers: {
+          'List-Unsubscribe': `<${unsubUrl}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
       });
       sent++;
     } catch (err) {
@@ -550,6 +555,55 @@ router.get('/preview', adminSessionAuth, (req, res) => {
   const fakeUser = { id: 'preview', name: 'Vista Previa', email: 'preview@hogaresrd.com' };
   const html = buildNewsletterHTML(fakeUser, { trending, newest, stats });
   res.type('html').send(html);
+});
+
+// POST /api/newsletter/subscribe — public subscribe by email
+const rateLimit = require('express-rate-limit');
+const subLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: 'Demasiadas solicitudes.' } });
+
+router.post('/subscribe', subLimiter, (req, res) => {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: 'Email válido requerido' });
+
+  const user = store.getUserByEmail(email.trim().toLowerCase());
+  if (user) {
+    if (user.marketingOptIn) return res.json({ success: true, message: 'Ya estás suscrito.' });
+    user.marketingOptIn = true;
+    store.saveUser(user);
+    return res.json({ success: true, message: '¡Te has suscrito exitosamente!' });
+  }
+  // Non-registered email — for now just acknowledge (they'd need to register to get newsletters)
+  res.json({ success: true, message: '¡Gracias! Crea una cuenta para recibir nuestro boletín.' });
+});
+
+// POST /api/newsletter/unsubscribe — one-click unsubscribe (RFC 8058)
+router.post('/unsubscribe', (req, res) => {
+  const token = req.body.token || req.query.token;
+  if (!token) return res.status(400).json({ error: 'Token requerido' });
+  const userId = verifyUnsubToken(token);
+  if (!userId) return res.status(400).json({ error: 'Token inválido' });
+  const user = store.getUserById(userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  user.marketingOptIn = false;
+  store.saveUser(user);
+
+  // Log for compliance (CAN-SPAM requires honoring within 10 business days)
+  store.appendPrivacyLog({
+    id:           'priv_' + require('crypto').randomBytes(8).toString('hex'),
+    user_id:      user.id,
+    user_email:   user.email,
+    request_type: 'email_unsubscribe',
+    status:       'completed',
+    source:       'one_click',
+    details:      { method: 'RFC8058_one_click' },
+    created_at:   new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+  });
+
+  console.log(`[newsletter] Unsubscribed: ${user.email} (one-click)`);
+  res.json({ success: true });
 });
 
 module.exports = { router, sendNewsletter, verifyUnsubToken };
