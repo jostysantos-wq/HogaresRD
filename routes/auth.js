@@ -1352,8 +1352,7 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
     if (!inviteToken || !name || !password)
       return res.status(400).json({ error: 'Token, nombre y contraseña requeridos' });
 
-    if (!validateEmail(email))
-      return res.status(400).json({ error: 'Correo electrónico inválido' });
+    // Email comes from the stored invitation (line 1375), not from request body
     const pwError = validatePassword(password);
     if (pwError) return res.status(400).json({ error: pwError });
 
@@ -1714,7 +1713,11 @@ router.post('/apple', async (req, res) => {
     }
 
     if (!verified) {
-      console.warn('[auth] Apple Sign In: token not cryptographically verified (using decoded sub)');
+      if (IS_PROD) {
+        console.error('[auth] Apple Sign In: token not cryptographically verified — rejecting in production');
+        return res.status(400).json({ error: 'No se pudo verificar el token de Apple. Intenta de nuevo.' });
+      }
+      console.warn('[auth] Apple Sign In: token not verified (dev mode — proceeding with decoded sub)');
     }
 
     const appleUserId = decoded.sub;

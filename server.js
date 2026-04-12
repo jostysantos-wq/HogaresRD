@@ -2121,6 +2121,57 @@ cron.schedule('0 9 1 * *', () => {
   }
 }, { timezone: 'America/Santo_Domingo' });
 
+// ── Memory cleanup — runs daily at 3 AM DR time ────────────────────────────
+// Prunes expired data that accumulates in memory over time:
+//   - Revoked JWT tokens older than 14 days (token TTL)
+//   - Expired 2FA sessions
+//   - Claimed/expired lead queue items older than 30 days
+cron.schedule('0 3 * * *', () => {
+  try {
+    let cleaned = 0;
+
+    // 1. Prune revoked tokens older than JWT expiry (14 days)
+    const revokedCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    if (store._revokedTokens instanceof Set) {
+      // Revoked tokens are stored as JTIs; we can't check age from JTI alone.
+      // Instead, clear expired tokens from PostgreSQL and reload.
+      store.pool.query(`DELETE FROM revoked_tokens WHERE created_at < NOW() - INTERVAL '14 days'`)
+        .then(r => { if (r.rowCount) console.log(`[Cleanup] Pruned ${r.rowCount} expired revoked tokens`); })
+        .catch(() => {});
+    }
+
+    // 2. Prune expired 2FA sessions (older than 10 minutes)
+    const twofaCutoff = Date.now() - 10 * 60 * 1000;
+    if (Array.isArray(store._twofa)) {
+      const before = store._twofa.length;
+      store._twofa = store._twofa.filter(s => {
+        const exp = s.expiresAt || s.data?.expiresAt;
+        return exp && new Date(exp).getTime() > twofaCutoff;
+      });
+      cleaned += before - store._twofa.length;
+    }
+
+    // 3. Prune old lead queue items (claimed/auto_responded > 30 days)
+    const lqCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    if (Array.isArray(store._leadQueue)) {
+      const before = store._leadQueue.length;
+      store._leadQueue = store._leadQueue.filter(item => {
+        if (item.status === 'active') return true; // never prune active cascades
+        const created = item.created_at ? new Date(item.created_at).getTime() : Date.now();
+        return created > lqCutoff;
+      });
+      cleaned += before - store._leadQueue.length;
+      // Also clean from DB
+      store.pool.query(`DELETE FROM lead_queue WHERE status != 'active' AND created_at < NOW() - INTERVAL '30 days'`)
+        .catch(() => {});
+    }
+
+    if (cleaned > 0) console.log(`[Cleanup] Pruned ${cleaned} expired items from memory`);
+  } catch (e) {
+    console.error('[Cleanup] Error:', e.message);
+  }
+}, { timezone: 'America/Santo_Domingo' });
+
 // ── Admin: re-run AI review on a listing ─────────────────────────
 app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
   const { reviewListing } = require('./routes/ai-review');
