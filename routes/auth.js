@@ -387,7 +387,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       },
       resetToken:        null,
       resetTokenExpiry:  null,
-      marketingOptIn:    marketingOptIn !== false,
+      marketingOptIn:    !!marketingOptIn,  // Explicit opt-in required (GDPR-safe)
     };
 
     const verifyRawToken = attachVerifyToken(user);
@@ -573,7 +573,7 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
-      marketingOptIn:  true,
+      marketingOptIn:  false,  // Explicit opt-in required
       subscriptionStatus: 'pending_payment',  // card required before trial starts
       trialEndsAt:     null,                    // trial not started until checkout
       paywallRequired: true,                    // new signups are paywalled
@@ -700,7 +700,7 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
-      marketingOptIn:  true,
+      marketingOptIn:  false,  // Explicit opt-in required
       subscriptionStatus: 'pending_payment',  // card required before trial starts
       trialEndsAt:     null,                    // trial not started until checkout
       paywallRequired: true,                    // new signups are paywalled
@@ -829,7 +829,7 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
-      marketingOptIn:  true,
+      marketingOptIn:  false,  // Explicit opt-in required
       subscriptionStatus: 'pending_payment',  // card required before trial starts
       trialEndsAt:     null,                    // trial not started until checkout
       paywallRequired: true,                    // new signups are paywalled
@@ -968,7 +968,7 @@ router.post('/register/constructora', authLimiter, async (req, res, next) => {
       favorites:       [],
       resetToken:      null,
       resetTokenExpiry: null,
-      marketingOptIn:  true,
+      marketingOptIn:  false,  // Explicit opt-in required
       subscriptionStatus: 'pending_payment',  // card required before trial starts
       trialEndsAt:     null,                    // trial not started until checkout
       paywallRequired: true,                    // new signups are paywalled

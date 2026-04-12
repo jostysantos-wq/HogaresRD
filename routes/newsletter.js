@@ -8,15 +8,21 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const UNSUB_SECRET = process.env.JWT_SECRET || 'hogaresrd-unsub';
 
 function makeUnsubToken(userId) {
-  const sig = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex').slice(0, 16);
+  const sig = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex');
   return Buffer.from(userId).toString('base64url') + '.' + sig;
 }
 function verifyUnsubToken(token) {
   const parts = token.split('.');
   if (parts.length !== 2) return null;
   const userId = Buffer.from(parts[0], 'base64url').toString();
-  const expected = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex').slice(0, 16);
-  return crypto.timingSafeEqual(Buffer.from(parts[1]), Buffer.from(expected)) ? userId : null;
+  const expected = crypto.createHmac('sha256', UNSUB_SECRET).update(userId).digest('hex');
+  // Support both old 16-char and new 64-char tokens during transition
+  const sig = parts[1];
+  if (sig.length === 64) {
+    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)) ? userId : null;
+  }
+  // Legacy 16-char token fallback
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected.slice(0, 16))) ? userId : null;
 }
 
 const { createTransport } = require('./mailer');
