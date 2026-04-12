@@ -14,6 +14,8 @@
 'use strict';
 
 const { Pool } = require('pg');
+const path = require('path');
+const fs   = require('fs');
 const appEvents = require('./app-events');
 
 // ── Connection ───────────────────────────────────────────────────────────
