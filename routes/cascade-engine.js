@@ -2,15 +2,18 @@
 // HogaresRD — Cascading Priority Lead Distribution Engine
 //
 // 3-tier system with time-aware windows:
-//   Tier 1: Listing creator (exclusive)
-//   Tier 2: Contributing affiliates (score >= 10)
-//   Tier 3: All remaining affiliates (first-to-claim)
+//   Tier 1: Listing creator (exclusive) — most time (highest priority agent)
+//   Tier 2: Contributing affiliates (score >= 10) — less time
+//   Tier 3: All remaining affiliates (first-to-claim) — least time (lead is getting cold)
 //   Tier 4: Auto-response to buyer
 //
-// Business hours (8 AM – 8 PM AST):
-//   Tier 1: 5 min  |  Tier 2: 10 min  |  Tier 3: 15 min  (30 min total)
-// Off-hours (8 PM – 8 AM, weekends):
-//   Tier 1: 15 min |  Tier 2: 30 min  |  Tier 3: 60 min  (105 min total)
+// Cascade windows (8 AM – 11 PM AST):
+//   Tier 1: 60 min  |  Tier 2: 30 min  |  Tier 3: 20 min  (110 min total)
+//
+// Overnight freeze (11 PM – 8 AM):
+//   Cascade pauses. The lead stays with whatever tier it's currently in.
+//   When business hours resume at 8 AM, the timer starts fresh for that
+//   tier — like the stock market closing and reopening.
 //
 // Uses in-memory timers (setTimeout) with cron-based crash recovery.
 // ══════════════════════════════════════════════════════════════════════════
@@ -20,34 +23,52 @@ const store = require('./store');
 const CONTRIB_THRESHOLD = 10;            // Minimum score for Tier 2
 
 // ── Time-aware cascade windows (Dominican Republic, AST = UTC-4) ────────
-const BUSINESS_HOURS_START = 8;  // 8 AM
-const BUSINESS_HOURS_END   = 20; // 8 PM
-const TZ_OFFSET_HOURS      = -4; // AST (Atlantic Standard Time)
+const MARKET_OPEN  = 8;   // 8 AM — cascade timers start/resume
+const MARKET_CLOSE = 23;  // 11 PM — cascade freezes overnight
+const TZ_OFFSET_HOURS = -4; // AST (Atlantic Standard Time)
 
-// Tier durations in milliseconds
-const BUSINESS_WINDOWS = { 1:  5 * 60_000, 2: 10 * 60_000, 3: 15 * 60_000 };
-const OFFHOURS_WINDOWS = { 1: 15 * 60_000, 2: 30 * 60_000, 3: 60 * 60_000 };
+// Tier durations in milliseconds — higher tier = more time (they're more important)
+const TIER_WINDOWS = { 1: 60 * 60_000, 2: 30 * 60_000, 3: 20 * 60_000 };
+
+/** Get the current hour in Dominican Republic (0-23) */
+function getLocalHour() {
+  return (new Date().getUTCHours() + 24 + TZ_OFFSET_HOURS) % 24;
+}
+
+/** Returns true during active cascade hours (8 AM – 11 PM, any day) */
+function isMarketOpen() {
+  const h = getLocalHour();
+  return h >= MARKET_OPEN && h < MARKET_CLOSE;
+}
 
 /**
- * Returns true if the current time in the Dominican Republic is within
- * business hours (8 AM – 8 PM, Mon–Sat). Sunday is always off-hours.
+ * Get the cascade window in ms for a given tier.
+ * During market hours: returns the tier's configured window.
+ * During overnight freeze: returns ms until 8 AM (timer sleeps until open).
  */
-function isBusinessHours() {
-  const now = new Date();
-  const localHour = (now.getUTCHours() + 24 + TZ_OFFSET_HOURS) % 24;
-  const localDay  = now.getUTCDay(); // 0=Sun, 6=Sat
-  if (localDay === 0) return false;  // Sunday is always off-hours
-  return localHour >= BUSINESS_HOURS_START && localHour < BUSINESS_HOURS_END;
-}
-
-/** Get the cascade window in ms for a given tier at the current time */
 function getCascadeWindowMs(tier) {
-  const windows = isBusinessHours() ? BUSINESS_WINDOWS : OFFHOURS_WINDOWS;
-  return windows[tier] || windows[3];
+  if (isMarketOpen()) {
+    return TIER_WINDOWS[tier] || TIER_WINDOWS[3];
+  }
+  // Overnight: calculate ms until next 8 AM
+  return msUntilMarketOpen();
 }
 
-// Legacy constant for recovery calculations (uses tier-specific windows now)
-const CASCADE_WINDOW_MS = 10 * 60 * 1000; // fallback only — not used for new cascades
+/** Calculate milliseconds until the next 8 AM AST */
+function msUntilMarketOpen() {
+  const now = new Date();
+  // Build a Date for 8 AM AST today (or tomorrow if past 8 AM)
+  const target = new Date(now);
+  // Set to 8 AM in UTC terms (8 AM AST = 12 PM UTC)
+  target.setUTCHours(MARKET_OPEN - TZ_OFFSET_HOURS, 0, 0, 0);
+  if (target <= now) {
+    target.setUTCDate(target.getUTCDate() + 1); // next day
+  }
+  return target.getTime() - now.getTime();
+}
+
+// Legacy constant for recovery calculations
+const CASCADE_WINDOW_MS = 60 * 60 * 1000; // 1 hour fallback
 
 // Active cascade timers: leadQueueId → timeoutId
 const _timers = new Map();
@@ -109,7 +130,7 @@ function notifyAgents(agentIds, item, listing, tierNum) {
   for (const userId of agentIds) {
     push.notify(userId, {
       title: `🏠 Nueva consulta — ${tierLabel}`,
-      body: `${item.buyer_name || 'Un cliente'} está interesado en "${listing.title || 'una propiedad'}". Tienes ${Math.round(getCascadeWindowMs(tierNum) / 60_000)} minutos para responder.`,
+      body: `${item.buyer_name || 'Un cliente'} está interesado en "${listing.title || 'una propiedad'}". ${isMarketOpen() ? `Tienes ${Math.round((TIER_WINDOWS[tierNum] || TIER_WINDOWS[3]) / 60_000)} minutos para responder.` : 'Responde cuando abras — el timer inicia a las 8 AM.'}`,
       url: '/broker#lead-queue',
       type: 'lead_cascade',
       data: {
@@ -197,20 +218,28 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}) {
     created_at: now(),
   };
 
-  // Mark notification timestamp for starting tier
-  item[`tier${startTier}_notified_at`] = now();
-
   store.saveLeadQueueItem(item);
 
-  // Notify agents in starting tier
   const agentsByTier = { 1: tier1, 2: tier2, 3: tier3 };
-  notifyAgents(agentsByTier[startTier], item, listing, startTier);
 
-  // Schedule escalation timer (time-aware: shorter during business hours)
-  scheduleEscalation(item.id, getCascadeWindowMs(startTier));
-
-  const startWindowMin = Math.round(getCascadeWindowMs(startTier) / 60_000);
-  console.log(`[cascade] Started: ${item.id} for ${inquiryType}/${inquiryId} → tier ${startTier} (${agentsByTier[startTier].length} agents, ${startWindowMin}min, ${isBusinessHours() ? 'business-hours' : 'off-hours'})`);
+  if (isMarketOpen()) {
+    // Market is open — start the cascade timer normally
+    item[`tier${startTier}_notified_at`] = now();
+    store.saveLeadQueueItem(item);
+    notifyAgents(agentsByTier[startTier], item, listing, startTier);
+    const windowMs = TIER_WINDOWS[startTier] || TIER_WINDOWS[3];
+    scheduleEscalation(item.id, windowMs);
+    console.log(`[cascade] Started: ${item.id} for ${inquiryType}/${inquiryId} → tier ${startTier} (${agentsByTier[startTier].length} agents, ${Math.round(windowMs / 60_000)}min)`);
+  } else {
+    // Market is closed — send push notification (agent might see it)
+    // but DON'T start the timer. Timer will start at 8 AM.
+    // tier_notified_at stays null so morning wake-up logic gives a fresh window.
+    notifyAgents(agentsByTier[startTier], item, listing, startTier);
+    const sleepMs = msUntilMarketOpen();
+    scheduleEscalation(item.id, sleepMs);
+    const sleepHrs = Math.round(sleepMs / 3_600_000 * 10) / 10;
+    console.log(`[cascade] Started overnight: ${item.id} for ${inquiryType}/${inquiryId} → tier ${startTier} (frozen, timer starts in ${sleepHrs}h at 8 AM)`);
+  }
   return item;
 }
 
@@ -274,16 +303,44 @@ function claimLead(leadQueueId, userId) {
 
 /**
  * Escalate to the next tier. Called by timer or recovery.
+ * If the market is closed (11 PM – 8 AM), the cascade freezes
+ * in the current tier and re-schedules to fire at 8 AM.
  */
 function escalateTier(leadQueueId) {
   const item = store.getLeadQueueById(leadQueueId);
   if (!item || item.status !== 'active') return;
+
+  // Overnight freeze: if market is closed, don't advance — sleep until 8 AM
+  if (!isMarketOpen()) {
+    const sleepMs = msUntilMarketOpen();
+    const sleepHrs = Math.round(sleepMs / 3_600_000 * 10) / 10;
+    console.log(`[cascade] Frozen overnight: ${item.id} stays in tier ${item.current_tier}, resuming in ${sleepHrs}h at 8 AM`);
+    // Reset the notification timestamp so the full tier window restarts at 8 AM
+    item[`tier${item.current_tier}_notified_at`] = null;
+    store.saveLeadQueueItem(item);
+    scheduleEscalation(item.id, sleepMs);
+    return;
+  }
 
   const listing = store.getListingById(item.listing_id);
   if (!listing) return;
 
   const { tier1, tier2, tier3 } = getTierAgents(listing);
   const allTiers = { 1: tier1, 2: tier2, 3: tier3 };
+
+  // Morning wake-up: if tier_notified_at is null, this is resuming after
+  // overnight freeze. Re-notify the CURRENT tier with a fresh timer.
+  const currentTierField = `tier${item.current_tier}_notified_at`;
+  if (!item[currentTierField]) {
+    item[currentTierField] = now();
+    store.saveLeadQueueItem(item);
+    const agents = allTiers[item.current_tier] || [];
+    if (agents.length) notifyAgents(agents, item, listing, item.current_tier);
+    const windowMs = TIER_WINDOWS[item.current_tier] || TIER_WINDOWS[3];
+    scheduleEscalation(item.id, windowMs);
+    console.log(`[cascade] Morning resume: ${item.id} → tier ${item.current_tier} (${agents.length} agents, ${Math.round(windowMs / 60_000)}min)`);
+    return;
+  }
 
   // Find next non-empty tier
   let nextTier = item.current_tier + 1;
@@ -339,7 +396,7 @@ function escalateTier(leadQueueId) {
   scheduleEscalation(item.id, windowMs);
 
   const windowMin = Math.round(windowMs / 60_000);
-  console.log(`[cascade] Escalated: ${item.id} → tier ${nextTier} (${allTiers[nextTier].length} agents, ${windowMin}min window, ${isBusinessHours() ? 'business' : 'off-hours'})`);
+  console.log(`[cascade] Escalated: ${item.id} → tier ${nextTier} (${allTiers[nextTier].length} agents, ${windowMin}min window)`);
 }
 
 // ── Timer management ────────────────────────────────────────────────────
@@ -372,16 +429,23 @@ function recoverStaleCascades() {
   for (const item of active) {
     if (_timers.has(item.id)) continue; // Timer already running
 
+    // If market is closed, freeze everything until 8 AM
+    if (!isMarketOpen()) {
+      const sleepMs = msUntilMarketOpen();
+      scheduleEscalation(item.id, sleepMs);
+      continue;
+    }
+
     const tierField = `tier${item.current_tier}_notified_at`;
     const notifiedAt = item[tierField];
     if (!notifiedAt) {
-      // No notification timestamp — escalate immediately
+      // No notification timestamp — morning wake-up or fresh start
       escalateTier(item.id);
       continue;
     }
 
     const elapsed = nowMs - new Date(notifiedAt).getTime();
-    const tierWindow = getCascadeWindowMs(item.current_tier);
+    const tierWindow = TIER_WINDOWS[item.current_tier] || TIER_WINDOWS[3];
     const remaining = tierWindow - elapsed;
 
     if (remaining <= 0) {
