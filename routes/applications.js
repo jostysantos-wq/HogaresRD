@@ -1921,6 +1921,8 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
 
   const safeReceipt = guardDocPath(app.payment.receipt_path);
   if (!safeReceipt) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  res.setHeader('Content-Disposition', `attachment; filename="${app.payment.receipt_original || 'receipt'}"`)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeReceipt);
 });
 
@@ -2728,6 +2730,8 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   if (!fs.existsSync(inst.proof_path)) return res.status(404).json({ error: 'Archivo no encontrado' });
   const safeProof = guardDocPath(inst.proof_path);
   if (!safeProof) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  res.setHeader('Content-Disposition', `attachment; filename="${inst.proof_original || 'proof'}"`)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeProof);
 });
 

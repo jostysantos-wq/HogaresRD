@@ -87,7 +87,7 @@ router.post('/create-checkout', requireAuth, requireStripe, async (req, res) => 
     res.json({ url: session.url });
   } catch (err) {
     console.error('[Stripe] create-checkout error:', err.message);
-    res.status(500).json({ error: 'Error al crear sesión de pago: ' + err.message });
+    res.status(500).json({ error: 'Error al crear sesión de pago. Intenta de nuevo.' });
   }
 });
 
@@ -107,7 +107,7 @@ router.post('/create-portal', requireAuth, requireStripe, async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[Stripe] create-portal error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Error interno. Intenta de nuevo.' });
   }
 });
 
@@ -244,7 +244,7 @@ router.post('/cancel-feedback', requireAuth, requireStripe, async (req, res) => 
     res.json({ action: 'none', message: 'No se encontro suscripcion activa.' });
   } catch (err) {
     console.error('[Stripe] cancel-feedback error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Error interno. Intenta de nuevo.' });
   }
 });
 

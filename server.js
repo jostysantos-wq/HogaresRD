@@ -685,7 +685,8 @@ app.get('/api/config/meta', (req, res) => {
 // EXIF (GPS coords, device serial, etc.) and cap dimensions at 1920px.
 // This protects user privacy (no home-GPS leaking from a property
 // photo) and trims bandwidth on view.
-app.post('/api/upload/photos', photoUpload.array('photos', 30), async (req, res) => {
+const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Demasiadas subidas. Intenta más tarde.' } });
+app.post('/api/upload/photos', uploadLimiter, photoUpload.array('photos', 30), async (req, res) => {
   if (!req.files || !req.files.length)
     return res.status(400).json({ error: 'No se recibieron imágenes.' });
 
@@ -717,7 +718,7 @@ app.post('/api/upload/photos', photoUpload.array('photos', 30), async (req, res)
 });
 
 // ── Blueprint upload endpoint ──────────────────────────────────
-app.post('/api/upload/blueprints', blueprintUpload.array('blueprints', 5), (req, res) => {
+app.post('/api/upload/blueprints', uploadLimiter, blueprintUpload.array('blueprints', 5), (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No se recibieron archivos.' });
   }

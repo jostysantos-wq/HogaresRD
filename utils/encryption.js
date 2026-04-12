@@ -20,7 +20,11 @@ const IV_LENGTH = 16;
 
 // Derive a 32-byte key from the env var using SHA-256
 function getKey() {
-  const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'hogaresrd-default-key';
+  const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('[encryption] CRITICAL: No ENCRYPTION_KEY or JWT_SECRET set — encryption will fail');
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
   return crypto.createHash('sha256').update(secret).digest();
 }
 
