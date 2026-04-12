@@ -164,7 +164,7 @@ async function sendViaGmailAPI(opts) {
     '',
     Buffer.from(opts.html).toString('base64'),
     `--${boundary}--`,
-  ];
+  );
 
   const raw = Buffer.from(messageParts.join('\r\n'))
     .toString('base64')
