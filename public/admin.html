@@ -462,7 +462,7 @@
     .rte-content ul, .rte-content ol { margin:0.5rem 0 1rem 1.5rem; }
     .rte-content li { margin-bottom:0.3rem; }
     .rte-content a { color:var(--accent); }
-    .rte-content img { max-width:100%;border-radius:8px;margin:0.75rem 0; }
+    .rte-content img { max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;margin:0.75rem 0; }
     .rte-content blockquote { border-left:3px solid var(--accent);padding:0.5rem 1rem;margin:1rem 0;background:var(--accent-light);border-radius:0 8px 8px 0;font-style:italic;color:var(--text-muted); }
     .rte-source { flex:1;padding:1rem 1.25rem;border:none;background:var(--bg);color:var(--text);font-family:monospace;font-size:0.83rem;resize:none;outline:none; }
     /* Editor sidebar */
@@ -472,7 +472,10 @@
     .editor-field input, .editor-field select, .editor-field textarea { width:100%;border:1.5px solid var(--border);border-radius:8px;padding:0.55rem 0.75rem;font-size:0.88rem;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s; }
     .editor-field input:focus, .editor-field select:focus, .editor-field textarea:focus { border-color:var(--accent); }
     .editor-field textarea { resize:vertical;min-height:80px; }
-    .cover-preview { width:100%;height:120px;border-radius:8px;object-fit:cover;margin-top:0.5rem;background:var(--bg);display:none; }
+    .cover-preview { width:100%;aspect-ratio:16/9;border-radius:8px;object-fit:cover;margin-top:0.5rem;background:var(--bg);display:none; }
+    .rte-content img { max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;margin:0.75rem 0; }
+    .editor-word-count { font-size:0.68rem;color:var(--text-muted);padding:0.3rem 1rem;border-top:1px solid var(--border);display:flex;gap:1rem; }
+    .editor-char-count { font-size:0.62rem;color:var(--text-muted);text-align:right;margin-top:0.2rem; }
     .editor-toggle { display:flex;align-items:center;justify-content:space-between; }
     .toggle-switch { position:relative;width:40px;height:22px;cursor:pointer; }
     .toggle-switch input { opacity:0;width:0;height:0; }
@@ -1576,6 +1579,12 @@
               <button class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="Lista">• Lista</button>
               <button class="rte-btn" onclick="rteCmd('insertOrderedList')" title="Lista numerada">1. Lista</button>
               <div class="rte-sep"></div>
+              <button class="rte-btn" onclick="rteCmd('strikeThrough')" title="Tachado"><s>S</s></button>
+              <button class="rte-btn" onclick="rteCmd('insertHorizontalRule')" title="Línea horizontal">—</button>
+              <div class="rte-sep"></div>
+              <button class="rte-btn" onclick="rteCmd('justifyLeft')" title="Alinear izquierda">⫷</button>
+              <button class="rte-btn" onclick="rteCmd('justifyCenter')" title="Centrar">⫸</button>
+              <div class="rte-sep"></div>
               <button class="rte-btn" onclick="rteLink()" title="Enlace">🔗</button>
               <button class="rte-btn" onclick="rteImage()" title="Imagen URL">🖼</button>
               <button class="rte-btn" onclick="rteUploadImage()" title="Subir imagen" style="color:var(--accent);font-weight:700;">📤 Subir</button>
@@ -1586,11 +1595,17 @@
             <div class="rte-content" id="rteContent" contenteditable="true" spellcheck="true"></div>
             <textarea class="rte-source" id="rteSource" style="display:none;" placeholder="Pega o escribe el HTML del artículo…"></textarea>
           </div>
+          <div class="editor-word-count" id="editorStats">
+            <span id="wordCount">0 palabras</span>
+            <span id="charCount">0 caracteres</span>
+            <span id="readTimeEst">~0 min lectura</span>
+          </div>
         </div>
         <div class="blog-editor-side">
           <div class="editor-field">
             <label>Extracto</label>
-            <textarea id="editorExcerpt" placeholder="Resumen breve del artículo (150–200 caracteres)…"></textarea>
+            <textarea id="editorExcerpt" placeholder="Resumen breve del artículo (150–200 caracteres)…" maxlength="250" oninput="updateExcerptCount()"></textarea>
+            <div class="editor-char-count" id="excerptCharCount">0/250</div>
           </div>
           <div class="editor-field">
             <label>Categoría</label>
@@ -1616,7 +1631,8 @@
           </div>
           <div class="editor-field">
             <label>Meta descripción (SEO)</label>
-            <textarea id="editorMetaDesc" placeholder="Descripción para buscadores (max 160 chars)…" maxlength="160" style="height:50px;"></textarea>
+            <textarea id="editorMetaDesc" placeholder="Descripción para buscadores (max 160 chars)…" maxlength="160" style="height:50px;" oninput="document.getElementById('metaCharCount').textContent=this.value.length+'/160'"></textarea>
+            <div class="editor-char-count" id="metaCharCount">0/160</div>
           </div>
           <div class="editor-field">
             <label>Etiquetas</label>
@@ -3632,6 +3648,37 @@
   }
 
   // Rich Text Editor commands
+  // ── Editor stats: word count, char count, read time ───────
+  function updateEditorStats() {
+    const el = document.getElementById('rteContent');
+    if (!el) return;
+    const text = el.innerText || '';
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const chars = text.length;
+    const readMin = Math.max(1, Math.ceil(words / 200));
+    document.getElementById('wordCount').textContent = words + ' palabras';
+    document.getElementById('charCount').textContent = chars.toLocaleString() + ' caracteres';
+    document.getElementById('readTimeEst').textContent = '~' + readMin + ' min lectura';
+    // Auto-set read time field
+    const rtField = document.getElementById('editorReadTime');
+    if (rtField && !rtField._manuallySet) rtField.value = readMin;
+  }
+  function updateExcerptCount() {
+    const el = document.getElementById('editorExcerpt');
+    if (!el) return;
+    const count = el.value.length;
+    const counter = document.getElementById('excerptCharCount');
+    if (counter) {
+      counter.textContent = count + '/250';
+      counter.style.color = count > 200 ? 'var(--warning)' : count > 0 ? 'var(--success)' : 'var(--text-muted)';
+    }
+  }
+  // Attach input listener to RTE content
+  setTimeout(() => {
+    const rte = document.getElementById('rteContent');
+    if (rte) rte.addEventListener('input', updateEditorStats);
+  }, 500);
+
   function rteCmd(cmd) {
     document.getElementById('rteContent').focus();
     document.execCommand(cmd, false, null);
