@@ -177,7 +177,26 @@ router.patch('/profile', userAuth, (req, res) => {
   if (shareActivity !== undefined)    user.shareActivity    = !!shareActivity;
   if (allowAnalytics !== undefined)   user.allowAnalytics   = !!allowAnalytics;
   // CCPA / Do Not Sell — opt out of any future data sharing
-  if (req.body.doNotSell !== undefined) user.doNotSell = !!req.body.doNotSell;
+  if (req.body.doNotSell !== undefined) {
+    const oldVal = !!user.doNotSell;
+    const newVal = !!req.body.doNotSell;
+    user.doNotSell = newVal;
+    // Log the change for CCPA compliance (24-month retention)
+    if (oldVal !== newVal) {
+      const crypto = require('crypto');
+      store.appendPrivacyLog({
+        id:           'priv_' + crypto.randomBytes(8).toString('hex'),
+        user_id:      user.id,
+        user_email:   user.email,
+        request_type: newVal ? 'opt_out_sale' : 'opt_in_sale',
+        status:       'completed',
+        source:       req.headers['sec-gpc'] === '1' ? 'gpc_signal' : 'manual',
+        details:      { previous: oldVal, current: newVal, ip: req.ip, userAgent: (req.headers['user-agent'] || '').slice(0, 200) },
+        created_at:   new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+      });
+    }
+  }
   // Notification preferences — synced across platforms
   if (notif_newListings !== undefined)   user.notif_newListings   = !!notif_newListings;
   if (notif_priceDrops !== undefined)    user.notif_priceDrops    = !!notif_priceDrops;

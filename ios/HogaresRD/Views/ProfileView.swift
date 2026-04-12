@@ -700,6 +700,7 @@ struct PrivacySettingsView: View {
     @State private var shareActivity     = Self.loadBool("priv_shareActivity")
     @State private var allowAnalytics    = Self.loadBool("priv_allowAnalytics")
     @State private var doNotSell        = Self.loadBool("priv_doNotSell")
+    @State private var doNotSellConfirmation: String?
     @State private var showDeleteAlert = false
 
     var body: some View {
@@ -820,7 +821,16 @@ struct PrivacySettingsView: View {
         .onChange(of: showOnlineStatus) { _, v in UserDefaults.standard.set(v, forKey: "priv_showOnlineStatus"); syncPrivacy("showOnlineStatus", v) }
         .onChange(of: shareActivity)    { _, v in UserDefaults.standard.set(v, forKey: "priv_shareActivity"); syncPrivacy("shareActivity", v) }
         .onChange(of: allowAnalytics)   { _, v in UserDefaults.standard.set(v, forKey: "priv_allowAnalytics"); syncPrivacy("allowAnalytics", v) }
-        .onChange(of: doNotSell)        { _, v in UserDefaults.standard.set(v, forKey: "priv_doNotSell"); syncPrivacy("doNotSell", v) }
+        .onChange(of: doNotSell) { _, v in
+            UserDefaults.standard.set(v, forKey: "priv_doNotSell")
+            syncPrivacy("doNotSell", v)
+            doNotSellConfirmation = v
+                ? "Tu preferencia ha sido registrada. HogaresRD no vende ni compartirá tu información personal."
+                : "Has reactivado el uso compartido de datos."
+        }
+        .alert("Preferencia registrada", isPresented: .constant(doNotSellConfirmation != nil), actions: {
+            Button("OK") { doNotSellConfirmation = nil }
+        }, message: { Text(doNotSellConfirmation ?? "") })
         .alert("¿Eliminar tu cuenta?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Eliminar permanentemente", role: .destructive) {

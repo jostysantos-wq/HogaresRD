@@ -293,6 +293,7 @@ let _metaLeads = [];
 let _leadQueue = [];
 let _contributionScores = [];
 let _deletionRequests = [];
+let _privacyLog = [];
 let _cacheReady = false;
 
 // ── Initial cache load ──────────────────────────────────────────────────
@@ -318,6 +319,12 @@ async function _loadCache() {
         _extra JSONB DEFAULT '{}'
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_cs_user_listing ON contribution_scores (user_id, listing_id);
+      CREATE TABLE IF NOT EXISTS privacy_log (
+        id TEXT PRIMARY KEY, user_id TEXT, user_email TEXT,
+        request_type TEXT NOT NULL, status TEXT DEFAULT 'completed',
+        source TEXT DEFAULT 'manual', details JSONB DEFAULT '{}',
+        created_at TEXT NOT NULL, completed_at TEXT
+      );
       CREATE TABLE IF NOT EXISTS deletion_requests (
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL, user_email TEXT NOT NULL,
         user_name TEXT, user_role TEXT, reason TEXT,
@@ -327,7 +334,7 @@ async function _loadCache() {
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
-           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs] = await Promise.all([
+           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs, privLog] = await Promise.all([
       query('SELECT * FROM users'),
       query('SELECT * FROM submissions'),
       query('SELECT * FROM applications'),
@@ -346,6 +353,7 @@ async function _loadCache() {
       query('SELECT * FROM lead_queue'),
       query('SELECT * FROM contribution_scores'),
       query('SELECT * FROM deletion_requests'),
+      query('SELECT * FROM privacy_log'),
     ]);
     _users = users;
     _submissions = subs;
@@ -365,6 +373,7 @@ async function _loadCache() {
     _leadQueue = lq;
     _contributionScores = cs;
     _deletionRequests = delReqs;
+    _privacyLog = privLog;
     _cacheReady = true;
     console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} lead queue, ${cs.length} scores`);
   } catch (err) {
@@ -1099,6 +1108,22 @@ function withTransaction(fn) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// PRIVACY LOG (CCPA compliance — 24-month retention)
+// ══════════════════════════════════════════════════════════════════════════
+
+function getPrivacyLog() { return _privacyLog; }
+
+function appendPrivacyLog(entry) {
+  const row = { ...entry };
+  if (typeof row.details === 'object') row.details = JSON.stringify(row.details);
+  const { sql, values } = buildUpsert('privacy_log', row, 'id');
+  pool.query(sql, values).catch(err => _dbWriteError('appendPrivacyLog', err));
+  const cacheRow = { ...row };
+  if (typeof cacheRow.details === 'string') { try { cacheRow.details = JSON.parse(cacheRow.details); } catch {} }
+  _privacyLog.push(cacheRow);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // DELETION REQUESTS
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -1154,6 +1179,7 @@ module.exports = {
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
   withTransaction,
+  getPrivacyLog, appendPrivacyLog,
   getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,
   // Internal refs for memory management (used by cleanup cron)

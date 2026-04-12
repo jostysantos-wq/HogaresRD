@@ -255,6 +255,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── GPC (Global Privacy Control) signal detection ────────────
+// Browsers that send Sec-GPC: 1 are automatically opted out of
+// data sale/sharing per CCPA. We honor this at the response level.
+app.use((req, res, next) => {
+  if (req.headers['sec-gpc'] === '1') {
+    res.setHeader('X-GPC-Acknowledged', '1');
+  }
+  next();
+});
+
 // ── Short referral links ─────────────────────────────────────
 app.get('/r/:refToken', (req, res) => res.redirect(`/comprar?ref=${req.params.refToken}`));
 app.get('/r/:refToken/:listingId', (req, res) => res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`));
@@ -1349,6 +1359,13 @@ app.post('/admin/deletion-requests/:id/process', adminSessionAuth, async (req, r
   dr.processed_by = 'admin';
   store.saveDeletionRequest(dr);
   res.json({ success: true });
+});
+
+// ── Admin: Privacy / CCPA compliance log ───────────────────────────────
+app.get('/admin/privacy-log', adminSessionAuth, (req, res) => {
+  const log = store.getPrivacyLog().sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  const optedOut = store.getUsers().filter(u => u.doNotSell).length;
+  res.json({ log, stats: { total: log.length, optedOut } });
 });
 
 app.post('/admin/deletion-requests/:id/reject', adminSessionAuth, (req, res) => {

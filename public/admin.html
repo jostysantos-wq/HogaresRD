@@ -1518,6 +1518,34 @@
             </tbody>
           </table>
         </div>
+
+        <h3 style="margin-top:2rem;font-size:1rem;">Registro de Privacidad (CCPA)</h3>
+        <div class="error-grid" style="margin-bottom:1rem;">
+          <div class="error-stat">
+            <div class="num" id="privTotal">—</div>
+            <div class="lbl">Total Registros</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--accent);" id="privOptedOut">—</div>
+            <div class="lbl">Usuarios Opt-Out</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+          <button class="action-btn" onclick="exportPrivacyLog()" style="font-weight:600;">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Exportar Registro CCPA
+          </button>
+        </div>
+        <div class="error-log-table">
+          <table>
+            <thead>
+              <tr><th>Tipo</th><th>Email</th><th>Fuente</th><th>Estado</th><th>Fecha</th></tr>
+            </thead>
+            <tbody id="privacyLogBody">
+              <tr><td colspan="5" class="leads-empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div><!-- /content-area -->
@@ -2866,6 +2894,7 @@
       const pill = document.getElementById('deletionPill');
       if (pill) { pill.textContent = pending; pill.style.display = pending > 0 ? '' : 'none'; }
       renderDeletionTable(data);
+      loadPrivacyLog();
     }).catch(() => {
       document.getElementById('deletionTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Error al cargar.</td></tr>';
     });
@@ -2931,6 +2960,50 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `eliminacion_datos_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  // ── Privacy Log (CCPA) ──────────────────────────────────────
+  let _privacyLog = [];
+
+  function loadPrivacyLog() {
+    fetch('/admin/privacy-log').then(r => r.ok ? r.json() : { log: [], stats: {} }).then(data => {
+      _privacyLog = data.log || [];
+      document.getElementById('privTotal').textContent = _privacyLog.length;
+      document.getElementById('privOptedOut').textContent = data.stats?.optedOut || 0;
+      const tbody = document.getElementById('privacyLogBody');
+      if (!_privacyLog.length) { tbody.innerHTML = '<tr><td colspan="5" class="leads-empty">Sin registros de privacidad.</td></tr>'; return; }
+      tbody.innerHTML = _privacyLog.map(r => {
+        const typeBadge = r.request_type === 'opt_out_sale'
+          ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">Opt-Out</span>'
+          : r.request_type === 'opt_in_sale'
+          ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">Opt-In</span>'
+          : `<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">${esc(r.request_type)}</span>`;
+        const srcBadge = r.source === 'gpc_signal'
+          ? '<span style="color:#7c3aed;font-weight:600;">GPC</span>'
+          : 'Manual';
+        const date = r.created_at ? new Date(r.created_at).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        return `<tr>
+          <td>${typeBadge}</td>
+          <td>${esc(r.user_email || '—')}</td>
+          <td>${srcBadge}</td>
+          <td>${r.status || '—'}</td>
+          <td>${date}</td>
+        </tr>`;
+      }).join('');
+    }).catch(() => {});
+  }
+
+  function exportPrivacyLog() {
+    const rows = [['ID','Tipo','User ID','Email','Fuente','Estado','Fecha','Completado']];
+    for (const r of _privacyLog) {
+      rows.push([r.id, r.request_type, r.user_id||'', r.user_email||'', r.source||'', r.status||'', r.created_at||'', r.completed_at||'']);
+    }
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ccpa_privacy_log_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
   }
 
