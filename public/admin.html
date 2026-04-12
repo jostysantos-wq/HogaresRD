@@ -1380,11 +1380,20 @@
             <div class="num" style="color:var(--success);" id="errRoutes">—</div>
             <div class="lbl">Rutas con errores</div>
           </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--warning);" id="errClient">—</div>
+            <div class="lbl">Errores iOS</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <button class="action-btn" onclick="filterErrors('all')" id="errFilterAll" style="font-weight:700;">Todos</button>
+          <button class="action-btn" onclick="filterErrors('server')" id="errFilterServer">Servidor</button>
+          <button class="action-btn" onclick="filterErrors('client')" id="errFilterClient">iOS / Cliente</button>
         </div>
         <div class="error-log-table">
           <table>
             <thead>
-              <tr><th>Nivel</th><th>Tipo</th><th>Método</th><th>URL</th><th>Status</th><th>Mensaje</th><th>Fecha</th></tr>
+              <tr><th>Fuente</th><th>Nivel</th><th>Tipo</th><th>Contexto</th><th>Status</th><th>Mensaje</th><th>Fecha</th></tr>
             </thead>
             <tbody id="errorTableBody">
               <tr><td colspan="7" class="leads-empty">Cargando errores...</td></tr>
@@ -2802,29 +2811,57 @@
   }).catch(() => {});
 
   // ── Error Logs ────────────────────────────────────────────────
+  let _allErrors = [];
+  let _errFilter = 'all';
+
+  function filterErrors(mode) {
+    _errFilter = mode;
+    document.getElementById('errFilterAll').style.fontWeight    = mode === 'all'    ? '700' : '400';
+    document.getElementById('errFilterServer').style.fontWeight = mode === 'server' ? '700' : '400';
+    document.getElementById('errFilterClient').style.fontWeight = mode === 'client' ? '700' : '400';
+    renderErrors();
+  }
+
+  function renderErrors() {
+    const tbody = document.getElementById('errorTableBody');
+    let errors = _allErrors;
+    if (_errFilter === 'server') errors = errors.filter(e => e.type !== 'client_error');
+    if (_errFilter === 'client') errors = errors.filter(e => e.type === 'client_error');
+    if (!errors.length) { tbody.innerHTML = '<tr><td colspan="7" class="leads-empty">No hay errores registrados.</td></tr>'; return; }
+    tbody.innerHTML = errors.map(e => {
+      const levelClass = e.level === 'fatal' ? 'elog-fatal' : e.level === 'error' ? 'elog-error' : 'elog-warn';
+      const date = e.timestamp ? new Date(e.timestamp).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+      const isClient = e.type === 'client_error';
+      const source = isClient
+        ? `<span style="background:#6366f1;color:#fff;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;">iOS</span>`
+        : `<span style="background:#64748b;color:#fff;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;">Server</span>`;
+      const context = isClient
+        ? (e.context || e.endpoint || '—')
+        : (e.url || e.method ? `${e.method || ''} ${e.url || ''}`.trim() : '—');
+      const extra = isClient && e.device ? ` · ${e.device} · iOS ${e.osVersion || '?'}` : '';
+      return `
+        <tr>
+          <td>${source}</td>
+          <td><span class="${levelClass}">${e.level || '—'}</span></td>
+          <td>${e.type || '—'}</td>
+          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(context + extra).replace(/"/g,'&quot;')}">${context}${extra}</td>
+          <td>${e.statusCode || '—'}</td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4d6a8a;" title="${(e.message||'').replace(/"/g,'&quot;')}">${e.message || '—'}</td>
+          <td style="white-space:nowrap;">${date}</td>
+        </tr>`;
+    }).join('');
+  }
+
   function loadErrors() {
     fetch('/api/admin/errors').then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); }).then(data => {
       document.getElementById('errTotal').textContent  = data.totalErrors24h || 0;
       document.getElementById('errUptime').textContent = data.uptime ? Math.round(data.uptime / 3600) : '—';
       document.getElementById('errMem').textContent    = data.memory ? Math.round(data.memory.heapUsed / 1024 / 1024) : '—';
       document.getElementById('errRoutes').textContent = data.errorsByRoute ? Object.keys(data.errorsByRoute).length : 0;
-      const tbody = document.getElementById('errorTableBody');
-      const errors = data.recentErrors || [];
-      if (!errors.length) { tbody.innerHTML = '<tr><td colspan="7" class="leads-empty">No hay errores registrados.</td></tr>'; return; }
-      tbody.innerHTML = errors.map(e => {
-        const levelClass = e.level === 'fatal' ? 'elog-fatal' : e.level === 'error' ? 'elog-error' : 'elog-warn';
-        const date = e.timestamp ? new Date(e.timestamp).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-        return `
-          <tr>
-            <td><span class="${levelClass}">${e.level || '—'}</span></td>
-            <td>${e.type || '—'}</td>
-            <td>${e.method || '—'}</td>
-            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.url || '—'}</td>
-            <td>${e.statusCode || '—'}</td>
-            <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4d6a8a;">${e.message || '—'}</td>
-            <td style="white-space:nowrap;">${date}</td>
-          </tr>`;
-      }).join('');
+      const allErrs = data.recentErrors || [];
+      document.getElementById('errClient').textContent = allErrs.filter(e => e.type === 'client_error').length;
+      _allErrors = allErrs;
+      renderErrors();
     }).catch(() => {
       document.getElementById('errorTableBody').innerHTML = '<tr><td colspan="7" class="leads-empty">Error al cargar el registro.</td></tr>';
     });

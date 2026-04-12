@@ -213,6 +213,37 @@ router.get('/errors', adminSessionAuth, (req, res) => {
   });
 });
 
+// ── Client error reporting (iOS / web) ───────────────────────────
+// Rate-limited: 20 reports per minute per IP to prevent abuse.
+const rateLimit = require('express-rate-limit');
+const clientErrorLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: false, legacyHeaders: false });
+
+router.post('/client-errors', clientErrorLimiter, (req, res) => {
+  const errors = Array.isArray(req.body) ? req.body.slice(0, 25) : [req.body];
+
+  for (const err of errors) {
+    appendLog({
+      level:       'error',
+      type:        'client_error',
+      source:      String(err.source   || 'ios').slice(0, 20),
+      timestamp:   err.timestamp       || new Date().toISOString(),
+      message:     String(err.message  || '').slice(0, 2000),
+      context:     String(err.context  || '').slice(0, 500),
+      stack:       String(err.stack    || '').slice(0, 4000),
+      appVersion:  String(err.appVersion  || '').slice(0, 20),
+      osVersion:   String(err.osVersion   || '').slice(0, 30),
+      device:      String(err.device      || '').slice(0, 50),
+      userId:      err.userId || null,
+      userRole:    String(err.userRole || '').slice(0, 30),
+      endpoint:    String(err.endpoint || '').slice(0, 200),
+      statusCode:  err.statusCode || null,
+      ip:          req.ip || '',
+    });
+  }
+  recordError('POST', '/api/admin/client-errors');
+  res.json({ ok: true, count: errors.length });
+});
+
 // ── Exports ───────────────────────────────────────────────────────
 module.exports = {
   requestTimer,

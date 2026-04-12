@@ -398,6 +398,7 @@ struct ConversationThreadView: View {
             syncClosedState(conv)
         } catch {
             print("[ConvThread] loadMessages FAILED: \(error)")
+            ErrorReporter.shared.reportAPIError(error, endpoint: "GET /api/conversations/\(conversation.id)", context: "loadMessages")
         }
     }
 
@@ -431,6 +432,7 @@ struct ConversationThreadView: View {
             }
         } catch {
             print("[ConvThread] pollNew FAILED: \(error)")
+            ErrorReporter.shared.reportAPIError(error, endpoint: "GET /api/conversations/\(conversation.id)?since=", context: "pollNew")
         }
     }
 
@@ -716,6 +718,7 @@ struct ConversationThreadView: View {
             lastTimestamp = msg.timestamp
         } catch {
             print("[ConvThread] send FAILED: \(error)")
+            ErrorReporter.shared.reportAPIError(error, endpoint: "POST /api/conversations/\(conversation.id)/messages", context: "sendMessage")
             // Reload the full thread to pick up the message the server saved
             await loadMessages()
         }

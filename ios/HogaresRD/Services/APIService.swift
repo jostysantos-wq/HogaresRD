@@ -951,6 +951,7 @@ class APIService: ObservableObject {
         } catch {
             let raw = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
             print("[Conversations] decode error: \(error)\nraw: \(raw)")
+            ErrorReporter.shared.reportDecodeError(error, endpoint: "GET /api/conversations", rawPrefix: raw)
             throw error
         }
     }
