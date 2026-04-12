@@ -391,10 +391,14 @@ struct ConversationThreadView: View {
     // MARK: - Network
 
     private func loadMessages() async {
-        guard let conv = try? await api.getConversation(id: conversation.id) else { return }
-        messages      = conv.messages ?? []
-        lastTimestamp = messages.last?.timestamp
-        syncClosedState(conv)
+        do {
+            let conv = try await api.getConversation(id: conversation.id)
+            messages      = conv.messages ?? []
+            lastTimestamp = messages.last?.timestamp
+            syncClosedState(conv)
+        } catch {
+            print("[ConvThread] loadMessages FAILED: \(error)")
+        }
     }
 
     private func claimConv() async {
@@ -413,19 +417,20 @@ struct ConversationThreadView: View {
     }
 
     private func pollNew() async {
-        guard let conv = try? await api.getConversation(id: conversation.id, since: lastTimestamp) else { return }
-        let fresh = conv.messages ?? []
-        syncClosedState(conv)
-        guard !fresh.isEmpty else { return }
-        let existingIDs = Set(messages.map { $0.id })
-        let toAdd = fresh.filter { !existingIDs.contains($0.id) }
-        if !toAdd.isEmpty {
-            messages.append(contentsOf: toAdd)
-            lastTimestamp = toAdd.last?.timestamp
-            // New messages arrived while the thread is open — clear the
-            // unread badge on the server so it doesn't show up again when
-            // the user backs out and comes back.
-            await markRead()
+        do {
+            let conv = try await api.getConversation(id: conversation.id, since: lastTimestamp)
+            let fresh = conv.messages ?? []
+            syncClosedState(conv)
+            guard !fresh.isEmpty else { return }
+            let existingIDs = Set(messages.map { $0.id })
+            let toAdd = fresh.filter { !existingIDs.contains($0.id) }
+            if !toAdd.isEmpty {
+                messages.append(contentsOf: toAdd)
+                lastTimestamp = toAdd.last?.timestamp
+                await markRead()
+            }
+        } catch {
+            print("[ConvThread] pollNew FAILED: \(error)")
         }
     }
 
@@ -705,9 +710,14 @@ struct ConversationThreadView: View {
         guard !text.isEmpty else { return }
         input   = ""
         sending = true
-        if let msg = try? await api.sendMessage(conversationId: conversation.id, text: text) {
+        do {
+            let msg = try await api.sendMessage(conversationId: conversation.id, text: text)
             messages.append(msg)
             lastTimestamp = msg.timestamp
+        } catch {
+            print("[ConvThread] send FAILED: \(error)")
+            // Reload the full thread to pick up the message the server saved
+            await loadMessages()
         }
         sending = false
     }
