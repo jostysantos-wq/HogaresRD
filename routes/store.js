@@ -21,9 +21,24 @@ const appEvents = require('./app-events');
 // in newer versions, rejecting DO's managed database CA. Set ssl separately.
 const _rawUrl = process.env.DATABASE_URL || '';
 const _connStr = _rawUrl.replace(/[?&]sslmode=[^&]*/g, '');
+
+// SSL configuration: use CA cert if available for proper verification
+const _sslConfig = (() => {
+  if (!_rawUrl.includes('sslmode')) return false;
+  // If a CA certificate is provided, use it for proper verification
+  const caPath = process.env.DB_CA_CERT || path.join(__dirname, '..', 'ca-certificate.crt');
+  if (fs.existsSync(caPath)) {
+    console.log('[store-pg] Using CA certificate for SSL verification');
+    return { ca: fs.readFileSync(caPath).toString(), rejectUnauthorized: true };
+  }
+  // Fallback: SSL without certificate verification (log warning)
+  console.warn('[store-pg] WARNING: SSL enabled but no CA certificate found — using rejectUnauthorized:false');
+  return { rejectUnauthorized: false };
+})();
+
 const pool = new Pool({
   connectionString: _connStr,
-  ssl: _rawUrl.includes('sslmode') ? { rejectUnauthorized: false } : false,
+  ssl: _sslConfig,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,

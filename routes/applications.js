@@ -12,6 +12,7 @@ const { createAutoTask, autoCompleteTasksByEvent } = require('./tasks');
 const notify     = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 const appEvents  = require('./app-events');
+const { encrypt, decrypt } = require('../utils/encryption');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
@@ -609,14 +610,14 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   const clientExtended = {
     id_type:           safeEnum(id_type, ['cedula', 'passport', '']),
-    id_number:         safeStr(id_number, 30),
+    id_number:         encrypt(safeStr(id_number, 30)) || '',       // ENCRYPTED: government ID
     nationality:       safeStr(nationality, 60),
     current_address:   safeStr(current_address, 250),
     date_of_birth:     /^\d{4}-\d{2}-\d{2}$/.test(date_of_birth || '') ? date_of_birth : '',
     employment_status: safeEnum(employment_status, ['employed','self_employed','retired','student','unemployed',''], ''),
-    employer_name:     safeStr(employer_name, 120),
+    employer_name:     encrypt(safeStr(employer_name, 120)) || '',  // ENCRYPTED: employer
     job_title:         safeStr(job_title, 80),
-    monthly_income:    safeStr(String(monthly_income || ''), 20),
+    monthly_income:    encrypt(safeStr(String(monthly_income || ''), 20)) || '', // ENCRYPTED: income
     income_currency:   safeEnum(income_currency, ['USD','DOP',''], 'DOP'),
   };
 
@@ -630,8 +631,8 @@ router.post('/', appCreateLimiter, (req, res) => {
         name:           coName,
         phone:          coPhone,
         email:          safeStr(co_applicant.email, 120),
-        id_number:      safeStr(co_applicant.id_number, 30),
-        monthly_income: safeStr(String(co_applicant.monthly_income || ''), 20),
+        id_number:      encrypt(safeStr(co_applicant.id_number, 30)) || '',       // ENCRYPTED
+        monthly_income: encrypt(safeStr(String(co_applicant.monthly_income || ''), 20)) || '', // ENCRYPTED
       };
     }
   }
@@ -985,8 +986,23 @@ router.get('/:id', userAuth, (req, res) => {
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
+
+// Helper: decrypt sensitive PII fields before sending to authorized users
+function decryptAppPII(app) {
+  const copy = JSON.parse(JSON.stringify(app)); // deep clone
+  if (copy.client) {
+    if (copy.client.id_number)      copy.client.id_number      = decrypt(copy.client.id_number);
+    if (copy.client.monthly_income) copy.client.monthly_income = decrypt(copy.client.monthly_income);
+    if (copy.client.employer_name)  copy.client.employer_name  = decrypt(copy.client.employer_name);
+  }
+  if (copy.co_applicant) {
+    if (copy.co_applicant.id_number)      copy.co_applicant.id_number      = decrypt(copy.co_applicant.id_number);
+    if (copy.co_applicant.monthly_income) copy.co_applicant.monthly_income = decrypt(copy.co_applicant.monthly_income);
+  }
+  return copy;
+}
 
 // ── GET /:id/events — SSE stream of application state changes ────
 // Long-lived Server-Sent Events stream that pushes a fresh state
@@ -1611,6 +1627,9 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
 
   const safePath = guardDocPath(doc.path);
   if (!safePath) return res.status(400).json({ error: 'Ruta de archivo inválida' });
+  // Force download, don't render in browser (prevents XSS via uploaded HTML/SVG)
+  res.setHeader('Content-Disposition', `attachment; filename="${doc.original_name || 'document'}"`)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safePath);
 });
 
