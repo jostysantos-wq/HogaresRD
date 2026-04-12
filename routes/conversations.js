@@ -331,10 +331,13 @@ router.get('/:id', requireLogin, (req, res) => {
     : conv.messages;
 
   // Auto-mark-read on INITIAL load (no ?since= = user just opened the thread).
+  // Use clientId match (not global role) to determine which side to clear —
+  // a pro user who is the CLIENT should clear unreadClient, not unreadBroker.
   if (!since) {
     let dirty = false;
-    if (isBroker && conv.unreadBroker) { conv.unreadBroker = 0; dirty = true; }
-    if (isClient && conv.unreadClient) { conv.unreadClient = 0; dirty = true; }
+    const isClientSide = conv.clientId === user.sub;
+    if (!isClientSide && conv.unreadBroker) { conv.unreadBroker = 0; dirty = true; }
+    if (isClientSide && conv.unreadClient)  { conv.unreadClient = 0; dirty = true; }
     if (dirty) store.saveConversation(conv);
   }
 
@@ -616,8 +619,8 @@ router.put('/:id/archive', requireLogin, (req, res) => {
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
   const isClient = conv.clientId === user.sub;
-  const isBroker = PRO_ROLES.includes(user.role);
-  if (!isClient && !isBroker) {
+  const isAssignedBroker = PRO_ROLES.includes(user.role) && conv.brokerId === user.sub;
+  if (!isClient && !isAssignedBroker) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
   if (!conv.closed) {
@@ -639,8 +642,8 @@ router.put('/:id/unarchive', requireLogin, (req, res) => {
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
   const isClient = conv.clientId === user.sub;
-  const isBroker = PRO_ROLES.includes(user.role);
-  if (!isClient && !isBroker) {
+  const isAssignedBroker = PRO_ROLES.includes(user.role) && conv.brokerId === user.sub;
+  if (!isClient && !isAssignedBroker) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 

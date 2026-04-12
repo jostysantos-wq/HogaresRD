@@ -44,6 +44,20 @@ class APIService: ObservableObject {
     @Published var currentUser: User?
     @Published var token: String?
 
+    /// Handles 401 Unauthorized — token expired or invalidated.
+    /// Logs the user out so the app shows the login screen instead of
+    /// repeatedly failing with "No autorizado" on every request.
+    func handleUnauthorized(_ response: URLResponse?) {
+        guard let http = response as? HTTPURLResponse, http.statusCode == 401 else { return }
+        Task { @MainActor in
+            if currentUser != nil {
+                print("[APIService] 401 received — token expired, logging out")
+                ErrorReporter.shared.report("Token expired — auto-logout", context: "401 handler")
+                logout()
+            }
+        }
+    }
+
     /// Affiliate ref token from a deep link. Set when the app opens via
     /// a Universal Link with ?ref=TOKEN. Included in conversation and
     /// application requests so the lead is attributed to the sharing agent.
@@ -490,8 +504,9 @@ class APIService: ObservableObject {
         var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/me")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.cachePolicy = .reloadIgnoringLocalCacheData
-        guard let (data, resp) = try? await session.data(for: req),
-              let http = resp as? HTTPURLResponse, http.statusCode == 200,
+        guard let (data, resp) = try? await session.data(for: req) else { return }
+        handleUnauthorized(resp)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200,
               let user = try? decoder.decode(User.self, from: data) else { return }
         await MainActor.run {
             self.currentUser = user
@@ -941,6 +956,7 @@ class APIService: ObservableObject {
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, resp) = try await session.data(for: req)
+        handleUnauthorized(resp)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }

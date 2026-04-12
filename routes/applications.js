@@ -908,10 +908,16 @@ router.get('/', userAuth, (req, res) => {
     apps = store.getApplications();
   } else if (user.role === 'inmobiliaria' || user.role === 'constructora') {
     apps = store.getApplicationsByInmobiliaria(user.id);
+    // Also include applications where this user applied as a client
+    const asClient = store.getApplicationsByClient(user.id);
+    for (const a of asClient) { if (!apps.some(x => x.id === a.id)) apps.push(a); }
   } else if (user.role === 'secretary') {
     apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
   } else if (['agency', 'broker'].includes(user.role)) {
     apps = store.getApplicationsByBroker(user.id);
+    // Also include applications where this pro user applied as a client
+    const asClient = store.getApplicationsByClient(user.id);
+    for (const a of asClient) { if (!apps.some(x => x.id === a.id)) apps.push(a); }
   } else {
     return res.status(403).json({ error: 'No autorizado' });
   }
