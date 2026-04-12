@@ -17,6 +17,7 @@ const { Pool } = require('pg');
 const path = require('path');
 const fs   = require('fs');
 const appEvents = require('./app-events');
+const { encrypt: _enc, decrypt: _dec } = require('../utils/encryption');
 
 // ── Connection ───────────────────────────────────────────────────────────
 // Strip sslmode from URL — pg driver treats sslmode=require as verify-full
@@ -654,8 +655,34 @@ function getApplicationsByInmobiliaria(inmId) {
   return _applications.filter(a => a.inmobiliaria_id === inmId).map(hydrateApplication);
 }
 
+// Encrypt financial amounts before saving to DB
+function _encryptAppFinancials(app) {
+  if (app.commission) {
+    for (const k of ['sale_amount', 'agent_amount', 'inmobiliaria_amount', 'agent_net']) {
+      if (app.commission[k] != null && typeof app.commission[k] === 'number') {
+        app.commission[k] = _enc(String(app.commission[k]));
+      }
+    }
+  }
+  if (app.payment_plan) {
+    if (app.payment_plan.total_amount != null && typeof app.payment_plan.total_amount === 'number') {
+      app.payment_plan.total_amount = _enc(String(app.payment_plan.total_amount));
+    }
+    if (Array.isArray(app.payment_plan.installments)) {
+      for (const inst of app.payment_plan.installments) {
+        if (inst.amount != null && typeof inst.amount === 'number') {
+          inst.amount = _enc(String(inst.amount));
+        }
+      }
+    }
+  }
+}
+
 function saveApplication(app) {
-  const row = dehydrateApplication(app);
+  // Deep clone before encrypting so the in-memory object stays usable
+  const toSave = JSON.parse(JSON.stringify(app));
+  _encryptAppFinancials(toSave);
+  const row = dehydrateApplication(toSave);
   const { sql, values } = buildUpsert('applications', row, 'id');
   pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
   const cacheRow = { ...row };

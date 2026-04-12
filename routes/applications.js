@@ -989,9 +989,10 @@ router.get('/:id', userAuth, (req, res) => {
   res.json(decryptAppPII(app));
 });
 
-// Helper: decrypt sensitive PII fields before sending to authorized users
+// Helper: decrypt sensitive PII + financial fields before sending to authorized users
 function decryptAppPII(app) {
   const copy = JSON.parse(JSON.stringify(app)); // deep clone
+  // PII fields
   if (copy.client) {
     if (copy.client.id_number)      copy.client.id_number      = decrypt(copy.client.id_number);
     if (copy.client.monthly_income) copy.client.monthly_income = decrypt(copy.client.monthly_income);
@@ -1001,7 +1002,52 @@ function decryptAppPII(app) {
     if (copy.co_applicant.id_number)      copy.co_applicant.id_number      = decrypt(copy.co_applicant.id_number);
     if (copy.co_applicant.monthly_income) copy.co_applicant.monthly_income = decrypt(copy.co_applicant.monthly_income);
   }
+  // Financial fields — decrypt commission amounts
+  if (copy.commission) {
+    for (const key of ['sale_amount', 'agent_amount', 'inmobiliaria_amount', 'agent_net']) {
+      if (copy.commission[key] && typeof copy.commission[key] === 'string') {
+        const dec = decrypt(copy.commission[key]);
+        copy.commission[key] = dec ? (isNaN(Number(dec)) ? dec : Number(dec)) : copy.commission[key];
+      }
+    }
+  }
+  // Payment plan amounts
+  if (copy.payment_plan?.total_amount && typeof copy.payment_plan.total_amount === 'string') {
+    const dec = decrypt(copy.payment_plan.total_amount);
+    copy.payment_plan.total_amount = dec ? (isNaN(Number(dec)) ? dec : Number(dec)) : copy.payment_plan.total_amount;
+  }
+  if (copy.payment_plan?.installments) {
+    for (const inst of copy.payment_plan.installments) {
+      if (inst.amount && typeof inst.amount === 'string') {
+        const dec = decrypt(inst.amount);
+        inst.amount = dec ? (isNaN(Number(dec)) ? dec : Number(dec)) : inst.amount;
+      }
+    }
+  }
   return copy;
+}
+
+// Helper: encrypt financial fields before saving
+function encryptFinancials(app) {
+  // Commission amounts
+  if (app.commission) {
+    for (const key of ['sale_amount', 'agent_amount', 'inmobiliaria_amount', 'agent_net']) {
+      if (app.commission[key] != null && typeof app.commission[key] === 'number') {
+        app.commission[key] = encrypt(String(app.commission[key]));
+      }
+    }
+  }
+  // Payment plan amounts
+  if (app.payment_plan?.total_amount != null && typeof app.payment_plan.total_amount === 'number') {
+    app.payment_plan.total_amount = encrypt(String(app.payment_plan.total_amount));
+  }
+  if (app.payment_plan?.installments) {
+    for (const inst of app.payment_plan.installments) {
+      if (inst.amount != null && typeof inst.amount === 'number') {
+        inst.amount = encrypt(String(inst.amount));
+      }
+    }
+  }
 }
 
 // ── GET /:id/events — SSE stream of application state changes ────
