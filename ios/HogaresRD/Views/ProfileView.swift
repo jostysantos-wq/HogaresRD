@@ -1250,6 +1250,8 @@ struct MyListingCard: View {
     var onInventory: (() -> Void)?
 
     @State private var copied = false
+    @State private var showQR = false
+    @State private var qrURL = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1378,6 +1380,24 @@ struct MyListingCard: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
+
+                        // QR Code
+                        Button {
+                            showQR = true
+                            qrURL = "https://hogaresrd.com/listing/\(listing.id)?ref=\(ref)"
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "qrcode")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("QR")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .padding(.vertical, 8).padding(.horizontal, 12)
+                            .background(Color(.systemGray5))
+                            .foregroundStyle(.primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -1386,5 +1406,70 @@ struct MyListingCard: View {
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+        .sheet(isPresented: $showQR) {
+            NavigationStack {
+                VStack(spacing: 20) {
+                    Spacer()
+                    // Generate QR from CoreImage
+                    if let qrImage = generateQRCode(from: qrURL) {
+                        Image(uiImage: qrImage)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 220, height: 220)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    Text(listing.title)
+                        .font(.subheadline).bold()
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Text(qrURL)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                    Button {
+                        if let img = generateQRCode(from: qrURL) {
+                            let av = UIActivityViewController(activityItems: [img, qrURL], applicationActivities: nil)
+                            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let root = scene.windows.first?.rootViewController?.presentedViewController {
+                                root.present(av, animated: true)
+                            }
+                        }
+                    } label: {
+                        Label("Compartir QR", systemImage: "square.and.arrow.up")
+                            .font(.subheadline).bold()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal, 32)
+                    Spacer()
+                }
+                .navigationTitle("Código QR")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cerrar") { showQR = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    private func generateQRCode(from string: String) -> UIImage? {
+        guard let data = string.data(using: .ascii),
+              let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+        filter.setValue(data, forKey: "inputMessage")
+        filter.setValue("M", forKey: "inputCorrectionLevel")
+        guard let ciImage = filter.outputImage else { return nil }
+        let scale = 10.0
+        let transformed = ciImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(transformed, from: transformed.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
     }
 }

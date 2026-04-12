@@ -4854,10 +4854,15 @@
       }
     } catch {}
 
-    // Generate QR code (using a simple API)
+    // Generate QR code using Google Charts API (more reliable than qrserver)
     const qrUrl = `${baseUrl}/r/${refToken}`;
     const qrEl = document.getElementById('refQRCode');
-    qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}&color=002D62" alt="QR Code" style="width:180px;height:180px;">`;
+    const qrImgUrl = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(qrUrl)}&chco=002D62`;
+    qrEl.innerHTML = `
+      <img src="${qrImgUrl}" alt="QR Code" style="width:200px;height:200px;border-radius:4px;"
+           onerror="this.onerror=null;this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}&color=002D62';">
+      <div style="margin-top:.5rem;font-size:.72rem;color:var(--text-muted);word-break:break-all;">${esc(qrUrl)}</div>
+    `;
   }
 
   window.copyRefLink = function(type) {
@@ -4890,10 +4895,9 @@
 
   window.downloadQR = function() {
     const img = document.querySelector('#refQRCode img');
-    if (!img) return;
-    const a = document.createElement('a');
-    a.href = img.src; a.download = `hogaresrd-qr-${currentUser.refToken}.png`;
-    a.click();
+    if (!img || !img.src) return;
+    // Open in new tab for saving (cross-origin images can't be downloaded directly)
+    window.open(img.src, '_blank');
   };
 
   // Load referral page when navigating to it
