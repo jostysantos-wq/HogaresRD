@@ -229,13 +229,22 @@ router.get('/agencies/:slug', (req, res) => {
       email: agencyUser.email || null,
     };
 
-    // Team members (if inmobiliaria/constructora)
+    // Team members (if inmobiliaria/constructora) — include owner as lead
     if (['inmobiliaria', 'constructora'].includes(agencyUser.role)) {
+      // Owner first
+      team.push({
+        name: agencyUser.name, role: agencyUser.role,
+        jobTitle: agencyUser.jobTitle || agencyUser.team_title || 'Director',
+        avatarUrl: agencyUser.avatarUrl || null,
+      });
+      // Then team members
       const members = store.getUsersByInmobiliaria(agencyUser.id);
-      team = members.map(m => ({
-        name: m.name, role: m.role, jobTitle: m.jobTitle || m.team_title || '',
-        avatarUrl: m.avatarUrl || null,
-      }));
+      for (const m of members) {
+        team.push({
+          name: m.name, role: m.role, jobTitle: m.jobTitle || m.team_title || 'Agente',
+          avatarUrl: m.avatarUrl || null,
+        });
+      }
     }
 
     // Posts

@@ -282,9 +282,9 @@
     <div style="max-width:1280px;margin:0 auto;padding:0 2rem;display:flex;gap:0;overflow-x:auto;">
       <button class="profile-tab active" onclick="switchTab('about', this)">Nosotros</button>
       <button class="profile-tab" onclick="switchTab('listings', this)">Propiedades</button>
-      <button class="profile-tab" onclick="switchTab('team', this)" id="tabTeam" style="display:none;">Equipo</button>
+      <button class="profile-tab" onclick="switchTab('team', this)" id="tabTeam">Agentes</button>
       <button class="profile-tab" onclick="switchTab('posts', this)" id="tabPosts" style="display:none;">Noticias</button>
-      <button class="profile-tab" onclick="switchTab('reviews', this)" id="tabReviews" style="display:none;">Reseñas</button>
+      <button class="profile-tab" onclick="switchTab('reviews', this)" id="tabReviews">Reseñas</button>
       <button class="profile-tab" onclick="switchTab('contact', this)">Contacto</button>
     </div>
   </div>
@@ -555,7 +555,7 @@
           if (data.reviews?.count) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;text-align:center;"><strong style="font-size:1.5rem;color:#FFD700;">★ ${data.reviews.average}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">${data.reviews.count} Reseña${data.reviews.count !== 1 ? 's' : ''}</span></div>`);
           document.getElementById('aboutMeta').innerHTML = meta.join('');
 
-          // Team section
+          // Team section — always render (show empty state if no members)
           if (data.team && data.team.length) {
             document.getElementById('teamGrid').innerHTML = data.team.map(m => `
               <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;">
@@ -564,8 +564,25 @@
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">${esc(m.jobTitle || 'Agente')}</div>
               </div>
             `).join('');
-            document.getElementById('tabTeam').style.display = '';
             document.getElementById('tabTeam').innerHTML = `Agentes <span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">${data.team.length}</span>`;
+          } else {
+            document.getElementById('teamGrid').innerHTML = `
+              <div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.3;">👥</div>
+                <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Equipo en crecimiento</h3>
+                <p style="font-size:0.88rem;color:var(--text-muted);max-width:400px;margin:0 auto;">Esta inmobiliaria está construyendo su equipo. Los agentes afiliados aparecerán aquí.</p>
+              </div>`;
+          }
+
+          // Reviews section — always render
+          if (!data.reviews?.count) {
+            document.getElementById('reviewSummary').innerHTML = '';
+            document.getElementById('reviewsList').innerHTML = `
+              <div style="text-align:center;padding:2rem 1rem;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.3;">⭐</div>
+                <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Sin reseñas aún</h3>
+                <p style="font-size:0.88rem;color:var(--text-muted);">Las reseñas de compradores verificados aparecerán aquí.</p>
+              </div>`;
           }
 
           // Posts section
