@@ -1,19 +1,53 @@
 // ══════════════════════════════════════════════════════════════════════════
 // HogaresRD — Cascading Priority Lead Distribution Engine
 //
-// 3-tier system:
-//   Tier 1: Listing creator (5-min exclusive)
-//   Tier 2: Contributing affiliates (score >= 10, 5-min)
-//   Tier 3: All remaining affiliates (first-to-claim, 5-min)
+// 3-tier system with time-aware windows:
+//   Tier 1: Listing creator (exclusive)
+//   Tier 2: Contributing affiliates (score >= 10)
+//   Tier 3: All remaining affiliates (first-to-claim)
 //   Tier 4: Auto-response to buyer
+//
+// Business hours (8 AM – 8 PM AST):
+//   Tier 1: 5 min  |  Tier 2: 10 min  |  Tier 3: 15 min  (30 min total)
+// Off-hours (8 PM – 8 AM, weekends):
+//   Tier 1: 15 min |  Tier 2: 30 min  |  Tier 3: 60 min  (105 min total)
 //
 // Uses in-memory timers (setTimeout) with cron-based crash recovery.
 // ══════════════════════════════════════════════════════════════════════════
 
 const store = require('./store');
 
-const CASCADE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes per tier
 const CONTRIB_THRESHOLD = 10;            // Minimum score for Tier 2
+
+// ── Time-aware cascade windows (Dominican Republic, AST = UTC-4) ────────
+const BUSINESS_HOURS_START = 8;  // 8 AM
+const BUSINESS_HOURS_END   = 20; // 8 PM
+const TZ_OFFSET_HOURS      = -4; // AST (Atlantic Standard Time)
+
+// Tier durations in milliseconds
+const BUSINESS_WINDOWS = { 1:  5 * 60_000, 2: 10 * 60_000, 3: 15 * 60_000 };
+const OFFHOURS_WINDOWS = { 1: 15 * 60_000, 2: 30 * 60_000, 3: 60 * 60_000 };
+
+/**
+ * Returns true if the current time in the Dominican Republic is within
+ * business hours (8 AM – 8 PM, Mon–Sat). Sunday is always off-hours.
+ */
+function isBusinessHours() {
+  const now = new Date();
+  const localHour = (now.getUTCHours() + 24 + TZ_OFFSET_HOURS) % 24;
+  const localDay  = now.getUTCDay(); // 0=Sun, 6=Sat
+  if (localDay === 0) return false;  // Sunday is always off-hours
+  return localHour >= BUSINESS_HOURS_START && localHour < BUSINESS_HOURS_END;
+}
+
+/** Get the cascade window in ms for a given tier at the current time */
+function getCascadeWindowMs(tier) {
+  const windows = isBusinessHours() ? BUSINESS_WINDOWS : OFFHOURS_WINDOWS;
+  return windows[tier] || windows[3];
+}
+
+// Legacy constant for recovery calculations (uses tier-specific windows now)
+const CASCADE_WINDOW_MS = 10 * 60 * 1000; // fallback only — not used for new cascades
 
 // Active cascade timers: leadQueueId → timeoutId
 const _timers = new Map();
@@ -75,7 +109,7 @@ function notifyAgents(agentIds, item, listing, tierNum) {
   for (const userId of agentIds) {
     push.notify(userId, {
       title: `🏠 Nueva consulta — ${tierLabel}`,
-      body: `${item.buyer_name || 'Un cliente'} está interesado en "${listing.title || 'una propiedad'}". Tienes 10 minutos para responder.`,
+      body: `${item.buyer_name || 'Un cliente'} está interesado en "${listing.title || 'una propiedad'}". Tienes ${Math.round(getCascadeWindowMs(tierNum) / 60_000)} minutos para responder.`,
       url: '/broker#lead-queue',
       type: 'lead_cascade',
       data: {
@@ -172,10 +206,11 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}) {
   const agentsByTier = { 1: tier1, 2: tier2, 3: tier3 };
   notifyAgents(agentsByTier[startTier], item, listing, startTier);
 
-  // Schedule escalation timer
-  scheduleEscalation(item.id, CASCADE_WINDOW_MS);
+  // Schedule escalation timer (time-aware: shorter during business hours)
+  scheduleEscalation(item.id, getCascadeWindowMs(startTier));
 
-  console.log(`[cascade] Started: ${item.id} for ${inquiryType}/${inquiryId} → tier ${startTier} (${agentsByTier[startTier].length} agents)`);
+  const startWindowMin = Math.round(getCascadeWindowMs(startTier) / 60_000);
+  console.log(`[cascade] Started: ${item.id} for ${inquiryType}/${inquiryId} → tier ${startTier} (${agentsByTier[startTier].length} agents, ${startWindowMin}min, ${isBusinessHours() ? 'business-hours' : 'off-hours'})`);
   return item;
 }
 
@@ -299,10 +334,12 @@ function escalateTier(leadQueueId) {
   // Notify
   notifyAgents(allTiers[nextTier], item, listing, nextTier);
 
-  // Schedule next escalation
-  scheduleEscalation(item.id, CASCADE_WINDOW_MS);
+  // Schedule next escalation (time-aware window for this tier)
+  const windowMs = getCascadeWindowMs(nextTier);
+  scheduleEscalation(item.id, windowMs);
 
-  console.log(`[cascade] Escalated: ${item.id} → tier ${nextTier} (${allTiers[nextTier].length} agents)`);
+  const windowMin = Math.round(windowMs / 60_000);
+  console.log(`[cascade] Escalated: ${item.id} → tier ${nextTier} (${allTiers[nextTier].length} agents, ${windowMin}min window, ${isBusinessHours() ? 'business' : 'off-hours'})`);
 }
 
 // ── Timer management ────────────────────────────────────────────────────
@@ -344,7 +381,8 @@ function recoverStaleCascades() {
     }
 
     const elapsed = nowMs - new Date(notifiedAt).getTime();
-    const remaining = CASCADE_WINDOW_MS - elapsed;
+    const tierWindow = getCascadeWindowMs(item.current_tier);
+    const remaining = tierWindow - elapsed;
 
     if (remaining <= 0) {
       // Window has passed — escalate now
