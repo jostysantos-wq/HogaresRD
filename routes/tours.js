@@ -324,6 +324,15 @@ router.post('/request', tourRequestLimiter, optionalAuth, (req, res) => {
     updated_at:     new Date().toISOString(),
   };
 
+  // Double-booking prevention: re-check availability right before save.
+  // Since cache updates are synchronous (single-threaded Node.js), this
+  // is a reliable lock — the first request's saveTour updates _tours cache
+  // before the second request reaches this point.
+  const finalCheck = generateSlots(broker_id, date);
+  if (!finalCheck.some(s => s.time === time)) {
+    return res.status(409).json({ error: 'Este horario acaba de ser reservado. Por favor selecciona otro.' });
+  }
+
   // Check if broker has auto-confirm enabled
   const broker = store.getUserById(broker_id);
   if (broker?.auto_confirm_tours) {

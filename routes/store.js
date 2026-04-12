@@ -31,6 +31,25 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('[store-pg] Pool error:', err.message));
 
+// Track DB write failures for monitoring — logged to error tracker
+let _dbWriteFailures = 0;
+function _dbWriteError(label, err) {
+  _dbWriteFailures++;
+  console.error(`[store-pg] ${label} error:`, err.message);
+  // Append to error log if error-tracker is available
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const logFile = path.join(__dirname, '..', 'data', 'errors.log');
+    const entry = JSON.stringify({
+      level: 'error', type: 'db_write_failure', timestamp: new Date().toISOString(),
+      message: `${label}: ${err.message}`, statusCode: null,
+    });
+    fs.appendFileSync(logFile, entry + '\n');
+  } catch {}
+}
+function getDbWriteFailureCount() { return _dbWriteFailures; }
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 const ACTIVITY_CAP = 200;
 
@@ -393,7 +412,7 @@ function getSecretariesByInmobiliaria(inmobiliariaId) {
 function saveUser(user) {
   const row = dehydrateUser(user);
   const { sql, values } = buildUpsert('users', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveUser error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveUser', err));
   // Update cache — parse _extra back to object for consistency with PG-loaded rows
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') {
@@ -474,7 +493,7 @@ function getListings(filters = {}) {
 function saveListing(listing) {
   const row = dehydrateSubmission(listing);
   const { sql, values } = buildUpsert('submissions', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveListing error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveListing', err));
   // Parse JSON strings back to objects for cache consistency
   const cacheRow = { ...row };
   for (const col of SUBMISSION_JSON_COLS) {
@@ -526,7 +545,7 @@ function getApplicationsByInmobiliaria(inmId) {
 function saveApplication(app) {
   const row = dehydrateApplication(app);
   const { sql, values } = buildUpsert('applications', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveApplication error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
   const cacheRow = { ...row };
   for (const col of APP_JSON_COLS) {
     if (typeof cacheRow[col] === 'string') {
@@ -577,7 +596,7 @@ function saveConversation(conv) {
     `INSERT INTO conversations (id, "clientId", "brokerId", data) VALUES ($1, $2, $3, $4)
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
     [conv.id, conv.clientId, conv.brokerId, jsonData]
-  ).catch(err => console.error('[store-pg] saveConversation error:', err.message));
+  ).catch(err => _dbWriteError('saveConversation', err));
   // Store parsed object in cache (PG returns JSONB as object, so match that)
   const cacheRow = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, data: conv };
   const idx = _conversations.findIndex(c => c.id === conv.id);
@@ -602,7 +621,7 @@ function getBookedSlots(brokerId, dateStr) {
 function saveTour(tour) {
   const row = dehydrateTour(tour);
   const { sql, values } = buildUpsert('tours', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveTour error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveTour', err));
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   const idx = _tours.findIndex(t => t.id === tour.id);
@@ -626,7 +645,7 @@ function saveAvailabilitySlot(slot) {
     `INSERT INTO availability_slots (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})
      ON CONFLICT (id) DO UPDATE SET ${updates}`,
     vals
-  ).catch(err => console.error('[store-pg] saveAvailabilitySlot error:', err.message));
+  ).catch(err => _dbWriteError('saveAvailabilitySlot', err));
   const idx = _availability.findIndex(s => s.id === slot.id);
   if (idx >= 0) _availability[idx] = slot;
   else _availability.push(slot);
@@ -865,7 +884,7 @@ function saveTask(task) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('tasks', row, 'id');
-  pool.query(sql, values).catch(() => {});
+  pool.query(sql, values).catch(err => _dbWriteError('saveTask', err));
   const cacheRow = { ...row, _extra: extra }; // store parsed object in cache
   const idx = _tasks.findIndex(t => t.id === task.id);
   if (idx >= 0) _tasks[idx] = cacheRow;
@@ -873,7 +892,7 @@ function saveTask(task) {
 }
 
 function deleteTask(id) {
-  pool.query('DELETE FROM tasks WHERE id = $1', [id]).catch(() => {});
+  pool.query('DELETE FROM tasks WHERE id = $1', [id]).catch(err => _dbWriteError('deleteTask', err));
   _tasks = _tasks.filter(t => t.id !== id);
 }
 
@@ -942,7 +961,7 @@ function saveLeadQueueItem(item) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('lead_queue', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveLeadQueueItem error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveLeadQueueItem', err));
   const cacheRow = { ...row, _extra: extra };
   const idx = _leadQueue.findIndex(r => r.id === item.id);
   if (idx >= 0) _leadQueue[idx] = cacheRow;
@@ -990,7 +1009,7 @@ function saveContributionScore(cs) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('contribution_scores', row, 'id');
-  pool.query(sql, values).catch(err => console.error('[store-pg] saveContributionScore error:', err.message));
+  pool.query(sql, values).catch(err => _dbWriteError('saveContributionScore', err));
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   if (typeof cacheRow.score_breakdown === 'string') { try { cacheRow.score_breakdown = JSON.parse(cacheRow.score_breakdown); } catch { cacheRow.score_breakdown = {}; } }
@@ -1043,6 +1062,9 @@ module.exports = {
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
   withTransaction,
+  getDbWriteFailureCount,
+  // Internal refs for memory management (used by cleanup cron)
+  _twofa, _leadQueue, _revokedTokens, _tasks,
   // PostgreSQL pool for direct queries if needed
   pool,
 };

@@ -1411,12 +1411,25 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
 });
 
 // ── 2FA: Verify code ──────────────────────────────────────────────────────
+// Per-user 2FA attempt tracking (prevents brute-force across multiple sessions)
+const _twoFAUserAttempts = new Map(); // userId → { count, lockedUntil }
+const TWOFA_USER_MAX = 10;           // max attempts across ALL sessions
+const TWOFA_USER_LOCKOUT_MS = 30 * 60 * 1000; // 30-minute lockout
+
 router.post('/2fa/verify', twoFALimiter, (req, res) => {
   const { twoFASessionId, code } = req.body;
   if (!twoFASessionId || !code) return res.status(400).json({ error: 'Sesión y código requeridos' });
 
   const session = store.getTwoFASession(twoFASessionId);
   if (!session) return res.status(400).json({ error: 'Sesión de verificación inválida o expirada' });
+
+  // Per-user global lockout check (across all sessions)
+  const userTrack = _twoFAUserAttempts.get(session.userId);
+  if (userTrack?.lockedUntil && Date.now() < userTrack.lockedUntil) {
+    const remainMin = Math.ceil((userTrack.lockedUntil - Date.now()) / 60_000);
+    return res.status(429).json({ error: `Cuenta bloqueada por demasiados intentos de verificación. Intenta en ${remainMin} minuto(s).` });
+  }
+
   if (new Date(session.expiresAt) < new Date()) {
     store.deleteTwoFASession(twoFASessionId);
     return res.status(400).json({ error: 'Código expirado. Inicia sesión nuevamente.' });
@@ -1431,12 +1444,23 @@ router.post('/2fa/verify', twoFALimiter, (req, res) => {
   if (codeHash !== session.codeHash) {
     session.attempts++;
     store.saveTwoFASession(session);
+
+    // Track per-user global attempts
+    const track = _twoFAUserAttempts.get(session.userId) || { count: 0, lockedUntil: null };
+    track.count++;
+    if (track.count >= TWOFA_USER_MAX) {
+      track.lockedUntil = Date.now() + TWOFA_USER_LOCKOUT_MS;
+      logSec('2fa_user_locked', req, { userId: session.userId, attempts: track.count });
+    }
+    _twoFAUserAttempts.set(session.userId, track);
+
     logSec('2fa_failed', req, { userId: session.userId, attempts: session.attempts });
     return res.status(401).json({ error: 'Código incorrecto', attemptsRemaining: 5 - session.attempts });
   }
 
-  // Success — issue token
+  // Success — issue token, clear per-user tracking
   store.deleteTwoFASession(twoFASessionId);
+  _twoFAUserAttempts.delete(session.userId);
   const user = store.getUserById(session.userId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -1612,12 +1636,18 @@ router.post('/biometric/login', authLimiter, async (req, res) => {
   }
 
   logSec('biometric_login_success', req, { userId: user.id });
+
+  // Rotate biometric token on each successful login — old token becomes invalid
+  const newRawToken = crypto.randomBytes(64).toString('hex');
+  user.biometricTokenHash = crypto.createHash('sha256').update(newRawToken).digest('hex');
+  store.saveUser(user);
+
   const token = signToken(user);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true, secure: IS_PROD, sameSite: 'lax',
     maxAge: 14 * 24 * 60 * 60 * 1000,
   });
-  res.json({ token, user: safeUser(user) });
+  res.json({ token, user: safeUser(user), newBiometricToken: newRawToken });
 });
 
 // ── Biometric: Revoke ────────────────────────────────────────────────────

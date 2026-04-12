@@ -900,6 +900,11 @@ class APIService: ObservableObject {
             throw APIError.server("Respuesta inesperada")
         }
         await persist(user: user, token: token)
+        // Save rotated biometric token (server issues a new one on each login)
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let newBio = json["newBiometricToken"] as? String {
+            try? BiometricService.shared.saveBiometricToken(newBio, for: email)
+        }
         return .success(user)
     }
 
