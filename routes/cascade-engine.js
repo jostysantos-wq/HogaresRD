@@ -288,8 +288,8 @@ function claimLead(leadQueueId, userId) {
     const listing = store.getListingById(item.listing_id);
     if (!listing) return { success: false, error: 'Propiedad no encontrada.' };
 
-    // Validate agent is eligible for current tier
-    const { tier1, tier2, tier3 } = getTierAgents(listing);
+    // Validate agent is eligible for current tier (respecting inmobiliaria scope)
+    const { tier1, tier2, tier3 } = getTierAgents(listing, item.inmobiliaria_scope || null);
     const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[item.current_tier] || [];
 
     if (!currentTierAgents.includes(userId)) {
@@ -589,5 +589,6 @@ module.exports = {
   getTierAgents,
   isEnabled,
   CASCADE_WINDOW_MS,
+  TIER_WINDOWS,
   CONTRIB_THRESHOLD,
 };

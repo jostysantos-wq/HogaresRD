@@ -25,14 +25,19 @@ router.get('/', (req, res) => {
     const listing = store.getListingById(item.listing_id);
     if (!listing) continue;
 
-    const { tier1, tier2, tier3 } = cascade.getTierAgents(listing);
-    const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[item.current_tier] || [];
+    // Hydrate the full item to get _extra fields (like inmobiliaria_scope)
+    const fullItem = store.getLeadQueueById(item.id) || item;
+
+    // Respect inmobiliaria scope — only show leads to agents in the scoped org
+    const { tier1, tier2, tier3 } = cascade.getTierAgents(listing, fullItem.inmobiliaria_scope || null);
+    const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[fullItem.current_tier] || [];
 
     if (currentTierAgents.includes(userId)) {
-      // Calculate time remaining in current tier window
-      const tierField = `tier${item.current_tier}_notified_at`;
-      const notifiedAt = item[tierField] ? new Date(item[tierField]).getTime() : Date.now();
-      const remainingMs = Math.max(0, cascade.CASCADE_WINDOW_MS - (Date.now() - notifiedAt));
+      // Calculate time remaining using tier-specific window (not hardcoded constant)
+      const tierField = `tier${fullItem.current_tier}_notified_at`;
+      const notifiedAt = fullItem[tierField] ? new Date(fullItem[tierField]).getTime() : Date.now();
+      const tierWindow = cascade.TIER_WINDOWS?.[fullItem.current_tier] || cascade.CASCADE_WINDOW_MS;
+      const remainingMs = Math.max(0, tierWindow - (Date.now() - notifiedAt));
 
       claimable.push({
         id: item.id,
