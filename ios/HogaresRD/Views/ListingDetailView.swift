@@ -29,6 +29,9 @@ struct ListingDetailView: View {
     @State private var mcRate:        Double = 12
     @State private var mcTermYears:   Int    = 20
 
+    // Collapsible description
+    @State private var descriptionExpanded = false
+
     // Scroll offset for fading the hero overlay bar as user scrolls past
     @State private var scrollOffset: CGFloat = 0
 
@@ -131,53 +134,45 @@ struct ListingDetailView: View {
 
                     // Content card with rounded top corners — overlaps image bottom
                     VStack(alignment: .leading, spacing: 24) {
-                        // Drag indicator
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.secondary.opacity(0.4))
-                            .frame(width: 38, height: 5)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 14)
 
-                        // ── Price + Save ──────────────────────────────
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 4) {
+                        // ── Badges + Price + Save ─────────────────────
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Type + condition badges ABOVE price
+                            HStack(spacing: 8) {
+                                Text(l.typeLabel)
+                                    .font(.caption).bold()
+                                    .padding(.horizontal, 10).padding(.vertical, 4)
+                                    .background(l.type == "venta" ? Color.rdGreen : l.type == "alquiler" ? Color.rdBlue : Color.rdRed)
+                                    .foregroundStyle(.white).clipShape(Capsule())
+                                if let cond = l.condition, !cond.isEmpty {
+                                    Text(cond)
+                                        .font(.caption).bold()
+                                        .padding(.horizontal, 10).padding(.vertical, 4)
+                                        .background(Color(.systemGray5))
+                                        .foregroundStyle(.secondary).clipShape(Capsule())
+                                }
+                            }
+                            HStack(alignment: .top) {
                                 Text(l.priceFormatted)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(Color.rdBlue)
-                                HStack(spacing: 8) {
-                                    Text(l.typeLabel)
-                                        .font(.caption).bold()
-                                        .padding(.horizontal, 10).padding(.vertical, 4)
-                                        .background(l.type == "venta" ? Color.rdGreen : l.type == "alquiler" ? Color.rdBlue : Color.rdRed)
-                                        .foregroundStyle(.white).clipShape(Capsule())
-                                    if let cond = l.condition, !cond.isEmpty {
-                                        Text(cond)
-                                            .font(.caption).bold()
-                                            .padding(.horizontal, 10).padding(.vertical, 4)
-                                            .background(Color(.systemGray5))
-                                            .foregroundStyle(.secondary).clipShape(Capsule())
-                                    }
-                                }
-                            }
-                            Spacer()
-                            // Heart + saved count
-                            Button {
-                                // Haptic feedback removed for performance
-                                saved.toggle(l.id)
-                            } label: {
-                                VStack(spacing: 2) {
-                                    Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
-                                        .font(.title2)
-                                        .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
-                                    let count = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
-                                    if count > 0 {
-                                        Text("\(count)")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.secondary)
+                                Spacer()
+                                Button { saved.toggle(l.id) } label: {
+                                    VStack(spacing: 2) {
+                                        Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
+                                            .font(.title2)
+                                            .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
+                                        let count = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
+                                        if count > 0 {
+                                            Text("\(count)")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                 }
                             }
                         }
+                        .padding(.top, 20)
 
                         // ── Title & Location ──────────────────────────
                         VStack(alignment: .leading, spacing: 6) {
@@ -191,24 +186,66 @@ struct ListingDetailView: View {
                                 Label(addr, systemImage: "map")
                                     .foregroundStyle(.secondary).font(.caption)
                             }
-                            // Stats row
-                            HStack(spacing: 12) {
-                                if let views = l.views, views > 0 {
-                                    Label("\(views) vista\(views == 1 ? "" : "s")", systemImage: "eye")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                let savedCount = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
-                                if savedCount > 0 {
-                                    Label("\(savedCount) guardado\(savedCount == 1 ? "" : "s")", systemImage: "heart")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
                         }
 
                         // ── Quick Stats Bar ───────────────────────────
                         quickStatsBar(l)
+
+                        Divider()
+
+                        // ── Description (collapsible) ─────────────────
+                        if let desc = l.description, !desc.isEmpty {
+                            sectionBlock("Descripción") {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(desc)
+                                        .font(.body)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(descriptionExpanded ? nil : 3)
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.25)) { descriptionExpanded.toggle() }
+                                    } label: {
+                                        Text(descriptionExpanded ? "Ver menos" : "Ver más")
+                                            .font(.caption).bold()
+                                            .foregroundStyle(Color.rdBlue)
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Características y Amenidades (merged) ─────
+                        if (l.tags != nil && !l.tags!.isEmpty) || !l.amenities.isEmpty {
+                            sectionBlock("Características y Amenidades") {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if let tags = l.tags, !tags.isEmpty {
+                                        FlowLayout(spacing: 8) {
+                                            ForEach(tags, id: \.self) { tag in
+                                                Text(tag)
+                                                    .font(.caption).bold()
+                                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                                    .background(Color.rdRed.opacity(0.08))
+                                                    .foregroundStyle(Color.rdRed)
+                                                    .clipShape(Capsule())
+                                            }
+                                        }
+                                    }
+                                    if !l.amenities.isEmpty {
+                                        if l.tags != nil && !l.tags!.isEmpty {
+                                            Divider()
+                                        }
+                                        FlowLayout(spacing: 8) {
+                                            ForEach(l.amenities, id: \.self) { a in
+                                                Text(a)
+                                                    .font(.caption).bold()
+                                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                                    .background(Color.rdBlue.opacity(0.08))
+                                                    .foregroundStyle(Color.rdBlue)
+                                                    .clipShape(Capsule())
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         Divider()
 
@@ -217,53 +254,6 @@ struct ListingDetailView: View {
 
                         // ── Project Meta (proyecto only) ───────────
                         if l.type == "proyecto" { projectMetaSection(l) }
-
-                        // ── Description ────────────────────────────
-                        if let desc = l.description, !desc.isEmpty {
-                            sectionBlock("Descripción") {
-                                Text(desc)
-                                    .font(.body)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-
-                        // ── Mortgage Calculator ────────────────────
-                        if let priceNum = Double(l.price), priceNum > 0 {
-                            mortgageCalculatorSection(price: priceNum)
-                        }
-
-                        // ── Tags ───────────────────────────────────
-                        if let tags = l.tags, !tags.isEmpty {
-                            sectionBlock("Características") {
-                                FlowLayout(spacing: 8) {
-                                    ForEach(tags, id: \.self) { tag in
-                                        Text(tag)
-                                            .font(.caption).bold()
-                                            .padding(.horizontal, 10).padding(.vertical, 5)
-                                            .background(Color.rdRed.opacity(0.08))
-                                            .foregroundStyle(Color.rdRed)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── Amenities ──────────────────────────────
-                        if !l.amenities.isEmpty {
-                            sectionBlock("Amenidades") {
-                                FlowLayout(spacing: 8) {
-                                    ForEach(l.amenities, id: \.self) { a in
-                                        Text(a)
-                                            .font(.caption).bold()
-                                            .padding(.horizontal, 10).padding(.vertical, 5)
-                                            .background(Color.rdBlue.opacity(0.08))
-                                            .foregroundStyle(Color.rdBlue)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                            }
-                        }
 
                         // ── Unit Types ─────────────────────────────
                         if let units = l.unit_types, !units.isEmpty {
@@ -314,9 +304,11 @@ struct ListingDetailView: View {
                             blueprintsSection(bps, l: l)
                         }
 
-                        // ── Construction Company ───────────────────
-                        if let builder = l.construction_company {
-                            builderSection(builder)
+                        Divider()
+
+                        // ── Mortgage Calculator ────────────────────
+                        if let priceNum = Double(l.price), priceNum > 0 {
+                            mortgageCalculatorSection(price: priceNum)
                         }
 
                         // ── Map ────────────────────────────────────
@@ -324,7 +316,12 @@ struct ListingDetailView: View {
                             mapSection(lat: lat, lng: lng, title: l.title, address: l.address)
                         }
 
-                        // ── Agency Contact ─────────────────────────
+                        // ── Construction Company ───────────────────
+                        if let builder = l.construction_company {
+                            builderSection(builder)
+                        }
+
+                        // ── Agency ─────────────────────────────────
                         if let agencies = l.agencies, !agencies.isEmpty {
                             agencySection(agencies, listing: l)
                         }
@@ -367,7 +364,7 @@ struct ListingDetailView: View {
     /// Horizontal swipeable image gallery — tap to open full-screen.
     /// Uses TabView with page style for smooth horizontal swiping
     /// without conflicting with the main vertical ScrollView.
-    private let imageSlotHeight: CGFloat = UIScreen.main.bounds.height * 0.27
+    private let imageSlotHeight: CGFloat = UIScreen.main.bounds.height * 0.42
 
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
@@ -514,19 +511,30 @@ struct ListingDetailView: View {
         let isOwner = isMyListing(l)
 
         HStack(spacing: 8) {
-            if hasBroker && !isOwner {
-                Button { showTourBooking = true } label: {
-                    Label("Visita", systemImage: "calendar.badge.clock")
-                        .font(.caption).bold()
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
-                        .foregroundStyle(Color.rdBlue)
+            if isOwner {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(Color.rdGreen)
+                    Text("Tu propiedad")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdGreen)
                 }
-            }
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(Color.rdGreen.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            } else {
+                if hasBroker {
+                    Button { showTourBooking = true } label: {
+                        Label("Agendar Visita", systemImage: "calendar.badge.clock")
+                            .font(.caption).bold()
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                }
 
-            if !isMyListing(l) {
                 Button { showContactAgent = true } label: {
                     Label("Consultar", systemImage: "bubble.left.fill")
                         .font(.caption).bold()
@@ -536,26 +544,15 @@ struct ListingDetailView: View {
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
                         .foregroundStyle(Color.rdBlue)
                 }
-            } else {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color.rdGreen)
-                    Text("Tu propiedad")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color.rdGreen)
-                }
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .background(Color.rdGreen.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-            }
 
-            Button { showApply = true } label: {
-                Label("Aplicar", systemImage: "doc.text.fill")
-                    .font(.caption).bold()
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white)
+                Button { showApply = true } label: {
+                    Label("Aplicar", systemImage: "doc.text.fill")
+                        .font(.subheadline).bold()
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
+                        .foregroundStyle(.white)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -1113,18 +1110,6 @@ struct ListingDetailView: View {
                             }
                         }
 
-                        if !isOwner {
-                            Button {
-                                showContactAgent = true
-                            } label: {
-                                Label("Contactar Agente", systemImage: "bubble.left.fill")
-                                    .font(.subheadline.bold())
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
-                                    .foregroundStyle(.white)
-                            }
-                        }
                     }
                     .padding(12)
                     .background(Color.rdBlue.opacity(0.04))

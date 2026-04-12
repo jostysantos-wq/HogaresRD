@@ -499,10 +499,18 @@ router.post('/', appCreateLimiter, (req, res) => {
   const listing = store.getListingById(listing_id);
   const agencies = listing?.agencies || [];
 
+  // Resolve affiliate ref_token early — referred leads bypass cascade
+  const earlyRefToken = req.body.ref_token || req.cookies?.hrd_ref || null;
+  let referredByAgent = null;
+  if (earlyRefToken) {
+    referredByAgent = store.getUserByRefToken(earlyRefToken);
+  }
+
   // Auto-assign first agency broker (or leave unassigned)
-  // Cascade check: if cascade engine is enabled, defer broker assignment
+  // Cascade check: if cascade engine is enabled AND this is NOT a referred
+  // lead (affiliate links bypass cascade since the agent generated the lead)
   const cascadeEngine = require('./cascade-engine');
-  const useCascade = cascadeEngine.isEnabled() && agencies.length > 0;
+  const useCascade = cascadeEngine.isEnabled() && agencies.length > 0 && !referredByAgent;
 
   // Helper: try to resolve an agency contact to a registered user
   // so we can populate broker.user_id. Listings with agency cards
@@ -536,7 +544,16 @@ router.post('/', appCreateLimiter, (req, res) => {
   }
 
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
-  if (!useCascade && agencies.length) {
+  if (referredByAgent) {
+    // Affiliate link lead — assign directly to the referring agent
+    broker = {
+      user_id:     referredByAgent.id,
+      name:        referredByAgent.name || '',
+      agency_name: referredByAgent.inmobiliaria_name || '',
+      email:       referredByAgent.email || '',
+      phone:       referredByAgent.phone || '',
+    };
+  } else if (!useCascade && agencies.length) {
     const agency = agencies[0];
     const resolved = resolveAgencyToUser(agency);
     broker = {
@@ -667,10 +684,9 @@ router.post('/', appCreateLimiter, (req, res) => {
     updated_at:      new Date().toISOString(),
   };
 
-  // Resolve referring agent
-  if (app.ref_token) {
-    const refAgent = store.getUserByRefToken(app.ref_token);
-    if (refAgent) app.referred_by = refAgent.id;
+  // Resolve referring agent (already looked up above for cascade bypass)
+  if (referredByAgent) {
+    app.referred_by = referredByAgent.id;
   }
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',

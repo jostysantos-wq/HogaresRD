@@ -2040,6 +2040,7 @@
           co_applicant,
           deferred_documents,
           attached_document_types,
+          ref_token: _refToken || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
