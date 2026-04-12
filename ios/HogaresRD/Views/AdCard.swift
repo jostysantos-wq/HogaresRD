@@ -12,7 +12,7 @@ struct AdCard: View {
 
                 // ── Background image ───────────────────────────────────
                 if let url = ad.imageURL {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):
                             img.resizable().aspectRatio(contentMode: .fill)

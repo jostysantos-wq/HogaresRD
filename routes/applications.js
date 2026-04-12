@@ -2159,7 +2159,7 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
   }
 
   const now = new Date().toISOString();
-  const snapshotBefore = { ...app.commission };
+  const { history: _bh, ...snapshotBefore } = app.commission;
 
   if (action === 'reject') {
     app.commission.status          = 'rejected';
@@ -2198,7 +2198,7 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
     byName:   user.name || '',
     action,
     snapshotBefore,
-    snapshotAfter: { ...app.commission },
+    snapshotAfter: (() => { const { history: _ah, ...rest } = app.commission; return rest; })(),
     note:     (req.body?.note || '').toString().slice(0, 300),
   });
   app.updated_at = now;
@@ -2431,6 +2431,23 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   store.saveApplication(app);
   if (!isEdit && app.client.email)
     sendNotification(app.client.email, 'HogaresRD — Plan de Pagos Creado', buildPaymentPlanEmail(app));
+
+  // Auto-create task for client to upload payment proof
+  if (!isEdit && app.client?.user_id) {
+    const firstDue = installments[0]?.due_date || null;
+    createAutoTask({
+      title:          'Sube tu comprobante de pago',
+      description:    `Tu plan de pagos ha sido creado con ${installments.length} cuota(s) por ${fmtAmt(total_amount, currency || 'DOP')}. Sube el comprobante de tu primer pago.`,
+      assigned_to:    app.client.user_id,
+      assigned_by:    req.user.sub,
+      application_id: app.id,
+      listing_id:     app.listing_id,
+      source_event:   'payment_plan_created',
+      due_date:       firstDue,
+      approver_id:    app.broker.user_id,
+    });
+  }
+
   res.json(app);
 });
 

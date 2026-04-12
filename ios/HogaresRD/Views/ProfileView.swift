@@ -1225,7 +1225,7 @@ struct MyListingCard: View {
         VStack(spacing: 0) {
             // Image
             if let img = listing.image, let url = URL(string: img) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)

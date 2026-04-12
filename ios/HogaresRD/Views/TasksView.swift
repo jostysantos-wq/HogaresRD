@@ -284,7 +284,7 @@ struct TaskRow: View {
             // Falls back to a placeholder icon when the listing has no
             // image or when the task isn't related to a listing.
             if let imgUrl = task.listingImage, let url = URL(string: imgUrl) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let img):
                         img.resizable().aspectRatio(contentMode: .fill)
@@ -527,7 +527,7 @@ struct TaskDetailSheet: View {
                     if let lt = task.listingTitle, !lt.isEmpty {
                         HStack(spacing: 12) {
                             if let imgUrl = task.listingImage, let url = URL(string: imgUrl) {
-                                AsyncImage(url: url) { phase in
+                                CachedAsyncImage(url: url) { phase in
                                     switch phase {
                                     case .success(let img):
                                         img.resizable().aspectRatio(contentMode: .fill)

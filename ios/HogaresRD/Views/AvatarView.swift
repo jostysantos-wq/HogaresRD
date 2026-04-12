@@ -99,7 +99,7 @@ struct AvatarView: View {
     @ViewBuilder
     private var avatarContent: some View {
         if let url = user.avatarImageURL {
-            AsyncImage(url: url) { phase in
+            CachedAsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let img):
                     img.resizable().scaledToFill()

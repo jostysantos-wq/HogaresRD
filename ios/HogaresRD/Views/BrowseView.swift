@@ -483,7 +483,7 @@ struct BrowseView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     // Image
                     ZStack(alignment: .topLeading) {
-                        AsyncImage(url: listing.firstImageURL) { phase in
+                        CachedAsyncImage(url: listing.firstImageURL) { phase in
                             switch phase {
                             case .success(let img):
                                 img.resizable().scaledToFill()
@@ -846,7 +846,7 @@ struct BrowseView: View {
                             isActive: filterMinBedrooms == val
                         ) {
                             filterMinBedrooms = val
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            Task { @MainActor in try? await Task.sleep(for: .milliseconds(200));
                                 withAnimation { activeDropdown = nil }
                             }
                         }
@@ -869,7 +869,7 @@ struct BrowseView: View {
                 ForEach(homeTypes, id: \.0) { name, icon in
                     Button {
                         filterHomeType = (filterHomeType == name) ? nil : name
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        Task { @MainActor in try? await Task.sleep(for: .milliseconds(200));
                             withAnimation { activeDropdown = nil }
                         }
                     } label: {
@@ -1164,7 +1164,7 @@ struct CarouselCard: View {
     var body: some View {
         HStack(spacing: 10) {
             // Image
-            AsyncImage(url: listing.firstImageURL) { phase in
+            CachedAsyncImage(url: listing.firstImageURL) { phase in
                 switch phase {
                 case .success(let img): img.resizable().scaledToFill()
                 default:
@@ -1232,7 +1232,7 @@ struct ListingRow: View {
         VStack(alignment: .leading, spacing: 0) {
             // Large image
             ZStack {
-                AsyncImage(url: listing.firstImageURL) { phase in
+                CachedAsyncImage(url: listing.firstImageURL) { phase in
                     switch phase {
                     case .success(let img):
                         img.resizable().scaledToFill()
@@ -1356,7 +1356,7 @@ struct PeekCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            AsyncImage(url: listing.firstImageURL) { phase in
+            CachedAsyncImage(url: listing.firstImageURL) { phase in
                 switch phase {
                 case .success(let img): img.resizable().scaledToFill()
                 default:
@@ -1582,7 +1582,7 @@ struct GridCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                AsyncImage(url: listing.firstImageURL) { phase in
+                CachedAsyncImage(url: listing.firstImageURL) { phase in
                     switch phase {
                     case .success(let img):
                         img.resizable().scaledToFill()

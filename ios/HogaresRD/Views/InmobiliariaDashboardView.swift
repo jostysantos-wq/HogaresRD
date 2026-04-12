@@ -319,7 +319,7 @@ struct TeamMembersTab: View {
             }
             let impact = UINotificationFeedbackGenerator()
             impact.notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            Task { @MainActor in try? await Task.sleep(for: .seconds(3));
                 withAnimation { removeSuccess = nil }
             }
         } catch {
@@ -1351,14 +1351,14 @@ struct TeamSecretariesTab: View {
             inviteEmail = ""
             let impact = UINotificationFeedbackGenerator()
             impact.notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            Task { @MainActor in try? await Task.sleep(for: .seconds(4));
                 withAnimation { successMsg = nil }
             }
         } catch {
             withAnimation {
                 errorMsg = error.localizedDescription
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            Task { @MainActor in try? await Task.sleep(for: .seconds(4));
                 withAnimation { errorMsg = nil }
             }
         }
@@ -1374,7 +1374,7 @@ struct TeamSecretariesTab: View {
             }
             let impact = UINotificationFeedbackGenerator()
             impact.notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            Task { @MainActor in try? await Task.sleep(for: .seconds(3));
                 withAnimation { successMsg = nil }
             }
         } catch {

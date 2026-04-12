@@ -243,14 +243,30 @@ struct ConversationsView: View {
         if conversations.isEmpty { loading = true }
         errorMsg = nil
         do {
-            async let active = api.getConversations(archived: false)
-            async let archived = api.getConversations(archived: true)
-            let (a, b) = try await (active, archived)
-            conversations = a + b
+            let active  = try await api.getConversations(archived: false)
+            let archived = try await api.getConversations(archived: true)
+            conversations = active + archived
+        } catch let decodingError as DecodingError {
+            errorMsg = decodingErrorMessage(decodingError)
         } catch {
             errorMsg = error.localizedDescription
         }
         loading = false
+    }
+
+    private func decodingErrorMessage(_ error: DecodingError) -> String {
+        switch error {
+        case .typeMismatch(let type, let ctx):
+            return "Tipo incorrecto: \(type) en \(ctx.codingPath.map(\.stringValue).joined(separator: "."))"
+        case .valueNotFound(let type, let ctx):
+            return "Valor requerido ausente: \(type) en \(ctx.codingPath.map(\.stringValue).joined(separator: "."))"
+        case .keyNotFound(let key, _):
+            return "Campo requerido ausente: \(key.stringValue)"
+        case .dataCorrupted(let ctx):
+            return "Datos corruptos: \(ctx.debugDescription)"
+        @unknown default:
+            return error.localizedDescription
+        }
     }
 
     private func load() async {
@@ -315,7 +331,7 @@ struct ConversationRow: View {
             ZStack(alignment: .bottomTrailing) {
                 // Listing image or fallback
                 if let imgStr = conv.propertyImage, let url = URL(string: imgStr) {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):
                             img.resizable().scaledToFill()

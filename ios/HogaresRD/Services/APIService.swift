@@ -56,7 +56,7 @@ class APIService: ObservableObject {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         config.timeoutIntervalForResource = 30
-        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.requestCachePolicy = .useProtocolCachePolicy
         config.urlCache = {
             let cache = URLCache(memoryCapacity: 20 * 1024 * 1024,  // 20MB memory
                                  diskCapacity: 50 * 1024 * 1024)     // 50MB disk
@@ -938,7 +938,13 @@ class APIService: ObservableObject {
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error cargando conversaciones")
         }
-        return try decoder.decode([Conversation].self, from: data)
+        do {
+            return try decoder.decode([Conversation].self, from: data)
+        } catch {
+            let raw = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
+            print("[Conversations] decode error: \(error)\nraw: \(raw)")
+            throw error
+        }
     }
 
     func getConversation(id: String, since: String? = nil) async throws -> Conversation {

@@ -187,7 +187,7 @@ struct PortfolioListingCard: View {
                     ListingDetailView(id: listing.id)
                 } label: {
                     ZStack(alignment: .bottomTrailing) {
-                        AsyncImage(url: listing.firstImageURL) { phase in
+                        CachedAsyncImage(url: listing.firstImageURL) { phase in
                             switch phase {
                             case .success(let img):
                                 img.resizable().scaledToFill()
@@ -319,7 +319,7 @@ struct ListingAnalyticsView: View {
 
                     // ── Listing Header ──────────────────────
                     HStack(spacing: 14) {
-                        AsyncImage(url: listing.firstImageURL) { phase in
+                        CachedAsyncImage(url: listing.firstImageURL) { phase in
                             switch phase {
                             case .success(let img):
                                 img.resizable().scaledToFill()

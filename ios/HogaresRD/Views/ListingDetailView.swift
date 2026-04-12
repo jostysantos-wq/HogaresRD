@@ -379,7 +379,7 @@ struct ListingDetailView: View {
                         ZStack {
                             // Opaque background prevents bleed-through during swipe
                             Color(.systemGray6)
-                            AsyncImage(url: url) { phase in
+                            CachedAsyncImage(url: url) { phase in
                                 switch phase {
                                 case .success(let image):
                                     image
@@ -977,7 +977,7 @@ struct ListingDetailView: View {
                 TabView(selection: $blueprintIndex) {
                     ForEach(Array(bps.enumerated()), id: \.offset) { i, bp in
                         let url: URL? = bp.hasPrefix("http") ? URL(string: bp) : URL(string: APIService.baseURL + bp)
-                        AsyncImage(url: url) { phase in
+                        CachedAsyncImage(url: url) { phase in
                             switch phase {
                             case .success(let img):
                                 img.resizable().scaledToFit()
@@ -1459,7 +1459,7 @@ struct FullGalleryView: View {
 
             TabView(selection: $current) {
                 ForEach(Array(images.enumerated()), id: \.offset) { i, url in
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):
                             img.resizable().scaledToFit()

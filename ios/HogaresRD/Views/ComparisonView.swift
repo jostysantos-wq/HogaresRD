@@ -114,7 +114,7 @@ struct ComparisonView: View {
                 VStack(spacing: 0) {
                     // Image
                     if let url = listing.firstImageURL {
-                        AsyncImage(url: url) { phase in
+                        CachedAsyncImage(url: url) { phase in
                             switch phase {
                             case .success(let img):
                                 img.resizable().aspectRatio(contentMode: .fill)

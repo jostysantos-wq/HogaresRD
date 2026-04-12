@@ -33,6 +33,7 @@
 		AA22000000000000000000D3 /* SavedListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000C3 /* SavedListingsView.swift */; };
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
 		AA33000000000000000000D2 /* AdCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C2 /* AdCard.swift */; };
+		AA33000000000000000001FF /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000FF /* CachedAsyncImage.swift */; };
 		AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA44000000000000000000C1 /* LeadApplicationView.swift */; };
 		AA550000000000000000000000C2 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C1 /* DashboardModels.swift */; };
 		AA550000000000000000000000C4 /* BrokerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA550000000000000000000000C3 /* BrokerDashboardView.swift */; };
@@ -107,6 +108,7 @@
 		AA22000000000000000000C3 /* SavedListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedListingsView.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C2 /* AdCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCard.swift; sourceTree = "<group>"; };
+		AA33000000000000000000FF /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
 		AA44000000000000000000C1 /* LeadApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadApplicationView.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C1 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		AA550000000000000000000000C3 /* BrokerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerDashboardView.swift; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 				AA22000000000000000000C2 /* AgencyPortfolioView.swift */,
 				AA22000000000000000000C3 /* SavedListingsView.swift */,
 				AA33000000000000000000C2 /* AdCard.swift */,
+				AA33000000000000000000FF /* CachedAsyncImage.swift */,
 				AA44000000000000000000C1 /* LeadApplicationView.swift */,
 				AA55000000000000000000B3 /* ConversationsView.swift */,
 				AA55000000000000000000B4 /* ConversationThreadView.swift */,
@@ -392,6 +395,7 @@
 				AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
+				AA33000000000000000001FF /* CachedAsyncImage.swift in Sources */,
 				AA44000000000000000000D1 /* LeadApplicationView.swift in Sources */,
 				AA22000000000000000000D3 /* SavedListingsView.swift in Sources */,
 				AA55000000000000000000C1 /* Conversation.swift in Sources */,

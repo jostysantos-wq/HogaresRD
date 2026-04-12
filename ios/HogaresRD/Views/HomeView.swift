@@ -358,7 +358,7 @@ struct ListingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                AsyncImage(url: listing.firstImageURL) { phase in
+                CachedAsyncImage(url: listing.firstImageURL) { phase in
                     switch phase {
                     case .success(let img):
                         img.resizable().scaledToFill()

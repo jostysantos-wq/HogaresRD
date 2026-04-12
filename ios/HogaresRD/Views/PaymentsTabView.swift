@@ -358,7 +358,7 @@ struct PaymentsTabView: View {
 
     private func showToast(_ msg: String) {
         withAnimation { toast = msg }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+        Task { @MainActor in try? await Task.sleep(for: .milliseconds(2200));
             withAnimation { toast = nil }
         }
     }

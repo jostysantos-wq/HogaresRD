@@ -358,7 +358,7 @@ struct PendingListingRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 10) {
                 if let first = listing.images.first, let url = URL(string: first) {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):
                             img.resizable().aspectRatio(contentMode: .fill)
@@ -661,7 +661,7 @@ struct ListingAnalyticsCard: View {
         VStack(spacing: 0) {
             // Image
             if let img = listing.image, let url = URL(string: img) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
@@ -751,7 +751,7 @@ struct ListingAnalyticsDetailView: View {
                         // Header
                         HStack(spacing: 12) {
                             if let img = d.image, let url = URL(string: img) {
-                                AsyncImage(url: url) { phase in
+                                CachedAsyncImage(url: url) { phase in
                                     switch phase {
                                     case .success(let image):
                                         image.resizable().aspectRatio(contentMode: .fill)

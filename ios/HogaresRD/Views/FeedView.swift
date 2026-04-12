@@ -36,6 +36,13 @@ struct FeedView: View {
     /// How many listings between each ad slot
     private let adFrequency = 5
 
+    /// O(1) listing lookup for the feed interest-weight system
+    private var feedListingIndex: [String: Listing] {
+        feed.reduce(into: [:]) { dict, item in
+            if case .listing(let l) = item { dict[l.id] = l }
+        }
+    }
+
     /// Timestamp recorded when each card index appears on screen
     @State private var appearedAt: [Int: Date] = [:]
 
@@ -124,13 +131,8 @@ struct FeedView: View {
             }
             // Tap-through bonus: opening the detail view is a strong interest signal
             .onChange(of: selectedListingID) { _, newID in
-                if let id = newID {
-                    for item in feed {
-                        if case .listing(let l) = item, l.id == id {
-                            applyWeight(l, weight: 8.0)
-                            break
-                        }
-                    }
+                if let id = newID, let l = feedListingIndex[id] {
+                    applyWeight(l, weight: 8.0)
                 }
             }
             .navigationDestination(isPresented: Binding(
@@ -326,7 +328,7 @@ struct ReelCard: View {
                 } else {
                     TabView(selection: $imageIndex) {
                         ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
-                            AsyncImage(url: url) { phase in
+                            CachedAsyncImage(url: url) { phase in
                                 switch phase {
                                 case .success(let img):
                                     img.resizable().aspectRatio(contentMode: .fill)

@@ -8,6 +8,16 @@ extension Color {
     static let rdBg    = Color(red: 242/255, green: 246/255, blue: 255/255)
 }
 
+// MARK: - Lazy Tab Helper
+
+/// Defers a tab's body evaluation until the view first appears.
+/// Prevents SwiftUI's TabView from initializing all 4 tabs up front.
+struct LazyView<Content: View>: View {
+    let build: () -> Content
+    init(_ build: @autoclosure @escaping () -> Content) { self.build = build }
+    var body: some View { build() }
+}
+
 // MARK: - Root Tab View
 
 struct ContentView: View {
@@ -44,16 +54,16 @@ struct ContentView: View {
                 .tabItem { Label("Feed", systemImage: "newspaper.fill") }
                 .tag(0)
 
-            BrowseView()
+            LazyView(BrowseView())
                 .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
                 .tag(1)
 
-            MessagesTabView()
+            LazyView(MessagesTabView())
                 .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
                 .badge(unreadMessages)
                 .tag(2)
 
-            ProfileTabView(unreadTasks: unreadTasks)
+            LazyView(ProfileTabView(unreadTasks: unreadTasks))
                 .tabItem { Label("Perfil", systemImage: "person.fill") }
                 .badge(unreadTasks)
                 .tag(3)

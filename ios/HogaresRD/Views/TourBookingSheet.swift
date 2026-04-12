@@ -187,7 +187,7 @@ struct TourBookingSheet: View {
 
     private var listingCard: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: listing.firstImageURL) { phase in
+            CachedAsyncImage(url: listing.firstImageURL) { phase in
                 switch phase {
                 case .success(let img): img.resizable().scaledToFill()
                 default:

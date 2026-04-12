@@ -183,6 +183,13 @@ function hydrateApplication(row) {
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
   }
+  // Strip 'history' from commission snapshots to break any circular refs
+  if (Array.isArray(obj.commission?.history)) {
+    for (const entry of obj.commission.history) {
+      if (entry.snapshotBefore) delete entry.snapshotBefore.history;
+      if (entry.snapshotAfter)  delete entry.snapshotAfter.history;
+    }
+  }
   return obj;
 }
 
