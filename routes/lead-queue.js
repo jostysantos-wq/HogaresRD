@@ -60,7 +60,7 @@ router.get('/', (req, res) => {
 });
 
 // ── POST /api/lead-queue/:id/claim — Claim a lead ──────────────────────
-router.post('/:id/claim', (req, res) => {
+router.post('/:id/claim', async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: 'No autenticado.' });
 
@@ -68,7 +68,7 @@ router.post('/:id/claim', (req, res) => {
     return res.status(400).json({ error: 'El sistema de cascada no está habilitado.' });
   }
 
-  const result = cascade.claimLead(req.params.id, userId);
+  const result = await cascade.claimLead(req.params.id, userId);
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });

@@ -273,17 +273,32 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, inmobil
  * @param {string} userId
  * @returns {{ success: boolean, error?: string }}
  */
-function claimLead(leadQueueId, userId) {
-  // Claim lock to prevent double-claims within the same tick
+async function claimLead(leadQueueId, userId) {
+  // In-memory lock (single-process) + DB-level atomic update (cluster-safe)
   if (_claimLocks.has(leadQueueId)) {
     return { success: false, error: 'Este lead está siendo procesado.' };
   }
   _claimLocks.add(leadQueueId);
 
   try {
+    // Atomic DB claim: only succeeds if status is still 'active'
+    // This prevents double-claims even across multiple Node processes
+    const dbResult = await store.pool.query(
+      `UPDATE lead_queue SET status = 'claimed', claimed_by = $1, claimed_at = $2
+       WHERE id = $3 AND status = 'active' RETURNING id`,
+      [userId, now(), leadQueueId]
+    ).catch(() => ({ rowCount: 0 }));
+
+    if (!dbResult.rowCount) {
+      return { success: false, error: 'Este lead ya fue reclamado.' };
+    }
+
     const item = store.getLeadQueueById(leadQueueId);
     if (!item) return { success: false, error: 'Lead no encontrado.' };
-    if (item.status !== 'active') return { success: false, error: 'Este lead ya fue reclamado.' };
+    // Update in-memory cache to match DB
+    item.status = 'claimed';
+    item.claimed_by = userId;
+    item.claimed_at = now();
 
     const listing = store.getListingById(item.listing_id);
     if (!listing) return { success: false, error: 'Propiedad no encontrada.' };
@@ -296,10 +311,7 @@ function claimLead(leadQueueId, userId) {
       return { success: false, error: 'No tienes prioridad para reclamar este lead en la ronda actual.' };
     }
 
-    // Claim it
-    item.status = 'claimed';
-    item.claimed_by = userId;
-    item.claimed_at = now();
+    // Sync in-memory cache (DB already updated atomically above)
     store.saveLeadQueueItem(item);
 
     // Cancel timer

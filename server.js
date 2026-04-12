@@ -189,9 +189,10 @@ const CSP_DIRECTIVES = [
   "frame-ancestors 'self'",
   "report-uri /api/csp-report",
 ].join('; ');
-const CSP_HEADER = process.env.CSP_ENFORCE === '1'
-  ? 'Content-Security-Policy'
-  : 'Content-Security-Policy-Report-Only';
+// CSP enforcing by default. Set CSP_REPORT_ONLY=1 to switch to report-only.
+const CSP_HEADER = process.env.CSP_REPORT_ONLY === '1'
+  ? 'Content-Security-Policy-Report-Only'
+  : 'Content-Security-Policy';
 app.use((req, res, next) => {
   res.setHeader(CSP_HEADER, CSP_DIRECTIVES);
   next();
