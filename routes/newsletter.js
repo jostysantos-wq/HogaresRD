@@ -450,8 +450,9 @@ function buildNewsletterHTML(user, { trending, newest, stats }) {
                 HOGARES<span style="color:${C.red};">RD</span>
               </div>
               <div class="footer-text" style="font-size:11px;color:${C.light};line-height:1.65;font-family:Arial,sans-serif;">
-                © ${new Date().getFullYear()} HogaresRD — Bienes raíces en República Dominicana<br/>
-                Recibes este correo porque te suscribiste a actualizaciones de HogaresRD.
+                © ${new Date().getFullYear()} HogaresRD — Plataforma informativa de bienes raíces<br/>
+                Recibes este correo porque te suscribiste a actualizaciones de HogaresRD.<br/>
+                HogaresRD · Santo Domingo, República Dominicana
               </div>
               <div style="margin-top:12px;font-family:Arial,sans-serif;">
                 <a href="${BASE_URL}/home" class="footer-link" style="font-size:11px;color:${C.muted};text-decoration:none;">hogaresrd.com</a>
@@ -510,7 +511,7 @@ async function sendNewsletter() {
         subject: `🏠 Tu resumen del día — ${trending.length} propiedades en tendencia`,
         html,
         headers: {
-          'List-Unsubscribe': `<${unsubUrl}>`,
+          'List-Unsubscribe': `<mailto:unsubscribe@hogaresrd.com?subject=unsubscribe-${user.id}>, <${unsubUrl}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
       });
@@ -606,4 +607,4 @@ router.post('/unsubscribe', (req, res) => {
   res.json({ success: true });
 });
 
-module.exports = { router, sendNewsletter, verifyUnsubToken };
+module.exports = { router, sendNewsletter, verifyUnsubToken, makeUnsubToken };

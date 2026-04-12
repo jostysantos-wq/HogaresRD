@@ -147,6 +147,14 @@ async function sendViaGmailAPI(opts) {
     `To: ${toArray.join(', ')}`,
     `Subject: =?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`,
     `Reply-To: ${REPLY_TO}`,
+  ];
+  // Inject custom headers (List-Unsubscribe, etc.)
+  if (opts.headers && typeof opts.headers === 'object') {
+    for (const [key, value] of Object.entries(opts.headers)) {
+      if (value) messageParts.push(`${key}: ${value}`);
+    }
+  }
+  messageParts.push(
     `MIME-Version: 1.0`,
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     '',

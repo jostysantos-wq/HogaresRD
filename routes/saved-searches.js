@@ -5,6 +5,7 @@ const rateLimit    = require('express-rate-limit');
 const store        = require('./store');
 const { userAuth } = require('./auth');
 const { notify }   = require('./push');
+const { makeUnsubToken } = require('./newsletter');
 
 const router  = express.Router();
 
@@ -303,8 +304,10 @@ async function sendSearchAlertEmail(user, search, newListings, totalNew) {
   <table width="100%" cellpadding="0" cellspacing="0">
     <tr><td style="padding:16px 32px;background:#f5f8fd;border-top:1px solid #dce8f5;">
       <p style="margin:0;font-size:0.72rem;color:#9ab0c8;text-align:center;line-height:1.7;">
-        © ${new Date().getFullYear()} HogaresRD — República Dominicana<br/>
-        Recibiste este correo por tu búsqueda guardada. Desactiva las alertas desde tu perfil.
+        © ${new Date().getFullYear()} HogaresRD — Plataforma informativa de bienes raíces<br/>
+        HogaresRD · Santo Domingo, República Dominicana<br/>
+        Recibiste este correo por tu búsqueda guardada.<br/>
+        <a href="${BASE_URL}/unsubscribe?token=${makeUnsubToken(user.id)}" style="color:#9ab0c8;text-decoration:underline;">Cancelar suscripción</a>
       </p>
     </td></tr>
   </table>
