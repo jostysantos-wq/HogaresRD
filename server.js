@@ -685,7 +685,7 @@ app.get('/api/config/meta', (req, res) => {
 // EXIF (GPS coords, device serial, etc.) and cap dimensions at 1920px.
 // This protects user privacy (no home-GPS leaking from a property
 // photo) and trims bandwidth on view.
-const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Demasiadas subidas. Intenta más tarde.' } });
+const uploadLimiter = require('express-rate-limit')({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Demasiadas subidas. Intenta más tarde.' } });
 app.post('/api/upload/photos', uploadLimiter, photoUpload.array('photos', 30), async (req, res) => {
   if (!req.files || !req.files.length)
     return res.status(400).json({ error: 'No se recibieron imágenes.' });
