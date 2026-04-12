@@ -144,8 +144,13 @@ router.post('/', requireLogin, (req, res) => {
 
   // Start cascade if enabled and no refToken assignment
   const cascadeEngine = require('./cascade-engine');
-  if (cascadeEngine.isEnabled() && !assignedBrokerId && !inmobiliariaId && propertyId) {
-    cascadeEngine.startCascade('conversation', conv.id, propertyId, { name: user.name || '' });
+  // Cascade: start if no direct broker assigned
+  // - Broker ref → assignedBrokerId is set → no cascade (already assigned)
+  // - Inmobiliaria ref → inmobiliariaId is set → cascade SCOPED to that org's team
+  // - No ref → normal cascade among all listing agencies
+  if (cascadeEngine.isEnabled() && !assignedBrokerId && propertyId) {
+    const cascadeScope = inmobiliariaId || null;
+    cascadeEngine.startCascade('conversation', conv.id, propertyId, { name: user.name || '' }, cascadeScope);
     return res.status(201).json({ id: conv.id, created: true });
   }
 

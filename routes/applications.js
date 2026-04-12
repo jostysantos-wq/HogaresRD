@@ -499,18 +499,29 @@ router.post('/', appCreateLimiter, (req, res) => {
   const listing = store.getListingById(listing_id);
   const agencies = listing?.agencies || [];
 
-  // Resolve affiliate ref_token early — referred leads bypass cascade
+  // Resolve affiliate ref_token early — determines how the lead is routed
   const earlyRefToken = req.body.ref_token || req.cookies?.hrd_ref || null;
   let referredByAgent = null;
+  let referredByInmobiliaria = null; // set when ref comes from an org (cascade within team)
   if (earlyRefToken) {
-    referredByAgent = store.getUserByRefToken(earlyRefToken);
+    const refUser = store.getUserByRefToken(earlyRefToken);
+    if (refUser) {
+      if (['agency', 'broker'].includes(refUser.role)) {
+        // Individual agent link → lead goes DIRECTLY to this agent, no cascade
+        referredByAgent = refUser;
+      } else if (['inmobiliaria', 'constructora'].includes(refUser.role)) {
+        // Org link → cascade within this inmobiliaria's team only
+        referredByInmobiliaria = refUser;
+      }
+    }
   }
 
-  // Auto-assign first agency broker (or leave unassigned)
-  // Cascade check: if cascade engine is enabled AND this is NOT a referred
-  // lead (affiliate links bypass cascade since the agent generated the lead)
+  // Cascade decision:
+  // - Broker ref → no cascade (direct assign)
+  // - Inmobiliaria ref → cascade scoped to that org's team
+  // - No ref → normal cascade among listing agencies
   const cascadeEngine = require('./cascade-engine');
-  const useCascade = cascadeEngine.isEnabled() && agencies.length > 0 && !referredByAgent;
+  const useCascade = cascadeEngine.isEnabled() && (agencies.length > 0 || referredByInmobiliaria) && !referredByAgent;
 
   // Helper: try to resolve an agency contact to a registered user
   // so we can populate broker.user_id. Listings with agency cards
@@ -545,7 +556,7 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
   if (referredByAgent) {
-    // Affiliate link lead — assign directly to the referring agent
+    // Individual broker affiliate link → assign directly to this agent
     broker = {
       user_id:     referredByAgent.id,
       name:        referredByAgent.name || '',
@@ -553,6 +564,9 @@ router.post('/', appCreateLimiter, (req, res) => {
       email:       referredByAgent.email || '',
       phone:       referredByAgent.phone || '',
     };
+  } else if (referredByInmobiliaria) {
+    // Inmobiliaria affiliate link → leave broker unassigned, cascade within team
+    broker = { user_id: null, name: 'Pendiente de asignación', agency_name: referredByInmobiliaria.name || '', email: '', phone: '' };
   } else if (!useCascade && agencies.length) {
     const agency = agencies[0];
     const resolved = resolveAgencyToUser(agency);
@@ -684,9 +698,14 @@ router.post('/', appCreateLimiter, (req, res) => {
     updated_at:      new Date().toISOString(),
   };
 
-  // Resolve referring agent (already looked up above for cascade bypass)
+  // Resolve referring agent/org (already looked up above for cascade bypass)
   if (referredByAgent) {
     app.referred_by = referredByAgent.id;
+  } else if (referredByInmobiliaria) {
+    app.referred_by = referredByInmobiliaria.id;
+    // Set inmobiliaria context so the org's team can see this application
+    app.inmobiliaria_id   = referredByInmobiliaria.id;
+    app.inmobiliaria_name = referredByInmobiliaria.name || '';
   }
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',
@@ -754,7 +773,9 @@ router.post('/', appCreateLimiter, (req, res) => {
     res.status(201).json({ ok: true, id: app.id });
 
     const buyerInfo = { name: app.client.name, phone: app.client.phone, email: app.client.email };
-    const cascadeResult = cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo);
+    // If this came from an inmobiliaria affiliate link, scope cascade to their team only
+    const cascadeScope = referredByInmobiliaria ? referredByInmobiliaria.id : null;
+    const cascadeResult = cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo, cascadeScope);
 
     if (!cascadeResult) {
       console.warn('[applications] Cascade returned null — falling back to direct agency notifications for app', app.id);

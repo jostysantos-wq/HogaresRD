@@ -52,10 +52,18 @@ router.post('/', leadLimiter, (req, res) => {
     updated_at:    new Date().toISOString()
   };
 
-  // Resolve referring agent
+  // Resolve referring agent or inmobiliaria
+  let refUser = null;
+  let inmobiliariaScope = null;
   if (lead.ref_token) {
-    const agent = store.getUserByRefToken(lead.ref_token);
-    if (agent) lead.referred_by = agent.id;
+    refUser = store.getUserByRefToken(lead.ref_token);
+    if (refUser) {
+      lead.referred_by = refUser.id;
+      // Inmobiliaria links cascade within team; broker links skip cascade entirely
+      if (['inmobiliaria', 'constructora'].includes(refUser.role)) {
+        inmobiliariaScope = refUser.id;
+      }
+    }
   }
 
   const cols = Object.keys(lead);
@@ -68,12 +76,16 @@ router.post('/', leadLimiter, (req, res) => {
 
   res.status(201).json({ ok: true, id: lead.id });
 
-  // Start cascade if enabled and not a referral
+  // Start cascade if enabled
+  // - Broker ref → skip cascade (direct assign via referred_by)
+  // - Inmobiliaria ref → cascade scoped to that org's team
+  // - No ref → normal cascade
   const cascadeEngine = require('./cascade-engine');
-  if (cascadeEngine.isEnabled() && !lead.referred_by && lead.listing_id) {
+  const isBrokerRef = refUser && ['agency', 'broker'].includes(refUser.role);
+  if (cascadeEngine.isEnabled() && !isBrokerRef && lead.listing_id) {
     cascadeEngine.startCascade('lead', lead.id, lead.listing_id, {
       name: lead.name || '', phone: lead.phone || '', email: lead.email || '',
-    });
+    }, inmobiliariaScope);
   }
 });
 

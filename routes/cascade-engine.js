@@ -96,19 +96,39 @@ function getMailer() {
 
 /**
  * Returns arrays of user_ids eligible for each tier on this listing.
+ *
+ * @param {object} listing — the listing object
+ * @param {string|null} inmobiliariaScope — if set, restrict ALL tiers to
+ *   agents belonging to this inmobiliaria. Used when leads arrive through
+ *   an inmobiliaria's affiliate link: the cascade should only rotate among
+ *   that inmobiliaria's team, not the listing's full agency set.
  */
-function getTierAgents(listing) {
+function getTierAgents(listing, inmobiliariaScope = null) {
   const creatorId = listing.creator_user_id || null;
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-  const allAgentIds = agencies.map(a => a.user_id).filter(Boolean);
+  let allAgentIds = agencies.map(a => a.user_id).filter(Boolean);
 
-  // Tier 1: creator only
-  const tier1 = creatorId ? [creatorId] : [];
+  // If scoped to an inmobiliaria, restrict to only that org's agents
+  if (inmobiliariaScope) {
+    const teamMembers = store.getUsersByInmobiliaria(inmobiliariaScope);
+    const teamIds = new Set(teamMembers.map(u => u.id));
+    // Also include the inmobiliaria owner themselves
+    teamIds.add(inmobiliariaScope);
+    allAgentIds = allAgentIds.filter(id => teamIds.has(id));
+    // If none of the listing's agencies are in this inmobiliaria,
+    // use the full team as the candidate pool instead
+    if (allAgentIds.length === 0) {
+      allAgentIds = [...teamIds];
+    }
+  }
+
+  // Tier 1: creator only (if in scope)
+  const tier1 = (creatorId && allAgentIds.includes(creatorId)) ? [creatorId] : [];
 
   // Tier 2: contributors with score >= threshold, excluding creator
   const scores = store.getContributionScoresForListing(listing.id);
   const tier2 = scores
-    .filter(s => s.score >= CONTRIB_THRESHOLD && s.user_id !== creatorId)
+    .filter(s => s.score >= CONTRIB_THRESHOLD && s.user_id !== creatorId && allAgentIds.includes(s.user_id))
     .map(s => s.user_id);
 
   // Tier 3: remaining agents not in tier 1 or 2
@@ -172,9 +192,12 @@ function sendAutoResponse(item) {
  * @param {string} inquiryId
  * @param {string} listingId
  * @param {{ name?: string, phone?: string, email?: string }} buyerInfo
+ * @param {string|null} inmobiliariaScope — if set, restrict cascade to
+ *   agents belonging to this inmobiliaria only. Used for inmobiliaria
+ *   affiliate links where the lead should rotate within the org's team.
  * @returns {object|null} The created lead_queue item, or null if cascade not applicable
  */
-function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}) {
+function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, inmobiliariaScope = null) {
   const listing = store.getListingById(listingId);
   if (!listing) {
     console.warn('[cascade] Listing not found:', listingId);
@@ -182,12 +205,12 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}) {
   }
 
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-  if (agencies.length === 0) {
+  if (agencies.length === 0 && !inmobiliariaScope) {
     console.log('[cascade] No agencies on listing, skipping cascade:', listingId);
     return null;
   }
 
-  const { tier1, tier2, tier3 } = getTierAgents(listing);
+  const { tier1, tier2, tier3 } = getTierAgents(listing, inmobiliariaScope);
 
   // Determine starting tier (skip empty tiers)
   let startTier = 1;
@@ -215,6 +238,7 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}) {
     tier2_notified_at: null,
     tier3_notified_at: null,
     auto_responded_at: null,
+    inmobiliaria_scope: inmobiliariaScope || null,
     created_at: now(),
   };
 
@@ -325,7 +349,7 @@ function escalateTier(leadQueueId) {
   const listing = store.getListingById(item.listing_id);
   if (!listing) return;
 
-  const { tier1, tier2, tier3 } = getTierAgents(listing);
+  const { tier1, tier2, tier3 } = getTierAgents(listing, item.inmobiliaria_scope || null);
   const allTiers = { 1: tier1, 2: tier2, 3: tier3 };
 
   // Morning wake-up: if tier_notified_at is null, this is resuming after
