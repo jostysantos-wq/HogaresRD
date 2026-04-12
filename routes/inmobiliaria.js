@@ -603,4 +603,169 @@ router.put('/team/:userId/role', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) 
   });
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// COMPANY PROFILE (public + editable)
+// ══════════════════════════════════════════════════════════════════════════
+
+// GET /profile — own company profile
+router.get('/profile', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
+  const inmId = ['inmobiliaria', 'constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
+  if (!inmId) return res.status(400).json({ error: 'No perteneces a una inmobiliaria' });
+  const owner = store.getUserById(inmId);
+  if (!owner) return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
+  const profile = typeof owner.profile === 'string' ? JSON.parse(owner.profile || '{}') : (owner.profile || {});
+  res.json({ id: inmId, name: owner.name, email: owner.email, phone: owner.phone, profile });
+});
+
+// PATCH /profile — update company profile (Director only)
+router.patch('/profile', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
+  if (!['inmobiliaria', 'constructora'].includes(user.role))
+    return res.status(403).json({ error: 'Solo el dueño puede editar el perfil de empresa' });
+
+  const profile = typeof user.profile === 'string' ? JSON.parse(user.profile || '{}') : (user.profile || {});
+  const { companyDescription, tagline, website, social, yearsInBusiness,
+          officeAddress, officeHours, certifications } = req.body;
+
+  if (companyDescription !== undefined) profile.companyDescription = String(companyDescription).slice(0, 5000);
+  if (tagline !== undefined)            profile.tagline = String(tagline).slice(0, 200);
+  if (website !== undefined)            profile.website = String(website).slice(0, 200);
+  if (social !== undefined)             profile.social = {
+    facebook:  String(social.facebook  || '').slice(0, 200),
+    instagram: String(social.instagram || '').slice(0, 200),
+    linkedin:  String(social.linkedin  || '').slice(0, 200),
+    whatsapp:  String(social.whatsapp  || '').slice(0, 20),
+  };
+  if (yearsInBusiness !== undefined) profile.yearsInBusiness = Math.max(0, Math.min(100, Number(yearsInBusiness) || 0));
+  if (officeAddress !== undefined)   profile.officeAddress = String(officeAddress).slice(0, 300);
+  if (officeHours !== undefined)     profile.officeHours = String(officeHours).slice(0, 100);
+  if (certifications !== undefined)  profile.certifications = Array.isArray(certifications) ? certifications.slice(0, 10).map(c => String(c).slice(0, 100)) : [];
+
+  user.profile = profile;
+  store.saveUser(user);
+  res.json({ success: true, profile });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// POSTS (social updates + articles)
+// ══════════════════════════════════════════════════════════════════════════
+
+router.get('/posts', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
+  const inmId = ['inmobiliaria', 'constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
+  if (!inmId) return res.status(400).json({ error: 'No perteneces a una inmobiliaria' });
+  const posts = store.getInmobPosts(inmId).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  res.json(posts);
+});
+
+router.post('/posts', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
+  const inmId = ['inmobiliaria', 'constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
+  if (!inmId) return res.status(403).json({ error: 'No autorizado' });
+
+  const { post_type, title, content, image } = req.body;
+  if (!content || !content.trim()) return res.status(400).json({ error: 'Contenido requerido' });
+
+  const post = {
+    id:               'ipost_' + crypto.randomBytes(8).toString('hex'),
+    inmobiliaria_id:  inmId,
+    post_type:        post_type === 'article' ? 'article' : 'update',
+    title:            post_type === 'article' ? String(title || '').slice(0, 200) : null,
+    content:          String(content).slice(0, post_type === 'article' ? 20000 : 500),
+    image:            image || null,
+    published:        1,
+    created_at:       new Date().toISOString(),
+    updated_at:       new Date().toISOString(),
+  };
+  store.saveInmobPost(post);
+  res.status(201).json(post);
+});
+
+router.put('/posts/:id', userAuth, (req, res) => {
+  const post = store.getInmobPostById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Post no encontrado' });
+  const user = store.getUserById(req.user.sub);
+  const inmId = ['inmobiliaria', 'constructora'].includes(user?.role) ? user.id : user?.inmobiliaria_id;
+  if (post.inmobiliaria_id !== inmId) return res.status(403).json({ error: 'No autorizado' });
+
+  if (req.body.title !== undefined)   post.title   = String(req.body.title).slice(0, 200);
+  if (req.body.content !== undefined) post.content  = String(req.body.content).slice(0, post.post_type === 'article' ? 20000 : 500);
+  if (req.body.image !== undefined)   post.image    = req.body.image || null;
+  post.updated_at = new Date().toISOString();
+  store.saveInmobPost(post);
+  res.json(post);
+});
+
+router.delete('/posts/:id', userAuth, (req, res) => {
+  const post = store.getInmobPostById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Post no encontrado' });
+  const user = store.getUserById(req.user.sub);
+  const inmId = ['inmobiliaria', 'constructora'].includes(user?.role) ? user.id : user?.inmobiliaria_id;
+  if (post.inmobiliaria_id !== inmId) return res.status(403).json({ error: 'No autorizado' });
+  store.deleteInmobPost(post.id);
+  res.json({ success: true });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// REVIEWS (public submit + admin manage)
+// ══════════════════════════════════════════════════════════════════════════
+
+const rateLimit = require('express-rate-limit');
+const reviewLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, message: { error: 'Demasiadas reseñas. Intenta más tarde.' } });
+
+// Public: get approved reviews for an inmobiliaria
+router.get('/:inmId/reviews', (req, res) => {
+  const reviews = store.getApprovedInmobReviews(req.params.inmId);
+  const avg = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
+  res.json({ reviews, average: avg ? parseFloat(avg) : null, count: reviews.length });
+});
+
+// Public: submit a review
+router.post('/:inmId/reviews', reviewLimiter, (req, res) => {
+  const { reviewer_name, reviewer_email, rating, comment } = req.body;
+  if (!reviewer_name || !rating) return res.status(400).json({ error: 'Nombre y calificación requeridos' });
+  const r = Math.max(1, Math.min(5, Number(rating) || 0));
+
+  const review = {
+    id:               'irev_' + crypto.randomBytes(8).toString('hex'),
+    inmobiliaria_id:  req.params.inmId,
+    reviewer_name:    String(reviewer_name).slice(0, 100),
+    reviewer_email:   String(reviewer_email || '').slice(0, 120),
+    rating:           r,
+    comment:          String(comment || '').slice(0, 1000),
+    status:           'pending',
+    created_at:       new Date().toISOString(),
+  };
+  store.saveInmobReview(review);
+  res.status(201).json({ success: true, message: 'Tu reseña ha sido enviada y será revisada pronto.' });
+});
+
+// Authenticated: manage reviews (approve/reject)
+router.post('/reviews/:id/approve', userAuth, (req, res) => {
+  const review = store.getInmobReviewById(req.params.id);
+  if (!review) return res.status(404).json({ error: 'Reseña no encontrada' });
+  const user = store.getUserById(req.user.sub);
+  if (!['inmobiliaria', 'constructora'].includes(user?.role) || user.id !== review.inmobiliaria_id)
+    return res.status(403).json({ error: 'No autorizado' });
+  review.status = 'approved';
+  store.saveInmobReview(review);
+  res.json({ success: true });
+});
+
+router.post('/reviews/:id/reject', userAuth, (req, res) => {
+  const review = store.getInmobReviewById(req.params.id);
+  if (!review) return res.status(404).json({ error: 'Reseña no encontrada' });
+  const user = store.getUserById(req.user.sub);
+  if (!['inmobiliaria', 'constructora'].includes(user?.role) || user.id !== review.inmobiliaria_id)
+    return res.status(403).json({ error: 'No autorizado' });
+  review.status = 'rejected';
+  store.saveInmobReview(review);
+  res.json({ success: true });
+});
+
 module.exports = router;

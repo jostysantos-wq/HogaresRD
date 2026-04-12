@@ -209,9 +209,47 @@ router.get('/agencies/:slug', (req, res) => {
   if (!agencyObj) return res.status(404).json({ error: 'Agencia no encontrada' });
   const agencyName = agencyObj.name;
 
-  // Look up the registered user for this agency to get their refToken
+  // Look up the registered user for this agency to get their refToken + profile
   const agencyUser = agencyObj.email ? store.getUserByEmail(agencyObj.email) : null;
   const refToken   = agencyUser?.refToken || null;
+
+  // Enrich with company profile, team, posts, reviews
+  let companyProfile = {};
+  let team = [];
+  let posts = [];
+  let reviews = { items: [], average: null, count: 0 };
+
+  if (agencyUser) {
+    const rawProfile = typeof agencyUser.profile === 'string'
+      ? (JSON.parse(agencyUser.profile || '{}')) : (agencyUser.profile || {});
+    companyProfile = {
+      ...rawProfile,
+      companyLogo: agencyUser.avatarUrl || rawProfile.companyLogo || null,
+      phone: agencyUser.phone || null,
+      email: agencyUser.email || null,
+    };
+
+    // Team members (if inmobiliaria/constructora)
+    if (['inmobiliaria', 'constructora'].includes(agencyUser.role)) {
+      const members = store.getUsersByInmobiliaria(agencyUser.id);
+      team = members.map(m => ({
+        name: m.name, role: m.role, jobTitle: m.jobTitle || m.team_title || '',
+        avatarUrl: m.avatarUrl || null,
+      }));
+    }
+
+    // Posts
+    posts = store.getPublishedInmobPosts(agencyUser.id)
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      .slice(0, 20);
+
+    // Reviews
+    const approvedReviews = store.getApprovedInmobReviews(agencyUser.id);
+    const avg = approvedReviews.length
+      ? (approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length).toFixed(1)
+      : null;
+    reviews = { items: approvedReviews, average: avg ? parseFloat(avg) : null, count: approvedReviews.length };
+  }
 
   // Pagination
   const page  = Math.max(1, parseInt(req.query.page) || 1);
@@ -219,7 +257,11 @@ router.get('/agencies/:slug', (req, res) => {
   const total = matched.length;
   const items = matched.slice((page - 1) * limit, page * limit);
 
-  res.json({ name: agencyName, slug, refToken, listings: attachFavCounts(items), total, page, limit, pages: Math.ceil(total / limit) });
+  res.json({
+    name: agencyName, slug, refToken, inmobiliariaId: agencyUser?.id || null,
+    profile: companyProfile, team, posts, reviews,
+    listings: attachFavCounts(items), total, page, limit, pages: Math.ceil(total / limit),
+  });
 });
 
 // GET /api/listings/:id

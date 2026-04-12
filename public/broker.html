@@ -1186,6 +1186,14 @@
       <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
       <span class="sidebar-nav-label">Enlaces de Referido</span>
     </button>
+    <button class="sidebar-nav-item" data-page="empresa" id="empresaNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+      <span class="sidebar-nav-label">Perfil de Empresa</span>
+    </button>
+    <button class="sidebar-nav-item" data-page="publicaciones" id="pubNavBtn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span class="sidebar-nav-label">Publicaciones</span>
+    </button>
   </nav>
 
   <div class="sidebar-footer">
@@ -2231,6 +2239,67 @@
   </div>
 
   <!-- ═══ PAGE: MENSAJES ═══════════════════════════════════ -->
+  <!-- PERFIL DE EMPRESA -->
+  <div class="page-section" id="page-empresa">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Información de la Empresa</h3>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Eslogan / Tagline</label>
+            <input type="text" id="empTagline" placeholder="Tu hogar, nuestra misión" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Descripción de la empresa</label>
+            <textarea id="empDescription" rows="5" placeholder="Escribe sobre tu empresa, historia, valores..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical;"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Años de experiencia</label>
+              <input type="number" id="empYears" min="0" max="100" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+            <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Sitio web</label>
+              <input type="url" id="empWebsite" placeholder="https://..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+          </div>
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Dirección de la oficina</label>
+            <input type="text" id="empAddress" placeholder="Av. Winston Churchill #1099, Santo Domingo" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.3rem;">Horario de atención</label>
+            <input type="text" id="empHours" placeholder="Lun-Vie 9AM-6PM, Sáb 9AM-1PM" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Redes Sociales</h3>
+          <div style="display:flex;flex-direction:column;gap:.75rem;">
+            <div><label style="font-size:.78rem;font-weight:600;">Facebook</label><input type="url" id="empFacebook" placeholder="https://facebook.com/..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+            <div><label style="font-size:.78rem;font-weight:600;">Instagram</label><input type="url" id="empInstagram" placeholder="https://instagram.com/..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+            <div><label style="font-size:.78rem;font-weight:600;">LinkedIn</label><input type="url" id="empLinkedin" placeholder="https://linkedin.com/company/..." style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+            <div><label style="font-size:.78rem;font-weight:600;">WhatsApp</label><input type="tel" id="empWhatsapp" placeholder="+1 809 000 0000" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></div>
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <button onclick="saveEmpresa()" style="background:var(--accent);color:#fff;border:none;padding:.75rem 2.5rem;border-radius:10px;font-weight:700;cursor:pointer;font-size:.95rem;">Guardar Perfil</button>
+          <p id="empMsg" style="display:none;margin-top:.5rem;font-size:.82rem;font-weight:600;"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUBLICACIONES -->
+  <div class="page-section" id="page-publicaciones">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem;">Nueva Publicación</h3>
+      <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+        <button onclick="setPubType('update')" id="pubTypeUpdate" style="padding:.4rem 1rem;border:1px solid var(--accent);border-radius:20px;background:var(--accent);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Actualización</button>
+        <button onclick="setPubType('article')" id="pubTypeArticle" style="padding:.4rem 1rem;border:1px solid var(--border);border-radius:20px;background:none;color:var(--text-muted);font-size:.8rem;font-weight:600;cursor:pointer;">Artículo</button>
+      </div>
+      <div id="pubTitleWrap" style="display:none;margin-bottom:.75rem;">
+        <input type="text" id="pubTitle" placeholder="Título del artículo" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:600;">
+      </div>
+      <textarea id="pubContent" placeholder="¿Qué quieres compartir?" rows="3" style="width:100%;padding:.6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical;"></textarea>
+      <div style="display:flex;gap:.5rem;align-items:center;margin-top:.75rem;">
+        <input type="url" id="pubImage" placeholder="URL de imagen (opcional)" style="flex:1;padding:.4rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.82rem;">
+        <button onclick="submitPost()" style="background:var(--accent);color:#fff;border:none;padding:.5rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem;">Publicar</button>
+      </div>
+      <p id="pubMsg" style="display:none;margin-top:.5rem;font-size:.82rem;font-weight:600;"></p>
+    </div>
+    <div id="pubList"><p style="color:var(--text-muted);font-size:.85rem;">Cargando publicaciones...</p></div>
+  </div>
+
   <div class="page-section" id="page-mensajes" style="padding:0;display:flex;flex-direction:row;height:calc(100vh - 60px);overflow:hidden;">
 
     <!-- Conversation list panel -->
@@ -4900,12 +4969,130 @@
     window.open(img.src, '_blank');
   };
 
+  // ── Company Profile Page ────────────────────────────────────
+  async function loadEmpresaPage() {
+    try {
+      const data = await API('/api/inmobiliaria/profile');
+      const p = data.profile || {};
+      document.getElementById('empTagline').value = p.tagline || '';
+      document.getElementById('empDescription').value = p.companyDescription || '';
+      document.getElementById('empYears').value = p.yearsInBusiness || '';
+      document.getElementById('empWebsite').value = p.website || '';
+      document.getElementById('empAddress').value = p.officeAddress || '';
+      document.getElementById('empHours').value = p.officeHours || '';
+      document.getElementById('empFacebook').value = p.social?.facebook || '';
+      document.getElementById('empInstagram').value = p.social?.instagram || '';
+      document.getElementById('empLinkedin').value = p.social?.linkedin || '';
+      document.getElementById('empWhatsapp').value = p.social?.whatsapp || '';
+    } catch {}
+  }
+
+  window.saveEmpresa = async function() {
+    const msg = document.getElementById('empMsg');
+    try {
+      await API('/api/inmobiliaria/profile', {
+        method: 'PATCH',
+        body: {
+          tagline: document.getElementById('empTagline').value,
+          companyDescription: document.getElementById('empDescription').value,
+          yearsInBusiness: document.getElementById('empYears').value,
+          website: document.getElementById('empWebsite').value,
+          officeAddress: document.getElementById('empAddress').value,
+          officeHours: document.getElementById('empHours').value,
+          social: {
+            facebook: document.getElementById('empFacebook').value,
+            instagram: document.getElementById('empInstagram').value,
+            linkedin: document.getElementById('empLinkedin').value,
+            whatsapp: document.getElementById('empWhatsapp').value,
+          },
+        }
+      });
+      msg.textContent = '✅ Perfil guardado'; msg.style.color = '#059669'; msg.style.display = '';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    } catch (e) {
+      msg.textContent = e.message || 'Error'; msg.style.color = 'red'; msg.style.display = '';
+    }
+  };
+
+  // ── Publicaciones Page ─────────────────────────────────────
+  let _pubType = 'update';
+  window.setPubType = function(type) {
+    _pubType = type;
+    document.getElementById('pubTypeUpdate').style.background = type === 'update' ? 'var(--accent)' : 'none';
+    document.getElementById('pubTypeUpdate').style.color = type === 'update' ? '#fff' : 'var(--text-muted)';
+    document.getElementById('pubTypeArticle').style.background = type === 'article' ? 'var(--accent)' : 'none';
+    document.getElementById('pubTypeArticle').style.color = type === 'article' ? '#fff' : 'var(--text-muted)';
+    document.getElementById('pubTitleWrap').style.display = type === 'article' ? '' : 'none';
+  };
+
+  async function loadPublicaciones() {
+    try {
+      const posts = await API('/api/inmobiliaria/posts');
+      const el = document.getElementById('pubList');
+      if (!posts.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:2rem;">Sin publicaciones aún. ¡Crea tu primera!</p>'; return; }
+      el.innerHTML = posts.map(p => `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem;display:flex;gap:1rem;align-items:flex-start;">
+          ${p.image ? `<img src="${esc(p.image)}" style="width:80px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0;">` : ''}
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;">
+              <span style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:4px;${p.post_type === 'article' ? 'background:#e0e7ff;color:#3730a3;' : 'background:#dcfce7;color:#166534;'}">${p.post_type === 'article' ? 'Artículo' : 'Actualización'}</span>
+              <span style="font-size:.72rem;color:var(--text-muted);">${new Date(p.created_at).toLocaleDateString('es-DO')}</span>
+            </div>
+            ${p.title ? `<div style="font-weight:700;font-size:.9rem;margin-bottom:.25rem;">${esc(p.title)}</div>` : ''}
+            <div style="font-size:.82rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.content?.slice(0, 120))}</div>
+          </div>
+          <button onclick="deletePost('${p.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.85rem;" title="Eliminar">🗑</button>
+        </div>
+      `).join('');
+    } catch { document.getElementById('pubList').innerHTML = '<p style="color:red;">Error al cargar</p>'; }
+  }
+
+  window.submitPost = async function() {
+    const msg = document.getElementById('pubMsg');
+    const content = document.getElementById('pubContent').value.trim();
+    if (!content) { msg.textContent = 'Escribe algo primero'; msg.style.color = 'red'; msg.style.display = ''; return; }
+    try {
+      await API('/api/inmobiliaria/posts', {
+        method: 'POST',
+        body: {
+          post_type: _pubType,
+          title: _pubType === 'article' ? document.getElementById('pubTitle').value : '',
+          content,
+          image: document.getElementById('pubImage').value || null,
+        }
+      });
+      document.getElementById('pubContent').value = '';
+      document.getElementById('pubTitle').value = '';
+      document.getElementById('pubImage').value = '';
+      msg.textContent = '✅ Publicado'; msg.style.color = '#059669'; msg.style.display = '';
+      setTimeout(() => { msg.style.display = 'none'; }, 2000);
+      loadPublicaciones();
+    } catch (e) {
+      msg.textContent = e.message || 'Error'; msg.style.color = 'red'; msg.style.display = '';
+    }
+  };
+
+  window.deletePost = async function(id) {
+    if (!confirm('¿Eliminar esta publicación?')) return;
+    try { await API(`/api/inmobiliaria/posts/${id}`, { method: 'DELETE' }); loadPublicaciones(); } catch {}
+  };
+
+  // Show empresa/publicaciones nav for inmobiliaria/constructora
+  if (['inmobiliaria', 'constructora'].includes(currentUser?.role)) {
+    const empBtn = document.getElementById('empresaNavBtn');
+    const pubBtn = document.getElementById('pubNavBtn');
+    if (empBtn) empBtn.style.display = '';
+    if (pubBtn) pubBtn.style.display = '';
+  }
+
   // Load referral page when navigating to it
   const origShowPage = window.showPage;
   if (origShowPage) {
     window.showPage = function(page) {
       origShowPage(page);
       if (page === 'referrals') loadReferralPage();
+      if (page === 'empresa') loadEmpresaPage();
+      if (page === 'publicaciones') loadPublicaciones();
     };
   }
 

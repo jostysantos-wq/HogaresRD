@@ -294,6 +294,8 @@ let _leadQueue = [];
 let _contributionScores = [];
 let _deletionRequests = [];
 let _privacyLog = [];
+let _inmobPosts = [];
+let _inmobReviews = [];
 let _cacheReady = false;
 
 // ── Initial cache load ──────────────────────────────────────────────────
@@ -325,6 +327,18 @@ async function _loadCache() {
         source TEXT DEFAULT 'manual', details JSONB DEFAULT '{}',
         created_at TEXT NOT NULL, completed_at TEXT
       );
+      CREATE TABLE IF NOT EXISTS inmobiliaria_posts (
+        id TEXT PRIMARY KEY, inmobiliaria_id TEXT NOT NULL,
+        post_type TEXT DEFAULT 'update', title TEXT, content TEXT NOT NULL,
+        image TEXT, published INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS inmobiliaria_reviews (
+        id TEXT PRIMARY KEY, inmobiliaria_id TEXT NOT NULL,
+        reviewer_name TEXT NOT NULL, reviewer_email TEXT,
+        rating INTEGER NOT NULL, comment TEXT,
+        status TEXT DEFAULT 'pending', created_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS deletion_requests (
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL, user_email TEXT NOT NULL,
         user_name TEXT, user_role TEXT, reason TEXT,
@@ -334,7 +348,7 @@ async function _loadCache() {
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
-           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs, privLog] = await Promise.all([
+           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs, privLog, iPost, iReview] = await Promise.all([
       query('SELECT * FROM users'),
       query('SELECT * FROM submissions'),
       query('SELECT * FROM applications'),
@@ -354,6 +368,8 @@ async function _loadCache() {
       query('SELECT * FROM contribution_scores'),
       query('SELECT * FROM deletion_requests'),
       query('SELECT * FROM privacy_log'),
+      query('SELECT * FROM inmobiliaria_posts'),
+      query('SELECT * FROM inmobiliaria_reviews'),
     ]);
     _users = users;
     _submissions = subs;
@@ -374,6 +390,8 @@ async function _loadCache() {
     _contributionScores = cs;
     _deletionRequests = delReqs;
     _privacyLog = privLog;
+    _inmobPosts = iPost;
+    _inmobReviews = iReview;
     _cacheReady = true;
     console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} lead queue, ${cs.length} scores`);
   } catch (err) {
@@ -1108,6 +1126,48 @@ function withTransaction(fn) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// INMOBILIARIA POSTS
+// ══════════════════════════════════════════════════════════════════════════
+
+function getInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id === inmId); }
+function getInmobPostById(id) { return _inmobPosts.find(p => p.id === id) || null; }
+function getPublishedInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id === inmId && p.published); }
+
+function saveInmobPost(post) {
+  const { sql, values } = buildUpsert('inmobiliaria_posts', post, 'id');
+  pool.query(sql, values).catch(err => _dbWriteError('saveInmobPost', err));
+  const idx = _inmobPosts.findIndex(p => p.id === post.id);
+  if (idx >= 0) _inmobPosts[idx] = post;
+  else _inmobPosts.push(post);
+}
+
+function deleteInmobPost(id) {
+  pool.query('DELETE FROM inmobiliaria_posts WHERE id = $1', [id]).catch(err => _dbWriteError('deleteInmobPost', err));
+  _inmobPosts = _inmobPosts.filter(p => p.id !== id);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// INMOBILIARIA REVIEWS
+// ══════════════════════════════════════════════════════════════════════════
+
+function getInmobReviews(inmId) { return _inmobReviews.filter(r => r.inmobiliaria_id === inmId); }
+function getApprovedInmobReviews(inmId) { return _inmobReviews.filter(r => r.inmobiliaria_id === inmId && r.status === 'approved'); }
+function getInmobReviewById(id) { return _inmobReviews.find(r => r.id === id) || null; }
+
+function saveInmobReview(review) {
+  const { sql, values } = buildUpsert('inmobiliaria_reviews', review, 'id');
+  pool.query(sql, values).catch(err => _dbWriteError('saveInmobReview', err));
+  const idx = _inmobReviews.findIndex(r => r.id === review.id);
+  if (idx >= 0) _inmobReviews[idx] = review;
+  else _inmobReviews.push(review);
+}
+
+function deleteInmobReview(id) {
+  pool.query('DELETE FROM inmobiliaria_reviews WHERE id = $1', [id]).catch(err => _dbWriteError('deleteInmobReview', err));
+  _inmobReviews = _inmobReviews.filter(r => r.id !== id);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // PRIVACY LOG (CCPA compliance — 24-month retention)
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -1179,6 +1239,8 @@ module.exports = {
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
   withTransaction,
+  getInmobPosts, getInmobPostById, getPublishedInmobPosts, saveInmobPost, deleteInmobPost,
+  getInmobReviews, getApprovedInmobReviews, getInmobReviewById, saveInmobReview, deleteInmobReview,
   getPrivacyLog, appendPrivacyLog,
   getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,

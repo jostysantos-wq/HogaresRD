@@ -265,24 +265,87 @@
       <div class="agency-avatar" id="agencyAvatar"></div>
       <div class="agency-hero-text">
         <h1 id="agencyName"></h1>
+        <p id="agencyTagline" style="font-size:1.05rem;opacity:0.9;margin-top:0.25rem;"></p>
         <p id="agencySubtitle"></p>
+        <div id="agencyReviewBadge" style="display:none;margin-top:0.5rem;">
+          <span style="color:#FFD700;font-size:1.1rem;" id="heroStars"></span>
+          <span style="opacity:0.8;font-size:0.9rem;" id="heroReviewCount"></span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- RESULTS BAR -->
-  <div class="results-bar" id="resultsBar" style="display:none">
-    <div class="results-count" id="resultsCount"></div>
-  </div>
+  <!-- PROFILE CONTENT -->
+  <div style="max-width:1280px;margin:0 auto;padding:0 2rem;">
 
-  <!-- GRID -->
-  <div class="listings-section" id="listingsSection">
-    <div class="listings-grid" id="listingsGrid">
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-      <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
-    </div>
-    <div class="pagination" id="pagination"></div>
+    <!-- ABOUT -->
+    <section id="sectionAbout" style="display:none;padding:2.5rem 0;">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1rem;">Sobre Nosotros</h2>
+      <div id="aboutContent" style="font-size:0.95rem;line-height:1.8;color:var(--text-muted);"></div>
+      <div id="aboutMeta" style="display:flex;flex-wrap:wrap;gap:1.5rem;margin-top:1.5rem;"></div>
+    </section>
+
+    <!-- TEAM -->
+    <section id="sectionTeam" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Nuestro Equipo</h2>
+      <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.25rem;"></div>
+    </section>
+
+    <!-- POSTS -->
+    <section id="sectionPosts" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Publicaciones</h2>
+      <div id="postsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;"></div>
+    </section>
+
+    <!-- REVIEWS -->
+    <section id="sectionReviews" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <h2 style="font-size:1.3rem;font-weight:800;">Reseñas de Clientes</h2>
+        <button onclick="document.getElementById('reviewForm').style.display=''" style="background:var(--accent);color:#fff;border:none;padding:0.5rem 1.25rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">Escribir Reseña</button>
+      </div>
+      <div id="reviewSummary" style="margin-bottom:1.25rem;"></div>
+      <div id="reviewsList"></div>
+      <!-- Review form -->
+      <div id="reviewForm" style="display:none;margin-top:1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Deja tu reseña</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <input type="text" id="revName" placeholder="Tu nombre *" style="padding:0.6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+          <input type="email" id="revEmail" placeholder="Tu email (opcional)" style="padding:0.6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;display:block;">Calificación *</label>
+          <div id="starPicker" style="font-size:1.5rem;cursor:pointer;">
+            <span onclick="pickStar(1)">☆</span><span onclick="pickStar(2)">☆</span><span onclick="pickStar(3)">☆</span><span onclick="pickStar(4)">☆</span><span onclick="pickStar(5)">☆</span>
+          </div>
+        </div>
+        <textarea id="revComment" placeholder="Comparte tu experiencia..." style="width:100%;padding:0.6rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);min-height:80px;resize:vertical;"></textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+          <button onclick="submitReview()" style="background:var(--accent);color:#fff;border:none;padding:0.6rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;">Enviar Reseña</button>
+          <button onclick="document.getElementById('reviewForm').style.display='none'" style="background:none;border:1px solid var(--border);padding:0.6rem 1.5rem;border-radius:8px;cursor:pointer;color:var(--text-muted);">Cancelar</button>
+        </div>
+        <p id="reviewMsg" style="display:none;margin-top:0.75rem;font-size:0.85rem;font-weight:600;"></p>
+      </div>
+    </section>
+
+    <!-- LISTINGS PORTFOLIO -->
+    <section style="padding:2rem 0;border-top:1px solid var(--border);">
+      <div class="results-bar" id="resultsBar" style="display:none">
+        <div class="results-count" id="resultsCount"></div>
+      </div>
+      <div class="listings-grid" id="listingsGrid">
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+        <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="skeleton sk-line lg"></div><div class="skeleton sk-line md"></div><div class="skeleton sk-line sm"></div></div></div>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="sectionContact" style="display:none;padding:2rem 0;border-top:1px solid var(--border);">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Contacto</h2>
+      <div id="contactInfo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;"></div>
+    </section>
+
   </div>
 
   <!-- FOOTER -->
@@ -436,16 +499,113 @@
         // Store refToken for portfolio-aware affiliate links
         if (page === 1 && data.refToken) _agencyRefToken = data.refToken;
 
-        // Render hero (once)
+        // Render hero + profile sections (once on first load)
         if (page === 1) {
+          const p = data.profile || {};
           const initials = data.name.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
-          document.getElementById('agencyAvatar').textContent = initials;
-          document.getElementById('agencyName').textContent   = data.name;
+          const avatarEl = document.getElementById('agencyAvatar');
+          if (p.companyLogo) {
+            avatarEl.innerHTML = `<img src="${esc(p.companyLogo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+          } else { avatarEl.textContent = initials; }
+          document.getElementById('agencyName').textContent = data.name;
+          if (p.tagline) document.getElementById('agencyTagline').textContent = p.tagline;
           document.getElementById('agencySubtitle').textContent =
-            `${data.total} propiedad${data.total !== 1 ? 'es' : ''} listada${data.total !== 1 ? 's' : ''}`;
+            `${data.total} propiedad${data.total !== 1 ? 'es' : ''} listada${data.total !== 1 ? 's' : ''}` +
+            (p.yearsInBusiness ? ` · ${p.yearsInBusiness} años de experiencia` : '');
           document.title = `${data.name} — HogaresRD`;
           document.getElementById('agencyHero').style.display = '';
           document.getElementById('resultsBar').style.display  = '';
+
+          // Reviews badge in hero
+          if (data.reviews && data.reviews.count > 0) {
+            document.getElementById('heroStars').textContent = '★'.repeat(Math.round(data.reviews.average)) + '☆'.repeat(5 - Math.round(data.reviews.average));
+            document.getElementById('heroReviewCount').textContent = `${data.reviews.average} (${data.reviews.count} reseña${data.reviews.count !== 1 ? 's' : ''})`;
+            document.getElementById('agencyReviewBadge').style.display = '';
+          }
+
+          // About section
+          if (p.companyDescription) {
+            document.getElementById('aboutContent').innerHTML = p.companyDescription;
+            const meta = [];
+            if (p.yearsInBusiness) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${p.yearsInBusiness}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Años de experiencia</span></div>`);
+            if ((p.certifications || []).length) meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${p.certifications.length}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Certificaciones</span></div>`);
+            meta.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.25rem;"><strong>${data.total}</strong><br><span style="font-size:0.8rem;color:var(--text-muted);">Propiedades</span></div>`);
+            document.getElementById('aboutMeta').innerHTML = meta.join('');
+            document.getElementById('sectionAbout').style.display = '';
+          }
+
+          // Team section
+          if (data.team && data.team.length) {
+            document.getElementById('teamGrid').innerHTML = data.team.map(m => `
+              <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;">
+                ${m.avatarUrl ? `<img src="${esc(m.avatarUrl)}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:0.75rem;">` : `<div style="width:64px;height:64px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;font-size:1.2rem;font-weight:700;color:var(--accent);">${esc(m.name.charAt(0))}</div>`}
+                <div style="font-weight:700;font-size:0.9rem;">${esc(m.name)}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">${esc(m.jobTitle || 'Agente')}</div>
+              </div>
+            `).join('');
+            document.getElementById('sectionTeam').style.display = '';
+          }
+
+          // Posts section
+          if (data.posts && data.posts.length) {
+            document.getElementById('postsGrid').innerHTML = data.posts.map(post => `
+              <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                ${post.image ? `<img src="${esc(post.image)}" style="width:100%;aspect-ratio:16/9;object-fit:cover;">` : ''}
+                <div style="padding:1rem;">
+                  ${post.title ? `<h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">${esc(post.title)}</h3>` : ''}
+                  <p style="font-size:0.88rem;color:var(--text-muted);line-height:1.6;">${post.post_type === 'article' ? post.content.slice(0, 200) + '...' : esc(post.content)}</p>
+                  <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.75rem;">${new Date(post.created_at).toLocaleDateString('es-DO', { dateStyle: 'medium' })}</div>
+                </div>
+              </div>
+            `).join('');
+            document.getElementById('sectionPosts').style.display = '';
+          }
+
+          // Reviews section
+          if (data.reviews) {
+            _inmId = data.inmobiliariaId || slug;
+            if (data.reviews.count > 0) {
+              document.getElementById('reviewSummary').innerHTML = `
+                <div style="display:flex;align-items:center;gap:1rem;">
+                  <span style="font-size:2.5rem;font-weight:800;color:var(--accent);">${data.reviews.average}</span>
+                  <div>
+                    <div style="color:#FFD700;font-size:1.2rem;">${'★'.repeat(Math.round(data.reviews.average))}${'☆'.repeat(5 - Math.round(data.reviews.average))}</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted);">${data.reviews.count} reseña${data.reviews.count !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>`;
+              document.getElementById('reviewsList').innerHTML = data.reviews.items.map(r => `
+                <div style="border-top:1px solid var(--border);padding:1rem 0;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <strong>${esc(r.reviewer_name)}</strong>
+                    <span style="color:#FFD700;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+                  </div>
+                  ${r.comment ? `<p style="margin-top:0.5rem;font-size:0.9rem;color:var(--text-muted);">${esc(r.comment)}</p>` : ''}
+                  <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.5rem;">${new Date(r.created_at).toLocaleDateString('es-DO', { dateStyle: 'medium' })}</div>
+                </div>
+              `).join('');
+            }
+            document.getElementById('sectionReviews').style.display = '';
+          }
+
+          // Contact section
+          const contactItems = [];
+          if (p.phone || data.profile?.phone) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>📞 Teléfono</strong><br>${esc(p.phone || data.profile.phone)}</div>`);
+          if (p.email || data.profile?.email) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>✉️ Email</strong><br>${esc(p.email || data.profile.email)}</div>`);
+          if (p.website) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>🌐 Web</strong><br><a href="${esc(p.website)}" target="_blank" style="color:var(--accent);">${esc(p.website)}</a></div>`);
+          if (p.officeAddress) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>📍 Dirección</strong><br>${esc(p.officeAddress)}</div>`);
+          if (p.officeHours) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>🕐 Horario</strong><br>${esc(p.officeHours)}</div>`);
+          if (p.social) {
+            const links = [];
+            if (p.social.facebook) links.push(`<a href="${esc(p.social.facebook)}" target="_blank" style="color:var(--accent);">Facebook</a>`);
+            if (p.social.instagram) links.push(`<a href="${esc(p.social.instagram)}" target="_blank" style="color:var(--accent);">Instagram</a>`);
+            if (p.social.linkedin) links.push(`<a href="${esc(p.social.linkedin)}" target="_blank" style="color:var(--accent);">LinkedIn</a>`);
+            if (p.social.whatsapp) links.push(`<a href="https://wa.me/${esc(p.social.whatsapp)}" target="_blank" style="color:var(--accent);">WhatsApp</a>`);
+            if (links.length) contactItems.push(`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem;"><strong>🔗 Redes</strong><br>${links.join(' · ')}</div>`);
+          }
+          if (contactItems.length) {
+            document.getElementById('contactInfo').innerHTML = contactItems.join('');
+            document.getElementById('sectionContact').style.display = '';
+          }
         }
 
         document.getElementById('resultsCount').innerHTML =
@@ -473,6 +633,32 @@
     }
 
     function goPage(p) { loadPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    // Reviews
+    let _inmId = slug;
+    let _selectedRating = 0;
+    window.pickStar = function(n) {
+      _selectedRating = n;
+      const spans = document.querySelectorAll('#starPicker span');
+      spans.forEach((s, i) => { s.textContent = i < n ? '★' : '☆'; s.style.color = i < n ? '#FFD700' : 'var(--text-muted)'; });
+    };
+    window.submitReview = async function() {
+      const name = document.getElementById('revName').value.trim();
+      const email = document.getElementById('revEmail').value.trim();
+      const comment = document.getElementById('revComment').value.trim();
+      const msg = document.getElementById('reviewMsg');
+      if (!name || !_selectedRating) { msg.textContent = 'Nombre y calificación requeridos.'; msg.style.color = 'red'; msg.style.display = ''; return; }
+      try {
+        const r = await fetch(`/api/inmobiliaria/${encodeURIComponent(_inmId)}/reviews`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reviewer_name: name, reviewer_email: email, rating: _selectedRating, comment }),
+        });
+        const d = await r.json();
+        if (r.ok) { msg.textContent = '✅ ' + (d.message || 'Reseña enviada'); msg.style.color = 'green'; }
+        else { msg.textContent = d.error || 'Error'; msg.style.color = 'red'; }
+      } catch { msg.textContent = 'Error de conexión'; msg.style.color = 'red'; }
+      msg.style.display = '';
+    };
 
     loadPage(1);
   </script>
