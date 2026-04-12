@@ -276,7 +276,8 @@ struct ConversationsView: View {
     private func archiveConv(_ conv: Conversation) async {
         do {
             try await api.archiveConversation(id: conv.id)
-            // Update locally — no need to reload all conversations
+            withAnimation { conversations.removeAll { $0.id == conv.id } }
+            await loadAll()
         } catch {
             errorMsg = error.localizedDescription
         }
@@ -285,7 +286,8 @@ struct ConversationsView: View {
     private func unarchiveConv(_ conv: Conversation) async {
         do {
             try await api.unarchiveConversation(id: conv.id)
-            // Update locally — no need to reload all conversations
+            withAnimation { conversations.removeAll { $0.id == conv.id } }
+            await loadAll()
         } catch {
             errorMsg = error.localizedDescription
         }
