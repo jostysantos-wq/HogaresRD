@@ -763,23 +763,59 @@
         </button>
         <button type="button" class="mode-btn" id="modeClaim" onclick="setMode('claim')">
           <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
-          Agregar mi Agencia
+          Asociarme a una Propiedad
         </button>
       </div>
 
-      <!-- Claim mode: listing ID -->
+      <!-- Claim mode: listing ID + agency info + submit -->
       <div id="claimSection" style="display:none;">
         <div class="card">
           <div class="card-title">
             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm4-4h8v2h-8z"/></svg>
-            Identificar la Propiedad
+            Asociarse a una Propiedad
           </div>
-          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Ingresa el ID de la publicación aprobada a la que deseas agregar tu agencia.</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Ingresa el ID de la propiedad a la que deseas asociarte como agente. El ID aparece en la página del listado (ej. <strong>EW7498</strong>).</p>
           <div class="field">
-            <label for="claim_listing_id">ID de la Publicación <span class="req">*</span></label>
-            <input type="text" id="claim_listing_id" name="claim_listing_id" placeholder="Ej. 1748291234567" />
-            <p class="claim-id-note">El ID lo encuentras en la confirmación de tu publicación o solicitándolo al administrador de HogaresRD.</p>
+            <label for="claim_listing_id">ID de la Propiedad <span class="req">*</span></label>
+            <input type="text" id="claim_listing_id" name="claim_listing_id" placeholder="Ej. EW7498" />
+            <p class="claim-id-note">Puedes encontrar el ID en la página del listado, debajo del título de la propiedad.</p>
           </div>
+        </div>
+
+        <!-- Agency contact info for claim mode -->
+        <div class="card" style="margin-top:1rem;">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            Tu Información de Contacto
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Estos datos serán visibles para los clientes que consulten sobre esta propiedad.</p>
+          <div class="grid-2" style="gap:1rem;">
+            <div class="field">
+              <label>Nombre / Agencia <span class="req">*</span></label>
+              <input type="text" id="claimAgencyName" placeholder="Tu nombre o nombre de agencia" />
+            </div>
+            <div class="field">
+              <label>Nombre del agente</label>
+              <input type="text" id="claimAgentName" placeholder="Nombre de contacto" />
+            </div>
+            <div class="field">
+              <label>Teléfono <span class="req">*</span></label>
+              <input type="tel" id="claimPhone" placeholder="+1 (809) 000-0000" />
+            </div>
+            <div class="field">
+              <label>Email <span class="req">*</span></label>
+              <input type="email" id="claimEmail" placeholder="tu@correo.com" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit button for claim mode -->
+        <div style="margin-top:1.5rem;text-align:center;">
+          <button type="submit" class="btn btn-submit" id="claimSubmitBtn">
+            <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            Enviar Solicitud de Asociación
+          </button>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">El equipo de HogaresRD verificará tu solicitud y te asociará a la propiedad.</p>
         </div>
       </div>
 
@@ -1872,10 +1908,10 @@
       document.getElementById('newPropSections').style.display = isNew ? '' : 'none';
       document.getElementById('claimSection').style.display = isNew ? 'none' : '';
       document.getElementById('progressWrap').style.display = isNew ? '' : 'none';
-      document.getElementById('pageTitle').textContent = isNew ? 'Publica Tu Propiedad' : 'Agregar mi Agencia a una Propiedad';
+      document.getElementById('pageTitle').textContent = isNew ? 'Publica Tu Propiedad' : 'Asociarme a una Propiedad';
       document.getElementById('pageSubtitle').textContent = isNew
         ? 'Completa el formulario paso a paso y la revisaremos antes de publicarla.'
-        : 'Ingresa el ID de la publicación existente y los datos de tu agencia.';
+        : 'Ingresa el ID del listado y tus datos de contacto para asociarte como agente.';
       document.getElementById('contactTitle').textContent = isNew ? 'Información de Contacto' : 'Información del Solicitante';
       if (!isNew) {
         const notice = document.getElementById('contactNotice');
@@ -2631,12 +2667,27 @@
         return;
       }
 
-      body.agencies = Array.from(document.querySelectorAll('.agency-entry')).map(entry => ({
-        name:  entry.querySelector('[name="agency_name[]"]').value.trim(),
-        agent: entry.querySelector('[name="agency_agent[]"]').value.trim(),
-        phone: entry.querySelector('[name="agency_phone[]"]').value.trim(),
-        email: entry.querySelector('[name="agency_email[]"]').value.trim(),
-      })).filter(a => a.name);
+      if (isClaim) {
+        // In claim mode, agency info comes from the claim-specific fields
+        const claimName  = (document.getElementById('claimAgencyName')?.value || '').trim();
+        const claimAgent = (document.getElementById('claimAgentName')?.value || '').trim();
+        const claimPhone = (document.getElementById('claimPhone')?.value || '').trim();
+        const claimEmail = (document.getElementById('claimEmail')?.value || '').trim();
+        if (!claimName || !claimPhone || !claimEmail) {
+          alert('Por favor completa tu nombre, teléfono y email para asociarte.');
+          btn.disabled = false;
+          btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Enviar Solicitud de Asociación';
+          return;
+        }
+        body.agencies = [{ name: claimName, agent: claimAgent, phone: claimPhone, email: claimEmail }];
+      } else {
+        body.agencies = Array.from(document.querySelectorAll('.agency-entry')).map(entry => ({
+          name:  entry.querySelector('[name="agency_name[]"]').value.trim(),
+          agent: entry.querySelector('[name="agency_agent[]"]').value.trim(),
+          phone: entry.querySelector('[name="agency_phone[]"]').value.trim(),
+          email: entry.querySelector('[name="agency_email[]"]').value.trim(),
+        })).filter(a => a.name);
+      }
 
       // In edit mode, merge existing image/blueprint URLs (that weren't
       // removed) with the newly uploaded ones. This ensures the owner
