@@ -888,6 +888,7 @@ app.get('/ciudades',          (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/ciudad/:slug',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudad.html')));
 app.get('/contacto',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'contacto.html')));
 app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos.html')));
+app.get('/privacidad',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacidad.html')));
 app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
 app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'post.html')));
 app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
