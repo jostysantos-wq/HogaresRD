@@ -1809,6 +1809,39 @@ function _jsonParseSafe(str) {
   try { return JSON.parse(str || '{}'); } catch { return {}; }
 }
 
+// POST /auth/request-deletion — user requests data deletion (reviewed by admin)
+router.post('/request-deletion', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // Check for existing pending request
+  const existing = store.getDeletionRequests().find(r => r.user_id === user.id && r.status === 'pending');
+  if (existing) return res.json({ success: true, message: 'Ya tienes una solicitud pendiente.' });
+
+  const crypto = require('crypto');
+  const dr = {
+    id:           'del_' + crypto.randomBytes(8).toString('hex'),
+    user_id:      user.id,
+    user_email:   user.email,
+    user_name:    user.name,
+    user_role:    user.role,
+    reason:       (req.body.reason || '').slice(0, 500),
+    status:       'pending',
+    processed_at: null,
+    processed_by: null,
+    data_summary: {
+      conversations: store.getConversations().filter(c => c.clientId === user.id || c.brokerId === user.id).length,
+      tours:         store.getToursByClient(user.id).length,
+      tasks:         store.getTasksByUser(user.id).length,
+      savedSearches: store.getSavedSearchesByUser(user.id).length,
+    },
+    created_at:   new Date().toISOString(),
+  };
+  store.saveDeletionRequest(dr);
+  logSec('deletion_requested', req, { userId: user.id });
+  res.json({ success: true, message: 'Tu solicitud de eliminación ha sido registrada. Será procesada en las próximas 48 horas.' });
+});
+
 // DELETE /auth/delete-account — permanently delete user account and all associated data
 router.delete('/delete-account', userAuth, async (req, res) => {
   try {

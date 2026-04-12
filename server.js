@@ -1318,20 +1318,82 @@ app.delete('/admin/users/:id', adminSessionAuth, (req, res) => {
   const user = store.getUserById(req.params.id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  // Also clean up related data
-  const apps = store.getApplicationsByClient(req.params.id);
-  const conversations = store.getConversations().filter(c => c.clientId === req.params.id || c.brokerId === req.params.id);
-  const tours = store.getToursByClient(req.params.id);
-  const tasks = store.getTasksByUser(req.params.id);
-  const savedSearches = store.getSavedSearchesByUser(req.params.id);
+  const uid = req.params.id;
+  // Clean up ALL related data
+  const apps = store.getApplicationsByClient(uid);
+  const conversations = store.getConversations().filter(c => c.clientId === uid || c.brokerId === uid);
+  const tours = [...store.getToursByClient(uid), ...store.getToursByBroker(uid)];
+  const tasks = store.getTasksByUser(uid);
+  const savedSearches = store.getSavedSearchesByUser(uid);
 
-  // Delete related records
+  // Delete all related records
   for (const s of savedSearches) store.deleteSavedSearch(s.id);
   for (const t of tasks) store.deleteTask(t.id);
+  // Delete conversations from DB
+  for (const c of conversations) {
+    store.pool.query('DELETE FROM conversations WHERE id = $1', [c.id]).catch(() => {});
+  }
+  // Delete tours from DB
+  for (const t of tours) {
+    store.pool.query('DELETE FROM tours WHERE id = $1', [t.id]).catch(() => {});
+  }
+  // Delete push subscriptions
+  store.pool.query('DELETE FROM push_subscriptions WHERE "userId" = $1', [uid]).catch(() => {});
+  // Delete availability slots
+  store.pool.query('DELETE FROM availability_slots WHERE broker_id = $1', [uid]).catch(() => {});
 
-  store.deleteUser(req.params.id);
-  console.log(`[admin] Deleted user ${user.email} (${user.role}) — cleaned up ${apps.length} apps, ${conversations.length} convs, ${tours.length} tours, ${tasks.length} tasks, ${savedSearches.length} saved searches`);
-  res.json({ success: true, deleted: { user: user.email, apps: apps.length, conversations: conversations.length, tours: tours.length, tasks: tasks.length, savedSearches: savedSearches.length } });
+  store.deleteUser(uid);
+  const summary = { user: user.email, apps: apps.length, conversations: conversations.length, tours: tours.length, tasks: tasks.length, savedSearches: savedSearches.length };
+  console.log(`[admin] Deleted user ${user.email} (${user.role}) — cleaned up ${JSON.stringify(summary)}`);
+  res.json({ success: true, deleted: summary });
+});
+
+// ── Admin: Data Deletion Requests ──────────────────────────────────────
+// Users can request data deletion. Admin can review, process, or export.
+
+app.get('/admin/deletion-requests', adminSessionAuth, (req, res) => {
+  const requests = store.getDeletionRequests().sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  res.json(requests);
+});
+
+app.post('/admin/deletion-requests/:id/process', adminSessionAuth, (req, res) => {
+  const dr = store.getDeletionRequestById(req.params.id);
+  if (!dr) return res.status(404).json({ error: 'Solicitud no encontrada' });
+  if (dr.status === 'completed') return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
+
+  // Delete the user and all their data
+  const user = store.getUserById(dr.user_id);
+  if (user) {
+    const uid = dr.user_id;
+    const convs = store.getConversations().filter(c => c.clientId === uid || c.brokerId === uid);
+    const tours = [...(store.getToursByClient(uid) || []), ...(store.getToursByBroker(uid) || [])];
+    const tasks = store.getTasksByUser(uid) || [];
+    const searches = store.getSavedSearchesByUser(uid) || [];
+    for (const s of searches) store.deleteSavedSearch(s.id);
+    for (const t of tasks) store.deleteTask(t.id);
+    for (const c of convs) store.pool.query('DELETE FROM conversations WHERE id = $1', [c.id]).catch(() => {});
+    for (const t of tours) store.pool.query('DELETE FROM tours WHERE id = $1', [t.id]).catch(() => {});
+    store.pool.query('DELETE FROM push_subscriptions WHERE "userId" = $1', [uid]).catch(() => {});
+    store.pool.query('DELETE FROM availability_slots WHERE broker_id = $1', [uid]).catch(() => {});
+    store.deleteUser(uid);
+    console.log(`[admin] Processed deletion request ${dr.id} for ${dr.user_email}`);
+  }
+
+  dr.status = 'completed';
+  dr.processed_at = new Date().toISOString();
+  dr.processed_by = 'admin';
+  store.saveDeletionRequest(dr);
+  res.json({ success: true });
+});
+
+app.post('/admin/deletion-requests/:id/reject', adminSessionAuth, (req, res) => {
+  const dr = store.getDeletionRequestById(req.params.id);
+  if (!dr) return res.status(404).json({ error: 'Solicitud no encontrada' });
+  dr.status = 'rejected';
+  dr.processed_at = new Date().toISOString();
+  dr.processed_by = 'admin';
+  store.saveDeletionRequest(dr);
+  res.json({ success: true });
 });
 
 // ── Admin: Delete listing ──────────────────────────────────────────────

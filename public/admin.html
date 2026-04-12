@@ -691,6 +691,13 @@
         <span class="nav-item-label">Registro de Errores</span>
         <span class="nav-tooltip">Errores</span>
       </button>
+
+      <button class="nav-item" data-page="eliminacion" onclick="showPage('eliminacion', this)">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span class="nav-item-label">Eliminación de Datos</span>
+        <span class="nav-pill" id="deletionPill" style="display:none;"></span>
+        <span class="nav-tooltip">Eliminación</span>
+      </button>
     </nav>
 
     <div class="sb-footer">
@@ -1479,6 +1486,40 @@
         </div>
       </div>
 
+      <!-- ── ELIMINACIÓN DE DATOS ──────────────────────────────────── -->
+      <div class="page-section" id="page-eliminacion">
+        <div class="error-grid">
+          <div class="error-stat">
+            <div class="num" id="delTotal">—</div>
+            <div class="lbl">Total Solicitudes</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--warning);" id="delPending">—</div>
+            <div class="lbl">Pendientes</div>
+          </div>
+          <div class="error-stat">
+            <div class="num" style="color:var(--success);" id="delCompleted">—</div>
+            <div class="lbl">Completadas</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;">
+          <button class="action-btn" onclick="exportDeletionLog()" style="font-weight:600;">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+        <div class="error-log-table">
+          <table>
+            <thead>
+              <tr><th>Estado</th><th>Usuario</th><th>Email</th><th>Rol</th><th>Razón</th><th>Datos</th><th>Fecha</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="deletionTableBody">
+              <tr><td colspan="8" class="leads-empty">Cargando solicitudes...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div><!-- /content-area -->
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -1628,6 +1669,7 @@
     paginas:      'Editor de Páginas',
     reportes:     'Reportes',
     cascade:      'Sistema de Cascada',
+    eliminacion:  'Eliminación de Datos',
   };
 
   let currentPage = 'dashboard';
@@ -1656,6 +1698,7 @@
     else if (page === 'paginas')     { loadPageContent(); }
     else if (page === 'reportes')    { loadReports(); }
     else if (page === 'cascade')     { loadCascade(); }
+    else if (page === 'eliminacion') { loadDeletionRequests(); }
   }
 
   function refreshCurrent() {
@@ -2808,6 +2851,94 @@
       pill.textContent = d.reports.length;
       pill.style.display = '';
     }
+  }).catch(() => {});
+
+  // ── Deletion Requests ─────────────────────────────────────────
+  let _deletionRequests = [];
+
+  function loadDeletionRequests() {
+    fetch('/admin/deletion-requests').then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); }).then(data => {
+      _deletionRequests = data;
+      const pending = data.filter(r => r.status === 'pending').length;
+      document.getElementById('delTotal').textContent = data.length;
+      document.getElementById('delPending').textContent = pending;
+      document.getElementById('delCompleted').textContent = data.filter(r => r.status === 'completed').length;
+      const pill = document.getElementById('deletionPill');
+      if (pill) { pill.textContent = pending; pill.style.display = pending > 0 ? '' : 'none'; }
+      renderDeletionTable(data);
+    }).catch(() => {
+      document.getElementById('deletionTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Error al cargar.</td></tr>';
+    });
+  }
+
+  function renderDeletionTable(data) {
+    const tbody = document.getElementById('deletionTableBody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" class="leads-empty">No hay solicitudes de eliminación.</td></tr>'; return; }
+    tbody.innerHTML = data.map(r => {
+      const date = r.created_at ? new Date(r.created_at).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+      const statusBadge = r.status === 'pending'
+        ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">Pendiente</span>'
+        : r.status === 'completed'
+        ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">Completada</span>'
+        : '<span style="background:#fecaca;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;">Rechazada</span>';
+      const summary = r.data_summary || {};
+      const dataStr = `${summary.conversations||0} conv, ${summary.tours||0} tours, ${summary.tasks||0} tareas`;
+      const actions = r.status === 'pending' ? `
+        <button class="action-btn" style="font-size:0.7rem;background:var(--danger);color:#fff;border-color:var(--danger);" onclick="processDeletion('${r.id}')">Eliminar</button>
+        <button class="action-btn" style="font-size:0.7rem;" onclick="rejectDeletion('${r.id}')">Rechazar</button>
+      ` : (r.processed_at ? new Date(r.processed_at).toLocaleDateString('es-DO') : '—');
+      return `<tr>
+        <td>${statusBadge}</td>
+        <td style="font-weight:600;">${esc(r.user_name || '—')}</td>
+        <td>${esc(r.user_email || '—')}</td>
+        <td>${esc(r.user_role || '—')}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.reason || '')}">${esc(r.reason || '—')}</td>
+        <td style="font-size:0.72rem;">${dataStr}</td>
+        <td style="white-space:nowrap;">${date}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function processDeletion(id) {
+    const r = _deletionRequests.find(x => x.id === id);
+    if (!r) return;
+    if (!confirm(`¿Eliminar permanentemente todos los datos de ${r.user_email}? Esta acción NO se puede deshacer.`)) return;
+    if (!confirm(`CONFIRMAR: Se eliminarán la cuenta, conversaciones, tours, tareas y búsquedas guardadas de ${r.user_name}. ¿Continuar?`)) return;
+    fetch(`/admin/deletion-requests/${id}/process`, { method: 'POST' })
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(() => { loadDeletionRequests(); alert('Datos eliminados exitosamente.'); })
+      .catch(() => alert('Error al procesar la solicitud.'));
+  }
+
+  function rejectDeletion(id) {
+    if (!confirm('¿Rechazar esta solicitud de eliminación?')) return;
+    fetch(`/admin/deletion-requests/${id}/reject`, { method: 'POST' })
+      .then(r => { if (handleUnauth(r)) throw new Error(); return r.json(); })
+      .then(() => loadDeletionRequests())
+      .catch(() => alert('Error al rechazar.'));
+  }
+
+  function exportDeletionLog() {
+    const rows = [['ID','Estado','Nombre','Email','Rol','Razón','Conversaciones','Tours','Tareas','Fecha Solicitud','Fecha Procesada']];
+    for (const r of _deletionRequests) {
+      const s = r.data_summary || {};
+      rows.push([r.id, r.status, r.user_name||'', r.user_email||'', r.user_role||'', (r.reason||'').replace(/,/g,' '),
+        s.conversations||0, s.tours||0, s.tasks||0, r.created_at||'', r.processed_at||'']);
+    }
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `eliminacion_datos_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  // Check for pending deletion requests on load
+  fetch('/admin/deletion-requests').then(r => r.ok ? r.json() : []).then(data => {
+    const pending = (data || []).filter(r => r.status === 'pending').length;
+    const pill = document.getElementById('deletionPill');
+    if (pill && pending > 0) { pill.textContent = pending; pill.style.display = ''; }
   }).catch(() => {});
 
   // ── Error Logs ────────────────────────────────────────────────

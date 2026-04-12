@@ -292,6 +292,7 @@ let _tasks = [];
 let _metaLeads = [];
 let _leadQueue = [];
 let _contributionScores = [];
+let _deletionRequests = [];
 let _cacheReady = false;
 
 // ── Initial cache load ──────────────────────────────────────────────────
@@ -316,10 +317,16 @@ async function _loadCache() {
         _extra JSONB DEFAULT '{}'
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_cs_user_listing ON contribution_scores (user_id, listing_id);
+      CREATE TABLE IF NOT EXISTS deletion_requests (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL, user_email TEXT NOT NULL,
+        user_name TEXT, user_role TEXT, reason TEXT,
+        status TEXT DEFAULT 'pending', processed_at TEXT, processed_by TEXT,
+        data_summary JSONB DEFAULT '{}', created_at TEXT NOT NULL
+      );
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
-           searches, blog, pages, reports, tasks, meta, lq, cs] = await Promise.all([
+           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs] = await Promise.all([
       query('SELECT * FROM users'),
       query('SELECT * FROM submissions'),
       query('SELECT * FROM applications'),
@@ -337,6 +344,7 @@ async function _loadCache() {
       query('SELECT * FROM meta_leads'),
       query('SELECT * FROM lead_queue'),
       query('SELECT * FROM contribution_scores'),
+      query('SELECT * FROM deletion_requests'),
     ]);
     _users = users;
     _submissions = subs;
@@ -355,6 +363,7 @@ async function _loadCache() {
     _metaLeads = meta;
     _leadQueue = lq;
     _contributionScores = cs;
+    _deletionRequests = delReqs;
     _cacheReady = true;
     console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} lead queue, ${cs.length} scores`);
   } catch (err) {
@@ -1031,6 +1040,30 @@ function withTransaction(fn) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// DELETION REQUESTS
+// ══════════════════════════════════════════════════════════════════════════
+
+function getDeletionRequests() { return _deletionRequests; }
+function getDeletionRequestById(id) { return _deletionRequests.find(r => r.id === id) || null; }
+
+function saveDeletionRequest(req) {
+  const row = { ...req };
+  if (typeof row.data_summary === 'object') row.data_summary = JSON.stringify(row.data_summary);
+  const { sql, values } = buildUpsert('deletion_requests', row, 'id');
+  pool.query(sql, values).catch(err => _dbWriteError('saveDeletionRequest', err));
+  const cacheRow = { ...row };
+  if (typeof cacheRow.data_summary === 'string') { try { cacheRow.data_summary = JSON.parse(cacheRow.data_summary); } catch {} }
+  const idx = _deletionRequests.findIndex(r => r.id === req.id);
+  if (idx >= 0) _deletionRequests[idx] = cacheRow;
+  else _deletionRequests.push(cacheRow);
+}
+
+function deleteDeletionRequest(id) {
+  pool.query('DELETE FROM deletion_requests WHERE id = $1', [id]).catch(err => _dbWriteError('deleteDeletionRequest', err));
+  _deletionRequests = _deletionRequests.filter(r => r.id !== id);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -1062,6 +1095,7 @@ module.exports = {
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
   withTransaction,
+  getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,
   // Internal refs for memory management (used by cleanup cron)
   _twofa, _leadQueue, _revokedTokens, _tasks,
