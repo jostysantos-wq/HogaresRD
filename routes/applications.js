@@ -1191,6 +1191,24 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   store.saveApplication(app);
 
+  // ── Cancel pending tasks + void commission on terminal statuses ──
+  if (status === 'rechazado' || status === 'completado') {
+    // Cancel all active tasks for this application
+    const allEvents = ['documents_requested', 'documents_rejected', 'document_uploaded',
+                       'payment_plan_created', 'payment_uploaded', 'payment_rejected'];
+    for (const evt of allEvents) autoCompleteTasksByEvent(app.id, evt);
+
+    // Void approved commission if application is rejected (sale didn't happen)
+    if (status === 'rechazado' && app.commission?.status === 'approved') {
+      app.commission.status = 'voided';
+      app.commission.voided_at = new Date().toISOString();
+      addEvent(app, 'commission_voided',
+        'Comisión anulada por rechazo de la aplicación',
+        'system', 'Sistema', { reason: 'application_rejected' });
+      store.saveApplication(app);
+    }
+  }
+
   // ── Auto-update unit inventory on status change ────────────────
   if (app.assigned_unit?.unitId && app.listing_id) {
     try {
@@ -1251,6 +1269,10 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
+
+  // Block document requests on terminal statuses
+  if (['rechazado', 'completado'].includes(app.status))
+    return res.status(400).json({ error: 'No se pueden solicitar documentos en una aplicación finalizada.' });
 
   let { documents } = req.body; // [{ type, label, required }]
   if (!Array.isArray(documents) || !documents.length)
@@ -2386,6 +2408,14 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
 
   if (!isBrokerOwner && !isInmobiliaria && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
+
+  // Status guard: payment plan requires an approved or later status
+  const paymentAllowed = ['aprobado', 'pendiente_pago', 'pago_enviado', 'pago_aprobado'];
+  if (!paymentAllowed.includes(app.status) && !admin) {
+    return res.status(400).json({
+      error: 'El plan de pagos solo puede crearse cuando la aplicación está aprobada.',
+    });
+  }
 
   // Broker can only create the plan (first time). Once it exists, only inmobiliaria can edit.
   const planExists = !!(app.payment_plan?.installments?.length);

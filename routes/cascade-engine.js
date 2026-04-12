@@ -383,6 +383,17 @@ function assignBrokerToInquiry(item, userId) {
     if (conv) {
       conv.brokerId = userId;
       conv.brokerName = user.name || '';
+      // Notify the client that an agent has been assigned
+      const crypto = require('crypto');
+      conv.messages.push({
+        id:         'msg_' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'),
+        senderId:   'system',
+        senderRole: 'system',
+        senderName: 'HogaresRD',
+        text:       `${user.name || 'Un agente'} ha sido asignado a tu consulta y te responderá pronto.`,
+        timestamp:  new Date().toISOString(),
+      });
+      conv.updatedAt = new Date().toISOString();
       store.saveConversation(conv);
     }
   } else if (item.inquiry_type === 'lead') {
