@@ -934,6 +934,7 @@ class APIService: ObservableObject {
         let suffix = archived ? "?archived=true" : ""
         var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations\(suffix)")!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
@@ -957,6 +958,7 @@ class APIService: ObservableObject {
         }
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
@@ -994,6 +996,7 @@ class APIService: ObservableObject {
         let url = URL(string: "\(apiBase)/api/conversations/\(conversationId)/messages")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
+        req.cachePolicy = .reloadIgnoringLocalCacheData
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONEncoder().encode(["text": text])
