@@ -1937,6 +1937,13 @@ class APIService: ObservableObject {
 
     private func throwIfErr(_ data: Data, _ resp: URLResponse, fallback: String) throws {
         guard let http = resp as? HTTPURLResponse, http.statusCode >= 400 else { return }
+        // 402 = subscription required — special error for UI handling
+        if http.statusCode == 402 {
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+               obj["needsSubscription"] as? Bool == true {
+                throw APIError.subscriptionRequired
+            }
+        }
         if let obj = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
            let msg = obj["error"] as? String { throw APIError.server(msg) }
         throw APIError.server(fallback)
@@ -2646,8 +2653,11 @@ struct AgencyDetail: Decodable {
 
 enum APIError: LocalizedError {
     case server(String)
+    case subscriptionRequired
     var errorDescription: String? {
-        if case .server(let msg) = self { return msg }
-        return "Error desconocido"
+        switch self {
+        case .server(let msg): return msg
+        case .subscriptionRequired: return "Tu suscripción no está activa. Renueva tu plan para continuar."
+        }
     }
 }

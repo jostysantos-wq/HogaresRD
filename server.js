@@ -272,15 +272,17 @@ app.get('/r/:refToken', (req, res) => res.redirect(`/comprar?ref=${req.params.re
 app.get('/r/:refToken/:listingId', (req, res) => res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`));
 
 // ── API routes ─────────────────────────────────────────────────
+const { requireActiveSubscription } = require('./utils/subscription-gate');
+
 app.use('/api/stripe',     require('./routes/stripe'));
 app.use('/api/auth',       require('./routes/auth'));
-app.use('/api/listings',   require('./routes/listings'));
+app.use('/api/listings',   requireActiveSubscription, require('./routes/listings'));
 app.use('/api/listings',   require('./routes/ai-translate').router);
 app.use('/api/user',       require('./routes/user'));
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/ads',        require('./routes/ads'));
 app.use('/api/leads',         require('./routes/leads'));
-app.use('/api/applications',  require('./routes/applications'));
+app.use('/api/applications',  requireActiveSubscription, require('./routes/applications'));
 app.use('/api/broker',        require('./routes/broker-dashboard'));
 
 // Public agent count for home page stats
@@ -291,18 +293,18 @@ app.get('/api/agents', (req, res) => {
 app.use('/api/referrals',     require('./routes/referrals'));
 app.use('/api/inmobiliaria',  require('./routes/inmobiliaria'));
 app.use('/api/chat',          require('./routes/chat'));
-app.use('/api/conversations', require('./routes/auth').userAuth, require('./routes/conversations'));
-app.use('/api/lead-queue', require('./routes/auth').userAuth, require('./routes/lead-queue').router);
+app.use('/api/conversations', require('./routes/auth').userAuth, requireActiveSubscription, require('./routes/conversations'));
+app.use('/api/lead-queue', require('./routes/auth').userAuth, requireActiveSubscription, require('./routes/lead-queue').router);
 app.use('/api/contributions', require('./routes/auth').userAuth, require('./routes/contributions').router);
 app.use('/api/webhooks/meta', require('./routes/meta-webhook'));
-app.use('/api/tours',         require('./routes/tours'));
+app.use('/api/tours',         requireActiveSubscription, require('./routes/tours'));
 app.use('/api/listing-analytics', require('./routes/listing-analytics'));
-app.use('/api/inventory',          require('./routes/inventory'));
+app.use('/api/inventory',          requireActiveSubscription, require('./routes/inventory'));
 app.use('/api/reports',            require('./routes/reports').router);
 app.use('/api/paid-ads',          require('./routes/paid-ads'));
 app.use('/api/push',              require('./routes/push').router);
 app.use('/api/saved-searches',    savedSearchRouter);
-app.use('/api/tasks',             require('./routes/tasks'));
+app.use('/api/tasks',             requireActiveSubscription, require('./routes/tasks'));
 
 // ── Contact Timeline CRM ──────────────────────────────────────────────────
 const { userAuth: contactAuth } = require('./routes/auth');

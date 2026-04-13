@@ -3034,6 +3034,15 @@
         location.href = '/subscribe';
         return;
       }
+      // Show read-only banner for canceled users
+      if (subStatus.status === 'canceled') {
+        const banner = document.createElement('div');
+        banner.id = 'canceledBanner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;padding:0.7rem 1.5rem;font-size:0.85rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:0.75rem;';
+        banner.innerHTML = '<span>⚠️ Tu suscripción fue cancelada. Puedes ver tus datos pero no crear contenido nuevo.</span><a href="/subscription" style="background:#fff;color:#dc2626;padding:0.3rem 1rem;border-radius:6px;font-weight:700;font-size:0.8rem;text-decoration:none;">Reactivar</a>';
+        document.body.prepend(banner);
+        document.body.style.paddingTop = '44px';
+      }
     }
   } catch(e) { /* fail open if status check errors */ }
 
