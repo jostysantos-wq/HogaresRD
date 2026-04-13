@@ -48,8 +48,8 @@ const DEPT_EMAILS = {
 // be configured as "Send As" addresses in the primary Workspace user's Gmail
 // settings for the From header to be respected by the Gmail API.
 
-// All replies go to the main workspace inbox
-const REPLY_TO = 'Jostysantos@hogaresrd.com';
+// All replies go to the main support inbox
+const REPLY_TO = 'soporte@hogaresrd.com';
 
 /**
  * Auto-detect the department based on email subject keywords.
