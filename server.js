@@ -921,7 +921,32 @@ app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname
 app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));
 app.get('/nuevos-proyectos',  (req, res) => res.redirect(301, '/comprar?type=proyecto'));
 app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
-app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));
+// Listing detail — inject dynamic OG meta tags for social sharing / SEO crawlers
+app.get('/listing/:id', (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing || listing.status !== 'approved') {
+    return res.sendFile(path.join(__dirname, 'public', 'listing.html'));
+  }
+  // Read the HTML template and replace placeholder OG tags
+  const htmlPath = path.join(__dirname, 'public', 'listing.html');
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  const title = `${listing.title} — HogaresRD`;
+  const price = listing.price ? `$${Number(listing.price).toLocaleString('en-US')}` : '';
+  const desc = [price, listing.city, listing.province].filter(Boolean).join(' · ');
+  const image = (listing.images && listing.images[0])
+    ? (typeof listing.images[0] === 'string' ? listing.images[0] : listing.images[0].url || '')
+    : '';
+  const fullImage = image.startsWith('http') ? image : `https://hogaresrd.com${image}`;
+  const url = `https://hogaresrd.com/listing/${listing.id}`;
+
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
+  html = html.replace(/content="Propiedad — HogaresRD"/, `content="${title}"`);
+  html = html.replace(/content="Detalles de la propiedad en HogaresRD\."/, `content="${desc}"`);
+  html = html.replace(/content="https:\/\/hogaresrd\.com\/img\/og-default\.jpg"/, `content="${fullImage}"`);
+  html = html.replace(/content="https:\/\/hogaresrd\.com\/listing"/, `content="${url}"`);
+
+  res.type('html').send(html);
+});
 app.get('/inmobiliaria/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inmobiliaria.html')));
 app.get('/resena/:inmId',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'resena.html')));
 app.get('/ciudades',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'ciudades.html')));

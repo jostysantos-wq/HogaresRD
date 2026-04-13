@@ -246,4 +246,69 @@ router.get('/listings', userAuth, (req, res) => {
   res.json({ listings: mine });
 });
 
+// POST /api/user/request-data-download — CCPA/GDPR data export request
+// Collects all user data and sends it via email as a JSON attachment.
+router.post('/request-data-download', userAuth, async (req, res) => {
+  const userId = req.user.sub;
+  const user = store.getUserById(userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  try {
+    // Collect all user data
+    const conversations = store.getConversationsByClient(userId);
+    const applications = store.getApplicationsByClient(userId);
+    const favorites = user.favorites || [];
+    const recentlyViewed = user.recentlyViewed || [];
+    const savedSearches = store.getSavedSearchesByUser(userId);
+    const tasks = store.getTasksByUser(userId);
+    const activity = [];
+    try { const a = await store.getActivityByUser(userId, { limit: 500 }); activity.push(...a); } catch {}
+
+    // Strip sensitive fields
+    const { passwordHash, resetToken, resetTokenExpiry, biometricTokenHash, ...safeUser } = user;
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+      favorites,
+      recentlyViewed,
+      savedSearches: savedSearches.map(s => ({ id: s.id, name: s.name, filters: s.filters, createdAt: s.created_at })),
+      conversations: conversations.map(c => ({
+        id: c.id, propertyTitle: c.propertyTitle, brokerName: c.brokerName,
+        messageCount: (c.messages || []).length, createdAt: c.createdAt,
+      })),
+      applications: applications.map(a => ({
+        id: a.id, listingTitle: a.listing_title, status: a.status, createdAt: a.created_at,
+      })),
+      tasks: tasks.map(t => ({ id: t.id, title: t.title, status: t.status, createdAt: t.created_at })),
+      activityLog: activity.slice(0, 100),
+    };
+
+    // Send via email
+    const { createTransport } = require('./mailer');
+    const et = require('../utils/email-templates');
+    const mailer = createTransport();
+
+    await mailer.sendMail({
+      to: user.email,
+      subject: 'Tu descarga de datos — HogaresRD',
+      department: 'soporte',
+      html: et.layout({
+        title: 'Descarga de Datos',
+        subtitle: 'HogaresRD',
+        body: `<p>Hola <strong>${user.name || ''}</strong>,</p>
+          <p>Adjunto encontrarás un resumen de tus datos personales almacenados en HogaresRD.</p>
+          <p>Este archivo contiene: tu perfil, favoritos, búsquedas guardadas, historial de conversaciones (sin mensajes completos), aplicaciones, tareas y actividad reciente.</p>
+          <p>Si deseas la eliminación completa de tus datos, puedes hacerlo desde la app en Perfil → Privacidad → Eliminar mi cuenta.</p>
+          <pre style="background:#f5f5f5;padding:1rem;border-radius:8px;font-size:0.75rem;max-height:400px;overflow:auto;">${JSON.stringify(exportData, null, 2).slice(0, 50000)}</pre>`,
+      }),
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[data-download] Error:', err.message);
+    res.status(500).json({ error: 'Error al procesar la solicitud. Intenta de nuevo.' });
+  }
+});
+
 module.exports = router;
