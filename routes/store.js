@@ -368,6 +368,18 @@ async function _loadCache() {
         action TEXT NOT NULL, data JSONB DEFAULT '{}', created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log (user_id, created_at);
+      CREATE TABLE IF NOT EXISTS messages (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        sender_id       TEXT NOT NULL,
+        sender_role     TEXT NOT NULL,
+        sender_name     TEXT NOT NULL,
+        text            TEXT NOT NULL,
+        timestamp       TIMESTAMPTZ NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_messages_conv_ts ON messages(conversation_id, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id);
+      ALTER TABLE conversations ADD COLUMN IF NOT EXISTS message_count INTEGER DEFAULT 0;
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
@@ -712,9 +724,19 @@ function hydrateConversation(row) {
   if (!row) return null;
   if (row.data) {
     const d = typeof row.data === 'string' ? _jsonParse(row.data, {}) : row.data;
-    return { ...d, id: row.id };
+    // Strip messages from hydrated result — they now live in the messages table.
+    // Safety net for old data blobs that still contain an embedded messages array.
+    const { messages: _m, ...rest } = d;
+    return { ...rest, id: row.id, message_count: row.message_count || 0 };
   }
   return row;
+}
+
+/// Strip messages array before serialising to the data column.
+function _stripMessagesFromData(conv) {
+  if (!conv) return {};
+  const { messages, message_count, ...rest } = conv;
+  return rest;
 }
 
 function getConversations() { return _conversations.map(hydrateConversation).filter(Boolean); }
@@ -743,7 +765,7 @@ async function claimConversationAtomic(convId, brokerId, brokerName, now, system
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'SELECT id, "clientId", "brokerId", data FROM conversations WHERE id = $1 AND "brokerId" IS NULL FOR UPDATE',
+      'SELECT id, "clientId", "brokerId", data, message_count FROM conversations WHERE id = $1 AND "brokerId" IS NULL FOR UPDATE',
       [convId]
     );
     if (rows.length === 0) {
@@ -752,23 +774,30 @@ async function claimConversationAtomic(convId, brokerId, brokerName, now, system
     }
     const row = rows[0];
     const conv = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-    conv.brokerId = brokerId;
-    conv.brokerName = brokerName;
-    conv.updatedAt = now;
-    if (!Array.isArray(conv.messages)) conv.messages = [];
-    conv.messages.push(systemMessage);
-    const jsonData = JSON.stringify(conv);
+    const { messages: _m, ...cleanConv } = conv;
+    cleanConv.brokerId = brokerId;
+    cleanConv.brokerName = brokerName;
+    cleanConv.updatedAt = now;
+    const newCount = (row.message_count || 0) + 1;
+    const jsonData = JSON.stringify(cleanConv);
     await client.query(
-      'UPDATE conversations SET "brokerId" = $2, data = $3 WHERE id = $1',
-      [convId, brokerId, jsonData]
+      'UPDATE conversations SET "brokerId" = $2, data = $3, message_count = $4 WHERE id = $1',
+      [convId, brokerId, jsonData, newCount]
+    );
+    // Insert system message into messages table within same transaction
+    await client.query(
+      `INSERT INTO messages (id, conversation_id, sender_id, sender_role, sender_name, text, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [systemMessage.id, convId, systemMessage.senderId, systemMessage.senderRole,
+       systemMessage.senderName, systemMessage.text, systemMessage.timestamp]
     );
     await client.query('COMMIT');
-    // Update in-memory cache
-    const cacheRow = { id: convId, clientId: row.clientId, brokerId, data: conv };
+    // Update in-memory cache — message_count lives on the row, NOT inside data
+    const cacheRow = { id: convId, clientId: row.clientId, brokerId, message_count: newCount, data: cleanConv };
     const idx = _conversations.findIndex(c => c.id === convId);
     if (idx >= 0) _conversations[idx] = cacheRow;
     else _conversations.push(cacheRow);
-    return { ...conv, id: convId };
+    return { ...cleanConv, id: convId, message_count: newCount };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -778,11 +807,14 @@ async function claimConversationAtomic(convId, brokerId, brokerName, now, system
 }
 
 function saveConversation(conv) {
-  const jsonData = JSON.stringify(conv);
+  const jsonData = JSON.stringify(_stripMessagesFromData(conv));
+  // message_count is set on INSERT (new conversations) but NOT overwritten on UPDATE —
+  // addMessage() is the sole authority for incrementing the counter.
   pool.query(
-    `INSERT INTO conversations (id, "clientId", "brokerId", data) VALUES ($1, $2, $3, $4)
+    `INSERT INTO conversations (id, "clientId", "brokerId", data, message_count)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
-    [conv.id, conv.clientId, conv.brokerId, jsonData]
+    [conv.id, conv.clientId, conv.brokerId, jsonData, conv.message_count || 0]
   ).catch(err => _dbWriteError('saveConversation', err));
   _updateConversationCache(conv);
 }
@@ -790,17 +822,19 @@ function saveConversation(conv) {
 /// Awaitable version of saveConversation — use for critical writes
 /// where DB confirmation is required before responding to the client.
 async function saveConversationAsync(conv) {
-  const jsonData = JSON.stringify(conv);
+  const jsonData = JSON.stringify(_stripMessagesFromData(conv));
   await pool.query(
-    `INSERT INTO conversations (id, "clientId", "brokerId", data) VALUES ($1, $2, $3, $4)
+    `INSERT INTO conversations (id, "clientId", "brokerId", data, message_count)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
-    [conv.id, conv.clientId, conv.brokerId, jsonData]
+    [conv.id, conv.clientId, conv.brokerId, jsonData, conv.message_count || 0]
   );
   _updateConversationCache(conv);
 }
 
 function _updateConversationCache(conv) {
-  const cacheRow = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, data: conv };
+  const { messages, ...rest } = conv;
+  const cacheRow = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, message_count: conv.message_count || 0, data: rest };
   const idx = _conversations.findIndex(c => c.id === conv.id);
   if (idx >= 0) _conversations[idx] = cacheRow;
   else _conversations.push(cacheRow);
@@ -823,7 +857,7 @@ async function addTransferRequestAtomic(convId, transferReq) {
     if (hasPending) { await client.query('ROLLBACK'); return { duplicate: true }; }
     conv.transfer_requests.push(transferReq);
     conv.updatedAt = transferReq.createdAt;
-    const jsonData = JSON.stringify(conv);
+    const jsonData = JSON.stringify(_stripMessagesFromData(conv));
     await client.query(
       'UPDATE conversations SET data = $2 WHERE id = $1',
       [convId, jsonData]
@@ -837,6 +871,90 @@ async function addTransferRequestAtomic(convId, transferReq) {
   } finally {
     if (client) client.release();
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MESSAGE FUNCTIONS (separate messages table)
+// ══════════════════════════════════════════════════════════════════════════
+
+/// Fire-and-forget insert. Also bumps message_count on conversations.
+function addMessage(conversationId, msg) {
+  pool.query(
+    `INSERT INTO messages (id, conversation_id, sender_id, sender_role, sender_name, text, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [msg.id, conversationId, msg.senderId, msg.senderRole, msg.senderName, msg.text, msg.timestamp]
+  ).catch(err => _dbWriteError('addMessage', err));
+  pool.query(
+    'UPDATE conversations SET message_count = COALESCE(message_count, 0) + 1 WHERE id = $1',
+    [conversationId]
+  ).catch(err => _dbWriteError('addMessage:count', err));
+  // Bump in-memory cache
+  const cached = _conversations.find(c => c.id === conversationId);
+  if (cached) cached.message_count = (cached.message_count || 0) + 1;
+}
+
+/// Awaitable insert — use when the caller must confirm the write succeeded.
+async function addMessageAsync(conversationId, msg) {
+  await pool.query(
+    `INSERT INTO messages (id, conversation_id, sender_id, sender_role, sender_name, text, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [msg.id, conversationId, msg.senderId, msg.senderRole, msg.senderName, msg.text, msg.timestamp]
+  );
+  await pool.query(
+    'UPDATE conversations SET message_count = COALESCE(message_count, 0) + 1 WHERE id = $1',
+    [conversationId]
+  );
+  const cached = _conversations.find(c => c.id === conversationId);
+  if (cached) cached.message_count = (cached.message_count || 0) + 1;
+}
+
+/// Fetch messages for a conversation with optional pagination.
+/// @param {string} conversationId
+/// @param {{ since?: string, limit?: number }} opts
+///   since: ISO-8601 timestamp — only messages after this time
+///   limit: max rows (default 50)
+/// @returns {Promise<Array>} messages ordered by timestamp ASC
+function _hydrateMessages(rows) {
+  // pg returns TIMESTAMPTZ as JS Date — convert to ISO string to match old JSONB shape
+  for (const r of rows) {
+    if (r.timestamp instanceof Date) r.timestamp = r.timestamp.toISOString();
+  }
+  return rows;
+}
+
+async function getMessages(conversationId, { since, limit = 50 } = {}) {
+  if (since) {
+    const { rows } = await pool.query(
+      `SELECT id, sender_id AS "senderId", sender_role AS "senderRole",
+              sender_name AS "senderName", text, timestamp
+       FROM messages WHERE conversation_id = $1 AND timestamp > $2
+       ORDER BY timestamp ASC`,
+      [conversationId, since]
+    );
+    return _hydrateMessages(rows);
+  }
+  // Initial load: last N messages — subquery to get newest N, then re-sort ASC
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       SELECT id, sender_id AS "senderId", sender_role AS "senderRole",
+              sender_name AS "senderName", text, timestamp
+       FROM messages WHERE conversation_id = $1
+       ORDER BY timestamp DESC LIMIT $2
+     ) sub ORDER BY timestamp ASC`,
+    [conversationId, limit]
+  );
+  return _hydrateMessages(rows);
+}
+
+/// Total message count for a conversation (reads denormalized column, falls back to COUNT).
+async function getMessageCount(conversationId) {
+  const cached = _conversations.find(c => c.id === conversationId);
+  if (cached && typeof cached.message_count === 'number') return cached.message_count;
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM messages WHERE conversation_id = $1',
+    [conversationId]
+  );
+  return rows[0]?.count || 0;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1373,6 +1491,7 @@ module.exports = {
   getConversations, getConversationById, getConversationsByClient,
   getConversationsForBroker, getConversationsByInmobiliaria, saveConversation, saveConversationAsync,
   claimConversationAtomic, addTransferRequestAtomic,
+  addMessage, addMessageAsync, getMessages, getMessageCount,
   getMetaLeads, appendMetaLead,
   getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
   getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,

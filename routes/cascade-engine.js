@@ -538,14 +538,16 @@ function assignBrokerToInquiry(item, userId) {
       conv.brokerName = user.name || '';
       // Notify the client that an agent has been assigned
       const crypto = require('crypto');
-      conv.messages.push({
+      const sysMsg = {
         id:         'msg_' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'),
         senderId:   'system',
         senderRole: 'system',
         senderName: 'HogaresRD',
         text:       `${user.name || 'Un agente'} ha sido asignado a tu consulta y te responderá pronto.`,
         timestamp:  new Date().toISOString(),
-      });
+      };
+      store.addMessage(conv.id, sysMsg);
+      conv.lastMessage = sysMsg.text;
       conv.updatedAt = new Date().toISOString();
       store.saveConversation(conv);
     }

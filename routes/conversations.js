@@ -85,7 +85,7 @@ router.post('/', requireLogin, (req, res) => {
       text:       message.trim(),
       timestamp:  new Date().toISOString(),
     };
-    existing.messages.push(msg);
+    store.addMessage(existing.id, msg);
     existing.lastMessage  = message.trim();
     existing.updatedAt    = new Date().toISOString();
     existing.unreadBroker = (existing.unreadBroker || 0) + 1;
@@ -140,10 +140,11 @@ router.post('/', requireLogin, (req, res) => {
     lastMessage:    message.trim(),
     unreadBroker:   1,
     unreadClient:   0,
-    messages:       [msg],
+    message_count:  1,
   };
 
   store.saveConversation(conv);
+  store.addMessage(conv.id, msg);
 
   // Start cascade if enabled and no refToken assignment
   const cascadeEngine = require('./cascade-engine');
@@ -226,7 +227,7 @@ router.get('/', requireLogin, (req, res) => {
 
   // Return without full message array for list view (just metadata)
   // Enrich with participant avatars for display in conversation list
-  const list = convs.map(({ messages, ...meta }) => {
+  const list = convs.map(meta => {
     const isMyConv = meta.brokerId === user.sub || meta.clientId === user.sub;
     const isUnclaimed = meta.inmobiliariaId && !meta.brokerId;
 
@@ -245,12 +246,12 @@ router.get('/', requireLogin, (req, res) => {
         clientEmail:  null,
         clientPhone:  null,
         lastMessage:  isUnclaimed ? 'Nuevo mensaje pendiente' : 'Conversacion asignada',
-        messageCount: messages.length,
+        messageCount: meta.message_count || 0,
         claimRequired: isUnclaimed,
       };
     }
 
-    return { ...meta, messageCount: messages.length };
+    return { ...meta, messageCount: meta.message_count || 0 };
   });
 
   res.json(list);
@@ -356,7 +357,7 @@ router.get('/:id', requireLogin, async (req, res) => {
       propertyImage:  conv.propertyImage,
       clientName:     firstName,
       inmobiliariaId: conv.inmobiliariaId,
-      messageCount:   (conv.messages || []).length,
+      messageCount:   conv.message_count || 0,
       createdAt:      conv.createdAt,
       claimRequired:  true,
       messages:       [], // hidden until claimed
@@ -377,13 +378,11 @@ router.get('/:id', requireLogin, async (req, res) => {
   }
 
   // Since the request comes with ?since= for polling, return only new messages
-  const since = req.query.since ? new Date(req.query.since) : null;
-  const allMsgs = conv.messages || [];
+  const since = req.query.since || null;
   const MAX_INITIAL = 50;
-  const messages = since
-    ? allMsgs.filter(m => new Date(m.timestamp) > since)
-    : allMsgs.slice(-MAX_INITIAL);
-  const hasMore = !since && allMsgs.length > MAX_INITIAL;
+  const totalMessages = await store.getMessageCount(conv.id);
+  const messages = await store.getMessages(conv.id, { since, limit: MAX_INITIAL });
+  const hasMore = !since && totalMessages > MAX_INITIAL;
 
   // Enrich messages with sender avatars (looked up at read time so they stay fresh)
   const _avatarCache = {};
@@ -410,7 +409,7 @@ router.get('/:id', requireLogin, async (req, res) => {
     if (dirty) store.saveConversation(conv);
   }
 
-  res.json({ ...conv, messages, hasMore, totalMessages: allMsgs.length, clientAvatar, brokerAvatar });
+  res.json({ ...conv, messages, hasMore, totalMessages, clientAvatar, brokerAvatar });
 });
 
 // ── POST /api/conversations/:id/claim ────────────────────────────────────
@@ -510,7 +509,7 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
     timestamp:  new Date().toISOString(),
   };
 
-  conv.messages.push(msg);
+  store.addMessage(conv.id, msg);
   conv.lastMessage = text.trim();
   conv.updatedAt   = new Date().toISOString();
 
@@ -522,7 +521,7 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
   }
 
   store.saveConversation(conv);
-  res.json({ message: msg, conversation: conv });
+  res.json({ message: msg });
 
   // Push notification → recipient
   const preview = text.trim().slice(0, 80) + (text.trim().length > 80 ? '…' : '');
@@ -640,8 +639,8 @@ router.put('/:id/close', requireLogin, (req, res) => {
     text:       '📋 Esta conversación será archivada automáticamente en 24 horas. Si desea archivarla antes, puede hacerlo desde el menú de opciones. Las conversaciones archivadas permanecen accesibles en la sección "Archivadas" de sus mensajes.',
     timestamp:  conv.closedAt,
   };
-  conv.messages.push(closeMsg);
-  conv.messages.push(archiveNotice);
+  store.addMessage(conv.id, closeMsg);
+  store.addMessage(conv.id, archiveNotice);
   conv.lastMessage = closeMsg.text;
   conv.unreadClient = (conv.unreadClient || 0) + 1;
 
@@ -694,7 +693,7 @@ router.put('/:id/reopen', requireLogin, (req, res) => {
     text:       `🔓 Conversación reabierta por ${user.name}.`,
     timestamp:  conv.updatedAt,
   };
-  conv.messages.push(sysMsg);
+  store.addMessage(conv.id, sysMsg);
   conv.lastMessage = sysMsg.text;
   conv.unreadClient = (conv.unreadClient || 0) + 1;
 
@@ -938,8 +937,7 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
     system:     true,
     type:       'transfer',
   };
-  if (!Array.isArray(conv.messages)) conv.messages = [];
-  conv.messages.push(systemMsg);
+  store.addMessage(conv.id, systemMsg);
   conv.lastMessage = systemMsg.text;
 
   store.saveConversation(conv);
@@ -1205,8 +1203,7 @@ router.put('/:id/respond-transfer', requireLogin, (req, res) => {
     system: true,
     type: 'transfer',
   };
-  if (!Array.isArray(conv.messages)) conv.messages = [];
-  conv.messages.push(sysMsg);
+  store.addMessage(conv.id, sysMsg);
   conv.lastMessage = sysMsg.text;
 
   store.saveConversation(conv);

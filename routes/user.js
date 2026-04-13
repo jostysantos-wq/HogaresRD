@@ -275,7 +275,7 @@ router.post('/request-data-download', userAuth, async (req, res) => {
       savedSearches: savedSearches.map(s => ({ id: s.id, name: s.name, filters: s.filters, createdAt: s.created_at })),
       conversations: conversations.map(c => ({
         id: c.id, propertyTitle: c.propertyTitle, brokerName: c.brokerName,
-        messageCount: (c.messages || []).length, createdAt: c.createdAt,
+        messageCount: c.message_count || 0, createdAt: c.createdAt,
       })),
       applications: applications.map(a => ({
         id: a.id, listingTitle: a.listing_title, status: a.status, createdAt: a.created_at,

@@ -2132,7 +2132,7 @@ router.post('/:id/contact-client', userAuth, (req, res) => {
   if (conv) {
     // Continue existing thread. Don't reassign the broker if the
     // conversation already belongs to someone else.
-    conv.messages.push(msgObj);
+    store.addMessage(conv.id, msgObj);
     conv.lastMessage  = text;
     conv.updatedAt    = new Date().toISOString();
     conv.unreadClient = (conv.unreadClient || 0) + 1;
@@ -2154,9 +2154,10 @@ router.post('/:id/contact-client', userAuth, (req, res) => {
       lastMessage:    text,
       unreadBroker:   0,
       unreadClient:   1,
-      messages:       [msgObj],
+      message_count:  1,
     };
     store.saveConversation(conv);
+    store.addMessage(conv.id, msgObj);
   }
 
   // Log on the application timeline so both sides have an audit trail
