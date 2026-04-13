@@ -1549,6 +1549,10 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
   if (requestId) {
     const docReq = app.documents_requested.find(d => d.id === requestId);
     if (docReq) docReq.status = 'uploaded';
+  } else if (docType && docType !== 'other') {
+    // No explicit request_id — try to match by document type
+    const docReq = app.documents_requested.find(d => d.type === docType && d.status === 'pending');
+    if (docReq) docReq.status = 'uploaded';
   }
 
   // Auto-transition to documentos_enviados if all required docs have uploads

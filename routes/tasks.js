@@ -567,7 +567,7 @@ function createAutoTask({ title, description, assigned_to, assigned_by, applicat
   // Dedup check
   if (application_id && source_event) {
     const existing = store.getTasksByApplication(application_id);
-    if (existing.some(t => t.source_event === source_event && t.status !== 'completada')) {
+    if (existing.some(t => t.source_event === source_event && t.status !== 'completada' && t.status !== 'no_aplica')) {
       return null; // Already has a pending task for this event
     }
   }
