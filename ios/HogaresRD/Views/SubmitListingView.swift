@@ -12,6 +12,8 @@ struct UnitType: Identifiable {
     var area      = ""
     var price     = ""
     var available = ""
+    var floor     = ""   // floor/level number
+    var phase     = ""   // construction phase for this unit type
     var unitIds   = ""   // newline-separated IDs (e.g. "Apt 1A\nApt 2A\nApt 3A")
 }
 
@@ -33,6 +35,8 @@ struct SubmitListingView: View {
 
     // Price & size
     @State private var price     = ""
+    @State private var priceMax  = ""
+    @State private var priceRangeEnabled = false
     @State private var currency  = "USD"
     @State private var areaConst = ""
     @State private var areaLand  = ""
@@ -54,6 +58,8 @@ struct SubmitListingView: View {
 
     // Amenities
     @State private var selectedAmenities: Set<String> = []
+    @State private var customAmenityText = ""
+    @State private var customAmenities: [String] = []
 
     // Tags
     @State private var selectedTags: Set<String> = []
@@ -63,6 +69,12 @@ struct SubmitListingView: View {
     @State private var selectedImages: [UIImage] = []
     @State private var uploadedPhotoURLs: [String] = []
     @State private var uploadingPhotos = false
+
+    // Blueprints
+    @State private var blueprintItems: [PhotosPickerItem] = []
+    @State private var blueprintImages: [UIImage] = []
+    @State private var uploadedBlueprintURLs: [String] = []
+    @State private var uploadingBlueprints = false
 
     // Project-specific
     @State private var constructionCompany = ""
@@ -104,7 +116,7 @@ struct SubmitListingView: View {
     private let bathroomOpts   = ["1","1.5","2","2.5","3","4+"]
     private let parkingOpts    = ["0","1","2","3","4+"]
     private let floorsOpts     = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20+"]
-    private let projectStages  = ["En planos","En construcción","Listo para entrega"]
+    private let projectStages  = ["En planos","Inicio de construcción","Estructura","Acabados","Listo para entrega"]
     private let contactPrefs   = ["WhatsApp","Llamada","Correo"]
     private let roleOpts       = ["Agente/Broker","Dueño","Constructora","Inmobiliaria"]
     private let provinces      = ["Azua","Bahoruco","Barahona","Dajabón","Distrito Nacional","Duarte",
@@ -371,7 +383,16 @@ struct SubmitListingView: View {
                                 }
                                 .pickerStyle(.segmented)
                                 .frame(width: 160)
-                                FloatingField(label: "Precio *", text: $price)
+                                FloatingField(label: priceRangeEnabled ? "Precio desde *" : "Precio *", text: $price)
+                                    .keyboardType(.numberPad)
+                            }
+                            Toggle(isOn: $priceRangeEnabled) {
+                                Text("Rango de precio (desde — hasta)")
+                                    .font(.caption)
+                            }
+                            .tint(Color.rdBlue)
+                            if priceRangeEnabled {
+                                FloatingField(label: "Precio hasta *", text: $priceMax)
                                     .keyboardType(.numberPad)
                             }
                             HStack(spacing: 12) {
@@ -426,6 +447,45 @@ struct SubmitListingView: View {
                     // ── Amenidades ──────────────────────────────────────
                     FormSection(title: "Amenidades", icon: "sparkles", color: Color.rdGreen) {
                         FlowChips(items: amenitiesList, selected: $selectedAmenities)
+
+                        // Custom amenity input
+                        HStack(spacing: 8) {
+                            TextField("Agregar amenidad personalizada", text: $customAmenityText)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.subheadline)
+                                .submitLabel(.done)
+                                .onSubmit { addCustomAmenity() }
+                            Button {
+                                addCustomAmenity()
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(Color.rdBlue)
+                                    .font(.title3)
+                            }
+                            .disabled(customAmenityText.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                        .padding(.top, 8)
+
+                        if !customAmenities.isEmpty {
+                            FlowLayout(spacing: 6) {
+                                ForEach(customAmenities, id: \.self) { amenity in
+                                    HStack(spacing: 4) {
+                                        Text(amenity).font(.caption).bold()
+                                        Button {
+                                            customAmenities.removeAll { $0 == amenity }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption2)
+                                        }
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.rdBlue.opacity(0.1))
+                                    .foregroundStyle(Color.rdBlue)
+                                    .clipShape(Capsule())
+                                }
+                            }
+                        }
                     }
 
                     // ── Etiquetas ────────────────────────────────────────
@@ -437,11 +497,11 @@ struct SubmitListingView: View {
                     // ── Photos ──
                     FormSection(title: "Fotos de la propiedad", icon: "camera.fill", color: .orange) {
                         PhotosPicker(selection: $selectedPhotoItems,
-                                     maxSelectionCount: 5,
+                                     maxSelectionCount: 30,
                                      matching: .images) {
                             HStack {
                                 Image(systemName: "photo.on.rectangle.angled")
-                                Text(selectedImages.isEmpty ? "Seleccionar fotos (máx. 5)" : "\(selectedImages.count) foto(s) seleccionada(s)")
+                                Text(selectedImages.isEmpty ? "Seleccionar fotos (máx. 30)" : "\(selectedImages.count) foto(s) seleccionada(s)")
                                 Spacer()
                                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
                             }
@@ -483,6 +543,57 @@ struct SubmitListingView: View {
                                 Text("Subiendo fotos…").font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                    }
+
+                    // ── Planos / Blueprints ─────────────────────────
+                    FormSection(title: "Planos / Blueprints", icon: "doc.richtext.fill", color: Color.rdBlue) {
+                        PhotosPicker(selection: $blueprintItems,
+                                     maxSelectionCount: 5,
+                                     matching: .images) {
+                            HStack {
+                                Image(systemName: "doc.badge.plus")
+                                Text(blueprintImages.isEmpty ? "Seleccionar planos (máx. 5)" : "\(blueprintImages.count) plano(s)")
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                            }
+                        }
+                        .onChange(of: blueprintItems) { _, items in
+                            Task { await loadBlueprints(items) }
+                        }
+                        if !blueprintImages.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(Array(blueprintImages.enumerated()), id: \.offset) { i, img in
+                                        Image(uiImage: img)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 80, height: 60)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(alignment: .topTrailing) {
+                                                Button {
+                                                    blueprintImages.remove(at: i)
+                                                    if i < blueprintItems.count { blueprintItems.remove(at: i) }
+                                                } label: {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.caption)
+                                                        .foregroundStyle(.white)
+                                                        .background(Circle().fill(.black.opacity(0.5)))
+                                                }
+                                                .offset(x: 4, y: -4)
+                                            }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        if uploadingBlueprints {
+                            HStack(spacing: 8) {
+                                ProgressView().scaleEffect(0.7)
+                                Text("Subiendo planos…").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Text("Sube planos de piso, distribuciones o renders. Formatos: JPG, PNG, PDF.")
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
 
                     FormSection(title: "Datos de Contacto", icon: "person.fill", color: Color.rdBlue) {
@@ -574,7 +685,7 @@ struct SubmitListingView: View {
     /// Load selected photos from PhotosPicker into UIImage array
     private func loadPhotos(_ items: [PhotosPickerItem]) async {
         var images: [UIImage] = []
-        for item in items.prefix(5) {
+        for item in items.prefix(30) {
             if let data = try? await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
                 images.append(img)
@@ -617,6 +728,58 @@ struct SubmitListingView: View {
         return result.urls
     }
 
+    private func loadBlueprints(_ items: [PhotosPickerItem]) async {
+        var images: [UIImage] = []
+        for item in items.prefix(5) {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                images.append(img)
+            }
+        }
+        await MainActor.run { blueprintImages = images }
+    }
+
+    private func uploadBlueprints() async throws -> [String] {
+        guard !blueprintImages.isEmpty else { return [] }
+        guard let token = api.token else { return [] }
+        await MainActor.run { uploadingBlueprints = true }
+        defer { Task { @MainActor in uploadingBlueprints = false } }
+
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: URL(string: "\(apiBase)/api/upload/blueprints")!)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var data = Data()
+        for (i, img) in blueprintImages.enumerated() {
+            guard let jpeg = img.jpegData(compressionQuality: 0.9) else { continue }
+            data.append("--\(boundary)\r\n".data(using: .utf8)!)
+            data.append("Content-Disposition: form-data; name=\"blueprints\"; filename=\"blueprint\(i).jpg\"\r\n".data(using: .utf8)!)
+            data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            data.append(jpeg)
+            data.append("\r\n".data(using: .utf8)!)
+        }
+        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = data
+
+        let (responseData, resp) = try await URLSession.shared.data(for: request)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw APIError.server("Error subiendo planos")
+        }
+        struct UploadResponse: Decodable { let urls: [String] }
+        return try JSONDecoder().decode(UploadResponse.self, from: responseData).urls
+    }
+
+    private func addCustomAmenity() {
+        let trimmed = customAmenityText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        if !customAmenities.contains(trimmed) {
+            customAmenities.append(trimmed)
+        }
+        customAmenityText = ""
+    }
+
     private func submit() async {
         loading = true; error = nil
 
@@ -625,6 +788,15 @@ struct SubmitListingView: View {
             uploadedPhotoURLs = try await uploadPhotos()
         } catch {
             self.error = "Error subiendo fotos: \(error.localizedDescription)"
+            loading = false
+            return
+        }
+
+        // Upload blueprints
+        do {
+            uploadedBlueprintURLs = try await uploadBlueprints()
+        } catch {
+            self.error = "Error subiendo planos: \(error.localizedDescription)"
             loading = false
             return
         }
@@ -647,7 +819,7 @@ struct SubmitListingView: View {
             "city":            city,
             "sector":          sector,
             "address":         address,
-            "amenities":       Array(selectedAmenities),
+            "amenities":       Array(selectedAmenities) + customAmenities,
             "tags":            Array(selectedTags),
             "name":            contactName,
             "email":           contactEmail,
@@ -664,7 +836,11 @@ struct SubmitListingView: View {
             "contact_pref":    contactPref,
             "role":            role,
             "images":          uploadedPhotoURLs,
+            "blueprints":      uploadedBlueprintURLs,
         ]
+        if priceRangeEnabled && !priceMax.isEmpty {
+            body["priceMax"] = priceMax
+        }
         if let coord = coordinate {
             body["lat"] = coord.latitude
             body["lng"] = coord.longitude
@@ -674,7 +850,7 @@ struct SubmitListingView: View {
                 let ids = $0.unitIds.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
                 return ["name": $0.name, "bedrooms": $0.bedrooms, "bathrooms": $0.bathrooms,
                  "area": $0.area, "price": $0.price, "available": $0.available,
-                 "unitIds": ids] as [String: Any]
+                 "floor": $0.floor, "phase": $0.phase, "unitIds": ids] as [String: Any]
             }
         }
         if let user = api.currentUser, user.isAgency {
@@ -718,6 +894,10 @@ struct UnitTypeRow: View {
             HStack(spacing: 10) {
                 FloatingField(label: "Precio USD", text: $unit.price).keyboardType(.numberPad)
                 FloatingField(label: "Disponibles", text: $unit.available).keyboardType(.numberPad)
+            }
+            HStack(spacing: 10) {
+                FloatingField(label: "Piso / Nivel", text: $unit.floor).keyboardType(.numberPad)
+                FloatingField(label: "Etapa", text: $unit.phase)
             }
 
             // Unit IDs — shown when available count > 0
