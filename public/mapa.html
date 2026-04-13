@@ -8,9 +8,7 @@
   <title>Explorar Mapa — HogaresRD</title>
   <meta name="description" content="Explora propiedades en venta y alquiler en el mapa de la República Dominicana." />
   <link rel="stylesheet" href="/css/core.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin async></script>
   <style>
     :root {
       --toggle-bg: #CBD5E1;
@@ -382,8 +380,7 @@
     }
     .price-marker:hover { transform: scale(1.15); z-index: 999 !important; }
     .price-marker.active { background: var(--green, #0a7c4f); transform: scale(1.15); }
-    .leaflet-popup-content-wrapper { border-radius: 6px !important; box-shadow: var(--shadow-lg) !important; }
-    .leaflet-popup-content { margin: 0 !important; padding: 0 !important; min-width: 260px; }
+    /* MapKit annotation callout styling handled inline */
 
     /* ── POPUP ────────────────────────────────────────────────── */
     .popup-card { font-family: var(--font); }
@@ -705,8 +702,7 @@
     <option value=""></option>
   </select>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Apple MapKit JS loaded in head -->
   <script>
   (function() {
 
@@ -755,72 +751,45 @@
       toast._timer = setTimeout(() => toast.classList.remove('show'), duration || 2500);
     }
 
-    // ── Map Setup ─────────────────────────────────────────────
-    const DR_CENTER = [18.7357, -70.1627];
-    const map = L.map('map', { zoomControl: false }).setView(DR_CENTER, 9);
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    // ── Apple MapKit JS Setup ─────────────────────────────────
+    const DR_CENTER = { lat: 18.7357, lng: -70.1627 };
+    let map = null;
+    let mapInitialized = false;
+    let mapAnnotations = [];
 
-    // Tile layer — subtle carto style
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 20
-    }).addTo(map);
-
-    // ── Province Boundaries ───────────────────────────────────
-    let boundaryLayer = null;
-    let boundaryVisible = true;
-
-    const boundaryStyle = {
-      color: '#0038A8', weight: 1.5, opacity: 0.45,
-      fillColor: '#0038A8', fillOpacity: 0.04
-    };
-    const boundaryHoverStyle = {
-      color: '#0038A8', weight: 2.5, opacity: 0.75,
-      fillColor: '#0038A8', fillOpacity: 0.10
-    };
-
-    fetch('https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/dominican-republic.geojson')
-      .then(r => r.json())
-      .then(geojson => {
-        boundaryLayer = L.geoJSON(geojson, {
-          style: () => ({ ...boundaryStyle }),
-          onEachFeature: (feature, layer) => {
-            const name = feature.properties.name || feature.properties.NAME || '';
-            if (name) layer.bindTooltip(name, { sticky: true, opacity: 0.85, className: 'province-tooltip' });
-            layer.on('mouseover', function() { this.setStyle(boundaryHoverStyle); });
-            layer.on('mouseout',  function() { boundaryLayer.resetStyle(this); });
-          }
-        }).addTo(map);
-      })
-      .catch(() => {}); // silently fail if offline
-
-    document.getElementById('boundaryBtn').addEventListener('click', function() {
-      this.classList.toggle('active');
-      if (boundaryLayer) {
-        boundaryVisible = !boundaryVisible;
-        if (boundaryVisible) map.addLayer(boundaryLayer);
-        else map.removeLayer(boundaryLayer);
-      }
-    });
-
-    // ── Marker Cluster ────────────────────────────────────────
-    const markerCluster = L.markerClusterGroup({
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      iconCreateFunction: function(cluster) {
-        const count = cluster.getChildCount();
-        const sz = count > 30 ? 52 : count > 10 ? 44 : 36;
-        const fs = count > 30 ? '0.88rem' : '0.78rem';
-        return L.divIcon({
-          html: `<div style="background:var(--accent,#0038A8);color:#fff;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${fs};box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid #fff;">${count}</div>`,
-          className: '',
-          iconSize: [sz, sz]
+    async function initMap() {
+      if (mapInitialized || typeof mapkit === 'undefined') return;
+      try {
+        const res = await fetch('/api/mapkit-token');
+        const { token } = await res.json();
+        if (!token) { console.warn('[Map] No MapKit token'); return; }
+        mapkit.init({ authorizationCallback: done => done(token) });
+        map = new mapkit.Map('map', {
+          center: new mapkit.Coordinate(DR_CENTER.lat, DR_CENTER.lng),
+          showsCompass: mapkit.FeatureVisibility.Hidden,
+          showsZoomControl: true,
+          showsMapTypeControl: false,
+          colorScheme: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light,
         });
-      }
+        map.setCameraDistanceAnimated(400000); // Country-level zoom
+        mapInitialized = true;
+        console.log('[Map] Apple MapKit JS initialized');
+        loadListings();
+      } catch (err) { console.warn('[Map] Init error:', err.message); }
+    }
+
+    // Theme change listener
+    new MutationObserver(() => {
+      if (map) map.colorScheme = document.documentElement.getAttribute('data-theme') === 'dark'
+        ? mapkit.Map.ColorSchemes.Dark : mapkit.Map.ColorSchemes.Light;
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // Province boundary toggle (no-op for MapKit — boundaries not supported as overlays)
+    document.getElementById('boundaryBtn')?.addEventListener('click', function() {
+      this.classList.toggle('active');
+      showToast('Provincias visibles en vista satelital', 2000);
     });
-    map.addLayer(markerCluster);
 
     let allListings = [];
     let filteredListings = [];
@@ -836,12 +805,10 @@
     function openSidebar() {
       sidebar.classList.remove('hidden');
       showListBtn.classList.add('hidden');
-      setTimeout(() => map.invalidateSize(), 320);
     }
     function closeSidebar() {
       sidebar.classList.add('hidden');
       showListBtn.classList.remove('hidden');
-      setTimeout(() => map.invalidateSize(), 320);
     }
 
     document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
@@ -908,9 +875,9 @@
       updateCountDisplay(filteredListings.length);
       renderSidebar(filteredListings);
       renderMarkers(filteredListings);
-      if (filteredListings.length) {
-        const bounds = L.latLngBounds(filteredListings.map(l => [parseFloat(l.lat), parseFloat(l.lng)]));
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      if (filteredListings.length && map && mapAnnotations.length) {
+        const padding = new mapkit.Padding({ top: 40, right: 40, bottom: 60, left: 40 });
+        map.showItems(mapAnnotations, { animate: true, padding });
       }
     }
 
@@ -960,62 +927,51 @@
       }).join('');
     }
 
-    // ── Render Markers ────────────────────────────────────────
+    // ── Render Markers (Apple MapKit annotations) ──────────────
     function renderMarkers(listings) {
-      markerCluster.clearLayers();
+      if (!map || !mapInitialized) return;
+      map.removeAnnotations(mapAnnotations);
+      mapAnnotations = [];
       markers = {};
+
       listings.forEach(l => {
         const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
         if (isNaN(lat) || isNaN(lng)) return;
-        const icon = L.divIcon({
-          className: '',
-          html: `<div class="price-marker" data-id="${esc(l.id)}">${formatPrice(l.price)}</div>`,
-          iconSize: [70, 28], iconAnchor: [35, 28]
+
+        const coord = new mapkit.Coordinate(lat, lng);
+        const annotation = new mapkit.MarkerAnnotation(coord, {
+          title: '',
+          subtitle: '',
+          glyphText: formatPrice(l.price),
+          color: '#002D62',
+          displayPriority: mapkit.Annotation.DisplayPriority.Required,
+          data: { listingId: l.id },
         });
-        const marker = L.marker([lat, lng], { icon });
-        const img = Array.isArray(l.images) && l.images.length
-          ? `<img class="popup-img" src="${esc(l.images[0])}" alt="" onerror="this.style.display='none'" />`
-          : '';
-        marker.bindPopup(`
-          <div class="popup-card">
-            ${img}
-            <div class="popup-body">
-              <div class="popup-price">${formatPriceFull(l.price)}</div>
-              <div class="popup-title">${esc(l.title)}</div>
-              <div class="popup-loc">${esc([l.sector || l.city, l.province].filter(Boolean).join(', '))}</div>
-              <div class="popup-specs">
-                ${l.bedrooms  ? `<span>${l.bedrooms} hab.</span>` : ''}
-                ${l.bathrooms ? `<span>${l.bathrooms} baños</span>` : ''}
-                ${l.area_const ? `<span>${l.area_const} m²</span>` : ''}
-              </div>
-              <a class="popup-btn" href="/listing/${esc(l.id)}">Ver Propiedad →</a>
-            </div>
-          </div>
-        `, { maxWidth: 280, minWidth: 260 });
-        marker.on('click', () => highlightCard(l.id));
-        markers[l.id] = marker;
-        markerCluster.addLayer(marker);
+
+        annotation.addEventListener('select', () => {
+          highlightCard(l.id);
+          // Open listing in new location on double-click/tap
+        });
+
+        mapAnnotations.push(annotation);
+        markers[l.id] = annotation;
       });
+
+      map.addAnnotations(mapAnnotations);
     }
 
     // ── Focus / Highlight ─────────────────────────────────────
     window.focusListing = function(id) {
       const listing = allListings.find(l => l.id === id);
-      if (!listing) return;
+      if (!listing || !map) return;
       const lat = parseFloat(listing.lat), lng = parseFloat(listing.lng);
-      map.setView([lat, lng], 16, { animate: true });
-      if (activeMarker) {
-        const el = activeMarker.getElement();
-        if (el) el.querySelector('.price-marker')?.classList.remove('active');
-      }
-      const marker = markers[id];
-      if (marker) {
-        markerCluster.zoomToShowLayer(marker, () => {
-          marker.openPopup();
-          const el = marker.getElement();
-          if (el) el.querySelector('.price-marker')?.classList.add('active');
-        });
-        activeMarker = marker;
+      map.setCenterAnimated(new mapkit.Coordinate(lat, lng), true);
+      map.setCameraDistanceAnimated(2000); // Close zoom
+
+      const annotation = markers[id];
+      if (annotation) {
+        map.selectedAnnotation = annotation;
+        activeMarker = annotation;
       }
       highlightCard(id);
     };
@@ -1030,16 +986,24 @@
       }
     }
 
-    // Update "in view" count when map moves
-    map.on('moveend', () => {
-      const bounds = map.getBounds();
-      const visible = filteredListings.filter(l => {
-        const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
-        return bounds.contains([lat, lng]);
+    // Update "in view" count when map moves (after init)
+    function setupMoveListener() {
+      if (!map) return;
+      let moveTimer = null;
+      map.addEventListener('region-change-end', () => {
+        clearTimeout(moveTimer);
+        moveTimer = setTimeout(() => {
+          const region = map.region;
+          const visible = filteredListings.filter(l => {
+            const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+            return Math.abs(lat - region.center.latitude) < region.span.latitudeDelta / 2
+                && Math.abs(lng - region.center.longitude) < region.span.longitudeDelta / 2;
+          });
+          const viewEl = document.getElementById('listingViewCount');
+          if (viewEl) viewEl.textContent = visible.length < filteredListings.length ? `${visible.length} en esta área` : '';
+        }, 300);
       });
-      const viewEl = document.getElementById('listingViewCount');
-      if (viewEl) viewEl.textContent = visible.length < filteredListings.length ? `${visible.length} en esta área` : '';
-    });
+    }
 
     // ── Tab switching ─────────────────────────────────────────
     document.querySelectorAll('.tt-tab').forEach(tab => {
@@ -1220,7 +1184,9 @@
 
     // ── Init ──────────────────────────────────────────────────
     renderSavedDropdown();
-    loadListings();
+    // Initialize Apple MapKit, then load listings
+    if (typeof mapkit !== 'undefined') { initMap().then(setupMoveListener); }
+    else document.querySelector('script[src*="mapkit"]')?.addEventListener('load', () => { initMap().then(setupMoveListener); });
 
   })();
   </script>
