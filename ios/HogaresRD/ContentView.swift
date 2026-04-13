@@ -40,6 +40,8 @@ struct ContentView: View {
     @State private var showPopup = false
     @State private var popupDismissed = false
     @State private var showPushPrimer = false
+    @State private var popupAd: Ad?
+    @State private var showAdPopup = false
 
     // Deep link state — set when a Universal Link opens the app to a listing
     @State private var deepLinkListingID: String?
@@ -87,6 +89,8 @@ struct ContentView: View {
             } else if showPushPrimer {
                 PushPermissionPrimer(isPresented: $showPushPrimer)
                     .environmentObject(pushService)
+            } else if showAdPopup, let ad = popupAd {
+                popupAdOverlay(ad)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
@@ -150,6 +154,8 @@ struct ContentView: View {
                 // Immediate unread refresh + restart the poll timer
                 Task { await refreshUnreadCount() }
                 startUnreadPolling()
+                // Check for popup ad on foreground
+                Task { await checkPopupAd() }
             } else if phase == .background || phase == .inactive {
                 stopUnreadPolling()
             }
@@ -189,6 +195,11 @@ struct ContentView: View {
             if api.currentUser != nil {
                 Task { await refreshUnreadCount() }
                 startUnreadPolling()
+            }
+            // Check popup ad on first launch (after a delay for other popups)
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                await checkPopupAd()
             }
         }
         .onDisappear { stopUnreadPolling() }
@@ -267,6 +278,118 @@ struct ContentView: View {
     private func dismissPopup() {
         withAnimation(.easeInOut(duration: 0.25)) { showPopup = false }
         popupDismissed = true
+    }
+
+    // MARK: - Popup Ad
+
+    private func checkPopupAd() async {
+        // Don't show ad popup if another popup is active
+        guard !showPopup, !showPushPrimer, !showAdPopup else { return }
+        guard let ad = await api.fetchPopupAd() else { return }
+        // Per-ad cooldown check
+        let key = "popup_ad_last_shown_\(ad.id)"
+        let lastShown = UserDefaults.standard.double(forKey: key)
+        let cooldownSeconds = Double(ad.cooldown_hours ?? 2) * 3600
+        if lastShown > 0 && Date().timeIntervalSince1970 - lastShown < cooldownSeconds { return }
+        // Show after a brief delay
+        await MainActor.run {
+            popupAd = ad
+            withAnimation(.easeInOut(duration: 0.3)) { showAdPopup = true }
+        }
+        api.trackAdImpression(ad.id)
+    }
+
+    private func dismissAdPopup() {
+        if let ad = popupAd {
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "popup_ad_last_shown_\(ad.id)")
+        }
+        withAnimation(.easeInOut(duration: 0.25)) { showAdPopup = false }
+    }
+
+    private func popupAdOverlay(_ ad: Ad) -> some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .onTapGesture { dismissAdPopup() }
+
+            VStack(spacing: 0) {
+                // Close button
+                HStack {
+                    // Sponsored badge
+                    Text("Publicidad")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.black.opacity(0.5), in: Capsule())
+                    Spacer()
+                    Button { dismissAdPopup() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.bottom, 4)
+
+                VStack(spacing: 0) {
+                    // Ad image
+                    CachedAsyncImage(url: ad.imageURL, maxPixelSize: 1200) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                                .frame(maxHeight: 280)
+                                .clipped()
+                        case .failure:
+                            Color.gray.opacity(0.2).frame(height: 200)
+                        default:
+                            Color.gray.opacity(0.1).frame(height: 200)
+                                .overlay(ProgressView())
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    // Ad info
+                    VStack(spacing: 10) {
+                        if let advertiser = ad.advertiser, !advertiser.isEmpty {
+                            Text(advertiser)
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(ad.title)
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                        if let desc = ad.description, !desc.isEmpty {
+                            Text(desc)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(3)
+                        }
+                        if ad.targetURL != nil {
+                            Button {
+                                api.trackAdClick(ad.id)
+                                if let url = ad.targetURL { UIApplication.shared.open(url) }
+                                dismissAdPopup()
+                            } label: {
+                                Text("Ver oferta")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(16)
+                }
+                .background(Color(.systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+            }
+            .padding(24)
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
+        }
+        .transition(.opacity)
     }
 
     // MARK: - Reminder Popup

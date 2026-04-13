@@ -24,14 +24,18 @@ const adUpload = multer({
 });
 
 // ── GET /api/ads/active  (public — used by the mobile app) ─────
+// Optional ?type=popup to filter by ad_type
 router.get('/active', async (req, res) => {
   try {
     const now = new Date().toISOString();
+    const adType = req.query.type || null;
     const result = await store.pool.query(
       `SELECT * FROM ads WHERE is_active = true
        AND (start_date IS NULL OR start_date <= $1)
-       AND (end_date IS NULL OR end_date >= $1)`,
-      [now]
+       AND (end_date IS NULL OR end_date >= $1)
+       ${adType ? 'AND ad_type = $2' : ''}
+       ORDER BY priority DESC, created_at DESC`,
+      adType ? [now, adType] : [now]
     );
     res.json(result.rows);
   } catch (err) {
@@ -67,7 +71,7 @@ router.get('/', adminSessionAuth, async (req, res) => {
 // ── POST /api/ads  (admin — create) ───────────────────────────
 router.post('/', adminSessionAuth, async (req, res) => {
   const { title, advertiser, image_url, target_url, start_date, end_date,
-          ad_type, placement, description, budget, priority, audience } = req.body;
+          ad_type, placement, description, budget, priority, audience, cooldown_hours } = req.body;
   if (!title || !image_url) {
     return res.status(400).json({ error: 'title and image_url are required' });
   }
@@ -83,6 +87,7 @@ router.post('/', adminSessionAuth, async (req, res) => {
     budget:      budget ? Number(budget) : null,
     priority:    Math.min(10, Math.max(1, Number(priority) || 5)),
     audience:    audience || 'todos',
+    cooldown_hours: Math.min(48, Math.max(1, Number(cooldown_hours) || 2)),
     is_active:   false,
     start_date:  start_date || null,
     end_date:    end_date   || null,
@@ -150,6 +155,32 @@ router.post('/:id/click', async (req, res) => {
     await store.pool.query('UPDATE ads SET clicks = clicks + 1 WHERE id = $1', [req.params.id]);
   } catch {}
   res.json({ ok: true });
+});
+
+// ── GET /api/ads/analytics  (admin — dashboard data) ──────────
+router.get('/analytics', adminSessionAuth, async (req, res) => {
+  try {
+    const result = await store.pool.query(`
+      SELECT id, title, advertiser, ad_type, placement, impressions, clicks,
+        CASE WHEN impressions > 0 THEN ROUND(clicks::numeric / impressions * 100, 2) ELSE 0 END AS ctr,
+        budget, is_active, start_date, end_date, cooldown_hours, created_at
+      FROM ads ORDER BY created_at DESC
+    `);
+    const ads = result.rows;
+    const summary = {
+      total_ads:         ads.length,
+      active_ads:        ads.filter(a => a.is_active).length,
+      total_impressions: ads.reduce((s, a) => s + (a.impressions || 0), 0),
+      total_clicks:      ads.reduce((s, a) => s + (a.clicks || 0), 0),
+      avg_ctr:           0,
+    };
+    if (summary.total_impressions > 0) {
+      summary.avg_ctr = Math.round(summary.total_clicks / summary.total_impressions * 10000) / 100;
+    }
+    res.json({ summary, ads });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

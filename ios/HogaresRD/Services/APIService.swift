@@ -156,6 +156,14 @@ class APIService: ObservableObject {
         return ads
     }
 
+    /// Fetch the highest-priority active popup ad
+    func fetchPopupAd() async -> Ad? {
+        guard let url = URL(string: "\(apiBase)/api/ads/active?type=popup") else { return nil }
+        guard let (data, _) = try? await session.data(from: url) else { return nil }
+        let ads = (try? decoder.decode([Ad].self, from: data)) ?? []
+        return ads.first // Already sorted by priority DESC on server
+    }
+
     /// Fire-and-forget view tracking — matches web's listing.html POST
     /// /api/listings/:id/view so broker analytics count iOS views too.
     func trackListingView(_ listingId: String) {

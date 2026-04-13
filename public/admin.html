@@ -626,6 +626,12 @@
         <span class="nav-tooltip">Anuncios</span>
       </button>
 
+      <button class="nav-item" data-page="ad-analytics" onclick="showPage('ad-analytics', this)">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+        <span class="nav-item-label">Ad Analytics</span>
+        <span class="nav-tooltip">Ad Analytics</span>
+      </button>
+
       <button class="nav-item" data-page="aplicaciones" onclick="showPage('aplicaciones', this)">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         <span class="nav-item-label">Aplicaciones</span>
@@ -924,6 +930,7 @@
               <label>Tipo de anuncio</label>
               <select id="adType" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
                 <option value="fullscreen">Fullscreen (Feed)</option>
+                <option value="popup">Popup (App Launch)</option>
                 <option value="banner">Banner (728x90)</option>
                 <option value="card">Card (300x250)</option>
               </select>
@@ -932,6 +939,7 @@
               <label>Ubicación</label>
               <select id="adPlacement" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
                 <option value="feed">Feed principal</option>
+                <option value="app-launch">App Launch (Popup)</option>
                 <option value="sidebar">Sidebar</option>
                 <option value="listing-page">Página de propiedad</option>
               </select>
@@ -952,6 +960,11 @@
             <div class="ads-field">
               <label>Presupuesto (USD)</label>
               <input type="number" id="adBudget" placeholder="0" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+            </div>
+            <div class="ads-field" id="adCooldownField">
+              <label>Cooldown (horas entre re-shows)</label>
+              <input type="number" id="adCooldown" min="1" max="48" value="2" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
+              <small style="color:var(--text-muted);font-size:.72rem;">Solo aplica a tipo Popup. Ej: 2 = el popup no se muestra otra vez hasta 2 horas despues.</small>
             </div>
             <div class="ads-field">
               <label>Fecha de inicio</label>
@@ -976,6 +989,43 @@
 
         <div class="ads-list" id="adsList">
           <div class="loading">Cargando anuncios...</div>
+        </div>
+      </div>
+
+      <!-- ── AD ANALYTICS PAGE ──────────────────────────────── -->
+      <div class="page-section" id="page-ad-analytics">
+        <div class="leads-stats" id="adAnalyticsSummary">
+          <div class="stat-card"><div class="stat-value" id="anTotalImpressions">-</div><div class="stat-label">Impresiones</div></div>
+          <div class="stat-card"><div class="stat-value" id="anTotalClicks">-</div><div class="stat-label">Clicks</div></div>
+          <div class="stat-card"><div class="stat-value" id="anAvgCTR">-</div><div class="stat-label">CTR Promedio</div></div>
+          <div class="stat-card"><div class="stat-value" id="anActiveAds">-</div><div class="stat-label">Activos</div></div>
+        </div>
+        <div style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <select id="anTypeFilter" onchange="renderAdAnalytics()" style="border:1.5px solid var(--border);border-radius:6px;padding:.4rem .8rem;font-size:.82rem;background:var(--bg);color:var(--text);">
+            <option value="">Todos los tipos</option>
+            <option value="fullscreen">Fullscreen</option>
+            <option value="popup">Popup</option>
+            <option value="banner">Banner</option>
+            <option value="card">Card</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table" id="adAnalyticsTable" style="width:100%;font-size:.82rem;">
+            <thead>
+              <tr>
+                <th style="cursor:pointer" onclick="sortAdAnalytics('title')">Titulo</th>
+                <th>Tipo</th>
+                <th style="cursor:pointer" onclick="sortAdAnalytics('impressions')">Impresiones</th>
+                <th style="cursor:pointer" onclick="sortAdAnalytics('clicks')">Clicks</th>
+                <th style="cursor:pointer" onclick="sortAdAnalytics('ctr')">CTR%</th>
+                <th>Budget</th>
+                <th>Cooldown</th>
+                <th>Estado</th>
+                <th>Periodo</th>
+              </tr>
+            </thead>
+            <tbody id="adAnalyticsBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1745,8 +1795,9 @@
     // Load data
     if (page === 'propiedades')  { loadSubmissions(); }
     else if (page === 'leads')       { loadLeads(); }
-    else if (page === 'anuncios')    { loadAds(); }
-    else if (page === 'aplicaciones'){ loadApps(); }
+    else if (page === 'anuncios')      { loadAds(); }
+    else if (page === 'ad-analytics') { loadAdAnalytics(); }
+    else if (page === 'aplicaciones') { loadApps(); }
     else if (page === 'catalogo')    { loadCatalogue(); }
     else if (page === 'usuarios')    { loadUsers(); }
     else if (page === 'newsletter')  { loadNewsletter(); }
@@ -2552,9 +2603,10 @@
     const start_date = document.getElementById('adStartDate').value;
     const end_date = document.getElementById('adEndDate').value;
     const msg = document.getElementById('adMsg');
+    const cooldown_hours = document.getElementById('adCooldown').value;
     if (!title || !image_url) { msg.textContent = 'Título e imagen son obligatorios.'; msg.className = 'ads-msg err'; return; }
     fetch('/api/ads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, advertiser, description, image_url, target_url, ad_type, placement, audience, priority, budget, start_date: start_date || null, end_date: end_date || null })
+      body: JSON.stringify({ title, advertiser, description, image_url, target_url, ad_type, placement, audience, priority, budget, cooldown_hours, start_date: start_date || null, end_date: end_date || null })
     }).then(r => r.json()).then(ad => {
         if (ad.error) throw new Error(ad.error);
         msg.textContent = '¡Anuncio creado! Actívalo cuando estés listo.'; msg.className = 'ads-msg ok';
@@ -2575,6 +2627,50 @@
   function deleteAd(id) {
     if (!confirm('¿Seguro que quieres eliminar este anuncio?')) return;
     fetch(`/api/ads/${id}`, { method: 'DELETE', headers: {} }).then(() => { allAds = allAds.filter(a => a.id !== id); renderAds(allAds); });
+  }
+
+  // ── Ad Analytics ─────────────────────────────────────────────
+  let _adAnalyticsData = [];
+  let _adAnalyticsSort = { field: 'impressions', asc: false };
+
+  function loadAdAnalytics() {
+    fetch('/api/ads/analytics').then(r => r.json()).then(data => {
+      if (data.error) return;
+      const s = data.summary;
+      document.getElementById('anTotalImpressions').textContent = (s.total_impressions || 0).toLocaleString();
+      document.getElementById('anTotalClicks').textContent = (s.total_clicks || 0).toLocaleString();
+      document.getElementById('anAvgCTR').textContent = (s.avg_ctr || 0) + '%';
+      document.getElementById('anActiveAds').textContent = s.active_ads || 0;
+      _adAnalyticsData = data.ads || [];
+      renderAdAnalytics();
+    }).catch(() => {});
+  }
+
+  function renderAdAnalytics() {
+    const filter = document.getElementById('anTypeFilter').value;
+    let ads = filter ? _adAnalyticsData.filter(a => a.ad_type === filter) : [..._adAnalyticsData];
+    ads.sort((a, b) => {
+      const va = a[_adAnalyticsSort.field] ?? 0, vb = b[_adAnalyticsSort.field] ?? 0;
+      return _adAnalyticsSort.asc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+    const body = document.getElementById('adAnalyticsBody');
+    body.innerHTML = ads.map(a => `<tr>
+      <td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted)">${esc(a.advertiser || '')}</small></td>
+      <td><span style="background:${a.ad_type==='popup'?'#7c3aed':a.ad_type==='fullscreen'?'#2563eb':'#6b7280'};color:#fff;padding:2px 8px;border-radius:4px;font-size:.72rem;">${a.ad_type}</span></td>
+      <td>${(a.impressions||0).toLocaleString()}</td>
+      <td>${(a.clicks||0).toLocaleString()}</td>
+      <td>${a.ctr||0}%</td>
+      <td>${a.budget ? '$'+Number(a.budget).toLocaleString() : '-'}</td>
+      <td>${a.cooldown_hours ? a.cooldown_hours+'h' : '-'}</td>
+      <td>${a.is_active ? '<span style="color:#16a34a;font-weight:600;">Activo</span>' : '<span style="color:#888;">Inactivo</span>'}</td>
+      <td style="font-size:.75rem;">${a.start_date ? a.start_date.split('T')[0] : '-'} → ${a.end_date ? a.end_date.split('T')[0] : '-'}</td>
+    </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">No hay anuncios</td></tr>';
+  }
+
+  function sortAdAnalytics(field) {
+    if (_adAnalyticsSort.field === field) _adAnalyticsSort.asc = !_adAnalyticsSort.asc;
+    else { _adAnalyticsSort.field = field; _adAnalyticsSort.asc = false; }
+    renderAdAnalytics();
   }
 
   // ── Applications ─────────────────────────────────────────────
