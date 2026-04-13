@@ -227,6 +227,14 @@ function hydrateApplication(row) {
       if (entry.snapshotAfter)  delete entry.snapshotAfter.history;
     }
   }
+  // Defensive defaults — survive DB migration gaps where JSON columns are null
+  if (!obj.documents_requested) obj.documents_requested = [];
+  if (!obj.documents_uploaded)  obj.documents_uploaded  = [];
+  if (!obj.tours)               obj.tours               = [];
+  if (!obj.timeline_events)     obj.timeline_events     = [];
+  if (!obj.broker)  obj.broker  = { user_id: null, name: '', email: '', phone: '' };
+  if (!obj.client)  obj.client  = { user_id: null, name: '', email: '', phone: '' };
+  if (!obj.payment) obj.payment = { amount: null, currency: 'DOP', verification_status: 'none' };
   return obj;
 }
 

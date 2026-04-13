@@ -81,7 +81,7 @@ const STATUS_FLOW = {
   en_revision:             ['documentos_requeridos', 'en_aprobacion', 'rechazado'],
   documentos_requeridos:   ['documentos_enviados', 'rechazado'],
   documentos_enviados:     ['en_aprobacion', 'documentos_insuficientes', 'rechazado'],
-  documentos_insuficientes:['documentos_requeridos', 'rechazado'],
+  documentos_insuficientes:['documentos_requeridos', 'documentos_enviados', 'rechazado'],
   en_aprobacion:           ['reservado', 'aprobado', 'rechazado'],
   reservado:               ['aprobado', 'rechazado'],
   aprobado:                ['pendiente_pago', 'rechazado'],
@@ -221,6 +221,7 @@ function isAdmin(req) {
 }
 
 function addEvent(app, type, description, actor, actorName, data = {}) {
+  if (!app.timeline_events) app.timeline_events = [];
   app.timeline_events.push({
     id: uuid(), type, description, actor, actor_name: actorName, data,
     created_at: new Date().toISOString(),
@@ -269,6 +270,7 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
 
 function buildPaymentPlanEmail(app) {
   const plan = app.payment_plan;
+  if (!plan?.installments || !Array.isArray(plan.installments)) return '';
   const rows = plan.installments.map(i =>
     `<tr>
        <td style="padding:9px 12px;border-bottom:1px solid ${et.C.bg};font-size:0.88rem;color:${et.C.text};">#${i.number} — ${_esc(i.label)}</td>
@@ -985,7 +987,7 @@ router.get('/:id', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
 
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
@@ -1085,7 +1087,7 @@ router.get('/:id/events', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
@@ -1180,7 +1182,7 @@ router.get('/:id/state', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
@@ -1378,7 +1380,15 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   if (!documents.length)
     return res.status(400).json({ error: 'Lista de documentos inválida' });
 
-  const newDocs = documents.map(d => ({
+  // Filter out document types that already have a pending request
+  const pendingTypes = new Set(
+    app.documents_requested.filter(d => d.status === 'pending').map(d => d.type)
+  );
+  const deduped = documents.filter(d => !pendingTypes.has(d.type || 'other'));
+  if (!deduped.length)
+    return res.status(400).json({ error: 'Todos los documentos solicitados ya están pendientes.' });
+
+  const newDocs = deduped.map(d => ({
     id:           uuid(),
     type:         d.type || 'other',
     label:        d.label || DOCUMENT_TYPES[d.type] || 'Documento',
@@ -1508,7 +1518,7 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
 
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   if (!isClient && !isAdmin(req))
     return res.status(403).json({ error: 'Solo el cliente puede subir documentos' });
 
@@ -1660,6 +1670,21 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
     });
   }
 
+  // Email notification → client (document reviewed)
+  if (app.client.email) {
+    const reviewBody = status === 'rejected'
+      ? et.p(`Tu documento <strong>"${et.esc(doc.original_name)}"</strong> fue rechazado para la aplicación de <strong>${et.esc(app.listing_title)}</strong>.`)
+        + (note ? et.alertBox('<strong>Motivo:</strong> ' + et.esc(note), 'danger') : '')
+        + et.p('Por favor sube una nueva versión corregida desde tu panel.')
+        + et.button('Subir documentos', `${BASE_URL}/my-applications?id=${app.id}`)
+      : et.p(`Tu documento <strong>"${et.esc(doc.original_name)}"</strong> fue aprobado para la aplicación de <strong>${et.esc(app.listing_title)}</strong>.`)
+        + et.button('Ver mi aplicación', `${BASE_URL}/my-applications?id=${app.id}`);
+    sendNotification(app.client.email,
+      `Documento ${status === 'approved' ? 'aprobado' : 'rechazado'} — ${app.listing_title}`,
+      et.layout({ title: `Documento ${status === 'approved' ? 'aprobado' : 'rechazado'}`, subtitle: et.esc(app.listing_title), body: reviewBody })
+    );
+  }
+
   res.json(app);
 });
 
@@ -1671,7 +1696,7 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -1705,6 +1730,13 @@ router.post('/:id/tours', userAuth, (req, res) => {
   const { scheduled_date, scheduled_time, location, notes } = req.body;
   if (!scheduled_date || !scheduled_time)
     return res.status(400).json({ error: 'Fecha y hora son requeridos' });
+
+  // Validate date format and ensure it's not in the past
+  const tourDate = new Date(`${scheduled_date}T${scheduled_time}`);
+  if (isNaN(tourDate.getTime()))
+    return res.status(400).json({ error: 'Formato de fecha u hora inválido' });
+  if (tourDate < new Date())
+    return res.status(400).json({ error: 'No se puede programar una visita en el pasado' });
 
   const user = store.getUserById(req.user.sub);
   const tour = {
@@ -1801,7 +1833,7 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
 
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isBroker = app.broker.user_id === req.user.sub;
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
@@ -1809,6 +1841,14 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
     return res.status(403).json({ error: 'No autorizado' });
 
   if (!req.file) return res.status(400).json({ error: 'Recibo es requerido' });
+
+  // Block upload if a receipt is already pending verification
+  if (app.payment?.verification_status === 'pending')
+    return res.status(400).json({ error: 'Ya tienes un recibo pendiente de revisión. Espera la verificación antes de subir otro.' });
+
+  // Block re-upload after payment was already approved
+  if (app.payment?.verification_status === 'approved')
+    return res.status(400).json({ error: 'El pago ya fue aprobado.' });
 
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
@@ -1863,6 +1903,20 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
       `Recibo de pago recibido — ${app.client.name}`,
       `<p>${user?.name || app.client.name} ha subido un recibo de pago para ${app.listing_title}.</p>
        <a href="${BASE_URL}/broker">Verificar en Dashboard</a>`
+    );
+  }
+
+  // Confirmation email → client
+  if (isClient && app.client.email) {
+    sendNotification(app.client.email,
+      `Recibo de pago recibido — ${app.listing_title}`,
+      et.layout({
+        title: 'Recibo de pago recibido',
+        subtitle: et.esc(app.listing_title),
+        body: et.p('Tu recibo de pago ha sido recibido y está pendiente de verificación por tu agente.')
+          + et.p('Te notificaremos cuando sea revisado.')
+          + et.button('Ver mi aplicación', `${BASE_URL}/my-applications?id=${app.id}`),
+      })
     );
   }
 
@@ -1937,7 +1991,7 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -2007,7 +2061,7 @@ router.get('/:id/payment/processed-receipt', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -2035,7 +2089,7 @@ router.post('/:id/message', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   if (!isBroker && !isClient && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
@@ -2695,7 +2749,7 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
   if (!app || !app.payment_plan) return res.status(404).json({ error: 'Plan no encontrado' });
   const user     = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
-    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+    (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isBroker = app.broker.user_id === req.user.sub;
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
@@ -2705,6 +2759,7 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
   if (!inst)       return res.status(404).json({ error: 'Cuota no encontrada' });
   if (!req.file)   return res.status(400).json({ error: 'Archivo requerido' });
   if (inst.status === 'approved') return res.status(400).json({ error: 'Este pago ya fue aprobado' });
+  if (inst.status === 'proof_uploaded') return res.status(400).json({ error: 'Ya subiste un comprobante para esta cuota. Espera la revisión antes de subir otro.' });
 
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
@@ -2829,7 +2884,7 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   const user     = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+    (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
