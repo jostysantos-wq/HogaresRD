@@ -213,6 +213,13 @@
         </div>
       </div>
       <div class="messages-area" id="messagesArea"></div>
+      <div id="quickReplies" style="display:flex;gap:5px;padding:5px 1rem 0;overflow-x:auto;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg-card);">
+        <button onclick="document.getElementById('msgInput').value='Hola, me interesa esta propiedad. ¿Sigue disponible?';document.getElementById('msgInput').focus()" style="white-space:nowrap;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.72rem;background:var(--bg);color:var(--text);cursor:pointer;">¿Disponible?</button>
+        <button onclick="document.getElementById('msgInput').value='¿Podria agendar una visita para ver la propiedad?';document.getElementById('msgInput').focus()" style="white-space:nowrap;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.72rem;background:var(--bg);color:var(--text);cursor:pointer;">Agendar visita</button>
+        <button onclick="document.getElementById('msgInput').value='¿Cual es el precio final? ¿Es negociable?';document.getElementById('msgInput').focus()" style="white-space:nowrap;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.72rem;background:var(--bg);color:var(--text);cursor:pointer;">Precio</button>
+        <button onclick="document.getElementById('msgInput').value='¿Tiene estacionamiento incluido?';document.getElementById('msgInput').focus()" style="white-space:nowrap;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.72rem;background:var(--bg);color:var(--text);cursor:pointer;">Parking</button>
+        <button onclick="document.getElementById('msgInput').value='Gracias por la informacion.';document.getElementById('msgInput').focus()" style="white-space:nowrap;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.72rem;background:var(--bg);color:var(--text);cursor:pointer;">Gracias</button>
+      </div>
       <div class="msg-input-bar" id="msgInputBar">
         <textarea class="msg-input" id="msgInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
         <button class="msg-send-btn" id="msgSendBtn" onclick="sendMessage()">Enviar</button>
@@ -393,11 +400,22 @@
       return;
     }
     if (conv.messages?.length) {
+      const hasIncoming = conv.messages.some(m => m.senderId !== ME?.id);
       appendMessages(conv.messages);
       lastTimestamp = conv.messages.at(-1).timestamp;
       // Mark as read
       fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' }).catch(() => {});
       loadConvList(); // refresh unread counts
+      // Play notification sound for incoming messages
+      if (hasIncoming) { try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime);
+        g.gain.setValueAtTime(0.12, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
+      } catch {} }
     }
   }
 
