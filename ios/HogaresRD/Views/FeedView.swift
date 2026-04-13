@@ -4,13 +4,13 @@ import SwiftUI
 
 /// A feed item is either a real listing or a sponsored ad.
 enum FeedItem: Identifiable {
-    case listing(Listing)
-    case ad(Ad, slot: Int) // slot index makes each ad placement unique
+    case listing(Listing, cycle: Int) // cycle differentiates reshuffled duplicates
+    case ad(Ad, slot: Int)
 
     var id: String {
         switch self {
-        case .listing(let l):      return "l-\(l.id)"
-        case .ad(let a, let slot): return "a-\(a.id)-\(slot)"
+        case .listing(let l, let c): return "l-\(l.id)-\(c)"
+        case .ad(let a, let slot):   return "a-\(a.id)-\(slot)"
         }
     }
 }
@@ -36,11 +36,9 @@ struct FeedView: View {
     /// How many listings between each ad slot
     private let adFrequency = 5
 
-    /// O(1) listing lookup for the feed interest-weight system
+    /// O(1) listing lookup — built from allListings (stable) instead of feed (growing)
     private var feedListingIndex: [String: Listing] {
-        feed.reduce(into: [:]) { dict, item in
-            if case .listing(let l) = item { dict[l.id] = l }
-        }
+        Dictionary(allListings.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
     }
 
     /// Timestamp recorded when each card index appears on screen
@@ -48,6 +46,8 @@ struct FeedView: View {
 
     /// Weighted interest scores keyed by listing attribute (type, province, city)
     @AppStorage("feed_prefs") private var prefJSON: String = "{}"
+    /// In-memory cache of prefs — avoids reading JSON from disk on every applyWeight call
+    @State private var _prefsCache: [String: Double]?
 
     var body: some View {
         NavigationStack {
@@ -71,6 +71,20 @@ struct FeedView: View {
                             .buttonStyle(.borderedProminent).tint(Color.rdBlue)
                     }
                     .padding(32)
+                } else if feed.isEmpty && !initialLoad {
+                    // Empty state — API returned no listings
+                    VStack(spacing: 20) {
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 48)).foregroundStyle(.white.opacity(0.4))
+                        Text("No hay propiedades disponibles")
+                            .font(.headline).foregroundStyle(.white.opacity(0.7))
+                        Text("Vuelve pronto — nuevas propiedades se publican cada día.")
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await refresh() } }
+                            .buttonStyle(.borderedProminent).tint(Color.rdBlue)
+                    }
+                    .padding(32)
                 } else if !feed.isEmpty {
                     GeometryReader { proxy in
                         ScrollView(.vertical, showsIndicators: false) {
@@ -78,7 +92,7 @@ struct FeedView: View {
                                 ForEach(Array(feed.enumerated()), id: \.element.id) { index, item in
                                     Group {
                                         switch item {
-                                        case .listing(let listing):
+                                        case .listing(let listing, _):
                                             ReelCard(
                                                 listing:     listing,
                                                 onTap:       { selectedListingID = listing.id },
@@ -117,6 +131,7 @@ struct FeedView: View {
                         }
                         .scrollTargetBehavior(.paging)
                         .scrollIndicators(.hidden)
+                        .refreshable { await refresh() }
                         .ignoresSafeArea()
                     }
                     .ignoresSafeArea()
@@ -171,14 +186,16 @@ struct FeedView: View {
                 let response = try await api.getListings(limit: 12, page: page)
                 allListings.append(contentsOf: response.listings)
                 totalPages = response.pages
-                feed.append(contentsOf: interleaved(ranked(response.listings)))
+                feed.append(contentsOf: interleaved(ranked(response.listings), cycle: 0))
                 errorMsg = nil
             } catch {
                 errorMsg = "No se pudo cargar el feed. Verifica tu conexión."
             }
         } else {
             reshuffles += 1
-            feed.append(contentsOf: interleaved(ranked(allListings)))
+            // Cap feed at ~500 items to prevent unbounded memory growth
+            if feed.count > 500 { feed = Array(feed.suffix(200)) }
+            feed.append(contentsOf: interleaved(ranked(allListings), cycle: reshuffles))
         }
 
         initialLoad = false
@@ -193,13 +210,13 @@ struct FeedView: View {
     }
 
     /// Inserts an ad slot every `adFrequency` listings, cycling through activeAds.
-    private func interleaved(_ listings: [Listing]) -> [FeedItem] {
-        guard !activeAds.isEmpty else { return listings.map { .listing($0) } }
+    private func interleaved(_ listings: [Listing], cycle: Int = 0) -> [FeedItem] {
+        guard !activeAds.isEmpty else { return listings.map { .listing($0, cycle: cycle) } }
         var result: [FeedItem] = []
         var adSlot = feed.filter { if case .ad = $0 { return true }; return false }.count
         var adIndex = adSlot % activeAds.count
         for (i, listing) in listings.enumerated() {
-            result.append(.listing(listing))
+            result.append(.listing(listing, cycle: cycle))
             if (i + 1) % adFrequency == 0 {
                 result.append(.ad(activeAds[adIndex % activeAds.count], slot: adSlot))
                 adIndex += 1
@@ -278,20 +295,26 @@ struct FeedView: View {
     // MARK: - Prefs Persistence ([String: Double] stored as JSON in AppStorage)
 
     private func loadPrefs() -> [String: Double] {
+        if let cached = _prefsCache { return cached }
         guard let data = prefJSON.data(using: .utf8),
               let d = try? JSONDecoder().decode([String: Double].self, from: data)
         else { return [:] }
+        _prefsCache = d
         return d
     }
 
     @State private var _prefSaveTask: Task<Void, Never>?
     private func savePrefs(_ p: [String: Double]) {
+        // Update in-memory cache immediately (prevents race condition on rapid calls)
+        _prefsCache = p
         // Debounce: batch rapid writes (dwell time, taps) into one disk write
         _prefSaveTask?.cancel()
         _prefSaveTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
             guard !Task.isCancelled else { return }
-            if let data = try? JSONEncoder().encode(p),
+            // Write the current cache (not the captured `p`) to ensure latest state
+            let current = _prefsCache ?? p
+            if let data = try? JSONEncoder().encode(current),
                let str  = String(data: data, encoding: .utf8) { prefJSON = str }
         }
     }
