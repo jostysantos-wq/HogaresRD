@@ -2477,7 +2477,7 @@
 
         return `<div class="agency-card${isCreator ? ' primary' : ''}">
           <div class="agency-card-top">
-            <div class="agent-avatar">${initials}</div>
+            <div class="agent-avatar">${a.avatarUrl ? `<img src="${a.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="${esc(a.agent || a.name || '')}">` : initials}</div>
             <div class="agent-info">
               <div class="agent-name">${esc(a.agent || a.contact || a.name)}</div>
               <div class="agency-name-tag"><a href="/inmobiliaria/${agSlug}" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${esc(a.name)}</a></div>

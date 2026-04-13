@@ -329,10 +329,20 @@ struct ConversationRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // ── Avatar with listing thumbnail ──
+            // ── Avatar: other party's profile picture, falling back to property image ──
             ZStack(alignment: .bottomTrailing) {
-                // Listing image or fallback
-                if let imgStr = conv.propertyImage, let url = URL(string: imgStr) {
+                if let avatarURL = conv.otherPartyAvatarURL(myId: myId) {
+                    CachedAsyncImage(url: avatarURL, maxPixelSize: 120) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            avatarFallback
+                        }
+                    }
+                    .frame(width: 52, height: 52)
+                    .clipShape(Circle())
+                } else if let imgStr = conv.propertyImage, let url = URL(string: imgStr) {
                     CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):

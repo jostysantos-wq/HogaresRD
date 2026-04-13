@@ -801,9 +801,31 @@ struct MessageBubble: View {
             if isMe { Spacer(minLength: 60) }
 
             VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
-                // Sender name + role badge (only for other party, and only when sender changes)
+                // Sender avatar + name + role badge (only for other party, and only when sender changes)
                 if !isMe && showSender {
                     HStack(spacing: 6) {
+                        if let avatarURL = msg.senderAvatarURL {
+                            CachedAsyncImage(url: avatarURL, maxPixelSize: 60) { phase in
+                                switch phase {
+                                case .success(let img):
+                                    img.resizable().scaledToFill()
+                                default:
+                                    Text(String(msg.senderName.prefix(1)))
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 22, height: 22)
+                                        .background(roleColor, in: Circle())
+                                }
+                            }
+                            .frame(width: 22, height: 22)
+                            .clipShape(Circle())
+                        } else {
+                            Text(String(msg.senderName.prefix(1)))
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 22, height: 22)
+                                .background(roleColor, in: Circle())
+                        }
                         Text(msg.senderName)
                             .font(.caption2).bold()
                             .foregroundStyle(roleColor)

@@ -270,9 +270,12 @@
 
     el.innerHTML = list.map(c => {
       const unread = c.unreadClient || 0;
-      const img    = c.propertyImage
-        ? `<img class="conv-thumb" src="/uploads/photos/${c.propertyImage}" onerror="this.style.display='none'">`
-        : `<div class="conv-thumb-placeholder">🏠</div>`;
+      const otherAvatar = c.brokerAvatar || c.clientAvatar;
+      const img = otherAvatar
+        ? `<img class="conv-thumb" src="${otherAvatar}" style="border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="conv-thumb-placeholder" style="display:none;">🏠</div>`
+        : c.propertyImage
+          ? `<img class="conv-thumb" src="/uploads/photos/${c.propertyImage}" onerror="this.style.display='none'">`
+          : `<div class="conv-thumb-placeholder">🏠</div>`;
       const badge  = unread > 0 ? `<span class="conv-badge">${unread}</span>` : '';
       const broker = c.brokerName ? `Agente: ${c.brokerName}` : 'Sin agente asignado aún';
       const closedIcon = c.closed ? '<span style="font-size:0.7rem;margin-left:4px;">🔒</span>' : '';
@@ -417,10 +420,18 @@
     }
     const mine = m.senderId === ME?.id;
     const time  = new Date(m.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    const avatarHtml = !mine && m.senderAvatar
+      ? `<img src="${m.senderAvatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-top:2px;">`
+      : '';
     return `
       <div class="msg-bubble-wrap ${mine ? 'mine' : 'theirs'}">
-        <div class="msg-bubble">${escHtml(m.text)}</div>
-        <div class="msg-meta">${mine ? 'Tú' : m.senderName} · ${time}</div>
+        <div style="display:flex;gap:6px;align-items:flex-start;${mine ? 'flex-direction:row-reverse;' : ''}">
+          ${avatarHtml}
+          <div>
+            <div class="msg-bubble">${escHtml(m.text)}</div>
+            <div class="msg-meta">${mine ? 'Tú' : m.senderName} · ${time}</div>
+          </div>
+        </div>
       </div>`;
   }
 

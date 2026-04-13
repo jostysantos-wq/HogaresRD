@@ -282,6 +282,11 @@ router.get('/:id', (req, res) => {
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
   if (listing.status === 'approved') {
+    // Enrich agency with current avatar if available
+    if (listing.agency?.user_id) {
+      const agentUser = store.getUserById(listing.agency.user_id);
+      if (agentUser) listing.agency.avatarUrl = agentUser.avatarUrl || null;
+    }
     return res.json(listing);
   }
 

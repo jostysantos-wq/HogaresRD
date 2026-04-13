@@ -225,9 +225,14 @@ router.get('/', requireLogin, (req, res) => {
   convs = convs.filter(c => wantArchived ? !!c.archived : !c.archived);
 
   // Return without full message array for list view (just metadata)
+  // Enrich with participant avatars for display in conversation list
   const list = convs.map(({ messages, ...meta }) => {
     const isMyConv = meta.brokerId === user.sub || meta.clientId === user.sub;
     const isUnclaimed = meta.inmobiliariaId && !meta.brokerId;
+
+    // Attach current avatars for both parties
+    meta.clientAvatar = store.getUserById(meta.clientId)?.avatarUrl || null;
+    meta.brokerAvatar = meta.brokerId ? (store.getUserById(meta.brokerId)?.avatarUrl || null) : null;
 
     // Strict: only the assigned broker and the client see lastMessage.
     // Unclaimed org conversations: ALL org agents see redacted metadata only.
@@ -380,6 +385,20 @@ router.get('/:id', requireLogin, async (req, res) => {
     : allMsgs.slice(-MAX_INITIAL);
   const hasMore = !since && allMsgs.length > MAX_INITIAL;
 
+  // Enrich messages with sender avatars (looked up at read time so they stay fresh)
+  const _avatarCache = {};
+  for (const m of messages) {
+    if (m.senderId && m.senderId !== 'system' && !_avatarCache.hasOwnProperty(m.senderId)) {
+      const u = store.getUserById(m.senderId);
+      _avatarCache[m.senderId] = u?.avatarUrl || null;
+    }
+    m.senderAvatar = _avatarCache[m.senderId] || null;
+  }
+
+  // Attach participant avatars
+  const clientAvatar = store.getUserById(conv.clientId)?.avatarUrl || null;
+  const brokerAvatar = conv.brokerId ? (store.getUserById(conv.brokerId)?.avatarUrl || null) : null;
+
   // Auto-mark-read on INITIAL load (no ?since= = user just opened the thread).
   // Use clientId match (not global role) to determine which side to clear —
   // a pro user who is the CLIENT should clear unreadClient, not unreadBroker.
@@ -391,7 +410,7 @@ router.get('/:id', requireLogin, async (req, res) => {
     if (dirty) store.saveConversation(conv);
   }
 
-  res.json({ ...conv, messages, hasMore, totalMessages: allMsgs.length });
+  res.json({ ...conv, messages, hasMore, totalMessages: allMsgs.length, clientAvatar, brokerAvatar });
 });
 
 // ── POST /api/conversations/:id/claim ────────────────────────────────────

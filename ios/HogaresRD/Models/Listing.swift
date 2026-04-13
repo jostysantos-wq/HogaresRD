@@ -222,10 +222,17 @@ struct Agency: Codable {
     let email: String?
     let phone: String?
     let userId: String?
+    let avatarUrl: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, email, phone
+        case name, email, phone, avatarUrl
         case userId = "user_id"
+    }
+
+    var avatarImageURL: URL? {
+        guard let av = avatarUrl, !av.isEmpty else { return nil }
+        if av.hasPrefix("http") { return URL(string: av) }
+        return URL(string: "\(APIService.baseURL)\(av)")
     }
 
     var slug: String? {

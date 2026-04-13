@@ -4653,7 +4653,7 @@
         const lvl = b.access_level || 1;
         const titleDisplay = b.team_title || b.jobTitle || '';
         return `<div class="equipo-card" data-id="${esc(b.id)}" style="overflow:visible;">
-          <div class="equipo-avatar">${esc(av)}</div>
+          <div class="equipo-avatar">${b.avatarUrl ? `<img src="${b.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(av)}</div>
           <div style="flex:1;min-width:0;">
             <div class="equipo-name">${esc(b.name)} <span style="display:inline-block;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:50px;background:${levelColors[lvl]}20;color:${levelColors[lvl]};vertical-align:middle;margin-left:4px;">${levelLabels[lvl]}</span></div>
             ${titleDisplay ? `<div class="equipo-meta" style="color:var(--accent);font-weight:600;font-size:0.74rem;">${esc(titleDisplay)}</div>` : ''}
@@ -4855,7 +4855,7 @@
       const rank = medals[i] || `<span style="font-size:0.82rem;font-weight:700;color:var(--text-muted);">${i + 1}</span>`;
       return `<div class="team-perf-card">
         <div class="team-perf-rank">${rank}</div>
-        <div class="equipo-avatar">${esc(av)}</div>
+        <div class="equipo-avatar">${b.avatarUrl ? `<img src="${b.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(av)}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:0.88rem;font-weight:700;color:var(--text);">${esc(b.name)}</div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.1rem;">${esc(b.email)}</div>
@@ -4901,7 +4901,7 @@
             return `<tr style="border-bottom:1px solid var(--border);">
               <td style="padding:0.5rem;">
                 <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <div class="equipo-avatar" style="width:28px;height:28px;font-size:0.6rem;">${esc(initials)}</div>
+                  <div class="equipo-avatar" style="width:28px;height:28px;font-size:0.6rem;">${a.avatarUrl ? `<img src="${a.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials)}</div>
                   <div>
                     <div style="font-weight:600;">${esc(a.name)}</div>
                     <div style="font-size:0.7rem;color:var(--text-muted);">${esc(a.role)}</div>
@@ -4988,7 +4988,7 @@
       el.innerHTML = `<div class="equipo-grid">${secs.map(s => {
         const av = (s.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
         return `<div class="equipo-card" style="overflow:visible;">
-          <div class="equipo-avatar" style="background:#16a34a;">${esc(av)}</div>
+          <div class="equipo-avatar" style="background:#16a34a;">${s.avatarUrl ? `<img src="${s.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(av)}</div>
           <div style="flex:1;min-width:0;">
             <div class="equipo-name">${esc(s.name)}</div>
             <div class="equipo-meta">${esc(s.email)}</div>

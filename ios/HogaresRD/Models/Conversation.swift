@@ -3,12 +3,20 @@ import Foundation
 // MARK: - Message
 
 struct ConvMessage: Codable, Identifiable {
-    let id:         String
-    let senderId:   String
-    let senderRole: String
-    let senderName: String
-    let text:       String
-    let timestamp:  String
+    let id:           String
+    let senderId:     String
+    let senderRole:   String
+    let senderName:   String
+    let senderAvatar: String?
+    let text:         String
+    let timestamp:    String
+
+    /// Resolved avatar URL (handles relative server paths)
+    var senderAvatarURL: URL? {
+        guard let av = senderAvatar, !av.isEmpty else { return nil }
+        if av.hasPrefix("http") { return URL(string: av) }
+        return URL(string: "\(APIService.baseURL)\(av)")
+    }
 }
 
 // MARK: - Conversation
@@ -20,8 +28,10 @@ struct Conversation: Codable, Identifiable {
     let propertyImage: String?
     let clientId:      String
     let clientName:    String
+    let clientAvatar:  String?
     let brokerId:      String?
     let brokerName:    String?
+    let brokerAvatar:  String?
     let createdAt:     String
     let updatedAt:     String
     let lastMessage:   String?
@@ -40,6 +50,14 @@ struct Conversation: Codable, Identifiable {
     let archivedBy:     String?
     let claimRequired:  Bool?
     let inmobiliariaId: String?
+
+    /// Avatar URL of the other party (for the current user to display)
+    func otherPartyAvatarURL(myId: String) -> URL? {
+        let av = clientId == myId ? brokerAvatar : clientAvatar
+        guard let av, !av.isEmpty else { return nil }
+        if av.hasPrefix("http") { return URL(string: av) }
+        return URL(string: "\(APIService.baseURL)\(av)")
+    }
 }
 
 // MARK: - Response wrappers
