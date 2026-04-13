@@ -42,7 +42,7 @@ const _sslConfig = (() => {
 const pool = new Pool({
   connectionString: _connStr,
   ssl: _sslConfig,
-  max: 10,
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });

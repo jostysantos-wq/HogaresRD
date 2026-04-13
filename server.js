@@ -85,7 +85,10 @@ const { createTransport: _createMailTransport } = require('./routes/mailer');
 const et = require('./utils/email-templates');
 const transporter = _createMailTransport();
 
-// ── Photo upload (multer) ──────────────────────────────────────
+// ── Spaces (CDN upload) ─────────────────────────────────────────
+const { uploadToSpaces, deleteFromSpaces, keyFromUrl, isConfigured: spacesConfigured } = require('./utils/spaces');
+
+// ── Photo upload (multer → Spaces or local) ────────────────────
 const PHOTOS_DIR = path.join(__dirname, 'public', 'uploads', 'photos');
 if (!fs.existsSync(PHOTOS_DIR)) fs.mkdirSync(PHOTOS_DIR, { recursive: true });
 
@@ -696,19 +699,25 @@ app.post('/api/upload/photos', uploadLimiter, photoUpload.array('photos', 30), a
 
   const urls = [];
   for (const f of req.files) {
+    let buf;
     try {
-      const buf = await fsp.readFile(f.path);
-      // rotate() honors existing EXIF orientation, then strips metadata.
-      // resize() only downscales (withoutEnlargement).
-      const out = await sharp(buf)
+      const raw = await fsp.readFile(f.path);
+      buf = await sharp(raw)
         .rotate()
         .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality: 82, mozjpeg: true })
         .toBuffer();
-      await fsp.writeFile(f.path, out);
+      await fsp.writeFile(f.path, buf);
     } catch (e) {
       console.warn('[upload/photos] sharp processing failed for', f.filename, '-', e.message);
-      // If sharp fails, fall back to the original file (user still gets upload).
+      buf = await fsp.readFile(f.path).catch(() => null);
+    }
+    // Upload to Spaces CDN if configured, otherwise serve from local disk
+    if (buf && spacesConfigured()) {
+      try {
+        const cdnUrl = await uploadToSpaces(buf, `photos/${f.filename}`, 'image/jpeg');
+        if (cdnUrl) { urls.push(cdnUrl); fsp.unlink(f.path).catch(() => {}); continue; }
+      } catch (e) { console.warn('[upload/photos] Spaces upload failed:', e.message); }
     }
     urls.push(`/uploads/photos/${f.filename}`);
   }
@@ -722,11 +731,23 @@ app.post('/api/upload/photos', uploadLimiter, photoUpload.array('photos', 30), a
 });
 
 // ── Blueprint upload endpoint ──────────────────────────────────
-app.post('/api/upload/blueprints', uploadLimiter, blueprintUpload.array('blueprints', 5), (req, res) => {
+app.post('/api/upload/blueprints', uploadLimiter, blueprintUpload.array('blueprints', 5), async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No se recibieron archivos.' });
   }
-  const urls = req.files.map(f => `/uploads/blueprints/${f.filename}`);
+  const urls = [];
+  for (const f of req.files) {
+    if (spacesConfigured()) {
+      try {
+        const buf = await fsp.readFile(f.path);
+        const ext = path.extname(f.originalname).toLowerCase();
+        const mime = ext === '.pdf' ? 'application/pdf' : 'image/jpeg';
+        const cdnUrl = await uploadToSpaces(buf, `blueprints/${f.filename}`, mime);
+        if (cdnUrl) { urls.push(cdnUrl); fsp.unlink(f.path).catch(() => {}); continue; }
+      } catch (e) { console.warn('[upload/blueprints] Spaces upload failed:', e.message); }
+    }
+    urls.push(`/uploads/blueprints/${f.filename}`);
+  }
   res.json({ urls });
 }, (err, req, res, next) => {
   const safe = err.code === 'LIMIT_FILE_SIZE' ? 'Archivo demasiado grande' :
@@ -763,18 +784,32 @@ const avatarUpload = multer({
 app.post('/api/upload/avatar', (req, res, next) => {
   const { userAuth } = require('./routes/auth');
   userAuth(req, res, next);
-}, avatarUpload.single('avatar'), (req, res) => {
+}, avatarUpload.single('avatar'), async (req, res) => {
   console.log('[avatar] Upload received:', req.file ? { name: req.file.originalname, mime: req.file.mimetype, size: req.file.size } : 'NO FILE');
   if (!req.file) return res.status(400).json({ error: 'No se recibió imagen.' });
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   // Delete old avatar file if it exists
-  if (user.avatarUrl && user.avatarUrl.startsWith('/uploads/avatars/')) {
-    try { fs.unlinkSync(path.join(__dirname, 'public', user.avatarUrl)); } catch {}
+  if (user.avatarUrl) {
+    const oldKey = keyFromUrl(user.avatarUrl);
+    if (oldKey) deleteFromSpaces(oldKey);
+    else if (user.avatarUrl.startsWith('/uploads/avatars/')) {
+      try { fs.unlinkSync(path.join(__dirname, 'public', user.avatarUrl)); } catch {}
+    }
   }
 
-  user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  // Upload to Spaces if configured
+  let avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  if (spacesConfigured()) {
+    try {
+      const buf = await fsp.readFile(req.file.path);
+      const cdnUrl = await uploadToSpaces(buf, `avatars/${req.file.filename}`, req.file.mimetype || 'image/jpeg');
+      if (cdnUrl) { avatarUrl = cdnUrl; fsp.unlink(req.file.path).catch(() => {}); }
+    } catch (e) { console.warn('[avatar] Spaces upload failed:', e.message); }
+  }
+
+  user.avatarUrl = avatarUrl;
   store.saveUser(user);
   console.log('[avatar] Saved:', user.avatarUrl);
   res.json({ success: true, avatarUrl: user.avatarUrl });

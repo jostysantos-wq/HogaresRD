@@ -47,11 +47,21 @@ router.get('/active', async (req, res) => {
 router.post('/upload', adminSessionAuth, adUpload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
   try {
+    const { uploadToSpaces, isConfigured: spacesConfigured } = require('../utils/spaces');
     const fname = `ad_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.webp`;
-    await sharp(req.file.buffer)
+    const buf = await sharp(req.file.buffer)
       .resize(1200, 628, { fit: 'cover' })
       .webp({ quality: 85 })
-      .toFile(path.join(ADS_UPLOAD_DIR, fname));
+      .toBuffer();
+    // Upload to Spaces CDN if configured
+    if (spacesConfigured()) {
+      try {
+        const cdnUrl = await uploadToSpaces(buf, `ads/${fname}`, 'image/webp');
+        if (cdnUrl) return res.json({ url: cdnUrl });
+      } catch (e) { console.warn('[ads] Spaces upload failed:', e.message); }
+    }
+    // Fallback: save to local disk
+    await sharp(buf).toFile(path.join(ADS_UPLOAD_DIR, fname));
     res.json({ url: `/uploads/ads/${fname}` });
   } catch (e) {
     res.status(500).json({ error: 'Error al procesar imagen: ' + e.message });

@@ -8509,7 +8509,7 @@
     fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
     brkLoadList();
 
-    brkPollTimer = setInterval(() => brkPoll(id), 3000);
+    brkPollTimer = setInterval(() => brkPoll(id), 5000);
   };
 
   // Notification sound for incoming messages (Web Audio API — no file needed)

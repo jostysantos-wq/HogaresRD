@@ -230,7 +230,7 @@ struct ContentView: View {
         stopUnreadPolling()
         unreadPollTask = Task { @MainActor in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(45))
                 if Task.isCancelled { return }
                 await refreshUnreadCount()
             }
