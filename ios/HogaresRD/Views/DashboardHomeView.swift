@@ -23,7 +23,7 @@ struct DashboardHomeView: View {
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Buenos dias" }
+        if hour < 12 { return "Buenos días" }
         if hour < 18 { return "Buenas tardes" }
         return "Buenas noches"
     }

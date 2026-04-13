@@ -651,7 +651,7 @@ struct AppSettingsView: View {
                 HStack {
                     Text("Versión")
                     Spacer()
-                    Text("1.0.0").foregroundStyle(.secondary)
+                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0").foregroundStyle(.secondary)
                 }
             }
         }

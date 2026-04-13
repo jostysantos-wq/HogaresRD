@@ -98,9 +98,9 @@ struct ProfileView: View {
                     HStack {
                         Label("Verificación en dos pasos", systemImage: "shield.lefthalf.filled.badge.checkmark")
                         Spacer()
-                        Text("Desactivado")
+                        Text(api.currentUser?.twoFAEnabled == true ? "Activado" : "Desactivado")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(api.currentUser?.twoFAEnabled == true ? .green : .secondary)
                     }
                 }
             }
@@ -111,84 +111,11 @@ struct ProfileView: View {
                 } label: {
                     Label("Privacidad y datos", systemImage: "hand.raised.fill")
                 }
-                NavigationLink {
-                    ConnectedAppsView()
-                } label: {
-                    Label("Aplicaciones conectadas", systemImage: "app.badge.checkmark.fill")
-                }
-                NavigationLink {
-                    ActiveSessionsView()
-                } label: {
-                    Label("Sesiones activas", systemImage: "iphone.and.arrow.forward")
-                }
             }
 
-            // ── Client-only section ──
-            if !user.isAgency {
-                Section("Cuenta") {
-                    NavigationLink {
-                        SavedListingsView().environmentObject(saved)
-                    } label: {
-                        HStack {
-                            Label("Mis favoritos", systemImage: "heart.fill")
-                            Spacer()
-                            if !saved.savedIDs.isEmpty {
-                                Text("\(saved.savedIDs.count)")
-                                    .font(.caption).bold()
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 7).padding(.vertical, 3)
-                                    .background(Color.rdRed)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    }
-                    NavigationLink {
-                        ConversationsView().environmentObject(api)
-                    } label: {
-                        Label("Mis mensajes", systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    NavigationLink {
-                        ApplicationsView().environmentObject(api)
-                    } label: {
-                        Label("Mis aplicaciones", systemImage: "doc.text.fill")
-                    }
-                }
-            }
-
-            // Appearance
-            Section("Apariencia") {
-                Picker(selection: $schemePref) {
-                    Label("Sistema", systemImage: "circle.lefthalf.filled").tag("system")
-                    Label("Claro",   systemImage: "sun.max.fill").tag("light")
-                    Label("Oscuro",  systemImage: "moon.fill").tag("dark")
-                } label: {
-                    Label("Tema", systemImage: "paintbrush.fill")
-                }
-                .pickerStyle(.menu)
-            }
-
-            // Support
-            Section("Ayuda") {
-                Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
-                    Label("Contactar soporte", systemImage: "message.fill")
-                }
-                Link(destination: URL(string: "https://hogaresrd.com/terminos")!) {
-                    Label("Términos de uso", systemImage: "doc.text.fill")
-                }
-                Link(destination: URL(string: "https://hogaresrd.com/blog")!) {
-                    Label("Blog HogaresRD", systemImage: "newspaper.fill")
-                }
-            }
-
-            // Logout
-            Section {
-                Button(role: .destructive) {
-                    api.logout()
-                } label: {
-                    Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
-                        .foregroundStyle(Color.rdRed)
-                }
-            }
+            // Note: Favorites, Messages, Applications, Appearance, Support, and Logout
+            // are all accessible from ProfileTabView (the parent). This view focuses
+            // on security and privacy settings only.
         }
         .navigationTitle("Mi Perfil")
     }
@@ -702,6 +629,7 @@ struct PrivacySettingsView: View {
     @State private var doNotSell        = Self.loadBool("priv_doNotSell")
     @State private var doNotSellConfirmation: String?
     @State private var showDeleteAlert = false
+    @State private var deleteError: String?
 
     var body: some View {
         List {
@@ -776,32 +704,7 @@ struct PrivacySettingsView: View {
 
             Section("Tus datos") {
                 NavigationLink {
-                    // Placeholder
-                    VStack(spacing: 16) {
-                        Image(systemName: "arrow.down.doc.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.rdBlue)
-                        Text("Solicitar descarga de datos")
-                            .font(.headline)
-                        Text("Recibirás un archivo con todos tus datos personales almacenados en HogaresRD.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                        Button {
-                        } label: {
-                            Text("Solicitar descarga")
-                                .bold()
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.rdBlue)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .padding(.horizontal, 32)
-                    }
-                    .navigationTitle("Descargar datos")
-                    .navigationBarTitleDisplayMode(.inline)
+                    DataDownloadRequestView()
                 } label: {
                     Label("Descargar mis datos", systemImage: "arrow.down.doc.fill")
                 }
@@ -839,12 +742,17 @@ struct PrivacySettingsView: View {
                         try await api.deleteAccount()
                         api.logout()
                     } catch {
-                        // Silent fail — user will stay logged in
+                        deleteError = error.localizedDescription
                     }
                 }
             }
         } message: {
             Text("Esta accion es permanente e irreversible. Se eliminaran todos tus datos, propiedades guardadas, conversaciones y documentos.")
+        }
+        .alert("Error al eliminar cuenta", isPresented: .constant(deleteError != nil)) {
+            Button("OK") { deleteError = nil }
+        } message: {
+            Text(deleteError ?? "Intenta de nuevo mas tarde o contacta soporte.")
         }
     }
 
@@ -866,7 +774,83 @@ struct PrivacySettingsView: View {
     }
 }
 
-// MARK: - Connected Apps
+// MARK: - Data Download Request
+
+struct DataDownloadRequestView: View {
+    @EnvironmentObject var api: APIService
+    @State private var requested = false
+    @State private var loading = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "arrow.down.doc.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.rdBlue)
+            Text("Solicitar descarga de datos")
+                .font(.headline)
+            Text("Recibirás un correo electrónico con un enlace para descargar todos tus datos personales almacenados en HogaresRD.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            if requested {
+                Label("Solicitud enviada. Revisa tu correo.", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.green)
+            } else if let error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            if !requested {
+                Button {
+                    Task {
+                        loading = true
+                        error = nil
+                        do {
+                            // Request data download via email
+                            guard let url = URL(string: "\(APIService.baseURL)/api/user/request-data-download") else { return }
+                            var req = URLRequest(url: url)
+                            req.httpMethod = "POST"
+                            req.setValue("Bearer \(api.token ?? "")", forHTTPHeaderField: "Authorization")
+                            let (_, resp) = try await URLSession.shared.data(for: req)
+                            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                                throw APIError.server("Error al solicitar descarga")
+                            }
+                            withAnimation { requested = true }
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                        loading = false
+                    }
+                } label: {
+                    if loading {
+                        ProgressView().frame(maxWidth: .infinity).padding()
+                    } else {
+                        Text("Solicitar descarga")
+                            .bold()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.rdBlue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 32)
+            }
+            Spacer()
+        }
+        .navigationTitle("Descargar datos")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Connected Apps (hidden — coming soon)
 
 struct ConnectedAppsView: View {
     @State private var connectedApps: [ConnectedApp] = ConnectedApp.samples

@@ -61,7 +61,7 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             FeedView()
-                .tabItem { Label("Feed", systemImage: "newspaper.fill") }
+                .tabItem { Label("Inicio", systemImage: "newspaper.fill") }
                 .tag(0)
 
             LazyView(BrowseView())
@@ -516,6 +516,7 @@ struct ContentView: View {
 
 struct MessagesTabView: View {
     @EnvironmentObject var api: APIService
+    @State private var showAuth = false
 
     var body: some View {
         NavigationStack {
@@ -526,6 +527,9 @@ struct MessagesTabView: View {
                 messagesGuestView
                     .navigationTitle("Mensajes")
             }
+        }
+        .sheet(isPresented: $showAuth) {
+            AuthView(initialMode: .login).environmentObject(api)
         }
     }
 
@@ -546,6 +550,14 @@ struct MessagesTabView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+            Button { showAuth = true } label: {
+                Text("Iniciar sesión")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 32).padding(.vertical, 12)
+                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
             Spacer()
         }
     }
@@ -555,6 +567,7 @@ struct MessagesTabView: View {
 
 struct TasksTabView: View {
     @EnvironmentObject var api: APIService
+    @State private var showAuth = false
 
     var body: some View {
         NavigationStack {
@@ -565,6 +578,9 @@ struct TasksTabView: View {
                 tasksGuestView
                     .navigationTitle("Tareas")
             }
+        }
+        .sheet(isPresented: $showAuth) {
+            AuthView(initialMode: .login).environmentObject(api)
         }
     }
 
@@ -585,6 +601,14 @@ struct TasksTabView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+            Button { showAuth = true } label: {
+                Text("Iniciar sesión")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 32).padding(.vertical, 12)
+                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
             Spacer()
         }
     }
