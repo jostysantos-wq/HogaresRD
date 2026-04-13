@@ -64,7 +64,7 @@ final class ApplicationEventStream {
 
     private func consume(continuation: AsyncThrowingStream<ApplicationState, Error>.Continuation) async throws {
         guard let api = api else { throw StreamError.notAuthenticated }
-        guard let token = api.token else { throw StreamError.notAuthenticated }
+        guard let token = await api.token else { throw StreamError.notAuthenticated }
 
         // The SSE endpoint uses the ?token= fallback because URLSession
         // cannot attach custom headers to async-bytes streaming requests

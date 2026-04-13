@@ -19,8 +19,22 @@ private final class ResponseCache {
         return entry.data as? T
     }
 
+    private let maxEntries = 200
+
     func set(_ key: String, value: Any, ttl: TimeInterval = 120) {
         lock.lock(); defer { lock.unlock() }
+        // Evict expired entries when approaching capacity
+        if store.count >= maxEntries {
+            let now = Date()
+            store = store.filter { now < $0.value.expires }
+        }
+        // If still at capacity, evict oldest entries
+        if store.count >= maxEntries {
+            let oldest = store.sorted { $0.value.expires < $1.value.expires }
+            for entry in oldest.prefix(store.count - maxEntries + 1) {
+                store.removeValue(forKey: entry.key)
+            }
+        }
         store[key] = (data: value, expires: Date().addingTimeInterval(ttl))
     }
 
@@ -37,6 +51,7 @@ private final class ResponseCache {
 
 // MARK: - APIService
 
+@MainActor
 class APIService: ObservableObject {
     static let shared = APIService()
     static let baseURL = apiBase
@@ -47,13 +62,13 @@ class APIService: ObservableObject {
     /// Handles 401 Unauthorized — token expired or invalidated.
     /// Logs the user out so the app shows the login screen instead of
     /// repeatedly failing with "No autorizado" on every request.
-    func handleUnauthorized(_ response: URLResponse?) {
+    nonisolated func handleUnauthorized(_ response: URLResponse?) {
         guard let http = response as? HTTPURLResponse, http.statusCode == 401 else { return }
         Task { @MainActor in
-            if currentUser != nil {
+            if self.currentUser != nil {
                 print("[APIService] 401 received — token expired, logging out")
                 ErrorReporter.shared.report("Token expired — auto-logout", context: "401 handler")
-                logout()
+                self.logout()
             }
         }
     }
@@ -2244,6 +2259,29 @@ class APIService: ObservableObject {
 
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error subiendo comprobante")
+    }
+
+    /// Upload processed receipt (broker/agent side) after verifying payment
+    func uploadProcessedReceipt(applicationId: String, fileData: Data, filename: String) async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/processed-receipt")!
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        let mime = filename.lowercased().hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error subiendo recibo procesado")
     }
 
     // MARK: - Cancel / Retention

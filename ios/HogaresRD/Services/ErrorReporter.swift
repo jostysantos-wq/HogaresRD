@@ -18,6 +18,18 @@ final class ErrorReporter {
     private let maxBuffer = 10
     private let flushInterval: TimeInterval = 30
 
+    // Thread-safe user info from UserDefaults (avoids @MainActor isolation on APIService)
+    private var _cachedUserId: String? {
+        guard let data = UserDefaults.standard.data(forKey: "rd_user"),
+              let user = try? JSONDecoder().decode(User.self, from: data) else { return nil }
+        return user.id
+    }
+    private var _cachedUserRole: String? {
+        guard let data = UserDefaults.standard.data(forKey: "rd_user"),
+              let user = try? JSONDecoder().decode(User.self, from: data) else { return nil }
+        return user.role
+    }
+
     private init() {
         startFlushLoop()
     }
@@ -87,8 +99,8 @@ final class ErrorReporter {
             "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?",
             "osVersion":  UIDevice.current.systemVersion,
             "device":     UIDevice.current.model,
-            "userId":     APIService.shared.currentUser?.id as Any,
-            "userRole":   APIService.shared.currentUser?.role as Any,
+            "userId":     _cachedUserId as Any,
+            "userRole":   _cachedUserRole as Any,
             "endpoint":   endpoint as Any,
             "statusCode": statusCode as Any,
         ]

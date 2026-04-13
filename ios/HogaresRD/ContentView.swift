@@ -52,7 +52,7 @@ struct ContentView: View {
     @State private var unreadMessages = 0
     // Actionable task count — tasks either assigned to me that I haven't
     // completed, or tasks submitted for my review. Drives the badge on
-    // the Profile tab (which is where the Tareas menu lives).
+    // the dedicated Tareas tab.
     @State private var unreadTasks = 0
     @State private var unreadPollTask: Task<Void, Never>?
 
@@ -71,10 +71,14 @@ struct ContentView: View {
                 .badge(unreadMessages)
                 .tag(2)
 
-            LazyView(ProfileTabView(unreadTasks: unreadTasks))
-                .tabItem { Label("Perfil", systemImage: "person.fill") }
+            LazyView(TasksTabView())
+                .tabItem { Label("Tareas", systemImage: "checklist") }
                 .badge(unreadTasks)
                 .tag(3)
+
+            LazyView(ProfileTabView())
+                .tabItem { Label("Perfil", systemImage: "person.fill") }
+                .tag(4)
         }
         .tint(Color.rdBlue)
         .overlay {
@@ -151,10 +155,9 @@ struct ContentView: View {
             }
         }
         .onChange(of: selectedTab) { _, newTab in
-            // Opening the Messages tab clears the badge optimistically
-            // (the thread read endpoint will clear it server-side once
-            // the user opens a specific conversation).
-            if newTab == 2 {
+            // Opening the Messages or Tasks tab refreshes the badge
+            // so it clears/updates promptly.
+            if newTab == 2 || newTab == 3 {
                 Task { await refreshUnreadCount() }
             }
         }
@@ -255,8 +258,7 @@ struct ContentView: View {
             guard !popupDismissed else { return }
             // Re-check — refreshUser() may have updated the field to true
             guard api.currentUser?.emailVerified != true else { return }
-            // One final server check to avoid false positives from stale cache
-            await api.refreshUser()
+            // onAppear already refreshed the user — just re-check the field
             guard api.currentUser?.emailVerified != true else { return }
             withAnimation(.easeInOut(duration: 0.25)) { showPopup = true }
         }
@@ -371,14 +373,13 @@ struct ContentView: View {
         switch type {
         case "new_message":
             selectedTab = 2 // Messages tab
-        case "tour_update", "tour_reminder":
-            selectedTab = 3 // Profile tab (tours are in profile)
-        case "new_application", "status_changed", "payment_approved", "document_reviewed":
-            selectedTab = 3 // Profile tab (applications are in profile)
         case "task_assigned", "task_requested":
-            // Tasks live under Profile → Tareas. Route there so the
-            // client lands directly on the work the agent asked for.
-            selectedTab = 3
+            selectedTab = 3 // Tasks tab — direct access
+            Task { await refreshUnreadCount() }
+        case "tour_update", "tour_reminder":
+            selectedTab = 4 // Profile tab (tours are in profile)
+        case "new_application", "status_changed", "payment_approved", "document_reviewed":
+            selectedTab = 4 // Profile tab (applications are in profile)
         case "saved_search_match", "new_listing":
             selectedTab = 1 // Browse/Explore tab
         default:
@@ -426,6 +427,45 @@ struct MessagesTabView: View {
     }
 }
 
+// MARK: - Tasks Tab
+
+struct TasksTabView: View {
+    @EnvironmentObject var api: APIService
+
+    var body: some View {
+        NavigationStack {
+            if api.currentUser != nil {
+                TasksView()
+                    .environmentObject(api)
+            } else {
+                tasksGuestView
+                    .navigationTitle("Tareas")
+            }
+        }
+    }
+
+    private var tasksGuestView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            ZStack {
+                Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 110, height: 110)
+                Image(systemName: "checklist")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color.rdBlue)
+            }
+            VStack(spacing: 8) {
+                Text("Tus tareas")
+                    .font(.title2).bold()
+                Text("Inicia sesión para ver las tareas\nasignadas a ti.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Spacer()
+        }
+    }
+}
+
 // MARK: - Profile Tab (replaces old Alertas + ProfileMenuView)
 
 struct ProfileTabView: View {
@@ -433,10 +473,6 @@ struct ProfileTabView: View {
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @State private var showPost = false
-    // Red badge count for the Tareas menu row. Propagated down from
-    // ContentView so the same /api/tasks/badge-count poll drives
-    // BOTH the Profile tab badge and the menu row indicator.
-    var unreadTasks: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -680,21 +716,6 @@ struct ProfileTabView: View {
                 Label("Visitas agendadas", systemImage: "calendar.badge.clock")
             }
             NavigationLink {
-                TasksView().environmentObject(api)
-            } label: {
-                HStack {
-                    Label("Tareas", systemImage: "checklist")
-                    Spacer()
-                    if unreadTasks > 0 {
-                        Text("\(unreadTasks)")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Color.red, in: Capsule())
-                    }
-                }
-            }
-            NavigationLink {
                 AdCampaignsView().environmentObject(api)
             } label: {
                 Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
@@ -747,21 +768,6 @@ struct ProfileTabView: View {
                 ApplicationsView()
             } label: {
                 Label("Mis aplicaciones", systemImage: "doc.text.fill")
-            }
-            NavigationLink {
-                TasksView().environmentObject(api)
-            } label: {
-                HStack {
-                    Label("Mis tareas", systemImage: "checklist")
-                    Spacer()
-                    if unreadTasks > 0 {
-                        Text("\(unreadTasks)")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Color.red, in: Capsule())
-                    }
-                }
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)

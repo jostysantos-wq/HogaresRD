@@ -243,9 +243,9 @@ struct ConversationsView: View {
         if conversations.isEmpty { loading = true }
         errorMsg = nil
         do {
-            let active  = try await api.getConversations(archived: false)
-            let archived = try await api.getConversations(archived: true)
-            conversations = active + archived
+            async let active  = api.getConversations(archived: false)
+            async let archived = api.getConversations(archived: true)
+            conversations = try await active + archived
         } catch let decodingError as DecodingError {
             errorMsg = decodingErrorMessage(decodingError)
         } catch {
@@ -436,14 +436,29 @@ struct ConversationRow: View {
         }
     }
 
+    // Cached formatters — DateFormatter/ISO8601DateFormatter allocation is expensive
+    private static let iso8601Frac: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let iso8601NoFrac: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    private static let timeFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "h:mm a"; f.locale = Locale(identifier: "es_DO"); return f
+    }()
+    private static let dayNameFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEE"; f.locale = Locale(identifier: "es_DO"); return f
+    }()
+    private static let shortDateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "d/M/yy"; return f
+    }()
+
     private func relativeTime(_ iso: String) -> String {
-        let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var date = fmt.date(from: iso)
-        if date == nil {
-            fmt.formatOptions = [.withInternetDateTime]
-            date = fmt.date(from: iso)
-        }
+        let date = Self.iso8601Frac.date(from: iso) ?? Self.iso8601NoFrac.date(from: iso)
         guard let d = date else { return "" }
 
         let now = Date()
@@ -452,21 +467,13 @@ struct ConversationRow: View {
         if diff < 60 { return "Ahora" }
         if diff < 3600 { return "\(Int(diff / 60))m" }
         if Calendar.current.isDateInToday(d) {
-            let df = DateFormatter()
-            df.dateFormat = "h:mm a"
-            df.locale = Locale(identifier: "es_DO")
-            return df.string(from: d)
+            return Self.timeFmt.string(from: d)
         }
         if Calendar.current.isDateInYesterday(d) { return "Ayer" }
         let days = Calendar.current.dateComponents([.day], from: d, to: now).day ?? 0
         if days < 7 {
-            let df = DateFormatter()
-            df.dateFormat = "EEE"
-            df.locale = Locale(identifier: "es_DO")
-            return df.string(from: d).capitalized
+            return Self.dayNameFmt.string(from: d).capitalized
         }
-        let df = DateFormatter()
-        df.dateFormat = "d/M/yy"
-        return df.string(from: d)
+        return Self.shortDateFmt.string(from: d)
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import ImageIO
 
 // MARK: - Image Cache
 
@@ -21,20 +22,48 @@ final class ImageCache {
     }
 }
 
+// MARK: - Image Downsampling
+
+/// Decodes an image at the exact pixel size needed for display, avoiding
+/// the massive memory cost of decoding full-resolution photos.
+/// A 4000×3000 image displayed at 400pt (800px @2x) drops from ~48 MB to ~2.5 MB.
+private func downsample(data: Data, maxPixelSize: CGFloat) -> UIImage? {
+    let options: [CFString: Any] = [
+        kCGImageSourceShouldCache: false
+    ]
+    guard let source = CGImageSourceCreateWithData(data as CFData, options as CFDictionary) else {
+        return UIImage(data: data)
+    }
+    let downsampleOptions: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+    ]
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, downsampleOptions as CFDictionary) else {
+        return UIImage(data: data)
+    }
+    return UIImage(cgImage: cgImage)
+}
+
 // MARK: - CachedAsyncImage
 
 /// Drop-in replacement for `AsyncImage` that caches downloaded images
 /// in memory via `NSCache`. Prevents re-downloads when scrolling back
 /// through lists or navigating between tabs.
+///
+/// Images are downsampled to `maxPixelSize` on decode, dramatically
+/// reducing memory usage for large property photos.
 struct CachedAsyncImage<Content: View>: View {
     let url: URL?
+    let maxPixelSize: CGFloat
     let content: (AsyncImagePhase) -> Content
 
     @State private var phase: AsyncImagePhase = .empty
     @State private var loadTask: Task<Void, Never>?
 
-    init(url: URL?, @ViewBuilder content: @escaping (AsyncImagePhase) -> Content) {
+    init(url: URL?, maxPixelSize: CGFloat = 800, @ViewBuilder content: @escaping (AsyncImagePhase) -> Content) {
         self.url = url
+        self.maxPixelSize = maxPixelSize
         self.content = content
     }
 
@@ -60,11 +89,11 @@ struct CachedAsyncImage<Content: View>: View {
         }
 
         phase = .empty
-        loadTask = Task {
+        loadTask = Task.detached(priority: .userInitiated) { [maxPixelSize] in
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 guard !Task.isCancelled else { return }
-                if let uiImage = UIImage(data: data) {
+                if let uiImage = downsample(data: data, maxPixelSize: maxPixelSize) {
                     ImageCache.shared.set(url, image: uiImage)
                     await MainActor.run {
                         phase = .success(Image(uiImage: uiImage))

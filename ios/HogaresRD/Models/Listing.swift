@@ -103,13 +103,17 @@ struct Listing: Decodable, Identifiable, Equatable {
         amenities            = (try? c.decode([String].self, forKey: .amenities)) ?? []
     }
 
+    private static let priceFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = "USD"
+        f.maximumFractionDigits = 0
+        return f
+    }()
+
     var priceFormatted: String {
         if let n = Double(price) {
-            let f = NumberFormatter()
-            f.numberStyle = .currency
-            f.currencyCode = "USD"
-            f.maximumFractionDigits = 0
-            return f.string(from: NSNumber(value: n)) ?? "$\(price)"
+            return Self.priceFormatter.string(from: NSNumber(value: n)) ?? "$\(price)"
         }
         return "$\(price)"
     }

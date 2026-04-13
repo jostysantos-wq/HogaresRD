@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 // MARK: - Tasks list
 
@@ -452,6 +453,8 @@ struct TaskDetailSheet: View {
     @State private var showNASheet = false
     @State private var naNote = ""
     @State private var markingNA = false
+    @State private var paymentAmount = ""
+    @State private var showFileImporter = false
 
     // The current user, for action-gating
     private var currentUserId: String { api.currentUser?.id ?? "" }
@@ -462,16 +465,22 @@ struct TaskDetailSheet: View {
     /// Does this task require a file upload?
     private var needsUpload: Bool {
         guard task.status != "completada" else { return false }
-        let uploadEvents = ["documents_requested", "documents_insufficient", "payment_required", "payment_rejected"]
+        let uploadEvents = ["documents_requested", "documents_insufficient", "payment_plan_created", "payment_uploaded"]
         return task.applicationId != nil && uploadEvents.contains(task.sourceEvent ?? "")
     }
 
-    /// Is this a payment-related task?
+    /// Is this a payment-related task? (client or broker side)
     private var isPaymentTask: Bool {
-        ["payment_required", "payment_rejected"].contains(task.sourceEvent ?? "")
+        ["payment_plan_created", "payment_uploaded"].contains(task.sourceEvent ?? "")
+    }
+
+    /// Is this a broker-side payment verification task?
+    private var isBrokerPaymentTask: Bool {
+        task.sourceEvent == "payment_uploaded"
     }
 
     private var uploadLabel: String {
+        if isBrokerPaymentTask { return "Subir recibo procesado" }
         if isPaymentTask { return "Subir comprobante de pago" }
         return "Subir documento"
     }
@@ -484,8 +493,9 @@ struct TaskDetailSheet: View {
     private var taskIcon: String {
         switch task.sourceEvent {
         case "documents_requested", "documents_insufficient": return "doc.text.fill"
-        case "payment_required", "payment_rejected": return "creditcard.fill"
+        case "payment_plan_created": return "creditcard.fill"
         case "payment_uploaded": return "checkmark.seal.fill"
+        case "receipt_ready": return "doc.badge.checkmark"
         case "tour_scheduled": return "calendar.badge.clock"
         default: return "checklist"
         }
@@ -494,8 +504,9 @@ struct TaskDetailSheet: View {
     private var taskColor: Color {
         switch task.sourceEvent {
         case "documents_requested", "documents_insufficient": return .orange
-        case "payment_required", "payment_rejected": return Color.rdBlue
+        case "payment_plan_created": return Color.rdBlue
         case "payment_uploaded": return Color.rdGreen
+        case "receipt_ready": return Color.rdGreen
         default: return Color.rdBlue
         }
     }
@@ -681,39 +692,71 @@ struct TaskDetailSheet: View {
                                 .font(.system(size: 32))
                                 .foregroundStyle(taskColor)
 
-                            Text(isPaymentTask ? "Sube tu comprobante de pago" : "Sube los documentos solicitados")
+                            Text(isBrokerPaymentTask
+                                 ? "Sube el recibo procesado del pago"
+                                 : isPaymentTask ? "Sube tu comprobante de pago" : "Sube los documentos solicitados")
                                 .font(.subheadline.bold())
                                 .multilineTextAlignment(.center)
 
-                            Text(isPaymentTask
-                                 ? "Toma una foto o selecciona el comprobante de tu galeria."
-                                 : "Toma una foto de tu documento o selecciona de tu galeria. Formatos: JPG, PNG, PDF.")
+                            Text(isBrokerPaymentTask
+                                 ? "Sube el recibo oficial procesado para el cliente."
+                                 : isPaymentTask
+                                   ? "Toma una foto o selecciona el comprobante de tu galeria."
+                                   : "Toma una foto de tu documento o selecciona de tu galeria. Formatos: JPG, PNG, PDF.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
+
+                            // Amount input for client payment tasks
+                            if isPaymentTask && !isBrokerPaymentTask {
+                                TextField("Monto del pago (ej: 150000)", text: $paymentAmount)
+                                    .keyboardType(.decimalPad)
+                                    .textFieldStyle(.roundedBorder)
+                            }
 
                             if uploadSuccess {
                                 Label("Documento subido correctamente", systemImage: "checkmark.circle.fill")
                                     .font(.subheadline.bold())
                                     .foregroundStyle(Color.rdGreen)
                             } else {
+                                let needsAmount = isPaymentTask && !isBrokerPaymentTask && paymentAmount.trimmingCharacters(in: .whitespaces).isEmpty
                                 Button { showPicker = true } label: {
                                     HStack {
                                         if uploading {
                                             ProgressView().tint(.white)
                                         } else {
-                                            Image(systemName: "arrow.up.circle.fill")
+                                            Image(systemName: "camera.fill")
                                         }
-                                        Text(uploading ? "Subiendo..." : uploadLabel)
+                                        Text(uploading ? "Subiendo..." : "Foto desde galería")
                                             .font(.subheadline.bold())
                                     }
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
-                                    .background(taskColor, in: RoundedRectangle(cornerRadius: 12))
+                                    .background(needsAmount ? Color.gray : taskColor, in: RoundedRectangle(cornerRadius: 12))
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(uploading)
+                                .disabled(uploading || needsAmount)
+
+                                Button { showFileImporter = true } label: {
+                                    HStack {
+                                        Image(systemName: "doc.fill")
+                                        Text("Seleccionar PDF")
+                                            .font(.subheadline.bold())
+                                    }
+                                    .foregroundStyle(needsAmount ? .gray : taskColor)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(needsAmount ? Color.gray : taskColor, lineWidth: 1.5))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(uploading || needsAmount)
+
+                                if needsAmount {
+                                    Text("Ingresa el monto del pago para continuar")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
                             }
                         }
                         .padding(16)
@@ -878,6 +921,19 @@ struct TaskDetailSheet: View {
                 Task { await handleUpload(item: item) }
                 selectedPhotos = []
             }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .jpeg, .png]) { result in
+                switch result {
+                case .success(let url):
+                    guard url.startAccessingSecurityScopedResource() else { return }
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    guard let data = try? Data(contentsOf: url),
+                          let appId = task.applicationId else { return }
+                    let filename = url.lastPathComponent
+                    Task { await handleFileUpload(data: data, filename: filename, appId: appId) }
+                case .failure(let error):
+                    errorMsg = error.localizedDescription
+                }
+            }
             .sheet(isPresented: $showRejectSheet) {
                 RejectTaskSheet(
                     taskTitle: task.title,
@@ -968,13 +1024,20 @@ struct TaskDetailSheet: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let appId = task.applicationId else { return }
         let filename = "upload_\(Date().timeIntervalSince1970).jpg"
+        await handleFileUpload(data: data, filename: filename, appId: appId)
+    }
 
+    private func handleFileUpload(data: Data, filename: String, appId: String) async {
         uploading = true
         errorMsg = nil
         do {
-            if isPaymentTask {
+            if isBrokerPaymentTask {
+                try await api.uploadProcessedReceipt(
+                    applicationId: appId, fileData: data, filename: filename
+                )
+            } else if isPaymentTask {
                 try await api.uploadPaymentReceipt(
-                    applicationId: appId, amount: "0", notes: task.title,
+                    applicationId: appId, amount: paymentAmount, notes: task.title,
                     fileData: data, filename: filename
                 )
             } else {

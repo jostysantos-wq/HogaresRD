@@ -1278,7 +1278,7 @@ router.put('/:id/status', userAuth, (req, res) => {
   if (status === 'rechazado' || status === 'completado') {
     // Cancel all active tasks for this application
     const allEvents = ['documents_requested', 'documents_rejected', 'document_uploaded',
-                       'payment_plan_created', 'payment_uploaded', 'payment_rejected'];
+                       'payment_plan_created', 'payment_uploaded', 'payment_rejected', 'receipt_ready'];
     for (const evt of allEvents) autoCompleteTasksByEvent(app.id, evt);
 
     // Void approved commission if application is rejected (sale didn't happen)
@@ -1777,7 +1777,10 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
 // ── PAYMENT ──────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 
-// ── POST /:id/payment/upload  — Client uploads receipt ──────────
+// ── POST /:id/payment/upload  — Upload payment receipt ──────────
+// Client, broker, inmobiliaria, constructora, or secretary can upload.
+// When the agent uploads on behalf of the client, the client's upload
+// task is auto-completed and no self-verify task is created.
 router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
@@ -1790,7 +1793,11 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isClient) return res.status(403).json({ error: 'Solo el cliente puede subir recibo' });
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isClient && !isBroker && !isInmobiliaria && !isSecretary && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
 
   if (!req.file) return res.status(400).json({ error: 'Recibo es requerido' });
 
@@ -1817,12 +1824,13 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   }
 
   addEvent(app, 'payment_uploaded', `Recibo de pago subido: ${req.file.originalname}`,
-    req.user.sub, user?.name || app.client.name, { filename: req.file.originalname });
+    req.user.sub, user?.name || app.client.name,
+    { filename: req.file.originalname, uploaded_by_role: isClient ? 'client' : 'agent' });
 
   store.saveApplication(app);
 
-  // Auto-task: broker must verify payment
-  if (app.broker?.user_id) {
+  // Auto-task: broker must verify payment (only when client uploaded)
+  if (app.broker?.user_id && isClient) {
     createAutoTask({
       title: `Verifica el pago de ${app.client?.name || 'cliente'} para ${app.listing_title || 'la propiedad'}`,
       description: `Recibo: ${req.file?.originalname || 'archivo subido'}`,
@@ -1834,11 +1842,16 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
     });
   }
 
-  // Notify broker
-  if (app.broker.email) {
+  // When agent uploads on behalf of client, complete the client's upload task
+  if (!isClient) {
+    autoCompleteTasksByEvent(app.id, 'payment_plan_created');
+  }
+
+  // Notify broker (only if someone else uploaded)
+  if (!isBroker && app.broker.email) {
     sendNotification(app.broker.email,
       `Recibo de pago recibido — ${app.client.name}`,
-      `<p>${app.client.name} ha subido un recibo de pago para ${app.listing_title}.</p>
+      `<p>${user?.name || app.client.name} ha subido un recibo de pago para ${app.listing_title}.</p>
        <a href="${BASE_URL}/broker">Verificar en Dashboard</a>`
     );
   }
@@ -1928,6 +1941,84 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${app.payment.receipt_original || 'receipt'}"`)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeReceipt);
+});
+
+// ── POST /:id/payment/processed-receipt — Agent uploads processed receipt ──
+// After verifying payment, the broker/inmobiliaria uploads the official
+// processed receipt so the client can download it.
+router.post('/:id/payment/processed-receipt', userAuth, docUpload.single('receipt'), async (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicacion no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isBroker && !isInmobiliaria && !isSecretary && !isAdmin(req))
+    return res.status(403).json({ error: 'Solo agentes pueden subir recibo procesado' });
+
+  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
+  if (!(await validateMime(req.file.path)))
+    return res.status(400).json({ error: 'Tipo de archivo no permitido.' });
+
+  if (!app.payment) app.payment = {};
+  app.payment.processed_receipt_path = req.file.path;
+  app.payment.processed_receipt_filename = req.file.filename;
+  app.payment.processed_receipt_original = req.file.originalname;
+  app.payment.processed_receipt_uploaded_at = new Date().toISOString();
+
+  addEvent(app, 'processed_receipt_uploaded', `Recibo procesado subido: ${req.file.originalname}`,
+    req.user.sub, user?.name || 'Agente', { filename: req.file.originalname });
+
+  store.saveApplication(app);
+
+  // Auto-complete the broker's "verify payment" task
+  autoCompleteTasksByEvent(app.id, 'payment_uploaded');
+
+  // Auto-task: notify client their processed receipt is ready
+  if (app.client?.user_id) {
+    createAutoTask({
+      title: `Tu recibo de pago procesado esta listo`,
+      description: `Descarga tu recibo procesado para ${app.listing_title || 'tu propiedad'}.`,
+      assigned_to: app.client.user_id,
+      assigned_by: req.user.sub,
+      application_id: app.id,
+      listing_id: app.listing_id,
+      source_event: 'receipt_ready',
+    });
+    pushNotify(app.client.user_id, {
+      type: 'document_reviewed',
+      title: 'Recibo Procesado Disponible',
+      body: `Tu recibo de pago procesado para ${app.listing_title || 'tu propiedad'} esta listo para descargar.`,
+      url: `/my-applications?id=${app.id}`,
+    });
+  }
+
+  res.json({ ok: true });
+});
+
+// ── GET /:id/payment/processed-receipt — Serve processed receipt ──
+router.get('/:id/payment/processed-receipt', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicacion no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isClient = app.client.user_id === req.user.sub ||
+                   (user && app.client.email.toLowerCase() === user.email.toLowerCase());
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
+
+  if (!app.payment?.processed_receipt_path || !fs.existsSync(app.payment.processed_receipt_path))
+    return res.status(404).json({ error: 'Recibo procesado no encontrado' });
+
+  const safePath = guardDocPath(app.payment.processed_receipt_path);
+  if (!safePath) return res.status(400).json({ error: 'Ruta de archivo invalida' });
+  res.setHeader('Content-Disposition', `attachment; filename="${app.payment.processed_receipt_original || 'processed_receipt'}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(safePath);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -2602,7 +2693,11 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
   const user     = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
     (user && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isClient && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isClient && !isBroker && !isInmobiliaria && !isSecretary && !isAdmin(req))
+    return res.status(403).json({ error: 'No autorizado' });
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst)       return res.status(404).json({ error: 'Cuota no encontrada' });
   if (!req.file)   return res.status(400).json({ error: 'Archivo requerido' });
@@ -2622,6 +2717,10 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
     req.user.sub, user?.name || app.client.name || 'Cliente',
     { type: 'proof_uploaded', installment_id: inst.id, installment_number: inst.number });
   store.saveApplication(app);
+  // If agent uploaded on behalf of client, complete client's upload task
+  if (!isClient) {
+    autoCompleteTasksByEvent(app.id, 'payment_plan_created');
+  }
   const proofNotifHtml = `<div style="font-family:sans-serif;max-width:520px;">
     <p>Hola,</p>
     <p><strong>${app.client.name}</strong> subió el comprobante de la <strong>Cuota #${inst.number} (${inst.label})</strong> para <em>${app.listing_title}</em>.</p>

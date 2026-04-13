@@ -33,6 +33,7 @@ struct ConversationThreadView: View {
     @State private var transferSending:   Bool = false
     @State private var transferError:     String?
     @State private var transferred:       Bool = false
+    @State private var emptyPolls:        Int  = 0
 
     private var myId: String { api.currentUser?.id ?? "" }
     private var myRole: String { api.currentUser?.role ?? "user" }
@@ -320,7 +321,9 @@ struct ConversationThreadView: View {
             await loadMessages()
             await markRead()
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
+                // Adaptive backoff: 5s → 10s → 20s → 30s max based on idle polls
+                let interval: Int = emptyPolls < 3 ? 5 : emptyPolls < 6 ? 10 : emptyPolls < 10 ? 20 : 30
+                try? await Task.sleep(for: .seconds(interval))
                 await pollNew()
             }
         }
@@ -455,13 +458,16 @@ struct ConversationThreadView: View {
             let conv = try await api.getConversation(id: conversation.id, since: lastTimestamp)
             let fresh = conv.messages ?? []
             syncClosedState(conv)
-            guard !fresh.isEmpty else { return }
+            guard !fresh.isEmpty else { emptyPolls += 1; return }
             let existingIDs = Set(messages.map { $0.id })
             let toAdd = fresh.filter { !existingIDs.contains($0.id) }
             if !toAdd.isEmpty {
+                emptyPolls = 0 // Reset backoff on new messages
                 messages.append(contentsOf: toAdd)
                 lastTimestamp = toAdd.last?.timestamp
                 await markRead()
+            } else {
+                emptyPolls += 1
             }
         } catch {
             print("[ConvThread] pollNew FAILED: \(error)")
@@ -749,6 +755,7 @@ struct ConversationThreadView: View {
             let msg = try await api.sendMessage(conversationId: conversation.id, text: text)
             messages.append(msg)
             lastTimestamp = msg.timestamp
+            emptyPolls = 0 // Reset backoff after sending
         } catch {
             print("[ConvThread] send FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "POST /api/conversations/\(conversation.id)/messages", context: "sendMessage")
@@ -859,12 +866,19 @@ struct MessageBubble: View {
 
 // MARK: - ISO 8601 parser (handles with and without fractional seconds)
 
+private let _iso8601Frac: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return f
+}()
+private let _iso8601NoFrac: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime]
+    return f
+}()
+
 private func parseISO(_ s: String) -> Date? {
-    let fmt = ISO8601DateFormatter()
-    fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let d = fmt.date(from: s) { return d }
-    fmt.formatOptions = [.withInternetDateTime]
-    return fmt.date(from: s)
+    _iso8601Frac.date(from: s) ?? _iso8601NoFrac.date(from: s)
 }
 
 // MARK: - Chat Bubble Shape (tail on one side)
