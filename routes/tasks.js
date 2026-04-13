@@ -29,6 +29,7 @@ const store      = require('./store');
 const { userAuth } = require('./auth');
 const { notify: pushNotify } = require('./push');
 const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
 
 const router      = express.Router();
 const transporter = createTransport();
@@ -131,6 +132,24 @@ router.get('/', userAuth, (req, res) => {
     tasks = tasks.filter(t => t.due_date && t.due_date < now && t.status !== 'completada');
   }
 
+  // Org-scoping: if the user belongs to an org, only show tasks from the same org
+  const fullUser = store.getUserById(uid);
+  const userOrgId = ['inmobiliaria','constructora'].includes(fullUser?.role) ? fullUser.id : fullUser?.inmobiliaria_id;
+  if (userOrgId) {
+    tasks = tasks.filter(t => {
+      // Check if the task creator belongs to the same org
+      const creator = store.getUserById(t.assigned_by);
+      const creatorOrgId = creator ? (['inmobiliaria','constructora'].includes(creator.role) ? creator.id : creator.inmobiliaria_id) : null;
+      if (creatorOrgId === userOrgId) return true;
+      // Check if the task's application belongs to the same org
+      if (t.application_id) {
+        const app = store.getApplicationById(t.application_id);
+        if (app && app.inmobiliaria_id === userOrgId) return true;
+      }
+      return false;
+    });
+  }
+
   // Enrich each task with listing thumbnail + title before returning
   res.json({ tasks: tasks.map(enrichTask) });
 });
@@ -171,6 +190,17 @@ router.get('/:id', userAuth, (req, res) => {
               || task.assigned_by === req.user.sub
               || approverId === req.user.sub;
   if (!canSee) return res.status(403).json({ error: 'Sin acceso a esta tarea' });
+
+  // Verify org scope: if user belongs to an org, task must be from same org
+  const fullUser = store.getUserById(req.user.sub);
+  const userOrgId = ['inmobiliaria','constructora'].includes(fullUser?.role) ? fullUser.id : fullUser?.inmobiliaria_id;
+  if (userOrgId && task.application_id) {
+    const app = store.getApplicationById(task.application_id);
+    if (app && app.inmobiliaria_id && app.inmobiliaria_id !== userOrgId) {
+      return res.status(403).json({ error: 'Sin acceso a esta tarea' });
+    }
+  }
+
   res.json(enrichTask(task));
 });
 
@@ -184,6 +214,17 @@ router.post('/', userAuth, (req, res) => {
   const { title, description, priority, due_date, assigned_to, application_id, listing_id, approver_id } = req.body;
   if (!title || !title.trim())
     return res.status(400).json({ error: 'Título requerido' });
+
+  // Validate application_id belongs to the creator's org
+  if (application_id) {
+    const app = store.getApplicationById(application_id);
+    if (app) {
+      const creatorOrgId = ['inmobiliaria','constructora'].includes(creator.role) ? creator.id : creator.inmobiliaria_id;
+      if (creatorOrgId && app.inmobiliaria_id && app.inmobiliaria_id !== creatorOrgId) {
+        return res.status(403).json({ error: 'La aplicacion no pertenece a tu organizacion.' });
+      }
+    }
+  }
 
   const assigneeId = assigned_to || req.user.sub;
 
@@ -593,33 +634,24 @@ async function sendTaskEmail(assigneeId, creatorName, task) {
   const user = store.getUserById(assigneeId);
   if (!user?.email) return;
   const firstName = (user.name || '').split(' ')[0] || 'Agente';
-  const dueLine = task.due_date
-    ? `<tr><td style="padding:4px 0;color:#7a9bbf;">Fecha límite:</td><td style="padding:4px 0;"><strong>${new Date(task.due_date).toLocaleDateString('es-DO')}</strong></td></tr>`
-    : '';
+  const priorityLabel = task.priority === 'alta' ? 'Alta' : task.priority === 'baja' ? 'Baja' : 'Media';
   await transporter.sendMail({
     to:      user.email,
     subject: `Nueva tarea asignada — ${task.title.slice(0, 60)}`,
-    html: `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;"><tr><td align="center">
-<table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-  <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
-    <div style="font-size:1.1rem;font-weight:800;color:#fff;">Nueva tarea asignada</div>
-  </td></tr>
-  <tr><td style="padding:24px 32px;">
-    <p style="margin:0 0 12px;color:#1a2b40;">Hola <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 16px;font-size:0.92rem;color:#4d6a8a;"><strong>${creatorName}</strong> te asignó una nueva tarea:</p>
-    <div style="background:#f0f6ff;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
-      <div style="font-size:1rem;font-weight:700;color:#002D62;margin-bottom:6px;">${task.title}</div>
-      ${task.description ? `<div style="font-size:0.85rem;color:#4d6a8a;margin-bottom:8px;">${task.description.slice(0, 200)}</div>` : ''}
-      <table style="font-size:0.85rem;color:#1a2b40;">
-        <tr><td style="padding:4px 0;color:#7a9bbf;">Prioridad:</td><td style="padding:4px 0;"><strong>${task.priority === 'alta' ? 'Alta' : task.priority === 'baja' ? 'Baja' : 'Media'}</strong></td></tr>
-        ${dueLine}
-      </table>
-    </div>
-    <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;font-size:0.9rem;font-weight:700;padding:12px 28px;border-radius:10px;text-decoration:none;">Ver mis tareas →</a>
-  </td></tr>
-</table>
-</td></tr></table></body></html>`,
+    html: et.layout({
+      title: 'Nueva tarea asignada',
+      preheader: `Nueva tarea asignada: ${task.title.slice(0, 80)}`,
+      body:
+        et.p(`Hola <strong>${et.esc(firstName)}</strong>,`)
+        + et.p(`<strong>${et.esc(creatorName)}</strong> te asigno una nueva tarea:`)
+        + et.infoTable(
+            et.infoRow('Tarea', et.esc(task.title))
+            + (task.description ? et.infoRow('Descripcion', et.esc(task.description.slice(0, 200))) : '')
+            + et.infoRow('Prioridad', priorityLabel)
+            + (task.due_date ? et.infoRow('Fecha limite', new Date(task.due_date).toLocaleDateString('es-DO')) : '')
+          )
+        + et.button('Ver mis tareas', `${BASE_URL}/broker`),
+    }),
   });
 }
 

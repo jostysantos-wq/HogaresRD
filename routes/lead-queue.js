@@ -28,6 +28,12 @@ router.get('/', (req, res) => {
     // Hydrate the full item to get _extra fields (like inmobiliaria_scope)
     const fullItem = store.getLeadQueueById(item.id) || item;
 
+    // Safety net: if lead is scoped to an inmobiliaria, skip if user doesn't belong to that org
+    if (fullItem.inmobiliaria_scope) {
+      const userOrgId = ['inmobiliaria','constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
+      if (userOrgId !== fullItem.inmobiliaria_scope) continue;
+    }
+
     // Respect inmobiliaria scope — only show leads to agents in the scoped org
     const { tier1, tier2, tier3 } = cascade.getTierAgents(listing, fullItem.inmobiliaria_scope || null);
     const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[fullItem.current_tier] || [];

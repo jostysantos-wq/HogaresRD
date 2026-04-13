@@ -82,6 +82,7 @@ const ADMIN_EMAIL = 'Jostysantos@gmail.com';
 
 // ── Email transporter (uses Resend via mailer.js) ─────────────
 const { createTransport: _createMailTransport } = require('./routes/mailer');
+const et = require('./utils/email-templates');
 const transporter = _createMailTransport();
 
 // ── Photo upload (multer) ──────────────────────────────────────
@@ -1005,55 +1006,49 @@ app.post('/submit', require('./routes/auth').optionalAuth, async (req, res) => {
       : submission.amenities;
 
     const adminPanelUrl = `${process.env.BASE_URL || 'https://hogaresrd.com'}/${process.env.ADMIN_PATH || 'admin'}`;
+    const adminEmailBody = isClaim
+      ? et.infoTable(
+          et.infoRow('Tipo', 'Solicitud de Agencia') +
+          et.infoRow('Anuncio ID', et.esc(submission.claim_listing_id))
+        )
+      : et.infoTable(
+          et.infoRow('Titulo', et.esc(submission.title)) +
+          et.infoRow('Tipo', et.esc(submission.type)) +
+          et.infoRow('Precio', '$' + Number(submission.price).toLocaleString()) +
+          et.infoRow('Ubicacion', et.esc(submission.city + ', ' + submission.province)) +
+          et.infoRow('Habitaciones', submission.bedrooms + ' hab. / ' + submission.bathrooms + ' banos') +
+          et.infoRow('Amenidades', et.esc(amenitiesList || 'Ninguna'))
+        );
+
+    const adminHtml = et.layout({
+      title: isClaim ? 'Solicitud de Agencia' : 'Nueva Propiedad para Aprobar',
+      subtitle: 'Panel de Administracion',
+      preheader: 'Nueva propiedad pendiente de aprobacion',
+      headerColor: et.C.red,
+      body:
+        adminEmailBody +
+        et.divider() +
+        et.infoTable(
+          et.infoRow('Contacto', `${et.esc(submission.name)}`) +
+          et.infoRow('Email', et.esc(submission.email)) +
+          et.infoRow('Telefono', et.esc(submission.phone))
+        ) +
+        et.button('Revisar y Aprobar', adminPanelUrl, et.C.red) +
+        et.small('Enviado el ' + new Date(submission.submittedAt).toLocaleString('es-DO') + ' — ID: ' + submission.id),
+    });
+
     await transporter.sendMail({
       department: 'admin',
       to:      ADMIN_EMAIL,
       subject: isClaim
-        ? `🔴 [IMPORTANTE] Solicitud de agencia — Anuncio #${submission.claim_listing_id}`
-        : `🔴 [ACCIÓN REQUERIDA] Nueva propiedad para aprobar: ${submission.title}`,
+        ? `[IMPORTANTE] Solicitud de agencia — Anuncio #${submission.claim_listing_id}`
+        : `[Accion Requerida] Nueva propiedad para aprobar: ${submission.title}`,
       headers: {
         'X-Priority':        '1',
         'X-MSMail-Priority': 'High',
         'Importance':        'High',
       },
-      html: `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-          <div style="background:#CF142B;padding:10px 32px;text-align:center;">
-            <span style="color:#fff;font-size:0.78rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">⚑ Acción Requerida — Prioridad Alta</span>
-          </div>
-          <div style="background:#002D62;padding:24px 32px;">
-            <h2 style="color:#fff;margin:0;font-size:1.3rem;">${isClaim ? '🏢 Solicitud de Agencia' : '🏠 Nueva Propiedad para Aprobar'}</h2>
-            <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:0.9rem;">HogaresRD — Panel de Administración</p>
-          </div>
-          <div style="padding:28px 32px;background:#fff;">
-            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-              ${isClaim ? `
-              <tr><td style="padding:8px 0;color:#4d6a8a;width:40%;">Tipo</td><td style="padding:8px 0;font-weight:600;">Solicitud de Agencia</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Anuncio ID</td><td style="padding:8px 0;font-family:monospace;font-weight:600;">${submission.claim_listing_id}</td></tr>
-              ` : `
-              <tr><td style="padding:8px 0;color:#4d6a8a;width:40%;">Título</td><td style="padding:8px 0;font-weight:600;">${submission.title}</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Tipo</td><td style="padding:8px 0;">${submission.type}</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Precio</td><td style="padding:8px 0;font-weight:700;color:#002D62;font-size:1rem;">$${Number(submission.price).toLocaleString()}</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Ubicación</td><td style="padding:8px 0;">${submission.city}, ${submission.province}</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Habitaciones</td><td style="padding:8px 0;">${submission.bedrooms} hab. · ${submission.bathrooms} baños</td></tr>
-              <tr><td style="padding:8px 0;color:#4d6a8a;">Amenidades</td><td style="padding:8px 0;">${amenitiesList || '—'}</td></tr>
-              `}
-              <tr style="border-top:1px solid #e8eef7;">
-                <td style="padding:12px 0;color:#4d6a8a;">Contacto</td>
-                <td style="padding:12px 0;"><strong>${submission.name}</strong><br>${submission.email}<br>${submission.phone}</td>
-              </tr>
-            </table>
-            <div style="margin-top:24px;text-align:center;">
-              <a href="${adminPanelUrl}" style="background:#CF142B;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;font-size:1rem;">
-                Revisar y Aprobar Ahora →
-              </a>
-            </div>
-          </div>
-          <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;text-align:center;">
-            Enviado el ${new Date(submission.submittedAt).toLocaleString('es-DO')} · ID: ${submission.id}
-          </div>
-        </div>
-      `,
+      html: adminHtml,
     });
     console.log(`Email sent for submission ${submission.id}`);
   } catch (err) {
@@ -1233,37 +1228,18 @@ app.post('/admin/submissions/:id/request-edits', adminSessionAuth, (req, res) =>
     const ownerEmail = owner?.email || sub.email;
     if (ownerEmail && transporter) {
       const safeReason = reason.replace(/</g,'&lt;').replace(/\n/g,'<br>');
-      const subject = `HogaresRD — Se solicitaron ediciones en tu propiedad`;
-      const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-          <tr><td align="center">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-              <tr><td style="background:linear-gradient(135deg,#D97706 0%,#F59E0B 100%);padding:32px 40px;color:#fff;">
-                <div style="font-size:1rem;font-weight:900;">🏠 HogaresRD</div>
-                <div style="margin-top:8px;font-size:1.4rem;font-weight:800;">Se solicitaron ediciones</div>
-              </td></tr>
-              <tr><td style="padding:28px 40px;">
-                <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-                  Revisamos tu publicación <strong>${(sub.title || 'sin título').replace(/</g,'&lt;')}</strong> y necesitamos que hagas algunos ajustes antes de publicarla:
-                </p>
-                <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:0.9rem;color:#7c2d12;line-height:1.55;">
-                  ${safeReason}
-                </div>
-                <p style="margin:0 0 16px;font-size:0.88rem;color:#4d6a8a;line-height:1.55;">
-                  Ingresa a tu panel, edita los campos necesarios y vuelve a enviar la publicación. La pondremos en la cola de revisión automáticamente.
-                </p>
-                <div style="text-align:center;margin-top:22px;">
-                  <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/broker#pending-listings"
-                     style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;">Editar mi propiedad →</a>
-                </div>
-              </td></tr>
-              <tr><td style="padding:14px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-                <p style="margin:0;font-size:0.75rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD</p>
-              </td></tr>
-            </table>
-          </td></tr>
-        </table>
-      </body></html>`;
+      const subject = `Se solicitaron ediciones en tu propiedad — HogaresRD`;
+      const html = et.layout({
+        title: 'Se solicitaron ediciones',
+        subtitle: et.esc(sub.title || 'sin titulo'),
+        preheader: 'Tu publicacion requiere ajustes antes de ser aprobada',
+        headerColor: '#b45309',
+        body:
+          et.p('Revisamos tu publicacion <strong>' + et.esc(sub.title || 'sin titulo') + '</strong> y necesitamos que hagas algunos ajustes antes de publicarla:') +
+          et.alertBox(safeReason, 'warning') +
+          et.p('Ingresa a tu panel, edita los campos necesarios y vuelve a enviar la publicacion. La pondremos en la cola de revision automaticamente.') +
+          et.button('Editar mi propiedad', (process.env.BASE_URL || 'https://hogaresrd.com') + '/broker#pending-listings'),
+      });
       transporter.sendMail({
         department: 'soporte',
         to: ownerEmail,
@@ -1372,6 +1348,21 @@ app.get('/admin/privacy-log', adminSessionAuth, (req, res) => {
   res.json({ log, stats: { total: log.length, optedOut } });
 });
 
+app.get('/api/admin/conversation-access-log', adminSessionAuth, (req, res) => {
+  try {
+    const fs = require('fs');
+    const logPath = require('path').join(__dirname, 'data', 'security_log.json');
+    let events = [];
+    try { events = JSON.parse(fs.readFileSync(logPath, 'utf8')); } catch { events = []; }
+    const accessLog = events
+      .filter(e => e.type === 'admin_conversation_access')
+      .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    res.json({ log: accessLog });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener el registro' });
+  }
+});
+
 app.post('/admin/deletion-requests/:id/reject', adminSessionAuth, (req, res) => {
   const dr = store.getDeletionRequestById(req.params.id);
   if (!dr) return res.status(404).json({ error: 'Solicitud no encontrada' });
@@ -1474,23 +1465,26 @@ app.put('/admin/applications/:id/reassign', adminSessionAuth, (req, res) => {
   try {
     const transporter = _createMailTransport();
     const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
-    const htmlTo = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-      <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-        <h2 style="margin:0;">Nueva Aplicación Asignada</h2>
-      </div>
-      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
-        <p>Te hemos asignado una aplicación:</p>
-        <p style="font-size:1.1rem;font-weight:700;">${app_.listing_title} — $${Number(app_.listing_price || 0).toLocaleString()}</p>
-        <p><strong>Cliente:</strong> ${app_.client.name}</p>
-        <p>📞 ${app_.client.phone} · ✉️ ${app_.client.email || 'N/A'}</p>
-        <a href="${BASE_URL}/broker" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver en Dashboard</a>
-      </div>
-    </div>`;
+    const htmlTo = et.layout({
+      title: 'Nueva Aplicacion Asignada',
+      subtitle: et.esc(app_.listing_title),
+      preheader: 'Se te asigno una nueva aplicacion',
+      body:
+        et.p('Se te ha asignado una nueva aplicacion para gestionar.') +
+        et.infoTable(
+          et.infoRow('Propiedad', et.esc(app_.listing_title)) +
+          et.infoRow('Precio', '$' + Number(app_.listing_price || 0).toLocaleString()) +
+          et.infoRow('Cliente', et.esc(app_.client.name)) +
+          et.infoRow('Telefono', et.esc(app_.client.phone)) +
+          et.infoRow('Email', et.esc(app_.client.email || 'N/A'))
+        ) +
+        et.button('Ver en Dashboard', BASE_URL + '/broker'),
+    });
     if (newBroker.email && transporter?.sendMail) {
       transporter.sendMail({
         department: 'admin',
         to:         newBroker.email,
-        subject:    `Te asignaron una aplicación — ${app_.listing_title}`,
+        subject:    `Aplicacion asignada — ${app_.listing_title}`,
         html:       htmlTo,
       }).catch(e => console.error('[reassign] notify-new error:', e.message));
     }
@@ -2054,8 +2048,20 @@ cron.schedule('*/30 * * * *', () => {
 
         const clientEmail = tour.client_email || (tour.client_id ? store.getUserById(tour.client_id)?.email : null);
         if (clientEmail) {
-          mailer.sendMail({ to: clientEmail, subject: `Recordatorio de visita mañana — ${tour.listing_title}`, department: 'noreply',
-            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;"><div style="background:#0038A8;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;"><h2 style="margin:0;">Recordatorio de Visita</h2></div><div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;"><p>Tu visita a <strong>${tour.listing_title}</strong> es mañana.</p><p><strong>Fecha:</strong> ${tour.requested_date}<br><strong>Hora:</strong> ${tour.requested_time}</p><p style="color:#666;font-size:.85rem;">Te recomendamos llegar 5 minutos antes.</p></div></div>`
+          mailer.sendMail({ to: clientEmail, subject: `Recordatorio de visita manana — ${tour.listing_title}`, department: 'noreply',
+            html: et.layout({
+              title: 'Recordatorio de Visita',
+              subtitle: 'Tienes una visita programada para manana',
+              preheader: 'Tienes una visita programada para manana',
+              body:
+                et.p('Tu visita a <strong>' + et.esc(tour.listing_title) + '</strong> esta programada para manana.') +
+                et.infoTable(
+                  et.infoRow('Propiedad', et.esc(tour.listing_title)) +
+                  et.infoRow('Fecha', et.esc(tour.requested_date)) +
+                  et.infoRow('Hora', et.esc(tour.requested_time))
+                ) +
+                et.small('Te recomendamos llegar 5 minutos antes de la hora programada.'),
+            }),
           }).catch(() => {});
         }
         sent++;
@@ -2129,25 +2135,27 @@ cron.schedule('0 8 * * *', () => {
         const formattedAmount = (inst.amount || 0).toLocaleString('es-DO');
         const formattedDate = new Date(inst.due_date).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
+        const alertType = daysUntil < 0 ? 'danger' : daysUntil === 0 ? 'warning' : 'info';
         mailTransport.sendMail({
           to: client.email,
           subject: subject + ' — HogaresRD',
           department: 'noreply',
-          html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-            <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
-            <h2 style="color:#1a1a1a;margin-bottom:16px;">${subject}</h2>
-            <p>Hola ${firstName},</p>
-            <p>${urgency}</p>
-            <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Propiedad</td><td style="padding:8px;border:1px solid #e2e8f0;">${app.listing_title || '—'}</td></tr>
-              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Cuota</td><td style="padding:8px;border:1px solid #e2e8f0;">${inst.label || 'Cuota ' + inst.number}</td></tr>
-              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Monto</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700;color:#002D62;">${plan.currency || 'DOP'} $${formattedAmount}</td></tr>
-              <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Fecha limite</td><td style="padding:8px;border:1px solid #e2e8f0;">${formattedDate}</td></tr>
-              ${plan.payment_method ? `<tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:600;">Metodo de pago</td><td style="padding:8px;border:1px solid #e2e8f0;">${plan.payment_method}${plan.method_details ? ' — ' + plan.method_details : ''}</td></tr>` : ''}
-            </table>
-            <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/my-applications" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Ver mis pagos</a>
-            <p style="margin-top:24px;color:#666;font-size:0.85rem;">Si ya realizaste el pago, puedes ignorar este mensaje.</p>
-          </div>`,
+          html: et.layout({
+            title: subject,
+            preheader: 'Tienes un pago pendiente',
+            body:
+              et.p('Hola ' + et.esc(firstName) + ',') +
+              et.alertBox(urgency, alertType) +
+              et.infoTable(
+                et.infoRow('Propiedad', et.esc(app.listing_title || '—')) +
+                et.infoRow('Cuota', et.esc(inst.label || 'Cuota ' + inst.number)) +
+                et.infoRow('Monto', (plan.currency || 'DOP') + ' $' + formattedAmount) +
+                et.infoRow('Fecha limite', et.esc(formattedDate)) +
+                (plan.payment_method ? et.infoRow('Metodo de pago', et.esc(plan.payment_method + (plan.method_details ? ' — ' + plan.method_details : ''))) : '')
+              ) +
+              et.button('Ver mis pagos', (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications') +
+              et.small('Si ya realizaste el pago, puedes ignorar este mensaje.'),
+          }),
         }).catch(err => console.error('[Cron] Payment reminder email error:', err.message));
 
         // Mark reminder sent
@@ -2183,25 +2191,24 @@ cron.schedule('0 9 1 * *', () => {
       if (pendingInstallments.length === 0) continue;
 
       const firstName = (client.name || '').split(' ')[0] || 'Cliente';
-      const rows = pendingInstallments.map(i => {
+      const summaryRows = pendingInstallments.map(i => {
         const d = new Date(i.due_date).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
-        return `<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">${i.label || 'Cuota ' + i.number}</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-weight:600;">${plan.currency || 'DOP'} $${(i.amount || 0).toLocaleString('es-DO')}</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">${d}</td></tr>`;
+        return et.infoRow(et.esc(i.label || 'Cuota ' + i.number), (plan.currency || 'DOP') + ' $' + (i.amount || 0).toLocaleString('es-DO') + ' — ' + d);
       }).join('');
 
       mailTransport.sendMail({
         to: client.email,
         subject: `Resumen mensual de pagos pendientes — HogaresRD`,
         department: 'noreply',
-        html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-          <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
-          <h2 style="color:#1a1a1a;">Resumen de pagos pendientes</h2>
-          <p>Hola ${firstName}, este es tu resumen de pagos pendientes para <strong>${app.listing_title || 'tu propiedad'}</strong>:</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-            <tr style="background:#f7fafc;"><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Cuota</th><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Monto</th><th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;">Vence</th></tr>
-            ${rows}
-          </table>
-          <a href="${process.env.BASE_URL || 'https://hogaresrd.com'}/my-applications" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Ir a mis pagos</a>
-        </div>`,
+        html: et.layout({
+          title: 'Resumen de Pagos Pendientes',
+          subtitle: et.esc(app.listing_title || 'Tu propiedad'),
+          preheader: 'Resumen de pagos pendientes del mes',
+          body:
+            et.p('Hola ' + et.esc(firstName) + ', este es tu resumen de pagos pendientes para <strong>' + et.esc(app.listing_title || 'tu propiedad') + '</strong>:') +
+            et.infoTable(summaryRows) +
+            et.button('Ir a mis pagos', (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications'),
+        }),
       }).catch(err => console.error('[Cron] Monthly payment summary error:', err.message));
       sent++;
     }
@@ -2314,6 +2321,53 @@ if (require.main === module) {
       setInterval(() => cascadeEngine.recoverStaleCascades(), 30000);
       console.log('[cascade] Recovery timer started (30s interval)');
     }
+
+    // ── Transfer request expiration (every 30 min) ──────────────────────────
+    // Use targeted DB query to find only conversations with pending transfers
+    // instead of iterating ALL conversations in memory.
+    const _pushNotifyRef = require('./routes/push').notify;
+    setInterval(async () => {
+      try {
+        const { rows } = await store.pool.query(
+          `SELECT id, data FROM conversations
+           WHERE data->'transfer_requests' IS NOT NULL
+             AND data::text LIKE '%"status":"pending"%'`
+        );
+        const candidates = rows.map(r => {
+          const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+          return { ...d, id: r.id };
+        }).filter(c => Array.isArray(c.transfer_requests) && c.transfer_requests.some(tr => tr.status === 'pending'));
+        const now = new Date();
+        let expiredCount = 0;
+        for (const conv of candidates) {
+          let dirty = false;
+          for (const tr of conv.transfer_requests) {
+            if (tr.status === 'pending' && new Date(tr.expiresAt) < now) {
+              tr.status = 'expired';
+              tr.respondedAt = now.toISOString();
+              dirty = true;
+              expiredCount++;
+              // Notify director that request expired
+              try {
+                _pushNotifyRef(tr.requestedBy, {
+                  type: 'transfer_expired',
+                  title: 'Solicitud de transferencia expirada',
+                  body: `La solicitud de transferencia para ${conv.propertyTitle || 'una conversacion'} expiro sin respuesta`,
+                  url: '/broker',
+                });
+              } catch (e) { console.warn('[transfer-expiry] push failed:', e.message); }
+            }
+          }
+          if (dirty) {
+            conv.updatedAt = now.toISOString();
+            store.saveConversation(conv);
+          }
+        }
+        if (expiredCount > 0) console.log(`[transfer-expiry] Expired ${expiredCount} transfer request(s)`);
+      } catch (err) {
+        console.error('[transfer-expiry] interval error:', err.message);
+      }
+    }, 30 * 60 * 1000); // every 30 minutes
   });
 }
 

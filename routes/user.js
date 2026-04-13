@@ -88,11 +88,11 @@ router.post('/activity', userAuth, (req, res) => {
     return res.status(400).json({ error: 'Tipo de evento inválido' });
 
   store.appendActivity({
-    userId:    req.user.sub,
-    type,
-    listingId: listingId || null,
-    metadata:  metadata  || {},
-    timestamp: new Date().toISOString(),
+    user_id:    req.user.sub,
+    action:     type,
+    listing_id: listingId || null,
+    data:       metadata  || {},
+    created_at: new Date().toISOString(),
   });
 
   // Rebuild profile preferences after every view event

@@ -13,6 +13,7 @@ const notify     = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 const appEvents  = require('./app-events');
 const { encrypt, decrypt } = require('../utils/encryption');
+const et         = require('../utils/email-templates');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
@@ -229,7 +230,6 @@ function sendNotification(to, subject, html) {
 }
 
 function statusEmail(app, oldStatus, newStatus, reason) {
-  const et = require('../utils/email-templates');
   const STATUS_NAMES = {
     aplicado: 'Aplicado', en_revision: 'En Revision', documentos_requeridos: 'Documentos Requeridos',
     documentos_enviados: 'Documentos Enviados', documentos_insuficientes: 'Documentos Insuficientes',
@@ -250,8 +250,8 @@ function statusEmail(app, oldStatus, newStatus, reason) {
     + et.small('Si tienes preguntas sobre este cambio, responde a este correo.');
 
   return {
-    subject: 'HogaresRD — Tu aplicacion: ' + statusName,
-    html: et.layout({ title: 'Estado de tu aplicacion', subtitle: et.esc(app.listing_title), body }),
+    subject: 'Tu aplicacion: ' + statusName + ' — HogaresRD',
+    html: et.layout({ title: 'Estado de tu aplicacion', subtitle: et.esc(app.listing_title), preheader: 'Tu aplicacion para ' + (app.listing_title || '') + ' ahora esta: ' + statusName, body }),
   };
 }
 
@@ -266,54 +266,54 @@ function buildPaymentPlanEmail(app) {
   const plan = app.payment_plan;
   const rows = plan.installments.map(i =>
     `<tr>
-       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;">#${i.number} — ${_esc(i.label)}</td>
-       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;font-weight:600;">${fmtAmt(i.amount, plan.currency)}</td>
-       <td style="padding:.5rem .75rem;border-bottom:1px solid #eee;color:#555;">${_esc(i.due_date) || '—'}</td>
+       <td style="padding:9px 12px;border-bottom:1px solid ${et.C.bg};font-size:0.88rem;color:${et.C.text};">#${i.number} — ${_esc(i.label)}</td>
+       <td style="padding:9px 12px;border-bottom:1px solid ${et.C.bg};font-size:0.88rem;font-weight:700;color:${et.C.navy};">${fmtAmt(i.amount, plan.currency)}</td>
+       <td style="padding:9px 12px;border-bottom:1px solid ${et.C.bg};font-size:0.88rem;color:${et.C.muted};">${_esc(i.due_date) || '—'}</td>
      </tr>`
   ).join('');
-  return `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;">
-    <div style="background:#1C2B3A;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-      <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Plan de Pagos</h2>
-    </div>
-    <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-      <p>Hola <strong>${_esc(app.client.name)}</strong>,</p>
-      <p>Tu broker ha creado un plan de pagos para tu solicitud de <strong>${_esc(app.listing_title)}</strong>.</p>
-      <p><strong>Método de pago:</strong> ${_esc(plan.payment_method) || '—'}</p>
-      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;margin:.5rem 0;">${_esc(plan.method_details)}</div>` : ''}
-      <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-        <thead><tr style="background:#f5f7fa;"><th style="padding:.5rem .75rem;text-align:left;">Cuota</th><th style="padding:.5rem .75rem;text-align:left;">Monto</th><th style="padding:.5rem .75rem;text-align:left;">Vence</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      ${plan.notes ? `<p style="font-size:.9rem;color:#555;"><strong>Notas:</strong> ${_esc(plan.notes)}</p>` : ''}
-      <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563EB;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;margin-top:.5rem;">Ver mi Plan de Pagos</a>
-    </div>
-  </div>`;
+  const tableHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid ${et.C.border};border-radius:8px;overflow:hidden;">
+    <thead><tr style="background:${et.C.bg};"><th style="padding:10px 12px;text-align:left;font-size:0.8rem;color:${et.C.muted};font-weight:700;">Cuota</th><th style="padding:10px 12px;text-align:left;font-size:0.8rem;color:${et.C.muted};font-weight:700;">Monto</th><th style="padding:10px 12px;text-align:left;font-size:0.8rem;color:${et.C.muted};font-weight:700;">Vence</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  return et.layout({
+    title: 'Plan de pagos creado',
+    subtitle: et.esc(app.listing_title),
+    preheader: 'Se creo un plan de pagos para tu aplicacion en HogaresRD',
+    body: `
+      ${et.p('Tu agente ha creado un plan de pagos para tu solicitud de <strong>' + et.esc(app.listing_title) + '</strong>.')}
+      ${et.infoTable(et.infoRow('Metodo de pago', _esc(plan.payment_method) || '—'))}
+      ${plan.method_details ? et.alertBox(et.esc(plan.method_details), 'info') : ''}
+      ${tableHtml}
+      ${plan.notes ? et.small('<strong>Notas:</strong> ' + et.esc(plan.notes)) : ''}
+      ${et.button('Ver mi plan de pagos', BASE_URL + '/my-applications')}
+    `,
+  });
 }
 
 function buildPaymentReminderEmail(app, inst) {
   const plan = app.payment_plan;
   const dueLabel = inst.due_date
     ? new Date(inst.due_date + 'T12:00:00').toLocaleDateString('es-DO', { year:'numeric', month:'long', day:'numeric' })
-    : 'próximamente';
-  return `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;">
-    <div style="background:#1C2B3A;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-      <h2 style="margin:0;font-size:1.2rem;">HogaresRD — Recordatorio de Pago</h2>
-    </div>
-    <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-      <p>Hola <strong>${_esc(app.client.name)}</strong>,</p>
-      <p>Tienes un pago pendiente para tu solicitud de <strong>${_esc(app.listing_title)}</strong>:</p>
-      <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:1rem;margin:1rem 0;">
-        <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.05em;">Cuota #${inst.number}</div>
-        <div style="font-size:1.15rem;font-weight:700;margin:.3rem 0;">${_esc(inst.label)}</div>
-        <div style="font-size:1.05rem;color:#1C2B3A;font-weight:600;">${fmtAmt(inst.amount, plan.currency)}</div>
-        <div style="font-size:.85rem;color:#B45309;margin-top:.3rem;">📅 Vence: ${dueLabel}</div>
-      </div>
-      <p><strong>Método de pago:</strong> ${plan.payment_method || '—'}</p>
-      ${plan.method_details ? `<div style="background:#f5f7fa;padding:.75rem;border-radius:6px;font-size:.9rem;">${plan.method_details}</div>` : ''}
-      <p style="margin-top:1rem;">Una vez realizado el pago, sube tu comprobante en el portal:</p>
-      <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563EB;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Subir Comprobante</a>
-    </div>
-  </div>`;
+    : 'proximamente';
+  return et.layout({
+    title: 'Recordatorio de pago',
+    subtitle: et.esc(app.listing_title),
+    preheader: `Cuota #${inst.number} vence ${dueLabel} — ${fmtAmt(inst.amount, plan.currency)}`,
+    headerColor: '#b45309',
+    body: `
+      ${et.p('Tienes un pago pendiente para tu solicitud de <strong>' + et.esc(app.listing_title) + '</strong>.')}
+      ${et.alertBox(
+        `<strong>Cuota #${inst.number}</strong> — ${et.esc(inst.label)}<br/>` +
+        `<span style="font-size:1.1rem;font-weight:700;">${fmtAmt(inst.amount, plan.currency)}</span><br/>` +
+        `Vence: ${dueLabel}`,
+        'warning'
+      )}
+      ${et.infoTable(et.infoRow('Metodo de pago', plan.payment_method || '—'))}
+      ${plan.method_details ? et.small(et.esc(plan.method_details)) : ''}
+      ${et.p('Una vez realizado el pago, sube tu comprobante en el portal.')}
+      ${et.button('Subir comprobante', BASE_URL + '/my-applications')}
+    `,
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1663,7 +1663,9 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isBroker && !isClient && !isAdmin(req))
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   const doc = app.documents_uploaded.find(d => d.id === req.params.docId);
@@ -1913,7 +1915,9 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
                    (user && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isBroker && !isClient && !isAdmin(req))
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   if (!app.payment.receipt_path || !fs.existsSync(app.payment.receipt_path))
@@ -2724,7 +2728,9 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
     (user && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isBroker && !isClient && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req)) return res.status(403).json({ error: 'No autorizado' });
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst?.proof_path)               return res.status(404).json({ error: 'Comprobante no encontrado' });
   if (!fs.existsSync(inst.proof_path)) return res.status(404).json({ error: 'Archivo no encontrado' });

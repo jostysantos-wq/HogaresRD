@@ -18,6 +18,7 @@ const MAX_SAVED_SEARCHES = 10;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
 const transporter = createTransport();
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -246,82 +247,39 @@ async function checkSavedSearchMatches() {
 
 // ── Email template ──────────────────────────────────────────────────────────
 
-function formatPrice(p) {
-  if (!p) return 'Consultar';
-  const n = Number(p);
-  if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
-  if (n >= 1000)    return '$' + Math.round(n / 1000) + 'K';
-  return '$' + n.toLocaleString('es-DO');
-}
-
 async function sendSearchAlertEmail(user, search, newListings, totalNew) {
   const firstName = user.name.split(' ')[0];
   const filterDesc = describeFilters(search.filters);
 
   // Use the shared hero-image listing card so saved-search alerts show
   // the actual property photo with price overlay, matching the newsletter.
-  const { listingCard: sharedListingCard } = require('../utils/email-templates');
-  const listingCards = newListings.map(sharedListingCard).join('');
+  const listingCards = newListings.map(et.listingCard).join('');
 
   const moreText = totalNew > newListings.length
-    ? `<p style="font-size:0.85rem;color:#7a9bbf;text-align:center;margin-top:8px;">...y ${totalNew - newListings.length} más</p>`
+    ? et.small(`...y ${totalNew - newListings.length} mas`)
     : '';
 
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:28px 16px;">
-<tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-<tr><td style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:28px 32px;">
-      <div style="font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🔔 ALERTA DE BÚSQUEDA</div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.25;margin-bottom:6px;">
-        ¡${totalNew === 1 ? 'Nueva propiedad encontrada' : totalNew + ' nuevas propiedades encontradas'}!
-      </div>
-      <div style="font-size:0.85rem;color:rgba(255,255,255,0.7);">Búsqueda: "${search.name}"</div>
-    </td></tr>
-  </table>
-
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td style="padding:24px 32px 8px;">
-      <p style="margin:0 0 6px;font-size:0.92rem;color:#1a2b40;">Hola <strong>${firstName}</strong>,</p>
-      <p style="margin:0 0 20px;font-size:0.88rem;color:#4d6a8a;line-height:1.6;">
-        ${totalNew === 1 ? 'Hay una nueva propiedad que coincide' : `Hay ${totalNew} nuevas propiedades que coinciden`} con tu búsqueda guardada <strong>"${search.name}"</strong> (${filterDesc}).
-      </p>
-      ${listingCards}
-      ${moreText}
-    </td></tr>
-  </table>
-
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td style="padding:16px 32px 28px;text-align:center;">
-      <a href="${BASE_URL}/busquedas-guardadas" style="display:inline-block;background:#002D62;color:#fff;font-size:0.9rem;font-weight:700;padding:12px 36px;border-radius:10px;text-decoration:none;">Ver todas mis búsquedas →</a>
-    </td></tr>
-  </table>
-
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td style="padding:16px 32px;background:#f5f8fd;border-top:1px solid #dce8f5;">
-      <p style="margin:0;font-size:0.72rem;color:#9ab0c8;text-align:center;line-height:1.7;">
-        © ${new Date().getFullYear()} HogaresRD — Plataforma informativa de bienes raíces<br/>
-        HogaresRD · Santo Domingo, República Dominicana<br/>
-        Recibiste este correo por tu búsqueda guardada.<br/>
-        <a href="${BASE_URL}/unsubscribe?token=${makeUnsubToken(user.id)}" style="color:#9ab0c8;text-decoration:underline;">Cancelar suscripción</a>
-      </p>
-    </td></tr>
-  </table>
-
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body></html>`;
+  const html = et.layout({
+    title: totalNew === 1 ? 'Nueva propiedad encontrada' : `${totalNew} nuevas propiedades encontradas`,
+    subtitle: `Busqueda: "${et.esc(search.name)}"`,
+    preheader: `${totalNew} nuevas propiedades en ${search.name}`,
+    body:
+      et.p(`Hola <strong>${et.esc(firstName)}</strong>,`)
+      + et.p(
+          (totalNew === 1 ? 'Hay una nueva propiedad que coincide' : `Hay ${totalNew} nuevas propiedades que coinciden`)
+          + ` con tu busqueda guardada <strong>"${et.esc(search.name)}"</strong> (${et.esc(filterDesc)}).`
+        )
+      + listingCards
+      + moreText
+      + et.button('Ver todas mis busquedas', `${BASE_URL}/busquedas-guardadas`)
+      + et.divider()
+      + et.small(`Recibiste este correo por tu busqueda guardada. <a href="${BASE_URL}/unsubscribe?token=${makeUnsubToken(user.id)}" style="color:${et.C.muted};text-decoration:underline;">Cancelar suscripcion</a>`),
+  });
 
   await transporter.sendMail({
     department: 'noreply',
     to:      user.email,
-    subject: `🔔 ${totalNew === 1 ? 'Nueva propiedad' : totalNew + ' nuevas propiedades'} en "${search.name}" — HogaresRD`,
+    subject: `${totalNew === 1 ? 'Nueva propiedad' : totalNew + ' nuevas propiedades'} en "${search.name}" — HogaresRD`,
     html,
   });
 }

@@ -363,6 +363,11 @@ async function _loadCache() {
         status TEXT DEFAULT 'pending', processed_at TEXT, processed_by TEXT,
         data_summary JSONB DEFAULT '{}', created_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id SERIAL PRIMARY KEY, user_id TEXT NOT NULL, listing_id TEXT,
+        action TEXT NOT NULL, data JSONB DEFAULT '{}', created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log (user_id, created_at);
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
@@ -729,6 +734,49 @@ function getConversationsForBroker(brokerId) {
   );
 }
 
+function getConversationsByInmobiliaria(inmobiliariaId) {
+  return _conversations.map(hydrateConversation).filter(c => c && c.inmobiliariaId === inmobiliariaId);
+}
+
+async function claimConversationAtomic(convId, brokerId, brokerName, now, systemMessage) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id, "clientId", "brokerId", data FROM conversations WHERE id = $1 AND "brokerId" IS NULL FOR UPDATE',
+      [convId]
+    );
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null; // already claimed
+    }
+    const row = rows[0];
+    const conv = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+    conv.brokerId = brokerId;
+    conv.brokerName = brokerName;
+    conv.updatedAt = now;
+    if (!Array.isArray(conv.messages)) conv.messages = [];
+    conv.messages.push(systemMessage);
+    const jsonData = JSON.stringify(conv);
+    await client.query(
+      'UPDATE conversations SET "brokerId" = $2, data = $3 WHERE id = $1',
+      [convId, brokerId, jsonData]
+    );
+    await client.query('COMMIT');
+    // Update in-memory cache
+    const cacheRow = { id: convId, clientId: row.clientId, brokerId, data: conv };
+    const idx = _conversations.findIndex(c => c.id === convId);
+    if (idx >= 0) _conversations[idx] = cacheRow;
+    else _conversations.push(cacheRow);
+    return { ...conv, id: convId };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 function saveConversation(conv) {
   const jsonData = JSON.stringify(conv);
   pool.query(
@@ -1039,9 +1087,21 @@ function deleteTask(id) {
 // ACTIVITY LOG
 // ══════════════════════════════════════════════════════════════════════════
 
-function getActivityByUser(userId) {
-  // Read from cache not implemented for activity — query directly
-  return []; // Will be populated as activities are logged
+async function getActivityByUser(userId, opts = {}) {
+  const { limit = 10, days = 30, action = null } = opts;
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  try {
+    let sql = 'SELECT user_id, listing_id, action, data, created_at FROM activity_log WHERE user_id = $1 AND created_at >= $2';
+    const params = [userId, since];
+    if (action) { sql += ' AND action = $3'; params.push(action); }
+    sql += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1);
+    params.push(limit);
+    const result = await pool.query(sql, params);
+    return result.rows || [];
+  } catch (err) {
+    console.error('[store] getActivityByUser error:', err.message);
+    return [];
+  }
 }
 
 function getListingActivity(listingId) { return []; }
@@ -1263,7 +1323,7 @@ module.exports = {
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
   getConversations, getConversationById, getConversationsByClient,
-  getConversationsForBroker, saveConversation,
+  getConversationsForBroker, getConversationsByInmobiliaria, saveConversation, claimConversationAtomic,
   getMetaLeads, appendMetaLead,
   getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
   getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,

@@ -8,6 +8,7 @@ const router   = express.Router();
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
 const transporter = createTransport();
 
 function send(to, subject, html) {
@@ -117,10 +118,14 @@ router.post('/join-request', userAuth, brokerAuth, (req, res) => {
     return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
 
   if (broker.inmobiliaria_id === inmobiliaria_id)
-    return res.status(400).json({ error: 'Ya estás afiliado a esta inmobiliaria' });
+    return res.status(400).json({ error: 'Ya estas afiliado a esta inmobiliaria.' });
+
+  // Block agents who are already linked to a DIFFERENT inmobiliaria
+  if (broker.inmobiliaria_id && broker.inmobiliaria_id !== inmobiliaria_id)
+    return res.status(400).json({ error: 'Ya estas afiliado a otra inmobiliaria. Debes salir de tu organizacion actual antes de solicitar afiliacion a otra.' });
 
   if (broker.inmobiliaria_join_status === 'pending')
-    return res.status(400).json({ error: 'Ya tienes una solicitud pendiente. Cancélala primero.' });
+    return res.status(400).json({ error: 'Ya tienes una solicitud pendiente. Cancelala primero.' });
 
   if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
 
@@ -149,18 +154,16 @@ router.post('/join-request', userAuth, brokerAuth, (req, res) => {
 
   // Notify inmobiliaria
   send(inm.email,
-    `Nueva solicitud de afiliación — ${broker.name}`,
-    `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-      <div style="background:#002D62;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
-        <h2 style="margin:0;font-size:1.1rem;">Nueva Solicitud de Afiliación</h2>
-      </div>
-      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-        <p>El agente broker <strong>${broker.name}</strong> (${broker.email}) ha solicitado afiliarse a <strong>${inm.companyName || inm.name}</strong>.</p>
-        ${broker.licenseNumber ? `<p>Licencia: <strong>${broker.licenseNumber}</strong></p>` : ''}
-        <p>Ingresa a tu dashboard para aprobar o rechazar la solicitud.</p>
-        <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Dashboard →</a>
-      </div>
-    </div>`
+    `Nueva solicitud de afiliacion — ${broker.name}`,
+    et.layout({
+      title: 'Nueva Solicitud de Afiliacion',
+      preheader: `${broker.name} quiere afiliarse a tu inmobiliaria`,
+      body:
+        et.p(`El agente broker <strong>${et.esc(broker.name)}</strong> (${et.esc(broker.email)}) ha solicitado afiliarse a <strong>${et.esc(inm.companyName || inm.name)}</strong>.`)
+        + (broker.licenseNumber ? et.p(`Licencia: <strong>${et.esc(broker.licenseNumber)}</strong>`) : '')
+        + et.p('Ingresa a tu dashboard para aprobar o rechazar la solicitud.')
+        + et.button('Ver Dashboard', `${BASE_URL}/broker`),
+    })
   );
 
   res.json({ success: true, message: `Solicitud enviada a ${inm.companyName || inm.name}` });
@@ -264,6 +267,10 @@ router.post('/brokers/:brokerId/approve', userAuth, teamAuth(LEVEL_DIRECTOR), (r
   if (!broker || !['broker', 'agency'].includes(broker.role))
     return res.status(404).json({ error: 'Agente no encontrado' });
 
+  // Block approval if broker is already linked to a different inmobiliaria
+  if (broker.inmobiliaria_id && broker.inmobiliaria_id !== inm.id)
+    return res.status(400).json({ error: 'Este agente ya esta afiliado a otra inmobiliaria. Debe salir de esa organizacion antes.' });
+
   if (!Array.isArray(inm.join_requests)) inm.join_requests = [];
   const jr = inm.join_requests.find(
     r => r.broker_id === broker.id && r.status === 'pending'
@@ -287,17 +294,16 @@ router.post('/brokers/:brokerId/approve', userAuth, teamAuth(LEVEL_DIRECTOR), (r
 
   // Notify broker
   send(broker.email,
-    `¡Solicitud aprobada! — ${inm.companyName || inm.name}`,
-    `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-      <div style="background:#16A34A;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
-        <h2 style="margin:0;font-size:1.1rem;">✅ Solicitud Aprobada</h2>
-      </div>
-      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-        <p>Tu solicitud de afiliación a <strong>${inm.companyName || inm.name}</strong> ha sido aprobada.</p>
-        <p>Ahora formas parte del equipo. Tus nuevas aplicaciones serán visibles para la inmobiliaria.</p>
-        <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ir al Dashboard →</a>
-      </div>
-    </div>`
+    `Solicitud aprobada — ${inm.companyName || inm.name}`,
+    et.layout({
+      title: 'Solicitud Aprobada',
+      headerColor: et.C.green,
+      preheader: `Tu solicitud a ${inm.companyName || inm.name} fue aprobada`,
+      body:
+        et.alertBox(`Tu solicitud de afiliacion a <strong>${et.esc(inm.companyName || inm.name)}</strong> ha sido aprobada.`, 'success')
+        + et.p('Ahora formas parte del equipo. Tus nuevas aplicaciones seran visibles para la inmobiliaria.')
+        + et.button('Ir al Dashboard', `${BASE_URL}/broker`),
+    })
   );
 
   res.json({ success: true });
@@ -312,6 +318,10 @@ router.post('/brokers/:brokerId/reject', userAuth, teamAuth(LEVEL_DIRECTOR), (re
 
   if (!broker)
     return res.status(404).json({ error: 'Agente no encontrado' });
+
+  // Block rejection if broker is already linked to a different inmobiliaria
+  if (broker.inmobiliaria_id && broker.inmobiliaria_id !== inm.id)
+    return res.status(400).json({ error: 'Este agente ya esta afiliado a otra inmobiliaria. Debe salir de esa organizacion antes.' });
 
   const jr = (inm.join_requests || []).find(
     r => r.broker_id === broker.id && r.status === 'pending'
@@ -331,17 +341,16 @@ router.post('/brokers/:brokerId/reject', userAuth, teamAuth(LEVEL_DIRECTOR), (re
 
   // Notify broker
   send(broker.email,
-    `Solicitud de afiliación — ${inm.companyName || inm.name}`,
-    `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-      <div style="background:#DC2626;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
-        <h2 style="margin:0;font-size:1.1rem;">Solicitud No Aprobada</h2>
-      </div>
-      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;">
-        <p>Tu solicitud para afiliarte a <strong>${inm.companyName || inm.name}</strong> no fue aprobada en esta ocasión.</p>
-        <p>Puedes intentar con otra inmobiliaria desde tu dashboard.</p>
-        <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ir al Dashboard →</a>
-      </div>
-    </div>`
+    `Solicitud de afiliacion — ${inm.companyName || inm.name}`,
+    et.layout({
+      title: 'Solicitud No Aprobada',
+      headerColor: et.C.red,
+      preheader: `Tu solicitud a ${inm.companyName || inm.name} no fue aprobada`,
+      body:
+        et.alertBox(`Tu solicitud para afiliarte a <strong>${et.esc(inm.companyName || inm.name)}</strong> no fue aprobada en esta ocasion.`, 'danger')
+        + et.p('Puedes intentar con otra inmobiliaria desde tu dashboard.')
+        + et.button('Ir al Dashboard', `${BASE_URL}/broker`),
+    })
   );
 
   res.json({ success: true });
@@ -418,21 +427,16 @@ router.post('/brokers/:brokerId/send-reset', userAuth, teamAuth(LEVEL_DIRECTOR),
   broker.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   store.saveUser(broker);
 
-  send(broker.email, 'Restablecer tu contraseña — HogaresRD', `
-    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-      <div style="background:#002D62;padding:28px 32px;">
-        <h2 style="color:#fff;margin:0;font-size:1.3rem;">🔒 Restablecer Contraseña</h2>
-      </div>
-      <div style="padding:28px 32px;background:#fff;">
-        <p style="color:#1a2b40;">Hola <strong>${broker.name}</strong>,</p>
-        <p style="color:#4d6a8a;line-height:1.6;">El administrador de <strong>${inm.name || 'tu inmobiliaria'}</strong> ha solicitado restablecer tu contraseña. Haz clic a continuación para crear una nueva.</p>
-        <p style="color:#4d6a8a;"><strong>Este enlace expira en 1 hora.</strong></p>
-        <div style="margin-top:24px;">
-          <a href="${BASE_URL}/reset-password?token=${rawToken}" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Restablecer Contraseña →</a>
-        </div>
-      </div>
-      <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;">HogaresRD · República Dominicana</div>
-    </div>`);
+  send(broker.email, 'Restablecer tu contrasena — HogaresRD',
+    et.layout({
+      title: 'Restablecer Contrasena',
+      preheader: 'Solicitud para restablecer tu contrasena en HogaresRD',
+      body:
+        et.p(`Hola <strong>${et.esc(broker.name)}</strong>,`)
+        + et.p(`El administrador de <strong>${et.esc(inm.name || 'tu inmobiliaria')}</strong> ha solicitado restablecer tu contrasena. Haz clic a continuacion para crear una nueva.`)
+        + et.alertBox('Este enlace expira en 1 hora.', 'warning')
+        + et.button('Restablecer Contrasena', `${BASE_URL}/reset-password?token=${rawToken}`),
+    }));
 
   res.json({ success: true });
 });
@@ -484,36 +488,15 @@ router.post('/secretaries/invite', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res
 
   // Send invitation email
   const inviteUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/register-secretary?token=${token}`;
-  send(email, `Invitación como Secretaria — ${user.agencyName || user.name} en HogaresRD`,
-    `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:12px;">🏠 HogaresRD</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2;">Invitación de Secretaria</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            <strong>${user.agencyName || user.name}</strong> te ha invitado como secretaria en HogaresRD.
-          </p>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
-            Como secretaria, podrás gestionar aplicaciones, aprobar pagos de clientes y acceder al panel de la inmobiliaria.
-          </p>
-          <div style="text-align:center;margin:28px 0;">
-            <a href="${inviteUrl}" style="display:inline-block;background:#002D62;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;">
-              Aceptar invitación →
-            </a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · República Dominicana</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`);
+  send(email, `Invitacion como Secretaria — ${user.agencyName || user.name} en HogaresRD`,
+    et.layout({
+      title: 'Invitacion de Secretaria',
+      preheader: `${user.agencyName || user.name} te invita como secretaria en HogaresRD`,
+      body:
+        et.p(`<strong>${et.esc(user.agencyName || user.name)}</strong> te ha invitado como secretaria en HogaresRD.`)
+        + et.p('Como secretaria, podras gestionar aplicaciones, aprobar pagos de clientes y acceder al panel de la inmobiliaria.')
+        + et.button('Aceptar invitacion', inviteUrl),
+    }));
 
   res.json({ success: true, message: 'Invitación enviada' });
 });
@@ -824,22 +807,18 @@ router.post('/reviews/invite', userAuth, (req, res) => {
   store.saveApplication(app);
 
   // Send email
-  send(app.client.email, `${user.name} te invita a dejar una reseña — HogaresRD`, `
-    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-      <div style="background:#002D62;color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-        <h2 style="margin:0;">⭐ ¿Cómo fue tu experiencia?</h2>
-      </div>
-      <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
-        <p>Hola <strong>${app.client.name || ''}</strong>,</p>
-        <p><strong>${user.name}</strong> te invita a compartir tu experiencia sobre la compra de <strong>${app.listing_title || 'tu propiedad'}</strong>.</p>
-        <p>Tu opinión ayuda a otros compradores a tomar mejores decisiones.</p>
-        <div style="text-align:center;margin:1.5rem 0;">
-          <a href="${reviewUrl}" style="display:inline-block;background:#0038A8;color:#fff;padding:0.8rem 2rem;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;">Dejar mi reseña →</a>
-        </div>
-        <p style="font-size:0.85rem;color:#666;">Este enlace es personal y de uso único.</p>
-      </div>
-    </div>
-  `);
+  send(app.client.email, `${user.name} te invita a dejar una resena — HogaresRD`,
+    et.layout({
+      title: 'Como fue tu experiencia?',
+      preheader: `${user.name} te invita a compartir tu experiencia`,
+      body:
+        et.p(`Hola <strong>${et.esc(app.client.name || '')}</strong>,`)
+        + et.p(`<strong>${et.esc(user.name)}</strong> te invita a compartir tu experiencia sobre la compra de <strong>${et.esc(app.listing_title || 'tu propiedad')}</strong>.`)
+        + et.p('Tu opinion ayuda a otros compradores a tomar mejores decisiones.')
+        + et.button('Dejar mi resena', reviewUrl)
+        + et.small('Este enlace es personal y de uso unico.'),
+    })
+  );
 
   res.json({ success: true, message: `Invitación enviada a ${app.client.email}` });
 });

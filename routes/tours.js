@@ -6,6 +6,7 @@ const store     = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
 const { notify: pushNotify } = require('./push');
 const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
 
 const transporter = createTransport();
 const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
@@ -43,11 +44,6 @@ function canManageTour(user, tour) {
 // Email helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function escHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function sendTourEmail(to, subject, html) {
   if (!to) return;
   transporter.sendMail({ to, subject, html, department: 'noreply' })
@@ -60,93 +56,102 @@ function formatDate(dateStr) {
   });
 }
 
-function tourEmailWrap(title, color, body) {
-  return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-    <div style="background:${color};color:#fff;padding:1.5rem;text-align:center;border-radius:12px 12px 0 0;">
-      <h2 style="margin:0;">${title}</h2>
-    </div>
-    <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;">
-      ${body}
-    </div>
-    <div style="padding:1rem;text-align:center;font-size:.75rem;color:#888;">
-      HogaresRD — Tu hogar ideal en República Dominicana
-    </div>
-  </div>`;
-}
-
 function tourTypeLabel(tour) {
   return tour.tour_type === 'virtual' ? 'Virtual' : 'Presencial';
 }
 
 function tourRequestEmail(tour, brokerName) {
-  return tourEmailWrap('Nueva Solicitud de Visita', '#002D62', `
-    <p><strong>${escHtml(tour.client_name)}</strong> ha solicitado una visita:</p>
-    <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-      <tr><td style="padding:.4rem 0;color:#666;">Propiedad</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.listing_title)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Tipo</td><td style="padding:.4rem 0;font-weight:600;">${tourTypeLabel(tour)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Fecha</td><td style="padding:.4rem 0;font-weight:600;">${formatDate(tour.requested_date)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Hora</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.requested_time)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Teléfono</td><td style="padding:.4rem 0;">${escHtml(tour.client_phone)}</td></tr>
-      ${tour.client_email ? `<tr><td style="padding:.4rem 0;color:#666;">Email</td><td style="padding:.4rem 0;">${escHtml(tour.client_email)}</td></tr>` : ''}
-      ${tour.client_notes ? `<tr><td style="padding:.4rem 0;color:#666;">Notas</td><td style="padding:.4rem 0;">${escHtml(tour.client_notes)}</td></tr>` : ''}
-    </table>
-    <a href="${BASE_URL}/broker#visitas" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Solicitud</a>
-  `);
+  return et.layout({
+    title: 'Solicitud de visita',
+    subtitle: et.esc(tour.listing_title),
+    preheader: `Solicitud de visita para ${tour.listing_title}`,
+    body: et.p(`<strong>${et.esc(tour.client_name)}</strong> ha solicitado una visita:`)
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(tour.listing_title))
+          + et.infoRow('Tipo', tourTypeLabel(tour))
+          + et.infoRow('Fecha', formatDate(tour.requested_date))
+          + et.infoRow('Hora', et.esc(tour.requested_time))
+          + et.infoRow('Telefono', et.esc(tour.client_phone))
+          + (tour.client_email ? et.infoRow('Email', et.esc(tour.client_email)) : '')
+          + (tour.client_notes ? et.infoRow('Notas', et.esc(tour.client_notes)) : '')
+        )
+        + et.button('Ver solicitud', `${BASE_URL}/broker#visitas`),
+  });
 }
 
 function tourConfirmedEmail(tour, brokerName) {
   const isVirtual = tour.tour_type === 'virtual';
-  return tourEmailWrap('Visita Confirmada', '#16a34a', `
-    <p>Tu visita ha sido <strong style="color:#16a34a;">confirmada</strong> por ${escHtml(brokerName)}.</p>
-    <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-      <tr><td style="padding:.4rem 0;color:#666;">Propiedad</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.listing_title)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Tipo</td><td style="padding:.4rem 0;font-weight:600;">${tourTypeLabel(tour)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Fecha</td><td style="padding:.4rem 0;font-weight:600;">${formatDate(tour.requested_date)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Hora</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.requested_time)}</td></tr>
-      ${tour.broker_notes ? `<tr><td style="padding:.4rem 0;color:#666;">Notas del agente</td><td style="padding:.4rem 0;">${escHtml(tour.broker_notes)}</td></tr>` : ''}
-      ${isVirtual && tour.virtual_link ? `<tr><td style="padding:.4rem 0;color:#666;">Enlace</td><td style="padding:.4rem 0;"><a href="${encodeURI(tour.virtual_link)}" style="color:#0038A8;font-weight:600;">Unirse a la visita virtual</a></td></tr>` : ''}
-    </table>
-    <p style="color:#666;font-size:.85rem;">${isVirtual ? 'Conéctate unos minutos antes para probar tu cámara y audio.' : 'Te recomendamos llegar 5 minutos antes de la hora programada.'}</p>
-  `);
+  return et.layout({
+    title: 'Visita confirmada',
+    subtitle: et.esc(tour.listing_title),
+    preheader: `Tu visita a ${tour.listing_title} esta confirmada`,
+    headerColor: '#1B7A3E',
+    body: et.p(`Tu visita ha sido <strong>confirmada</strong> por ${et.esc(brokerName)}.`)
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(tour.listing_title))
+          + et.infoRow('Tipo', tourTypeLabel(tour))
+          + et.infoRow('Fecha', formatDate(tour.requested_date))
+          + et.infoRow('Hora', et.esc(tour.requested_time))
+          + (tour.broker_notes ? et.infoRow('Notas del agente', et.esc(tour.broker_notes)) : '')
+          + (isVirtual && tour.virtual_link ? et.infoRow('Enlace', `<a href="${encodeURI(tour.virtual_link)}" style="color:#002D62;font-weight:600;">Unirse a la visita virtual</a>`) : '')
+        )
+        + et.alertBox(
+            isVirtual
+              ? 'Conectate unos minutos antes para probar tu camara y audio.'
+              : 'Te recomendamos llegar 5 minutos antes de la hora programada.',
+            'success'
+          ),
+  });
 }
 
 function tourRejectedEmail(tour, brokerName) {
-  return tourEmailWrap('Visita No Disponible', '#dc2626', `
-    <p>Lamentablemente, tu solicitud de visita no pudo ser confirmada.</p>
-    <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-      <tr><td style="padding:.4rem 0;color:#666;">Propiedad</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.listing_title)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Fecha solicitada</td><td style="padding:.4rem 0;">${formatDate(tour.requested_date)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Hora solicitada</td><td style="padding:.4rem 0;">${escHtml(tour.requested_time)}</td></tr>
-      ${tour.broker_notes ? `<tr><td style="padding:.4rem 0;color:#666;">Motivo</td><td style="padding:.4rem 0;">${escHtml(tour.broker_notes)}</td></tr>` : ''}
-    </table>
-    <p style="color:#666;font-size:.85rem;">Puedes solicitar una nueva visita en otro horario disponible.</p>
-    <a href="${BASE_URL}" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Buscar Horarios</a>
-  `);
+  return et.layout({
+    title: 'Visita no disponible',
+    subtitle: et.esc(tour.listing_title),
+    preheader: `La visita a ${tour.listing_title} no esta disponible`,
+    headerColor: '#CE1126',
+    body: et.p('Lamentablemente, tu solicitud de visita no pudo ser confirmada.')
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(tour.listing_title))
+          + et.infoRow('Fecha solicitada', formatDate(tour.requested_date))
+          + et.infoRow('Hora solicitada', et.esc(tour.requested_time))
+          + (tour.broker_notes ? et.infoRow('Motivo', et.esc(tour.broker_notes)) : '')
+        )
+        + et.alertBox('Puedes solicitar una nueva visita en otro horario disponible.', 'info')
+        + et.button('Buscar horarios', BASE_URL),
+  });
 }
 
 function tourRescheduledEmail(tour, oldDate, oldTime, rescheduledByBroker) {
-  const who = rescheduledByBroker ? 'el agente' : escHtml(tour.client_name);
-  return tourEmailWrap('Visita Reprogramada', '#7c3aed', `
-    <p>La visita ha sido reprogramada por <strong>${who}</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-      <tr><td style="padding:.4rem 0;color:#666;">Propiedad</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.listing_title)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#999;text-decoration:line-through;">Fecha anterior</td><td style="padding:.4rem 0;color:#999;text-decoration:line-through;">${formatDate(oldDate)} a las ${escHtml(oldTime)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#16a34a;font-weight:600;">Nueva fecha</td><td style="padding:.4rem 0;color:#16a34a;font-weight:600;">${formatDate(tour.requested_date)} a las ${escHtml(tour.requested_time)}</td></tr>
-    </table>
-    <p style="color:#666;font-size:.85rem;">La visita vuelve a estado pendiente y requiere confirmación.</p>
-  `);
+  const who = rescheduledByBroker ? 'el agente' : et.esc(tour.client_name);
+  return et.layout({
+    title: 'Visita reprogramada',
+    subtitle: et.esc(tour.listing_title),
+    preheader: `La visita a ${tour.listing_title} fue reprogramada`,
+    body: et.p(`La visita ha sido reprogramada por <strong>${who}</strong>.`)
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(tour.listing_title))
+          + et.infoRow('Fecha anterior', `<span style="text-decoration:line-through;color:#999;">${formatDate(oldDate)} a las ${et.esc(oldTime)}</span>`)
+          + et.infoRow('Nueva fecha', `<span style="color:#1B7A3E;font-weight:700;">${formatDate(tour.requested_date)} a las ${et.esc(tour.requested_time)}</span>`)
+        )
+        + et.alertBox('La visita vuelve a estado pendiente y requiere confirmacion.', 'warning'),
+  });
 }
 
 function tourCancelledEmail(tour, cancelledByBroker) {
-  const who = cancelledByBroker ? 'el agente' : escHtml(tour.client_name);
-  return tourEmailWrap('Visita Cancelada', '#f59e0b', `
-    <p>La visita ha sido cancelada por <strong>${who}</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem;">
-      <tr><td style="padding:.4rem 0;color:#666;">Propiedad</td><td style="padding:.4rem 0;font-weight:600;">${escHtml(tour.listing_title)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Fecha</td><td style="padding:.4rem 0;">${formatDate(tour.requested_date)}</td></tr>
-      <tr><td style="padding:.4rem 0;color:#666;">Hora</td><td style="padding:.4rem 0;">${escHtml(tour.requested_time)}</td></tr>
-    </table>
-  `);
+  const who = cancelledByBroker ? 'el agente' : et.esc(tour.client_name);
+  return et.layout({
+    title: 'Visita cancelada',
+    subtitle: et.esc(tour.listing_title),
+    preheader: `La visita a ${tour.listing_title} fue cancelada`,
+    headerColor: '#CE1126',
+    body: et.p(`La visita ha sido cancelada por <strong>${who}</strong>.`)
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(tour.listing_title))
+          + et.infoRow('Fecha', formatDate(tour.requested_date))
+          + et.infoRow('Hora', et.esc(tour.requested_time))
+        ),
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

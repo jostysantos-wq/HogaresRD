@@ -122,6 +122,7 @@ router.post('/', reportLimiter, (req, res, next) => {
       title: 'Nuevo reporte recibido',
       subtitle: typeLabels[type] + ': ' + et.esc(resolvedName),
       headerColor: '#991b1b',
+      preheader: `Nuevo reporte recibido sobre ${resolvedName}`,
       body: et.infoTable(
               et.infoRow('Tipo', typeLabels[type])
             + et.infoRow('Elemento', et.esc(resolvedName))

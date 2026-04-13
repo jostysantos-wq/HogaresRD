@@ -433,4 +433,112 @@ router.get('/accounting', (req, res) => {
   });
 });
 
+// ── GET /team-performance — Inmobiliaria director team metrics ───────────
+router.get('/team-performance', (req, res) => {
+  const user = req.brokerUser;
+  // Only inmobiliaria/constructora directors can view team performance
+  if (!['inmobiliaria', 'constructora'].includes(user.role)) {
+    return res.status(403).json({ error: 'Solo directores de inmobiliaria pueden ver el rendimiento del equipo.' });
+  }
+
+  const since = parseRange(req.query.range);
+  const teamMembers = store.getUsersByInmobiliaria(user.id);
+  const teamIds = new Set(teamMembers.map(m => m.id));
+  teamIds.add(user.id); // include the director themselves
+
+  // Conversations scoped to this inmobiliaria
+  const allConvs = store.getConversationsByInmobiliaria(user.id);
+  const convs = since
+    ? allConvs.filter(c => c.createdAt >= since.toISOString())
+    : allConvs;
+
+  // Lead queue items scoped to this inmobiliaria
+  const allLeads = store.getLeadQueue().filter(q => {
+    const extra = typeof q._extra === 'string' ? (function() { try { return JSON.parse(q._extra); } catch { return {}; } })() : (q._extra || {});
+    return extra.inmobiliaria_scope === user.id || teamIds.has(q.claimed_by);
+  });
+  const leads = since
+    ? allLeads.filter(q => q.created_at >= since.toISOString())
+    : allLeads;
+
+  // Applications scoped to this inmobiliaria
+  const apps = store.getApplicationsByInmobiliaria(user.id);
+  const filteredApps = since
+    ? apps.filter(a => a.created_at >= since.toISOString())
+    : apps;
+
+  // Contribution scores for team members
+  const allScores = store.getContributionScores().filter(c => teamIds.has(c.user_id));
+
+  // Per-agent stats
+  const agents = [];
+  for (const member of teamMembers) {
+    const agentConvs = convs.filter(c => c.brokerId === member.id);
+    const openConvs = agentConvs.filter(c => !c.closed && !c.archived);
+    const closedConvs = agentConvs.filter(c => c.closed || c.archived);
+    const agentApps = filteredApps.filter(a => a.broker?.user_id === member.id);
+    const agentScores = allScores.filter(c => c.user_id === member.id);
+    const totalResponses = agentScores.reduce((sum, c) => sum + (c.response_count || 0), 0);
+    const avgResponseMs = totalResponses > 0
+      ? Math.round(agentScores.reduce((sum, c) => sum + (c.avg_response_ms || 0) * (c.response_count || 0), 0) / totalResponses)
+      : null;
+    const agentClaims = leads.filter(q => q.claimed_by === member.id && q.status === 'claimed');
+
+    agents.push({
+      userId: member.id,
+      name: member.name || '',
+      role: member.role,
+      avatarUrl: member.avatarUrl || null,
+      conversations_handled: agentConvs.length,
+      open_conversations: openConvs.length,
+      closed_conversations: closedConvs.length,
+      applications_count: agentApps.length,
+      avg_response_ms: avgResponseMs,
+      avg_response_min: avgResponseMs ? +(avgResponseMs / 60000).toFixed(1) : null,
+      total_responses: totalResponses,
+      leads_claimed: agentClaims.length,
+    });
+  }
+
+  // Aggregate stats
+  const claimedLeads = leads.filter(q => q.status === 'claimed');
+  const unclaimedLeads = leads.filter(q => q.status === 'active');
+  const allResponseMs = agents.filter(a => a.avg_response_ms).map(a => a.avg_response_ms);
+  const avgSpeedToLead = allResponseMs.length
+    ? Math.round(allResponseMs.reduce((a, b) => a + b, 0) / allResponseMs.length)
+    : null;
+
+  // Best performer (most conversations handled)
+  const bestPerformer = agents.length
+    ? agents.reduce((best, a) => a.conversations_handled > (best?.conversations_handled || 0) ? a : best, null)
+    : null;
+
+  // Leads by day (last 30 days)
+  const leadsByDay = {};
+  for (const q of leads) {
+    const day = (q.created_at || '').slice(0, 10);
+    if (day) leadsByDay[day] = (leadsByDay[day] || 0) + 1;
+  }
+  const leadsByDayArr = Object.entries(leadsByDay)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  res.json({
+    team_size: teamMembers.length,
+    agents,
+    aggregate: {
+      total_leads: leads.length,
+      claimed_count: claimedLeads.length,
+      claimed_pct: leads.length ? Math.round((claimedLeads.length / leads.length) * 100) : 0,
+      unclaimed_count: unclaimedLeads.length,
+      avg_speed_to_lead_ms: avgSpeedToLead,
+      avg_speed_to_lead_min: avgSpeedToLead ? +(avgSpeedToLead / 60000).toFixed(1) : null,
+      total_conversations: convs.length,
+      total_applications: filteredApps.length,
+    },
+    best_performer: bestPerformer,
+    leads_by_day: leadsByDayArr,
+  });
+});
+
 module.exports = router;

@@ -13,6 +13,7 @@ const crypto   = require('crypto');
 const jwt      = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
 
 // TOTP settings — 30-second window, ±1 step drift tolerance.
 // otplib v13: pass options on each verify call, not as a global setter.
@@ -162,29 +163,16 @@ router.post('/login', async (req, res) => {
   try {
     await mailer.sendMail({
       to:      adminEmail,
-      subject: '🔐 HogaresRD Admin — Código de acceso',
-      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-  <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
-    <div style="font-size:1.1rem;font-weight:800;color:#fff;">Código de Acceso Admin</div>
-    <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:4px;">HogaresRD — Panel de Administración</div>
-  </td></tr>
-  <tr><td style="padding:28px 32px;">
-    <p style="margin:0 0 20px;font-size:0.92rem;color:#1a2b40;">Ingresa este código en el portal. Expira en <strong>10 minutos</strong>.</p>
-    <div style="background:#f0f6ff;border:2px solid #002D62;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-      <div style="font-size:2.8rem;font-weight:900;letter-spacing:10px;color:#002D62;font-family:monospace;">${otp}</div>
-    </div>
-    <p style="margin:0;font-size:0.78rem;color:#9ab0c8;line-height:1.6;">
-      Si no solicitaste este código, alguien tiene tus credenciales. Cambia tu contraseña inmediatamente.<br/>
-      IP de origen registrada: <strong>${ip}</strong>
-    </p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`,
+      subject: 'Codigo de acceso — HogaresRD Admin',
+      html: et.layout({
+        title: 'Codigo de Acceso Admin',
+        subtitle: 'HogaresRD — Panel de Administracion',
+        preheader: 'Codigo de acceso al panel de administracion',
+        body:
+          et.p('Ingresa este codigo en el portal. Expira en <strong>10 minutos</strong>.')
+          + et.codeBlock(otp)
+          + et.small('Si no solicitaste este codigo, alguien tiene tus credenciales. Cambia tu contrasena inmediatamente.<br/>IP de origen registrada: <strong>' + ip + '</strong>'),
+      }),
     });
     console.log(`[admin-auth] OTP emailed to ${adminEmail} (IP ${ip})`);
   } catch (e) {

@@ -1937,13 +1937,72 @@
 
   <!-- ═══ PAGE: TEAM — RENDIMIENTO ══════════════════════════ -->
   <div class="page-section" id="page-team-performance">
-    <div class="team-page-header">
-      <h2>Rendimiento del Equipo</h2>
-      <p>Ranking de actividad por agente basado en aplicaciones gestionadas</p>
+    <div class="team-page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+      <div>
+        <h2>Rendimiento del Equipo</h2>
+        <p>Metricas de rendimiento por agente &mdash; tiempos de respuesta, leads y conversaciones</p>
+      </div>
+      <select id="tpRangeSelect" style="padding:0.4rem 0.8rem;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:0.82rem;">
+        <option value="7d">Ultimos 7 dias</option>
+        <option value="30d" selected>Ultimos 30 dias</option>
+        <option value="90d">Ultimos 90 dias</option>
+        <option value="">Todo el tiempo</option>
+      </select>
     </div>
-    <div id="teamPerfList">
-      <p style="color:var(--text-muted);font-size:0.82rem;">Cargando...</p>
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin:1.2rem 0;">
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Equipo</div>
+        <div id="tpTeamSize" style="font-size:1.8rem;font-weight:800;color:var(--accent);">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">agentes</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Total Leads</div>
+        <div id="tpTotalLeads" style="font-size:1.8rem;font-weight:800;color:var(--accent);">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">en periodo</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Leads Reclamados</div>
+        <div id="tpClaimedPct" style="font-size:1.8rem;font-weight:800;color:#22c55e;">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">porcentaje</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Tiempo Resp. Prom.</div>
+        <div id="tpAvgResponse" style="font-size:1.8rem;font-weight:800;color:#f59e0b;">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">minutos</div>
+      </div>
     </div>
+
+    <!-- Agent performance table -->
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.2rem;overflow-x:auto;">
+      <h3 style="font-size:0.92rem;font-weight:700;margin:0 0 0.8rem;">Rendimiento por Agente</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="tpAgentTable">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th style="padding:0.5rem;">Agente</th>
+            <th style="padding:0.5rem;text-align:center;">Conversaciones</th>
+            <th style="padding:0.5rem;text-align:center;">Abiertas</th>
+            <th style="padding:0.5rem;text-align:center;">Cerradas</th>
+            <th style="padding:0.5rem;text-align:center;">Aplicaciones</th>
+            <th style="padding:0.5rem;text-align:center;">Tiempo Resp.</th>
+            <th style="padding:0.5rem;text-align:center;">Leads Reclamados</th>
+          </tr>
+        </thead>
+        <tbody id="tpAgentBody">
+          <tr><td colspan="7" style="padding:1rem;text-align:center;color:var(--text-muted);">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Leads per day chart -->
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;">
+      <h3 style="font-size:0.92rem;font-weight:700;margin:0 0 0.8rem;">Leads por Dia</h3>
+      <div style="height:260px;"><canvas id="chartLeadsPerDay"></canvas></div>
+    </div>
+
+    <!-- Legacy ranking (kept for backward compat) -->
+    <div id="teamPerfList" style="display:none;"></div>
   </div>
 
   <!-- ═══ REFERRAL LINKS PAGE ═══════════════════════════════════ -->
@@ -4783,7 +4842,7 @@
     if (!brokers.length) {
       el.innerHTML = `<div class="team-empty">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-        <p>No hay agentes afiliados aún.</p>
+        <p>No hay agentes afiliados aun.</p>
       </div>`;
       return;
     }
@@ -4811,6 +4870,96 @@
       </div>`;
     }).join('');
   }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Team Performance Dashboard (inmobiliaria directors) ──
+  // ══════════════════════════════════════════════════════════
+  let _tpLoaded = false;
+  async function loadTeamPerformanceDashboard(range) {
+    if (!isInmobiliariaRole) return;
+    const rangeParam = range || document.getElementById('tpRangeSelect')?.value || '30d';
+    try {
+      const data = await API(`/api/broker/team-performance?range=${rangeParam}`);
+
+      // Summary cards
+      document.getElementById('tpTeamSize').textContent = data.team_size || 0;
+      document.getElementById('tpTotalLeads').textContent = data.aggregate?.total_leads || 0;
+      document.getElementById('tpClaimedPct').textContent = (data.aggregate?.claimed_pct || 0) + '%';
+      const avgMin = data.aggregate?.avg_speed_to_lead_min;
+      document.getElementById('tpAvgResponse').textContent = avgMin != null ? avgMin + ' min' : 'N/A';
+
+      // Agent table
+      const tbody = document.getElementById('tpAgentBody');
+      if (tbody) {
+        if (!data.agents || !data.agents.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="padding:1rem;text-align:center;color:var(--text-muted);">No hay agentes en el equipo.</td></tr>';
+        } else {
+          const sorted = [...data.agents].sort((a, b) => b.conversations_handled - a.conversations_handled);
+          tbody.innerHTML = sorted.map(a => {
+            const initials = (a.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            const respTime = a.avg_response_min != null ? a.avg_response_min + ' min' : '-';
+            return `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <div class="equipo-avatar" style="width:28px;height:28px;font-size:0.6rem;">${esc(initials)}</div>
+                  <div>
+                    <div style="font-weight:600;">${esc(a.name)}</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);">${esc(a.role)}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="padding:0.5rem;text-align:center;font-weight:700;">${a.conversations_handled}</td>
+              <td style="padding:0.5rem;text-align:center;color:#22c55e;">${a.open_conversations}</td>
+              <td style="padding:0.5rem;text-align:center;color:var(--text-muted);">${a.closed_conversations}</td>
+              <td style="padding:0.5rem;text-align:center;">${a.applications_count}</td>
+              <td style="padding:0.5rem;text-align:center;color:#f59e0b;font-weight:600;">${respTime}</td>
+              <td style="padding:0.5rem;text-align:center;font-weight:700;">${a.leads_claimed}</td>
+            </tr>`;
+          }).join('');
+        }
+      }
+
+      // Leads per day chart
+      const defs = getChartDefaults();
+      const leadsDay = data.leads_by_day || [];
+      destroyChart('chartLeadsPerDay');
+      const canvas = document.getElementById('chartLeadsPerDay');
+      if (canvas) {
+        chartInstances['chartLeadsPerDay'] = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: leadsDay.map(d => d.date),
+            datasets: [{
+              label: 'Leads',
+              data: leadsDay.map(d => d.count),
+              backgroundColor: '#0038A8',
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              title: { display: true, text: 'Leads por Dia', color: defs.color }
+            },
+            scales: {
+              x: { ticks: { color: defs.color, maxTicksLimit: 15 }, grid: { color: defs.gridColor } },
+              y: { beginAtZero: true, ticks: { color: defs.color, stepSize: 1 }, grid: { color: defs.gridColor } }
+            }
+          }
+        });
+      }
+      _tpLoaded = true;
+    } catch (e) {
+      console.error('team-performance load error:', e);
+    }
+  }
+
+  // Wire up range selector
+  document.getElementById('tpRangeSelect')?.addEventListener('change', () => {
+    loadTeamPerformanceDashboard();
+  });
 
   async function respondJoinRequest(brokerId, action) {
     try {
@@ -5348,6 +5497,7 @@
     if (page === '2fa') load2FAStatus();
     if (page === 'perfil') loadProfilePage();
     if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
+    if (page === 'team-performance') loadTeamPerformanceDashboard();
     if (page === 'team-secretaries') loadSecretaries();
     if (page === 'tour-requests' && typeof window._loadTourRequests === 'function') window._loadTourRequests();
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
@@ -8240,9 +8390,48 @@
       transferBtn.style.display = (iAmAssigned && iAmPro && effectiveInm) ? 'inline-flex' : 'none';
     }
 
+    // Handle unclaimed conversations (claim required)
+    if (conv.claimRequired) {
+      document.getElementById('brkMsgArea').innerHTML = '';
+      const claimBox = document.createElement('div');
+      claimBox.style.cssText = 'padding:2rem;text-align:center;';
+      claimBox.innerHTML = `
+        <div style="background:var(--bg);border-radius:12px;padding:2rem;max-width:400px;margin:0 auto;">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">📋</div>
+          <h3 style="margin:0 0 0.5rem;color:var(--text);">Conversacion sin asignar</h3>
+          <p style="color:var(--text-muted);font-size:0.88rem;margin:0 0 1rem;">
+            Reclama esta conversacion para ver los mensajes y responder al cliente.
+          </p>
+          ${(conv.clientActivity && conv.clientActivity.length) ? `
+            <div style="text-align:left;margin:1rem 0;padding:1rem;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.5rem;">Propiedades vistas por el cliente</div>
+              ${conv.clientActivity.map(a => `
+                <div style="padding:4px 0;font-size:0.82rem;color:var(--text);border-bottom:1px solid var(--border);">
+                  ${esc(a.listing_title)} <span style="color:var(--text-muted);font-size:0.75rem;">${a.listing_city ? '· ' + esc(a.listing_city) : ''} ${a.listing_price ? '· $' + Number(a.listing_price).toLocaleString() : ''}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          <button onclick="brkClaimConv('${esc(id)}')" style="background:var(--accent);color:#fff;border:none;padding:0.75rem 2rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.95rem;">
+            Reclamar conversacion
+          </button>
+        </div>
+      `;
+      document.getElementById('brkMsgArea').appendChild(claimBox);
+      // Hide input area for unclaimed convos
+      const inputArea = document.getElementById('brkInputArea');
+      if (inputArea) inputArea.style.display = 'none';
+      if (transferBtn) transferBtn.style.display = 'none';
+      return; // Don't start polling for unclaimed convos
+    }
+
+    // Show input area (may have been hidden by a previous claim view)
+    const inputArea = document.getElementById('brkInputArea');
+    if (inputArea) inputArea.style.display = '';
+
     brkApplyClosedState(conv);
-    brkRenderMsgs(conv.messages);
-    if (conv.messages.length) brkLastTs = conv.messages.at(-1).timestamp;
+    brkRenderMsgs(conv.messages || []);
+    if (conv.messages?.length) brkLastTs = conv.messages.at(-1).timestamp;
 
     fetch(`/api/conversations/${id}/read`, { method: 'PUT', credentials: 'include' });
     brkLoadList();
@@ -8315,6 +8504,19 @@
   document.getElementById('brkInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); brkSend(); }
   });
+
+  // ── Claim unclaimed org conversation ─────────────────────────────────────
+  window.brkClaimConv = async function(id) {
+    try {
+      const res = await fetch(`/api/conversations/${id}/claim`, { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Error al reclamar'); return; }
+      // Reload the conversation now that it's claimed
+      brkOpenConv(id);
+    } catch (e) {
+      alert('Error al reclamar la conversacion');
+    }
+  };
 
   // ── Archive / unarchive conversation ─────────────────────────────────────
   window.brkArchiveConv = async function(id) {

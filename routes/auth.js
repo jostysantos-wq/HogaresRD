@@ -6,6 +6,7 @@ const crypto     = require('crypto');
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { logSec } = require('./security-log');
+const et         = require('../utils/email-templates');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET; // required — enforced at startup by server.js
@@ -154,33 +155,26 @@ function trackLoginAndAlert(user, req) {
 async function sendNewDeviceAlert(user, ip, userAgent) {
   if (!user.email) return;
   const when = new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
-  const firstName = (user.name || '').split(' ')[0] || 'Usuario';
   try {
     await transporter.sendMail({
       to:      user.email,
-      subject: 'Nuevo inicio de sesión en tu cuenta HogaresRD',
-      html: `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;"><tr><td align="center">
-<table width="100%" style="max-width:480px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-  <tr><td style="background:linear-gradient(135deg,#002D62,#1a5fa8);padding:24px 32px;">
-    <div style="font-size:1.1rem;font-weight:800;color:#fff;">Nuevo inicio de sesión detectado</div>
-  </td></tr>
-  <tr><td style="padding:24px 32px;">
-    <p style="margin:0 0 12px;color:#1a2b40;">Hola <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 16px;font-size:0.92rem;color:#4d6a8a;line-height:1.55;">
-      Detectamos un inicio de sesión en tu cuenta desde un dispositivo o red nueva:
-    </p>
-    <table width="100%" style="background:#f0f6ff;border-radius:10px;padding:14px 18px;font-size:0.85rem;color:#1a2b40;margin-bottom:14px;">
-      <tr><td style="padding:4px 0;color:#7a9bbf;">Fecha:</td><td style="padding:4px 0;"><strong>${when}</strong></td></tr>
-      <tr><td style="padding:4px 0;color:#7a9bbf;">IP:</td><td style="padding:4px 0;"><strong>${ip}</strong></td></tr>
-      <tr><td style="padding:4px 0;color:#7a9bbf;">Navegador:</td><td style="padding:4px 0;font-size:0.78rem;">${userAgent.slice(0, 120)}</td></tr>
-    </table>
-    <p style="margin:0;font-size:0.82rem;color:#7a9bbf;line-height:1.55;">
-      ¿No fuiste tú? Cambia tu contraseña inmediatamente y revoca sesiones activas desde tu perfil.
-    </p>
-  </td></tr>
-</table>
-</td></tr></table></body></html>`,
+      subject: 'Nuevo inicio de sesion detectado — HogaresRD',
+      html: et.layout({
+        title: 'Nuevo inicio de sesion',
+        subtitle: 'Se detecto acceso desde un dispositivo nuevo',
+        preheader: 'Se inicio sesion en tu cuenta desde un dispositivo o red nueva',
+        headerColor: '#b45309',
+        body: `
+          ${et.p('Detectamos un inicio de sesion en tu cuenta desde un dispositivo o red que no reconocemos.')}
+          ${et.infoTable(
+            et.infoRow('Fecha', when) +
+            et.infoRow('IP', ip) +
+            et.infoRow('Navegador', et.esc((userAgent || '').slice(0, 100)))
+          )}
+          ${et.alertBox('Si no reconoces esta actividad, cambia tu contrasena inmediatamente desde tu perfil.', 'danger')}
+          ${et.button('Cambiar contrasena', BASE_URL + '/reset-password')}
+        `,
+      }),
     });
   } catch {}
 }
@@ -198,119 +192,41 @@ function attachVerifyToken(user) {
 
 function sendVerificationEmail(user, rawToken) {
   const verifyUrl = `${BASE_URL}/verify-email?token=${rawToken}`;
-  const firstName = user.name.split(' ')[0];
   return transporter.sendMail({
     to:         user.email,
     subject:    'Verifica tu correo — HogaresRD',
     department: 'soporte',
-    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0 16px;">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
-
-  <!-- Logo -->
-  <tr><td style="padding:40px 0 32px;">
-    <div style="font-size:1.4rem;font-weight:900;color:#002D62;letter-spacing:-0.5px;">HogaresRD</div>
-  </td></tr>
-
-  <!-- Headline -->
-  <tr><td>
-    <h1 style="margin:0 0 24px;font-size:1.75rem;font-weight:800;color:#1a1a1a;line-height:1.2;">Verifica tu correo electronico</h1>
-  </td></tr>
-
-  <!-- Body -->
-  <tr><td>
-    <p style="margin:0 0 24px;font-size:1rem;color:#333;line-height:1.7;">
-      Hola ${firstName}, haz clic en el boton de abajo para verificar tu direccion de correo electronico y activar tu cuenta. Este enlace expira en <strong>24 horas</strong>.
-    </p>
-  </td></tr>
-
-  <!-- Button -->
-  <tr><td style="padding:8px 0 32px;">
-    <a href="${verifyUrl}" style="display:inline-block;background:#002D62;color:#ffffff;padding:16px 40px;border-radius:6px;text-decoration:none;font-weight:700;font-size:1rem;">Verificar mi correo</a>
-  </td></tr>
-
-  <!-- Secondary -->
-  <tr><td>
-    <p style="margin:0 0 8px;font-size:0.85rem;color:#666;line-height:1.6;">
-      Si no creaste esta cuenta, puedes ignorar este correo.
-    </p>
-    <p style="margin:0;font-size:0.8rem;color:#999;line-height:1.6;">
-      Para mayor seguridad, no compartas este enlace con nadie.
-    </p>
-  </td></tr>
-
-  <!-- Divider -->
-  <tr><td style="padding:32px 0 0;">
-    <div style="border-top:1px solid #e5e5e5;"></div>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="padding:24px 0 40px;">
-    <p style="margin:0 0 4px;font-size:0.75rem;color:#999;font-weight:600;">El equipo de HogaresRD</p>
-    <p style="margin:0;font-size:0.72rem;color:#bbb;">Republica Dominicana · hogaresrd.com</p>
-  </td></tr>
-
-</table>
-</td></tr></table>
-</body></html>`,
+    html: et.layout({
+      title: 'Verifica tu correo electronico',
+      subtitle: 'Un paso mas para activar tu cuenta',
+      preheader: 'Confirma tu direccion de correo para completar tu registro en HogaresRD',
+      body: `
+        ${et.p('Haz clic en el boton de abajo para verificar tu direccion de correo y activar tu cuenta. Este enlace expira en <strong>24 horas</strong>.')}
+        ${et.button('Verificar mi correo', verifyUrl)}
+        ${et.divider()}
+        ${et.small('Si no creaste esta cuenta, ignora este correo. No se realizara ningun cambio.')}
+      `,
+    }),
   }).catch(err => console.error('Verification email error:', err.message));
 }
 
 function send2FAEmail(user, code) {
-  const firstName = user.name.split(' ')[0];
-  const codeSpaced = code.toString().split('').join(' ');
   return transporter.sendMail({
     to:         user.email,
     department: 'soporte',
-    subject:    'Tu codigo de verificacion — HogaresRD',
-    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0 16px;">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
-
-  <!-- Logo -->
-  <tr><td style="padding:40px 0 32px;">
-    <div style="font-size:1.4rem;font-weight:900;color:#002D62;letter-spacing:-0.5px;">HogaresRD</div>
-  </td></tr>
-
-  <!-- Headline -->
-  <tr><td>
-    <h1 style="margin:0 0 24px;font-size:1.75rem;font-weight:800;color:#1a1a1a;line-height:1.2;">Ingresa este codigo para iniciar sesion</h1>
-  </td></tr>
-
-  <!-- Code -->
-  <tr><td>
-    <div style="font-size:2.5rem;font-weight:300;color:#1a1a1a;letter-spacing:0.15em;margin:0 0 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${codeSpaced}</div>
-  </td></tr>
-
-  <!-- Body -->
-  <tr><td>
-    <p style="margin:0 0 20px;font-size:1rem;color:#333;line-height:1.7;">
-      Ingresa el codigo de arriba en tu dispositivo para iniciar sesion en HogaresRD. Este codigo expira en <strong>5 minutos</strong>.
-    </p>
-    <p style="margin:0 0 8px;font-size:0.85rem;color:#666;line-height:1.6;">
-      Si no solicitaste este codigo, puedes ignorar este correo.
-    </p>
-    <p style="margin:0;font-size:0.8rem;color:#999;line-height:1.6;">
-      Para mayor seguridad, no compartas este codigo con nadie.
-    </p>
-  </td></tr>
-
-  <!-- Divider -->
-  <tr><td style="padding:32px 0 0;">
-    <div style="border-top:1px solid #e5e5e5;"></div>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="padding:24px 0 40px;">
-    <p style="margin:0 0 4px;font-size:0.75rem;color:#999;font-weight:600;">El equipo de HogaresRD</p>
-    <p style="margin:0;font-size:0.72rem;color:#bbb;">Republica Dominicana · hogaresrd.com</p>
-  </td></tr>
-
-</table>
-</td></tr></table>
-</body></html>`,
+    subject:    'Codigo de verificacion — HogaresRD',
+    html: et.layout({
+      title: 'Verificacion de identidad',
+      subtitle: 'Ingresa este codigo para continuar',
+      preheader: 'Tu codigo de seguridad para iniciar sesion en HogaresRD',
+      body: `
+        ${et.codeBlock(code)}
+        ${et.p('Ingresa este codigo en tu dispositivo para completar el inicio de sesion. Expira en <strong>5 minutos</strong>.')}
+        ${et.divider()}
+        ${et.alertBox('Si no solicitaste este codigo, ignora este correo. Tu cuenta permanece segura.', 'warning')}
+        ${et.small('Nunca compartas este codigo con terceros. HogaresRD nunca te pedira tu codigo por telefono o mensaje.')}
+      `,
+    }),
   }).catch(err => console.error('2FA email error:', err.message));
 }
 
@@ -412,108 +328,31 @@ router.post('/register', authLimiter, async (req, res, next) => {
       .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 3);
 
-    // Reuse the shared hero-image listing card so the welcome email's
-    // trending section shows actual property photos instead of a text-only
-    // card. The helper ensures image URLs are absolute and handles Outlook's
-    // VML fallback automatically.
-    const { listingCard } = require('../utils/email-templates');
-
-    const trendingHTML = trending.length
-      ? `
-        <!-- Trending listings -->
-        <tr><td style="padding:0 40px 32px;">
-          <div style="margin-bottom:16px;">
-            <div style="font-size:0.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7a9bbf;margin-bottom:6px;">🔥 LO MÁS VISTO AHORA</div>
-            <div style="font-size:1.05rem;font-weight:800;color:#1a2b40;">Propiedades que están dando de qué hablar</div>
-          </div>
-          ${trending.map(listingCard).join('')}
-          <div style="text-align:center;margin-top:8px;">
-            <a href="${BASE_URL}/comprar" style="display:inline-block;border:2px solid #002D62;color:#002D62;font-size:0.85rem;font-weight:700;padding:10px 28px;border-radius:10px;text-decoration:none;">Ver todas las propiedades →</a>
-          </div>
-        </td></tr>`
+    const trendingCards = trending.length
+      ? trending.map(l => et.listingCard(l)).join('') + et.buttonOutline('Ver todas las propiedades', BASE_URL + '/comprar')
       : '';
 
     transporter.sendMail({
       department: 'soporte',
       to:      user.email,
-      subject: `¡Bienvenido a HogaresRD, ${user.name.split(' ')[0]}! Tu hogar ideal te espera 🏠`,
-      html: `<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-
-        <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:40px 40px 36px;">
-          <div style="font-size:1rem;font-weight:900;color:#ffffff;letter-spacing:-0.5px;margin-bottom:24px;">🏠 HogaresRD</div>
-          <div style="font-size:1.75rem;font-weight:800;color:#ffffff;line-height:1.2;margin-bottom:8px;">
-            ¡Hola, ${user.name.split(' ')[0]}! 👋
-          </div>
-          <div style="font-size:1rem;color:rgba(255,255,255,0.8);line-height:1.5;">
-            Ya eres parte de la comunidad inmobiliaria más completa de la República Dominicana.
-          </div>
-        </td></tr>
-
-        <!-- Intro -->
-        <tr><td style="padding:36px 40px 24px;">
-          <p style="margin:0 0 16px;font-size:1rem;color:#1a2b40;line-height:1.7;">
-            Nos alegra tenerte aquí. En <strong>HogaresRD</strong> encontrarás desde acogedores apartamentos en Santo Domingo hasta villas frente al mar en Punta Cana — y todo lo que hay en el medio. 🌴
-          </p>
-          <p style="margin:0 0 24px;font-size:1rem;color:#1a2b40;line-height:1.7;">
-            Con tu cuenta puedes guardar favoritos, contactar directamente a las inmobiliarias y recibir actualizaciones de las propiedades que te interesan. Básicamente, encontrar tu próximo hogar acaba de volverse mucho más fácil.
-          </p>
-
-          <!-- Features -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fd;border-radius:12px;padding:4px 0;margin-bottom:28px;">
-            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
-              <span style="font-size:1rem;margin-right:10px;">🔍</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Busca por ciudad, precio, tipo y más filtros</span>
-            </td></tr>
-            <tr><td style="padding:12px 20px;border-bottom:1px solid #e0e8f5;">
-              <span style="font-size:1rem;margin-right:10px;">📍</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Explora propiedades en un mapa interactivo</span>
-            </td></tr>
-            <tr><td style="padding:12px 20px;">
-              <span style="font-size:1rem;margin-right:10px;">💬</span>
-              <span style="font-size:0.9rem;color:#1a2b40;font-weight:600;">Contacta inmobiliarias directamente desde cada anuncio</span>
-            </td></tr>
-          </table>
-
-          <!-- Main CTA -->
-          <div style="text-align:center;margin-bottom:8px;">
-            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#ffffff;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:0.3px;">
-              Explorar propiedades →
-            </a>
-          </div>
-        </td></tr>
-
-        ${trendingHTML}
-
-        <!-- Closing -->
-        <tr><td style="padding:0 40px 36px;">
-          <p style="margin:0;font-size:0.9rem;color:#4d6a8a;line-height:1.7;">
-            Si tienes alguna pregunta, responde directamente a este correo y con gusto te ayudamos. 😊<br/><br/>
-            Hasta pronto,<br/>
-            <strong style="color:#002D62;">El equipo de HogaresRD</strong>
-          </p>
-          ${user.marketingOptIn ? `<p style="margin:16px 0 0;font-size:0.78rem;color:#a0b4cc;">Recibirás ocasionalmente novedades y propiedades destacadas. Puedes cancelar en cualquier momento respondiendo a este correo.</p>` : ''}
-        </td></tr>
-
-        <!-- Footer -->
-        <tr><td style="padding:20px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.75rem;color:#9ab0c8;text-align:center;line-height:1.6;">
-            © ${new Date().getFullYear()} HogaresRD &mdash; República Dominicana<br/>
-            <a href="${BASE_URL}/home" style="color:#9ab0c8;text-decoration:underline;">hogaresrd.com</a>
-            &nbsp;·&nbsp;
-            <a href="${BASE_URL}/ciudades" style="color:#9ab0c8;text-decoration:underline;">Explorar ciudades</a>
-          </p>
-        </td></tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+      subject: 'Bienvenido a HogaresRD — Tu cuenta esta activa',
+      html: et.layout({
+        title: 'Bienvenido a HogaresRD',
+        subtitle: 'Tu cuenta esta lista. Explora propiedades en toda la Republica Dominicana.',
+        preheader: 'Tu cuenta en HogaresRD esta activa. Descubre propiedades en toda la Republica Dominicana.',
+        body: `
+          ${et.p('Gracias por registrarte. Con tu cuenta puedes guardar favoritos, contactar inmobiliarias y recibir actualizaciones de las propiedades que te interesan.')}
+          ${et.featureList([
+            'Busca por ciudad, precio, tipo y mas filtros',
+            'Explora propiedades en un mapa interactivo',
+            'Contacta inmobiliarias directamente desde cada anuncio',
+          ])}
+          ${et.button('Explorar propiedades', BASE_URL + '/home')}
+          ${trendingCards ? et.divider() + '<div style="margin-bottom:8px;font-size:0.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7a9bbf;">LO MAS VISTO</div>' + trendingCards : ''}
+          ${et.divider()}
+          ${et.small('Si tienes alguna pregunta, responde directamente a este correo.')}
+        `,
+      }),
     }).catch(err => console.error('Welcome email error:', err.message));
 
     sendVerificationEmail(user, verifyRawToken);
@@ -604,18 +443,16 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
           transporter.sendMail({
             department: 'soporte',
             to:      inm.email,
-            subject: `Nueva solicitud de afiliación — ${user.name}`,
-            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-              <div style="background:#002D62;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
-                <h2 style="margin:0;font-size:1.1rem;">Nueva Solicitud de Afiliación</h2>
-              </div>
-              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
-                <p>El agente <strong>${user.name}</strong> (${user.email}) solicitó afiliarse a <strong>${inm.companyName || inm.name}</strong> al crear su cuenta.</p>
-                ${user.licenseNumber ? `<p>Licencia: <strong>${user.licenseNumber}</strong></p>` : ''}
-                <p>Ingresa a tu dashboard para aprobar o rechazar la solicitud.</p>
-                <a href="${BASE_URL}/broker#team-requests" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Solicitudes →</a>
-              </div>
-            </div>`,
+            subject: `Solicitud de afiliacion — ${user.name}`,
+            html: et.layout({
+              title: 'Nueva solicitud de afiliacion',
+              preheader: `${user.name} solicito afiliarse a ${inm.companyName || inm.name}`,
+              body: `
+                ${et.p(`El agente <strong>${et.esc(user.name)}</strong> (${et.esc(user.email)}) solicito afiliarse a <strong>${et.esc(inm.companyName || inm.name)}</strong>.`)}
+                ${user.licenseNumber ? et.infoTable(et.infoRow('Licencia', user.licenseNumber)) : ''}
+                ${et.button('Ver solicitudes', BASE_URL + '/broker#team-requests')}
+              `,
+            }),
           }).catch(e => console.error('Inm notify email error:', e.message));
         }
       } catch (e) {
@@ -626,41 +463,23 @@ router.post('/register/agency', authLimiter, async (req, res, next) => {
     transporter.sendMail({
       department: 'soporte',
       to:      user.email,
-      subject: '¡Bienvenido a HogaresRD! Tu cuenta de inmobiliaria está lista 🏢',
-      html: `<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#004aaa 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;">🏢 HogaresRD — Inmobiliarias</div>
-          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Bienvenido, ${name.split(' ')[0]}!</div>
-          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">${agencyName} · Cuenta verificada</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Tu cuenta de agente está activa. Aquí tienes lo que puedes hacer:</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">🔗</span><span style="color:#4d6a8a;font-size:0.9rem;"><strong>Genera enlaces afiliados</strong> para cada propiedad y envíalos a tus clientes</span></td></tr>
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📩</span><span style="color:#4d6a8a;font-size:0.9rem;">Clientes que usen tu enlace te contactan <strong>directamente a ti</strong></span></td></tr>
-            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">🏠</span><span style="color:#4d6a8a;font-size:0.9rem;">Publica propiedades y proyectos en el portal</span></td></tr>
-          </table>
-          <div style="background:#f0f4f9;border-radius:10px;padding:16px 20px;margin-top:8px;">
-            <div style="font-size:0.75rem;font-weight:700;color:#4d6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Tu código de agente</div>
-            <div style="font-size:1.05rem;font-weight:800;color:#002D62;letter-spacing:2px;font-family:monospace;">${refToken}</div>
-            <div style="font-size:0.73rem;color:#7a9bbf;margin-top:4px;">Se incluye automáticamente en tus enlaces afiliados</div>
-          </div>
-          <div style="margin-top:28px;text-align:center;">
-            <a href="${BASE_URL}/home" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Explorar Propiedades →</a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+      subject: 'Bienvenido a HogaresRD — Tu cuenta de agencia esta lista',
+      html: et.layout({
+        title: `Bienvenido, ${name.split(' ')[0]}`,
+        subtitle: `${agencyName} — Cuenta activa`,
+        preheader: `Tu cuenta de agencia en HogaresRD esta activa. Codigo de agente: ${refToken}`,
+        body: `
+          ${et.p('Tu cuenta de agente esta activa. Desde tu dashboard puedes gestionar propiedades, generar enlaces afiliados y conectar con clientes.')}
+          ${et.featureList([
+            'Genera enlaces afiliados para cada propiedad',
+            'Clientes que usen tu enlace te contactan directamente',
+            'Publica propiedades y proyectos en el portal',
+          ])}
+          ${et.codeBlock(refToken)}
+          ${et.small('Este es tu codigo de agente. Se incluye automaticamente en tus enlaces afiliados.')}
+          ${et.button('Explorar propiedades', BASE_URL + '/home')}
+        `,
+      }),
     }).catch(err => console.error('Agency welcome email error:', err.message));
 
     sendVerificationEmail(user, verifyRawToken);
@@ -735,22 +554,19 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
             status:         'pending',
           });
           store.saveUser(inm);
-          // Notify the inmobiliaria of the pending request
           transporter.sendMail({
             department: 'soporte',
             to:      inm.email,
-            subject: `Nueva solicitud de afiliación — ${user.name}`,
-            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-              <div style="background:#002D62;color:#fff;padding:1.5rem;border-radius:12px 12px 0 0;">
-                <h2 style="margin:0;font-size:1.1rem;">Nueva Solicitud de Afiliación</h2>
-              </div>
-              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
-                <p>El agente <strong>${user.name}</strong> (${user.email}) solicitó afiliarse a <strong>${inm.companyName || inm.name}</strong> al crear su cuenta.</p>
-                ${user.licenseNumber ? `<p>Licencia: <strong>${user.licenseNumber}</strong></p>` : ''}
-                <p>Ingresa a tu dashboard para aprobar o rechazar la solicitud.</p>
-                <a href="${BASE_URL}/broker#team-requests" style="display:inline-block;background:#002D62;color:#fff;padding:.7rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver Solicitudes →</a>
-              </div>
-            </div>`,
+            subject: `Solicitud de afiliacion — ${user.name}`,
+            html: et.layout({
+              title: 'Nueva solicitud de afiliacion',
+              preheader: `${user.name} solicito afiliarse a ${inm.companyName || inm.name}`,
+              body: `
+                ${et.p(`El agente <strong>${et.esc(user.name)}</strong> (${et.esc(user.email)}) solicito afiliarse a <strong>${et.esc(inm.companyName || inm.name)}</strong>.`)}
+                ${user.licenseNumber ? et.infoTable(et.infoRow('Licencia', user.licenseNumber)) : ''}
+                ${et.button('Ver solicitudes', BASE_URL + '/broker#team-requests')}
+              `,
+            }),
           }).catch(e => console.error('Inm notify email error:', e.message));
         }
       } catch (e) {
@@ -761,35 +577,21 @@ router.post('/register/broker', authLimiter, async (req, res, next) => {
     transporter.sendMail({
       department: 'soporte',
       to:      user.email,
-      subject: '¡Bienvenido a HogaresRD! Tu cuenta de agente está lista 🏡',
-      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;">🏠 HogaresRD — Agentes</div>
-          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Bienvenido, ${name.split(' ')[0]}!</div>
-          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">Agente Broker · Lic. ${licenseNumber}</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Tu cuenta de agente broker está activa. Desde tu dashboard puedes:</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📋</span><span style="color:#4d6a8a;font-size:0.9rem;">Gestionar aplicaciones de clientes</span></td></tr>
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">🏢</span><span style="color:#4d6a8a;font-size:0.9rem;">Afiliarte a una inmobiliaria</span></td></tr>
-            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">📊</span><span style="color:#4d6a8a;font-size:0.9rem;">Ver analíticas de tus ventas</span></td></tr>
-          </table>
-          <div style="margin-top:24px;text-align:center;">
-            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+      subject: 'Bienvenido a HogaresRD — Tu cuenta de agente esta lista',
+      html: et.layout({
+        title: `Bienvenido, ${name.split(' ')[0]}`,
+        subtitle: `Agente Broker — Lic. ${licenseNumber}`,
+        preheader: 'Tu cuenta de agente broker en HogaresRD esta activa.',
+        body: `
+          ${et.p('Tu cuenta de agente broker esta activa. Desde tu dashboard puedes gestionar aplicaciones, afiliarte a inmobiliarias y ver analiticas de ventas.')}
+          ${et.featureList([
+            'Gestiona aplicaciones de clientes',
+            'Afiliate a una inmobiliaria registrada',
+            'Consulta analiticas de tus operaciones',
+          ])}
+          ${et.button('Ir a mi dashboard', BASE_URL + '/broker')}
+        `,
+      }),
     }).catch(err => console.error('Broker welcome email error:', err.message));
 
     sendVerificationEmail(user, verifyRawToken);
@@ -844,35 +646,21 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
     transporter.sendMail({
       department: 'soporte',
       to:      user.email,
-      subject: `¡Bienvenido a HogaresRD! ${companyName} está registrada 🏢`,
-      html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#0a4d8f 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;">🏢 HogaresRD — Inmobiliarias</div>
-          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">${companyName}</div>
-          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">Cuenta registrada · Lic. ${licenseNumber}</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">Hola <strong>${name.split(' ')[0]}</strong>, tu inmobiliaria ya está registrada en HogaresRD.</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">👥</span><span style="color:#4d6a8a;font-size:0.9rem;">Aprueba solicitudes de afiliación de agentes brokers</span></td></tr>
-            <tr><td style="padding:9px 0;border-bottom:1px solid #eef3fa;"><span style="margin-right:10px;">📊</span><span style="color:#4d6a8a;font-size:0.9rem;">Supervisión total de todas las aplicaciones de tu equipo</span></td></tr>
-            <tr><td style="padding:9px 0;"><span style="margin-right:10px;">💰</span><span style="color:#4d6a8a;font-size:0.9rem;">Gestión de planes de pagos y contabilidad consolidada</span></td></tr>
-          </table>
-          <div style="margin-top:24px;text-align:center;">
-            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Lic. ${licenseNumber}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+      subject: `Bienvenido a HogaresRD — ${companyName} registrada`,
+      html: et.layout({
+        title: et.esc(companyName),
+        subtitle: `Cuenta registrada — Lic. ${licenseNumber}`,
+        preheader: `${companyName} ya esta registrada en HogaresRD. Accede a tu dashboard para gestionar tu equipo.`,
+        body: `
+          ${et.p(`Hola <strong>${et.esc(name.split(' ')[0])}</strong>, tu inmobiliaria ya esta registrada en HogaresRD.`)}
+          ${et.featureList([
+            'Aprueba solicitudes de afiliacion de agentes brokers',
+            'Supervision total de aplicaciones de tu equipo',
+            'Gestion de planes de pago y contabilidad consolidada',
+          ])}
+          ${et.button('Ir a mi dashboard', BASE_URL + '/broker')}
+        `,
+      }),
     }).catch(err => console.error('Inmobiliaria welcome email error:', err.message));
 
     sendVerificationEmail(user, verifyRawToken);
@@ -895,38 +683,18 @@ router.post('/register/inmobiliaria', authLimiter, async (req, res, next) => {
           transporter.sendMail({
             department: 'soporte',
             to:      agent.email,
-            subject: `¡${companyName} ya está en HogaresRD! Conecta tu cuenta ahora 🔗`,
-            html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:linear-gradient(135deg,#002D62 0%,#1a5fa8 100%);padding:36px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;">🔗 HogaresRD — Conexión de Equipo</div>
-          <div style="margin-top:16px;font-size:1.5rem;font-weight:800;color:#fff;">¡Buenas noticias, ${agent.name.split(' ')[0]}!</div>
-          <div style="margin-top:4px;font-size:0.88rem;color:rgba(255,255,255,0.75);">${companyName} acaba de registrarse</div>
-        </td></tr>
-        <tr><td style="padding:32px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            <strong>${companyName}</strong>, la inmobiliaria que indicaste cuando creaste tu cuenta, acaba de registrarse en HogaresRD.
-          </p>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
-            Ahora puedes enviarles una solicitud de afiliación desde tu dashboard. Una vez que la aprueben, quedarás oficialmente vinculado a su equipo.
-          </p>
-          <div style="text-align:center;">
-            <a href="${BASE_URL}/broker" style="display:inline-block;background:#002D62;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;">Ir a mi Dashboard →</a>
-          </div>
-          <p style="margin:20px 0 0;font-size:0.75rem;color:#7a9bbf;text-align:center;">
-            En tu dashboard encontrarás el botón "Buscar y solicitar" en la sección de afiliación.
-          </p>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+            subject: `${companyName} se registro en HogaresRD — Conecta tu cuenta`,
+            html: et.layout({
+              title: `${et.esc(companyName)} esta en HogaresRD`,
+              subtitle: 'Ya puedes enviar tu solicitud de afiliacion',
+              preheader: `${companyName} acaba de registrarse. Envia tu solicitud de afiliacion desde tu dashboard.`,
+              body: `
+                ${et.p(`<strong>${et.esc(companyName)}</strong>, la inmobiliaria que indicaste al crear tu cuenta, acaba de registrarse en HogaresRD.`)}
+                ${et.p('Ahora puedes enviarles una solicitud de afiliacion desde tu dashboard. Una vez aprobada, quedaras vinculado a su equipo.')}
+                ${et.button('Ir a mi dashboard', BASE_URL + '/broker')}
+                ${et.small('En tu dashboard encontraras la opcion de afiliacion en la seccion correspondiente.')}
+              `,
+            }),
           }).catch(e => console.error('Agent notify email error:', e.message));
         });
       }
@@ -1024,34 +792,19 @@ router.post('/login', authLimiter, async (req, res, next) => {
         transporter.sendMail({
           department: 'soporte',
           to:      user.email,
-          subject: '⚠️ Tu cuenta ha sido bloqueada temporalmente — HogaresRD',
-          html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#eef3fa;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef3fa;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,45,98,0.10);">
-        <tr><td style="background:#b91c1c;padding:32px 40px;">
-          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:8px;">🏠 HogaresRD</div>
-          <div style="font-size:1.4rem;font-weight:800;color:#fff;">Cuenta bloqueada temporalmente</div>
-        </td></tr>
-        <tr><td style="padding:28px 40px;">
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#1a2b40;line-height:1.6;">
-            Hola <strong>${user.name}</strong>, detectamos <strong>${attempts} intentos fallidos de inicio de sesión</strong> en tu cuenta y la hemos bloqueado por 15 minutos como medida de seguridad.
-          </p>
-          <p style="margin:0 0 24px;font-size:0.9rem;color:#4d6a8a;line-height:1.6;">
-            Si no fuiste tú quien intentó iniciar sesión, te recomendamos cambiar tu contraseña inmediatamente.
-          </p>
-          <div style="text-align:center;">
-            <a href="${BASE_URL}/reset-password" style="display:inline-block;background:#002D62;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">Cambiar contraseña →</a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:16px 40px;background:#f0f4f9;border-top:1px solid #d0dcea;">
-          <p style="margin:0;font-size:0.76rem;color:#7a9bbf;text-align:center;">© ${new Date().getFullYear()} HogaresRD · Si no reconoces esta actividad, contacta soporte.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+          subject: 'Cuenta bloqueada temporalmente — HogaresRD',
+          html: et.layout({
+            title: 'Cuenta bloqueada temporalmente',
+            subtitle: 'Medida de seguridad activada',
+            preheader: 'Detectamos multiples intentos fallidos de inicio de sesion en tu cuenta HogaresRD',
+            headerColor: '#b91c1c',
+            body: `
+              ${et.alertBox(`Detectamos <strong>${attempts} intentos fallidos</strong> de inicio de sesion. Tu cuenta ha sido bloqueada por 15 minutos como medida de seguridad.`, 'danger')}
+              ${et.p('Si no fuiste tu, te recomendamos cambiar tu contrasena inmediatamente.')}
+              ${et.button('Cambiar contrasena', BASE_URL + '/reset-password')}
+              ${et.small('Si no reconoces esta actividad, contacta a soporte respondiendo a este correo.')}
+            `,
+          }),
         }).catch(err => console.error('Lockout email error:', err.message));
       }
 
@@ -1161,27 +914,19 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   transporter.sendMail({
     department: 'soporte',
     to:      user.email,
-    subject: 'Restablecer tu contraseña — HogaresRD',
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;border:1px solid #d0dcea;border-radius:12px;overflow:hidden;">
-        <div style="background:#002D62;padding:28px 32px;">
-          <h2 style="color:#fff;margin:0;font-size:1.3rem;">🔒 Restablecer Contraseña</h2>
-        </div>
-        <div style="padding:28px 32px;background:#fff;">
-          <p style="color:#1a2b40;">Hola <strong>${user.name}</strong>,</p>
-          <p style="color:#4d6a8a;line-height:1.6;">Recibimos una solicitud para restablecer la contraseña de tu cuenta en HogaresRD. Haz clic en el botón a continuación para crear una nueva contraseña.</p>
-          <p style="color:#4d6a8a;"><strong>Este enlace expira en 1 hora.</strong></p>
-          <div style="margin-top:24px;">
-            <a href="${BASE_URL}/reset-password?token=${rawToken}" style="background:#002D62;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
-              Restablecer Contraseña →
-            </a>
-          </div>
-          <p style="margin-top:24px;font-size:0.85rem;color:#4d6a8a;">Si no solicitaste esto, ignora este correo. Tu contraseña no cambiará.</p>
-        </div>
-        <div style="padding:16px 32px;background:#f0f4f9;font-size:0.8rem;color:#4d6a8a;">
-          HogaresRD · República Dominicana
-        </div>
-      </div>`,
+    subject: 'Restablecer tu contrasena — HogaresRD',
+    html: et.layout({
+      title: 'Restablecer contrasena',
+      subtitle: 'Solicitud recibida',
+      preheader: 'Recibimos tu solicitud para restablecer la contrasena de tu cuenta HogaresRD',
+      body: `
+        ${et.p('Recibimos una solicitud para restablecer la contrasena de tu cuenta. Haz clic en el boton de abajo para crear una nueva contrasena.')}
+        ${et.alertBox('Este enlace expira en <strong>1 hora</strong>.', 'info')}
+        ${et.button('Restablecer contrasena', `${BASE_URL}/reset-password?token=${rawToken}`)}
+        ${et.divider()}
+        ${et.small('Si no solicitaste esto, ignora este correo. Tu contrasena no cambiara.')}
+      `,
+    }),
   }).catch(err => console.error('Reset email error:', err.message));
 });
 
@@ -1880,9 +1625,50 @@ router.post('/apple-subscription', userAuth, async (req, res) => {
     const user = store.getUserById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // ── Security: block upgrade to inmobiliaria/constructora if agent is linked to one ──
+    // An agent (broker/agency) who is affiliated with an inmobiliaria must leave
+    // that organization before upgrading to an org-level role. Otherwise they
+    // could gain director-level visibility into their current org's data.
+    const isUpgradingToOrg = ['inmobiliaria', 'constructora'].includes(role);
+    const isLinkedToOrg    = user.inmobiliaria_id || user.inmobiliaria_join_status === 'pending';
+    if (isUpgradingToOrg && isLinkedToOrg) {
+      return res.status(400).json({
+        error: 'Debes desvincularte de tu inmobiliaria actual antes de crear tu propia empresa. Ve a tu dashboard y sal de la organizacion primero.',
+      });
+    }
+
+    // ── Security: block role changes that don't make sense ──
+    // Admin/secretary cannot upgrade through IAP
+    if (['admin', 'secretary'].includes(user.role)) {
+      return res.status(400).json({ error: 'Este tipo de cuenta no puede cambiar de rol mediante suscripcion.' });
+    }
+
+    // ── Security: org-level users (inmobiliaria/constructora) cannot downgrade to agent ──
+    // They may have team members, active applications, etc. Downgrade would orphan data.
+    const isCurrentlyOrg = ['inmobiliaria', 'constructora'].includes(user.role);
+    if (isCurrentlyOrg && !isUpgradingToOrg) {
+      return res.status(400).json({
+        error: 'Una cuenta de inmobiliaria o constructora no puede convertirse en agente individual. Contacta soporte si necesitas ayuda.',
+      });
+    }
+
     // Update user role
     const previousRole = user.role;
     user.role = role;
+
+    // When upgrading to org-level role, initialize org fields
+    if (['inmobiliaria', 'constructora'].includes(role) && !['inmobiliaria', 'constructora'].includes(previousRole)) {
+      if (!Array.isArray(user.join_requests)) user.join_requests = [];
+      // Clear any leftover agent-level affiliation fields
+      user.inmobiliaria_id          = null;
+      user.inmobiliaria_name        = null;
+      user.inmobiliaria_join_status = null;
+      user.inmobiliaria_pending_id  = null;
+      user.inmobiliaria_pending_name = null;
+      user.inmobiliaria_joined_at   = null;
+      user.access_level             = null;
+      user.team_title               = null;
+    }
 
     // Apple IAP is a paid subscription — satisfies the paywall. Apple
     // handles trials on their side, so we mark as active.

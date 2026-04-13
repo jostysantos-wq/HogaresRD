@@ -320,20 +320,22 @@ router.post('/webhook', (req, res) => {
         setImmediate(async () => {
           try {
             const { createTransport } = require('./mailer');
+            const et = require('../utils/email-templates');
             const mailer = createTransport();
             const firstName = (user.name || '').split(' ')[0] || 'Agente';
             await mailer.sendMail({
               to: user.email,
-              subject: 'Te extranaremos — HogaresRD',
+              subject: 'Tu suscripcion fue cancelada — HogaresRD',
               department: 'ventas',
-              html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-                <div style="font-size:1.2rem;font-weight:900;color:#002D62;margin-bottom:24px;">HogaresRD</div>
-                <h2 style="color:#1a1a1a;">Hola ${firstName}, lamentamos verte ir</h2>
-                <p style="color:#333;line-height:1.7;">Tu suscripcion ha sido cancelada. Tus propiedades y datos se mantendran en nuestra plataforma por 90 dias.</p>
-                <p style="color:#333;line-height:1.7;">Si cambias de opinion, puedes reactivar tu cuenta en cualquier momento con un <strong>30% de descuento por 3 meses</strong>.</p>
-                <a href="${BASE_URL}/subscribe" style="display:inline-block;background:#002D62;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;margin:20px 0;">Reactivar mi cuenta</a>
-                <p style="color:#666;font-size:0.85rem;">Esta oferta es valida por 14 dias.</p>
-              </div>`,
+              html: et.layout({
+                title: `Hola ${et.esc(firstName)}, lamentamos verte ir`,
+                preheader: 'Lamentamos que te vayas. Tu suscripcion ha sido cancelada.',
+                body:
+                  et.p('Tu suscripcion ha sido cancelada. Tus propiedades y datos se mantendran en nuestra plataforma por 90 dias.')
+                  + et.p('Si cambias de opinion, puedes reactivar tu cuenta en cualquier momento con un <strong>30% de descuento por 3 meses</strong>.')
+                  + et.button('Reactivar mi cuenta', `${BASE_URL}/subscribe`)
+                  + et.small('Esta oferta es valida por 14 dias.'),
+              }),
             });
           } catch (e) {
             console.error('[Stripe] Win-back email error:', e.message);

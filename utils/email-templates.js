@@ -34,12 +34,17 @@ const C = {
 /**
  * Wrap email content in the standard HogaresRD layout.
  */
-function layout({ title, subtitle, body, headerColor }) {
+function layout({ title, subtitle, body, headerColor, preheader }) {
   const hdrColor = headerColor || C.navy;
   const year = new Date().getFullYear();
+  // Preheader: hidden text shown in email client previews (Gmail, Apple Mail, Outlook)
+  const preheaderHtml = preheader
+    ? `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(preheader)}${'&zwnj;&nbsp;'.repeat(30)}</div>`
+    : '';
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
 <body style="margin:0;padding:0;background:${C.bg};font-family:'Segoe UI',Arial,sans-serif;">
+${preheaderHtml}
 <table width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};padding:40px 16px;">
 <tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${C.surface};border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,45,98,0.08);">
@@ -269,9 +274,24 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Standalone preheader for emails not using layout() */
+function preheader(text) {
+  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(text)}${'&zwnj;&nbsp;'.repeat(30)}</div>`;
+}
+
+/** Standard footer with address for CAN-SPAM compliance */
+function footer() {
+  return `<p style="margin:0;font-size:0.72rem;color:#7a9bbf;text-align:center;line-height:1.7;">
+    © ${new Date().getFullYear()} HogaresRD — Plataforma informativa de bienes raíces<br/>
+    HogaresRD · Santo Domingo, República Dominicana<br/>
+    <a href="${BASE_URL}/privacidad" style="color:#7a9bbf;">Privacidad</a> · <a href="${BASE_URL}/terminos" style="color:#7a9bbf;">Términos</a>
+  </p>`;
+}
+
 module.exports = {
   layout, button, buttonRed, buttonOutline, p, small, codeBlock,
   infoRow, infoTable, feature, featureList,
   statusBadge, alertBox, quote, listingCard, divider, esc,
+  preheader, footer,
   C, BASE_URL,
 };

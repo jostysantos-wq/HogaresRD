@@ -8,7 +8,7 @@
 //   Tier 4: Auto-response to buyer
 //
 // Cascade windows (8 AM – 11 PM AST):
-//   Tier 1: 60 min  |  Tier 2: 30 min  |  Tier 3: 20 min  (110 min total)
+//   Tier 1: 15 min  |  Tier 2: 10 min  |  Tier 3: 5 min  (30 min total)
 //
 // Overnight freeze (11 PM – 8 AM):
 //   Cascade pauses. The lead stays with whatever tier it's currently in.
@@ -19,6 +19,7 @@
 // ══════════════════════════════════════════════════════════════════════════
 
 const store = require('./store');
+const et    = require('../utils/email-templates');
 
 const CONTRIB_THRESHOLD = 10;            // Minimum score for Tier 2
 
@@ -28,7 +29,7 @@ const MARKET_CLOSE = 23;  // 11 PM — cascade freezes overnight
 const TZ_OFFSET_HOURS = -4; // AST (Atlantic Standard Time)
 
 // Tier durations in milliseconds — higher tier = more time (they're more important)
-const TIER_WINDOWS = { 1: 60 * 60_000, 2: 30 * 60_000, 3: 20 * 60_000 };
+const TIER_WINDOWS = { 1: 15 * 60_000, 2: 10 * 60_000, 3: 5 * 60_000 };
 
 /** Get the current hour in Dominican Republic (0-23) */
 function getLocalHour() {
@@ -68,7 +69,7 @@ function msUntilMarketOpen() {
 }
 
 // Legacy constant for recovery calculations
-const CASCADE_WINDOW_MS = 60 * 60 * 1000; // 1 hour fallback
+const CASCADE_WINDOW_MS = 15 * 60 * 1000; // 15 min fallback (matches Tier 1)
 
 // Active cascade timers: leadQueueId → timeoutId
 const _timers = new Map();
@@ -174,13 +175,20 @@ function sendAutoResponse(item) {
   mailer.sendMail({
     department: 'ventas',
     to: item.buyer_email,
-    subject: `Tu consulta sobre "${title}" — HogaresRD`,
-    html: `
-      <p>Hola ${item.buyer_name || ''},</p>
-      <p>Recibimos tu consulta sobre <strong>${title}</strong>. Un agente se pondrá en contacto contigo lo antes posible.</p>
-      <p>Si necesitas atención inmediata, puedes escribirnos por WhatsApp al <a href="https://wa.me/18094440000">+1 (809) 444-0000</a>.</p>
-      <p>— El equipo de HogaresRD</p>
-    `,
+    subject: `Tu consulta sobre "${title}" - HogaresRD`,
+    html: et.layout({
+      title: 'Recibimos tu consulta',
+      subtitle: title,
+      preheader: `Recibimos tu consulta sobre ${title}. Un agente se comunicara contigo pronto.`,
+      body: [
+        et.p(`Hola ${et.esc(item.buyer_name || '')},`),
+        et.p(`Recibimos tu consulta sobre <strong>${et.esc(title)}</strong>. Un agente de nuestro equipo se pondra en contacto contigo lo antes posible.`),
+        et.divider(),
+        et.p('Si necesitas atencion inmediata, puedes escribirnos directamente por WhatsApp:'),
+        et.button('Contactar por WhatsApp', 'https://wa.me/18094440000'),
+        et.small('Horario de atencion: lunes a sabado, 8:00 AM - 6:00 PM'),
+      ].join('\n'),
+    }),
   }).catch(err => console.error('[cascade] Auto-response email error:', err.message));
 }
 

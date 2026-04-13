@@ -433,6 +433,7 @@ router.post('/:id/inquiry', inquiryLimiter, async (req, res) => {
   const agentHtml = et.layout({
     title: 'Nueva consulta recibida',
     subtitle: listing.title,
+    preheader: `Nueva consulta sobre ${listing.title}`,
     body: et.p('Un cliente esta interesado en esta propiedad.')
         + et.infoTable(
             et.infoRow('Cliente', name)
@@ -447,6 +448,7 @@ router.post('/:id/inquiry', inquiryLimiter, async (req, res) => {
   const clientHtml = et.layout({
     title: 'Consulta recibida',
     subtitle: 'HogaresRD',
+    preheader: `Tu consulta sobre ${listing.title} fue enviada`,
     body: et.p('Hola <strong>' + et.esc(name) + '</strong>,')
         + et.p('Tu consulta sobre <strong>' + et.esc(listing.title) + '</strong> fue enviada exitosamente a ' + agencyNames + '. Un agente se pondra en contacto contigo pronto al numero <strong>' + phone + '</strong>.')
         + et.button('Ver propiedad', listingUrl)
@@ -464,7 +466,7 @@ router.post('/:id/inquiry', inquiryLimiter, async (req, res) => {
     );
     sends.push(transporter.sendMail({
       to:      email,
-      subject: '¡Tu consulta fue enviada! — HogaresRD',
+      subject: 'Tu consulta fue enviada — HogaresRD',
       html:    clientHtml,
     }));
     await Promise.all(sends);
@@ -488,11 +490,11 @@ router.put('/:id', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(401).json({ error: 'No autenticado' });
 
-  const isAdmin  = user.role === 'admin';
-  const isOwner  = listing.creator_user_id === user.id
-                || (listing.email && user.email && listing.email.toLowerCase() === user.email.toLowerCase());
+  const isAdmin    = user.role === 'admin';
+  const isOwner    = listing.creator_user_id === user.id;
+  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(user?.role) && listing.inmobiliaria_id === user.id;
 
-  if (!isOwner && !isAdmin) {
+  if (!isOwner && !isOrgOwner && !isAdmin) {
     return res.status(403).json({ error: 'No autorizado para editar esta propiedad' });
   }
 

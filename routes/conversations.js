@@ -1,4 +1,5 @@
 const express      = require('express');
+const crypto       = require('crypto');
 const rateLimit    = require('express-rate-limit');
 const router       = express.Router();
 // nodemailer replaced by central mailer.js (Resend HTTP API)
@@ -16,6 +17,8 @@ const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
 
 const { createTransport } = require('./mailer');
 const transporter = createTransport();
+const et           = require('../utils/email-templates');
+const { logSec }   = require('./security-log');
 
 function _sendMail(to, subject, html) {
   if (!to) return;
@@ -155,7 +158,6 @@ router.post('/', requireLogin, (req, res) => {
   }
 
   // Push notification to assigned broker or org team
-  const { notify: pushNotify } = require('./push');
   if (assignedBrokerId) {
     pushNotify(assignedBrokerId, {
       type: 'new_message',
@@ -222,25 +224,24 @@ router.get('/', requireLogin, (req, res) => {
   const wantArchived = req.query.archived === 'true';
   convs = convs.filter(c => wantArchived ? !!c.archived : !c.archived);
 
-  // Determine if this user is an org owner (level 3 — full oversight)
-  const fullUserForList = PRO_ROLES.includes(user.role) ? store.getUserById(user.sub) : null;
-  const isOrgOwner = fullUserForList && ['inmobiliaria', 'constructora'].includes(fullUserForList.role);
-
   // Return without full message array for list view (just metadata)
   const list = convs.map(({ messages, ...meta }) => {
-    const isUnclaimed = meta.inmobiliariaId && !meta.brokerId;
     const isMyConv = meta.brokerId === user.sub || meta.clientId === user.sub;
+    const isUnclaimed = meta.inmobiliariaId && !meta.brokerId;
 
-    // Unclaimed org conversations: redact details for non-owners
-    if (isUnclaimed && !isMyConv && !isOrgOwner) {
+    // Strict: only the assigned broker and the client see lastMessage.
+    // Unclaimed org conversations: ALL org agents see redacted metadata only.
+    // Even the inmobiliaria director does NOT see message content until claimed.
+    if (!isMyConv && user.role !== 'admin') {
       const firstName = (meta.clientName || '').split(' ')[0];
       return {
         ...meta,
         clientName:   firstName,
         clientEmail:  null,
-        lastMessage:  'Nuevo mensaje pendiente',
+        clientPhone:  null,
+        lastMessage:  isUnclaimed ? 'Nuevo mensaje pendiente' : 'Conversacion asignada',
         messageCount: messages.length,
-        claimRequired: true,
+        claimRequired: isUnclaimed,
       };
     }
 
@@ -263,13 +264,14 @@ router.get('/unread', requireLogin, (req, res) => {
   }
 
   if (PRO_ROLES.includes(user.role)) {
+    // Only count unread for conversations where this user is the ASSIGNED broker
     convs = store.getConversationsForBroker(user.sub);
-    // Include conversations where this pro user is the client
+    // Also conversations where this pro user is the client
     const clientConvs = store.getConversationsByClient(user.sub);
     for (const cc of clientConvs) {
       if (!convs.some(x => x.id === cc.id)) convs.push(cc);
     }
-    // Include unclaimed org conversations in unread count
+    // Include unclaimed org conversations in unread count (metadata only — not messages)
     const fullUser = store.getUserById(user.sub);
     const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
       ? fullUser.id : fullUser?.inmobiliaria_id;
@@ -279,10 +281,15 @@ router.get('/unread', requireLogin, (req, res) => {
       );
       convs = convs.concat(orgConvs);
     }
-    // Sum both broker and client unreads — pro users can be on either side
+    // Sum unreads — only for conversations where user is a direct participant
     const count = convs.reduce((n, c) => {
-      const isClient = c.clientId === user.sub;
-      return n + (isClient ? (c.unreadClient || 0) : (c.unreadBroker || 0));
+      const isClientHere = c.clientId === user.sub;
+      const isAssigned   = c.brokerId === user.sub;
+      const isUnclaimed  = c.inmobiliariaId && !c.brokerId;
+      if (isClientHere) return n + (c.unreadClient || 0);
+      if (isAssigned)   return n + (c.unreadBroker || 0);
+      if (isUnclaimed)  return n + 1; // count each unclaimed org convo as 1 pending item
+      return n;
     }, 0);
     return res.json({ count });
   }
@@ -291,30 +298,52 @@ router.get('/unread', requireLogin, (req, res) => {
 });
 
 // ── GET /api/conversations/:id ────────────────────────────────────────────
-router.get('/:id', requireLogin, (req, res) => {
+router.get('/:id', requireLogin, async (req, res) => {
   const user = getUser(req);
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  // Access check
-  const isBroker = PRO_ROLES.includes(user.role);
-  const isClient = conv.clientId === user.sub;
-  const isOwner  = conv.brokerId === user.sub;
-  // Org members can access unclaimed org conversations (to claim them)
-  const fullUser = isBroker ? store.getUserById(user.sub) : null;
-  const userInmId = fullUser ? (['inmobiliaria', 'constructora'].includes(fullUser.role) ? fullUser.id : fullUser.inmobiliaria_id) : null;
-  const isOrgUnclaimed = isBroker && conv.inmobiliariaId && conv.inmobiliariaId === userInmId && !conv.brokerId;
-  // Pros can access: assigned to them, unassigned (no brokerId), or unclaimed org conversations
-  const brokerHasAccess = isBroker && (isOwner || (!conv.brokerId && !conv.inmobiliariaId) || isOrgUnclaimed);
+  // ── Strict access: only the assigned broker, the client, or admin can read messages.
+  // Inmobiliaria owners/directors do NOT get message access — they must request
+  // it through admin if needed. This protects client privacy.
+  const isClient         = conv.clientId === user.sub;
+  const isAssignedBroker = conv.brokerId === user.sub;
+  const isAdmin          = user.role === 'admin';
 
-  if (!isClient && !brokerHasAccess) {
+  // Org agents (same inmobiliaria) can SEE that an unclaimed convo exists
+  // but cannot read messages — only claim metadata is returned.
+  const isPro    = PRO_ROLES.includes(user.role);
+  const fullUser = isPro ? store.getUserById(user.sub) : null;
+  const userInmId = fullUser
+    ? (['inmobiliaria', 'constructora'].includes(fullUser.role) ? fullUser.id : fullUser.inmobiliaria_id)
+    : null;
+  const isOrgUnclaimed = isPro && conv.inmobiliariaId && conv.inmobiliariaId === userInmId && !conv.brokerId;
+
+  if (!isClient && !isAssignedBroker && !isOrgUnclaimed && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
-  // For unclaimed org conversations: non-owner agents see a claim prompt, not the messages
-  const isOrgOwnerUser = fullUser && ['inmobiliaria', 'constructora'].includes(fullUser.role);
-  if (isOrgUnclaimed && !isOrgOwnerUser) {
+  // Unclaimed org conversations: ALL org agents (including the director) see
+  // only a claim prompt — no messages. They must claim first.
+  if (isOrgUnclaimed && !isAssignedBroker) {
     const firstName = (conv.clientName || '').split(' ')[0];
+
+    // Fetch client's recent property viewing activity (no PII, just listing titles)
+    let clientActivity = [];
+    try {
+      const activities = await store.getActivityByUser(conv.clientId, { limit: 10, days: 30, action: 'view_listing' });
+      clientActivity = activities.map(a => {
+        const listing = store.getListingById(a.listing_id);
+        return {
+          listing_id: a.listing_id,
+          listing_title: listing?.title || 'Propiedad',
+          listing_city: listing?.city || '',
+          listing_price: listing?.price || null,
+          viewed_at: a.created_at,
+        };
+      });
+    } catch {}
+
     return res.json({
       id:             conv.id,
       propertyId:     conv.propertyId,
@@ -322,18 +351,34 @@ router.get('/:id', requireLogin, (req, res) => {
       propertyImage:  conv.propertyImage,
       clientName:     firstName,
       inmobiliariaId: conv.inmobiliariaId,
-      messageCount:   conv.messages.length,
+      messageCount:   (conv.messages || []).length,
       createdAt:      conv.createdAt,
       claimRequired:  true,
       messages:       [], // hidden until claimed
+      clientActivity,
+    });
+  }
+
+  // Audit: log admin access to conversation content
+  if (isAdmin) {
+    logSec('admin_conversation_access', req, {
+      adminUserId: user.sub,
+      adminName: user.name || '',
+      conversationId: conv.id,
+      clientId: conv.clientId,
+      brokerId: conv.brokerId,
+      reason: req.query.reason || null,
     });
   }
 
   // Since the request comes with ?since= for polling, return only new messages
   const since = req.query.since ? new Date(req.query.since) : null;
+  const allMsgs = conv.messages || [];
+  const MAX_INITIAL = 50;
   const messages = since
-    ? conv.messages.filter(m => new Date(m.timestamp) > since)
-    : conv.messages;
+    ? allMsgs.filter(m => new Date(m.timestamp) > since)
+    : allMsgs.slice(-MAX_INITIAL);
+  const hasMore = !since && allMsgs.length > MAX_INITIAL;
 
   // Auto-mark-read on INITIAL load (no ?since= = user just opened the thread).
   // Use clientId match (not global role) to determine which side to clear —
@@ -346,22 +391,23 @@ router.get('/:id', requireLogin, (req, res) => {
     if (dirty) store.saveConversation(conv);
   }
 
-  res.json({ ...conv, messages });
+  res.json({ ...conv, messages, hasMore, totalMessages: allMsgs.length });
 });
 
 // ── POST /api/conversations/:id/claim ────────────────────────────────────
-// Agent explicitly claims an unclaimed org conversation
-router.post('/:id/claim', requireLogin, (req, res) => {
+// Agent explicitly claims an unclaimed org conversation.
+// Uses atomic DB UPDATE WHERE "brokerId" IS NULL to prevent race conditions.
+router.post('/:id/claim', requireLogin, async (req, res) => {
   const user = getUser(req);
   if (!PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes pueden reclamar conversaciones.' });
 
   const conv = store.getConversationById(req.params.id);
-  if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
+  if (!conv) return res.status(404).json({ error: 'Conversacion no encontrada.' });
 
-  // Must be unclaimed and org-tagged
+  // Must be unclaimed
   if (conv.brokerId)
-    return res.status(400).json({ error: 'Esta conversación ya fue reclamada por otro agente.' });
+    return res.status(400).json({ error: 'Esta conversacion ya fue reclamada por otro agente.' });
 
   // Verify agent belongs to the conversation's org
   const fullUser = store.getUserById(user.sub);
@@ -369,30 +415,30 @@ router.post('/:id/claim', requireLogin, (req, res) => {
     ? fullUser.id : fullUser?.inmobiliaria_id;
 
   if (conv.inmobiliariaId && conv.inmobiliariaId !== userInmId)
-    return res.status(403).json({ error: 'No perteneces a esta organización.' });
+    return res.status(403).json({ error: 'No perteneces a esta organizacion.' });
 
-  // Double-check before claiming (re-read to prevent race condition)
-  const fresh = store.getConversationById(req.params.id);
-  if (fresh.brokerId)
-    return res.status(400).json({ error: 'Esta conversación ya fue reclamada por otro agente.' });
-
-  // Claim it
-  fresh.brokerId   = user.sub;
-  fresh.brokerName = user.name;
-  fresh.updatedAt  = new Date().toISOString();
-
-  // Add system message
-  fresh.messages.push({
+  // Atomic DB claim: UPDATE only if brokerId is still NULL
+  // This prevents the TOCTOU race where two agents claim simultaneously
+  const now = new Date().toISOString();
+  const sysMsg = {
     id:         'msg_' + crypto.randomBytes(6).toString('hex'),
     senderId:   'system',
     senderRole: 'system',
     senderName: 'HogaresRD',
-    text:       `${user.name} ha tomado esta conversación.`,
-    timestamp:  fresh.updatedAt,
-  });
+    text:       `${user.name} ha tomado esta conversacion.`,
+    timestamp:  now,
+  };
 
-  store.saveConversation(fresh);
-  res.json({ ok: true, conversation: fresh });
+  try {
+    const result = await store.claimConversationAtomic(req.params.id, user.sub, user.name, now, sysMsg);
+    if (!result) {
+      return res.status(400).json({ error: 'Esta conversacion ya fue reclamada por otro agente.' });
+    }
+    res.json({ ok: true, conversation: result });
+  } catch (err) {
+    console.error('[claim] atomic claim failed:', err.message);
+    return res.status(500).json({ error: 'Error al reclamar la conversacion.' });
+  }
 });
 
 // ── POST /api/conversations/:id/messages ─────────────────────────────────
@@ -404,21 +450,27 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
   const { text } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Mensaje vacío.' });
 
-  // Determine sender's "side" based on conversation membership, not global role.
-  // A pro user can also BE the client in a conversation they started.
-  const isClient = conv.clientId === user.sub;
-  const isOwner  = conv.brokerId === user.sub;
-  const isPro    = PRO_ROLES.includes(user.role);
-  // Pros can post in unclaimed conversations (and claim them on first reply).
-  const brokerHasAccess = isPro && !isClient && (isOwner || !conv.brokerId);
-  // The message is sent AS the broker only when the user is the assigned
-  // broker OR is claiming an unassigned conversation — not just because
-  // they have a pro role. This fixes the case where a pro user replies
-  // to their own inquiry (they're the client in that conv).
-  const isBroker = brokerHasAccess;
+  // ── Strict access: only the assigned broker and the client can send messages.
+  // Agents must CLAIM an unclaimed conversation first (POST /:id/claim) before
+  // they can post. Inmobiliaria directors cannot send messages on behalf of agents.
+  const isClient         = conv.clientId === user.sub;
+  const isAssignedBroker = conv.brokerId === user.sub;
+  const isAdmin          = user.role === 'admin';
+  const isBroker         = isAssignedBroker; // only the assigned broker sends as "broker"
 
-  if (!isClient && !brokerHasAccess) {
+  if (!isClient && !isAssignedBroker && !isAdmin) {
+    if (!conv.brokerId && PRO_ROLES.includes(user.role)) {
+      return res.status(403).json({ error: 'Debes reclamar esta conversacion antes de enviar mensajes.' });
+    }
     return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  // Audit: log admin message posting
+  if (isAdmin) {
+    logSec('admin_conversation_message', req, {
+      adminUserId: user.sub, conversationId: conv.id,
+      clientId: conv.clientId, brokerId: conv.brokerId,
+    });
   }
 
   if (conv.closed) {
@@ -442,12 +494,6 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
   conv.messages.push(msg);
   conv.lastMessage = text.trim();
   conv.updatedAt   = new Date().toISOString();
-
-  // Auto-assign broker on first reply
-  if (isBroker && !conv.brokerId) {
-    conv.brokerId   = user.sub;
-    conv.brokerName = user.name;
-  }
 
   // Update unread counters
   if (isBroker) {
@@ -487,17 +533,17 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
         if (clientUser?.email) {
           _sendMail(
             clientUser.email,
-            `HogaresRD — ${user.name} te respondió sobre "${conv.propertyTitle}"`,
-            `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-              <div style="background:#002D62;color:#fff;padding:1.2rem 1.5rem;border-radius:12px 12px 0 0;">
-                <h2 style="margin:0;font-size:1.1rem;">💬 Nuevo mensaje de tu agente</h2>
-              </div>
-              <div style="padding:1.5rem;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
-                <p style="margin:0 0 0.5rem;"><strong>${user.name}</strong> respondió sobre <strong>${conv.propertyTitle}</strong>:</p>
-                <blockquote style="margin:0.75rem 0;padding:0.75rem 1rem;background:#f5f8ff;border-left:3px solid #0038A8;border-radius:4px;color:#1a2b40;">${preview}</blockquote>
-                <a href="${BASE_URL}/mensajes?conv=${conv.id}" style="display:inline-block;margin-top:1rem;background:#0038A8;color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver conversación →</a>
-              </div>
-            </div>`
+            `${user.name} respondio sobre "${conv.propertyTitle}" - HogaresRD`,
+            et.layout({
+              title: 'Nuevo mensaje de tu agente',
+              subtitle: conv.propertyTitle,
+              preheader: 'Tu agente respondio a tu consulta',
+              body: [
+                et.p(`<strong>${et.esc(user.name)}</strong> respondio sobre <strong>${et.esc(conv.propertyTitle)}</strong>:`),
+                et.quote(et.esc(preview)),
+                et.button('Ver conversacion', `${BASE_URL}/mensajes?conv=${conv.id}`),
+              ].join('\n'),
+            })
           );
         }
       } else {
@@ -527,12 +573,23 @@ router.put('/:id/close', requireLogin, (req, res) => {
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  if (!PRO_ROLES.includes(user.role)) {
-    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden cerrar conversaciones.' });
+  if (!PRO_ROLES.includes(user.role) && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo agentes pueden cerrar conversaciones.' });
   }
-  // Must be the assigned broker, OR no broker assigned yet (can't steal someone else's)
-  if (conv.brokerId && conv.brokerId !== user.sub) {
-    return res.status(403).json({ error: 'Solo el agente asignado puede cerrar esta conversación.' });
+  // Strict: only the assigned broker can close claimed conversations.
+  // Inmobiliaria directors cannot close their agents' conversations.
+  if (conv.brokerId && conv.brokerId !== user.sub && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo el agente asignado puede cerrar esta conversacion.' });
+  }
+  // Unclaimed conversations: only the org director or admin can close
+  if (!conv.brokerId && user.role !== 'admin') {
+    const fullUser = store.getUserById(user.sub);
+    const isOrgOwner = conv.inmobiliariaId
+      && ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+      && fullUser.id === conv.inmobiliariaId;
+    if (!isOrgOwner) {
+      return res.status(403).json({ error: 'Solo el director de la inmobiliaria o admin puede cerrar conversaciones sin asignar.' });
+    }
   }
 
   const reason = (req.body?.reason || '').trim().slice(0, 200);
@@ -579,11 +636,22 @@ router.put('/:id/reopen', requireLogin, (req, res) => {
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  if (!PRO_ROLES.includes(user.role)) {
-    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden reabrir conversaciones.' });
+  if (!PRO_ROLES.includes(user.role) && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo agentes pueden reabrir conversaciones.' });
   }
-  if (conv.brokerId && conv.brokerId !== user.sub) {
-    return res.status(403).json({ error: 'Solo el agente asignado puede reabrir esta conversación.' });
+  // Strict: only the assigned broker can reopen claimed conversations.
+  if (conv.brokerId && conv.brokerId !== user.sub && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo el agente asignado puede reabrir esta conversacion.' });
+  }
+  // Unclaimed conversations: only the org director or admin can reopen
+  if (!conv.brokerId && user.role !== 'admin') {
+    const fullUser = store.getUserById(user.sub);
+    const isOrgOwner = conv.inmobiliariaId
+      && ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+      && fullUser.id === conv.inmobiliariaId;
+    if (!isOrgOwner) {
+      return res.status(403).json({ error: 'Solo el director de la inmobiliaria o admin puede reabrir conversaciones sin asignar.' });
+    }
   }
 
   conv.closed = false;
@@ -676,34 +744,18 @@ router.put('/:id/read', requireLogin, (req, res) => {
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  const isClientSide = conv.clientId === user.sub;
+  // Strict: only the assigned broker, the client, or admin can mark read.
+  // Org agents cannot mark-read conversations they haven't claimed.
+  const isClientSide     = conv.clientId === user.sub;
   const isAssignedBroker = conv.brokerId && conv.brokerId === user.sub;
+  const isAdmin          = user.role === 'admin';
 
-  // A pro user with access to an UNCLAIMED org conversation (brokerId still
-  // null, inmobiliariaId matches their org) is acting as the broker here.
-  const isPro = PRO_ROLES.includes(user.role);
-  let hasOrgAccess = false;
-  if (isPro && !conv.brokerId && conv.inmobiliariaId) {
-    const fullUser = store.getUserById(user.sub);
-    const orgId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
-      ? fullUser.id
-      : fullUser?.inmobiliaria_id;
-    hasOrgAccess = orgId === conv.inmobiliariaId;
-  }
-
-  const isBrokerSide = isAssignedBroker || hasOrgAccess;
-  // Admins can act as either side; fall back to broker-side clearing.
-  const isAdmin = user.role === 'admin';
-
-  if (!isClientSide && !isBrokerSide && !isAdmin) {
+  if (!isClientSide && !isAssignedBroker && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
-  // Clear BOTH counters when the user is ambiguously both (e.g. a pro user
-  // who both owns the broker side AND is the client id — shouldn't happen
-  // in practice but we don't want stuck badges).
   if (isClientSide) conv.unreadClient = 0;
-  if (isBrokerSide || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
+  if (isAssignedBroker || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
 
   store.saveConversation(conv);
   res.json({ ok: true, unreadClient: conv.unreadClient || 0, unreadBroker: conv.unreadBroker || 0 });
@@ -746,12 +798,11 @@ router.get('/:id/transfer-targets', requireLogin, (req, res) => {
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  // Caller must currently own the conversation's broker side.
+  // Strict: only the assigned broker can see transfer targets (not the org owner).
+  // The org owner cannot read messages and therefore should not manage conversation routing.
   const isOwner = conv.brokerId === fullUser.id;
-  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(fullUser.role)
-                    && conv.inmobiliariaId === fullUser.id;
-  if (!isOwner && !isOrgOwner) {
-    return res.status(403).json({ error: 'No eres el agente asignado a esta conversación.' });
+  if (!isOwner && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo el agente asignado puede transferir esta conversacion.' });
   }
 
   const inmId = effectiveInmId(fullUser);
@@ -805,12 +856,11 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
   const { targetUserId, reason } = req.body || {};
   if (!targetUserId) return res.status(400).json({ error: 'targetUserId requerido.' });
 
-  // Only the current broker (or the org owner) can initiate a transfer.
+  // Strict: only the assigned broker can initiate a transfer.
+  // Inmobiliaria directors cannot transfer conversations they don't own.
   const isOwner = conv.brokerId === fullUser.id;
-  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(fullUser.role)
-                    && conv.inmobiliariaId === fullUser.id;
-  if (!isOwner && !isOrgOwner) {
-    return res.status(403).json({ error: 'No eres el agente asignado a esta conversación.' });
+  if (!isOwner && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo el agente asignado puede transferir esta conversacion.' });
   }
 
   const target = store.getUserById(targetUserId);
@@ -887,22 +937,22 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
   if (target.email) {
     _sendMail(
       target.email,
-      `Conversación transferida — ${conv.propertyTitle || 'HogaresRD'}`,
-      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
-         <div style="background:#002D62;color:#fff;padding:1.25rem;border-radius:10px 10px 0 0;text-align:center;">
-           <h2 style="margin:0;font-size:1.1rem;">Nueva conversación transferida</h2>
-         </div>
-         <div style="background:#fff;padding:1.25rem 1.5rem;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;">
-           <p style="margin:0 0 10px;color:#1a2b40;">Hola <strong>${(target.name||'').split(' ')[0] || 'agente'}</strong>,</p>
-           <p style="margin:0 0 14px;color:#4d6a8a;font-size:0.92rem;line-height:1.5;">
-             <strong>${fullUser.name || 'Un compañero'}</strong> te transfirió una conversación con
-             <strong>${conv.clientName || 'un cliente'}</strong> sobre
-             <strong>${conv.propertyTitle || 'una propiedad'}</strong>.
-             ${reason ? 'Motivo: <em>' + String(reason).replace(/</g,'&lt;').slice(0,200) + '</em>' : ''}
-           </p>
-           <a href="${BASE_URL}/broker#mensajes" style="display:inline-block;background:#0038A8;color:#fff;padding:0.7rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:700;">Abrir conversación →</a>
-         </div>
-       </div>`
+      `Conversacion transferida - ${conv.propertyTitle || 'HogaresRD'}`,
+      et.layout({
+        title: 'Conversacion transferida',
+        subtitle: conv.propertyTitle || 'Nueva asignacion',
+        preheader: `Nuevo mensaje de ${conv.clientName || 'un cliente'} sobre ${conv.propertyTitle || 'una propiedad'}`,
+        body: [
+          et.p(`Hola <strong>${et.esc((target.name||'').split(' ')[0] || 'agente')}</strong>,`),
+          et.p(
+            `<strong>${et.esc(fullUser.name || 'Un companero')}</strong> te transfirio una conversacion con ` +
+            `<strong>${et.esc(conv.clientName || 'un cliente')}</strong> sobre ` +
+            `<strong>${et.esc(conv.propertyTitle || 'una propiedad')}</strong>.` +
+            (reason ? ' Motivo: <em>' + et.esc(String(reason).slice(0, 200)) + '</em>' : '')
+          ),
+          et.button('Abrir conversacion', `${BASE_URL}/broker#mensajes`),
+        ].join('\n'),
+      })
     );
   }
 
@@ -919,6 +969,284 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
   }
 
   res.json({ ok: true, conversation: conv });
+});
+
+// ── POST /api/conversations/:id/request-transfer ────────────────────────
+// Inmobiliaria director REQUESTS a transfer without reading messages.
+// The assigned broker receives a notification and can accept or decline.
+router.post('/:id/request-transfer', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const fullUser = store.getUserById(user.sub);
+
+  // Only inmobiliaria/constructora directors can request transfers
+  if (!fullUser || !['inmobiliaria', 'constructora'].includes(fullUser.role)) {
+    return res.status(403).json({ error: 'Solo directores de inmobiliaria pueden solicitar transferencias.' });
+  }
+
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversacion no encontrada.' });
+
+  // Conversation must be claimed and belong to this org
+  if (!conv.brokerId) {
+    return res.status(400).json({ error: 'La conversacion no tiene agente asignado. Usa la funcion de reclamar.' });
+  }
+  if (conv.inmobiliariaId !== fullUser.id) {
+    return res.status(403).json({ error: 'Esta conversacion no pertenece a tu organizacion.' });
+  }
+
+  const { targetUserId, reason } = req.body || {};
+  if (!targetUserId) {
+    return res.status(400).json({ error: 'Debes indicar el agente destino (targetUserId).' });
+  }
+
+  const target = store.getUserById(targetUserId);
+  if (!target || !PRO_ROLES.includes(target.role)) {
+    return res.status(404).json({ error: 'Agente destino no encontrado.' });
+  }
+  if (!sameTeam(fullUser, target)) {
+    return res.status(403).json({ error: 'El agente destino no pertenece a tu equipo.' });
+  }
+  if (target.id === conv.brokerId) {
+    return res.status(400).json({ error: 'El agente destino ya es el agente asignado.' });
+  }
+
+  // Check for existing pending request
+  if (!Array.isArray(conv.transfer_requests)) conv.transfer_requests = [];
+  const hasPending = conv.transfer_requests.some(r => r.status === 'pending');
+  if (hasPending) {
+    return res.status(400).json({ error: 'Ya existe una solicitud de transferencia pendiente para esta conversacion.' });
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours
+
+  const transferReq = {
+    id: 'tr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    requestedBy: fullUser.id,
+    requestedByName: fullUser.name || fullUser.companyName || '',
+    targetUserId: target.id,
+    targetUserName: target.name || '',
+    reason: (reason || '').toString().trim().slice(0, 300),
+    status: 'pending',
+    createdAt: now.toISOString(),
+    respondedAt: null,
+    expiresAt: expiresAt.toISOString(),
+  };
+
+  // Re-read to minimize race window
+  const freshConv = store.getConversationById(req.params.id);
+  if (!freshConv) return res.status(404).json({ error: 'Conversacion no encontrada.' });
+  if (!Array.isArray(freshConv.transfer_requests)) freshConv.transfer_requests = [];
+  const stillHasPending = freshConv.transfer_requests.some(r => r.status === 'pending');
+  if (stillHasPending) {
+    return res.status(400).json({ error: 'Ya existe una solicitud de transferencia pendiente para esta conversacion.' });
+  }
+
+  freshConv.transfer_requests.push(transferReq);
+  freshConv.updatedAt = now.toISOString();
+  store.saveConversation(freshConv);
+
+  // Notify the assigned broker via push
+  try {
+    pushNotify(conv.brokerId, {
+      type: 'transfer_request',
+      title: 'Solicitud de transferencia',
+      body: `${fullUser.companyName || fullUser.name} solicita transferir la conversacion con ${conv.clientName || 'un cliente'} a ${target.name}`,
+      url: '/mensajes?conv=' + conv.id,
+    });
+  } catch (e) { console.warn('[request-transfer] push to broker failed:', e.message); }
+
+  // Notify via email
+  const broker = store.getUserById(conv.brokerId);
+  if (broker?.email) {
+    _sendMail(
+      broker.email,
+      'Solicitud de transferencia — HogaresRD',
+      et.layout({
+        title: 'Solicitud de transferencia',
+        subtitle: conv.propertyTitle || '',
+        preheader: `${fullUser.companyName || fullUser.name} solicita transferir una conversacion`,
+        body: [
+          et.p(`<strong>${et.esc(fullUser.companyName || fullUser.name)}</strong> solicita que transfieras tu conversacion sobre <strong>${et.esc(conv.propertyTitle || 'una propiedad')}</strong> al agente <strong>${et.esc(target.name)}</strong>.`),
+          transferReq.reason ? et.alertBox('<strong>Motivo:</strong> ' + et.esc(transferReq.reason), 'info') : '',
+          et.p('Tienes 4 horas para aceptar o rechazar esta solicitud. Si no respondes, la solicitud expirara automaticamente.'),
+          et.button('Ver conversacion', (process.env.BASE_URL || 'https://hogaresrd.com') + '/mensajes?conv=' + conv.id),
+        ].join('\n'),
+      })
+    );
+  }
+
+  res.json({ success: true, request: transferReq });
+});
+
+// ── PUT /api/conversations/:id/respond-transfer ─────────────────────────
+// Assigned broker accepts or declines a transfer request from their director.
+router.put('/:id/respond-transfer', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const conv = store.getConversationById(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Conversacion no encontrada.' });
+
+  // Only the assigned broker can respond
+  if (conv.brokerId !== user.sub) {
+    return res.status(403).json({ error: 'Solo el agente asignado puede responder a la solicitud.' });
+  }
+
+  const { requestId, action } = req.body || {};
+  if (!requestId || !['accept', 'decline'].includes(action)) {
+    return res.status(400).json({ error: 'requestId y action (accept/decline) son requeridos.' });
+  }
+
+  if (!Array.isArray(conv.transfer_requests)) conv.transfer_requests = [];
+  const tr = conv.transfer_requests.find(r => r.id === requestId);
+  if (!tr) return res.status(404).json({ error: 'Solicitud de transferencia no encontrada.' });
+  if (tr.status !== 'pending') {
+    return res.status(400).json({ error: `La solicitud ya fue ${tr.status === 'accepted' ? 'aceptada' : tr.status === 'declined' ? 'rechazada' : 'procesada'}.` });
+  }
+  if (new Date(tr.expiresAt) < new Date()) {
+    tr.status = 'expired';
+    store.saveConversation(conv);
+    return res.status(400).json({ error: 'La solicitud ha expirado.' });
+  }
+
+  const now = new Date().toISOString();
+  tr.respondedAt = now;
+
+  if (action === 'decline') {
+    tr.status = 'declined';
+    conv.updatedAt = now;
+    store.saveConversation(conv);
+
+    // Notify director that request was declined
+    try {
+      pushNotify(tr.requestedBy, {
+        type: 'transfer_declined',
+        title: 'Transferencia rechazada',
+        body: `${user.name} rechazo la solicitud de transferencia`,
+        url: '/broker',
+      });
+    } catch (e) { console.warn('[respond-transfer] push to director failed:', e.message); }
+
+    return res.json({ success: true, status: 'declined' });
+  }
+
+  // action === 'accept' — execute the transfer
+
+  // Re-check expiration right before accepting (guard against network delay / race)
+  if (new Date(tr.expiresAt) < new Date()) {
+    tr.status = 'expired';
+    store.saveConversation(conv);
+    return res.status(400).json({ error: 'La solicitud expiro mientras se procesaba.' });
+  }
+
+  // Re-validate broker ownership (guard against concurrent transfer/reassignment)
+  const freshConv = store.getConversationById(req.params.id);
+  if (!freshConv || freshConv.brokerId !== user.sub) {
+    return res.status(409).json({ error: 'La conversacion fue reasignada mientras respondias. Recarga la pagina.' });
+  }
+
+  const target = store.getUserById(tr.targetUserId);
+  if (!target || !PRO_ROLES.includes(target.role)) {
+    return res.status(400).json({ error: 'El agente destino ya no existe o cambio de rol.' });
+  }
+  // Re-validate same team (target may have left the org since the request was created)
+  const currentBroker = store.getUserById(conv.brokerId);
+  if (!sameTeam(currentBroker, target)) {
+    return res.status(400).json({ error: 'El agente destino ya no pertenece al mismo equipo.' });
+  }
+
+  tr.status = 'accepted';
+
+  const fromBroker = { user_id: conv.brokerId, name: conv.brokerName || user.name || '' };
+  const toBroker = { user_id: target.id, name: target.name || '' };
+
+  // Execute transfer
+  conv.brokerId = target.id;
+  conv.brokerName = target.name || '';
+  conv.updatedAt = now;
+  conv.unreadBroker = Math.max(1, conv.unreadBroker || 0);
+
+  if (!Array.isArray(conv.transferHistory)) conv.transferHistory = [];
+  conv.transferHistory.push({
+    from: fromBroker,
+    to: toBroker,
+    at: now,
+    by: user.sub,
+    byName: user.name || '',
+    reason: tr.reason || 'Solicitud del director',
+    viaRequest: tr.id,
+  });
+
+  // System message
+  const sysMsg = {
+    id: 'msg_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    senderId: 'system',
+    senderRole: 'system',
+    senderName: 'HogaresRD',
+    text: `Conversacion transferida de ${fromBroker.name} a ${toBroker.name}. A partir de ahora, ${toBroker.name} sera tu punto de contacto.`,
+    timestamp: now,
+    system: true,
+    type: 'transfer',
+  };
+  if (!Array.isArray(conv.messages)) conv.messages = [];
+  conv.messages.push(sysMsg);
+  conv.lastMessage = sysMsg.text;
+
+  store.saveConversation(conv);
+
+  // Email + push to target agent
+  try {
+    pushNotify(target.id, {
+      type: 'conversation_transferred',
+      title: 'Conversacion transferida',
+      body: `${user.name} te transfirio una conversacion con ${conv.clientName || 'un cliente'}`,
+      url: '/mensajes?conv=' + conv.id,
+    });
+  } catch (e) { console.warn('[respond-transfer] push to target failed:', e.message); }
+  if (target.email) {
+    _sendMail(target.email, `Conversacion transferida — ${conv.propertyTitle || 'HogaresRD'}`,
+      et.layout({
+        title: 'Conversacion transferida',
+        subtitle: conv.propertyTitle || '',
+        preheader: `${user.name} te transfirio una conversacion`,
+        body: et.p(`<strong>${et.esc(user.name)}</strong> te transfirio una conversacion sobre <strong>${et.esc(conv.propertyTitle || 'una propiedad')}</strong>.`)
+          + et.button('Abrir conversacion', (process.env.BASE_URL || 'https://hogaresrd.com') + '/mensajes?conv=' + conv.id),
+      })
+    );
+  }
+
+  // Email + push to director
+  try {
+    pushNotify(tr.requestedBy, {
+      type: 'transfer_accepted',
+      title: 'Transferencia aceptada',
+      body: `${user.name} acepto la transferencia a ${target.name}`,
+      url: '/broker',
+    });
+  } catch (e) { console.warn('[respond-transfer] push to director failed:', e.message); }
+  const director = store.getUserById(tr.requestedBy);
+  if (director?.email) {
+    _sendMail(director.email, 'Transferencia aceptada — HogaresRD',
+      et.layout({
+        title: 'Transferencia aceptada',
+        preheader: `${user.name} acepto la transferencia a ${target.name}`,
+        body: et.p(`<strong>${et.esc(user.name)}</strong> acepto transferir la conversacion sobre <strong>${et.esc(conv.propertyTitle || 'una propiedad')}</strong> a <strong>${et.esc(target.name)}</strong>.`),
+      })
+    );
+  }
+
+  // Notify client
+  if (conv.clientId) {
+    try {
+      pushNotify(conv.clientId, {
+        type: 'new_message',
+        title: 'Nuevo agente asignado',
+        body: `${toBroker.name} ahora es tu punto de contacto`,
+        url: '/mensajes?conv=' + conv.id,
+      });
+    } catch {}
+  }
+
+  res.json({ success: true, status: 'accepted', conversation: conv });
 });
 
 module.exports = router;
