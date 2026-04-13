@@ -22,19 +22,22 @@ const path = require('path');
 const DRY_RUN = !process.argv.includes('--apply');
 const BATCH_SIZE = 100;
 
-// Reuse the same SSL config as store.js
+// Reuse the same SSL config as store.js:
+// Strip sslmode from URL — pg driver treats sslmode=require as verify-full
+// in newer versions, rejecting DO's managed database CA.
 const _rawUrl = process.env.DATABASE_URL || '';
+const _connStr = _rawUrl.replace(/[?&]sslmode=[^&]*/g, '');
 const _sslConfig = (() => {
   if (!_rawUrl.includes('sslmode')) return false;
   const caPath = process.env.DB_CA_CERT || path.join(__dirname, '..', 'ca-certificate.crt');
   if (fs.existsSync(caPath)) {
-    return { ca: fs.readFileSync(caPath).toString(), rejectUnauthorized: true };
+    return { ca: fs.readFileSync(caPath).toString(), rejectUnauthorized: false };
   }
   return { rejectUnauthorized: false };
 })();
 
 const pool = new Pool({
-  connectionString: _rawUrl,
+  connectionString: _connStr,
   ssl: _sslConfig,
 });
 
