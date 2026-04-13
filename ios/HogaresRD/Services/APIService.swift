@@ -3,6 +3,23 @@ import Foundation
 // Change to "http://localhost:3000" for local development
 let apiBase = "https://hogaresrd.com"
 
+/// Detect MIME type from filename extension
+private func mimeType(for filename: String) -> String {
+    let ext = (filename as NSString).pathExtension.lowercased()
+    switch ext {
+    case "pdf":  return "application/pdf"
+    case "png":  return "image/png"
+    case "heic": return "image/heic"
+    case "gif":  return "image/gif"
+    case "webp": return "image/webp"
+    case "doc":  return "application/msword"
+    case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    case "xls":  return "application/vnd.ms-excel"
+    case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    default:     return "image/jpeg"
+    }
+}
+
 // MARK: - Simple In-Memory Cache
 
 private final class ResponseCache {
@@ -2222,7 +2239,7 @@ class APIService: ObservableObject {
         // File
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"files\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        let mime = filename.hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        let mime = mimeType(for: filename)
         body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n".data(using: .utf8)!)
@@ -2254,7 +2271,7 @@ class APIService: ObservableObject {
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        let mime = filename.hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        let mime = mimeType(for: filename)
         body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n".data(using: .utf8)!)
@@ -2282,7 +2299,7 @@ class APIService: ObservableObject {
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        let mime = filename.lowercased().hasSuffix(".pdf") ? "application/pdf" : "image/jpeg"
+        let mime = mimeType(for: filename)
         body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)

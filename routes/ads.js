@@ -110,54 +110,8 @@ router.post('/', adminSessionAuth, async (req, res) => {
   }
 });
 
-// ── PUT /api/ads/:id  (admin — update / toggle) ────────────────
-router.put('/:id', adminSessionAuth, async (req, res) => {
-  try {
-    // Get current ad
-    const current = await store.pool.query('SELECT * FROM ads WHERE id = $1', [req.params.id]);
-    if (!current.rows.length) return res.status(404).json({ error: 'Not found' });
-
-    const updated = { ...current.rows[0], ...req.body, id: req.params.id };
-    const cols = Object.keys(updated).filter(c => c !== 'id');
-    const sets = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
-    const vals = cols.map(c => updated[c]);
-    vals.push(req.params.id);
-
-    await store.pool.query(`UPDATE ads SET ${sets} WHERE id = $${vals.length}`, vals);
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DELETE /api/ads/:id  (admin) ───────────────────────────────
-router.delete('/:id', adminSessionAuth, async (req, res) => {
-  try {
-    const result = await store.pool.query('DELETE FROM ads WHERE id = $1', [req.params.id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── POST /api/ads/:id/impression  (public — mobile tracking) ──
-router.post('/:id/impression', async (req, res) => {
-  try {
-    await store.pool.query('UPDATE ads SET impressions = impressions + 1 WHERE id = $1', [req.params.id]);
-  } catch {}
-  res.json({ ok: true });
-});
-
-// ── POST /api/ads/:id/click  (public — mobile tracking) ───────
-router.post('/:id/click', async (req, res) => {
-  try {
-    await store.pool.query('UPDATE ads SET clicks = clicks + 1 WHERE id = $1', [req.params.id]);
-  } catch {}
-  res.json({ ok: true });
-});
-
 // ── GET /api/ads/analytics  (admin — dashboard data) ──────────
+// IMPORTANT: This literal route MUST be registered before /:id params
 router.get('/analytics', adminSessionAuth, async (req, res) => {
   try {
     const result = await store.pool.query(`
@@ -181,6 +135,62 @@ router.get('/analytics', adminSessionAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── PUT /api/ads/:id  (admin — update / toggle) ────────────────
+const AD_UPDATE_FIELDS = ['title', 'advertiser', 'description', 'image_url', 'target_url',
+  'ad_type', 'placement', 'budget', 'priority', 'audience', 'cooldown_hours',
+  'is_active', 'start_date', 'end_date'];
+
+router.put('/:id', adminSessionAuth, async (req, res) => {
+  try {
+    const current = await store.pool.query('SELECT * FROM ads WHERE id = $1', [req.params.id]);
+    if (!current.rows.length) return res.status(404).json({ error: 'Not found' });
+
+    const row = current.rows[0];
+    for (const k of AD_UPDATE_FIELDS) {
+      if (k in req.body) row[k] = req.body[k];
+    }
+    // Clamp cooldown on update
+    if (row.cooldown_hours != null) row.cooldown_hours = Math.min(48, Math.max(1, Number(row.cooldown_hours) || 2));
+
+    const cols = Object.keys(row).filter(c => c !== 'id');
+    const sets = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+    const vals = cols.map(c => row[c]);
+    vals.push(req.params.id);
+
+    await store.pool.query(`UPDATE ads SET ${sets} WHERE id = $${vals.length}`, vals);
+    res.json({ ...row, id: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/ads/:id  (admin) ───────────────────────────────
+router.delete('/:id', adminSessionAuth, async (req, res) => {
+  try {
+    const result = await store.pool.query('DELETE FROM ads WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/ads/:id/impression  (public — mobile tracking) ──
+router.post('/:id/impression', async (req, res) => {
+  try {
+    await store.pool.query('UPDATE ads SET impressions = impressions + 1 WHERE id = $1', [req.params.id]);
+  } catch (err) { console.warn('[ads] impression tracking error:', err.message); }
+  res.json({ ok: true });
+});
+
+// ── POST /api/ads/:id/click  (public — mobile tracking) ───────
+router.post('/:id/click', async (req, res) => {
+  try {
+    await store.pool.query('UPDATE ads SET clicks = clicks + 1 WHERE id = $1', [req.params.id]);
+  } catch (err) { console.warn('[ads] click tracking error:', err.message); }
+  res.json({ ok: true });
 });
 
 module.exports = router;

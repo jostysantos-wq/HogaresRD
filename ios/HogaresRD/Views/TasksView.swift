@@ -719,7 +719,8 @@ struct TaskDetailSheet: View {
                                     .font(.subheadline.bold())
                                     .foregroundStyle(Color.rdGreen)
                             } else {
-                                let needsAmount = isPaymentTask && !isBrokerPaymentTask && paymentAmount.trimmingCharacters(in: .whitespaces).isEmpty
+                                let amountText = paymentAmount.trimmingCharacters(in: .whitespaces)
+                                let needsAmount = isPaymentTask && !isBrokerPaymentTask && (amountText.isEmpty || Double(amountText.replacingOccurrences(of: ",", with: ".")) == nil)
                                 Button { showPicker = true } label: {
                                     HStack {
                                         if uploading {
@@ -924,10 +925,19 @@ struct TaskDetailSheet: View {
             .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .jpeg, .png]) { result in
                 switch result {
                 case .success(let url):
-                    guard url.startAccessingSecurityScopedResource() else { return }
+                    guard url.startAccessingSecurityScopedResource() else {
+                        errorMsg = "No se pudo acceder al archivo. Intenta de nuevo."
+                        return
+                    }
                     defer { url.stopAccessingSecurityScopedResource() }
-                    guard let data = try? Data(contentsOf: url),
-                          let appId = task.applicationId else { return }
+                    guard let data = try? Data(contentsOf: url) else {
+                        errorMsg = "No se pudo leer el archivo."
+                        return
+                    }
+                    guard let appId = task.applicationId else {
+                        errorMsg = "Esta tarea no tiene una aplicación asociada."
+                        return
+                    }
                     let filename = url.lastPathComponent
                     Task { await handleFileUpload(data: data, filename: filename, appId: appId) }
                 case .failure(let error):
@@ -1021,8 +1031,14 @@ struct TaskDetailSheet: View {
     // MARK: - Actions
 
     private func handleUpload(item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let appId = task.applicationId else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self) else {
+            errorMsg = "No se pudo cargar la imagen seleccionada."
+            return
+        }
+        guard let appId = task.applicationId else {
+            errorMsg = "Esta tarea no tiene una aplicación asociada."
+            return
+        }
         let filename = "upload_\(Date().timeIntervalSince1970).jpg"
         await handleFileUpload(data: data, filename: filename, appId: appId)
     }

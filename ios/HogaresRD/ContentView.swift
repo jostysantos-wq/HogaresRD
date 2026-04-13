@@ -283,8 +283,9 @@ struct ContentView: View {
     // MARK: - Popup Ad
 
     private func checkPopupAd() async {
-        // Don't show ad popup if another popup is active
-        guard !showPopup, !showPushPrimer, !showAdPopup else { return }
+        // Don't show ad popup if another popup, sheet, or fullscreen cover is active
+        guard !showPopup, !showPushPrimer, !showAdPopup,
+              deepLinkListingID == nil, favAuthSheet == nil else { return }
         guard let ad = await api.fetchPopupAd() else { return }
         // Per-ad cooldown check
         let key = "popup_ad_last_shown_\(ad.id)"

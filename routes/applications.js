@@ -17,6 +17,11 @@ const et         = require('../utils/email-templates');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
 
+// Sanitize filenames for Content-Disposition headers to prevent header injection
+function safeFilename(name) {
+  return (name || 'file').replace(/["\r\n\\]/g, '_').slice(0, 200);
+}
+
 const router    = express.Router();
 // ADMIN_KEY removed from applications.js — Sprint 4 scopes it to /admin/* in server.js only.
 // Admin access to the applications API uses JWT role='admin' instead.
@@ -1676,7 +1681,7 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
   const safePath = guardDocPath(doc.path);
   if (!safePath) return res.status(400).json({ error: 'Ruta de archivo inválida' });
   // Force download, don't render in browser (prevents XSS via uploaded HTML/SVG)
-  res.setHeader('Content-Disposition', `attachment; filename="${doc.original_name || 'document'}"`)
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(doc.original_name || 'document')}"`)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safePath);
 });
@@ -1805,6 +1810,7 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   if (!(await validateMime(req.file.path)))
     return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
 
+  if (!app.payment) app.payment = {};
   app.payment.receipt_path = req.file.path;
   app.payment.receipt_filename = req.file.filename;
   app.payment.receipt_original = req.file.originalname;
@@ -1938,7 +1944,7 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
 
   const safeReceipt = guardDocPath(app.payment.receipt_path);
   if (!safeReceipt) return res.status(400).json({ error: 'Ruta de archivo inválida' });
-  res.setHeader('Content-Disposition', `attachment; filename="${app.payment.receipt_original || 'receipt'}"`)
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(app.payment.receipt_original || 'receipt')}"`)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeReceipt);
 });
@@ -2008,7 +2014,7 @@ router.get('/:id/payment/processed-receipt', userAuth, (req, res) => {
 
   const safePath = guardDocPath(app.payment.processed_receipt_path);
   if (!safePath) return res.status(400).json({ error: 'Ruta de archivo invalida' });
-  res.setHeader('Content-Disposition', `attachment; filename="${app.payment.processed_receipt_original || 'processed_receipt'}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(app.payment.processed_receipt_original || 'processed_receipt')}"`);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safePath);
 });
@@ -2827,7 +2833,7 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   if (!fs.existsSync(inst.proof_path)) return res.status(404).json({ error: 'Archivo no encontrado' });
   const safeProof = guardDocPath(inst.proof_path);
   if (!safeProof) return res.status(400).json({ error: 'Ruta de archivo inválida' });
-  res.setHeader('Content-Disposition', `attachment; filename="${inst.proof_original || 'proof'}"`)
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(inst.proof_original || 'proof')}"`)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeProof);
 });

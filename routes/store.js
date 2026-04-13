@@ -773,7 +773,7 @@ async function claimConversationAtomic(convId, brokerId, brokerName, now, system
     await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
