@@ -57,6 +57,15 @@ router.post('/create-checkout', requireAuth, requireStripe, async (req, res) => 
     const priceId  = priceForRole(user.role);
     if (!priceId)  return res.status(400).json({ error: 'Este tipo de cuenta no requiere suscripción' });
 
+    // Block org-level subscription if agent is linked to another inmobiliaria
+    const isOrgRole   = ['inmobiliaria', 'constructora'].includes(user.role);
+    const isLinkedAgent = user.inmobiliaria_id || user.inmobiliaria_join_status === 'pending';
+    if (isOrgRole && isLinkedAgent) {
+      return res.status(400).json({
+        error: 'Debes desvincularte de tu inmobiliaria actual antes de suscribirte como empresa. Ve a tu dashboard y sal de la organizacion primero.',
+      });
+    }
+
     // Get or create a Stripe customer for this user
     let customerId = user.stripeCustomerId;
     if (!customerId) {
