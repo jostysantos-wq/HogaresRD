@@ -161,19 +161,36 @@ router.get('/', userAuth, (req, res) => {
 // Used to drive the red badge on the "Tareas" menu entry.
 router.get('/badge-count', userAuth, (req, res) => {
   const uid = req.user.sub;
+  const fullUser = store.getUserById(uid);
+  const userOrgId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+    ? fullUser.id : fullUser?.inmobiliaria_id;
+
   const all = store._tasks || [];
   let count = 0;
   for (const row of all) {
     const t = store.getTaskById(row.id);
     if (!t) continue;
     if (t.status === 'completada' || t.status === 'no_aplica') continue;
+
+    // Org scoping: skip tasks from other organizations
+    if (userOrgId) {
+      const creator = store.getUserById(t.assigned_by);
+      const creatorOrgId = creator
+        ? (['inmobiliaria', 'constructora'].includes(creator.role) ? creator.id : creator.inmobiliaria_id)
+        : null;
+      let inOrg = creatorOrgId === userOrgId;
+      if (!inOrg && t.application_id) {
+        const app = store.getApplicationById(t.application_id);
+        inOrg = !!(app && app.inmobiliaria_id === userOrgId);
+      }
+      if (!inOrg) continue;
+    }
+
     const approverId = resolveApproverId(t);
-    // Task assigned to me and still actionable
     if (t.assigned_to === uid && (t.status === 'pendiente' || t.status === 'en_progreso')) {
       count++;
       continue;
     }
-    // Task waiting for my review (as approver, not assignee)
     if (approverId === uid && t.assigned_to !== uid && t.status === 'pending_review') {
       count++;
     }

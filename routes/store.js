@@ -784,11 +784,59 @@ function saveConversation(conv) {
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
     [conv.id, conv.clientId, conv.brokerId, jsonData]
   ).catch(err => _dbWriteError('saveConversation', err));
-  // Store parsed object in cache (PG returns JSONB as object, so match that)
+  _updateConversationCache(conv);
+}
+
+/// Awaitable version of saveConversation — use for critical writes
+/// where DB confirmation is required before responding to the client.
+async function saveConversationAsync(conv) {
+  const jsonData = JSON.stringify(conv);
+  await pool.query(
+    `INSERT INTO conversations (id, "clientId", "brokerId", data) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
+    [conv.id, conv.clientId, conv.brokerId, jsonData]
+  );
+  _updateConversationCache(conv);
+}
+
+function _updateConversationCache(conv) {
   const cacheRow = { id: conv.id, clientId: conv.clientId, brokerId: conv.brokerId, data: conv };
   const idx = _conversations.findIndex(c => c.id === conv.id);
   if (idx >= 0) _conversations[idx] = cacheRow;
   else _conversations.push(cacheRow);
+}
+
+/// Atomic transfer request — uses FOR UPDATE to prevent duplicate pending requests.
+async function addTransferRequestAtomic(convId, transferReq) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id, "clientId", "brokerId", data FROM conversations WHERE id = $1 FOR UPDATE',
+      [convId]
+    );
+    if (rows.length === 0) { await client.query('ROLLBACK'); return null; }
+    const row = rows[0];
+    const conv = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+    if (!Array.isArray(conv.transfer_requests)) conv.transfer_requests = [];
+    const hasPending = conv.transfer_requests.some(r => r.status === 'pending');
+    if (hasPending) { await client.query('ROLLBACK'); return { duplicate: true }; }
+    conv.transfer_requests.push(transferReq);
+    conv.updatedAt = transferReq.createdAt;
+    const jsonData = JSON.stringify(conv);
+    await client.query(
+      'UPDATE conversations SET data = $2 WHERE id = $1',
+      [convId, jsonData]
+    );
+    await client.query('COMMIT');
+    _updateConversationCache(conv);
+    return { ...conv, id: convId };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    if (client) client.release();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1323,7 +1371,8 @@ module.exports = {
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
   getConversations, getConversationById, getConversationsByClient,
-  getConversationsForBroker, getConversationsByInmobiliaria, saveConversation, claimConversationAtomic,
+  getConversationsForBroker, getConversationsByInmobiliaria, saveConversation, saveConversationAsync,
+  claimConversationAtomic, addTransferRequestAtomic,
   getMetaLeads, appendMetaLead,
   getLeadQueue, getLeadQueueById, getActiveLeadQueue, getActiveLeadQueueForListing, saveLeadQueueItem,
   getContributionScores, getContributionScoresForListing, getContributionScore, saveContributionScore,

@@ -22,8 +22,10 @@ const fs = require('fs');
 let Resend;
 try { Resend = require('resend').Resend; } catch (_) {}
 
-// Gmail API — cached per-session for the primary delegated user
+// Gmail API — cached with 1-hour TTL for the primary delegated user
 let _gmailClient = null;
+let _gmailClientExpiry = 0;
+const GMAIL_CLIENT_TTL = 60 * 60 * 1000; // 1 hour
 
 // ── Department email addresses ──────────────────────────────────────────
 const EMAILS = {
@@ -91,8 +93,9 @@ function detectDepartment(subject) {
  * Gmail overrides the From header.
  */
 async function getGmailClient() {
-  // Return cached client if available
-  if (_gmailClient) return _gmailClient;
+  // Return cached client if available and not expired
+  if (_gmailClient && Date.now() < _gmailClientExpiry) return _gmailClient;
+  _gmailClient = null; // Force re-creation on expiry
 
   const keyEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!keyEnv) return null;
@@ -120,6 +123,7 @@ async function getGmailClient() {
     });
 
     _gmailClient = google.gmail({ version: 'v1', auth });
+    _gmailClientExpiry = Date.now() + GMAIL_CLIENT_TTL;
     return _gmailClient;
   } catch (err) {
     console.warn('[mailer] Gmail API init failed:', err.message);

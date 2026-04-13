@@ -974,7 +974,7 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
 // ── POST /api/conversations/:id/request-transfer ────────────────────────
 // Inmobiliaria director REQUESTS a transfer without reading messages.
 // The assigned broker receives a notification and can accept or decline.
-router.post('/:id/request-transfer', requireLogin, (req, res) => {
+router.post('/:id/request-transfer', requireLogin, async (req, res) => {
   const user = getUser(req);
   const fullUser = store.getUserById(user.sub);
 
@@ -1033,18 +1033,17 @@ router.post('/:id/request-transfer', requireLogin, (req, res) => {
     expiresAt: expiresAt.toISOString(),
   };
 
-  // Re-read to minimize race window
-  const freshConv = store.getConversationById(req.params.id);
-  if (!freshConv) return res.status(404).json({ error: 'Conversacion no encontrada.' });
-  if (!Array.isArray(freshConv.transfer_requests)) freshConv.transfer_requests = [];
-  const stillHasPending = freshConv.transfer_requests.some(r => r.status === 'pending');
-  if (stillHasPending) {
-    return res.status(400).json({ error: 'Ya existe una solicitud de transferencia pendiente para esta conversacion.' });
+  // Atomic DB insert: prevents duplicate pending requests via FOR UPDATE lock
+  try {
+    const result = await store.addTransferRequestAtomic(req.params.id, transferReq);
+    if (!result) return res.status(404).json({ error: 'Conversacion no encontrada.' });
+    if (result.duplicate) {
+      return res.status(400).json({ error: 'Ya existe una solicitud de transferencia pendiente para esta conversacion.' });
+    }
+  } catch (err) {
+    console.error('[request-transfer] atomic insert failed:', err.message);
+    return res.status(500).json({ error: 'Error al crear solicitud de transferencia.' });
   }
-
-  freshConv.transfer_requests.push(transferReq);
-  freshConv.updatedAt = now.toISOString();
-  store.saveConversation(freshConv);
 
   // Notify the assigned broker via push
   try {

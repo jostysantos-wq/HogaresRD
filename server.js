@@ -2331,7 +2331,10 @@ if (require.main === module) {
         const { rows } = await store.pool.query(
           `SELECT id, data FROM conversations
            WHERE data->'transfer_requests' IS NOT NULL
-             AND data::text LIKE '%"status":"pending"%'`
+             AND EXISTS (
+               SELECT 1 FROM jsonb_array_elements(data->'transfer_requests') tr
+               WHERE tr->>'status' = 'pending'
+             )`
         );
         const candidates = rows.map(r => {
           const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
@@ -2360,7 +2363,7 @@ if (require.main === module) {
           }
           if (dirty) {
             conv.updatedAt = now.toISOString();
-            store.saveConversation(conv);
+            await store.saveConversationAsync(conv);
           }
         }
         if (expiredCount > 0) console.log(`[transfer-expiry] Expired ${expiredCount} transfer request(s)`);
