@@ -38,6 +38,7 @@ const NotificationType = Object.freeze({
   SECRETARY_ACTION:   'secretary_action',
   SAVED_SEARCH_MATCH: 'saved_search_match',
   NEW_LISTING:        'new_listing',
+  NEW_AFFILIATION:    'new_affiliation',
 });
 
 // Default preferences — all enabled

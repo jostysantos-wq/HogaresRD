@@ -1323,6 +1323,7 @@ app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => 
   if (!target) return res.status(404).json({ error: `Anuncio #${claim.claim_listing_id} no encontrado` });
 
   if (!Array.isArray(target.agencies)) target.agencies = [];
+  const preExisting = [...target.agencies];
   const newAgencies = Array.isArray(claim.agencies) ? claim.agencies : [];
   target.agencies.push(...newAgencies);
   target.updatedAt = new Date().toISOString();
@@ -1331,6 +1332,20 @@ app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => 
   claim.status     = 'approved';
   claim.approvedAt = new Date().toISOString();
   store.saveListing(claim);
+
+  // Notify existing affiliated agents about the new affiliation
+  const { notify: pushNotifyMerge } = require('./routes/push');
+  const newNames = newAgencies.map(a => a.name || a.agent).filter(Boolean).join(', ') || 'Un nuevo agente';
+  const newUserIds = new Set(newAgencies.map(a => a.user_id).filter(Boolean));
+  for (const existing of preExisting) {
+    if (!existing.user_id || newUserIds.has(existing.user_id)) continue;
+    pushNotifyMerge(existing.user_id, {
+      type:  'new_affiliation',
+      title: 'Nuevo agente afiliado',
+      body:  `${newNames} se afilió a "${target.title}"`,
+      url:   `/listing/${target.id}`,
+    });
+  }
 
   res.json({ success: true, targetId: target.id });
 });

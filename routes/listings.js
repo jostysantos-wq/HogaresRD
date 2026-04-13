@@ -620,4 +620,93 @@ router.put('/:id', userAuth, (req, res) => {
   });
 });
 
+// ── POST /:id/request-affiliation — Agent requests to affiliate with a listing
+const crypto = require('crypto');
+const { notify: pushNotify } = require('./push');
+const et = require('../utils/email-templates');
+const PRO_ROLES = ['broker', 'agency', 'inmobiliaria', 'constructora'];
+const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
+
+router.post('/:id/request-affiliation', userAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing || listing.status !== 'approved')
+    return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user || !PRO_ROLES.includes(user.role))
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden solicitar afiliación' });
+
+  // Check if already affiliated
+  const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
+  if (agencies.some(a => a.user_id === user.id))
+    return res.status(400).json({ error: 'Ya estás afiliado a esta propiedad' });
+
+  // Check for existing pending request
+  const allSubmissions = store.getAllSubmissions();
+  const pending = allSubmissions.find(s =>
+    s.submission_type === 'agency_claim' &&
+    s.claim_listing_id === listing.id &&
+    s.status === 'pending' &&
+    s.creator_user_id === user.id
+  );
+  if (pending)
+    return res.status(400).json({ error: 'Ya tienes una solicitud pendiente para esta propiedad' });
+
+  // Create agency claim submission
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const l1 = letters[Math.floor(Math.random() * letters.length)];
+  const l2 = letters[Math.floor(Math.random() * letters.length)];
+  const num = Math.floor(1000 + Math.random() * 9000);
+  let claimId = `${l1}${l2}${num}`;
+  if (store.getListingById(claimId)) claimId = 'CL_' + crypto.randomUUID().slice(0, 8);
+
+  const submission = {
+    id: claimId,
+    creator_user_id: user.id,
+    submission_type: 'agency_claim',
+    claim_listing_id: listing.id,
+    title: '', type: '', property_type: '', condition: '', price: '', currency: 'DOP',
+    description: '', province: '', city: '', sector: '', address: '',
+    bedrooms: '', bathrooms: '', area: '', parking: '',
+    amenities: [], images: [], blueprints: [], tags: [], unit_types: [],
+    agencies: [{
+      name:         user.companyName || user.agencyName || user.name,
+      user_id:      user.id,
+      inmobiliaria: user.inmobiliaria_id || (PRO_ROLES.slice(2).includes(user.role) ? user.id : null),
+      email:        user.email || '',
+      phone:        user.phone || '',
+      agent:        user.name || '',
+    }],
+    name:  user.name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    role:  user.role,
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+  };
+
+  store.saveListing(submission);
+
+  // Notify admin
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
+  transporter.sendMail({
+    to: ADMIN_EMAIL,
+    subject: `Solicitud de afiliación — ${user.name} → ${listing.title}`,
+    html: et.layout({
+      title: 'Nueva solicitud de afiliación',
+      body: et.p(`<strong>${et.esc(user.name)}</strong> (${et.esc(user.role)}) solicita afiliarse a:`)
+        + et.infoTable(
+            et.infoRow('Propiedad', et.esc(listing.title))
+          + et.infoRow('ID', listing.id)
+          + et.infoRow('Agente', et.esc(user.name))
+          + et.infoRow('Email', et.esc(user.email))
+          + et.infoRow('Teléfono', et.esc(user.phone || ''))
+        )
+        + et.button('Revisar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`),
+    }),
+  }).catch(() => {});
+
+  res.json({ ok: true, message: 'Solicitud enviada. El equipo de HogaresRD revisará tu solicitud.' });
+});
+
 module.exports = router;

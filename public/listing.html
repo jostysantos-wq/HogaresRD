@@ -2493,6 +2493,53 @@
 
       document.getElementById('agencyCards').innerHTML = cardsHtml;
     }
+
+    // Show "Request Affiliation" button for logged-in pro users not already affiliated
+    const proRoles = ['broker', 'agency', 'inmobiliaria', 'constructora'];
+    const curUser = window._currentUser;
+    if (curUser && proRoles.includes(curUser.role)) {
+      const alreadyAffiliated = (l.agencies || []).some(a => a.user_id === curUser.id);
+      if (!alreadyAffiliated) {
+        document.getElementById('agenciesBox').style.display = '';
+        const btnHtml = `<div style="margin-top:0.75rem;">
+          <button id="requestAffiliationBtn" style="width:100%;padding:0.65rem;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.2s;"
+            onmouseover="this.style.background='var(--accent)';this.style.color='#fff'"
+            onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;vertical-align:-3px;margin-right:4px"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            Solicitar Afiliación
+          </button>
+        </div>`;
+        document.getElementById('agencyCards').insertAdjacentHTML('afterend', btnHtml);
+
+        document.getElementById('requestAffiliationBtn').addEventListener('click', async function() {
+          this.disabled = true;
+          this.textContent = 'Enviando...';
+          try {
+            const resp = await fetch('/api/listings/' + l.id + '/request-affiliation', {
+              method: 'POST', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+              this.textContent = 'Solicitud enviada ✓';
+              this.style.borderColor = '#16a34a';
+              this.style.color = '#16a34a';
+              this.style.background = 'transparent';
+            } else {
+              this.textContent = data.error || 'Error';
+              this.style.borderColor = '#CE1126';
+              this.style.color = '#CE1126';
+              this.style.background = 'transparent';
+              setTimeout(() => { this.disabled = false; this.textContent = 'Solicitar Afiliación'; this.style.borderColor = 'var(--accent)'; this.style.color = 'var(--accent)'; }, 3000);
+            }
+          } catch {
+            this.textContent = 'Error de red';
+            this.disabled = false;
+            setTimeout(() => { this.textContent = 'Solicitar Afiliación'; }, 2000);
+          }
+        });
+      }
+    }
   }
 
   // ── Init ───────────────────────────────────────────────────
