@@ -682,7 +682,7 @@
     function buildCard(l) {
       const firstImg = Array.isArray(l.images) && l.images.length ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0]?.url || '') : '';
       const img = firstImg
-        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
+        ? `<img src="${esc(firstImg)}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-img-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z\\'/></svg></div>')" />`
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       const isSaved = getSaved().includes(l.id);
       return `

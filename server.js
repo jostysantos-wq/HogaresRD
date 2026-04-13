@@ -883,7 +883,7 @@ app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/alquilar',          (req, res) => res.redirect(301, '/comprar?type=alquiler'));
 app.get('/comparar',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'comparar.html')));
 app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'busquedas-guardadas.html')));
-app.get('/mapa',              (req, res) => res.redirect(301, '/comprar'));
+app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));
 app.get('/nuevos-proyectos',  (req, res) => res.redirect(301, '/comprar?type=proyecto'));
 app.get('/profile',           (req, res) => res.redirect('/broker#perfil'));
 app.get('/listing/:id',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'listing.html')));

@@ -484,11 +484,18 @@ router.get('/team-performance', (req, res) => {
       : null;
     const agentClaims = leads.filter(q => q.claimed_by === member.id && q.status === 'claimed');
 
+    // Agent activity status: active if logged in within last 3 days
+    const lastLogin = member.lastLoginAt ? new Date(member.lastLoginAt) : null;
+    const daysSinceLogin = lastLogin ? Math.floor((Date.now() - lastLogin.getTime()) / 86400000) : null;
+
     agents.push({
       userId: member.id,
       name: member.name || '',
       role: member.role,
       avatarUrl: member.avatarUrl || null,
+      lastLoginAt: member.lastLoginAt || null,
+      daysSinceLogin,
+      isActive: daysSinceLogin !== null && daysSinceLogin <= 3,
       conversations_handled: agentConvs.length,
       open_conversations: openConvs.length,
       closed_conversations: closedConvs.length,
@@ -523,11 +530,26 @@ router.get('/team-performance', (req, res) => {
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  // Org-wide summary metrics
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const leadsThisMonth = leads.filter(q => (q.created_at || '') >= monthStart).length;
+  const completedApps = filteredApps.filter(a => a.status === 'completado');
+  const conversionRate = filteredApps.length
+    ? Math.round((completedApps.length / filteredApps.length) * 100) : 0;
+  const activePipelineValue = filteredApps
+    .filter(a => !['completado', 'rechazado'].includes(a.status))
+    .reduce((sum, a) => sum + (Number(a.listing_price) || 0), 0);
+  const totalRevenue = completedApps.reduce((sum, a) => sum + (Number(a.listing_price) || 0), 0);
+  const activeAgents = agents.filter(a => a.isActive).length;
+  const inactiveAgents = agents.filter(a => !a.isActive).length;
+
   res.json({
     team_size: teamMembers.length,
     agents,
     aggregate: {
       total_leads: leads.length,
+      leads_this_month: leadsThisMonth,
       claimed_count: claimedLeads.length,
       claimed_pct: leads.length ? Math.round((claimedLeads.length / leads.length) * 100) : 0,
       unclaimed_count: unclaimedLeads.length,
@@ -535,10 +557,72 @@ router.get('/team-performance', (req, res) => {
       avg_speed_to_lead_min: avgSpeedToLead ? +(avgSpeedToLead / 60000).toFixed(1) : null,
       total_conversations: convs.length,
       total_applications: filteredApps.length,
+      completed_applications: completedApps.length,
+      conversion_rate: conversionRate,
+      active_pipeline_value: activePipelineValue,
+      total_revenue: totalRevenue,
+      active_agents: activeAgents,
+      inactive_agents: inactiveAgents,
     },
     best_performer: bestPerformer,
     leads_by_day: leadsByDayArr,
   });
+});
+
+// ── POST /api/broker/team-broadcast — Director sends message to all team agents ──
+router.post('/team-broadcast', async (req, res) => {
+  const user = req.brokerUser;
+  if (!['inmobiliaria', 'constructora'].includes(user.role))
+    return res.status(403).json({ error: 'Solo directores pueden enviar anuncios al equipo.' });
+
+  const { message } = req.body;
+  if (!message || typeof message !== 'string' || message.trim().length < 1)
+    return res.status(400).json({ error: 'Mensaje requerido.' });
+
+  const teamMembers = store.getUsersByInmobiliaria(user.id);
+  const secretaries = store.getSecretariesByInmobiliaria(user.id);
+  const allMembers = [...teamMembers, ...secretaries];
+
+  if (!allMembers.length)
+    return res.json({ ok: true, sent: 0 });
+
+  const { notify: pushNotify } = require('./push');
+  const { createTransport } = require('./mailer');
+  const mailer = createTransport();
+  const et = require('../utils/email-templates');
+  let sent = 0;
+
+  for (const member of allMembers) {
+    // Push notification
+    try {
+      pushNotify(member.id, {
+        type: 'team_broadcast',
+        title: `Anuncio de ${user.companyName || user.name}`,
+        body: message.trim().slice(0, 200),
+        url: '/broker',
+      });
+    } catch {}
+
+    // Email notification
+    if (member.email) {
+      try {
+        mailer.sendMail({
+          to: member.email,
+          subject: `Anuncio del equipo — ${user.companyName || user.name}`,
+          department: 'noreply',
+          html: et.layout({
+            title: 'Anuncio del Equipo',
+            subtitle: user.companyName || user.name,
+            body: `<p>${message.trim().replace(/\n/g, '<br>')}</p>`,
+            cta: { label: 'Ir al Dashboard', url: 'https://hogaresrd.com/broker' },
+          }),
+        });
+      } catch {}
+    }
+    sent++;
+  }
+
+  res.json({ ok: true, sent });
 });
 
 module.exports = router;

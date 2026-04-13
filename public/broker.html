@@ -1975,6 +1975,36 @@
         <div id="tpAvgResponse" style="font-size:1.8rem;font-weight:800;color:#f59e0b;">-</div>
         <div style="font-size:0.72rem;color:var(--text-muted);">minutos</div>
       </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Leads Este Mes</div>
+        <div id="tpLeadsMonth" style="font-size:1.8rem;font-weight:800;color:var(--accent);">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">nuevos</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Tasa Conversion</div>
+        <div id="tpConversion" style="font-size:1.8rem;font-weight:800;color:#22c55e;">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">completadas</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Pipeline Activo</div>
+        <div id="tpPipeline" style="font-size:1.8rem;font-weight:800;color:#7c3aed;">-</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">en proceso</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;">
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Agentes Activos</div>
+        <div id="tpActiveAgents" style="font-size:1.8rem;font-weight:800;color:#22c55e;">-</div>
+        <div id="tpInactiveLabel" style="font-size:0.72rem;color:var(--text-muted);">-</div>
+      </div>
+    </div>
+
+    <!-- Team Broadcast -->
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.2rem;">
+      <h3 style="font-size:0.92rem;font-weight:700;margin:0 0 0.6rem;">📢 Anuncio al Equipo</h3>
+      <div style="display:flex;gap:0.5rem;">
+        <textarea id="broadcastMsg" rows="2" placeholder="Escribe un mensaje para todo el equipo..." style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);resize:none;font-family:inherit;"></textarea>
+        <button onclick="sendBroadcast()" id="broadcastBtn" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0 1.2rem;font-weight:700;cursor:pointer;font-size:.85rem;flex-shrink:0;">Enviar</button>
+      </div>
+      <div id="broadcastStatus" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem;min-height:1em;"></div>
     </div>
 
     <!-- Agent performance table -->
@@ -4898,11 +4928,19 @@
       const data = await API(`/api/broker/team-performance?range=${rangeParam}`);
 
       // Summary cards
+      const agg = data.aggregate || {};
       document.getElementById('tpTeamSize').textContent = data.team_size || 0;
-      document.getElementById('tpTotalLeads').textContent = data.aggregate?.total_leads || 0;
-      document.getElementById('tpClaimedPct').textContent = (data.aggregate?.claimed_pct || 0) + '%';
-      const avgMin = data.aggregate?.avg_speed_to_lead_min;
+      document.getElementById('tpTotalLeads').textContent = agg.total_leads || 0;
+      document.getElementById('tpClaimedPct').textContent = (agg.claimed_pct || 0) + '%';
+      const avgMin = agg.avg_speed_to_lead_min;
       document.getElementById('tpAvgResponse').textContent = avgMin != null ? avgMin + ' min' : 'N/A';
+      // New org-wide metrics
+      document.getElementById('tpLeadsMonth').textContent = agg.leads_this_month || 0;
+      document.getElementById('tpConversion').textContent = (agg.conversion_rate || 0) + '%';
+      const pipeVal = agg.active_pipeline_value || 0;
+      document.getElementById('tpPipeline').textContent = pipeVal >= 1e6 ? '$' + (pipeVal/1e6).toFixed(1) + 'M' : pipeVal >= 1e3 ? '$' + Math.round(pipeVal/1e3) + 'K' : '$' + pipeVal;
+      document.getElementById('tpActiveAgents').textContent = agg.active_agents || 0;
+      document.getElementById('tpInactiveLabel').textContent = (agg.inactive_agents || 0) + ' inactivos (3+ dias)';
 
       // Agent table
       const tbody = document.getElementById('tpAgentBody');
@@ -4919,8 +4957,8 @@
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                   <div class="equipo-avatar" style="width:28px;height:28px;font-size:0.6rem;">${a.avatarUrl ? `<img src="${a.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials)}</div>
                   <div>
-                    <div style="font-weight:600;">${esc(a.name)}</div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);">${esc(a.role)}</div>
+                    <div style="font-weight:600;">${esc(a.name)} <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${a.isActive ? '#22c55e' : '#ef4444'};vertical-align:middle;margin-left:4px;" title="${a.isActive ? 'Activo' : 'Inactivo ' + (a.daysSinceLogin != null ? a.daysSinceLogin + ' dias' : '')}"></span></div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);">${esc(a.role)}${a.daysSinceLogin != null && a.daysSinceLogin > 0 ? ` · hace ${a.daysSinceLogin}d` : ' · hoy'}</div>
                   </div>
                 </div>
               </td>
@@ -4976,6 +5014,25 @@
   document.getElementById('tpRangeSelect')?.addEventListener('change', () => {
     loadTeamPerformanceDashboard();
   });
+
+  async function sendBroadcast() {
+    const msg = document.getElementById('broadcastMsg')?.value?.trim();
+    if (!msg) return;
+    const btn = document.getElementById('broadcastBtn');
+    const status = document.getElementById('broadcastStatus');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      const res = await API('/api/broker/team-broadcast', { method: 'POST', body: JSON.stringify({ message: msg }), headers: { 'Content-Type': 'application/json' } });
+      status.textContent = `✅ Enviado a ${res.sent} miembro(s)`;
+      status.style.color = '#22c55e';
+      document.getElementById('broadcastMsg').value = '';
+    } catch(e) {
+      status.textContent = '❌ Error: ' + (e.message || 'No se pudo enviar');
+      status.style.color = '#ef4444';
+    }
+    btn.disabled = false; btn.textContent = 'Enviar';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  }
 
   async function respondJoinRequest(brokerId, action) {
     try {
