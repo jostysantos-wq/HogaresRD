@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject var api: APIService
     @State private var featured: [Listing] = []
     @State private var recent: [Listing] = []
+    @State private var recentlyViewed: [Listing] = []
     @State private var agencies: [Inmobiliaria] = []
     @State private var loading = true
     @State private var selectedType = "venta"
@@ -48,6 +49,17 @@ struct HomeView: View {
                         loading: loading
                     )
                     .padding(.top, 8)
+
+                    // ── Recently Viewed (logged-in users only) ───────
+                    if !recentlyViewed.isEmpty {
+                        carouselSection(
+                            label: "Historial",
+                            title: "Vistos Recientemente",
+                            listings: recentlyViewed,
+                            loading: false
+                        )
+                        .padding(.top, 8)
+                    }
 
                     // ── How it Works ──────────────────────────────────
                     howItWorksSection
@@ -347,6 +359,10 @@ struct HomeView: View {
         if let result = try? await r { recent = result.listings }
         if let result = try? await a { agencies = result }
         loading = false
+        // Recently viewed (only for logged-in users, non-blocking)
+        if APIService.shared.currentUser != nil {
+            recentlyViewed = await APIService.shared.getRecentlyViewedListings()
+        }
     }
 }
 

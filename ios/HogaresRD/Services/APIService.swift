@@ -2058,6 +2058,24 @@ class APIService: ObservableObject {
     }
 
     /// Log a recently viewed listing. Fire-and-forget.
+    /// Fetch recently viewed listing objects (up to 8 for the home carousel)
+    func getRecentlyViewedListings() async -> [Listing] {
+        guard token != nil else { return [] }
+        guard let url = URL(string: "\(apiBase)/api/user/recently-viewed") else { return [] }
+        do {
+            let req = try authedRequest(url)
+            let (data, _) = try await session.data(for: req)
+            struct RVResponse: Decodable { let ids: [String] }
+            let ids = (try? decoder.decode(RVResponse.self, from: data))?.ids ?? []
+            // Fetch up to 8 listings by ID
+            var listings: [Listing] = []
+            for id in ids.prefix(8) {
+                if let listing = try? await getListing(id: id) { listings.append(listing) }
+            }
+            return listings
+        } catch { return [] }
+    }
+
     func trackRecentlyViewed(_ listingId: String) {
         guard let t = token else { return }
         guard let url = URL(string: "\(apiBase)/api/user/recently-viewed/\(listingId)") else { return }

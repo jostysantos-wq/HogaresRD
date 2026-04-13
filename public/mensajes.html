@@ -290,8 +290,9 @@
         <div class="conv-item ${c.id === activeConvId ? 'active' : ''}" onclick="openConv('${c.id}')">
           ${img}
           <div class="conv-info">
-            <div class="conv-title">${esc(c.propertyTitle)}${closedIcon}${claimIcon}</div>
-            <div class="conv-sub">${esc(c.lastMessage || broker)}</div>
+            <div class="conv-title">${esc(c.brokerName || c.clientName)}${closedIcon}${claimIcon}</div>
+            <a href="/listing/${c.propertyId}" onclick="event.stopPropagation();" style="font-size:0.72rem;color:var(--accent);text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(c.propertyTitle)}">🏠 ${esc(c.propertyTitle)}</a>
+            <div class="conv-sub">${esc(c.lastMessage || '')}</div>
           </div>
           ${archiveBtn}${unarchiveBtn}${badge}
         </div>`;
@@ -326,8 +327,9 @@
     const res  = await fetch(`/api/conversations/${id}`, { credentials: 'include' });
     const conv = await res.json();
 
-    document.getElementById('threadTitle').textContent = conv.propertyTitle;
-    document.getElementById('threadSub').textContent   = `Iniciado el ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
+    const titleEl = document.getElementById('threadTitle');
+    titleEl.innerHTML = `<a href="/listing/${conv.propertyId}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;" title="Ver propiedad">${escHtml(conv.propertyTitle)} →</a>`;
+    document.getElementById('threadSub').textContent = `Iniciado el ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
 
     const brokerEl = document.getElementById('threadBroker');
     if (conv.brokerName) {

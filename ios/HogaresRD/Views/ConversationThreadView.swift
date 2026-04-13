@@ -265,14 +265,37 @@ struct ConversationThreadView: View {
         .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 1) {
-                    Text(conversation.propertyTitle)
-                        .font(.subheadline).bold()
-                        .lineLimit(1)
-                    Text(conversation.brokerName ?? conversation.clientName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                NavigationLink {
+                    ListingDetailView(id: conversation.propertyId)
+                } label: {
+                    HStack(spacing: 8) {
+                        if let imgStr = conversation.propertyImage, let url = URL(string: imgStr) {
+                            CachedAsyncImage(url: url, maxPixelSize: 80) { phase in
+                                switch phase {
+                                case .success(let img):
+                                    img.resizable().scaledToFill()
+                                default:
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color(.systemGray5))
+                                }
+                            }
+                            .frame(width: 32, height: 32)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(conversation.propertyTitle)
+                                .font(.subheadline).bold()
+                                .lineLimit(1)
+                            Text(conversation.brokerName ?? conversation.clientName)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                .buttonStyle(.plain)
             }
             if canToggleClose || canTransfer {
                 ToolbarItem(placement: .topBarTrailing) {
