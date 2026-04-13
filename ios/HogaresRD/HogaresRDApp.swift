@@ -108,11 +108,19 @@ struct HogaresRDApp: App {
                 lockManager.handleScenePhase(newPhase, isLoggedIn: api.currentUser != nil)
                 // Clear notification badge when app becomes active
                 if newPhase == .active {
-                    UNUserNotificationCenter.current().setBadgeCount(0)
+                    Task {
+                        try? await UNUserNotificationCenter.current().setBadgeCount(0)
+                        await APIService.shared.resetPushBadge()
+                    }
                 }
             }
             .onOpenURL { url in handleDeepLink(url) }
             .task {
+                // Clear stale badge on cold launch — .onChange doesn't
+                // fire for the initial .active transition on some devices.
+                try? await UNUserNotificationCenter.current().setBadgeCount(0)
+                await APIService.shared.resetPushBadge()
+
                 try? await Task.sleep(for: .seconds(0.8))
                 showSplash = false
                 // Deferred init — push service checks system permissions
@@ -126,6 +134,7 @@ struct HogaresRDApp: App {
 
     /// Parses incoming URLs from Universal Links and affiliate share links.
     /// Supported patterns:
+    ///   /verify-email?token={token}
     ///   /listing/{id}?ref={token}
     ///   /r/{token}/{listingId}
     ///   /r/{token}
@@ -141,7 +150,15 @@ struct HogaresRDApp: App {
 
         let segments = path.split(separator: "/").map(String.init)
 
-        if segments.first == "listing", let listingId = segments.dropFirst().first {
+        // /verify-email?token=... — email verification deep link
+        if segments.first == "verify-email" {
+            if let token = comps?.queryItems?.first(where: { $0.name == "token" })?.value,
+               !token.isEmpty {
+                Task {
+                    _ = await APIService.shared.verifyEmail(token: token)
+                }
+            }
+        } else if segments.first == "listing", let listingId = segments.dropFirst().first {
             // /listing/{id} — open listing detail
             NotificationCenter.default.post(
                 name: .deepLinkListing,

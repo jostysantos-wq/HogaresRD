@@ -580,6 +580,27 @@ class APIService: ObservableObject {
         }
     }
 
+    /// Verify email via deep link token. Calls the server endpoint which marks
+    /// the email verified, then refreshes the local user profile so the
+    /// verification popup dismisses automatically.
+    func verifyEmail(token: String) async -> Bool {
+        // Build the verify URL — same endpoint the web flow uses.
+        // We don't need to follow the redirect; the server processes
+        // the verification on the GET itself.
+        guard let url = URL(string: "\(apiBase)/api/auth/verify-email?token=\(token)") else { return false }
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        // Use a session that does NOT follow redirects — we only need the
+        // server to process the token; the 302 response is irrelevant.
+        let config = URLSessionConfiguration.ephemeral
+        let noRedirectSession = URLSession(configuration: config, delegate: NoRedirectDelegate.shared, delegateQueue: nil)
+        guard let (_, resp) = try? await noRedirectSession.data(for: req),
+              let http = resp as? HTTPURLResponse,
+              (200...399).contains(http.statusCode) else { return false }
+        await refreshUser()
+        return true
+    }
+
     func deleteAccount() async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/delete-account")!)
@@ -1145,6 +1166,18 @@ class APIService: ObservableObject {
         } catch {
             return 0
         }
+    }
+
+    /// Resets the server-side badge counter so the next push notification
+    /// starts from zero. Called when the app becomes active.
+    func resetPushBadge() async {
+        guard let t = token else { return }
+        guard let url = URL(string: "\(apiBase)/api/push/badge-reset") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        _ = try? await session.data(for: req)
     }
 
     /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
@@ -2677,5 +2710,16 @@ enum APIError: LocalizedError {
         case .server(let msg): return msg
         case .subscriptionRequired: return "Tu suscripción no está activa. Renueva tu plan para continuar."
         }
+    }
+}
+
+// MARK: - No-redirect URLSession delegate (used by verifyEmail)
+
+private class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
+    static let shared = NoRedirectDelegate()
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest) async -> URLRequest? {
+        nil // Don't follow redirects
     }
 }

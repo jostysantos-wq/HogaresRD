@@ -253,6 +253,33 @@ router.put('/preferences', userAuth, (req, res) => {
   res.json({ ...DEFAULT_PREFERENCES, ...sanitized });
 });
 
+// ── Per-user badge counter ────────────────────────────────────────────────
+// Tracks the cumulative unread badge value for each user's iOS app icon.
+// Incremented on every push, reset when the app calls POST /badge-reset.
+const _badgeCounts = new Map();
+
+function getBadgeCount(userId) {
+  return _badgeCounts.get(userId) || 0;
+}
+
+function incrementBadge(userId) {
+  const cur = _badgeCounts.get(userId) || 0;
+  _badgeCounts.set(userId, cur + 1);
+  return cur + 1;
+}
+
+function resetBadge(userId) {
+  _badgeCounts.set(userId, 0);
+}
+
+// POST /badge-reset — iOS app calls this when it becomes active to sync
+// the server-side badge counter to zero. This prevents stale badge values
+// from being sent with the next push notification.
+router.post('/badge-reset', userAuth, (req, res) => {
+  resetBadge(req.user.sub);
+  res.json({ ok: true });
+});
+
 // ── notify() — send a push notification to a user ─────────────────────────
 // notification: { type: string, title: string, body: string, url?: string, data?: object }
 // Never throws — errors are logged internally.
@@ -309,6 +336,7 @@ async function notify(userId, notification) {
 
     // ── iOS APNs ──────────────────────────────────────────────────────────
     if (userSubs.ios && userSubs.ios.length > 0) {
+      const badgeValue = incrementBadge(userId);
       const apnsPayload = {
         aps: {
           alert: {
@@ -316,7 +344,7 @@ async function notify(userId, notification) {
             body:  notification.body  || '',
           },
           sound: 'default',
-          badge: 1,
+          badge: badgeValue,
           'mutable-content': 1,
         },
         // Custom data for deep linking
