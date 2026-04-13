@@ -551,13 +551,41 @@ async function deleteUserCascade(userId) {
   _availability = _availability.filter(s => s.broker_id !== userId);
   summary.availability = 1;
 
-  // 7. 2FA sessions
+  // 7. Anonymize applications where the user is the client.
+  // Applications are business records that the broker needs to keep, so we
+  // replace PII with placeholders instead of deleting the whole record.
+  const clientApps = _applications.filter(a => {
+    const client = typeof a.client === 'string' ? _jsonParse(a.client, {}) : (a.client || {});
+    return client.user_id === userId;
+  });
+  const ANON = { user_id: null, name: 'Usuario eliminado', email: '', phone: '' };
+  for (const raw of clientApps) {
+    const app = hydrateApplication(raw);
+    if (!app) continue;
+    app.client = { ...ANON };
+    app.client_name  = ANON.name;
+    app.client_email = '';
+    app.client_phone = '';
+    // Scrub PII from timeline events (actor names referencing the client)
+    if (Array.isArray(app.timeline_events)) {
+      for (const ev of app.timeline_events) {
+        if (ev.actor === userId) {
+          ev.actor_name = ANON.name;
+          ev.actor = null;
+        }
+      }
+    }
+    saveApplication(app);
+  }
+  summary.applications = clientApps.length;
+
+  // 8. 2FA sessions
   _twofa = _twofa.filter(s => {
     const data = typeof s.data === 'string' ? _jsonParse(s.data, {}) : (s.data || {});
     return data.userId !== userId;
   });
 
-  // 8. User record
+  // 9. User record
   deleteUser(userId);
 
   return summary;
