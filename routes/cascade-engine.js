@@ -20,6 +20,7 @@
 
 const store = require('./store');
 const et    = require('../utils/email-templates');
+const { isSubscriptionActive } = require('../utils/subscription-gate');
 
 const CONTRIB_THRESHOLD = 10;            // Minimum score for Tier 2
 
@@ -123,7 +124,13 @@ function getTierAgents(listing, inmobiliariaScope = null) {
     }
   }
 
-  // Tier 1: creator only (if in scope)
+  // Exclude agents without active subscriptions — they can't respond to leads
+  allAgentIds = allAgentIds.filter(id => {
+    const u = store.getUserById(id);
+    return u && isSubscriptionActive(u);
+  });
+
+  // Tier 1: creator only (if in scope and subscribed)
   const tier1 = (creatorId && allAgentIds.includes(creatorId)) ? [creatorId] : [];
 
   // Tier 2: contributors with score >= threshold, excluding creator
