@@ -178,11 +178,11 @@ app.use((req, res, next) => {
 // to switch the header to `Content-Security-Policy` (enforcing mode).
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://connect.facebook.net https://*.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://cdn.apple-mapkit.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.openstreetmap.org https://cdn.apple-mapkit.com",
   "img-src 'self' data: blob: https: http:",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org",
+  "connect-src 'self' https://api.stripe.com https://www.facebook.com https://*.facebook.com https://graph.facebook.com https://*.openstreetmap.org https://nominatim.openstreetmap.org https://*.apple-mapkit.com https://*.ls.apple.com",
   "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
   "object-src 'none'",
   "base-uri 'self'",
