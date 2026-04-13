@@ -142,8 +142,9 @@ router.get('/status', requireAuth, (req, res) => {
     canAccessDashboard,
     paywallRequired,
     isLegacyTrial,
-    planName:         (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
-    hasPaymentMethod: !!user.stripeCustomerId,
+    planName:             (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
+    hasPaymentMethod:     !!user.stripeSubscriptionId,
+    subscriptionRenewsAt: user.subscriptionRenewsAt || null,
   });
 });
 
