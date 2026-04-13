@@ -1975,17 +1975,9 @@ router.post('/:id/payment/processed-receipt', userAuth, docUpload.single('receip
   // Auto-complete the broker's "verify payment" task
   autoCompleteTasksByEvent(app.id, 'payment_uploaded');
 
-  // Auto-task: notify client their processed receipt is ready
+  // Notify client their processed receipt is ready (push only — no open task,
+  // since this is informational and the receipt is already available to download)
   if (app.client?.user_id) {
-    createAutoTask({
-      title: `Tu recibo de pago procesado esta listo`,
-      description: `Descarga tu recibo procesado para ${app.listing_title || 'tu propiedad'}.`,
-      assigned_to: app.client.user_id,
-      assigned_by: req.user.sub,
-      application_id: app.id,
-      listing_id: app.listing_id,
-      source_event: 'receipt_ready',
-    });
     pushNotify(app.client.user_id, {
       type: 'document_reviewed',
       title: 'Recibo Procesado Disponible',
