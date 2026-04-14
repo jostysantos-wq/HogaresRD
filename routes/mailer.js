@@ -113,7 +113,10 @@ async function getGmailClient() {
 
     // Always impersonate the primary Workspace user
     const primaryUser = process.env.GOOGLE_DELEGATED_USER || 'soporte@hogaresrd.com';
-    console.log(`[mailer] Gmail API authenticating as primary user: ${primaryUser}`);
+    if (!getGmailClient._logged) {
+      getGmailClient._logged = true;
+      console.log(`[mailer] Gmail API authenticating as primary user: ${primaryUser}`);
+    }
 
     const auth = new google.auth.JWT({
       email:   key.client_email,
@@ -207,10 +210,13 @@ function createTransport() {
   // Resend HTTP API
   const resend = (resendKey && Resend) ? new Resend(resendKey) : null;
 
-  if (hasGmailAPI) console.log('[mailer] Gmail API configured as primary transport');
-  else if (resend) console.log('[mailer] Resend HTTP API configured as primary transport');
-  else if (smtp)   console.log('[mailer] SMTP configured as primary transport');
-  else             console.warn('[mailer] No email transport configured!');
+  if (!createTransport._logged) {
+    createTransport._logged = true;
+    if (hasGmailAPI) console.log('[mailer] Gmail API configured as primary transport');
+    else if (resend) console.log('[mailer] Resend HTTP API configured as primary transport');
+    else if (smtp)   console.log('[mailer] SMTP configured as primary transport');
+    else             console.warn('[mailer] No email transport configured!');
+  }
 
   return {
     /**
