@@ -1440,6 +1440,36 @@ app.get('/api/admin/conversation-access-log', adminSessionAuth, (req, res) => {
   }
 });
 
+// ── Admin: Orphaned leads (no active broker) ─────────────────────────────
+app.get('/admin/orphaned-leads', adminSessionAuth, (req, res) => {
+  const { isSubscriptionActive } = require('./utils/subscription-gate');
+  const apps = store.getApplications();
+  const orphaned = apps.filter(a => {
+    // Terminal statuses don't need an agent
+    if (['completado', 'rechazado'].includes(a.status)) return false;
+    // No broker at all
+    if (!a.broker?.user_id) return true;
+    // Broker exists but subscription is inactive
+    const brokerUser = store.getUserById(a.broker.user_id);
+    if (!brokerUser) return true;
+    if (!isSubscriptionActive(brokerUser)) return true;
+    return false;
+  }).map(a => ({
+    id: a.id,
+    listing_title: a.listing_title,
+    listing_id: a.listing_id,
+    client_name: a.client?.name,
+    client_email: a.client?.email,
+    client_phone: a.client?.phone,
+    broker_name: a.broker?.name || 'Sin asignar',
+    broker_user_id: a.broker?.user_id,
+    broker_active: a.broker?.user_id ? isSubscriptionActive(store.getUserById(a.broker.user_id) || {}) : false,
+    status: a.status,
+    created_at: a.created_at,
+  }));
+  res.json({ orphaned, total: orphaned.length });
+});
+
 app.post('/admin/deletion-requests/:id/reject', adminSessionAuth, (req, res) => {
   const dr = store.getDeletionRequestById(req.params.id);
   if (!dr) return res.status(404).json({ error: 'Solicitud no encontrada' });
@@ -2347,6 +2377,44 @@ cron.schedule('0 3 * * *', () => {
   } catch (e) {
     console.error('[Cleanup] Error:', e.message);
   }
+}, { timezone: 'America/Santo_Domingo' });
+
+// ── Cron: Orphaned leads check (daily at 8am) ───────────────────────
+// Scans for active applications with no broker or inactive broker
+// and sends admin a summary email.
+cron.schedule('0 8 * * *', () => {
+  try {
+    const { isSubscriptionActive: isActive } = require('./utils/subscription-gate');
+    const apps = store.getApplications();
+    const orphaned = apps.filter(a => {
+      if (['completado', 'rechazado'].includes(a.status)) return false;
+      if (!a.broker?.user_id) return true;
+      const brokerUser = store.getUserById(a.broker.user_id);
+      return !brokerUser || !isActive(brokerUser);
+    });
+    if (orphaned.length > 0) {
+      console.log(`[Cron] Found ${orphaned.length} orphaned lead(s) — notifying admin`);
+      const adminEmail = process.env.ADMIN_EMAIL || ADMIN_EMAIL;
+      const et = require('./utils/email-templates');
+      const rows = orphaned.map(a =>
+        et.infoRow(et.esc(a.client?.name || 'Cliente'), `${et.esc(a.listing_title || '')} — ${a.status}`)
+      ).join('');
+      const { createTransport: _ct } = require('./routes/mailer');
+      _ct().sendMail({
+        to: adminEmail,
+        subject: `⚠️ ${orphaned.length} lead(s) sin agente activo — HogaresRD`,
+        html: et.layout({
+          title: `${orphaned.length} lead(s) sin agente`,
+          headerColor: '#b45309',
+          body: et.alertBox(`Hay ${orphaned.length} aplicacion(es) activas sin un agente con suscripción activa.`, 'warning')
+            + et.infoTable(rows)
+            + et.button('Ver en Admin', `${process.env.BASE_URL || 'https://hogaresrd.com'}/${process.env.ADMIN_PATH || 'admin'}`),
+        }),
+      }).catch(e => console.error('[Cron] Orphaned leads email error:', e.message));
+    } else {
+      console.log('[Cron] No orphaned leads found');
+    }
+  } catch (e) { console.error('[Cron] Orphaned leads check error:', e.message); }
 }, { timezone: 'America/Santo_Domingo' });
 
 // ── Admin: re-run AI review on a listing ─────────────────────────

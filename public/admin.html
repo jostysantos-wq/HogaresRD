@@ -838,6 +838,14 @@
 
       <!-- ── LEADS PAGE ────────────────────────────────────── -->
       <div class="page-section" id="page-leads">
+        <!-- Orphaned leads alert banner -->
+        <div id="orphanedBanner" style="display:none; background:#fef3c7; border:1.5px solid #f59e0b; border-radius:12px; padding:1rem 1.2rem; margin-bottom:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
+            <span style="font-size:1.3rem;">⚠️</span>
+            <strong style="color:#92400e; font-size:0.9rem;" id="orphanedTitle">Leads sin agente activo</strong>
+          </div>
+          <div id="orphanedList" style="font-size:0.82rem; color:#78350f;"></div>
+        </div>
         <div class="leads-stats">
           <div class="lead-stat" style="border-top:3px solid var(--warning);">
             <div class="num" id="lsTotal" style="color:var(--warning);">—</div>
@@ -2380,6 +2388,34 @@
     }).catch(() => {
       document.getElementById('leadsTableBody').innerHTML = '<tr><td colspan="9" class="leads-empty">Error al cargar leads.</td></tr>';
     });
+    // Load orphaned leads
+    fetch('/admin/orphaned-leads').then(r => r.json()).then(data => {
+      const banner = document.getElementById('orphanedBanner');
+      if (!data.orphaned || !data.orphaned.length) { banner.style.display = 'none'; return; }
+      banner.style.display = '';
+      document.getElementById('orphanedTitle').textContent = `${data.total} lead(s) sin agente activo`;
+      document.getElementById('orphanedList').innerHTML = data.orphaned.map(o => {
+        const reason = !o.broker_user_id ? 'Sin agente asignado' : (!o.broker_active ? 'Suscripción inactiva' : '');
+        return `<div style="display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid rgba(245,158,11,0.2);">
+          <div>
+            <strong>${o.client_name || 'Cliente'}</strong> → ${o.listing_title || 'Propiedad'}
+            <span style="font-size:0.72rem; color:#92400e; margin-left:0.4rem;">(${reason})</span>
+          </div>
+          <button onclick="openReassignFromOrphan('${o.id}','${(o.client_name||'').replace(/'/g,"\\'")}')" style="font-size:0.72rem; font-weight:700; padding:0.3rem 0.7rem; border:1.5px solid #f59e0b; border-radius:6px; background:#fff; color:#92400e; cursor:pointer;">Reasignar</button>
+        </div>`;
+      }).join('');
+    }).catch(() => {});
+  }
+  function openReassignFromOrphan(appId, clientName) {
+    // Reuse the existing reassign modal from the aplicaciones page
+    fetch('/admin/applications').then(r => r.json()).then(apps => {
+      const app = apps.find(a => a.id === appId);
+      if (app && typeof openReassignModal === 'function') {
+        openReassignModal(app);
+      } else {
+        alert('Abre la sección Aplicaciones para reasignar esta solicitud (ID: ' + appId + ')');
+      }
+    }).catch(() => alert('Error cargando aplicaciones'));
   }
   function updateLeadStats(leads) {
     document.getElementById('lsTotal').textContent     = leads.filter(l => l.status === 'pendiente').length;

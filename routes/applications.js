@@ -13,6 +13,7 @@ const notify     = require('../utils/twilio');
 const { notify: pushNotify } = require('./push');
 const appEvents  = require('./app-events');
 const { encrypt, decrypt } = require('../utils/encryption');
+const { isSubscriptionActive } = require('../utils/subscription-gate');
 const et         = require('../utils/email-templates');
 // file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
 const { fileTypeFromFile } = require('file-type');
@@ -564,27 +565,39 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   let broker = { user_id: null, name: '', agency_name: '', email: '', phone: '' };
   if (referredByAgent) {
-    // Individual broker affiliate link → assign directly to this agent
-    broker = {
-      user_id:     referredByAgent.id,
-      name:        referredByAgent.name || '',
-      agency_name: referredByAgent.inmobiliaria_name || '',
-      email:       referredByAgent.email || '',
-      phone:       referredByAgent.phone || '',
-    };
+    // Individual broker affiliate link → assign directly ONLY if subscription active
+    if (isSubscriptionActive(referredByAgent)) {
+      broker = {
+        user_id:     referredByAgent.id,
+        name:        referredByAgent.name || '',
+        agency_name: referredByAgent.inmobiliaria_name || '',
+        email:       referredByAgent.email || '',
+        phone:       referredByAgent.phone || '',
+      };
+    } else {
+      // Agent's subscription is inactive — treat as unassigned, let cascade or fallback handle it
+      console.warn(`[applications] Referred agent ${referredByAgent.id} has inactive subscription — skipping direct assignment`);
+      referredByAgent = null; // clear so cascade/fallback activates
+    }
   } else if (referredByInmobiliaria) {
     // Inmobiliaria affiliate link → leave broker unassigned, cascade within team
     broker = { user_id: null, name: 'Pendiente de asignación', agency_name: referredByInmobiliaria.name || '', email: '', phone: '' };
   } else if (!useCascade && agencies.length) {
     const agency = agencies[0];
     const resolved = resolveAgencyToUser(agency);
-    broker = {
-      user_id: agency.user_id || resolved?.id || null,
-      name:    agency.contact || agency.name || resolved?.name || '',
-      agency_name: agency.name || '',
-      email:   agency.email || resolved?.email || '',
-      phone:   agency.phone || resolved?.phone || '',
-    };
+    const candidateUser = resolved || (agency.user_id ? store.getUserById(agency.user_id) : null);
+    // Only assign if the agent has an active subscription
+    if (candidateUser && isSubscriptionActive(candidateUser)) {
+      broker = {
+        user_id: candidateUser.id,
+        name:    agency.contact || agency.name || candidateUser.name || '',
+        agency_name: agency.name || '',
+        email:   candidateUser.email || agency.email || '',
+        phone:   candidateUser.phone || agency.phone || '',
+      };
+    } else {
+      console.warn(`[applications] First agency agent has inactive subscription — leaving unassigned`);
+    }
   } else if (useCascade) {
     // Even when cascade is used, pre-resolve the first agency's user
     // so we can fall back to them if cascade returns null later.
@@ -795,7 +808,7 @@ router.post('/', appCreateLimiter, (req, res) => {
       let assignedUser = null;
       for (const agency of agencies) {
         const resolved = resolveAgencyToUser(agency);
-        if (resolved) { assignedUser = resolved; break; }
+        if (resolved && isSubscriptionActive(resolved)) { assignedUser = resolved; break; }
       }
 
       if (assignedUser) {
@@ -867,6 +880,31 @@ router.post('/', appCreateLimiter, (req, res) => {
             newAppHtml(assignedUser ? `Agente: ${assignedUser.name}` : 'Sin agente asignado — por favor reasignar')
           );
         }
+      }
+
+      // ── ADMIN FALLBACK: if no agent was assigned, alert admin ─────
+      if (!assignedUser) {
+        const adminEmail = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
+        console.warn(`[applications] ORPHANED LEAD: app ${app.id} — no active agents available for ${app.listing_title}`);
+        sendNotification(adminEmail,
+          `⚠️ Lead sin agente — ${app.client.name} → ${app.listing_title}`,
+          et.layout({
+            title: 'Lead sin agente asignado',
+            headerColor: '#b45309',
+            body: et.alertBox('Este lead no tiene un agente activo asignado. Todos los agentes afiliados tienen suscripción inactiva o no pudieron ser contactados.', 'warning')
+              + et.infoTable(
+                  et.infoRow('Cliente', et.esc(app.client.name))
+                + et.infoRow('Teléfono', et.esc(app.client.phone))
+                + et.infoRow('Email', et.esc(app.client.email))
+                + et.infoRow('Propiedad', et.esc(app.listing_title))
+                + et.infoRow('ID Aplicación', app.id)
+              )
+              + et.button('Reasignar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`)
+          })
+        );
+        addEvent(app, 'orphaned_lead', 'Sin agente activo disponible — admin notificado',
+          'system', 'Sistema', { reason: 'no_active_agents' });
+        store.saveApplication(app);
       }
     }
   } else {
