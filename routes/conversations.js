@@ -124,6 +124,33 @@ router.post('/', requireLogin, (req, res) => {
     timestamp:  new Date().toISOString(),
   };
 
+  // If no inmobiliariaId from ref token, try to resolve from the listing's agencies
+  if (!inmobiliariaId && propertyId) {
+    const listing = store.getListingById(propertyId);
+    if (listing) {
+      // Check listing creator
+      const creator = listing.creator_user_id ? store.getUserById(listing.creator_user_id) : null;
+      if (creator && ['inmobiliaria', 'constructora'].includes(creator.role)) {
+        inmobiliariaId = creator.id;
+      }
+      // Check affiliated agencies
+      if (!inmobiliariaId && Array.isArray(listing.agencies)) {
+        for (const a of listing.agencies) {
+          if (!a.user_id) continue;
+          const agentUser = store.getUserById(a.user_id);
+          if (agentUser && ['inmobiliaria', 'constructora'].includes(agentUser.role)) {
+            inmobiliariaId = agentUser.id;
+            break;
+          }
+          if (agentUser?.inmobiliaria_id) {
+            inmobiliariaId = agentUser.inmobiliaria_id;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   const conv = {
     id:             uid(),
     propertyId,
@@ -133,7 +160,7 @@ router.post('/', requireLogin, (req, res) => {
     clientName:     user.name,
     brokerId:       assignedBrokerId,   // pre-assigned from ref link, or null
     brokerName:     assignedBrokerName,
-    inmobiliariaId: inmobiliariaId,      // set when org link used (for team visibility)
+    inmobiliariaId: inmobiliariaId,      // set from ref link or listing agencies
     refToken:       refTk || null,
     createdAt:      new Date().toISOString(),
     updatedAt:      new Date().toISOString(),
