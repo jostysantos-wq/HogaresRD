@@ -333,7 +333,7 @@ struct TourBookingSheet: View {
         let calendar = Calendar.current
         let year  = calendar.component(.year, from: currentMonth)
         let month = calendar.component(.month, from: currentMonth)
-        let firstOfMonth = calendar.date(from: DateComponents(year: year, month: month, day: 1))!
+        let firstOfMonth = (calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date())
         let firstWeekday = calendar.component(.weekday, from: firstOfMonth) - 1
         let daysInMonth  = calendar.range(of: .day, in: .month, for: firstOfMonth)!.count
         let today = todayString()
@@ -1273,7 +1273,7 @@ struct BrokerAvailabilityView: View {
 
     private func monthCard(month: Int, year: Int) -> some View {
         let cal = Calendar.current
-        let firstOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1))!
+        let firstOfMonth = (cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date())
         let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)!.count
         let firstWeekday = cal.component(.weekday, from: firstOfMonth) - 1 // 0=Sun
         let dayHeaders = ["D", "L", "M", "X", "J", "V", "S"]
@@ -1299,7 +1299,7 @@ struct BrokerAvailabilityView: View {
 
                 ForEach(1...daysInMonth, id: \.self) { day in
                     let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
-                    let dateObj = cal.date(from: DateComponents(year: year, month: month, day: day))!
+                    let dateObj = (cal.date(from: DateComponents(year: year, month: month, day: day)) ?? Date())
                     let dow = cal.component(.weekday, from: dateObj) - 1
                     let hasSchedule = activeDays.contains(dow)
                     let isBlocked = blockedDates.contains(dateStr)
@@ -1496,8 +1496,8 @@ struct DayEditorSheet: View {
                             Button {
                                 let cal = Calendar.current
                                 timeRanges.append((
-                                    start: cal.date(from: DateComponents(hour: 9, minute: 0))!,
-                                    end: cal.date(from: DateComponents(hour: 17, minute: 0))!
+                                    start: (cal.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()),
+                                    end: (cal.date(from: DateComponents(hour: 17, minute: 0)) ?? Date())
                                 ))
                             } label: {
                                 HStack {
@@ -1629,14 +1629,14 @@ struct DayEditorSheet: View {
                 let sParts = slot.start_time.split(separator: ":").map { Int($0) ?? 0 }
                 let eParts = slot.end_time.split(separator: ":").map { Int($0) ?? 0 }
                 return (
-                    start: cal.date(from: DateComponents(hour: sParts[0], minute: sParts.count > 1 ? sParts[1] : 0))!,
-                    end: cal.date(from: DateComponents(hour: eParts[0], minute: eParts.count > 1 ? eParts[1] : 0))!
+                    start: (cal.date(from: DateComponents(hour: sParts[0], minute: sParts.count > 1 ? sParts[1] : 0)) ?? Date()),
+                    end: (cal.date(from: DateComponents(hour: eParts[0], minute: eParts.count > 1 ? eParts[1] : 0)) ?? Date())
                 )
             }
         } else {
             timeRanges = [(
-                start: cal.date(from: DateComponents(hour: 9, minute: 0))!,
-                end: cal.date(from: DateComponents(hour: 17, minute: 0))!
+                start: (cal.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()),
+                end: (cal.date(from: DateComponents(hour: 17, minute: 0)) ?? Date())
             )]
         }
     }
@@ -1798,7 +1798,7 @@ struct RescheduleSheet: View {
                 ForEach(dayNames, id: \.self) { d in
                     Text(d).font(.caption2.bold()).foregroundStyle(.secondary)
                 }
-                let firstWeekday = cal.component(.weekday, from: cal.date(from: DateComponents(year: year, month: month, day: 1))!) - 1
+                let firstWeekday = cal.component(.weekday, from: (cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date())) - 1
                 ForEach(0..<firstWeekday, id: \.self) { _ in Color.clear.frame(height: 36) }
                 let daysInMonth = cal.range(of: .day, in: .month, for: currentMonth)!.count
                 ForEach(1...daysInMonth, id: \.self) { day in
@@ -1895,7 +1895,7 @@ struct RescheduleSheet: View {
     }
 
     private func moveMonth(_ delta: Int) {
-        currentMonth = Calendar.current.date(byAdding: .month, value: delta, to: currentMonth)!
+        currentMonth = Calendar.current.date(byAdding: .month, value: delta, to: currentMonth) ?? currentMonth
         selectedDate = nil; selectedTime = nil
         loadMonth()
     }

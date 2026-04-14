@@ -759,6 +759,7 @@ struct ListingDetailView: View {
         let monthly: Double = {
             guard monthlyRate > 0, totalPayments > 0, loanAmount > 0 else { return 0 }
             let factor = pow(1 + monthlyRate, totalPayments)
+            guard factor > 1 else { return loanAmount / totalPayments } // avoid division by zero
             return loanAmount * (monthlyRate * factor) / (factor - 1)
         }()
 

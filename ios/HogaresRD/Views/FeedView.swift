@@ -194,7 +194,12 @@ struct FeedView: View {
         } else {
             reshuffles += 1
             // Cap feed at ~500 items to prevent unbounded memory growth
-            if feed.count > 500 { feed = Array(feed.suffix(200)) }
+            if feed.count > 500 {
+                feed = Array(feed.suffix(200))
+                // Clean stale entries from appearedAt to prevent memory leak
+                let validIndices = Set(0..<feed.count)
+                appearedAt = appearedAt.filter { validIndices.contains($0.key) }
+            }
             feed.append(contentsOf: interleaved(ranked(allListings), cycle: reshuffles))
         }
 

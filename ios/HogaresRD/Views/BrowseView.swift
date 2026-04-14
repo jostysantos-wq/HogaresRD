@@ -206,6 +206,7 @@ struct BrowseView: View {
         let r = (rateVal / 100.0) / 12.0
         let n = yearsVal * 12.0
         let factor = pow(1 + r, n)
+        guard factor > 1 else { return principal / n }
         return principal * (r * factor) / (factor - 1)
     }
 
