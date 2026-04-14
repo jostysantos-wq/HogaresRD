@@ -4644,11 +4644,12 @@
   function renderEquipo(data) {
     const { brokers = [], pending_requests = [] } = data;
 
-    // Badge on sidebar Solicitudes button
+    // Badge on sidebar Solicitudes button (only show if count increased)
     const badge = document.getElementById('jrBadge');
     if (badge) {
+      const seen = parseInt(localStorage.getItem('broker_seen_team-requests') || '0');
       badge.textContent = pending_requests.length;
-      badge.style.display = pending_requests.length ? '' : 'none';
+      badge.style.display = pending_requests.length > seen ? '' : 'none';
     }
 
     // Stats cards on Miembros page
@@ -5576,6 +5577,23 @@
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
     if (page === 'tareas') loadTareas();
     if (page === 'mensajes' && typeof window.brkLoadList === 'function') window.brkLoadList();
+
+    // Clear badge when visiting the page (read-and-dismiss)
+    const badgeMap = {
+      mensajes: 'msgNavBadge',
+      tareas: 'tareasBadge',
+      'tour-requests': 'tourBadge',
+      'team-requests': 'jrBadge',
+    };
+    const badgeId = badgeMap[page];
+    if (badgeId) {
+      const el = document.getElementById(badgeId);
+      if (el) {
+        const count = parseInt(el.textContent) || 0;
+        try { localStorage.setItem('broker_seen_' + page, String(count)); } catch {}
+        el.style.display = 'none';
+      }
+    }
   }
 
   // ── Hash-based deep linking — e.g. /broker#mensajes from nav ──
@@ -8397,11 +8415,12 @@
       </div>`;
     }).join('');
 
-    // Update nav badge
+    // Update nav badge (only show if count increased since last visit)
     const navBadge = document.getElementById('msgNavBadge');
     if (navBadge) {
+      const seen = parseInt(localStorage.getItem('broker_seen_mensajes') || '0');
       navBadge.textContent = totalUnread;
-      navBadge.style.display = totalUnread > 0 ? 'inline' : 'none';
+      navBadge.style.display = totalUnread > seen ? 'inline' : 'none';
     }
   }
 
@@ -8927,7 +8946,11 @@
     const pending = _tourData.filter(t => t.status === 'pending').length;
     const badge = document.getElementById('tourBadge');
     const countEl = document.getElementById('tourPendingCount');
-    if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'inline' : 'none'; }
+    if (badge) {
+      const seen = parseInt(localStorage.getItem('broker_seen_tour-requests') || '0');
+      badge.textContent = pending;
+      badge.style.display = pending > seen ? 'inline' : 'none';
+    }
     if (countEl) countEl.textContent = pending;
     renderTourRequests();
   }
@@ -9369,8 +9392,9 @@
       const badge = document.getElementById('tareasBadge');
       if (!badge) return;
       const count = Number(data.count) || 0;
+      const seen = parseInt(localStorage.getItem('broker_seen_tareas') || '0');
       badge.textContent = count;
-      badge.style.display = count > 0 ? 'inline' : 'none';
+      badge.style.display = count > seen ? 'inline' : 'none';
     } catch {}
   }
   // Initial refresh + poll every 45s while the dashboard is open.
