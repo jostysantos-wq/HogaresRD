@@ -449,9 +449,21 @@ struct ReelCard: View {
                                 activeColor: .white,
                                 action:      shareListing
                             )
+                            // "Ver detalles" button at the bottom of the rail
+                            Button { onTap() } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "arrow.right.circle.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundStyle(.white)
+                                    Text("Ver detalles")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(0.85))
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.trailing, 10)
-                        .padding(.bottom, 170) // clear the text overlay + tab bar
+                        .padding(.bottom, 120) // clear the tab bar
                     }
                 }
                 .allowsHitTesting(true)
@@ -476,7 +488,7 @@ struct ReelCard: View {
                         .padding(.horizontal, 12).padding(.vertical, 5)
                         .background(.black.opacity(0.3))
                         .clipShape(Capsule())
-                        .padding(.bottom, 240)
+                        .padding(.bottom, 96)
                     }
                     .allowsHitTesting(false)
                 }
@@ -529,38 +541,22 @@ struct ReelCard: View {
                         }
                     }
 
-                    HStack {
-                        if let agency = listing.agencies?.first, let name = agency.name {
-                            Button {
-                                if let slug = agency.slug { onAgencyTap(slug) }
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "building.2.fill")
-                                        .font(.caption2)
-                                        .foregroundStyle(Color.rdBlue)
-                                    Text(name)
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.75))
-                                        .lineLimit(1)
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 8))
-                                        .foregroundStyle(.white.opacity(0.4))
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Spacer()
-                        Button { onTap() } label: {
-                            HStack(spacing: 4) {
-                                Text("Ver detalles")
-                                    .font(.caption).bold()
+                    if let agency = listing.agencies?.first, let name = agency.name {
+                        Button {
+                            if let slug = agency.slug { onAgencyTap(slug) }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "building.2.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.rdBlue)
+                                Text(name)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.75))
+                                    .lineLimit(1)
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(.white.opacity(0.4))
                             }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
                     }
