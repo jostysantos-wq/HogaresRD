@@ -195,6 +195,60 @@ ${JSON.stringify(batch, null, 2)}`;
   }
 }
 
+// ── Narrative report generation ─────────────────────────────────────────
+
+async function generateReport(summary, byListing, listings) {
+  if (!anthropic) return 'Reporte no disponible — API de IA no configurada.';
+  if (summary.totalFlags === 0) return 'Todo en orden. No se encontraron problemas en ninguna de las propiedades publicadas. El catálogo está limpio y actualizado.';
+
+  // Build a concise summary for Claude to narrate
+  const flaggedDetails = Object.entries(byListing).slice(0, 10).map(([id, flags]) => {
+    const l = listings.find(x => x.id === id) || {};
+    return {
+      title: l.title || id,
+      city: l.city || '',
+      price: l.price || '',
+      issues: flags.map(f => `[${f.severity}] ${f.message}`),
+    };
+  });
+
+  const prompt = `Eres el asistente de administración de HogaresRD, una plataforma inmobiliaria en República Dominicana.
+
+Acabo de ejecutar un escaneo automático del catálogo. Escribe un reporte ejecutivo breve (3-5 párrafos) en español, como si fueras un asistente informándole al administrador lo que encontraste.
+
+Tono: profesional pero cercano. Usa "usted" formal. Sé directo y prioriza las acciones más urgentes.
+
+Datos del escaneo:
+- Total propiedades escaneadas: ${summary.totalListings}
+- Propiedades con problemas: ${summary.flaggedListings}
+- Problemas críticos (alta): ${summary.bySeverity.high}
+- Problemas medios: ${summary.bySeverity.medium}
+- Problemas bajos: ${summary.bySeverity.low}
+- Tipos de problemas: ${JSON.stringify(summary.byType)}
+
+Detalle de propiedades con problemas:
+${JSON.stringify(flaggedDetails, null, 2)}
+
+Instrucciones:
+1. Empieza con un resumen general del estado del catálogo
+2. Menciona los problemas más urgentes con nombres de propiedades específicas
+3. Da recomendaciones concretas de qué hacer primero
+4. Si hay duplicados, menciónalo explícitamente
+5. Termina con una nota positiva si hay propiedades que están bien`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    return response.content?.[0]?.text || 'No se pudo generar el reporte.';
+  } catch (err) {
+    console.error('[ai-monitor] Report generation error:', err.message);
+    return 'Error al generar el reporte narrativo: ' + err.message;
+  }
+}
+
 // ── Main scan function ─────────────────────────────────────────────────
 
 async function runMonitorScan() {
@@ -281,6 +335,9 @@ async function runMonitorScan() {
       aiEnabled: !!anthropic,
       flags: allFlags,
     };
+
+    // Generate narrative report via AI
+    summary.report = await generateReport(summary, byListing, listings);
 
     _lastScan = summary;
     console.log(`[ai-monitor] Scan complete: ${summary.flaggedListings} listing(s) flagged, ${summary.totalFlags} total issues`);

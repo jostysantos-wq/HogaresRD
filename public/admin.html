@@ -810,21 +810,30 @@
         </div>
 
         <!-- AI Monitor Widget -->
-        <div id="monitorWidget" style="margin-top:1.5rem;background:#fff;border-radius:14px;border:1px solid #d0dcea;padding:1.4rem;display:flex;align-items:center;gap:1rem;justify-content:space-between;">
-          <div style="display:flex;align-items:center;gap:1rem;">
-            <div style="width:42px;height:42px;background:#fef3c7;border-radius:10px;display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:1.2rem;">🤖</span>
+        <div style="margin-top:1.5rem;background:#fff;border-radius:14px;border:1px solid #d0dcea;overflow:hidden;">
+          <div style="padding:1.4rem;display:flex;align-items:center;gap:1rem;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:1rem;">
+              <div style="width:42px;height:42px;background:#fef3c7;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:1.2rem;">🤖</span>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:0.9rem;">Monitor AI de Propiedades</div>
+                <div id="monitorStatus" style="font-size:0.75rem;color:#4d6a8a;">Cargando...</div>
+              </div>
             </div>
-            <div>
-              <div style="font-weight:700;font-size:0.9rem;">Monitor AI de Propiedades</div>
-              <div id="monitorStatus" style="font-size:0.75rem;color:#4d6a8a;">Cargando...</div>
+            <div style="display:flex;align-items:center;gap:0.8rem;">
+              <div id="monitorCounts" style="display:flex;gap:0.6rem;font-size:0.78rem;"></div>
+              <button onclick="runManualScan()" id="monitorScanBtn" style="font-size:0.78rem;font-weight:700;padding:0.5rem 1rem;border:1.5px solid var(--accent);border-radius:8px;background:none;color:var(--accent);cursor:pointer;white-space:nowrap;">
+                🔍 Ejecutar Escaneo
+              </button>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:0.8rem;">
-            <div id="monitorCounts" style="display:flex;gap:0.6rem;font-size:0.78rem;"></div>
-            <button onclick="runManualScan()" id="monitorScanBtn" style="font-size:0.78rem;font-weight:700;padding:0.5rem 1rem;border:1.5px solid var(--accent);border-radius:8px;background:none;color:var(--accent);cursor:pointer;white-space:nowrap;">
-              🔍 Ejecutar Escaneo
-            </button>
+          <!-- Narrative AI Report -->
+          <div id="monitorReport" style="display:none;padding:0 1.4rem 1.4rem;">
+            <div style="background:#f8fafd;border-radius:10px;padding:1.2rem;border:1px solid #e8eef7;">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#4d6a8a;margin-bottom:0.6rem;">📋 Reporte del Monitor</div>
+              <div id="monitorReportText" style="font-size:0.85rem;line-height:1.7;color:#1e293b;white-space:pre-wrap;"></div>
+            </div>
           </div>
         </div>
 
@@ -3836,6 +3845,7 @@
       if (!data.scan) {
         status.textContent = 'Sin escaneos previos. Ejecuta uno manualmente.';
         counts.innerHTML = '';
+        document.getElementById('monitorReport').style.display = 'none';
         return;
       }
       const s = data.scan;
@@ -3848,6 +3858,15 @@
         ${s.bySeverity?.low ? `<span style="background:#e0f2fe;color:#075985;padding:0.2rem 0.5rem;border-radius:6px;font-weight:600;">🔵 ${s.bySeverity.low} bajo</span>` : ''}
         ${s.totalFlags === 0 ? '<span style="background:#d1fae5;color:#065f46;padding:0.2rem 0.5rem;border-radius:6px;font-weight:700;">✅ Todo OK</span>' : ''}
       `;
+      // Show narrative report
+      const reportDiv = document.getElementById('monitorReport');
+      const reportText = document.getElementById('monitorReportText');
+      if (s.report) {
+        reportText.textContent = s.report;
+        reportDiv.style.display = '';
+      } else {
+        reportDiv.style.display = 'none';
+      }
     }).catch(() => {
       document.getElementById('monitorStatus').textContent = 'Error cargando resultados';
     });
