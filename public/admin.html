@@ -2440,7 +2440,7 @@
       const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
       const agentCell = l.agent_name
         ? `<div style="font-weight:600;font-size:0.82rem;">${l.agent_name}</div><div style="font-size:0.7rem;color:#7a93b0;">${l.agent_email || ''}</div>`
-        : `<div style="color:#b45309;font-size:0.78rem;font-weight:600;">Sin asignar</div><button onclick="assignLeadAgent('${l.id}')" style="margin-top:0.3rem;font-size:0.7rem;font-weight:700;padding:0.25rem 0.6rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);cursor:pointer;">Asignar</button>`;
+        : `<div id="lead-assign-${l.id}"><div style="color:#b45309;font-size:0.78rem;font-weight:600;">Sin asignar</div><button onclick="assignLeadAgent('${l.id}')" style="margin-top:0.3rem;font-size:0.7rem;font-weight:700;padding:0.25rem 0.6rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);cursor:pointer;">Asignar</button></div>`;
       return `
         <tr id="lead-row-${l.id}">
           <td><div class="lead-name">${l.name}</div><div class="lead-contact">📞 ${l.phone}</div>${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}<div class="lead-contact" style="font-size:0.7rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div></td>
@@ -2471,25 +2471,34 @@
     window.location.href = `/api/leads/export${qs}`;
   }
 
+  let _cachedAgents = null;
   function assignLeadAgent(leadId) {
-    const email = prompt('Ingresa el email del agente a asignar:');
-    if (!email) return;
-    // Find user by email
+    const doAssign = (agents) => {
+      _cachedAgents = agents;
+      const container = document.getElementById('lead-assign-' + leadId);
+      if (!container) return;
+      container.innerHTML = `
+        <select onchange="submitLeadAssign('${leadId}', this.value)" style="font-size:0.75rem;padding:0.3rem;border:1.5px solid var(--accent);border-radius:6px;max-width:160px;background:var(--bg);color:var(--text);">
+          <option value="">Seleccionar agente...</option>
+          ${agents.map(a => `<option value="${a.id}">${a.name} (${a.role})</option>`).join('')}
+        </select>`;
+    };
+    if (_cachedAgents) return doAssign(_cachedAgents);
     fetch('/admin/users').then(r => r.json()).then(users => {
-      const agent = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-      if (!agent) return alert('No se encontró un usuario con ese email.');
-      if (!['broker','agency','inmobiliaria','constructora'].includes(agent.role))
-        return alert('El usuario no es un agente (rol: ' + agent.role + ')');
-      fetch(`/api/leads/${leadId}/assign`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_id: agent.id })
-      }).then(r => r.json()).then(data => {
-        if (data.error) return alert(data.error);
-        alert('Lead asignado a ' + (data.agent_name || agent.name));
-        loadLeads();
-      }).catch(() => alert('Error al asignar'));
-    }).catch(() => alert('Error cargando usuarios'));
+      const proRoles = ['broker','agency','inmobiliaria','constructora'];
+      doAssign(users.filter(u => proRoles.includes(u.role)).sort((a,b) => a.name.localeCompare(b.name)));
+    }).catch(() => alert('Error cargando agentes'));
+  }
+  function submitLeadAssign(leadId, agentId) {
+    if (!agentId) return;
+    fetch(`/api/leads/${leadId}/assign`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId })
+    }).then(r => r.json()).then(data => {
+      if (data.error) return alert(data.error);
+      loadLeads();
+    }).catch(() => alert('Error al asignar'));
   }
 
   // ── Ads ───────────────────────────────────────────────────────
