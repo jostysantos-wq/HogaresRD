@@ -1124,13 +1124,28 @@ struct BrokerAvailabilityView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
 
-                // ── Instruction ──
-                Text(selectedDates.isEmpty
-                     ? "Toca un día para editarlo, o selecciona varios"
-                     : "\(selectedDates.count) día\(selectedDates.count > 1 ? "s" : "") seleccionado\(selectedDates.count > 1 ? "s" : "")")
-                    .font(.caption).foregroundStyle(selectedDates.isEmpty ? .secondary : Color.rdBlue)
-                    .fontWeight(selectedDates.isEmpty ? .regular : .bold)
-                    .frame(maxWidth: .infinity).multilineTextAlignment(.center)
+                // ── Quick select buttons ──
+                VStack(spacing: 8) {
+                    Text(selectedDates.isEmpty
+                         ? "Toca un día para editarlo, o usa los botones para seleccionar varios"
+                         : "\(selectedDates.count) día\(selectedDates.count > 1 ? "s" : "") seleccionado\(selectedDates.count > 1 ? "s" : "")")
+                        .font(.caption).foregroundStyle(selectedDates.isEmpty ? .secondary : Color.rdBlue)
+                        .fontWeight(selectedDates.isEmpty ? .regular : .bold)
+                        .frame(maxWidth: .infinity).multilineTextAlignment(.center)
+
+                    // Quick-select: all weekdays of a type
+                    HStack(spacing: 6) {
+                        quickSelectBtn("L-V", help: "Lun a Vie") { toggleWeekdaysInFuture([2,3,4,5,6]) }
+                        quickSelectBtn("Lun", help: "Lunes") { toggleWeekdaysInFuture([2]) }
+                        quickSelectBtn("Mar", help: "Martes") { toggleWeekdaysInFuture([3]) }
+                        quickSelectBtn("Mié", help: "Miércoles") { toggleWeekdaysInFuture([4]) }
+                        quickSelectBtn("Jue", help: "Jueves") { toggleWeekdaysInFuture([5]) }
+                        quickSelectBtn("Vie", help: "Viernes") { toggleWeekdaysInFuture([6]) }
+                        quickSelectBtn("Sáb", help: "Sábado") { toggleWeekdaysInFuture([7]) }
+                    }
+                    .padding(.horizontal, 8)
+                }
+                .padding(.horizontal, 16)
 
                 // ── 12-month grid ──
                 LazyVGrid(columns: [
@@ -1209,6 +1224,48 @@ struct BrokerAvailabilityView: View {
         HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 10, height: 10)
             Text(label).foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Quick Select Helpers
+
+    private func quickSelectBtn(_ label: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 11, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(Color.rdBlue.opacity(0.08))
+                .foregroundStyle(Color.rdBlue)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(help)
+    }
+
+    /// Toggle all future dates that fall on the given weekdays (1=Sun, 2=Mon, ... 7=Sat)
+    private func toggleWeekdaysInFuture(_ weekdays: [Int]) {
+        let cal = Calendar.current
+        let today = todayStr()
+        var datesToToggle: [String] = []
+
+        // Next 60 days
+        for offset in 0..<60 {
+            guard let date = cal.date(byAdding: .day, value: offset, to: Date()) else { continue }
+            let dow = cal.component(.weekday, from: date)
+            if weekdays.contains(dow) {
+                let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+                let dateStr = f.string(from: date)
+                if dateStr >= today { datesToToggle.append(dateStr) }
+            }
+        }
+
+        // If all are already selected, deselect them. Otherwise, select all.
+        let allSelected = datesToToggle.allSatisfy { selectedDates.contains($0) }
+        if allSelected {
+            for d in datesToToggle { selectedDates.remove(d) }
+        } else {
+            for d in datesToToggle { selectedDates.insert(d) }
         }
     }
 
