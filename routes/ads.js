@@ -216,7 +216,90 @@ const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
 const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
 
-// ── POST /api/ads/request — broker submits ad for approval ──────
+// ── Ad pricing tiers ─────────────────────────────────────────────
+const AD_PRICES = {
+  banner:     { label: 'Banner',           price: 2900,  duration: 7 },  // $29
+  card:       { label: 'Tarjeta (Feed)',   price: 4900,  duration: 7 },  // $49
+  popup:      { label: 'Popup',            price: 7900,  duration: 7 },  // $79
+  fullscreen: { label: 'Pantalla Completa',price: 9900,  duration: 7 },  // $99
+};
+
+// ── GET /api/ads/prices — public pricing info ────────────────────
+router.get('/prices', (req, res) => {
+  const prices = Object.entries(AD_PRICES).map(([type, p]) => ({
+    type, label: p.label, price: p.price / 100, duration: p.duration,
+  }));
+  res.json({ prices });
+});
+
+// ── POST /api/ads/checkout — create Stripe checkout for ad ───────
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? require('stripe')(stripeKey) : null;
+
+router.post('/checkout', userAuth, async (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user || !PRO_ROLES.includes(user.role))
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden comprar anuncios' });
+  if (!stripe)
+    return res.status(503).json({ error: 'Sistema de pagos no configurado' });
+
+  const { title, description, image_url, target_url, ad_type, placement, start_date, end_date } = req.body;
+  if (!title || !image_url)
+    return res.status(400).json({ error: 'Título e imagen son requeridos' });
+
+  const tier = AD_PRICES[ad_type] || AD_PRICES.fullscreen;
+
+  // Create the ad record as unpaid
+  const adId = uuidv4();
+  const ad = {
+    id: adId, title,
+    advertiser: user.companyName || user.agencyName || user.name || '',
+    description: (description || '').slice(0, 500), image_url,
+    target_url: target_url || '', ad_type: ad_type || 'fullscreen',
+    placement: placement || 'feed', budget: tier.price / 100,
+    priority: 5, audience: 'todos', cooldown_hours: 2,
+    is_active: false, start_date: start_date || null, end_date: end_date || null,
+    impressions: 0, clicks: 0, created_at: new Date().toISOString(),
+    requested_by: req.user.sub, request_status: 'pending_payment',
+    requester_name: user.name || '', requester_email: user.email || '',
+  };
+
+  try {
+    const cols = Object.keys(ad);
+    const vals = cols.map(c => ad[c]);
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+    await store.pool.query(
+      `INSERT INTO ads (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`, vals
+    );
+
+    // Create Stripe Checkout Session (one-time payment)
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Anuncio ${tier.label} — ${tier.duration} días`,
+            description: title.slice(0, 100),
+          },
+          unit_amount: tier.price,
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      metadata: { ad_id: adId, user_id: req.user.sub, ad_type },
+      success_url: `${BASE_URL}/broker#ad-request?paid=1`,
+      cancel_url: `${BASE_URL}/broker#ad-request?cancelled=1`,
+    });
+
+    res.json({ url: session.url, ad_id: adId });
+  } catch (err) {
+    console.error('[ads] Checkout error:', err.message);
+    res.status(500).json({ error: 'Error al crear sesión de pago' });
+  }
+});
+
+// ── POST /api/ads/request — broker submits ad for approval (free/manual) ──
 router.post('/request', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))

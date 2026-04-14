@@ -2739,8 +2739,17 @@
               <input type="date" id="arEndDate" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg);color:var(--text);">
             </div>
           </div>
+          <!-- Price display -->
+          <div id="arPriceDisplay" style="background:var(--accent-light);border-radius:10px;padding:0.8rem;text-align:center;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Precio</div>
+            <div id="arPriceAmount" style="font-size:1.5rem;font-weight:800;color:var(--accent);">$99</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">por 7 días</div>
+          </div>
           <div id="arMsg" style="font-size:0.82rem;min-height:1.2rem;"></div>
-          <button onclick="submitAdRequest()" id="arSubmitBtn" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0.7rem;font-size:0.9rem;font-weight:700;cursor:pointer;">Enviar Solicitud</button>
+          <button onclick="submitAdCheckout()" id="arSubmitBtn" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0.7rem;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#fff;"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+            Pagar y Enviar
+          </button>
         </div>
       </div>
       <!-- Right: my requests -->
@@ -9914,15 +9923,24 @@ async function arUploadImage(input) {
   } catch { document.getElementById('arMsg').textContent = 'Error de red'; }
 }
 
-async function submitAdRequest() {
+const AD_PRICE_MAP = { banner: 29, card: 49, popup: 79, fullscreen: 99 };
+
+// Update price display when ad type changes
+document.getElementById('arType')?.addEventListener('change', function() {
+  const price = AD_PRICE_MAP[this.value] || 99;
+  document.getElementById('arPriceAmount').textContent = '$' + price;
+});
+
+async function submitAdCheckout() {
   const btn = document.getElementById('arSubmitBtn');
   const msg = document.getElementById('arMsg');
   const title = document.getElementById('arTitle').value.trim();
   if (!title) { msg.textContent = 'El título es obligatorio'; msg.style.color = '#dc2626'; return; }
   if (!_arUploadedUrl) { msg.textContent = 'Sube una imagen'; msg.style.color = '#dc2626'; return; }
-  btn.disabled = true; btn.textContent = 'Enviando...';
+  btn.disabled = true; btn.innerHTML = 'Procesando...';
+  msg.textContent = '';
   try {
-    const r = await API('/api/ads/request', {
+    const r = await API('/api/ads/checkout', {
       method: 'POST',
       body: {
         title,
@@ -9936,21 +9954,19 @@ async function submitAdRequest() {
       },
     });
     if (r.error) throw new Error(r.error);
-    msg.textContent = 'Solicitud enviada. El admin revisará tu anuncio.';
-    msg.style.color = '#059669';
-    document.getElementById('arTitle').value = '';
-    document.getElementById('arDesc').value = '';
-    document.getElementById('arTargetUrl').value = '';
-    document.getElementById('arStartDate').value = '';
-    document.getElementById('arEndDate').value = '';
-    document.getElementById('arImgPreview').style.display = 'none';
-    _arUploadedUrl = '';
-    loadAdRequests();
+    if (r.url) {
+      // Redirect to Stripe Checkout
+      window.location.href = r.url;
+      return;
+    }
+    msg.textContent = 'Error: no se recibió URL de pago';
+    msg.style.color = '#dc2626';
   } catch (e) {
-    msg.textContent = e.message || 'Error al enviar';
+    msg.textContent = e.message || 'Error al procesar pago';
     msg.style.color = '#dc2626';
   }
-  btn.disabled = false; btn.textContent = 'Enviar Solicitud';
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#fff;"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> Pagar y Enviar';
 }
 
 async function loadAdRequests() {
@@ -9962,7 +9978,7 @@ async function loadAdRequests() {
       list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:1rem;text-align:center;">No has enviado solicitudes de anuncio aún.</div>';
       return;
     }
-    const statusMap = { pending_approval: ['⏳','Pendiente','#b45309','#fef3c7'], approved: ['✅','Aprobado','#059669','#d1fae5'], rejected: ['❌','Rechazado','#dc2626','#fee2e2'] };
+    const statusMap = { pending_payment: ['💳','Pago pendiente','#6b7280','#f3f4f6'], pending_approval: ['⏳','En revisión','#b45309','#fef3c7'], approved: ['✅','Aprobado','#059669','#d1fae5'], rejected: ['❌','Rechazado','#dc2626','#fee2e2'] };
     list.innerHTML = ads.map(ad => {
       const [icon, label, color, bg] = statusMap[ad.request_status] || ['⏳','Pendiente','#6b7280','#f3f4f6'];
       return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
