@@ -292,7 +292,7 @@ router.get('/unread', requireLogin, (req, res) => {
 
   if (user.role === 'user') {
     convs = store.getConversationsByClient(user.sub);
-    const count = convs.filter(c => (c.unreadClient || 0) > 0).length;
+    const count = convs.filter(c => !c.closed && !c.archived && (c.unreadClient || 0) > 0).length;
     return res.json({ count });
   }
 
@@ -325,8 +325,9 @@ router.get('/unread', requireLogin, (req, res) => {
         }
       }
     }
-    // Count conversations with unread messages (not total message count)
+    // Count active conversations with unread messages (exclude closed/archived)
     const count = convs.filter(c => {
+      if (c.closed || c.archived) return false;
       const isClientHere = c.clientId === user.sub;
       if (isClientHere) return (c.unreadClient || 0) > 0;
       return (c.unreadBroker || 0) > 0;
