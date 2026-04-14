@@ -664,7 +664,6 @@
       <button class="nav-item" data-page="tours" onclick="showPage('tours', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
         <span class="nav-item-label">Tours</span>
-        <span class="nav-pill" id="toursPill" style="display:none;"></span>
         <span class="nav-tooltip">Tours</span>
       </button>
 
@@ -1856,8 +1855,7 @@
     // Clear the badge and remember the count when admin visits the page.
     // Badge only reappears if the count INCREASES from what they last saw.
     const pillMap = {
-      leads: 'leadsPill', aplicaciones: 'appsPill', tours: 'toursPill',
-      reportes: 'reportsPill', eliminacion: 'deletionPill',
+      leads: 'leadsPill', aplicaciones: 'appsPill', eliminacion: 'deletionPill',
     };
     const pillId = pillMap[page];
     if (pillId) {
@@ -3938,29 +3936,23 @@
   }
 
   function updateSidebarBadges() {
+    // Leads: ONLY those with no agent assigned (need admin to assign)
     fetch('/api/leads').then(r => r.json()).then(leads => {
-      const pending = (Array.isArray(leads) ? leads : []).filter(l => l.status === 'pendiente').length;
-      _showPill('leadsPill', 'leads', pending);
+      const needsAction = (Array.isArray(leads) ? leads : []).filter(l =>
+        l.status === 'pendiente' && !l.referred_by
+      ).length;
+      _showPill('leadsPill', 'leads', needsAction);
     }).catch(() => {});
 
+    // Applications: orphaned (no active broker) — needs admin reassignment
     fetch('/admin/orphaned-leads').then(r => r.json()).then(data => {
       _showPill('appsPill', 'aplicaciones', data.total || 0);
     }).catch(() => {});
 
-    fetch('/api/tours?status=pending').then(r => r.json()).then(data => {
-      const tours = data.tours || data || [];
-      const pending = Array.isArray(tours) ? tours.filter(t => t.status === 'pending').length : 0;
-      _showPill('toursPill', 'tours', pending);
-    }).catch(() => {});
-
+    // Deletion requests: pending admin review
     fetch('/admin/deletion-requests').then(r => r.json()).then(data => {
       const pending = (Array.isArray(data) ? data : []).filter(d => d.status === 'pending').length;
       _showPill('deletionPill', 'eliminacion', pending);
-    }).catch(() => {});
-
-    fetch('/api/reports').then(r => r.json()).then(data => {
-      const pending = (data.reports || []).filter(r => r.status === 'pending').length;
-      _showPill('reportsPill', 'reportes', pending);
     }).catch(() => {});
   }
 
