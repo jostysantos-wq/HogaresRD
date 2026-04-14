@@ -1,6 +1,10 @@
 import SwiftUI
 
 /// Full-screen sponsored card shown every 5 listings in the Feed.
+/// The ad image (typically 1200×628 landscape) is displayed at its natural
+/// aspect ratio centered vertically, with a dark branded background filling
+/// the rest of the reel-height card. This avoids the zoomed/blurry look
+/// that .scaledToFill caused with landscape images in a portrait frame.
 struct AdCard: View {
     let ad: Ad
     var onImpression: () -> Void = { }
@@ -8,26 +12,40 @@ struct AdCard: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .bottom) {
+            ZStack {
+                // Dark branded background
+                LinearGradient(
+                    colors: [Color(red: 0.02, green: 0.05, blue: 0.15),
+                             Color(red: 0.0, green: 0.14, blue: 0.42)],
+                    startPoint: .top, endPoint: .bottom
+                )
 
-                // ── Background image ───────────────────────────────────
-                if let url = ad.imageURL {
-                    CachedAsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            adPlaceholder
+                // Centered ad image at natural aspect ratio
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    if let url = ad.imageURL {
+                        CachedAsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let img):
+                                img.resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .shadow(color: .black.opacity(0.4), radius: 20, y: 8)
+                            default:
+                                adPlaceholderImage
+                            }
                         }
+                        .padding(.horizontal, 16)
+                    } else {
+                        adPlaceholderImage
+                            .padding(.horizontal, 16)
                     }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-                } else {
-                    adPlaceholder
-                        .frame(width: geo.size.width, height: geo.size.height)
+
+                    Spacer()
                 }
 
-                // ── Tap target (opens URL) ─────────────────────────────
+                // Tap target
                 Button { onTap() } label: {
                     Color.clear
                         .frame(width: geo.size.width, height: geo.size.height)
@@ -35,7 +53,7 @@ struct AdCard: View {
                 }
                 .buttonStyle(.plain)
 
-                // ── "Publicidad" badge (top-left) ──────────────────────
+                // "Publicidad" badge (top-left)
                 VStack {
                     HStack {
                         Text("Publicidad")
@@ -52,25 +70,14 @@ struct AdCard: View {
                     Spacer()
                 }
 
-                // ── Gradient scrim ─────────────────────────────────────
-                LinearGradient(
-                    colors: [
-                        .black.opacity(0.80),
-                        .black.opacity(0.45),
-                        .black.opacity(0.05),
-                        .clear
-                    ],
-                    startPoint: .bottom,
-                    endPoint: .init(x: 0.5, y: 0.45)
-                )
-                .allowsHitTesting(false)
-
-                // ── Text overlay ───────────────────────────────────────
+                // Bottom text overlay
                 VStack(alignment: .leading, spacing: 8) {
+                    Spacer()
+
                     if let advertiser = ad.advertiser, !advertiser.isEmpty {
                         Text(advertiser.uppercased())
                             .font(.caption2.weight(.heavy))
-                            .foregroundStyle(Color.rdBlue)
+                            .foregroundStyle(Color.rdBlue.opacity(0.9))
                             .tracking(1.5)
                     }
 
@@ -79,6 +86,13 @@ struct AdCard: View {
                         .foregroundStyle(.white)
                         .lineLimit(3)
                         .shadow(color: .black.opacity(0.5), radius: 4)
+
+                    if let desc = ad.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.75))
+                            .lineLimit(2)
+                    }
 
                     // CTA row
                     HStack(spacing: 6) {
@@ -102,16 +116,14 @@ struct AdCard: View {
         }
     }
 
-    private var adPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.0, green: 0.22, blue: 0.66),
-                         Color(red: 0.0, green: 0.10, blue: 0.28)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+    private var adPlaceholderImage: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.white.opacity(0.08))
+            .frame(height: 200)
+            .overlay(
+                Image(systemName: "megaphone.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.white.opacity(0.15))
             )
-            Image(systemName: "megaphone.fill")
-                .font(.system(size: 60))
-                .foregroundStyle(.white.opacity(0.15))
-        }
     }
 }

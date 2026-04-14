@@ -2705,6 +2705,10 @@
               <div style="font-size:0.85rem;color:var(--text-muted);">Haz clic para subir imagen</div>
             </div>
             <div id="arImgPreview" style="margin-top:0.5rem;display:none;"></div>
+            <div style="margin-top:0.5rem;font-size:0.7rem;color:var(--text-muted);">
+              <strong>Tamaño recomendado:</strong> 1200 × 628 px (formato horizontal).<br>
+              La imagen se mostrará completa en el popup. En el feed se centra sobre fondo oscuro.
+            </div>
           </div>
           <div>
             <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">URL de destino</label>
@@ -9913,7 +9917,12 @@ async function arUploadImage(input) {
     const data = await r.json();
     if (data.url) {
       _arUploadedUrl = data.url;
-      document.getElementById('arImgPreview').innerHTML = `<img src="${data.url}" style="max-width:100%;max-height:160px;border-radius:8px;">`;
+      document.getElementById('arImgPreview').innerHTML = `
+        <div style="background:linear-gradient(135deg,#030d26,#002366);border-radius:12px;padding:16px;text-align:center;position:relative;">
+          <div style="position:absolute;top:8px;left:8px;font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:50px;">Publicidad</div>
+          <img src="${data.url}" style="max-width:100%;max-height:200px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <div style="color:#fff;font-size:0.8rem;font-weight:700;margin-top:10px;text-align:left;">Vista previa del feed</div>
+        </div>`;
       document.getElementById('arImgPreview').style.display = '';
       document.getElementById('arImgZone').style.borderColor = 'var(--accent)';
     } else {
