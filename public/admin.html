@@ -226,7 +226,7 @@
 
     /* ── SUBMISSION CARDS ───────────────────────────────────────── */
     .submissions-list { display: flex; flex-direction: column; gap: 1rem; }
-    .sub-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); overflow: hidden; }
+    .sub-card { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; box-shadow: 0 2px 8px rgba(17,17,16,0.04); overflow: hidden; display: flex; flex-direction: column; }
     .sub-card-header { padding: 1.1rem 1.4rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #f0f4f9; }
     .sub-title-row { flex: 1; }
     .sub-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
@@ -1119,6 +1119,12 @@
               <button type="button" class="edits-chip" onclick="addEditsChip(this)">📐 Falta área en m²</button>
               <button type="button" class="edits-chip" onclick="addEditsChip(this)">📞 Datos de contacto incompletos</button>
               <button type="button" class="edits-chip" onclick="addEditsChip(this)">🏷️ Categoría/tipo incorrecto</button>
+              <!-- Update-specific chips (for approved listings) -->
+              <button type="button" class="edits-chip edits-chip-update" style="display:none;" onclick="addEditsChip(this)">📸 Subir fotos reales del proyecto terminado</button>
+              <button type="button" class="edits-chip edits-chip-update" style="display:none;" onclick="addEditsChip(this)">📅 Fecha de entrega ya pasó — actualizar</button>
+              <button type="button" class="edits-chip edits-chip-update" style="display:none;" onclick="addEditsChip(this)">🏗️ Actualizar etapa del proyecto</button>
+              <button type="button" class="edits-chip edits-chip-update" style="display:none;" onclick="addEditsChip(this)">🔢 Actualizar unidades disponibles</button>
+              <button type="button" class="edits-chip edits-chip-update" style="display:none;" onclick="addEditsChip(this)">💲 Actualizar precios</button>
             </div>
 
             <!-- Note textarea -->
@@ -2148,6 +2154,11 @@
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 Rechazar
               </button>
+              ${s.status === 'approved' ? `
+              <button class="btn-edits" onclick="requestUpdate('${s.id}')" title="Solicitar que el agente actualice fotos, fechas u otra información">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                Solicitar Actualización
+              </button>` : ''}
             </div>
           </div>
         </div>`;
@@ -2164,6 +2175,8 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18 }).addTo(m);
       L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
       adminMaps[s.id] = m;
+      // Force tile reload after layout settles — fixes blank tiles
+      setTimeout(() => m.invalidateSize(), 300);
     });
   }
 
@@ -2241,7 +2254,39 @@
     setTimeout(() => document.getElementById('editsNoteInput').focus(), 100);
   }
 
+  function requestUpdate(id) {
+    const sub = allSubmissions.find(s => s.id === id);
+    if (!sub) return;
+    currentEditsListingId = id;
+    // Reuse the edits modal but with update-specific context
+    const summary = document.getElementById('editsListingSummary');
+    const thumb = (sub.images && sub.images[0]) ? sub.images[0] : '';
+    const location = [sub.sector, sub.city, sub.province].filter(Boolean).join(', ') || '';
+    summary.innerHTML = `
+      ${thumb ? `<img src="${thumb}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(sub.title || 'Sin título')}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(location)}</div>
+        <div style="font-size:0.7rem;color:#2563EB;font-weight:600;margin-top:2px;">Solicitar actualización (propiedad sigue publicada)</div>
+      </div>`;
+    document.getElementById('editsNoteInput').value = '';
+    document.getElementById('editsError').textContent = '';
+    updateEditsCharCount();
+    document.querySelectorAll('.edits-chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('editsSubmitBtn').disabled = false;
+    // Mark this as an update request — show update-specific chips
+    window._isUpdateRequest = true;
+    document.querySelectorAll('.edits-chip:not(.edits-chip-update)').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('.edits-chip-update').forEach(c => c.style.display = '');
+    document.getElementById('editsModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('editsNoteInput').focus(), 100);
+  }
+
   function closeEditsModal() {
+    window._isUpdateRequest = false;
+    // Reset chip visibility
+    document.querySelectorAll('.edits-chip:not(.edits-chip-update)').forEach(c => c.style.display = '');
+    document.querySelectorAll('.edits-chip-update').forEach(c => c.style.display = 'none');
     document.getElementById('editsModal').style.display = 'none';
     currentEditsListingId = null;
   }
@@ -2308,7 +2353,10 @@
     btn.textContent = 'Enviando...';
 
     try {
-      const r = await fetch(`/admin/submissions/${id}/request-edits`, {
+      const endpoint = window._isUpdateRequest
+        ? `/admin/submissions/${id}/request-update`
+        : `/admin/submissions/${id}/request-edits`;
+      const r = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: trimmed }),
@@ -2317,7 +2365,7 @@
       if (!r.ok) throw new Error(data.error || 'Error al enviar la solicitud');
 
       const sub = allSubmissions.find(s => s.id === id);
-      if (sub) {
+      if (sub && !window._isUpdateRequest) {
         sub.status = 'edits_requested';
         sub.editsReason = trimmed;
         sub.editsRequestedAt = new Date().toISOString();

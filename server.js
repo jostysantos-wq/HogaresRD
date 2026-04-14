@@ -1314,6 +1314,64 @@ app.post('/admin/submissions/:id/request-edits', adminSessionAuth, (req, res) =>
   }
 });
 
+// ── Request update on APPROVED listing (stays published) ─────────────
+// Unlike request-edits which changes status to edits_requested (unpublished),
+// this keeps the listing approved and just notifies the agent to update
+// photos, dates, or other info. Used when delivery date has passed, etc.
+app.post('/admin/submissions/:id/request-update', adminSessionAuth, (req, res) => {
+  const sub = store.getListingById(req.params.id);
+  if (!sub) return res.status(404).json({ error: 'No encontrado' });
+  if (sub.status !== 'approved') return res.status(400).json({ error: 'Solo se puede solicitar actualización en propiedades aprobadas' });
+
+  const reason = (req.body?.reason || '').toString().trim().slice(0, 1000);
+  if (!reason) return res.status(400).json({ error: 'Se requiere una nota explicando qué debe actualizarse' });
+
+  // Log the update request but keep status = approved
+  sub.editsHistory = Array.isArray(sub.editsHistory) ? sub.editsHistory : [];
+  sub.editsHistory.push({ at: new Date().toISOString(), reason, by: 'admin', type: 'update_request' });
+  sub.updateRequestedAt = new Date().toISOString();
+  sub.updateReason = reason;
+  sub.editsReasonActive = true; // shows banner to agent
+  store.saveListing(sub);
+
+  // Notify the owner
+  const ownerUserId = sub.creator_user_id || null;
+  const owner = ownerUserId ? store.getUserById(ownerUserId) : null;
+  const ownerEmail = owner?.email || sub.email;
+  if (ownerEmail) {
+    const safeReason = reason.replace(/</g, '&lt;').replace(/\n/g, '<br>');
+    transporter.sendMail({
+      department: 'soporte',
+      to: ownerEmail,
+      subject: `Actualización solicitada — ${sub.title || 'tu propiedad'} — HogaresRD`,
+      html: et.layout({
+        title: 'Actualización solicitada',
+        subtitle: et.esc(sub.title || ''),
+        preheader: 'Tu publicación necesita una actualización',
+        headerColor: '#2563EB',
+        body:
+          et.p('Tu publicación <strong>' + et.esc(sub.title) + '</strong> está activa, pero necesitamos que actualices la siguiente información:')
+          + et.alertBox(safeReason, 'info')
+          + et.p('La propiedad seguirá publicada mientras realizas los cambios.')
+          + et.button('Editar mi propiedad', (process.env.BASE_URL || 'https://hogaresrd.com') + '/submit?edit=' + sub.id),
+      }),
+    }).catch(e => console.error('[request-update] email error:', e.message));
+
+    // Push notification
+    if (owner?.id) {
+      const { notify: _pushUpdate } = require('./routes/push');
+      _pushUpdate(owner.id, {
+        type: 'status_changed',
+        title: 'Actualización solicitada',
+        body: `Tu propiedad "${sub.title}" necesita una actualización`,
+        url: '/broker#pending-listings',
+      });
+    }
+  }
+
+  res.json({ success: true });
+});
+
 app.post('/admin/submissions/:id/merge-agency', adminSessionAuth, (req, res) => {
   const claim = store.getListingById(req.params.id);
   if (!claim) return res.status(404).json({ error: 'Solicitud no encontrada' });
