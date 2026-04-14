@@ -3,6 +3,13 @@ import Foundation
 // Change to "http://localhost:3000" for local development
 let apiBase = "https://hogaresrd.com"
 
+/// Safe URL construction — returns a guaranteed URL, falling back to
+/// the base URL if the string is somehow malformed (should never happen
+/// with hardcoded paths but prevents force-unwrap crashes).
+private func apiURL(_ path: String) -> URL {
+    URL(string: "\(apiBase)\(path)") ?? URL(string: apiBase)!
+}
+
 /// Detect MIME type from filename extension
 private func mimeType(for filename: String) -> String {
     let ext = (filename as NSString).pathExtension.lowercased()
@@ -83,7 +90,7 @@ class APIService: ObservableObject {
         guard let http = response as? HTTPURLResponse, http.statusCode == 401 else { return }
         Task { @MainActor in
             if self.currentUser != nil {
-                print("[APIService] 401 received — token expired, logging out")
+            debugLog("[APIService] 401 received — token expired, logging out")
                 ErrorReporter.shared.report("Token expired — auto-logout", context: "401 handler")
                 self.logout()
             }
@@ -155,7 +162,7 @@ class APIService: ObservableObject {
     func getListing(id: String) async throws -> Listing {
         let cacheKey = "listing:\(id)"
         if let cached: Listing = cache.get(cacheKey) { return cached }
-        let url = URL(string: "\(apiBase)/api/listings/\(id)")!
+        let url = apiURL("/api/listings/\(id)")
         let (data, _) = try await session.data(from: url)
         let result = try decoder.decode(Listing.self, from: data)
         cache.set(cacheKey, value: result, ttl: 300) // 5 min cache
@@ -342,7 +349,7 @@ class APIService: ObservableObject {
     /// of whether the email exists (to avoid leaking which addresses are
     /// registered). So this method is fire-and-forget from the user's POV.
     func forgotPassword(email: String) async throws {
-        let url = URL(string: "\(apiBase)/api/auth/forgot-password")!
+        let url = apiURL("/api/auth/forgot-password")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -354,7 +361,7 @@ class APIService: ObservableObject {
     }
 
     func login(email: String, password: String) async throws -> LoginResult {
-        let url = URL(string: "\(apiBase)/api/auth/login")!
+        let url = apiURL("/api/auth/login")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -378,7 +385,7 @@ class APIService: ObservableObject {
 
     // Sign in with Apple
     func loginWithApple(identityToken: String, name: String?, email: String?) async throws {
-        let url = URL(string: "\(apiBase)/api/auth/apple")!
+        let url = apiURL("/api/auth/apple")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -401,7 +408,7 @@ class APIService: ObservableObject {
 
     // Sync Apple subscription with server (upgrade/downgrade role)
     func syncAppleSubscription(productID: String, transactionID: String, originalTransactionID: String, role: String, expirationDate: String?) async throws {
-        let url = URL(string: "\(apiBase)/api/auth/apple-subscription")!
+        let url = apiURL("/api/auth/apple-subscription")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -426,7 +433,7 @@ class APIService: ObservableObject {
 
     // Register user → server returns {success, user} (no token), so we login afterwards
     func register(name: String, email: String, password: String, marketingOptIn: Bool) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/register")!
+        let url = apiURL("/api/auth/register")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -449,7 +456,7 @@ class APIService: ObservableObject {
 
     func registerAgency(name: String, email: String, password: String,
                         phone: String, agencyName: String, licenseNumber: String) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/register/agency")!
+        let url = apiURL("/api/auth/register/agency")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -472,7 +479,7 @@ class APIService: ObservableObject {
     func registerBroker(name: String, email: String, password: String,
                         phone: String, licenseNumber: String,
                         jobTitle: String? = nil) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/register/broker")!
+        let url = apiURL("/api/auth/register/broker")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -495,7 +502,7 @@ class APIService: ObservableObject {
 
     func registerInmobiliaria(name: String, email: String, password: String,
                               phone: String, companyName: String, licenseNumber: String) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/register/inmobiliaria")!
+        let url = apiURL("/api/auth/register/inmobiliaria")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -518,7 +525,7 @@ class APIService: ObservableObject {
     func registerConstructora(name: String, email: String, password: String,
                               phone: String, companyName: String,
                               yearsExperience: String) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/register/constructora")!
+        let url = apiURL("/api/auth/register/constructora")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -543,7 +550,7 @@ class APIService: ObservableObject {
     /// Always bypasses cache to ensure fresh auth state.
     func refreshUser() async {
         guard let t = token else { return }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/me")!)
+        var req = URLRequest(url: apiURL("/api/auth/me"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.cachePolicy = .reloadIgnoringLocalCacheData
         guard let (data, resp) = try? await session.data(for: req) else { return }
@@ -562,7 +569,7 @@ class APIService: ObservableObject {
     /// an email was sent.
     func resendVerificationEmail() async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/resend-verification")!)
+        var req = URLRequest(url: apiURL("/api/auth/resend-verification"))
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -605,7 +612,7 @@ class APIService: ObservableObject {
 
     func deleteAccount() async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/delete-account")!)
+        var req = URLRequest(url: apiURL("/api/auth/delete-account"))
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (_, resp) = try await session.data(for: req)
@@ -637,7 +644,7 @@ class APIService: ObservableObject {
     }
 
     func getAgencies() async throws -> [Inmobiliaria] {
-        let url = URL(string: "\(apiBase)/api/listings/agencies")!
+        let url = apiURL("/api/listings/agencies")
         let (data, _) = try await session.data(from: url)
         return (try decoder.decode(AgenciesResponse.self, from: data)).agencies
     }
@@ -645,7 +652,7 @@ class APIService: ObservableObject {
     // MARK: - Inquiry
 
     func sendInquiry(listingId: String, name: String, email: String, phone: String, message: String) async throws {
-        let url = URL(string: "\(apiBase)/api/listings/\(listingId)/inquiry")!
+        let url = apiURL("/api/listings/\(listingId)/inquiry")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -846,7 +853,7 @@ class APIService: ObservableObject {
     // MARK: - Two-Factor Authentication
 
     func verify2FA(sessionId: String, code: String) async throws -> User {
-        let url = URL(string: "\(apiBase)/api/auth/2fa/verify")!
+        let url = apiURL("/api/auth/2fa/verify")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -864,7 +871,7 @@ class APIService: ObservableObject {
     }
 
     func resend2FA(sessionId: String) async throws {
-        let url = URL(string: "\(apiBase)/api/auth/2fa/resend")!
+        let url = apiURL("/api/auth/2fa/resend")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -879,7 +886,7 @@ class APIService: ObservableObject {
 
     func enable2FA() async throws -> String {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/enable")!)
+        var req = URLRequest(url: apiURL("/api/auth/2fa/enable"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -897,7 +904,7 @@ class APIService: ObservableObject {
 
     func confirmEnable2FA(sessionId: String, code: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/confirm-enable")!)
+        var req = URLRequest(url: apiURL("/api/auth/2fa/confirm-enable"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -913,7 +920,7 @@ class APIService: ObservableObject {
 
     func disable2FA(password: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/2fa/disable")!)
+        var req = URLRequest(url: apiURL("/api/auth/2fa/disable"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -928,7 +935,7 @@ class APIService: ObservableObject {
 
     func registerBiometric() async throws -> String {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/biometric/register")!)
+        var req = URLRequest(url: apiURL("/api/auth/biometric/register"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -944,7 +951,7 @@ class APIService: ObservableObject {
     }
 
     func loginWithBiometric(email: String, biometricToken: String) async throws -> LoginResult {
-        let url = URL(string: "\(apiBase)/api/auth/biometric/login")!
+        let url = apiURL("/api/auth/biometric/login")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -973,7 +980,7 @@ class APIService: ObservableObject {
 
     func revokeBiometric() async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/auth/biometric/revoke")!)
+        var req = URLRequest(url: apiURL("/api/auth/biometric/revoke"))
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (_, resp) = try await session.data(for: req)
@@ -1009,7 +1016,7 @@ class APIService: ObservableObject {
 
     func getListingAnalyticsDetail(id: String) async throws -> ListingAnalyticsDetail {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/listing-analytics/listing/\(id)")!)
+        var req = URLRequest(url: apiURL("/api/listing-analytics/listing/\(id)"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsDetail.self, from: data)
@@ -1020,7 +1027,7 @@ class APIService: ObservableObject {
     func getConversations(archived: Bool = false) async throws -> [Conversation] {
         guard let t = token else { throw APIError.server("No autenticado") }
         let suffix = archived ? "?archived=true" : ""
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/conversations\(suffix)")!)
+        var req = URLRequest(url: apiURL("/api/conversations\(suffix)"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, resp) = try await session.data(for: req)
@@ -1034,7 +1041,7 @@ class APIService: ObservableObject {
             return try decoder.decode([Conversation].self, from: data)
         } catch {
             let raw = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
-            print("[Conversations] decode error: \(error)\nraw: \(raw)")
+            debugLog("[Conversations] decode error: \(error)\nraw: \(raw)")
             ErrorReporter.shared.reportDecodeError(error, endpoint: "GET /api/conversations", rawPrefix: raw)
             throw error
         }
@@ -1060,7 +1067,7 @@ class APIService: ObservableObject {
 
     func startConversation(propertyId: String, propertyTitle: String, message: String) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations")!
+        let url = apiURL("/api/conversations")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1089,7 +1096,7 @@ class APIService: ObservableObject {
 
     func sendMessage(conversationId: String, text: String) async throws -> ConvMessage {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(conversationId)/messages")!
+        let url = apiURL("/api/conversations/\(conversationId)/messages")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.cachePolicy = .reloadIgnoringLocalCacheData
@@ -1108,7 +1115,7 @@ class APIService: ObservableObject {
 
     func markConversationRead(id: String) async throws {
         guard let t = token else { return }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/read")!
+        let url = apiURL("/api/conversations/\(id)/read")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1119,7 +1126,7 @@ class APIService: ObservableObject {
     /// broker is allowed to transfer this conversation to.
     func fetchTransferTargets(conversationId: String) async throws -> [TransferTarget] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(conversationId)/transfer-targets")!
+        let url = apiURL("/api/conversations/\(conversationId)/transfer-targets")
         var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
@@ -1136,7 +1143,7 @@ class APIService: ObservableObject {
     /// the target agent belongs to a different organization.
     func transferConversation(id: String, targetUserId: String, reason: String) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/transfer")!
+        let url = apiURL("/api/conversations/\(id)/transfer")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1186,7 +1193,7 @@ class APIService: ObservableObject {
     /// conversation so no further messages can be sent from either side.
     func closeConversation(id: String, reason: String) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/close")!
+        let url = apiURL("/api/conversations/\(id)/close")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1204,7 +1211,7 @@ class APIService: ObservableObject {
 
     func reopenConversation(id: String) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/reopen")!
+        let url = apiURL("/api/conversations/\(id)/reopen")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1220,7 +1227,7 @@ class APIService: ObservableObject {
 
     func claimConversation(id: String) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/claim")!
+        let url = apiURL("/api/conversations/\(id)/claim")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1237,7 +1244,7 @@ class APIService: ObservableObject {
 
     func archiveConversation(id: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/archive")!
+        let url = apiURL("/api/conversations/\(id)/archive")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1251,7 +1258,7 @@ class APIService: ObservableObject {
 
     func unarchiveConversation(id: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/conversations/\(id)/unarchive")!
+        let url = apiURL("/api/conversations/\(id)/unarchive")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1283,7 +1290,7 @@ class APIService: ObservableObject {
     /// wrong side of the relationship.
     func getApplications() async throws -> [Application] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications")!)
+        var req = URLRequest(url: apiURL("/api/applications"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
@@ -1304,7 +1311,7 @@ class APIService: ObservableObject {
     // MARK: - Submit Listing
 
     func submitListing(_ body: [String: Any]) async throws {
-        let url = URL(string: "\(apiBase)/submit")!
+        let url = apiURL("/submit")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1332,7 +1339,7 @@ class APIService: ObservableObject {
 
     func getDashboardSales() async throws -> DashboardSales {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/broker/sales")!)
+        var req = URLRequest(url: apiURL("/api/broker/sales"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardSales.self, from: data)
@@ -1354,7 +1361,7 @@ class APIService: ObservableObject {
     /// GET /api/applications/:id
     func fetchApplicationDetail(id: String) async throws -> ApplicationDetail {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(id)")!
+        let url = apiURL("/api/applications/\(id)")
         var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
@@ -1371,7 +1378,7 @@ class APIService: ObservableObject {
     @discardableResult
     func updateApplicationStatus(id: String, newStatus: String, reason: String = "") async throws -> ApplicationDetail {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(id)/status")!
+        let url = apiURL("/api/applications/\(id)/status")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1392,7 +1399,7 @@ class APIService: ObservableObject {
     @discardableResult
     func requestApplicationDocuments(id: String, documents: [(type: String, label: String, required: Bool)]) async throws -> ApplicationDetail {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(id)/documents/request")!
+        let url = apiURL("/api/applications/\(id)/documents/request")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1414,7 +1421,7 @@ class APIService: ObservableObject {
     /// client↔broker conversation and pushes a notification to the client.
     func contactApplicationClient(applicationId: String, message: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/contact-client")!
+        let url = apiURL("/api/applications/\(applicationId)/contact-client")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1434,7 +1441,7 @@ class APIService: ObservableObject {
     /// an inmobiliaria owner sees the whole team plus their own cut.
     func fetchCommissionsSummary() async throws -> CommissionsSummaryResponse {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/commissions/summary")!
+        let url = apiURL("/api/applications/commissions/summary")
         var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
@@ -1456,7 +1463,7 @@ class APIService: ObservableObject {
         note: String
     ) async throws -> Commission {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/commission")!
+        let url = apiURL("/api/applications/\(applicationId)/commission")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1490,7 +1497,7 @@ class APIService: ObservableObject {
         note: String
     ) async throws -> Commission {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/commission/review")!
+        let url = apiURL("/api/applications/\(applicationId)/commission/review")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1546,7 +1553,7 @@ class APIService: ObservableObject {
 
     func sendChatMessage(message: String, history: [[String: String]], context: [String: Any] = [:]) async throws -> String {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/chat")!
+        let url = apiURL("/api/chat")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1574,7 +1581,7 @@ class APIService: ObservableObject {
 
     func getTeamBrokers() async throws -> TeamResponse {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/brokers"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.timeoutInterval = 10
         let (data, resp) = try await session.data(for: req)
@@ -1588,7 +1595,7 @@ class APIService: ObservableObject {
 
     func getBrokerDetail(brokerId: String) async throws -> BrokerDetail {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/details")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/brokers/\(brokerId)/details"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.timeoutInterval = 10
         let (data, resp) = try await session.data(for: req)
@@ -1602,7 +1609,7 @@ class APIService: ObservableObject {
 
     func approveBroker(brokerId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/approve")!
+        let url = apiURL("/api/inmobiliaria/brokers/\(brokerId)/approve")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1616,7 +1623,7 @@ class APIService: ObservableObject {
 
     func rejectBroker(brokerId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/reject")!
+        let url = apiURL("/api/inmobiliaria/brokers/\(brokerId)/reject")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1630,7 +1637,7 @@ class APIService: ObservableObject {
 
     func removeBroker(brokerId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/remove")!
+        let url = apiURL("/api/inmobiliaria/brokers/\(brokerId)/remove")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1658,7 +1665,7 @@ class APIService: ObservableObject {
 
     func getSecretaries() async throws -> [SecretaryItem] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/secretaries"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(SecretariesResponse.self, from: data).secretaries
@@ -1666,7 +1673,7 @@ class APIService: ObservableObject {
 
     func inviteSecretary(email: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries/invite")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/secretaries/invite"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1681,7 +1688,7 @@ class APIService: ObservableObject {
 
     func removeSecretary(id: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/secretaries/\(id)/remove")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/secretaries/\(id)/remove"))
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
@@ -1694,7 +1701,7 @@ class APIService: ObservableObject {
 
     func saveBrokerNotes(brokerId: String, notes: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/notes")!
+        let url = apiURL("/api/inmobiliaria/brokers/\(brokerId)/notes")
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1710,7 +1717,7 @@ class APIService: ObservableObject {
 
     func updateTeamMemberRole(userId: String, accessLevel: Int, teamTitle: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/team/\(userId)/role")!
+        let url = apiURL("/api/inmobiliaria/team/\(userId)/role")
         var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1727,7 +1734,7 @@ class APIService: ObservableObject {
 
     func fetchMyAccess() async throws -> MyAccessResponse {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/inmobiliaria/my-access")!)
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/my-access"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try JSONDecoder().decode(MyAccessResponse.self, from: data)
@@ -1735,7 +1742,7 @@ class APIService: ObservableObject {
 
     func sendBrokerPasswordReset(brokerId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inmobiliaria/brokers/\(brokerId)/send-reset")!
+        let url = apiURL("/api/inmobiliaria/brokers/\(brokerId)/send-reset")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1750,7 +1757,7 @@ class APIService: ObservableObject {
     // MARK: - Reports
 
     func submitReport(type: String, targetId: String, targetName: String, reason: String, details: String) async throws {
-        let url = URL(string: "\(apiBase)/api/reports")!
+        let url = apiURL("/api/reports")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1782,14 +1789,14 @@ class APIService: ObservableObject {
     }
 
     func getInventory(listingId: String) async throws -> InventoryResponse {
-        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)")!
+        let url = apiURL("/api/inventory/\(listingId)")
         let (data, _) = try await session.data(from: url)
         return try decoder.decode(InventoryResponse.self, from: data)
     }
 
     func addInventoryUnit(listingId: String, label: String, type: String, floor: String = "") async throws -> UnitInventoryItem {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units")!
+        let url = apiURL("/api/inventory/\(listingId)/units")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1808,7 +1815,7 @@ class APIService: ObservableObject {
 
     func deleteInventoryUnit(listingId: String, unitId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)")!
+        let url = apiURL("/api/inventory/\(listingId)/units/\(unitId)")
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1822,7 +1829,7 @@ class APIService: ObservableObject {
 
     func assignUnit(listingId: String, unitId: String, applicationId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)/assign")!
+        let url = apiURL("/api/inventory/\(listingId)/units/\(unitId)/assign")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1838,7 +1845,7 @@ class APIService: ObservableObject {
 
     func releaseUnit(listingId: String, unitId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/inventory/\(listingId)/units/\(unitId)/release")!
+        let url = apiURL("/api/inventory/\(listingId)/units/\(unitId)/release")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -1885,7 +1892,7 @@ class APIService: ObservableObject {
     /// approver to sign off). The returned task object tells the caller
     /// which branch happened via task.status.
     func completeTask(id: String) async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks/\(id)/complete")!
+        let url = apiURL("/api/tasks/\(id)/complete")
         let req = try authedRequest(url, method: "POST")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error completando tarea")
@@ -1895,7 +1902,7 @@ class APIService: ObservableObject {
     /// Approver signs off on a submitted task. 403 if the caller is the
     /// assignee. Server sets status → completada.
     func approveTask(id: String, note: String = "") async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks/\(id)/approve")!
+        let url = apiURL("/api/tasks/\(id)/approve")
         let body: [String: Any] = ["note": note]
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
@@ -1908,7 +1915,7 @@ class APIService: ObservableObject {
     /// Note is required. Server sets status → en_progreso and notifies
     /// the assignee.
     func rejectTask(id: String, note: String) async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks/\(id)/reject")!
+        let url = apiURL("/api/tasks/\(id)/reject")
         let body: [String: Any] = ["note": note]
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
@@ -1920,7 +1927,7 @@ class APIService: ObservableObject {
     /// Mark a task as not applicable. Either the assignee or the approver
     /// can dismiss tasks that don't apply to the situation.
     func markTaskNotApplicable(id: String, note: String = "") async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks/\(id)/not-applicable")!
+        let url = apiURL("/api/tasks/\(id)/not-applicable")
         let body: [String: Any] = ["note": note]
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
@@ -1933,7 +1940,7 @@ class APIService: ObservableObject {
     /// admin) can delegate. New approver cannot be the task assignee —
     /// server enforces separation of duties.
     func reassignTaskApprover(id: String, newApproverId: String) async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks/\(id)/approver")!
+        let url = apiURL("/api/tasks/\(id)/approver")
         let body: [String: Any] = ["approver_id": newApproverId]
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "PUT", body: json)
@@ -1943,7 +1950,7 @@ class APIService: ObservableObject {
     }
 
     func createTask(title: String, description: String, priority: String, dueDate: String?, assignedTo: String?) async throws -> TaskItem {
-        let url = URL(string: "\(apiBase)/api/tasks")!
+        let url = apiURL("/api/tasks")
         var body: [String: Any] = [
             "title": title,
             "description": description,
@@ -1985,7 +1992,7 @@ class APIService: ObservableObject {
     }
 
     func listSavedSearches() async throws -> [SavedSearch] {
-        let url = URL(string: "\(apiBase)/api/saved-searches")!
+        let url = apiURL("/api/saved-searches")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando búsquedas")
@@ -1993,7 +2000,7 @@ class APIService: ObservableObject {
     }
 
     func createSavedSearch(name: String, filters: SavedSearchFilters, notify: Bool) async throws -> SavedSearch {
-        let url = URL(string: "\(apiBase)/api/saved-searches")!
+        let url = apiURL("/api/saved-searches")
         let body: [String: Any] = [
             "name": name,
             "filters": filtersToDict(filters),
@@ -2008,7 +2015,7 @@ class APIService: ObservableObject {
     }
 
     func updateSavedSearch(id: String, name: String?, filters: SavedSearchFilters?, notify: Bool?) async throws -> SavedSearch {
-        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        let url = apiURL("/api/saved-searches/\(id)")
         var body: [String: Any] = [:]
         if let name { body["name"] = name }
         if let filters { body["filters"] = filtersToDict(filters) }
@@ -2022,14 +2029,14 @@ class APIService: ObservableObject {
     }
 
     func deleteSavedSearch(id: String) async throws {
-        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        let url = apiURL("/api/saved-searches/\(id)")
         let req = try authedRequest(url, method: "DELETE")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error eliminando búsqueda")
     }
 
     func getSavedSearchResults(id: String) async throws -> SavedSearchResponse {
-        let url = URL(string: "\(apiBase)/api/saved-searches/\(id)")!
+        let url = apiURL("/api/saved-searches/\(id)")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando resultados")
@@ -2039,7 +2046,7 @@ class APIService: ObservableObject {
     // MARK: - Meta Ads (read-only management for iOS — creation stays on web)
 
     func getMetaStatus() async throws -> MetaStatusResponse {
-        let url = URL(string: "\(apiBase)/api/paid-ads/meta/status")!
+        let url = apiURL("/api/paid-ads/meta/status")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando estado")
@@ -2047,7 +2054,7 @@ class APIService: ObservableObject {
     }
 
     func getAdCampaigns() async throws -> AdCampaignsResponse {
-        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns")!
+        let url = apiURL("/api/paid-ads/meta/campaigns")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando campañas")
@@ -2055,14 +2062,14 @@ class APIService: ObservableObject {
     }
 
     func toggleAdCampaign(id: String) async throws {
-        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)/toggle-status")!
+        let url = apiURL("/api/paid-ads/meta/campaigns/\(id)/toggle-status")
         let req = try authedRequest(url, method: "POST")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cambiando estado")
     }
 
     func deleteAdCampaign(id: String) async throws {
-        let url = URL(string: "\(apiBase)/api/paid-ads/meta/campaigns/\(id)")!
+        let url = apiURL("/api/paid-ads/meta/campaigns/\(id)")
         let req = try authedRequest(url, method: "DELETE")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error eliminando campaña")
@@ -2085,7 +2092,7 @@ class APIService: ObservableObject {
 
     func addFavorite(listingId: String) async throws {
         guard let t = token else { return }
-        let url = URL(string: "\(apiBase)/api/user/favorites/\(listingId)")!
+        let url = apiURL("/api/user/favorites/\(listingId)")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2122,7 +2129,7 @@ class APIService: ObservableObject {
 
     func removeFavorite(listingId: String) async throws {
         guard let t = token else { return }
-        let url = URL(string: "\(apiBase)/api/user/favorites/\(listingId)")!
+        let url = apiURL("/api/user/favorites/\(listingId)")
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2149,7 +2156,7 @@ class APIService: ObservableObject {
 
     func changePassword(current: String, newPassword: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/auth/change-password")!
+        let url = apiURL("/api/auth/change-password")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2168,7 +2175,7 @@ class APIService: ObservableObject {
 
     func uploadAvatar(imageData: Data) async throws -> String {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/upload/avatar")!
+        let url = apiURL("/api/upload/avatar")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2219,7 +2226,7 @@ class APIService: ObservableObject {
 
     func registerPushToken(token: String) async throws {
         guard let t = self.token else { return }
-        let url = URL(string: "\(apiBase)/api/push/subscribe")!
+        let url = apiURL("/api/push/subscribe")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2238,7 +2245,7 @@ class APIService: ObservableObject {
 
     func unregisterPushToken() async throws {
         guard let t = self.token else { return }
-        let url = URL(string: "\(apiBase)/api/push/subscribe")!
+        let url = apiURL("/api/push/subscribe")
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2258,7 +2265,7 @@ class APIService: ObservableObject {
     // MARK: - Contact Timeline CRM
 
     func getContacts() async throws -> [ContactSummary] {
-        let url = URL(string: "\(apiBase)/api/contacts")!
+        let url = apiURL("/api/contacts")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando contactos")
@@ -2278,7 +2285,7 @@ class APIService: ObservableObject {
 
     /// Full application details (includes documents_requested, documents_uploaded)
     func getMyApplicationsFull() async throws -> [[String: Any]] {
-        let url = URL(string: "\(apiBase)/api/applications/my")!
+        let url = apiURL("/api/applications/my")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando aplicaciones")
@@ -2288,7 +2295,7 @@ class APIService: ObservableObject {
     /// Upload a document for an application
     func uploadDocument(applicationId: String, requestId: String?, type: String, fileData: Data, filename: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/documents/upload")!
+        let url = apiURL("/api/applications/\(applicationId)/documents/upload")
         let boundary = "Boundary-\(UUID().uuidString)"
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -2321,7 +2328,7 @@ class APIService: ObservableObject {
     /// Upload payment receipt
     func uploadPaymentReceipt(applicationId: String, amount: String, notes: String, fileData: Data, filename: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/upload")!
+        let url = apiURL("/api/applications/\(applicationId)/payment/upload")
         let boundary = "Boundary-\(UUID().uuidString)"
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -2349,7 +2356,7 @@ class APIService: ObservableObject {
     /// Upload processed receipt (broker/agent side) after verifying payment
     func uploadProcessedReceipt(applicationId: String, fileData: Data, filename: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/processed-receipt")!
+        let url = apiURL("/api/applications/\(applicationId)/payment/processed-receipt")
         let boundary = "Boundary-\(UUID().uuidString)"
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -2372,7 +2379,7 @@ class APIService: ObservableObject {
     // MARK: - Cancel / Retention
 
     func getCancelStats() async throws -> CancelStats {
-        let url = URL(string: "\(apiBase)/api/stripe/cancel-stats")!
+        let url = apiURL("/api/stripe/cancel-stats")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando estadisticas")
@@ -2380,7 +2387,7 @@ class APIService: ObservableObject {
     }
 
     func submitCancelFeedback(reason: String, feedback: String, acceptedOffer: String?) async throws -> CancelFeedbackResponse {
-        let url = URL(string: "\(apiBase)/api/stripe/cancel-feedback")!
+        let url = apiURL("/api/stripe/cancel-feedback")
         var body: [String: Any] = ["reason": reason, "feedback": feedback]
         if let offer = acceptedOffer { body["accepted_offer"] = offer }
         let req = try authedRequest(url, method: "POST", body: try JSONSerialization.data(withJSONObject: body))
@@ -2401,7 +2408,7 @@ class APIService: ObservableObject {
     }
 
     func createPaymentPlan(applicationId: String, plan: [String: Any]) async throws {
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan")!
+        let url = apiURL("/api/applications/\(applicationId)/payment-plan")
         let body = try JSONSerialization.data(withJSONObject: plan)
         let req = try authedRequest(url, method: "POST", body: body)
         let (data, resp) = try await session.data(for: req)
@@ -2409,7 +2416,7 @@ class APIService: ObservableObject {
     }
 
     func getPaymentsSummary() async throws -> PaymentsSummaryResponse {
-        let url = URL(string: "\(apiBase)/api/payments/summary")!
+        let url = apiURL("/api/payments/summary")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando pagos")
@@ -2417,7 +2424,7 @@ class APIService: ObservableObject {
     }
 
     func sendPaymentReminder(applicationId: String, installmentId: String) async throws {
-        let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/notify")!
+        let url = apiURL("/api/applications/\(applicationId)/payment-plan/\(installmentId)/notify")
         let req = try authedRequest(url, method: "POST")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error enviando recordatorio")
@@ -2426,7 +2433,7 @@ class APIService: ObservableObject {
     // MARK: - Subscription Status
 
     func getSubscriptionStatus() async throws -> SubscriptionStatus {
-        let url = URL(string: "\(apiBase)/api/stripe/status")!
+        let url = apiURL("/api/stripe/status")
         let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error verificando suscripcion")
@@ -2464,7 +2471,7 @@ class APIService: ObservableObject {
         note: String = ""
     ) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/review")!)
+        var req = URLRequest(url: apiURL("/api/applications/\(applicationId)/documents/\(documentId)/review"))
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2499,7 +2506,7 @@ class APIService: ObservableObject {
         reviewNotes: String = ""
     ) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/payment-plan/\(installmentId)/review")!)
+        var req = URLRequest(url: apiURL("/api/applications/\(applicationId)/payment-plan/\(installmentId)/review"))
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2520,7 +2527,7 @@ class APIService: ObservableObject {
         notes: String = ""
     ) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/applications/\(applicationId)/payment/verify")!)
+        var req = URLRequest(url: apiURL("/api/applications/\(applicationId)/payment/verify"))
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -2549,7 +2556,7 @@ class APIService: ObservableObject {
     /// pending/edits_requested/rejected submissions alongside approved ones.
     func getMyListings() async throws -> [Listing] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/user/listings")!)
+        var req = URLRequest(url: apiURL("/api/user/listings"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando propiedades")
@@ -2562,7 +2569,7 @@ class APIService: ObservableObject {
 
     func getListingPromoContent(id: String) async throws -> ListingPromoContent {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/listing-analytics/listing/\(id)/promo")!)
+        var req = URLRequest(url: apiURL("/api/listing-analytics/listing/\(id)/promo"))
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error generando contenido")
@@ -2576,7 +2583,7 @@ class APIService: ObservableObject {
     /// updated record; we ignore the body and just surface errors.
     func updateListing(id: String, body: [String: Any]) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(apiBase)/api/listings/\(id)")!)
+        var req = URLRequest(url: apiURL("/api/listings/\(id)"))
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")

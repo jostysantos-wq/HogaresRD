@@ -597,7 +597,7 @@ struct TwoFactorSettingsView: View {
                 biometricEnabled = false
             }
         } catch {
-            print("Biometric toggle error: \(error)")
+            debugLog("Biometric toggle error: \(error)")
         }
         biometricLoading = false
     }
@@ -1204,7 +1204,7 @@ struct AgencyDashboardView: View {
             summary = try await s
             listings = try await l
         } catch {
-            print("Portfolio load error: \(error)")
+            debugLog("Portfolio load error: \(error)")
         }
         loading = false
     }

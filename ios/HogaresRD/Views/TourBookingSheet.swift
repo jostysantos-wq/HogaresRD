@@ -803,7 +803,7 @@ struct TourBookingSheet: View {
                 try store.save(event, span: .thisEvent)
                 DispatchQueue.main.async { calendarAdded = true }
             } catch {
-                print("[Tour] Calendar save error:", error.localizedDescription)
+            debugLog("[Tour] Calendar save error: \(error.localizedDescription)")
             }
         }
     }

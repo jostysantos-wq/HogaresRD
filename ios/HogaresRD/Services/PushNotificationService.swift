@@ -63,14 +63,14 @@ class PushNotificationService: NSObject, ObservableObject {
             }
             return granted
         } catch {
-            print("Push permission error: \(error)")
+            debugLog("Push permission error: \(error)")
             return false
         }
     }
 
     func handleDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
-        print("[Push] Device token received: \(token.prefix(16))...")
+            debugLog("[Push] Device token received: \(token.prefix(16))...")
         DispatchQueue.main.async {
             self.deviceToken = token
         }
@@ -80,15 +80,15 @@ class PushNotificationService: NSObject, ObservableObject {
     }
 
     func handleRegistrationError(_ error: Error) {
-        print("APNs registration error: \(error)")
+            debugLog("APNs registration error: \(error)")
     }
 
     private func registerTokenWithServer(_ token: String) async {
         do {
             try await APIService.shared.registerPushToken(token: token)
-            print("Push token registered with server")
+            debugLog("Push token registered with server")
         } catch {
-            print("Failed to register push token: \(error)")
+            debugLog("Failed to register push token: \(error)")
         }
     }
 

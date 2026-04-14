@@ -73,7 +73,7 @@ class StoreManager: ObservableObject {
             await updatePurchasedProducts()
         } catch {
             self.error = "No se pudieron cargar los planes: \(error.localizedDescription)"
-            print("[StoreManager] Load products error:", error)
+            debugLog("[StoreManager] Load products error: \(error)")
         }
         isLoading = false
     }
@@ -110,7 +110,7 @@ class StoreManager: ObservableObject {
             }
         } catch {
             self.error = "Error al procesar la compra: \(error.localizedDescription)"
-            print("[StoreManager] Purchase error:", error)
+            debugLog("[StoreManager] Purchase error: \(error)")
             isLoading = false
             return false
         }
@@ -141,7 +141,7 @@ class StoreManager: ObservableObject {
                     await self.updatePurchasedProducts()
                     await self.syncWithServer(transaction: transaction)
                 } catch {
-                    print("[StoreManager] Transaction update error:", error)
+            debugLog("[StoreManager] Transaction update error: \(error)")
                 }
             }
         }
@@ -184,7 +184,7 @@ class StoreManager: ObservableObject {
 
     private func syncWithServer(transaction: StoreKit.Transaction) async {
         guard let api = _api else {
-            print("[StoreManager] No API service set — skipping server sync")
+            debugLog("[StoreManager] No API service set — skipping server sync")
             return
         }
         let role = Self.roleMap[transaction.productID] ?? "user"
@@ -197,9 +197,9 @@ class StoreManager: ObservableObject {
                 role: role,
                 expirationDate: transaction.expirationDate?.ISO8601Format()
             )
-            print("[StoreManager] Server synced: \(transaction.productID) → \(role)")
+            debugLog("[StoreManager] Server synced: \(transaction.productID) → \(role)")
         } catch {
-            print("[StoreManager] Server sync failed:", error.localizedDescription)
+            debugLog("[StoreManager] Server sync failed: \(error.localizedDescription)")
         }
     }
 
@@ -222,7 +222,7 @@ class StoreManager: ObservableObject {
                 expirationDate: transaction.expirationDate?.ISO8601Format()
             )
         } catch {
-            print("[StoreManager] Sync error:", error.localizedDescription)
+            debugLog("[StoreManager] Sync error: \(error.localizedDescription)")
         }
     }
 

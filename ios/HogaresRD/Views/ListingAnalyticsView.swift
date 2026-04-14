@@ -287,7 +287,7 @@ struct DashboardListingAnalyticsTab: View {
                 return s == "pending" || s == "edits_requested" || s == "rejected"
             }
         } catch {
-            print("Listing analytics error: \(error)")
+            debugLog("Listing analytics error: \(error)")
         }
         loading = false
     }
@@ -862,7 +862,7 @@ struct ListingAnalyticsDetailView: View {
                 do {
                     detail = try await api.getListingAnalyticsDetail(id: listingId)
                 } catch {
-                    print("Detail error: \(error)")
+            debugLog("Detail error: \(error)")
                 }
                 loading = false
             }

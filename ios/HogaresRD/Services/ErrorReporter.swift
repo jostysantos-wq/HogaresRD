@@ -1,6 +1,15 @@
 import Foundation
 import UIKit
 
+// MARK: - Debug-only logging (stripped from release builds)
+
+@inline(__always)
+func debugLog(_ message: @autoclosure () -> String) {
+    #if DEBUG
+    print(message())
+    #endif
+}
+
 // MARK: - Client Error Reporter
 //
 // Collects iOS errors and ships them to the server in batches.

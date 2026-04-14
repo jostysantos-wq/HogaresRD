@@ -451,12 +451,12 @@ struct ConversationThreadView: View {
             messagesLoaded = true
             loadError = nil
             syncClosedState(conv)
-            print("[ConvThread] loadMessages OK: \(messages.count) messages for \(conversation.id)")
+            debugLog("[ConvThread] loadMessages OK: \(messages.count) messages for \(conversation.id)")
         } catch is CancellationError {
-            print("[ConvThread] loadMessages CANCELLED")
+            debugLog("[ConvThread] loadMessages CANCELLED")
         } catch {
             loadError = "\(error)"
-            print("[ConvThread] loadMessages FAILED: \(error)")
+            debugLog("[ConvThread] loadMessages FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "GET /api/conversations/\(conversation.id)", context: "loadMessages")
         }
     }
@@ -493,7 +493,7 @@ struct ConversationThreadView: View {
                 emptyPolls += 1
             }
         } catch {
-            print("[ConvThread] pollNew FAILED: \(error)")
+            debugLog("[ConvThread] pollNew FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "GET /api/conversations/\(conversation.id)?since=", context: "pollNew")
         }
     }
@@ -765,7 +765,12 @@ struct ConversationThreadView: View {
         let id = conversation.id
         let api = self.api
         Task.detached {
-            try? await api.markConversationRead(id: id)
+            do {
+                try await api.markConversationRead(id: id)
+            } catch {
+                debugLog("[ConvThread] markRead failed for \(id): \(error)")
+                ErrorReporter.shared.reportAPIError(error, endpoint: "PUT /api/conversations/\(id)/read", context: "markRead")
+            }
         }
     }
 
@@ -780,7 +785,7 @@ struct ConversationThreadView: View {
             lastTimestamp = msg.timestamp
             emptyPolls = 0 // Reset backoff after sending
         } catch {
-            print("[ConvThread] send FAILED: \(error)")
+            debugLog("[ConvThread] send FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "POST /api/conversations/\(conversation.id)/messages", context: "sendMessage")
             // Reload the full thread to pick up the message the server saved
             await loadMessages()
