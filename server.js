@@ -2431,6 +2431,21 @@ app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
 // ── Admin error tracking endpoint ─────────────────────────────────
 app.use('/api/admin', errorTracker.router);
 
+// ── Health check endpoint (must be before 404 catch-all) ──────────
+app.get('/api/health', (req, res) => {
+  const uptime = process.uptime();
+  const cacheReady = store._cacheReady !== false;
+  const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+  res.json({
+    status: cacheReady ? 'ok' : 'warming',
+    uptime: Math.round(uptime),
+    memory: `${memMB}MB`,
+    cacheReady,
+    version: require('./package.json').version,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ── 404 handler for unmatched API routes ──────────────────────────
 app.use('/api/*', errorTracker.notFoundHandler);
 
@@ -2457,23 +2472,6 @@ app.use(errorTracker.errorHandler);
     console.error('[Blog] Seed error:', e.message);
   }
 })();
-
-// ── Health check endpoint ──────────────────────────────────────────
-// Used by deploy.sh and monitoring to verify the server is alive.
-// Returns cache status so we know if the DB has loaded.
-app.get('/api/health', (req, res) => {
-  const uptime = process.uptime();
-  const cacheReady = store._cacheReady !== false;
-  const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-  res.json({
-    status: cacheReady ? 'ok' : 'warming',
-    uptime: Math.round(uptime),
-    memory: `${memMB}MB`,
-    cacheReady,
-    version: require('./package.json').version,
-    timestamp: new Date().toISOString(),
-  });
-});
 
 if (require.main === module) {
   app.listen(PORT, () => {
