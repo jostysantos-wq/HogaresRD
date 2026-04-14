@@ -168,9 +168,11 @@ class APIService: ObservableObject {
         if let cached: [Ad] = cache.get("ads:active") { return cached }
         guard let url = URL(string: "\(apiBase)/api/ads/active") else { return [] }
         guard let (data, _) = try? await session.data(from: url) else { return [] }
-        let ads = (try? decoder.decode([Ad].self, from: data)) ?? []
-        cache.set("ads:active", value: ads, ttl: 300) // 5 min cache
-        return ads
+        let allAds = (try? decoder.decode([Ad].self, from: data)) ?? []
+        // Exclude popup ads — those are shown by fetchPopupAd(), not in the feed
+        let feedAds = allAds.filter { $0.ad_type != "popup" }
+        cache.set("ads:active", value: feedAds, ttl: 300)
+        return feedAds
     }
 
     /// Fetch the highest-priority active popup ad

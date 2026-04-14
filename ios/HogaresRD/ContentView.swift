@@ -309,75 +309,43 @@ struct ContentView: View {
 
     private func popupAdOverlay(_ ad: Ad) -> some View {
         ZStack {
-            Color.black.opacity(0.5)
+            Color.black.opacity(0.55)
                 .ignoresSafeArea()
                 .onTapGesture { dismissAdPopup() }
 
-            VStack(spacing: 0) {
-                // Close button
-                HStack {
-                    // Sponsored badge
-                    Text("Publicidad")
-                        .font(.caption2.bold())
+            ZStack(alignment: .topTrailing) {
+                // Full-bleed ad image — tappable
+                Button {
+                    api.trackAdClick(ad.id)
+                    if let url = ad.targetURL { UIApplication.shared.open(url) }
+                    dismissAdPopup()
+                } label: {
+                    CachedAsyncImage(url: ad.imageURL, maxPixelSize: 1200) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFit()
+                        case .failure:
+                            Color.gray.opacity(0.2).frame(height: 300)
+                        default:
+                            Color.gray.opacity(0.1).frame(height: 300)
+                                .overlay(ProgressView())
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                // X button — top right, overlaid on image
+                Button { dismissAdPopup() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 30))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color.black.opacity(0.5), in: Capsule())
-                    Spacer()
-                    Button { dismissAdPopup() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .buttonStyle(.plain)
+                        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
                 }
-                .padding(.bottom, 4)
-
-                VStack(spacing: 0) {
-                    // Ad image — tappable, opens the ad URL
-                    Button {
-                        api.trackAdClick(ad.id)
-                        if let url = ad.targetURL { UIApplication.shared.open(url) }
-                        dismissAdPopup()
-                    } label: {
-                        CachedAsyncImage(url: ad.imageURL, maxPixelSize: 1200) { phase in
-                            switch phase {
-                            case .success(let img):
-                                img.resizable().scaledToFit()
-                            case .failure:
-                                Color.gray.opacity(0.2).frame(height: 200)
-                            default:
-                                Color.gray.opacity(0.1).frame(height: 200)
-                                    .overlay(ProgressView())
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                    // Ad info
-                    VStack(spacing: 8) {
-                        if let advertiser = ad.advertiser, !advertiser.isEmpty {
-                            Text(advertiser)
-                                .font(.caption.bold())
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(ad.title)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                        if let desc = ad.description, !desc.isEmpty {
-                            Text(desc)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(3)
-                        }
-                    }
-                    .padding(16)
-                }
-                .background(Color(.systemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .buttonStyle(.plain)
+                .offset(x: 8, y: -8)
             }
-            .padding(24)
+            .padding(.horizontal, 28)
             .transition(.scale(scale: 0.85).combined(with: .opacity))
         }
         .transition(.opacity)
