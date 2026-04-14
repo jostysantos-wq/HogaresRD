@@ -1135,6 +1135,11 @@
       <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
       <span class="sidebar-nav-label">Disponibilidad</span>
     </button>
+    <div class="sidebar-section-label">Publicidad</div>
+    <button class="sidebar-nav-item" data-page="ad-request">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+      <span class="sidebar-nav-label">Solicitar Anuncio<span class="team-sidebar-badge" id="adReqBadge" style="display:none">0</span></span>
+    </button>
     <div class="sidebar-section-label">Herramientas</div>
     <button class="sidebar-nav-item" data-page="chat-ia">
       <svg viewBox="0 0 24 24"><path d="M12 2l2.09 6.43H21l-5.47 3.97 2.09 6.43L12 14.87l-5.62 3.96 2.09-6.43L3 8.43h6.91z"/></svg>
@@ -2678,6 +2683,76 @@
   </div>
 
   <!-- ═══ PAGE: APPS ════════════════════════════════════════ -->
+  <!-- ── AD REQUEST PAGE ─────────────────────────────────────────── -->
+  <div class="page-section" id="page-ad-request">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+      <!-- Left: form -->
+      <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border);padding:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:800;margin-bottom:1rem;">Nuevo Anuncio</h3>
+        <div style="display:flex;flex-direction:column;gap:0.9rem;">
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Título *</label>
+            <input type="text" id="arTitle" placeholder="Ej: Apartamentos desde $85,000" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;background:var(--bg);color:var(--text);">
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Descripción</label>
+            <textarea id="arDesc" rows="2" placeholder="Texto del anuncio..." style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;resize:vertical;background:var(--bg);color:var(--text);"></textarea>
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Imagen * (1200×628 recomendado)</label>
+            <div id="arImgZone" style="border:2px dashed var(--border);border-radius:8px;padding:1.2rem;text-align:center;cursor:pointer;" onclick="document.getElementById('arFileInput').click()">
+              <input type="file" id="arFileInput" accept="image/*" style="display:none" onchange="arUploadImage(this)">
+              <div style="font-size:0.85rem;color:var(--text-muted);">Haz clic para subir imagen</div>
+            </div>
+            <div id="arImgPreview" style="margin-top:0.5rem;display:none;"></div>
+          </div>
+          <div>
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">URL de destino</label>
+            <input type="url" id="arTargetUrl" placeholder="https://..." style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;background:var(--bg);color:var(--text);">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Tipo</label>
+              <select id="arType" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg);color:var(--text);">
+                <option value="fullscreen">Pantalla completa</option>
+                <option value="popup">Popup</option>
+                <option value="banner">Banner</option>
+                <option value="card">Tarjeta</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Ubicación</label>
+              <select id="arPlacement" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg);color:var(--text);">
+                <option value="feed">Feed</option>
+                <option value="app-launch">Apertura de app</option>
+                <option value="listing-page">Página de propiedad</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Fecha inicio</label>
+              <input type="date" id="arStartDate" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg);color:var(--text);">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Fecha fin</label>
+              <input type="date" id="arEndDate" style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;background:var(--bg);color:var(--text);">
+            </div>
+          </div>
+          <div id="arMsg" style="font-size:0.82rem;min-height:1.2rem;"></div>
+          <button onclick="submitAdRequest()" id="arSubmitBtn" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0.7rem;font-size:0.9rem;font-weight:700;cursor:pointer;">Enviar Solicitud</button>
+        </div>
+      </div>
+      <!-- Right: my requests -->
+      <div>
+        <h3 style="font-size:1rem;font-weight:800;margin-bottom:1rem;">Mis Solicitudes</h3>
+        <div id="arRequestsList" style="display:flex;flex-direction:column;gap:0.8rem;">
+          <div style="color:var(--text-muted);font-size:0.85rem;">Cargando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="page-section" id="page-apps">
     <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.92rem;">Herramientas y aplicaciones para tu portal de broker.</p>
     <div class="apps-grid">
@@ -5540,6 +5615,7 @@
     'tour-requests': 'Solicitudes de Visita',
     'availability': 'Disponibilidad para Visitas',
     'tareas': 'Mis Tareas',
+    'ad-request': 'Solicitar Anuncio',
   };
   let currentPage = 'dashboard';
 
@@ -5577,6 +5653,7 @@
     if (page === 'availability' && typeof window._loadAvailability === 'function') window._loadAvailability();
     if (page === 'tareas') loadTareas();
     if (page === 'mensajes' && typeof window.brkLoadList === 'function') window.brkLoadList();
+    if (page === 'ad-request') loadAdRequests();
 
     // Clear badge when visiting the page (read-and-dismiss)
     const badgeMap = {
@@ -9813,6 +9890,99 @@ async function submitNewTask() {
 }
 </script>
 
+<script>
+// ── Ad Request System ─────────────────────────────────────────
+let _arUploadedUrl = '';
+
+async function arUploadImage(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    const r = await fetch('/api/ads/upload', { method: 'POST', body: fd, credentials: 'include' });
+    const data = await r.json();
+    if (data.url) {
+      _arUploadedUrl = data.url;
+      document.getElementById('arImgPreview').innerHTML = `<img src="${data.url}" style="max-width:100%;max-height:160px;border-radius:8px;">`;
+      document.getElementById('arImgPreview').style.display = '';
+      document.getElementById('arImgZone').style.borderColor = 'var(--accent)';
+    } else {
+      document.getElementById('arMsg').textContent = data.error || 'Error al subir imagen';
+      document.getElementById('arMsg').style.color = '#dc2626';
+    }
+  } catch { document.getElementById('arMsg').textContent = 'Error de red'; }
+}
+
+async function submitAdRequest() {
+  const btn = document.getElementById('arSubmitBtn');
+  const msg = document.getElementById('arMsg');
+  const title = document.getElementById('arTitle').value.trim();
+  if (!title) { msg.textContent = 'El título es obligatorio'; msg.style.color = '#dc2626'; return; }
+  if (!_arUploadedUrl) { msg.textContent = 'Sube una imagen'; msg.style.color = '#dc2626'; return; }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await API('/api/ads/request', {
+      method: 'POST',
+      body: {
+        title,
+        description: document.getElementById('arDesc').value.trim(),
+        image_url: _arUploadedUrl,
+        target_url: document.getElementById('arTargetUrl').value.trim(),
+        ad_type: document.getElementById('arType').value,
+        placement: document.getElementById('arPlacement').value,
+        start_date: document.getElementById('arStartDate').value || null,
+        end_date: document.getElementById('arEndDate').value || null,
+      },
+    });
+    if (r.error) throw new Error(r.error);
+    msg.textContent = 'Solicitud enviada. El admin revisará tu anuncio.';
+    msg.style.color = '#059669';
+    document.getElementById('arTitle').value = '';
+    document.getElementById('arDesc').value = '';
+    document.getElementById('arTargetUrl').value = '';
+    document.getElementById('arStartDate').value = '';
+    document.getElementById('arEndDate').value = '';
+    document.getElementById('arImgPreview').style.display = 'none';
+    _arUploadedUrl = '';
+    loadAdRequests();
+  } catch (e) {
+    msg.textContent = e.message || 'Error al enviar';
+    msg.style.color = '#dc2626';
+  }
+  btn.disabled = false; btn.textContent = 'Enviar Solicitud';
+}
+
+async function loadAdRequests() {
+  const list = document.getElementById('arRequestsList');
+  try {
+    const data = await API('/api/ads/my-requests');
+    const ads = Array.isArray(data) ? data : [];
+    if (!ads.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:1rem;text-align:center;">No has enviado solicitudes de anuncio aún.</div>';
+      return;
+    }
+    const statusMap = { pending_approval: ['⏳','Pendiente','#b45309','#fef3c7'], approved: ['✅','Aprobado','#059669','#d1fae5'], rejected: ['❌','Rechazado','#dc2626','#fee2e2'] };
+    list.innerHTML = ads.map(ad => {
+      const [icon, label, color, bg] = statusMap[ad.request_status] || ['⏳','Pendiente','#6b7280','#f3f4f6'];
+      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        ${ad.image_url ? `<img src="${ad.image_url}" style="width:100%;height:120px;object-fit:cover;" onerror="this.style.display='none'">` : ''}
+        <div style="padding:0.8rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+            <strong style="font-size:0.88rem;">${ad.title || ''}</strong>
+            <span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:50px;background:${bg};color:${color};">${icon} ${label}</span>
+          </div>
+          ${ad.description ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.3rem;">${ad.description}</div>` : ''}
+          ${ad.rejection_reason ? `<div style="font-size:0.78rem;color:#dc2626;margin-top:0.3rem;">Motivo: ${ad.rejection_reason}</div>` : ''}
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">${new Date(ad.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' })}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Error cargando solicitudes</div>';
+  }
+}
+</script>
 <script src="/js/pixel.js" defer></script>
 </body>
 </html>

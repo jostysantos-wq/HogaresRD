@@ -623,6 +623,7 @@
       <button class="nav-item" data-page="anuncios" onclick="showPage('anuncios', this)">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
         <span class="nav-item-label">Anuncios</span>
+        <span class="nav-pill" id="adsPill" style="display:none;"></span>
         <span class="nav-tooltip">Anuncios</span>
       </button>
 
@@ -922,6 +923,14 @@
 
       <!-- ── ANUNCIOS PAGE ─────────────────────────────────── -->
       <div class="page-section" id="page-anuncios">
+        <!-- Pending ad requests banner -->
+        <div id="pendingAdsBanner" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+            <span style="font-size:1.3rem;">📢</span>
+            <strong style="color:#92400e;font-size:0.9rem;" id="pendingAdsTitle">Solicitudes de anuncio pendientes</strong>
+          </div>
+          <div id="pendingAdsList" style="font-size:0.82rem;color:#78350f;"></div>
+        </div>
         <div class="ads-form-card">
           <h3 class="ads-form-title">Crear Nuevo Anuncio</h3>
           <div class="ads-form-grid">
@@ -1855,7 +1864,7 @@
     // Clear the badge and remember the count when admin visits the page.
     // Badge only reappears if the count INCREASES from what they last saw.
     const pillMap = {
-      leads: 'leadsPill', aplicaciones: 'appsPill', eliminacion: 'deletionPill',
+      leads: 'leadsPill', aplicaciones: 'appsPill', eliminacion: 'deletionPill', anuncios: 'adsPill',
     };
     const pillId = pillMap[page];
     if (pillId) {
@@ -2623,6 +2632,46 @@
   function loadAds() {
     document.getElementById('adsList').innerHTML = '<div class="loading">Cargando anuncios...</div>';
     fetch('/api/ads').then(r => r.json()).then(data => { allAds = data; renderAds(data); }).catch(() => {});
+    loadPendingAds();
+  }
+
+  function loadPendingAds() {
+    fetch('/api/ads/pending').then(r => r.json()).then(ads => {
+      const banner = document.getElementById('pendingAdsBanner');
+      const pill = document.getElementById('adsPill');
+      if (!ads.length) { banner.style.display = 'none'; if (pill) pill.style.display = 'none'; return; }
+      banner.style.display = '';
+      document.getElementById('pendingAdsTitle').textContent = `${ads.length} solicitud(es) de anuncio pendiente(s)`;
+      // Update sidebar badge
+      const seen = parseInt(localStorage.getItem('admin_seen_anuncios') || '0');
+      if (pill && ads.length > seen) { pill.textContent = ads.length; pill.style.display = ''; }
+      document.getElementById('pendingAdsList').innerHTML = ads.map(ad => `
+        <div style="display:flex;align-items:center;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid rgba(245,158,11,0.2);">
+          ${ad.image_url ? `<img src="${ad.image_url}" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+          <div style="flex:1;min-width:0;">
+            <strong>${ad.title || ''}</strong>
+            <div style="font-size:0.72rem;color:#92400e;">${ad.requester_name || ''} · ${ad.ad_type || ''} · ${ad.placement || ''}</div>
+          </div>
+          <div style="display:flex;gap:0.4rem;">
+            <button onclick="approveAdRequest('${ad.id}')" style="font-size:0.7rem;font-weight:700;padding:0.3rem 0.6rem;border:none;border-radius:6px;background:#059669;color:#fff;cursor:pointer;">Aprobar</button>
+            <button onclick="rejectAdRequest('${ad.id}')" style="font-size:0.7rem;font-weight:700;padding:0.3rem 0.6rem;border:1.5px solid #dc2626;border-radius:6px;background:none;color:#dc2626;cursor:pointer;">Rechazar</button>
+          </div>
+        </div>
+      `).join('');
+    }).catch(() => {});
+  }
+
+  function approveAdRequest(id) {
+    fetch('/api/ads/' + id + '/approve', { method: 'POST' }).then(r => r.json()).then(data => {
+      if (data.error) return alert(data.error);
+      loadAds();
+    });
+  }
+
+  function rejectAdRequest(id) {
+    const reason = prompt('Motivo del rechazo (opcional):');
+    fetch('/api/ads/' + id + '/reject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: reason || '' }) })
+      .then(r => r.json()).then(data => { if (data.error) return alert(data.error); loadAds(); });
   }
   // ── Ad image upload helpers ──────────────────────────────────
   let _adUploadedUrl = '';

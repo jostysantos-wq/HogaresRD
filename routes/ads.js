@@ -203,4 +203,159 @@ router.post('/:id/click', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ══════════════════════════════════════════════════════════════════
+// ── SELF-SERVICE AD REQUESTS (brokers/inmobiliarias) ────────────
+// ══════════════════════════════════════════════════════════════════
+
+const { userAuth } = require('./auth');
+const { notify: pushNotify } = require('./push');
+const { createTransport } = require('./mailer');
+const et = require('../utils/email-templates');
+const _adMailer = createTransport();
+const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
+const BASE_URL = process.env.BASE_URL || 'https://hogaresrd.com';
+
+// ── POST /api/ads/request — broker submits ad for approval ──────
+router.post('/request', userAuth, async (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user || !PRO_ROLES.includes(user.role))
+    return res.status(403).json({ error: 'Solo agentes e inmobiliarias pueden solicitar anuncios' });
+
+  const { title, description, image_url, target_url, ad_type, placement, start_date, end_date } = req.body;
+  if (!title || !image_url)
+    return res.status(400).json({ error: 'Título e imagen son requeridos' });
+
+  const ad = {
+    id:             uuidv4(),
+    title,
+    advertiser:     user.companyName || user.agencyName || user.name || '',
+    description:    (description || '').slice(0, 500),
+    image_url,
+    target_url:     target_url || '',
+    ad_type:        ad_type || 'fullscreen',
+    placement:      placement || 'feed',
+    budget:         null,
+    priority:       5,
+    audience:       'todos',
+    cooldown_hours: 2,
+    is_active:      false,
+    start_date:     start_date || null,
+    end_date:       end_date || null,
+    impressions:    0,
+    clicks:         0,
+    created_at:     new Date().toISOString(),
+    requested_by:   req.user.sub,
+    request_status: 'pending_approval',
+    requester_name: user.name || '',
+    requester_email: user.email || '',
+  };
+
+  try {
+    const cols = Object.keys(ad);
+    const vals = cols.map(c => ad[c]);
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+    await store.pool.query(
+      `INSERT INTO ads (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`,
+      vals
+    );
+
+    // Notify admin
+    _adMailer.sendMail({
+      to: ADMIN_EMAIL,
+      subject: `Nueva solicitud de anuncio — ${user.name}`,
+      html: et.layout({
+        title: 'Solicitud de anuncio',
+        body: et.p(`<strong>${et.esc(user.name)}</strong> (${et.esc(user.role)}) solicita publicar un anuncio:`)
+          + et.infoTable(
+              et.infoRow('Título', et.esc(title))
+            + et.infoRow('Tipo', ad_type || 'fullscreen')
+            + et.infoRow('Ubicación', placement || 'feed')
+            + (target_url ? et.infoRow('URL destino', et.esc(target_url)) : '')
+          )
+          + et.button('Revisar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`),
+      }),
+    }).catch(() => {});
+
+    res.status(201).json({ ok: true, ad });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/ads/my-requests — broker sees their submitted ads ──
+router.get('/my-requests', userAuth, async (req, res) => {
+  try {
+    const result = await store.pool.query(
+      'SELECT * FROM ads WHERE requested_by = $1 ORDER BY created_at DESC',
+      [req.user.sub]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+// ── GET /api/ads/pending — admin sees pending requests ───────────
+router.get('/pending', adminSessionAuth, async (req, res) => {
+  try {
+    const result = await store.pool.query(
+      "SELECT * FROM ads WHERE request_status = 'pending_approval' ORDER BY created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+// ── POST /api/ads/:id/approve — admin approves ad request ────────
+router.post('/:id/approve', adminSessionAuth, async (req, res) => {
+  try {
+    const result = await store.pool.query(
+      `UPDATE ads SET request_status = 'approved', is_active = true WHERE id = $1 AND request_status = 'pending_approval' RETURNING *`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Solicitud no encontrada' });
+    const ad = result.rows[0];
+
+    // Notify the requester
+    if (ad.requested_by) {
+      pushNotify(ad.requested_by, {
+        type: 'status_changed',
+        title: 'Anuncio aprobado ✓',
+        body: `Tu anuncio "${ad.title}" ha sido aprobado y está activo`,
+        url: '/broker',
+      });
+    }
+    res.json({ ok: true, ad });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/ads/:id/reject — admin rejects ad request ─────────
+router.post('/:id/reject', adminSessionAuth, async (req, res) => {
+  const reason = (req.body?.reason || '').trim().slice(0, 500);
+  try {
+    const result = await store.pool.query(
+      `UPDATE ads SET request_status = 'rejected', rejection_reason = $1 WHERE id = $2 AND request_status = 'pending_approval' RETURNING *`,
+      [reason, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Solicitud no encontrada' });
+    const ad = result.rows[0];
+
+    if (ad.requested_by) {
+      pushNotify(ad.requested_by, {
+        type: 'status_changed',
+        title: 'Anuncio rechazado',
+        body: reason ? `Tu anuncio "${ad.title}" fue rechazado: ${reason}` : `Tu anuncio "${ad.title}" fue rechazado`,
+        url: '/broker',
+      });
+    }
+    res.json({ ok: true, ad });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
