@@ -382,8 +382,8 @@
     .cat-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
     .cat-search { flex: 1; min-width: 200px; max-width: 320px; padding: 0.45rem 0.9rem 0.45rem 2.2rem; border: 1.5px solid #d0dcea; border-radius: 8px; font-size: 0.87rem; outline: none; transition: border-color .2s; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234d6a8a'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat 0.6rem center / 14px; }
     .cat-search:focus { border-color: var(--accent); }
-    .cat-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow: hidden; }
-    .cat-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .cat-table-wrap { background: #fff; border-radius: 14px; border: 1px solid #d0dcea; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .cat-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.83rem; }
     .cat-table th { background: #f0f4f9; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; border-bottom: 1px solid #d0dcea; white-space: nowrap; }
     .cat-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0f4f9; vertical-align: middle; }
     .cat-table tr:last-child td { border-bottom: none; }
