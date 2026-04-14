@@ -333,24 +333,29 @@ struct ContentView: View {
                 .padding(.bottom, 4)
 
                 VStack(spacing: 0) {
-                    // Ad image
-                    CachedAsyncImage(url: ad.imageURL, maxPixelSize: 1200) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable().scaledToFill()
-                                .frame(maxHeight: 280)
-                                .clipped()
-                        case .failure:
-                            Color.gray.opacity(0.2).frame(height: 200)
-                        default:
-                            Color.gray.opacity(0.1).frame(height: 200)
-                                .overlay(ProgressView())
+                    // Ad image — tappable, opens the ad URL
+                    Button {
+                        api.trackAdClick(ad.id)
+                        if let url = ad.targetURL { UIApplication.shared.open(url) }
+                        dismissAdPopup()
+                    } label: {
+                        CachedAsyncImage(url: ad.imageURL, maxPixelSize: 1200) { phase in
+                            switch phase {
+                            case .success(let img):
+                                img.resizable().scaledToFit()
+                            case .failure:
+                                Color.gray.opacity(0.2).frame(height: 200)
+                            default:
+                                Color.gray.opacity(0.1).frame(height: 200)
+                                    .overlay(ProgressView())
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                     // Ad info
-                    VStack(spacing: 10) {
+                    VStack(spacing: 8) {
                         if let advertiser = ad.advertiser, !advertiser.isEmpty {
                             Text(advertiser)
                                 .font(.caption.bold())
@@ -365,21 +370,6 @@ struct ContentView: View {
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(3)
-                        }
-                        if ad.targetURL != nil {
-                            Button {
-                                api.trackAdClick(ad.id)
-                                if let url = ad.targetURL { UIApplication.shared.open(url) }
-                                dismissAdPopup()
-                            } label: {
-                                Text("Ver oferta")
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
-                            }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(16)
