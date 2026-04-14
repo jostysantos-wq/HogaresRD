@@ -185,7 +185,7 @@ router.put('/:id/assign', async (req, res) => {
     if (!agent) return res.status(404).json({ error: 'Agente no encontrado' });
 
     const result = await store.pool.query(
-      `UPDATE leads SET referred_by = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+      `UPDATE leads SET referred_by = $1, status = CASE WHEN status = 'pendiente' THEN 'en_proceso' ELSE status END, updated_at = $2 WHERE id = $3 RETURNING *`,
       [agent_id, new Date().toISOString(), req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Lead no encontrado' });
