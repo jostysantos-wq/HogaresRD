@@ -1883,12 +1883,14 @@ app.post('/admin/catalogue/:id/unpublish', adminSessionAuth, (req, res) => {
 
 // ── Public Blog API ──────────────────────────────────────────────────────────
 app.get('/api/blog/posts', (req, res) => {
-  const posts = store.getBlogPosts('published').map(p => ({
+  let posts = store.getBlogPosts('published').map(p => ({
     id: p.id, slug: p.slug, title: p.title, excerpt: p.excerpt,
     category: p.category, cover_image: p.cover_image, author: p.author,
     read_time: p.read_time, featured: p.featured, views: p.views,
     published_at: p.published_at,
   }));
+  const limit = parseInt(req.query.limit);
+  if (limit > 0) posts = posts.slice(0, limit);
   res.json({ posts });
 });
 

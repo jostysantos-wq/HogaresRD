@@ -2069,7 +2069,7 @@
     // ── Blog Preview ─────────────────────────────────────────
     async function loadBlogPreview() {
       try {
-        const res = await fetch('/api/blog?limit=3');
+        const res = await fetch('/api/blog/posts?limit=3');
         if (!res.ok) return;
         const data = await res.json();
         const posts = data.posts || data || [];

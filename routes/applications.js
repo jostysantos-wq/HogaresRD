@@ -2740,7 +2740,8 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
     });
   }
 
-  res.json(app);
+  // Return only the payment plan — avoids circular JSON from the full app object
+  res.json({ ok: true, payment_plan: app.payment_plan });
 });
 
 // ── POST /:id/payment-plan/:iid/upload  — Client uploads proof ───
