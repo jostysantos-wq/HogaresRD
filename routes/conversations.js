@@ -265,7 +265,7 @@ router.get('/unread', requireLogin, (req, res) => {
 
   if (user.role === 'user') {
     convs = store.getConversationsByClient(user.sub);
-    const count = convs.reduce((n, c) => n + (c.unreadClient || 0), 0);
+    const count = convs.filter(c => (c.unreadClient || 0) > 0).length;
     return res.json({ count });
   }
 
@@ -298,15 +298,12 @@ router.get('/unread', requireLogin, (req, res) => {
         }
       }
     }
-    // Sum unreads — use actual unreadBroker count, not a flat 1
-    const count = convs.reduce((n, c) => {
+    // Count conversations with unread messages (not total message count)
+    const count = convs.filter(c => {
       const isClientHere = c.clientId === user.sub;
-      const isAssigned   = c.brokerId === user.sub;
-      if (isClientHere) return n + (c.unreadClient || 0);
-      if (isAssigned)   return n + (c.unreadBroker || 0);
-      // Unclaimed org conversation: use actual unread count
-      return n + (c.unreadBroker || 0);
-    }, 0);
+      if (isClientHere) return (c.unreadClient || 0) > 0;
+      return (c.unreadBroker || 0) > 0;
+    }).length;
     return res.json({ count });
   }
 
