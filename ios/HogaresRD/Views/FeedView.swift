@@ -476,7 +476,7 @@ struct ReelCard: View {
                         .padding(.horizontal, 12).padding(.vertical, 5)
                         .background(.black.opacity(0.3))
                         .clipShape(Capsule())
-                        .padding(.bottom, 96)
+                        .padding(.bottom, 240)
                     }
                     .allowsHitTesting(false)
                 }
