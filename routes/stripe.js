@@ -398,44 +398,30 @@ router.post('/webhook', (req, res) => {
     // One-time payment completed (ad purchases)
     case 'checkout.session.completed': {
       const session = event.data.object;
-      // Only handle ad payments (identified by ad_id in metadata)
       const adId = session.metadata?.ad_id;
       if (adId && session.payment_status === 'paid') {
-        try {
-          await store.pool.query(
-            `UPDATE ads SET request_status = 'pending_approval' WHERE id = $1 AND request_status = 'pending_payment'`,
-            [adId]
-          );
+        // Use .then() instead of await — webhook handler is not async
+        store.pool.query(
+          `UPDATE ads SET request_status = 'pending_approval' WHERE id = $1 AND request_status = 'pending_payment'`,
+          [adId]
+        ).then(() => {
           console.log(`[Stripe] Ad payment confirmed: ${adId}`);
-
           // Notify admin
-          const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
-          const { createTransport } = require('./mailer');
-          const et = require('../utils/email-templates');
-          createTransport().sendMail({
-            to: ADMIN_EMAIL,
-            subject: `Nuevo anuncio pagado — pendiente de aprobación`,
-            html: et.layout({
-              title: 'Anuncio pagado — revisar',
-              body: et.p('Un agente pagó por un anuncio y está pendiente de tu aprobación.')
-                + et.button('Revisar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`),
-            }),
+          const _ADMIN = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
+          const { createTransport: _ct } = require('./mailer');
+          const _et = require('../utils/email-templates');
+          _ct().sendMail({
+            to: _ADMIN,
+            subject: 'Nuevo anuncio pagado — pendiente de aprobación',
+            html: _et.layout({ title: 'Anuncio pagado — revisar', body: _et.p('Un agente pagó por un anuncio y está pendiente de tu aprobación.') + _et.button('Revisar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`) }),
           }).catch(() => {});
-
           // Notify requester
-          const userId = session.metadata?.user_id;
-          if (userId) {
-            const { notify: pushNotify } = require('./push');
-            pushNotify(userId, {
-              type: 'status_changed',
-              title: 'Pago recibido ✓',
-              body: 'Tu anuncio fue pagado y está pendiente de aprobación',
-              url: '/broker#ad-request',
-            });
+          const uid = session.metadata?.user_id;
+          if (uid) {
+            const { notify: _pn } = require('./push');
+            _pn(uid, { type: 'status_changed', title: 'Pago recibido ✓', body: 'Tu anuncio fue pagado y está pendiente de aprobación', url: '/broker#ad-request' });
           }
-        } catch (e) {
-          console.error('[Stripe] Ad payment update error:', e.message);
-        }
+        }).catch(e => console.error('[Stripe] Ad payment update error:', e.message));
       }
       break;
     }
