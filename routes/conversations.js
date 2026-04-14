@@ -471,12 +471,12 @@ router.post('/:id/claim', requireLogin, async (req, res) => {
   if (conv.brokerId)
     return res.status(400).json({ error: 'Esta conversacion ya fue reclamada por otro agente.' });
 
-  // Verify agent belongs to the conversation's org
+  // Verify agent belongs to the conversation's org or is the org owner
   const fullUser = store.getUserById(user.sub);
   const userInmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
     ? fullUser.id : fullUser?.inmobiliaria_id;
 
-  if (conv.inmobiliariaId && conv.inmobiliariaId !== userInmId)
+  if (conv.inmobiliariaId && conv.inmobiliariaId !== userInmId && conv.inmobiliariaId !== user.sub)
     return res.status(403).json({ error: 'No perteneces a esta organizacion.' });
 
   // Atomic DB claim: UPDATE only if brokerId is still NULL
