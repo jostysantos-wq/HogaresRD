@@ -277,25 +277,35 @@ router.get('/unread', requireLogin, (req, res) => {
     for (const cc of clientConvs) {
       if (!convs.some(x => x.id === cc.id)) convs.push(cc);
     }
-    // Include unclaimed org conversations in unread count (metadata only — not messages)
+    // Include unclaimed org conversations in unread count.
+    // Covers both org-scoped (inmobiliariaId matches) and orphaned
+    // conversations on the org's listings (inmobiliariaId is null).
     const fullUser = store.getUserById(user.sub);
     const inmId = ['inmobiliaria', 'constructora'].includes(fullUser?.role)
       ? fullUser.id : fullUser?.inmobiliaria_id;
     if (inmId) {
-      const orgConvs = store.getConversations().filter(c =>
-        c.inmobiliariaId === inmId && !c.brokerId && !convs.some(x => x.id === c.id)
-      );
-      convs = convs.concat(orgConvs);
+      const allConvs = store.getConversations();
+      for (const c of allConvs) {
+        if (c.brokerId || convs.some(x => x.id === c.id)) continue;
+        if (c.inmobiliariaId === inmId) { convs.push(c); continue; }
+        // Orphaned: check if listing belongs to this org
+        if (!c.inmobiliariaId && c.propertyId) {
+          const listing = store.getListingById(c.propertyId);
+          if (listing && (listing.creator_user_id === inmId ||
+            (Array.isArray(listing.agencies) && listing.agencies.some(a => a.user_id === inmId)))) {
+            convs.push(c);
+          }
+        }
+      }
     }
-    // Sum unreads — only for conversations where user is a direct participant
+    // Sum unreads — use actual unreadBroker count, not a flat 1
     const count = convs.reduce((n, c) => {
       const isClientHere = c.clientId === user.sub;
       const isAssigned   = c.brokerId === user.sub;
-      const isUnclaimed  = c.inmobiliariaId && !c.brokerId;
       if (isClientHere) return n + (c.unreadClient || 0);
       if (isAssigned)   return n + (c.unreadBroker || 0);
-      if (isUnclaimed)  return n + 1; // count each unclaimed org convo as 1 pending item
-      return n;
+      // Unclaimed org conversation: use actual unread count
+      return n + (c.unreadBroker || 0);
     }, 0);
     return res.json({ count });
   }
@@ -323,7 +333,17 @@ router.get('/:id', requireLogin, async (req, res) => {
   const userInmId = fullUser
     ? (['inmobiliaria', 'constructora'].includes(fullUser.role) ? fullUser.id : fullUser.inmobiliaria_id)
     : null;
-  const isOrgUnclaimed = isPro && conv.inmobiliariaId && conv.inmobiliariaId === userInmId && !conv.brokerId;
+  // Org-scoped unclaimed: conversation belongs to this org, or has no broker/org
+  // and was started on a listing the inmobiliaria owns.
+  const isOrgUnclaimed = isPro && userInmId && !conv.brokerId && (
+    conv.inmobiliariaId === userInmId ||
+    // Orphaned conversations (no inmobiliariaId) — check if the listing belongs to this org
+    (!conv.inmobiliariaId && conv.propertyId && (() => {
+      const listing = store.getListingById(conv.propertyId);
+      return listing && (listing.creator_user_id === userInmId ||
+        (Array.isArray(listing.agencies) && listing.agencies.some(a => a.user_id === userInmId)));
+    })())
+  );
 
   if (!isClient && !isAssignedBroker && !isOrgUnclaimed && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
@@ -762,18 +782,24 @@ router.put('/:id/read', requireLogin, (req, res) => {
   const conv = store.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Conversación no encontrada.' });
 
-  // Strict: only the assigned broker, the client, or admin can mark read.
-  // Org agents cannot mark-read conversations they haven't claimed.
   const isClientSide     = conv.clientId === user.sub;
   const isAssignedBroker = conv.brokerId && conv.brokerId === user.sub;
   const isAdmin          = user.role === 'admin';
 
-  if (!isClientSide && !isAssignedBroker && !isAdmin) {
+  // Inmobiliaria/constructora owners can mark-read ANY conversation in their
+  // org — including unclaimed ones (brokerId is null). Without this, the
+  // unreadBroker counter never clears for org conversations the owner views.
+  const fullUser = store.getUserById(user.sub);
+  const userInmId = effectiveInmId(fullUser);
+  const isOrgOwner = userInmId && ['inmobiliaria', 'constructora'].includes(fullUser?.role)
+    && (conv.inmobiliariaId === userInmId || (!conv.brokerId && !conv.inmobiliariaId));
+
+  if (!isClientSide && !isAssignedBroker && !isOrgOwner && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
   }
 
   if (isClientSide) conv.unreadClient = 0;
-  if (isAssignedBroker || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
+  if (isAssignedBroker || isOrgOwner || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
 
   store.saveConversation(conv);
   res.json({ ok: true, unreadClient: conv.unreadClient || 0, unreadBroker: conv.unreadBroker || 0 });
