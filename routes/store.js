@@ -616,7 +616,7 @@ function getListingById(id) {
 }
 
 function getListings(filters = {}) {
-  let items = _submissions.filter(s => s.status === 'approved').map(hydrateSubmission);
+  let items = _submissions.filter(s => s.status === 'approved' && s.submission_type !== 'agency_claim').map(hydrateSubmission);
 
   if (filters.type) {
     if (filters.type === 'proyecto') {
