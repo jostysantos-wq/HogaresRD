@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HogaresRD — Panel de Administración</title>
   <link rel="stylesheet" href="/css/core.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin async></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -294,9 +293,9 @@
     .btn-merge svg { width: 15px; height: 15px; fill: #fff; }
 
     /* MINI MAP */
-    .sub-map-wrap { padding: 0 1.4rem 0.9rem; width: 100%; box-sizing: border-box; clear: both; }
+    .sub-map-wrap { padding: 0 1.4rem 0.9rem; width: 100%; box-sizing: border-box; clear: both; flex-shrink: 0; }
     .sub-map-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4d6a8a; margin-bottom: 0.4rem; }
-    .admin-map { height: 170px; width: 100%; border-radius: 10px; border: 1px solid #d0dcea; }
+    .admin-map { height: 200px; width: 100%; border-radius: 10px; border: 1px solid #d0dcea; z-index: 1; position: relative; }
 
     /* ── LEADS ──────────────────────────────────────────────────── */
     .leads-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
@@ -2164,20 +2163,44 @@
         </div>`;
     }).join('');
 
-    rendered.forEach(s => {
-      if (!s.lat || !s.lng) return;
-      const mapId = `amap-${s.id}`;
-      if (adminMaps[s.id]) { adminMaps[s.id].remove(); delete adminMaps[s.id]; }
-      const el = document.getElementById(mapId);
-      if (!el) return;
-      const m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
-        .setView([parseFloat(s.lat), parseFloat(s.lng)], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18 }).addTo(m);
-      L.marker([parseFloat(s.lat), parseFloat(s.lng)]).addTo(m);
-      adminMaps[s.id] = m;
-      // Force tile reload after layout settles — fixes blank tiles
-      setTimeout(() => m.invalidateSize(), 300);
-    });
+    // Initialize Apple Maps for listings with coordinates
+    const mapsToInit = rendered.filter(s => s.lat && s.lng);
+    if (mapsToInit.length && typeof mapkit !== 'undefined') {
+      (async () => {
+        try {
+          // Get MapKit token
+          if (!window._mkToken) {
+            const res = await fetch('/api/mapkit-token');
+            const data = await res.json();
+            window._mkToken = data.token;
+          }
+          if (!window._mkToken) return;
+          try { mapkit.init({ authorizationCallback: done => done(window._mkToken) }); } catch {}
+
+          mapsToInit.forEach(s => {
+            const mapId = `amap-${s.id}`;
+            if (adminMaps[s.id]) { try { adminMaps[s.id].destroy(); } catch {} delete adminMaps[s.id]; }
+            const el = document.getElementById(mapId);
+            if (!el) return;
+            const lat = parseFloat(s.lat), lng = parseFloat(s.lng);
+            const m = new mapkit.Map(el, {
+              center: new mapkit.Coordinate(lat, lng),
+              showsCompass: mapkit.FeatureVisibility.Hidden,
+              showsZoomControl: false,
+              showsMapTypeControl: false,
+              isScrollEnabled: false,
+              isZoomEnabled: false,
+            });
+            m.setCameraDistanceAnimated(4000);
+            m.addAnnotation(new mapkit.MarkerAnnotation(
+              new mapkit.Coordinate(lat, lng),
+              { color: '#006AFF', displayPriority: mapkit.Annotation.DisplayPriority.Required }
+            ));
+            adminMaps[s.id] = m;
+          });
+        } catch (e) { console.warn('[admin] MapKit init error:', e.message); }
+      })();
+    }
   }
 
   function mergeAgency(id) {
