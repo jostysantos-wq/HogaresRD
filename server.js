@@ -2476,13 +2476,19 @@ cron.schedule('0 8 * * *', () => {
 }, { timezone: 'America/Santo_Domingo' });
 
 // ── Cron: AI listing monitor (daily at 6am) ─────────────────────────
-cron.schedule('0 6 * * *', () => {
-  console.log('[Cron] Starting AI listing monitor scan...');
-  const { runMonitorScan } = require('./routes/ai-monitor');
-  runMonitorScan()
-    .then(r => console.log(`[Cron] Monitor scan done: ${r?.totalFlags || 0} issues, ${r?.flaggedListings || 0} listings flagged`))
-    .catch(e => console.error('[Cron] Monitor scan error:', e.message));
-}, { timezone: 'America/Santo_Domingo' });
+// AI monitor cron disabled — enable for launch by setting ENABLE_AI_MONITOR=1
+if (process.env.ENABLE_AI_MONITOR === '1') {
+  cron.schedule('0 6 * * *', () => {
+    console.log('[Cron] Starting AI listing monitor scan...');
+    const { runMonitorScan } = require('./routes/ai-monitor');
+    runMonitorScan()
+      .then(r => console.log(`[Cron] Monitor scan done: ${r?.totalFlags || 0} issues, ${r?.flaggedListings || 0} listings flagged`))
+      .catch(e => console.error('[Cron] Monitor scan error:', e.message));
+  }, { timezone: 'America/Santo_Domingo' });
+  console.log('[ai-monitor] Daily cron enabled (6 AM)');
+} else {
+  console.log('[ai-monitor] Daily cron disabled (set ENABLE_AI_MONITOR=1 to enable)');
+}
 
 // ── Admin: AI monitor endpoints ─────────────────────────────────────
 app.get('/admin/monitor/results', adminSessionAuth, (req, res) => {
