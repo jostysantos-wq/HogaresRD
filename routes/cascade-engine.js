@@ -552,10 +552,14 @@ function assignBrokerToInquiry(item, userId) {
       store.saveConversation(conv);
     }
   } else if (item.inquiry_type === 'lead') {
-    // Leads table doesn't have a broker column — update via direct SQL
+    // Update lead: set referred_by so admin panel shows the agent,
+    // status to en_proceso, and store full agent info in _extra
     store.pool.query(
-      `UPDATE leads SET status = 'en_proceso', _extra = jsonb_set(COALESCE(_extra, '{}'), '{claimed_by}', $1::jsonb) WHERE id = $2`,
-      [JSON.stringify({ user_id: userId, name: user.name, email: user.email, phone: user.phone }), item.inquiry_id]
+      `UPDATE leads SET status = 'en_proceso', referred_by = $1, updated_at = $2,
+       _extra = jsonb_set(COALESCE(_extra, '{}'), '{claimed_by}', $3::jsonb) WHERE id = $4`,
+      [userId, new Date().toISOString(),
+       JSON.stringify({ user_id: userId, name: user.name, email: user.email, phone: user.phone }),
+       item.inquiry_id]
     ).catch(err => console.error('[cascade] Lead update error:', err.message));
   }
 }

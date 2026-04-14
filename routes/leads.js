@@ -59,6 +59,10 @@ router.post('/', leadLimiter, (req, res) => {
     refUser = store.getUserByRefToken(lead.ref_token);
     if (refUser) {
       lead.referred_by = refUser.id;
+      // Direct agent ref → lead is already assigned, mark as en_proceso
+      if (['agency', 'broker'].includes(refUser.role)) {
+        lead.status = 'en_proceso';
+      }
       // Inmobiliaria links cascade within team; broker links skip cascade entirely
       if (['inmobiliaria', 'constructora'].includes(refUser.role)) {
         inmobiliariaScope = refUser.id;
