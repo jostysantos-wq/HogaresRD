@@ -161,12 +161,26 @@ struct SubmitListingView: View {
         "Valverde": ["Mao","Esperanza","Laguna Salada"],
     ]
     private let amenitiesList: [(String,String)] = [
+        // Exterior / Recreación
         ("piscina","Piscina"),("jacuzzi","Jacuzzi"),("gym","Gimnasio"),("bbq","Área BBQ"),
-        ("balcon","Balcón / Terraza"),("jardin","Jardín"),("ac","Aire Acondicionado"),
-        ("planta","Planta Eléctrica"),("cisterna","Cisterna / Bomba"),("seguridad","Vigilancia 24/7"),
-        ("camaras","Cámaras CCTV"),("elevador","Elevador"),("amueblado","Amueblado"),
-        ("semi_amueblado","Semi-amueblado"),("paneles_solares","Paneles Solares"),
-        ("vista_mar","Vista al Mar"),("frente_mar","Frente al Mar"),("cancha","Cancha Deportiva")
+        ("cancha","Cancha Deportiva"),("area_juegos","Área de Juegos"),("salon_fiestas","Salón de Fiestas"),
+        ("rooftop","Rooftop / Azotea"),("jardin","Jardín"),("pet_friendly","Pet Friendly"),
+        // Interior / Confort
+        ("balcon","Balcón / Terraza"),("ac","Aire Acondicionado"),("amueblado","Amueblado"),
+        ("semi_amueblado","Semi-amueblado"),("walk_in_closet","Walk-in Closet"),
+        ("cocina_modular","Cocina Modular"),("cuarto_servicio","Cuarto de Servicio"),
+        ("deposito","Depósito / Storage"),("lavanderia","Área de Lavandería"),
+        // Infraestructura
+        ("planta","Planta Eléctrica"),("cisterna","Cisterna / Bomba"),("elevador","Elevador"),
+        ("paneles_solares","Paneles Solares"),("gas_central","Gas Central"),
+        ("agua_caliente","Agua Caliente"),("fibra_optica","Fibra Óptica / Internet"),
+        // Seguridad
+        ("seguridad","Vigilancia 24/7"),("camaras","Cámaras CCTV"),
+        ("control_acceso","Control de Acceso"),("portero","Portero / Lobby"),
+        // Vistas / Ubicación
+        ("vista_mar","Vista al Mar"),("frente_mar","Frente al Mar"),
+        ("vista_montana","Vista a la Montaña"),("vista_ciudad","Vista a la Ciudad"),
+        ("cerca_playa","Cerca de la Playa"),("zona_tranquila","Zona Tranquila"),
     ]
 
     private var needsBedsBaths: Bool {
