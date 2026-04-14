@@ -879,13 +879,13 @@
           <table class="leads-table">
             <thead>
               <tr>
-                <th>Contacto</th><th>Propiedad</th><th>Intención</th>
+                <th>Contacto</th><th>Propiedad</th><th>Agente Asignado</th><th>Intención</th>
                 <th>Financiamiento</th><th>Presupuesto</th><th>Plazo</th>
                 <th>Estado</th><th>Fecha</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="leadsTableBody">
-              <tr><td colspan="9" class="leads-empty">Cargando leads...</td></tr>
+              <tr><td colspan="10" class="leads-empty">Cargando leads...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2386,7 +2386,7 @@
       updateLeadStats(data);
       renderLeads(currentLeadFilter === 'all' ? data : data.filter(l => l.status === currentLeadFilter));
     }).catch(() => {
-      document.getElementById('leadsTableBody').innerHTML = '<tr><td colspan="9" class="leads-empty">Error al cargar leads.</td></tr>';
+      document.getElementById('leadsTableBody').innerHTML = '<tr><td colspan="10" class="leads-empty">Error al cargar leads.</td></tr>';
     });
     // Load orphaned leads
     fetch('/admin/orphaned-leads').then(r => r.json()).then(data => {
@@ -2431,17 +2431,21 @@
   }
   function renderLeads(leads) {
     const tbody = document.getElementById('leadsTableBody');
-    if (!leads.length) { tbody.innerHTML = '<tr><td colspan="9" class="leads-empty">No hay leads en esta categoría.</td></tr>'; return; }
+    if (!leads.length) { tbody.innerHTML = '<tr><td colspan="10" class="leads-empty">No hay leads en esta categoría.</td></tr>'; return; }
     const financingMap = { efectivo: 'Efectivo', banco: 'Bancario', desarrollador: 'Desarrollador', vendedor: 'Vendedor' };
     const contactMap   = { whatsapp: '📱 WhatsApp', llamada: '📞 Llamada', email: '✉️ Email' };
     tbody.innerHTML = leads.map(l => {
       const date = new Date(l.created_at).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' });
       const agStr = (l.agencies || []).map(a => a.name || a).join(', ') || '—';
       const intentMap = { comprar: 'Comprar', alquilar: 'Alquilar', invertir: 'Invertir' };
+      const agentCell = l.agent_name
+        ? `<div style="font-weight:600;font-size:0.82rem;">${l.agent_name}</div><div style="font-size:0.7rem;color:#7a93b0;">${l.agent_email || ''}</div>`
+        : `<div style="color:#b45309;font-size:0.78rem;font-weight:600;">Sin asignar</div><button onclick="assignLeadAgent('${l.id}')" style="margin-top:0.3rem;font-size:0.7rem;font-weight:700;padding:0.25rem 0.6rem;border:1.5px solid var(--accent);border-radius:6px;background:none;color:var(--accent);cursor:pointer;">Asignar</button>`;
       return `
         <tr id="lead-row-${l.id}">
           <td><div class="lead-name">${l.name}</div><div class="lead-contact">📞 ${l.phone}</div>${l.email ? `<div class="lead-contact">✉️ ${l.email}</div>` : ''}<div class="lead-contact" style="font-size:0.7rem;color:#7a93b0;">${contactMap[l.contact_method] || '—'}</div></td>
           <td><div class="lead-listing">${l.listing_title || '—'}<small>${l.listing_price ? '$' + Number(l.listing_price).toLocaleString() : ''} · ${l.listing_type || ''}</small><small>${agStr}</small></div></td>
+          <td>${agentCell}</td>
           <td>${intentMap[l.intent] || l.intent || '—'}</td>
           <td><div>${financingMap[l.financing] || l.financing || '—'}</div>${l.pre_approved ? '<div style="font-size:0.7rem;color:var(--success);font-weight:600;">✓ Pre-aprobado</div>' : ''}</td>
           <td>${l.budget ? '$' + l.budget : '—'}</td>
@@ -2465,6 +2469,27 @@
   function exportLeads() {
     const qs = currentLeadFilter !== 'all' ? `?status=${currentLeadFilter}` : '';
     window.location.href = `/api/leads/export${qs}`;
+  }
+
+  function assignLeadAgent(leadId) {
+    const email = prompt('Ingresa el email del agente a asignar:');
+    if (!email) return;
+    // Find user by email
+    fetch('/admin/users').then(r => r.json()).then(users => {
+      const agent = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+      if (!agent) return alert('No se encontró un usuario con ese email.');
+      if (!['broker','agency','inmobiliaria','constructora'].includes(agent.role))
+        return alert('El usuario no es un agente (rol: ' + agent.role + ')');
+      fetch(`/api/leads/${leadId}/assign`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: agent.id })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert(data.error);
+        alert('Lead asignado a ' + (data.agent_name || agent.name));
+        loadLeads();
+      }).catch(() => alert('Error al asignar'));
+    }).catch(() => alert('Error cargando usuarios'));
   }
 
   // ── Ads ───────────────────────────────────────────────────────

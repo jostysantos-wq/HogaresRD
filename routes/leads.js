@@ -105,6 +105,12 @@ router.get('/', async (req, res) => {
     const result = await store.pool.query(sql, params);
     const leads = result.rows.map(r => {
       if (typeof r.agencies === 'string') r.agencies = JSON.parse(r.agencies);
+      // Resolve referred_by to agent name for admin display
+      if (r.referred_by) {
+        const agent = store.getUserById(r.referred_by);
+        r.agent_name = agent?.name || null;
+        r.agent_email = agent?.email || null;
+      }
       return r;
     });
     res.json(leads);
@@ -165,6 +171,38 @@ router.put('/:id', async (req, res) => {
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PUT /api/leads/:id/assign  (admin — assign agent to lead) ──
+router.put('/:id/assign', async (req, res) => {
+  try {
+    const { agent_id } = req.body;
+    if (!agent_id) return res.status(400).json({ error: 'agent_id requerido' });
+    const agent = store.getUserById(agent_id);
+    if (!agent) return res.status(404).json({ error: 'Agente no encontrado' });
+
+    const result = await store.pool.query(
+      `UPDATE leads SET referred_by = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+      [agent_id, new Date().toISOString(), req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    // Notify the assigned agent
+    const { notify: pushNotify } = require('./push');
+    pushNotify(agent_id, {
+      type: 'new_application',
+      title: 'Nuevo lead asignado',
+      body: `${result.rows[0].name} — ${result.rows[0].listing_title}`,
+      url: '/broker',
+    });
+
+    const lead = result.rows[0];
+    lead.agent_name = agent.name;
+    lead.agent_email = agent.email;
+    res.json(lead);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
