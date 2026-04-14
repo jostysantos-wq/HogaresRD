@@ -73,6 +73,7 @@ struct LeadApplicationView: View {
     @State private var pickerTargetSlot: DocSlot?
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var showPhotoPicker = false
+    @State private var showFilePicker = false
     @State private var showDocumentPicker = false
 
     // ── Submit state ─────────────────────────────────────────────
@@ -417,11 +418,19 @@ struct LeadApplicationView: View {
                 Spacer()
             }
             HStack(spacing: 6) {
-                chipButton("Adjuntar",
-                           active: { if case .attached = state { return true }; return false }(),
-                           accent: .rdGreen) {
-                    pickerTargetSlot = slot
-                    showPhotoPicker = true
+                Menu {
+                    Button {
+                        pickerTargetSlot = slot
+                        showPhotoPicker = true
+                    } label: { Label("Fotos", systemImage: "photo.on.rectangle") }
+                    Button {
+                        pickerTargetSlot = slot
+                        showFilePicker = true
+                    } label: { Label("Archivos", systemImage: "folder") }
+                } label: {
+                    chipLabel("Adjuntar",
+                              active: { if case .attached = state { return true }; return false }(),
+                              accent: .rdGreen)
                 }
                 chipButton("Después",
                            active: state == .deferred,
@@ -473,6 +482,24 @@ struct LeadApplicationView: View {
                         pickerTargetSlot = nil
                     }
                 }
+            }
+        }
+        .fileImporter(isPresented: Binding(
+            get: { showFilePicker && pickerTargetSlot?.type == slot.type },
+            set: { if !$0 { showFilePicker = false } }
+        ), allowedContentTypes: [.pdf, .jpeg, .png, .heic, .data]) { result in
+            guard let slot = pickerTargetSlot else { return }
+            switch result {
+            case .success(let url):
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                guard let data = try? Data(contentsOf: url) else { return }
+                let fname = url.lastPathComponent
+                docStates[slot.type] = .attached(data: data, filename: fname)
+                pickerTargetSlot = nil
+                showFilePicker = false
+            case .failure:
+                break
             }
         }
     }
@@ -833,5 +860,16 @@ struct LeadApplicationView: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+
+    private func chipLabel(_ title: String, active: Bool, accent: Color) -> some View {
+        Text(title)
+            .font(.caption.weight(.bold))
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background(active ? accent : Color(.systemBackground), in: Capsule())
+            .foregroundStyle(active ? .white : .secondary)
+            .overlay(
+                Capsule().stroke(active ? accent : Color(.systemGray4), lineWidth: 1)
+            )
     }
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 // MARK: - My Documents (Buyer document submission)
 
@@ -9,6 +10,7 @@ struct MyDocumentsView: View {
     @State private var loading = true
     @State private var uploadingFor: String? = nil // applicationId being uploaded to
     @State private var showPicker = false
+    @State private var showFileImporter = false
     @State private var pickerContext: PickerContext?
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var successMessage: String?
@@ -73,6 +75,19 @@ struct MyDocumentsView: View {
             guard let ctx = pickerContext, let item = selectedPhotos.first else { return }
             Task { await handlePickedPhoto(item: item, context: ctx) }
             selectedPhotos = []
+        }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .jpeg, .png, .heic, .data], allowsMultipleSelection: false) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first, let ctx = pickerContext else { return }
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                guard let data = try? Data(contentsOf: url) else { return }
+                let filename = url.lastPathComponent
+                Task { await handleFileData(data: data, filename: filename, context: ctx) }
+            case .failure:
+                break
+            }
         }
     }
 
@@ -153,9 +168,19 @@ struct MyDocumentsView: View {
 
                 let verStatus = pmt["verification_status"] as? String ?? "none"
                 if verStatus == "none" || verStatus == "rejected" {
-                    Button {
-                        pickerContext = PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")
-                        showPicker = true
+                    Menu {
+                        Button {
+                            pickerContext = PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")
+                            showPicker = true
+                        } label: {
+                            Label("Desde Fotos", systemImage: "photo.on.rectangle")
+                        }
+                        Button {
+                            pickerContext = PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")
+                            showFileImporter = true
+                        } label: {
+                            Label("Desde Archivos", systemImage: "folder")
+                        }
                     } label: {
                         Label("Subir comprobante", systemImage: "arrow.up.doc.fill")
                             .font(.subheadline.bold())
@@ -164,7 +189,6 @@ struct MyDocumentsView: View {
                             .padding(.vertical, 11)
                             .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.plain)
                     .disabled(uploadingFor == appId)
                     if verStatus == "rejected" {
                         Label("Rechazado — sube un nuevo comprobante", systemImage: "exclamationmark.circle")
@@ -258,15 +282,24 @@ struct MyDocumentsView: View {
             Spacer()
 
             if reviewStatus == nil || reviewStatus == "rejected" {
-                Button {
-                    pickerContext = PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)
-                    showPicker = true
+                Menu {
+                    Button {
+                        pickerContext = PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)
+                        showPicker = true
+                    } label: {
+                        Label("Fotos", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        pickerContext = PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)
+                        showFileImporter = true
+                    } label: {
+                        Label("Archivos", systemImage: "folder")
+                    }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.rdBlue)
                 }
-                .buttonStyle(.plain)
                 .disabled(uploadingFor != nil)
             } else if reviewStatus == "approved" {
                 Image(systemName: "checkmark.circle.fill")
@@ -303,9 +336,19 @@ struct MyDocumentsView: View {
             Spacer()
 
             if status == "pending" || status == "rejected" {
-                Button {
-                    pickerContext = PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)
-                    showPicker = true
+                Menu {
+                    Button {
+                        pickerContext = PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)
+                        showPicker = true
+                    } label: {
+                        Label("Fotos", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        pickerContext = PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)
+                        showFileImporter = true
+                    } label: {
+                        Label("Archivos", systemImage: "folder")
+                    }
                 } label: {
                     Text("Subir prueba")
                         .font(.caption.bold())
@@ -313,7 +356,6 @@ struct MyDocumentsView: View {
                         .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(Color.rdBlue, in: Capsule())
                 }
-                .buttonStyle(.plain)
                 .disabled(uploadingFor != nil)
             }
         }
@@ -361,6 +403,59 @@ struct MyDocumentsView: View {
                     type: context.type,
                     fileData: data,
                     filename: filename
+                )
+            }
+            withAnimation { successMessage = "\(context.label) subido correctamente" }
+            await load()
+        } catch {
+            withAnimation { successMessage = nil }
+        }
+        uploadingFor = nil
+    }
+
+    // MARK: - File Handling (from Files app)
+
+    private func handleFileData(data: Data, filename: String, context: PickerContext) async {
+        // Determine MIME type from extension
+        let ext = (filename as NSString).pathExtension.lowercased()
+        let mimeType: String
+        switch ext {
+        case "pdf": mimeType = "application/pdf"
+        case "png": mimeType = "image/png"
+        case "jpg", "jpeg": mimeType = "image/jpeg"
+        case "heic": mimeType = "image/heic"
+        default: mimeType = "application/octet-stream"
+        }
+
+        uploadingFor = context.applicationId
+        do {
+            if context.type == "payment_receipt" {
+                try await api.uploadPaymentReceipt(
+                    applicationId: context.applicationId,
+                    amount: "0", notes: "",
+                    fileData: data, filename: filename
+                )
+            } else if context.type == "installment_proof", let instId = context.requestId {
+                guard let t = api.token else { throw APIError.server("No autenticado") }
+                let url = URL(string: "\(APIService.baseURL)/api/applications/\(context.applicationId)/payment-plan/\(instId)/upload")!
+                let boundary = "Boundary-\(UUID().uuidString)"
+                var req = URLRequest(url: url)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+                req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                var body = Data()
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"proof\"; filename=\"\(filename)\"\r\nContent-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+                body.append(data)
+                body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+                req.httpBody = body
+                let (_, _) = try await URLSession.shared.data(for: req)
+            } else {
+                try await api.uploadDocument(
+                    applicationId: context.applicationId,
+                    requestId: context.requestId,
+                    type: context.type,
+                    fileData: data, filename: filename
                 )
             }
             withAnimation { successMessage = "\(context.label) subido correctamente" }
