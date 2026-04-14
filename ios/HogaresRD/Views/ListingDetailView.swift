@@ -212,36 +212,19 @@ struct ListingDetailView: View {
                             }
                         }
 
-                        // ── Características y Amenidades (merged) ─────
-                        if (l.tags != nil && !l.tags!.isEmpty) || !l.amenities.isEmpty {
-                            sectionBlock("Características y Amenidades") {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    if let tags = l.tags, !tags.isEmpty {
-                                        FlowLayout(spacing: 8) {
-                                            ForEach(tags, id: \.self) { tag in
-                                                Text(tag)
-                                                    .font(.caption).bold()
-                                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                                    .background(Color.rdRed.opacity(0.08))
-                                                    .foregroundStyle(Color.rdRed)
-                                                    .clipShape(Capsule())
-                                            }
-                                        }
-                                    }
-                                    if !l.amenities.isEmpty {
-                                        if l.tags != nil && !l.tags!.isEmpty {
-                                            Divider()
-                                        }
-                                        FlowLayout(spacing: 8) {
-                                            ForEach(l.amenities, id: \.self) { a in
-                                                Text(a)
-                                                    .font(.caption).bold()
-                                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                                    .background(Color.rdBlue.opacity(0.08))
-                                                    .foregroundStyle(Color.rdBlue)
-                                                    .clipShape(Capsule())
-                                            }
-                                        }
+                        // ── Amenidades ─────────────────────────────────
+                        // Tags are hidden from the detail view — they power search/
+                        // discovery but add visual noise next to amenities.
+                        if !l.amenities.isEmpty {
+                            sectionBlock("Amenidades") {
+                                FlowLayout(spacing: 8) {
+                                    ForEach(l.amenities, id: \.self) { a in
+                                        Text(a)
+                                            .font(.caption).bold()
+                                            .padding(.horizontal, 10).padding(.vertical, 5)
+                                            .background(Color.rdBlue.opacity(0.08))
+                                            .foregroundStyle(Color.rdBlue)
+                                            .clipShape(Capsule())
                                     }
                                 }
                             }
