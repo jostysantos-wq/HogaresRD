@@ -11,6 +11,7 @@ struct MyDocumentsView: View {
     @State private var uploadingFor: String? = nil // applicationId being uploaded to
     @State private var showPicker = false
     @State private var showFileImporter = false
+    @State private var showCamera = false
     @State private var pickerContext: PickerContext?
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var successMessage: String?
@@ -89,6 +90,45 @@ struct MyDocumentsView: View {
                 break
             }
         }
+        .sheet(isPresented: $showCamera) {
+            if let ctx = pickerContext {
+                CameraPickerView { image in
+                    showCamera = false
+                    guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+                    let filename = "foto_\(Int(Date().timeIntervalSince1970)).jpg"
+                    Task { await handleFileData(data: data, filename: filename, context: ctx) }
+                }
+                .ignoresSafeArea()
+            }
+        }
+    }
+
+    // MARK: - Unified Upload Menu
+
+    private func uploadMenu<Label: View>(ctx: PickerContext, @ViewBuilder label: () -> Label) -> some View {
+        Menu {
+            Button {
+                pickerContext = ctx
+                showCamera = true
+            } label: {
+                SwiftUI.Label("Tomar foto", systemImage: "camera.fill")
+            }
+            Button {
+                pickerContext = ctx
+                showPicker = true
+            } label: {
+                SwiftUI.Label("Elegir de Fotos", systemImage: "photo.on.rectangle")
+            }
+            Button {
+                pickerContext = ctx
+                showFileImporter = true
+            } label: {
+                SwiftUI.Label("Elegir de Archivos", systemImage: "folder")
+            }
+        } label: {
+            label()
+        }
+        .disabled(uploadingFor != nil)
     }
 
     // MARK: - Load
@@ -168,20 +208,7 @@ struct MyDocumentsView: View {
 
                 let verStatus = pmt["verification_status"] as? String ?? "none"
                 if verStatus == "none" || verStatus == "rejected" {
-                    Menu {
-                        Button {
-                            pickerContext = PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")
-                            showPicker = true
-                        } label: {
-                            Label("Desde Fotos", systemImage: "photo.on.rectangle")
-                        }
-                        Button {
-                            pickerContext = PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")
-                            showFileImporter = true
-                        } label: {
-                            Label("Desde Archivos", systemImage: "folder")
-                        }
-                    } label: {
+                    uploadMenu(ctx: PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")) {
                         Label("Subir comprobante", systemImage: "arrow.up.doc.fill")
                             .font(.subheadline.bold())
                             .foregroundStyle(.white)
@@ -282,25 +309,11 @@ struct MyDocumentsView: View {
             Spacer()
 
             if reviewStatus == nil || reviewStatus == "rejected" {
-                Menu {
-                    Button {
-                        pickerContext = PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)
-                        showPicker = true
-                    } label: {
-                        Label("Fotos", systemImage: "photo.on.rectangle")
-                    }
-                    Button {
-                        pickerContext = PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)
-                        showFileImporter = true
-                    } label: {
-                        Label("Archivos", systemImage: "folder")
-                    }
-                } label: {
+                uploadMenu(ctx: PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.rdBlue)
                 }
-                .disabled(uploadingFor != nil)
             } else if reviewStatus == "approved" {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 24))
@@ -336,27 +349,13 @@ struct MyDocumentsView: View {
             Spacer()
 
             if status == "pending" || status == "rejected" {
-                Menu {
-                    Button {
-                        pickerContext = PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)
-                        showPicker = true
-                    } label: {
-                        Label("Fotos", systemImage: "photo.on.rectangle")
-                    }
-                    Button {
-                        pickerContext = PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)
-                        showFileImporter = true
-                    } label: {
-                        Label("Archivos", systemImage: "folder")
-                    }
-                } label: {
+                uploadMenu(ctx: PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)) {
                     Text("Subir prueba")
                         .font(.caption.bold())
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(Color.rdBlue, in: Capsule())
                 }
-                .disabled(uploadingFor != nil)
             }
         }
         .padding(10)
@@ -512,5 +511,38 @@ struct MyDocumentsView: View {
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(color.opacity(0.1))
             .clipShape(Capsule())
+    }
+}
+
+// MARK: - Camera Picker (UIImagePickerController with .camera source)
+
+struct CameraPickerView: UIViewControllerRepresentable {
+    var onCapture: (UIImage) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.allowsEditing = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onCapture: onCapture) }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage) -> Void
+        init(onCapture: @escaping (UIImage) -> Void) { self.onCapture = onCapture }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            picker.dismiss(animated: true)
+            if let image = info[.originalImage] as? UIImage { onCapture(image) }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
     }
 }

@@ -74,6 +74,7 @@ struct LeadApplicationView: View {
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
+    @State private var showCameraPicker = false
     @State private var showDocumentPicker = false
 
     // ── Submit state ─────────────────────────────────────────────
@@ -421,12 +422,16 @@ struct LeadApplicationView: View {
                 Menu {
                     Button {
                         pickerTargetSlot = slot
+                        showCameraPicker = true
+                    } label: { Label("Tomar foto", systemImage: "camera.fill") }
+                    Button {
+                        pickerTargetSlot = slot
                         showPhotoPicker = true
-                    } label: { Label("Fotos", systemImage: "photo.on.rectangle") }
+                    } label: { Label("Elegir de Fotos", systemImage: "photo.on.rectangle") }
                     Button {
                         pickerTargetSlot = slot
                         showFilePicker = true
-                    } label: { Label("Archivos", systemImage: "folder") }
+                    } label: { Label("Elegir de Archivos", systemImage: "folder") }
                 } label: {
                     chipLabel("Adjuntar",
                               active: { if case .attached = state { return true }; return false }(),
@@ -500,6 +505,21 @@ struct LeadApplicationView: View {
                 showFilePicker = false
             case .failure:
                 break
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { showCameraPicker && pickerTargetSlot?.type == slot.type },
+            set: { if !$0 { showCameraPicker = false } }
+        )) {
+            if let slot = pickerTargetSlot {
+                CameraPickerView { image in
+                    showCameraPicker = false
+                    guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+                    let fname = "\(slot.type)_\(Int(Date().timeIntervalSince1970)).jpg"
+                    docStates[slot.type] = .attached(data: data, filename: fname)
+                    pickerTargetSlot = nil
+                }
+                .ignoresSafeArea()
             }
         }
     }
