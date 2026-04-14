@@ -10,7 +10,7 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter = 0 // 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas, 5=Vencidas, 6=No Aplica
+    @State private var filter = 1 // Start on Pendientes: 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
 
@@ -85,108 +85,129 @@ struct TasksView: View {
                         .padding(.vertical, 10)
                     }
 
-                    // Filter tabs
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            filterChip("Todas", tag: 0)
-                            filterChip("Pendientes", tag: 1)
-                            filterChip("En Progreso", tag: 2)
-                            filterChip("Por Revisar", tag: 3)
-                            filterChip("Completadas", tag: 4)
-                            filterChip("Vencidas", tag: 5)
-                            filterChip("No Aplica", tag: 6)
+                    // Swipeable filter tabs
+                    HStack(spacing: 0) {
+                        ForEach([
+                            (0, "Todas"), (1, "Pendientes"), (2, "En Progreso"),
+                            (3, "Por Revisar"), (4, "Completadas"),
+                        ], id: \.0) { tag, label in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { filter = tag }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text(label)
+                                        .font(.caption.bold())
+                                        .foregroundStyle(filter == tag ? Color.rdBlue : .secondary)
+                                    Rectangle()
+                                        .fill(filter == tag ? Color.rdBlue : .clear)
+                                        .frame(height: 2.5)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity)
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
                     }
+                    .padding(.horizontal, 4)
 
-                    if filteredTasks.isEmpty {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            Image(systemName: "checklist")
-                                .font(.system(size: 48))
-                                .foregroundStyle(Color(.tertiaryLabel))
-                            Text("No hay tareas")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    } else {
-                        List {
-                            if !activeTasks.isEmpty {
-                                Section("Activas (\(activeTasks.count))") {
-                                    ForEach(activeTasks) { task in
-                                        Button { selectedTask = task } label: {
-                                            TaskRow(task: task, currentUserId: currentUserId)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .swipeActions(edge: .leading) {
-                                            if task.assignedTo == currentUserId
-                                                && (task.status == "pendiente" || task.status == "en_progreso") {
-                                                Button {
-                                                    Task { await completeTask(task) }
-                                                } label: {
-                                                    Label(task.requiresApproval ? "Enviar" : "Completar",
-                                                          systemImage: "checkmark.circle.fill")
-                                                }
-                                                .tint(Color.rdGreen)
-                                            }
-                                        }
-                                        .swipeActions(edge: .trailing) {
-                                            if task.assignedTo == currentUserId
-                                                && task.status != "completada"
-                                                && task.status != "no_aplica" {
-                                                Button {
-                                                    Task { await markTaskNA(task) }
-                                                } label: {
-                                                    Label("No Aplica", systemImage: "minus.circle")
-                                                }
-                                                .tint(.gray)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if !completedTasks.isEmpty {
-                                Section("Finalizadas (\(completedTasks.count))") {
-                                    ForEach(completedTasks) { task in
-                                        Button { selectedTask = task } label: {
-                                            TaskRow(task: task, currentUserId: currentUserId)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                            }
-                        }
+                    // Swipeable content
+                    TabView(selection: $filter) {
+                        taskListPage(tasks).tag(0)
+                        taskListPage(tasks.filter { $0.status == "pendiente" }).tag(1)
+                        taskListPage(tasks.filter { $0.status == "en_progreso" }).tag(2)
+                        taskListPage(tasks.filter { $0.status == "pending_review" }).tag(3)
+                        taskListPage(tasks.filter { Self.finishedStatuses.contains($0.status) }).tag(4)
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.easeInOut(duration: 0.2), value: filter)
                 }
             }
         }
         .navigationTitle("Tareas")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if canCreate {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showCreate = true
-                    } label: {
-                        Image(systemName: "plus")
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showCreate = true } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3).foregroundStyle(Color.rdBlue)
                     }
                 }
             }
         }
-        .task { await load() }
-        .refreshable { await load() }
         .sheet(isPresented: $showCreate) {
-            CreateTaskSheet(onCreated: { newTask in
-                tasks.insert(newTask, at: 0)
-            })
-            .environmentObject(api)
+            CreateTaskSheet(onCreated: { _ in Task { await load() } }).environmentObject(api)
         }
         .sheet(item: $selectedTask) { task in
-            TaskDetailSheet(task: task, onComplete: {
-                Task { await load() }
-            })
-            .environmentObject(api)
+            NavigationStack {
+                TaskDetailSheet(task: task, onComplete: { Task { await load() } }).environmentObject(api)
+            }
+        }
+        .task { await load() }
+    }
+
+    // MARK: - Task List Page (for each swipeable tab)
+
+    @ViewBuilder
+    private func taskListPage(_ items: [TaskItem]) -> some View {
+        if items.isEmpty {
+            VStack(spacing: 12) {
+                Spacer()
+                Image(systemName: "checklist")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color(.tertiaryLabel))
+                Text("No hay tareas")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Spacer()
+            }
+        } else {
+            let active = items.filter { !Self.finishedStatuses.contains($0.status) }
+            let done = items.filter { Self.finishedStatuses.contains($0.status) }
+            List {
+                if !active.isEmpty {
+                    Section("Activas (\(active.count))") {
+                        ForEach(active) { task in
+                            Button { selectedTask = task } label: {
+                                TaskRow(task: task, currentUserId: currentUserId)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .leading) {
+                                if task.assignedTo == currentUserId
+                                    && (task.status == "pendiente" || task.status == "en_progreso") {
+                                    Button {
+                                        Task { await completeTask(task) }
+                                    } label: {
+                                        Label(task.requiresApproval ? "Enviar" : "Completar",
+                                              systemImage: "checkmark.circle.fill")
+                                    }
+                                    .tint(Color.rdGreen)
+                                }
+                            }
+                            .swipeActions(edge: .trailing) {
+                                if task.assignedTo == currentUserId
+                                    && task.status != "completada"
+                                    && task.status != "no_aplica" {
+                                    Button {
+                                        Task { await markTaskNA(task) }
+                                    } label: {
+                                        Label("No Aplica", systemImage: "minus.circle")
+                                    }
+                                    .tint(.gray)
+                                }
+                            }
+                        }
+                    }
+                }
+                if !done.isEmpty {
+                    Section("Finalizadas (\(done.count))") {
+                        ForEach(done) { task in
+                            Button { selectedTask = task } label: {
+                                TaskRow(task: task, currentUserId: currentUserId)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -205,20 +226,6 @@ struct TasksView: View {
         .padding(.vertical, 8).padding(.horizontal, 6)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func filterChip(_ title: String, tag: Int) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.15)) { filter = tag }
-        } label: {
-            Text(title)
-                .font(.caption).bold()
-                .padding(.horizontal, 14).padding(.vertical, 7)
-                .background(filter == tag ? Color(.label) : Color(.secondarySystemFill))
-                .foregroundStyle(filter == tag ? Color(.systemBackground) : .primary)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
