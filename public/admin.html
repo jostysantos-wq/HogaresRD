@@ -1852,6 +1852,17 @@
     else if (page === 'reportes')    { loadReports(); }
     else if (page === 'cascade')     { loadCascade(); }
     else if (page === 'eliminacion') { loadDeletionRequests(); }
+
+    // Clear the badge when the admin visits the page (they've "seen" the items)
+    const pillMap = {
+      leads: 'leadsPill', aplicaciones: 'appsPill', tours: 'toursPill',
+      reportes: 'reportsPill', eliminacion: 'deletionPill',
+    };
+    const pillId = pillMap[page];
+    if (pillId) {
+      const pill = document.getElementById(pillId);
+      if (pill) pill.style.display = 'none';
+    }
   }
 
   function refreshCurrent() {
