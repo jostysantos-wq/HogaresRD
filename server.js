@@ -2475,6 +2475,34 @@ cron.schedule('0 8 * * *', () => {
   } catch (e) { console.error('[Cron] Orphaned leads check error:', e.message); }
 }, { timezone: 'America/Santo_Domingo' });
 
+// ── Cron: AI listing monitor (daily at 6am) ─────────────────────────
+cron.schedule('0 6 * * *', () => {
+  console.log('[Cron] Starting AI listing monitor scan...');
+  const { runMonitorScan } = require('./routes/ai-monitor');
+  runMonitorScan()
+    .then(r => console.log(`[Cron] Monitor scan done: ${r?.totalFlags || 0} issues, ${r?.flaggedListings || 0} listings flagged`))
+    .catch(e => console.error('[Cron] Monitor scan error:', e.message));
+}, { timezone: 'America/Santo_Domingo' });
+
+// ── Admin: AI monitor endpoints ─────────────────────────────────────
+app.get('/admin/monitor/results', adminSessionAuth, (req, res) => {
+  const { getLastScan, isScanRunning } = require('./routes/ai-monitor');
+  res.json({ scan: getLastScan(), running: isScanRunning() });
+});
+
+let _lastManualScan = 0;
+app.post('/admin/monitor/scan', adminSessionAuth, async (req, res) => {
+  const { runMonitorScan, isScanRunning } = require('./routes/ai-monitor');
+  if (isScanRunning()) return res.status(409).json({ error: 'Escaneo en progreso, espera a que termine.' });
+  if (Date.now() - _lastManualScan < 60 * 60 * 1000) {
+    return res.status(429).json({ error: 'Solo puedes ejecutar un escaneo manual cada hora.' });
+  }
+  _lastManualScan = Date.now();
+  res.json({ ok: true, message: 'Escaneo iniciado. Los resultados estarán disponibles en unos segundos.' });
+  // Run in background
+  runMonitorScan().catch(e => console.error('[admin] Manual monitor scan error:', e.message));
+});
+
 // ── Admin: re-run AI review on a listing ─────────────────────────
 app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
   const { reviewListing } = require('./routes/ai-review');

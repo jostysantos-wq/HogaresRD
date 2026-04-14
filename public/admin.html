@@ -809,6 +809,25 @@
           </div>
         </div>
 
+        <!-- AI Monitor Widget -->
+        <div id="monitorWidget" style="margin-top:1.5rem;background:#fff;border-radius:14px;border:1px solid #d0dcea;padding:1.4rem;display:flex;align-items:center;gap:1rem;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:1rem;">
+            <div style="width:42px;height:42px;background:#fef3c7;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:1.2rem;">🤖</span>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Monitor AI de Propiedades</div>
+              <div id="monitorStatus" style="font-size:0.75rem;color:#4d6a8a;">Cargando...</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.8rem;">
+            <div id="monitorCounts" style="display:flex;gap:0.6rem;font-size:0.78rem;"></div>
+            <button onclick="runManualScan()" id="monitorScanBtn" style="font-size:0.78rem;font-weight:700;padding:0.5rem 1rem;border:1.5px solid var(--accent);border-radius:8px;background:none;color:var(--accent);cursor:pointer;white-space:nowrap;">
+              🔍 Ejecutar Escaneo
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── PROPIEDADES PAGE ───────────────────────────────── -->
@@ -3803,6 +3822,68 @@
 
   // ── Init ──────────────────────────────────────────────────────
   // Load submissions data immediately for the stats on dashboard
+  // ── AI Monitor ──────────────────────────────────────────────────
+  function loadMonitorResults() {
+    fetch('/admin/monitor/results').then(r => r.json()).then(data => {
+      const status = document.getElementById('monitorStatus');
+      const counts = document.getElementById('monitorCounts');
+      if (data.running) {
+        status.textContent = 'Escaneo en progreso...';
+        status.style.color = '#2563EB';
+        setTimeout(loadMonitorResults, 5000);
+        return;
+      }
+      if (!data.scan) {
+        status.textContent = 'Sin escaneos previos. Ejecuta uno manualmente.';
+        counts.innerHTML = '';
+        return;
+      }
+      const s = data.scan;
+      const ago = Math.round((Date.now() - new Date(s.scannedAt).getTime()) / 3600000);
+      status.textContent = `Último escaneo: hace ${ago < 1 ? 'menos de 1' : ago} hora(s) — ${s.totalListings} propiedades`;
+      status.style.color = s.bySeverity?.high > 0 ? '#b45309' : '#4d6a8a';
+      counts.innerHTML = `
+        ${s.bySeverity?.high ? `<span style="background:#fee2e2;color:#991b1b;padding:0.2rem 0.5rem;border-radius:6px;font-weight:700;">🔴 ${s.bySeverity.high} crítico</span>` : ''}
+        ${s.bySeverity?.medium ? `<span style="background:#fef3c7;color:#92400e;padding:0.2rem 0.5rem;border-radius:6px;font-weight:700;">🟡 ${s.bySeverity.medium} medio</span>` : ''}
+        ${s.bySeverity?.low ? `<span style="background:#e0f2fe;color:#075985;padding:0.2rem 0.5rem;border-radius:6px;font-weight:600;">🔵 ${s.bySeverity.low} bajo</span>` : ''}
+        ${s.totalFlags === 0 ? '<span style="background:#d1fae5;color:#065f46;padding:0.2rem 0.5rem;border-radius:6px;font-weight:700;">✅ Todo OK</span>' : ''}
+      `;
+    }).catch(() => {
+      document.getElementById('monitorStatus').textContent = 'Error cargando resultados';
+    });
+  }
+
+  function runManualScan() {
+    const btn = document.getElementById('monitorScanBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Escaneando...';
+    document.getElementById('monitorStatus').textContent = 'Escaneo en progreso...';
+    fetch('/admin/monitor/scan', { method: 'POST' }).then(r => r.json()).then(data => {
+      if (data.error) {
+        alert(data.error);
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Ejecutar Escaneo';
+        return;
+      }
+      // Poll for results
+      const poll = setInterval(() => {
+        fetch('/admin/monitor/results').then(r => r.json()).then(d => {
+          if (!d.running) {
+            clearInterval(poll);
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Ejecutar Escaneo';
+            loadMonitorResults();
+          }
+        });
+      }, 3000);
+    }).catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Ejecutar Escaneo';
+      alert('Error al iniciar escaneo');
+    });
+  }
+
+  loadMonitorResults();
   loadSubmissions();
 
   // ── Blog CMS ─────────────────────────────────────────────────────────────
