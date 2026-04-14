@@ -1853,7 +1853,8 @@
     else if (page === 'cascade')     { loadCascade(); }
     else if (page === 'eliminacion') { loadDeletionRequests(); }
 
-    // Clear the badge when the admin visits the page (they've "seen" the items)
+    // Clear the badge and remember the count when admin visits the page.
+    // Badge only reappears if the count INCREASES from what they last saw.
     const pillMap = {
       leads: 'leadsPill', aplicaciones: 'appsPill', tours: 'toursPill',
       reportes: 'reportsPill', eliminacion: 'deletionPill',
@@ -1861,7 +1862,12 @@
     const pillId = pillMap[page];
     if (pillId) {
       const pill = document.getElementById(pillId);
-      if (pill) pill.style.display = 'none';
+      if (pill) {
+        // Store the current count as "seen" — badge won't show until count increases
+        const currentCount = parseInt(pill.textContent) || 0;
+        try { localStorage.setItem('admin_seen_' + page, String(currentCount)); } catch {}
+        pill.style.display = 'none';
+      }
     }
   }
 
@@ -3917,40 +3923,44 @@
   }
 
   // ── Sidebar badge updater (runs on load, refreshes every 5 min) ───
+  // Only shows a badge if the count is HIGHER than what the admin last saw.
+  function _showPill(pillId, page, count) {
+    const pill = document.getElementById(pillId);
+    if (!pill) return;
+    if (count <= 0) { pill.style.display = 'none'; return; }
+    const seen = parseInt(localStorage.getItem('admin_seen_' + page) || '0');
+    if (count > seen) {
+      pill.textContent = count;
+      pill.style.display = '';
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+
   function updateSidebarBadges() {
-    // Leads: count pending leads with no agent
     fetch('/api/leads').then(r => r.json()).then(leads => {
       const pending = (Array.isArray(leads) ? leads : []).filter(l => l.status === 'pendiente').length;
-      const pill = document.getElementById('leadsPill');
-      if (pending > 0) { pill.textContent = pending; pill.style.display = ''; } else { pill.style.display = 'none'; }
+      _showPill('leadsPill', 'leads', pending);
     }).catch(() => {});
 
-    // Orphaned applications
     fetch('/admin/orphaned-leads').then(r => r.json()).then(data => {
-      const pill = document.getElementById('appsPill');
-      if (data.total > 0) { pill.textContent = data.total; pill.style.display = ''; } else { pill.style.display = 'none'; }
+      _showPill('appsPill', 'aplicaciones', data.total || 0);
     }).catch(() => {});
 
-    // Pending tours (not confirmed)
     fetch('/api/tours?status=pending').then(r => r.json()).then(data => {
       const tours = data.tours || data || [];
       const pending = Array.isArray(tours) ? tours.filter(t => t.status === 'pending').length : 0;
-      const pill = document.getElementById('toursPill');
-      if (pending > 0) { pill.textContent = pending; pill.style.display = ''; } else { pill.style.display = 'none'; }
+      _showPill('toursPill', 'tours', pending);
     }).catch(() => {});
 
-    // Deletion requests
     fetch('/admin/deletion-requests').then(r => r.json()).then(data => {
       const pending = (Array.isArray(data) ? data : []).filter(d => d.status === 'pending').length;
-      const pill = document.getElementById('deletionPill');
-      if (pending > 0) { pill.textContent = pending; pill.style.display = ''; } else { pill.style.display = 'none'; }
+      _showPill('deletionPill', 'eliminacion', pending);
     }).catch(() => {});
 
-    // Reports
     fetch('/api/reports').then(r => r.json()).then(data => {
       const pending = (data.reports || []).filter(r => r.status === 'pending').length;
-      const pill = document.getElementById('reportsPill');
-      if (pending > 0) { pill.textContent = pending; pill.style.display = ''; } else { pill.style.display = 'none'; }
+      _showPill('reportsPill', 'reportes', pending);
     }).catch(() => {});
   }
 
