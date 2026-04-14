@@ -1552,8 +1552,9 @@ module.exports = {
   getPrivacyLog, appendPrivacyLog,
   getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,
-  // Internal refs for memory management (used by cleanup cron)
+  // Internal refs for memory management (used by cleanup cron + health check)
   _twofa, _leadQueue, _revokedTokens, _tasks,
+  get _cacheReady() { return _cacheReady; },
   // PostgreSQL pool for direct queries if needed
   pool,
 };

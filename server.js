@@ -2458,9 +2458,41 @@ app.use(errorTracker.errorHandler);
   }
 })();
 
+// ── Health check endpoint ──────────────────────────────────────────
+// Used by deploy.sh and monitoring to verify the server is alive.
+// Returns cache status so we know if the DB has loaded.
+app.get('/api/health', (req, res) => {
+  const uptime = process.uptime();
+  const cacheReady = store._cacheReady !== false;
+  const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+  res.json({
+    status: cacheReady ? 'ok' : 'warming',
+    uptime: Math.round(uptime),
+    memory: `${memMB}MB`,
+    cacheReady,
+    version: require('./package.json').version,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`HogaresRD running at http://localhost:${PORT}`);
+
+    // Signal PM2 that the process is ready to serve traffic.
+    // PM2 waits for this before killing the old process (zero-downtime reload).
+    if (typeof process.send === 'function') {
+      // Wait for the store cache to finish loading before signaling ready
+      const readyCheck = setInterval(() => {
+        if (store._cacheReady !== false) {
+          clearInterval(readyCheck);
+          process.send('ready');
+          console.log('[pm2] Ready signal sent — zero-downtime reload complete');
+        }
+      }, 500);
+      // Safety timeout — send ready after 12s even if cache is slow
+      setTimeout(() => { clearInterval(readyCheck); try { process.send('ready'); } catch {} }, 12000);
+    }
 
     const cascadeEngine = require('./routes/cascade-engine');
     if (cascadeEngine.isEnabled()) {

@@ -30,9 +30,11 @@ module.exports = {
       min_uptime: '10s',
       restart_delay: 4000,
       autorestart: true,
-      // Graceful shutdown
+      // Graceful reload — new process sends process.send('ready') after
+      // the store cache is loaded, so PM2 doesn't kill the old one early.
+      wait_ready: true,
       kill_timeout: 5000,
-      listen_timeout: 8000,
+      listen_timeout: 15000,  // allow up to 15s for cache load before PM2 gives up
     },
   ],
 };
