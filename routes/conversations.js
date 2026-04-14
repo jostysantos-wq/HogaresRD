@@ -810,13 +810,16 @@ router.put('/:id/read', requireLogin, (req, res) => {
   const isAssignedBroker = conv.brokerId && conv.brokerId === user.sub;
   const isAdmin          = user.role === 'admin';
 
-  // Inmobiliaria/constructora owners can mark-read ANY conversation in their
-  // org — including unclaimed ones (brokerId is null). Without this, the
-  // unreadBroker counter never clears for org conversations the owner views.
+  // Pro users can mark-read conversations where they are the inmobiliariaId
+  // (org owner) or belong to the same org — including unclaimed ones.
   const fullUser = store.getUserById(user.sub);
   const userInmId = effectiveInmId(fullUser);
-  const isOrgOwner = userInmId && ['inmobiliaria', 'constructora'].includes(fullUser?.role)
-    && (conv.inmobiliariaId === userInmId || (!conv.brokerId && !conv.inmobiliariaId));
+  const isOrgOwner = (
+    // Direct match: user's ID is the conversation's inmobiliariaId
+    (conv.inmobiliariaId && conv.inmobiliariaId === user.sub) ||
+    // Org match: user belongs to the same org
+    (userInmId && conv.inmobiliariaId === userInmId)
+  );
 
   if (!isClientSide && !isAssignedBroker && !isOrgOwner && !isAdmin) {
     return res.status(403).json({ error: 'Sin acceso.' });
