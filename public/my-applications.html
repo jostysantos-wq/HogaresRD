@@ -693,14 +693,14 @@
 
     async function apiGet(url) {
       const res = await fetch(url, { headers: API_HEADERS });
-      if (res.status === 401) { handle401(); return; }
+      if (res.status === 401) { handle401(); throw new Error('Sesión expirada'); }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
 
     async function apiPost(url, body) {
       const res = await fetch(url, { method: 'POST', headers: API_HEADERS, body: JSON.stringify(body) });
-      if (res.status === 401) { handle401(); return; }
+      if (res.status === 401) { handle401(); throw new Error('Sesión expirada'); }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
@@ -1426,7 +1426,7 @@
         delete appDetails[appId];
         setTimeout(async () => { await toggleDetail(appId); await toggleDetail(appId); }, 1200);
       } catch(e) {
-        if (alertDiv) alertDiv.innerHTML = `<div style="font-size:.78rem;color:#DC2626;padding:.3rem 0;">Error: ${e.message || 'Intenta de nuevo.'}</div>`;
+        if (alertDiv) { alertDiv.innerHTML = '<div style="font-size:.78rem;color:#DC2626;padding:.3rem 0;"></div>'; alertDiv.firstChild.textContent = 'Error: ' + (e.message || 'Intenta de nuevo.'); }
         if (btn) { btn.disabled = false; btn.textContent = 'Enviar'; }
       }
     };

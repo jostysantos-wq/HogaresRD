@@ -1233,14 +1233,21 @@ router.post('/2fa/resend', twoFALimiter, (req, res) => {
     return res.status(400).json({ error: 'Sesión expirada. Inicia sesión nuevamente.' });
   }
 
+  // Enforce per-user global lockout (same check as /2fa/verify)
+  const userTrack = _twoFAUserAttempts.get(session.userId);
+  if (userTrack?.lockedUntil && Date.now() < userTrack.lockedUntil) {
+    const remainMin = Math.ceil((userTrack.lockedUntil - Date.now()) / 60_000);
+    return res.status(429).json({ error: `Cuenta bloqueada por demasiados intentos. Intenta en ${remainMin} minuto(s).` });
+  }
+
   const user = store.getUserById(session.userId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  // Generate new code
+  // Generate new code — keep per-user attempt count (don't reset global counter)
   const code = String(crypto.randomInt(100000, 999999));
   session.codeHash = crypto.createHash('sha256').update(code).digest('hex');
   session.expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  session.attempts = 0;
+  session.attempts = 0; // Reset per-session counter (new code), global counter preserved
   store.saveTwoFASession(session);
 
   send2FAEmail(user, code);

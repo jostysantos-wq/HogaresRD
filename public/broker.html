@@ -7251,7 +7251,7 @@
       promoData = await r.json();
       renderPromoPanel('facebook');
     } catch(e) {
-      body.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:2rem;">Error cargando contenido: ${e.message}</p>`;
+      body.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:2rem;">Error cargando contenido: ${esc(e.message)}</p>`;
     }
   };
 
@@ -7996,7 +7996,7 @@
         });
       }
     } catch (e) {
-      content.innerHTML = `<p style="text-align:center;color:var(--red);padding:2rem;">Error: ${e.message}</p>`;
+      content.innerHTML = `<p style="text-align:center;color:var(--red);padding:2rem;">Error: ${esc(e.message)}</p>`;
     }
   };
 
