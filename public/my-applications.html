@@ -311,7 +311,7 @@
     }
   </style>
 </head>
-<body>
+<body class="has-bottom-nav">
 
   <nav>
     <div class="nav-inner">
@@ -437,9 +437,26 @@
 
   <!-- MAIN CONTENT -->
   <div class="main-content" id="mainContent">
-    <div class="loading-container" id="loadingState">
-      <div class="spinner"></div>
-      <p style="color:var(--text-muted);">Cargando tus aplicaciones...</p>
+    <div class="loading-container" id="loadingState" style="max-width:700px;margin:0 auto;">
+      <!-- Skeleton loading cards -->
+      <div class="skeleton-stack" style="margin-bottom:1rem;">
+        <div style="display:flex;gap:1rem;align-items:center;">
+          <div class="skeleton" style="width:72px;height:72px;border-radius:10px;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text xs"></div></div>
+        </div>
+      </div>
+      <div class="skeleton-stack" style="margin-bottom:1rem;">
+        <div style="display:flex;gap:1rem;align-items:center;">
+          <div class="skeleton" style="width:72px;height:72px;border-radius:10px;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text xs"></div></div>
+        </div>
+      </div>
+      <div class="skeleton-stack">
+        <div style="display:flex;gap:1rem;align-items:center;">
+          <div class="skeleton" style="width:72px;height:72px;border-radius:10px;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text xs"></div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -730,11 +747,16 @@
 
         if (applications.length === 0) {
           main.innerHTML = `
-            <div class="empty-state">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h6v6h6v10H6z"/></svg>
+            <div class="empty-state-v2 animate-in">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h6v6h6v10H6z"/></svg>
+              </div>
               <h3>No tienes aplicaciones</h3>
-              <p>Aun no has aplicado a ninguna propiedad. Explora propiedades disponibles y comienza tu proceso de compra.</p>
-              <a href="/comprar">Explorar Propiedades</a>
+              <p>Aún no has aplicado a ninguna propiedad. Explora propiedades disponibles y comienza tu proceso de compra.</p>
+              <a href="/comprar" class="empty-cta">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                Explorar Propiedades
+              </a>
             </div>`;
           return;
         }
@@ -755,7 +777,7 @@
     /* ── Render list ── */
     function renderApplicationList() {
       const main = document.getElementById('mainContent');
-      main.innerHTML = `<div class="app-list" id="appList"></div>`;
+      main.innerHTML = `<div class="app-list stagger-children" id="appList"></div>`;
       const list = document.getElementById('appList');
 
       applications.forEach(app => {
@@ -1531,6 +1553,13 @@
 <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>
+<!-- Mobile bottom nav — mirrors iOS tab bar -->
+<nav class="mobile-bottom-nav mobile-only" aria-label="Navegación móvil">
+  <a href="/home"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Inicio</a>
+  <a href="/comprar"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>Explorar</a>
+  <a href="/my-applications" class="active"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h6v6h6v10H6z"/></svg>Aplicaciones</a>
+  <a href="/tareas"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Tareas</a>
+</nav>
 <footer style="text-align:center;padding:2rem 1rem;font-size:0.8rem;color:var(--text-muted,#888);">
   <p>&copy; 2026 HogaresRD &mdash; Santo Domingo, Rep&uacute;blica Dominicana</p>
   <p style="margin-top:0.5rem;"><a href="/privacidad">Privacidad</a> &middot; <a href="/terminos">T&eacute;rminos</a> &middot; <a href="/contacto">Contacto</a></p>

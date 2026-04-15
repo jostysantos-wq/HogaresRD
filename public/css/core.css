@@ -16,7 +16,7 @@
   --bg-hover:        #EBF0F8;
   --text:            #1A2535;
   --text-secondary:  #4A5568;
-  --text-muted:      #8A94A6;
+  --text-muted:      #6B7280;  /* WCAG AA compliant on white */
   --border:          #E2E8F0;
   --border-strong:   #CBD5E1;
 
@@ -53,7 +53,7 @@
   --font:            'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-size-xs:    0.72rem;
   --font-size-sm:    0.85rem;
-  --font-size-base:  0.9375rem;
+  --font-size-base:  1rem;
   --font-size-lg:    1.0625rem;
   --font-size-xl:    1.25rem;
   --font-size-2xl:   1.625rem;
@@ -81,7 +81,7 @@
   --bg-hover:        #263450;
   --text:            #EDF2F7;
   --text-secondary:  #A0AEBE;
-  --text-muted:      #5A6A80;
+  --text-muted:      #7A8A9E;  /* WCAG AA on dark bg */
   --border:          #2D3F58;
   --border-strong:   #3D5275;
 
@@ -399,4 +399,236 @@ nav {
 }
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV — mirrors iOS tab bar
+   Add <nav class="mobile-bottom-nav mobile-only"> to page HTML
+   ══════════════════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--nav-border);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 0.35rem 0 max(0.35rem, env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+}
+.mobile-bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 1;
+  padding: 0.3rem 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-bottom-nav a svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  transition: fill var(--transition);
+}
+.mobile-bottom-nav a.active,
+.mobile-bottom-nav a:active {
+  color: var(--accent);
+}
+.mobile-bottom-nav .nav-badge {
+  position: absolute;
+  top: 2px;
+  right: calc(50% - 18px);
+  min-width: 16px;
+  height: 16px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+/* Add bottom padding to body so content isn't hidden behind the bar */
+@media (max-width: 768px) {
+  body.has-bottom-nav { padding-bottom: 72px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SKELETON LOADING — shimmer placeholders
+   Use: <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-image"></div>
+   ══════════════════════════════════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-hover) 37%, var(--bg-secondary) 63%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+.skeleton-text {
+  height: 1rem;
+  width: 80%;
+  margin-bottom: 0.5rem;
+}
+.skeleton-text.short { width: 45%; }
+.skeleton-text.xs    { height: 0.75rem; width: 30%; }
+.skeleton-card {
+  height: 180px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+.skeleton-image {
+  height: 200px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+}
+.skeleton-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+}
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EMPTY STATES — illustrated placeholders with CTA
+   Use: <div class="empty-state-v2"> ... </div>
+   ══════════════════════════════════════════════════════════════════ */
+.empty-state-v2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  min-height: 280px;
+}
+.empty-state-v2 .empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-state-v2 .empty-icon svg {
+  width: 36px;
+  height: 36px;
+  fill: var(--accent);
+  opacity: 0.7;
+}
+.empty-state-v2 h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.empty-state-v2 p {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  max-width: 320px;
+  line-height: 1.5;
+}
+.empty-state-v2 .empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.4rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+  text-decoration: none;
+}
+.empty-state-v2 .empty-cta:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ENTRANCE ANIMATIONS — fade-in-up for cards, sections, lists
+   Add class="animate-in" to elements. They appear on scroll.
+   ══════════════════════════════════════════════════════════════════ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-in {
+  animation: fadeInUp 0.4s ease-out both;
+}
+/* Stagger children — add to parent: class="stagger-children" */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.35s ease-out both;
+}
+.stagger-children > *:nth-child(1)  { animation-delay: 0.03s; }
+.stagger-children > *:nth-child(2)  { animation-delay: 0.06s; }
+.stagger-children > *:nth-child(3)  { animation-delay: 0.09s; }
+.stagger-children > *:nth-child(4)  { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(5)  { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(6)  { animation-delay: 0.18s; }
+.stagger-children > *:nth-child(7)  { animation-delay: 0.21s; }
+.stagger-children > *:nth-child(8)  { animation-delay: 0.24s; }
+.stagger-children > *:nth-child(9)  { animation-delay: 0.27s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.30s; }
+
+/* Subtle hover lift for interactive cards */
+.card-hover {
+  transition: transform var(--transition-md), box-shadow var(--transition-md);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .stagger-children > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .card-hover:hover { transform: none; }
 }
