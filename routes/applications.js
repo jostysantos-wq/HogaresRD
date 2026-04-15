@@ -1635,9 +1635,13 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
 
   store.saveApplication(app);
 
-  // Auto-task: complete client's "upload docs" task + create broker review task
-  autoCompleteTasksByEvent(app.id, 'documents_requested');
-  autoCompleteTasksByEvent(app.id, 'documents_rejected');
+  // Auto-task: complete client's "upload docs" task only when ALL required
+  // documents are fulfilled — otherwise the client loses their reminder for
+  // remaining docs.
+  if (allFulfilled) {
+    autoCompleteTasksByEvent(app.id, 'documents_requested');
+    autoCompleteTasksByEvent(app.id, 'documents_rejected');
+  }
   if (app.broker?.user_id) {
     createAutoTask({
       title: `Revisa documentos de ${app.client?.name || 'cliente'} para ${app.listing_title || 'la propiedad'}`,
@@ -1683,6 +1687,15 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
   doc.reviewed_at   = new Date().toISOString();
   doc.reviewed_by   = req.user.sub;
 
+  // Sync the corresponding documents_requested entry so the client
+  // can re-upload against it (the upload handler matches by status === 'pending').
+  if (status === 'rejected') {
+    const reqEntry = doc.request_id
+      ? app.documents_requested.find(d => d.id === doc.request_id)
+      : app.documents_requested.find(d => d.type === doc.type && d.status === 'uploaded');
+    if (reqEntry) reqEntry.status = 'pending';
+  }
+
   addEvent(app, 'document_reviewed',
     `Documento "${doc.original_name}" ${status === 'approved' ? 'aprobado' : 'rechazado'}${note ? ': ' + note : ''}`,
     req.user.sub, user?.name || 'Broker',
@@ -1701,16 +1714,35 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
 
   // Auto-task: tell client to re-upload
   autoCompleteTasksByEvent(app.id, 'document_uploaded');
-  if (app.client?.user_id) {
-    createAutoTask({
+  if (status === 'rejected' && app.client?.user_id) {
+    const rejectedDocs = app.documents_uploaded
+      .filter(d => d.review_status === 'rejected')
+      .map(d => d.original_name);
+    const rejDesc = rejectedDocs.length
+      ? `Documentos rechazados: ${rejectedDocs.join(', ')}${note ? '. Nota: ' + note : ''}`
+      : (note ? `Nota: ${note}` : 'Revisa los documentos rechazados y sube nuevas versiones.');
+
+    const task = createAutoTask({
       title: `Documentos insuficientes — revisa y vuelve a subir para ${app.listing_title || 'la propiedad'}`,
-      description: note ? `Nota: ${note}` : 'Revisa los documentos rechazados y sube nuevas versiones.',
+      description: rejDesc,
       assigned_to: app.client.user_id,
       assigned_by: req.user.sub,
       application_id: app.id,
       listing_id: app.listing_id,
       source_event: 'documents_rejected',
     });
+
+    // If dedup blocked task creation, update the existing task's
+    // description with the latest rejection details.
+    if (!task) {
+      const existing = store.getTasksByApplication(app.id);
+      const pendingTask = existing.find(t => t.source_event === 'documents_rejected' && t.status !== 'completada' && t.status !== 'no_aplica');
+      if (pendingTask) {
+        pendingTask.description = rejDesc;
+        pendingTask.updated_at = new Date().toISOString();
+        store.saveTask(pendingTask);
+      }
+    }
   }
 
   // Push notification → client (document reviewed)
