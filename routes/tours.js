@@ -539,6 +539,12 @@ router.put('/:id/reschedule', userAuth, (req, res) => {
     return res.status(400).json({ error: 'Campos requeridos: date, time' });
   }
 
+  // Prevent rescheduling to a past date
+  const today = new Date().toISOString().slice(0, 10);
+  if (date < today) {
+    return res.status(400).json({ error: 'No se puede reprogramar a una fecha pasada.' });
+  }
+
   // Verify new slot is available
   const available = generateSlots(tour.broker_id, date);
   if (!available.some(s => s.time === time)) {

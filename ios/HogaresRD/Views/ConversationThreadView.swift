@@ -787,7 +787,8 @@ struct ConversationThreadView: View {
         } catch {
             debugLog("[ConvThread] send FAILED: \(error)")
             ErrorReporter.shared.reportAPIError(error, endpoint: "POST /api/conversations/\(conversation.id)/messages", context: "sendMessage")
-            // Reload the full thread to pick up the message the server saved
+            // Restore the draft so the user doesn't lose their message
+            input = text
             await loadMessages()
         }
         sending = false

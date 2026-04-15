@@ -544,6 +544,7 @@ router.put('/:id', userAuth, (req, res) => {
   // strings and overwrote the real URLs. Reject anything that doesn't
   // look like a real URL — plain strings pass through, objects get
   // flattened to {url, label}, everything else is dropped.
+  const MAX_MEDIA = 100; // guard against unbounded arrays
   const sanitizeMedia = (arr, fieldName) => {
     if (!Array.isArray(arr)) return arr;
     const out = [];
@@ -559,7 +560,7 @@ router.put('/:id', userAuth, (req, res) => {
         }
       }
     }
-    return out;
+    return out.slice(0, MAX_MEDIA);
   };
   if (Array.isArray(incoming.images)) incoming.images = sanitizeMedia(incoming.images, 'images');
   if (Array.isArray(incoming.blueprints)) incoming.blueprints = sanitizeMedia(incoming.blueprints, 'blueprints');

@@ -197,6 +197,12 @@ router.post('/meta/campaigns', userAuth, requireBroker, async (req, res) => {
   const listing = store.getListingById(listing_id);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
+  // Verify broker owns or is affiliated with the listing
+  const isListingOwner = listing.userId === user.id ||
+    (Array.isArray(listing.agencies) && listing.agencies.some(a => a.user_id === user.id)) ||
+    (user.inmobiliaria_id && listing.inmobiliaria_id === user.inmobiliaria_id);
+  if (!isListingOwner) return res.status(403).json({ error: 'Solo puedes crear anuncios para tus propias propiedades.' });
+
   const listingUrl = `https://hogaresrd.com/listing/${listing_id}`;
   const imageUrl   = listing.images?.[0] || null;
 
