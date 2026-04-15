@@ -81,19 +81,42 @@ private struct ApplicationCard: View {
     }
 
     private var style: StatusStyle {
+        let blue   = Color(red: 0.14, green: 0.39, blue: 0.92)
+        let orange = Color(red: 0.85, green: 0.47, blue: 0.02)
+        let green  = Color(red: 0.09, green: 0.64, blue: 0.29)
+        let red    = Color(red: 0.86, green: 0.15, blue: 0.15)
+        let purple = Color(red: 0.55, green: 0.24, blue: 0.78)
+        let teal   = Color(red: 0.18, green: 0.60, blue: 0.60)
+
         switch app.status {
         case "aplicado":
-            return .init(label: "Recibida",    icon: "clock.fill",           fg: Color(red:0.14, green:0.39, blue:0.92), bg: Color(red:0.94, green:0.96, blue:1.00))
-        case "revisando":
-            return .init(label: "En revisión", icon: "magnifyingglass",       fg: Color(red:0.85, green:0.47, blue:0.02), bg: Color(red:1.00, green:0.98, blue:0.92))
+            return .init(label: "Recibida",               icon: "clock.fill",            fg: blue,   bg: blue.opacity(0.10))
+        case "en_revision":
+            return .init(label: "En revisión",            icon: "magnifyingglass",       fg: orange, bg: orange.opacity(0.10))
+        case "documentos_requeridos":
+            return .init(label: "Docs. requeridos",       icon: "doc.badge.arrow.up",    fg: orange, bg: orange.opacity(0.10))
+        case "documentos_enviados":
+            return .init(label: "Docs. enviados",         icon: "doc.badge.checkmark",   fg: blue,   bg: blue.opacity(0.10))
+        case "documentos_insuficientes":
+            return .init(label: "Docs. insuficientes",    icon: "doc.badge.xmark",       fg: red,    bg: red.opacity(0.10))
+        case "en_aprobacion":
+            return .init(label: "En aprobación",          icon: "hourglass",             fg: purple, bg: purple.opacity(0.10))
+        case "reservado":
+            return .init(label: "Reservada",              icon: "bookmark.fill",         fg: teal,   bg: teal.opacity(0.10))
         case "aprobado":
-            return .init(label: "Aprobada",    icon: "checkmark.seal.fill",   fg: Color(red:0.09, green:0.64, blue:0.29), bg: Color(red:0.94, green:1.00, blue:0.96))
+            return .init(label: "Aprobada",               icon: "checkmark.seal.fill",   fg: green,  bg: green.opacity(0.10))
+        case "pendiente_pago":
+            return .init(label: "Pendiente de pago",      icon: "creditcard",            fg: orange, bg: orange.opacity(0.10))
+        case "pago_enviado":
+            return .init(label: "Pago enviado",           icon: "paperplane.fill",       fg: blue,   bg: blue.opacity(0.10))
+        case "pago_aprobado":
+            return .init(label: "Pago aprobado",          icon: "checkmark.circle.fill", fg: green,  bg: green.opacity(0.10))
+        case "completado":
+            return .init(label: "Completada",             icon: "flag.checkered",        fg: green,  bg: green.opacity(0.12))
         case "rechazado":
-            return .init(label: "Rechazada",   icon: "xmark.circle.fill",     fg: Color(red:0.86, green:0.15, blue:0.15), bg: Color(red:1.00, green:0.95, blue:0.95))
-        case "cerrado":
-            return .init(label: "Cerrada",     icon: "archivebox.fill",        fg: .secondary,                             bg: Color(.systemGray5))
+            return .init(label: "Rechazada",              icon: "xmark.circle.fill",     fg: red,    bg: red.opacity(0.10))
         default:
-            return .init(label: app.status,    icon: "circle",                 fg: .secondary,                             bg: Color(.systemGray6))
+            return .init(label: app.status,               icon: "circle",                fg: .secondary, bg: Color(.systemGray6))
         }
     }
 
