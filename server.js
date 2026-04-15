@@ -373,11 +373,21 @@ app.get('/api/contacts', contactAuth, (req, res) => {
 // GET /api/contacts/:id/timeline — unified activity feed for a contact
 app.get('/api/contacts/:id/timeline', contactAuth, (req, res) => {
   const contactId = req.params.id;
+  const brokerId  = req.user.sub;
   const typeFilter = req.query.type || null;
   const events = [];
 
-  // 1. Applications
-  const apps = store.getApplicationsByClient(contactId);
+  // Scope to only this broker's data (or their org)
+  const brokerUser = store.getUserById(brokerId);
+  const brokerOrgId = ['inmobiliaria','constructora'].includes(brokerUser?.role) ? brokerUser.id : brokerUser?.inmobiliaria_id;
+
+  // 1. Applications — only those belonging to this broker or their org
+  const allApps = store.getApplicationsByClient(contactId);
+  const apps = allApps.filter(a => {
+    if (a.broker?.user_id === brokerId) return true;
+    if (brokerOrgId && a.inmobiliaria_id === brokerOrgId) return true;
+    return false;
+  });
   for (const a of apps) {
     // Main application event
     events.push({
@@ -409,8 +419,13 @@ app.get('/api/contacts/:id/timeline', contactAuth, (req, res) => {
     }
   }
 
-  // 2. Conversations
-  const convs = store.getConversationsByClient(contactId);
+  // 2. Conversations — only those where this broker is assigned or in their org
+  const allConvs = store.getConversationsByClient(contactId);
+  const convs = allConvs.filter(c => {
+    if (c.brokerId === brokerId) return true;
+    if (brokerOrgId && c.inmobiliariaId === brokerOrgId) return true;
+    return false;
+  });
   for (const c of convs) {
     events.push({
       id: 'evt_conv_' + c.id,
@@ -441,8 +456,9 @@ app.get('/api/contacts/:id/timeline', contactAuth, (req, res) => {
     }
   }
 
-  // 3. Tours
-  const tours = store.getToursByClient(contactId);
+  // 3. Tours — only those assigned to this broker
+  const allTours = store.getToursByClient(contactId);
+  const tours = allTours.filter(t => t.broker_id === brokerId);
   for (const t of tours) {
     const tourLabels = { pending: 'Visita solicitada', confirmed: 'Visita confirmada', completed: 'Visita completada', rejected: 'Visita rechazada', cancelled: 'Visita cancelada' };
     events.push({
@@ -741,7 +757,8 @@ app.post('/api/upload/blueprints', uploadLimiter, blueprintUpload.array('bluepri
       try {
         const buf = await fsp.readFile(f.path);
         const ext = path.extname(f.originalname).toLowerCase();
-        const mime = ext === '.pdf' ? 'application/pdf' : 'image/jpeg';
+        const BLUEPRINT_MIMES = { '.pdf': 'application/pdf', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.heic': 'image/heic', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
+        const mime = BLUEPRINT_MIMES[ext] || 'image/jpeg';
         const cdnUrl = await uploadToSpaces(buf, `blueprints/${f.filename}`, mime);
         if (cdnUrl) { urls.push(cdnUrl); fsp.unlink(f.path).catch(() => {}); continue; }
       } catch (e) { console.warn('[upload/blueprints] Spaces upload failed:', e.message); }
