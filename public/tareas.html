@@ -181,9 +181,9 @@
     .task-upload-info strong { font-size: 0.85rem; color: var(--text); display: block; margin-bottom: 2px; }
     .task-upload-info span { font-size: 0.75rem; color: var(--text-muted); }
     .btn-upload {
-      background: var(--accent); color: #fff; border: none; font-size: 0.8rem; font-weight: 700;
-      padding: 0.5rem 1.1rem; border-radius: 8px; cursor: pointer; white-space: nowrap;
-      transition: background 0.2s, transform 0.15s;
+      background: var(--accent); color: #fff; border: none; font-size: 0.88rem; font-weight: 700;
+      padding: 0.65rem 1.5rem; border-radius: 10px; cursor: pointer; white-space: nowrap;
+      transition: background 0.2s, transform 0.15s; min-width: 140px; text-align: center;
     }
     .btn-upload:hover { background: var(--accent-hover); transform: translateY(-1px); }
     .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -442,11 +442,16 @@
 
       if (allTasks.length === 0) {
         container.innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" fill="var(--border)"/></svg>
+          <div class="empty-state-v2 animate-in">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+            </div>
             <h3>No tienes tareas pendientes</h3>
-            <p>Cuando te asignen tareas, aparecerán aquí.</p>
-            <a href="/my-applications">Ver mis aplicaciones</a>
+            <p>Cuando te asignen tareas relacionadas con tus aplicaciones, aparecerán aquí.</p>
+            <a href="/my-applications" class="empty-cta">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/></svg>
+              Ver mis aplicaciones
+            </a>
           </div>`;
         return;
       }

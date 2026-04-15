@@ -74,8 +74,8 @@
     .gimg-icon.main svg { width: 80px; height: 80px; }
     .gimg-icon.thumb svg { width: 36px; height: 36px; }
     .gallery-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem 1.25rem 0.85rem; background: linear-gradient(transparent, rgba(0,0,0,0.55)); color: #fff; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; pointer-events: none; }
-    .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; transition: background 0.2s; z-index: 2; }
-    .gallery-count:hover { background: rgba(0,0,0,0.75); }
+    .gallery-count { position: absolute; bottom: 0.85rem; right: 1.25rem; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.82rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s, transform 0.15s; z-index: 2; border: 1px solid rgba(255,255,255,0.2); }
+    .gallery-count:hover { background: rgba(0,0,0,0.85); transform: translateY(-1px); }
     .gallery-count svg { width: 14px; height: 14px; fill: #fff; }
     /* "Ver todas" button overlaying bottom-right thumb */
     .gallery-overlay-btn { position: absolute; inset: 0; background: rgba(17,17,16,0.55); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 0.82rem; font-weight: 700; gap: 0.25rem; opacity: 0; transition: opacity 0.25s; z-index: 2; }
@@ -521,9 +521,29 @@
     }
   
     .section-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted, #9E9A94); margin-bottom: 0.4rem; }
+
+    /* Mobile floating CTA bar — always visible while scrolling */
+    .mobile-listing-cta { display: none; }
+    @media (max-width: 768px) {
+      .mobile-listing-cta {
+        display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 998;
+        background: var(--nav-bg, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid var(--border, #e2e8f0); padding: 0.65rem 1rem max(0.65rem, env(safe-area-inset-bottom));
+        align-items: center; gap: 0.75rem; box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+      }
+      .mobile-listing-cta .mlc-price { font-size: 1.1rem; font-weight: 800; color: var(--text); flex: 1; }
+      .mobile-listing-cta .mlc-price small { display: block; font-size: 0.68rem; font-weight: 500; color: var(--text-muted); }
+      .mobile-listing-cta .mlc-btn { background: var(--accent); color: #fff; font-weight: 700; font-size: 0.9rem; padding: 0.7rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+      body.has-listing-cta { padding-bottom: 72px; }
+    }
   </style>
 </head>
-<body>
+<body class="has-listing-cta">
+<!-- Mobile floating CTA -->
+<div class="mobile-listing-cta" id="mobileCTA">
+  <div class="mlc-price"><span id="mlcPrice">—</span><small id="mlcType"></small></div>
+  <button class="mlc-btn" onclick="document.getElementById('applySection')?.scrollIntoView({behavior:'smooth'})">Aplicar</button>
+</div>
 
 <!-- NAV -->
 <nav>
@@ -1296,7 +1316,7 @@
     const countEl = document.getElementById('photoCountText');
     if (countEl && _galleryImages.length > 0) {
       const n = _galleryImages.length;
-      countEl.textContent = `${n} foto${n !== 1 ? 's' : ''}`;
+      countEl.textContent = `Ver todas (${n})`;
     }
 
     // Preload all images for smooth lightbox
@@ -2182,10 +2202,14 @@
     // Header
     const condLabel = { 'nueva_construccion':'Nueva Construcción', 'reventa':'Reventa', 'remodeladao':'Remodelado' };
     const typeLabel = { 'venta':'En Venta', 'alquiler':'En Alquiler', 'venta_alquiler':'Venta / Alquiler' };
+    // Dedup: skip project_stage badge if it matches condition (avoids "EN PLANOS" twice)
+    const condText = condLabel[l.condition] || l.condition || '';
+    const stageText = l.project_stage || '';
+    const showStage = stageText && stageText.toLowerCase() !== condText.toLowerCase();
     const badges = [
       l.type       ? `<span class="badge badge-sale">${esc(typeLabel[l.type]||l.type)}</span>` : '',
-      l.condition  ? `<span class="badge badge-new">${esc(condLabel[l.condition]||l.condition)}</span>` : '',
-      l.project_stage ? `<span class="badge badge-stage">${esc(l.project_stage)}</span>` : '',
+      l.condition  ? `<span class="badge badge-new">${esc(condText)}</span>` : '',
+      showStage    ? `<span class="badge badge-stage">${esc(stageText)}</span>` : '',
     ].filter(Boolean).join('');
 
     const tags = (l.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('');
@@ -2412,6 +2436,12 @@
     const isProject = !!l.unit_types;
     document.getElementById('sidebarPriceLabel').textContent = isProject ? 'Precio desde' : 'Precio';
     document.getElementById('sidebarPrice').innerHTML = `<sup>$</sup>${Number(l.price).toLocaleString('en-US')}`;
+
+    // Mobile floating CTA
+    const mlcPrice = document.getElementById('mlcPrice');
+    const mlcType  = document.getElementById('mlcType');
+    if (mlcPrice) mlcPrice.textContent = '$' + Number(l.price).toLocaleString('en-US');
+    if (mlcType)  mlcType.textContent = typeLabel[l.type] || '';
 
     const metaRows = [];
     if (l.units_available && l.units_total)

@@ -119,8 +119,9 @@
 
     /* APPLICATION CARDS */
     .app-list { display: flex; flex-direction: column; gap: 1.25rem; }
-    .app-card { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
+    .app-card { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; transition: box-shadow 0.2s, border-left 0.2s; cursor: pointer; }
     .app-card:hover { box-shadow: var(--shadow-md); }
+    .app-card.expanded { border-left: 4px solid var(--accent); }
     .app-card-header { padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .app-card-info { flex: 1; min-width: 200px; }
     .app-card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem; }
@@ -196,9 +197,9 @@
     .doc-status.approved { background: var(--green); }
     .doc-status.rejected { background: var(--red); }
     .doc-actions { display: flex; gap: 0.5rem; align-items: center; }
-    .btn-upload { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .btn-upload:hover { background: var(--accent-hover); }
-    .btn-upload svg { width: 14px; height: 14px; fill: currentColor; }
+    .btn-upload { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: none; color: var(--accent); border: 2px dashed var(--border); border-radius: 10px; padding: 0.75rem 1.2rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.2s, border-color 0.2s; width: 100%; }
+    .btn-upload:hover { background: var(--accent-light); border-color: var(--accent); }
+    .btn-upload svg { width: 16px; height: 16px; fill: currentColor; }
     .btn-link { background: none; border: none; color: var(--accent); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: underline; }
 
     /* TOURS */
@@ -265,11 +266,11 @@
     [data-theme="dark"] .timeline-eta { background: rgba(85,153,255,0.1); }
     .timeline-eta svg { width: 12px; height: 12px; fill: currentColor; }
 
-    .timeline-message-form { display: flex; gap: 0.75rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
-    .timeline-message-form input { flex: 1; padding: 0.6rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
-    .timeline-message-form input:focus { border-color: var(--accent); }
-    .btn-send { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
-    .btn-send:hover { background: var(--accent-hover); }
+    .timeline-message-form { display: flex; gap: 0.75rem; margin-top: 1.25rem; padding: 1rem; background: var(--bg-secondary); border-radius: 10px; }
+    .timeline-message-form input { flex: 1; padding: 0.85rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg-card); color: var(--text); font-size: 1rem; outline: none; transition: border-color 0.2s; min-height: 44px; }
+    .timeline-message-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+    .btn-send { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0.85rem 1.4rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; white-space: nowrap; }
+    .btn-send:hover { background: var(--accent-hover); transform: translateY(-1px); }
     .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ALERT */
@@ -835,16 +836,20 @@
       const detail = document.getElementById(`detail-${appId}`);
       if (!detail) return;
 
+      const card = document.getElementById(`app-${appId}`);
       if (detail.classList.contains('open')) {
         detail.classList.remove('open');
+        if (card) card.classList.remove('expanded');
         expandedAppId = null;
         return;
       }
 
-      // Close any other open detail
+      // Close any other open detail + remove accent
       document.querySelectorAll('.app-detail.open').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.app-card.expanded').forEach(c => c.classList.remove('expanded'));
 
       detail.classList.add('open');
+      if (card) card.classList.add('expanded');
       expandedAppId = appId;
 
       // Load detail if not cached

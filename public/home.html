@@ -143,9 +143,9 @@
     .search-input::placeholder { color: #A0AEBE; }
     .search-btn { background: var(--accent, #006AFF); color: #fff; border: none; border-radius: 8px; padding: 0.78rem 1.85rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.18s, transform 0.15s, box-shadow 0.15s; flex-shrink: 0; white-space: nowrap; }
     .search-btn:hover { background: var(--accent-hover, #0052CC); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,106,255,0.35); }
-    .search-hints { padding: 0.6rem 1.1rem 0.85rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: center; font-size: 0.78rem; color: #8A94A6; }
-    .search-hints a { color: var(--accent, #006AFF); text-decoration: none; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--accent-light, #EBF3FF); transition: background 0.15s; }
-    .search-hints a:hover { background: #d0e4ff; }
+    .search-hints { padding: 0.6rem 1.1rem 0.85rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: center; font-size: 0.78rem; color: rgba(255,255,255,0.7); }
+    .search-hints a { color: #fff; text-decoration: none; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.18); backdrop-filter: blur(4px); transition: background 0.15s; }
+    .search-hints a:hover { background: rgba(255,255,255,0.32); }
 
     /* Hero stats */
     .hero-stats { display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
@@ -650,20 +650,11 @@
         </div>
       </div>
 
-      <!-- Inline trust stats -->
-      <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statListings">--</span> <span data-i18n="hero.stat_properties">Propiedades</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;" id="statAgents">--</span> <span data-i18n="hero.stat_agents">Agentes</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="font-size:1.3rem;font-weight:800;color:#fff;">32</span> <span data-i18n="hero.stat_cities">Ciudades</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;color:rgba(255,255,255,0.8);font-size:0.85rem;">
-          <span style="color:#fbbf24;">&#9733;</span> <span style="font-size:1.3rem;font-weight:800;color:#fff;">4.8</span> <span data-i18n="hero.stat_satisfaction">Satisfacción</span>
-        </div>
+      <!-- Trust bar — replaces raw numbers pre-launch -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap;margin-top:1.5rem;">
+        <p style="color:rgba(255,255,255,0.75);font-size:0.9rem;font-weight:500;max-width:500px;text-align:center;line-height:1.5;margin:0;">
+          La plataforma que conecta compradores con los mejores agentes inmobiliarios de República Dominicana.
+        </p>
       </div>
 
     </div>
