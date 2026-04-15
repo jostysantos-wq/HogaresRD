@@ -524,10 +524,10 @@
       document.body.insertBefore(banner, document.body.firstChild);
     }
 
-    // Auth nav bar
+    // Auth nav bar (legacy fallback — nav-auth.js handles this independently)
     (function() {
       const area = document.getElementById('navAuthArea');
-      if (token && user) {
+      if (user && user.id) {
         const initials  = (user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
         const firstName = (user.name || 'Usuario').split(' ')[0];
         area.innerHTML = `
@@ -711,7 +711,7 @@
         method: 'POST',
         body: formData
       });
-      if (res.status === 401) { handle401(); return; }
+      if (res.status === 401) { handle401(); throw new Error('Sesión expirada'); }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       return res.json();
     }
@@ -1493,8 +1493,15 @@
     }
 
     /* ── Init ── */
-    if (token) {
-      loadApplications();
+    if (user && user.id) {
+      loadApplications().then(() => {
+        // Deep-link: auto-expand application from ?id= (used in email links)
+        const params = new URLSearchParams(window.location.search);
+        const targetId = params.get('id');
+        if (targetId && applications.some(a => a.id === targetId)) {
+          toggleDetail(targetId);
+        }
+      });
     }
   </script>
 <script src="/js/i18n.js" defer></script>
