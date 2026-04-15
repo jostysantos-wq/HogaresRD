@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Iniciar Sesión — HogaresRD</title>
   <link rel="stylesheet" href="/css/core.css">
+  <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" defer></script>
   <style>
     :root {
       --toggle-bg: #CBD5E1;
@@ -439,10 +440,7 @@
       btn.disabled = true; btn.textContent = 'Conectando...';
       try {
         if (!window.AppleID) {
-          const s = document.createElement('script');
-          s.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-          document.head.appendChild(s);
-          await new Promise((resolve, reject) => { s.onload = resolve; s.onerror = () => reject(new Error('No se pudo cargar Apple SDK')); });
+          throw new Error('Apple Sign In no disponible. Intenta recargar la página.');
         }
         AppleID.auth.init({
           clientId:    'com.josty.hogaresrd.web',
