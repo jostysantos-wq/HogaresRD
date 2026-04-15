@@ -867,7 +867,7 @@
               <div class="status-detail-badge">
                 <span class="status-badge large status-${getStatusColor(app.status)}">${getStatusLabel(app.status)}</span>
               </div>
-              ${app.status === 'rechazado' && app.rejection_reason ? `<div class="rejection-reason"><strong>Motivo del rechazo:</strong> ${esc(app.rejection_reason)}</div>` : ''}
+              ${app.status === 'rechazado' && (app.status_reason || app.rejection_reason) ? `<div class="rejection-reason"><strong>Motivo del rechazo:</strong> ${esc(app.status_reason || app.rejection_reason)}</div>` : ''}
               ${broker.name ? `
                 <div class="broker-info">
                   <div class="broker-avatar">${(broker.name || 'B').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -1298,9 +1298,9 @@
                   <div class="timeline-desc">Aplicación Rechazada</div>
                   ${rejDate ? `<div class="timeline-date">${timeAgo(rejDate)}</div>` : ''}
                 </div>
-                ${app.rejection_reason || app.status_reason ? `
+                ${app.status_reason || app.rejection_reason ? `
                   <div class="timeline-detail">
-                    <strong>Motivo:</strong> ${esc(app.rejection_reason || app.status_reason)}
+                    <strong>Motivo:</strong> ${esc(app.status_reason || app.rejection_reason)}
                   </div>` : ''}
                 <div class="timeline-status-chip" style="background:var(--red);">Rechazado</div>
               </div>
