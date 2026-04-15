@@ -767,12 +767,16 @@
         const listing = app.listing || {};
         const broker = app.broker || app.assigned_broker || {};
 
+        const imgUrl = app.listing_image || '';
+        const imgSrc = imgUrl.startsWith('http') ? imgUrl : (imgUrl ? '' + imgUrl : '');
         card.innerHTML = `
           <div class="app-card-header" data-app-id="${esc(String(app.id))}">
-            <div class="app-card-info">
+            ${imgSrc ? `<img src="${esc(imgSrc)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0;" loading="lazy" />` : `<div style="width:72px;height:72px;border-radius:10px;background:var(--bg-card,#f4f4f5);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:var(--text-muted,#aaa)"><path d="M1 5v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2zm18 14H5V5h14v14zm-7-2l-4-5-3 4h14l-5-7z"/></svg></div>`}
+            <div class="app-card-info" style="flex:1;min-width:0;">
               <div class="app-card-title">${esc(listing.title || app.listing_title || 'Propiedad')}</div>
               <div class="app-card-price">${formatPrice(listing.price || app.listing_price || app.price)}</div>
               <div class="app-card-meta">
+                ${app.listing_city ? `<div class="app-card-meta-item"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>${esc(app.listing_city)}</div>` : ''}
                 <div class="app-card-meta-item">
                   <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
                   ${formatDate(app.created_at)}
@@ -842,7 +846,8 @@
       if (!detail || !app) return;
 
       const broker = app.broker || app.assigned_broker || {};
-      const documents = app.document_requests || app.documents || [];
+      const docsRequested = app.documents_requested || app.document_requests || [];
+      const docsUploaded  = app.documents_uploaded || [];
       const tours = app.tours || [];
       const timeline = app.timeline_events || app.timeline || [];
       const payment = app.payment || app.payment_receipt || null;
@@ -881,6 +886,8 @@
         </div>`;
 
       /* Documents section */
+      const docReqLabels = { pending: 'Pendiente', uploaded: 'Subido', approved: 'Aprobado', rejected: 'Rechazado' };
+      const docRevLabels = { pending: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado' };
       html += `
         <div class="detail-section">
           <div class="detail-section-header">
@@ -888,33 +895,50 @@
             Documentos
           </div>
           <div class="detail-section-body">
-            ${documents.length === 0 ? '<div class="no-items">No hay documentos solicitados aun.</div>' : `
+            ${docsRequested.length === 0 && docsUploaded.length === 0 ? '<div class="no-items">No hay documentos solicitados aún.</div>' : ''}
+            ${docsRequested.length > 0 ? `
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">Solicitados</div>
               <div class="doc-list">
-                ${documents.map(doc => {
-                  const docStatus = doc.status || 'pending';
-                  const docStatusLabels = { pending: 'Pendiente', uploaded: 'Subido', approved: 'Aprobado', rejected: 'Rechazado' };
+                ${docsRequested.map(doc => {
+                  const st = doc.status || 'pending';
                   return `<div class="doc-item">
                     <div class="doc-item-info">
-                      <div class="doc-item-name">${esc(doc.name || doc.type || doc.document_type || 'Documento')}</div>
-                      ${doc.description ? `<div class="doc-item-desc">${esc(doc.description)}</div>` : ''}
+                      <div class="doc-item-name">${esc(doc.label || doc.type || 'Documento')}</div>
+                      ${doc.required ? '<span style="font-size:0.65rem;color:#B45309;font-weight:600;">Requerido</span>' : ''}
                     </div>
-                    <span class="doc-status ${docStatus}">${docStatusLabels[docStatus] || docStatus}</span>
+                    <span class="doc-status ${st}">${docReqLabels[st] || st}</span>
                     <div class="doc-actions">
-                      ${docStatus === 'pending' || docStatus === 'rejected' ? `
+                      ${st === 'pending' ? `
                         <label class="btn-upload" style="cursor:pointer;">
                           <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                           Subir
-                          <input type="file" multiple style="display:none;" onchange="uploadDocument('${appId}', '${doc.id || doc._id}', '${doc.type || doc.document_type || ''}', this)" />
+                          <input type="file" multiple style="display:none;" onchange="uploadDocument('${esc(appId)}', '${esc(doc.id)}', '${esc(doc.type || '')}', this)" />
                         </label>
-                      ` : ''}
-                      ${doc.file_url || doc.id ? `
-                        <a href="/api/applications/${appId}/documents/${doc.id || doc._id}/file" target="_blank" class="btn-link">Ver archivo</a>
                       ` : ''}
                     </div>
                   </div>`;
                 }).join('')}
               </div>
-            `}
+            ` : ''}
+            ${docsUploaded.length > 0 ? `
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:1rem 0 .5rem;">Subidos</div>
+              <div class="doc-list">
+                ${docsUploaded.map(doc => {
+                  const rev = doc.review_status || 'pending';
+                  return `<div class="doc-item">
+                    <div class="doc-item-info">
+                      <div class="doc-item-name">${esc(doc.original_name || 'Documento')}</div>
+                      <div class="doc-item-desc" style="font-size:0.72rem;color:var(--text-muted);">${formatDate(doc.uploaded_at)}</div>
+                      ${rev === 'rejected' && doc.review_note ? `<div style="font-size:0.72rem;color:#DC2626;margin-top:2px;">${esc(doc.review_note)}</div>` : ''}
+                    </div>
+                    <span class="doc-status ${rev === 'approved' ? 'approved' : rev === 'rejected' ? 'rejected' : 'uploaded'}">${docRevLabels[rev] || rev}</span>
+                    <div class="doc-actions">
+                      <a href="/api/applications/${appId}/documents/${doc.id}/file" target="_blank" class="btn-link">Ver</a>
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            ` : ''}
           </div>
         </div>`;
 
@@ -929,20 +953,20 @@
             ${tours.length === 0 ? '<div class="no-items">No hay visitas programadas.</div>' : `
               <div class="tour-list">
                 ${tours.map(tour => {
-                  const tourDate = new Date(tour.date || tour.scheduled_at);
-                  const day = tourDate.getDate();
-                  const month = tourDate.toLocaleDateString('es-DO', { month: 'short' }).toUpperCase();
-                  const tourStatusLabels = { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada' };
-                  const tourStatusClass = tour.status || 'scheduled';
+                  const tourDate = new Date((tour.requested_date || tour.date || '') + 'T12:00:00');
+                  const day = isNaN(tourDate) ? '—' : tourDate.getDate();
+                  const month = isNaN(tourDate) ? '' : tourDate.toLocaleDateString('es-DO', { month: 'short' }).toUpperCase();
+                  const tourStatusLabels = { pending: 'Pendiente', confirmed: 'Confirmada', completed: 'Completada', cancelled: 'Cancelada', rejected: 'Rechazada' };
+                  const tourStatusClass = tour.status || 'pending';
                   return `<div class="tour-item">
                     <div class="tour-date-box">
                       <div class="tour-date-day">${day}</div>
                       <div class="tour-date-month">${month}</div>
                     </div>
                     <div class="tour-info">
-                      <div class="tour-time">${formatTime(tour.date || tour.scheduled_at)}</div>
-                      ${tour.location ? `<div class="tour-location">${esc(tour.location)}</div>` : ''}
-                      ${tour.notes ? `<div class="tour-notes">${esc(tour.notes)}</div>` : ''}
+                      <div class="tour-time">${esc(tour.requested_time || '')}</div>
+                      ${tour.listing_title ? `<div class="tour-location">${esc(tour.listing_title)}</div>` : ''}
+                      ${tour.broker_notes || tour.client_notes ? `<div class="tour-notes">${esc(tour.broker_notes || tour.client_notes)}</div>` : ''}
                     </div>
                     <span class="tour-status ${tourStatusClass}">${tourStatusLabels[tourStatusClass] || tourStatusClass}</span>
                   </div>`;
