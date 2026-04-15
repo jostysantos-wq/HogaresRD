@@ -158,7 +158,7 @@ struct ApplicationsView: View {
         if applications.isEmpty { loading = true }
         errorMsg = nil
         do {
-            applications = try await api.getApplications()
+            applications = try await api.getMyApplications()
             applications.sort { $0.createdAt > $1.createdAt }
         } catch is CancellationError {
         } catch {

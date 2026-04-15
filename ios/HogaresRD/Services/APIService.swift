@@ -1283,11 +1283,20 @@ class APIService: ObservableObject {
     ///     assigned broker
     ///
     /// Before this fix, the broker dashboard was calling the wrong
-    /// endpoint (/api/applications/my), which returns applications
-    /// where the CURRENT USER IS THE CLIENT (a buyer). That's why
-    /// agents saw no applications on the iOS dashboard even though
-    /// clients were submitting them — the agent was querying the
-    /// wrong side of the relationship.
+    /// Fetch the current user's OWN applications (as a client/buyer).
+    /// Calls /api/applications/my which works for all roles and returns
+    /// enriched data (listing_image, listing_city).
+    func getMyApplications() async throws -> [Application] {
+        let url = apiURL("/api/applications/my")
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando mis aplicaciones")
+        if let arr = try? decoder.decode([Application].self, from: data) { return arr }
+        return []
+    }
+
+    /// Fetch applications managed by this broker/agent (for broker dashboard).
+    /// Returns 403 for regular users — use getMyApplications() for client views.
     func getApplications() async throws -> [Application] {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: apiURL("/api/applications"))

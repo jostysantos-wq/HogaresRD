@@ -2193,15 +2193,69 @@ router.post('/:id/message', userAuth, (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Mensaje es requerido' });
 
+  const senderRole = isBroker ? 'broker' : 'client';
   addEvent(app, 'message', message,
     req.user.sub, user?.name || (isBroker ? 'Broker' : app.client.name),
-    { role: isBroker ? 'broker' : 'client' });
+    { role: senderRole });
 
   store.saveApplication(app);
 
-  // Notify the other party
+  // ── Sync to Conversations system so messages appear in iOS Messages tab ──
+  // Find or create a conversation for this (client, property) pair.
+  const clientId = app.client?.user_id || null;
+  const brokerId = app.broker?.user_id || null;
+  if (clientId && brokerId && clientId !== brokerId) {
+    let conv = store.getConversations().find(
+      c => c.clientId === clientId && c.propertyId === app.listing_id
+    );
+    const msgObj = {
+      id:         'msg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+      senderId:   req.user.sub,
+      senderRole,
+      senderName: user?.name || (isBroker ? 'Broker' : app.client.name),
+      text:       message,
+      timestamp:  new Date().toISOString(),
+    };
+    if (conv) {
+      store.addMessage(conv.id, msgObj);
+      conv.lastMessage = message;
+      conv.updatedAt   = new Date().toISOString();
+      if (isBroker) conv.unreadClient = (conv.unreadClient || 0) + 1;
+      else          conv.unreadBroker = (conv.unreadBroker || 0) + 1;
+      store.saveConversation(conv);
+    } else {
+      conv = {
+        id:             'conv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        propertyId:     app.listing_id || '',
+        propertyTitle:  app.listing_title || 'Propiedad',
+        propertyImage:  null,
+        clientId,
+        clientName:     app.client?.name || 'Cliente',
+        brokerId,
+        brokerName:     app.broker?.name || 'Agente',
+        inmobiliariaId: app.inmobiliaria_id || null,
+        createdAt:      new Date().toISOString(),
+        updatedAt:      new Date().toISOString(),
+        lastMessage:    message,
+        unreadBroker:   isBroker ? 0 : 1,
+        unreadClient:   isBroker ? 1 : 0,
+        message_count:  1,
+      };
+      store.saveConversation(conv);
+      store.addMessage(conv.id, msgObj);
+    }
+    // Push notification to the other party
+    const pushTarget = isBroker ? clientId : brokerId;
+    pushNotify(pushTarget, {
+      type:  'new_message',
+      title: `💬 ${user?.name || 'Usuario'}`,
+      body:  message.slice(0, 120),
+      url:   `/mensajes?conv=${conv.id}`,
+    });
+  }
+
+  // Email notification to the other party
   const notifyEmail = isBroker ? app.client.email : app.broker.email;
-  const notifyName = isBroker ? app.client.name : (app.broker.name || 'Broker');
   if (notifyEmail) {
     sendNotification(notifyEmail,
       `HogaresRD — Nuevo mensaje sobre ${app.listing_title}`,
