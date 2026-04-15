@@ -1465,6 +1465,7 @@ async function verifyAppleToken(identityToken) {
         const decoded = jwt.verify(identityToken, pem, {
           algorithms: ['RS256'],
           issuer: 'https://appleid.apple.com',
+          audience: ['com.josty.hogaresrd', 'com.josty.hogaresrd.web'],
         });
         return { verified: true, decoded };
       }
