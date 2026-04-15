@@ -7,6 +7,8 @@ struct Application: Identifiable {
     let listingId:    String
     let listingTitle: String
     let listingType:  String
+    let listingImage: String?
+    let listingCity:  String?
     let status:       String
     let statusReason: String?
     let intent:       String
@@ -40,6 +42,8 @@ extension Application: Decodable {
         case listingTitle = "listing_title"
         case listingPrice = "listing_price"
         case listingType  = "listing_type"
+        case listingImage = "listing_image"
+        case listingCity  = "listing_city"
         case status
         case statusReason = "status_reason"
         case intent
@@ -53,6 +57,8 @@ extension Application: Decodable {
         listingId    = try c.decode(String.self, forKey: .listingId)
         listingTitle = try c.decode(String.self, forKey: .listingTitle)
         listingType  = try c.decode(String.self, forKey: .listingType)
+        listingImage = try? c.decode(String.self, forKey: .listingImage)
+        listingCity  = try? c.decode(String.self, forKey: .listingCity)
         status       = try c.decode(String.self, forKey: .status)
         statusReason = try? c.decode(String.self, forKey: .statusReason)
         intent       = try c.decode(String.self, forKey: .intent)

@@ -1002,7 +1002,18 @@ router.get('/my', userAuth, (req, res) => {
   const apps = store.getApplicationsByClient(user.id).length
     ? store.getApplicationsByClient(user.id)
     : store.getApplicationsByClient(user.email);
-  res.json(apps);
+
+  // Enrich with listing cover image + city for the card UI
+  const enriched = apps.map(a => {
+    const listing = a.listing_id ? store.getListingById(a.listing_id) : null;
+    const images = Array.isArray(listing?.images) ? listing.images : [];
+    return {
+      ...a,
+      listing_image: images[0] || null,
+      listing_city:  listing?.city || null,
+    };
+  });
+  res.json(enriched);
 });
 
 // ── GET /statuses  — Available statuses ──────────────────────────
