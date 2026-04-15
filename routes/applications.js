@@ -1455,15 +1455,31 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
 
   // Auto-task: notify client to upload requested documents
   if (app.client?.user_id) {
-    createAutoTask({
+    const task = createAutoTask({
       title: `Sube los documentos solicitados para ${app.listing_title || 'la propiedad'}`,
-      description: documents.map(d => d.label).join(', '),
+      description: newDocs.map(d => d.label).join(', '),
       assigned_to: app.client.user_id,
       assigned_by: req.user.sub,
       application_id: app.id,
       listing_id: app.listing_id,
       source_event: 'documents_requested',
     });
+
+    // If dedup blocked task creation, update the existing task's
+    // description so it reflects ALL pending documents — not just the
+    // first batch that was requested.
+    if (!task) {
+      const existing = store.getTasksByApplication(app.id);
+      const pendingTask = existing.find(t => t.source_event === 'documents_requested' && t.status !== 'completada' && t.status !== 'no_aplica');
+      if (pendingTask) {
+        const allPendingLabels = app.documents_requested
+          .filter(d => d.status === 'pending')
+          .map(d => d.label);
+        pendingTask.description = allPendingLabels.join(', ');
+        pendingTask.updated_at = new Date().toISOString();
+        store.saveTask(pendingTask);
+      }
+    }
   }
 
   // Notify client
