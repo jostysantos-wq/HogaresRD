@@ -344,7 +344,14 @@ struct ReelCard: View {
             ZStack(alignment: .bottom) {
 
                 // ── Image carousel (TabView — locks horizontal swipe to images only) ──
-                let urls = listing.allImageURLs
+                // Use pre-cropped feed image as the first slide when available
+                let feedURL = listing.feedImageURL
+                let originalURLs = listing.allImageURLs
+                let urls: [URL] = if let fu = feedURL, !originalURLs.contains(fu) {
+                    [fu] + originalURLs
+                } else {
+                    originalURLs
+                }
                 if urls.isEmpty {
                     ZStack {
                         Color(red: 0.1, green: 0.1, blue: 0.15)

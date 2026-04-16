@@ -526,7 +526,7 @@ router.put('/:id', userAuth, (req, res) => {
     'province', 'city', 'sector', 'address', 'referencePoint',
     'lat', 'lng',
     // Lists
-    'amenities', 'tags', 'images', 'blueprints',
+    'amenities', 'tags', 'images', 'blueprints', 'feed_image', 'feed_focal',
     // Project
     'construction_company', 'units_total', 'units_available',
     'delivery_date', 'project_stage', 'unit_types',
@@ -708,6 +708,96 @@ router.post('/:id/request-affiliation', userAuth, (req, res) => {
   }).catch(() => {});
 
   res.json({ ok: true, message: 'Solicitud enviada. El equipo de HogaresRD revisará tu solicitud.' });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── POST /:id/feed-image — Generate portrait feed crop from focal point
+// ══════════════════════════════════════════════════════════════════
+const sharp = require('sharp');
+const { uploadToSpaces, isConfigured: spacesConfigured } = require('../utils/spaces');
+
+router.post('/:id/feed-image', userAuth, async (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  // Auth: listing owner, org member, or admin
+  const user = store.getUserById(req.user.sub);
+  const isOwner = listing.creator_user_id === req.user.sub;
+  const isOrg = user?.inmobiliaria_id && listing.inmobiliaria_id === user.inmobiliaria_id;
+  const isAdmin = user?.role === 'admin';
+  if (!isOwner && !isOrg && !isAdmin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  const { imageIndex = 0, x = 0.5, y = 0.5 } = req.body;
+  if (typeof x !== 'number' || typeof y !== 'number' || x < 0 || x > 1 || y < 0 || y > 1)
+    return res.status(400).json({ error: 'Coordenadas inválidas (x, y deben ser 0–1)' });
+
+  // Resolve source image URL
+  const images = Array.isArray(listing.images) ? listing.images : [];
+  const idx = Math.min(Math.max(0, Math.floor(imageIndex)), images.length - 1);
+  if (images.length === 0)
+    return res.status(400).json({ error: 'La propiedad no tiene imágenes' });
+
+  const imgEntry = images[idx];
+  const imgUrl = typeof imgEntry === 'string' ? imgEntry : imgEntry?.url;
+  if (!imgUrl) return res.status(400).json({ error: 'Imagen no encontrada' });
+
+  try {
+    // Fetch source image
+    const fullUrl = imgUrl.startsWith('http') ? imgUrl : `${process.env.BASE_URL || 'https://hogaresrd.com'}${imgUrl}`;
+    const imgRes = await fetch(fullUrl);
+    if (!imgRes.ok) throw new Error('No se pudo descargar la imagen fuente');
+    const sourceBuf = Buffer.from(await imgRes.arrayBuffer());
+
+    // Generate 1080x1920 portrait crop centered on focal point
+    const img = sharp(sourceBuf);
+    const meta = await img.metadata();
+    const targetW = 1080, targetH = 1920;
+    const ratio = targetW / targetH; // 0.5625
+
+    let cropW, cropH;
+    if (meta.width / meta.height > ratio) {
+      cropH = meta.height;
+      cropW = Math.round(cropH * ratio);
+    } else {
+      cropW = meta.width;
+      cropH = Math.round(cropW / ratio);
+    }
+    const left = Math.max(0, Math.min(Math.round(x * meta.width - cropW / 2), meta.width - cropW));
+    const top  = Math.max(0, Math.min(Math.round(y * meta.height - cropH / 2), meta.height - cropH));
+
+    const feedBuf = await sharp(sourceBuf)
+      .extract({ left, top, width: cropW, height: cropH })
+      .resize(targetW, targetH)
+      .jpeg({ quality: 88, mozjpeg: true })
+      .toBuffer();
+
+    // Upload to CDN or save locally
+    const feedKey = `feed/${listing.id}_feed.jpg`;
+    let feedUrl;
+    if (spacesConfigured()) {
+      feedUrl = await uploadToSpaces(feedBuf, feedKey, 'image/jpeg');
+    }
+    if (!feedUrl) {
+      const fsp = require('fs').promises;
+      const path = require('path');
+      const dir = path.join(__dirname, '..', 'public', 'uploads', 'feed');
+      await fsp.mkdir(dir, { recursive: true });
+      const localPath = path.join(dir, `${listing.id}_feed.jpg`);
+      await fsp.writeFile(localPath, feedBuf);
+      feedUrl = `/uploads/feed/${listing.id}_feed.jpg`;
+    }
+
+    // Save on listing
+    listing.feed_image = feedUrl;
+    listing.feed_focal = { imageIndex: idx, x, y };
+    store.saveListing(listing);
+
+    res.json({ feed_image: feedUrl, feed_focal: listing.feed_focal });
+  } catch (e) {
+    console.error('[feed-image] Error generating feed crop:', e.message);
+    res.status(500).json({ error: 'Error generando imagen del feed: ' + e.message });
+  }
 });
 
 module.exports = router;

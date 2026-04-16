@@ -2750,6 +2750,12 @@
         }
         const data = await res.json();
         if (data.success) {
+          // Show focal point picker for feed image (if images exist)
+          const listingId = data.listingId || data.id || EDIT_LISTING_ID;
+          if (listingId && body.images && body.images.length > 0 && !isClaim) {
+            await showFocalPointPicker(listingId, body.images);
+          }
+
           document.getElementById('successText').textContent = IS_EDIT_MODE
             ? (data.requeued
                 ? 'Cambios guardados. Tu propiedad volvió a la cola de revisión.'
@@ -3063,6 +3069,107 @@
       }
     }
     loadForEdit();
+
+    // ══════════════════════════════════════════════════════════════
+    // ── Focal point picker for feed image ──────────────────────────
+    // ══════════════════════════════════════════════════════════════
+    function showFocalPointPicker(listingId, images) {
+      return new Promise((resolve) => {
+        const firstImg = images[0];
+        const imgUrl = typeof firstImg === 'string' ? firstImg : firstImg?.url;
+        if (!imgUrl) return resolve();
+
+        // Build modal
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        modal.innerHTML = `
+          <div style="background:var(--bg-card);max-width:560px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px;padding:1.5rem;">
+            <div style="text-align:center;margin-bottom:1rem;">
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 0.3rem;">Elige el punto focal para el feed</h2>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">Toca la parte más atractiva de tu foto. Se usará un recorte vertical (9:16) para el feed.</p>
+            </div>
+            <div id="fpImageWrap" style="position:relative;width:100%;border-radius:12px;overflow:hidden;cursor:crosshair;background:#111;">
+              <img id="fpImage" src="${imgUrl}" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none;" alt="" />
+              <div id="fpMarker" style="display:none;position:absolute;width:32px;height:32px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,0.6),0 0 12px rgba(0,0,0,0.5);transform:translate(-50%,-50%);pointer-events:none;"></div>
+              <div id="fpCrop" style="display:none;position:absolute;border:2px solid #006AFF;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;"></div>
+            </div>
+            <p id="fpHint" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin:0.75rem 0;">Toca la imagen para marcar el punto focal</p>
+            <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+              <button id="fpSkip" type="button" style="flex:1;padding:0.75rem;background:none;border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-weight:600;cursor:pointer;">Omitir</button>
+              <button id="fpSave" type="button" disabled style="flex:2;padding:0.75rem;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;opacity:0.5;">Guardar Punto Focal</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const img = modal.querySelector('#fpImage');
+        const wrap = modal.querySelector('#fpImageWrap');
+        const marker = modal.querySelector('#fpMarker');
+        const crop = modal.querySelector('#fpCrop');
+        const hint = modal.querySelector('#fpHint');
+        const saveBtn = modal.querySelector('#fpSave');
+        let focalX = 0.5, focalY = 0.5, hasSelection = false;
+
+        function updateCropPreview() {
+          // Show 9:16 crop overlay on the displayed image
+          const imgW = img.clientWidth;
+          const imgH = img.clientHeight;
+          const ratio = 9 / 16;
+          let cropW, cropH;
+          if (imgW / imgH > ratio) {
+            cropH = imgH;
+            cropW = cropH * ratio;
+          } else {
+            cropW = imgW;
+            cropH = cropW / ratio;
+          }
+          let cropLeft = Math.max(0, Math.min(focalX * imgW - cropW / 2, imgW - cropW));
+          let cropTop = Math.max(0, Math.min(focalY * imgH - cropH / 2, imgH - cropH));
+          crop.style.left = cropLeft + 'px';
+          crop.style.top = cropTop + 'px';
+          crop.style.width = cropW + 'px';
+          crop.style.height = cropH + 'px';
+          crop.style.display = 'block';
+
+          marker.style.left = (focalX * imgW) + 'px';
+          marker.style.top = (focalY * imgH) + 'px';
+          marker.style.display = 'block';
+        }
+
+        wrap.addEventListener('click', (e) => {
+          const rect = img.getBoundingClientRect();
+          focalX = (e.clientX - rect.left) / rect.width;
+          focalY = (e.clientY - rect.top) / rect.height;
+          focalX = Math.max(0, Math.min(1, focalX));
+          focalY = Math.max(0, Math.min(1, focalY));
+          hasSelection = true;
+          updateCropPreview();
+          hint.textContent = 'Vista previa del recorte 9:16 · Toca otra zona para ajustar';
+          saveBtn.disabled = false;
+          saveBtn.style.opacity = '1';
+        });
+
+        modal.querySelector('#fpSkip').addEventListener('click', () => {
+          document.body.removeChild(modal);
+          resolve();
+        });
+
+        saveBtn.addEventListener('click', async () => {
+          if (!hasSelection) return;
+          saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+          try {
+            await fetch(`/api/listings/${listingId}/feed-image`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ imageIndex: 0, x: focalX, y: focalY })
+            });
+          } catch (e) { console.warn('[feed-image] save failed:', e); }
+          document.body.removeChild(modal);
+          resolve();
+        });
+      });
+    }
   </script>
 <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>

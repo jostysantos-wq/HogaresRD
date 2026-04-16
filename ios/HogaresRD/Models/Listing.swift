@@ -18,6 +18,7 @@ struct Listing: Decodable, Identifiable, Equatable {
     let sector: String?
     let address: String?
     let images: [String]
+    let feedImage: String?
     let amenities: [String]
 
     // Project-specific fields
@@ -51,6 +52,7 @@ struct Listing: Decodable, Identifiable, Equatable {
              units_total, unit_types, construction_company, blueprints,
              lat, lng
         case unitInventory = "unit_inventory"
+        case feedImage = "feed_image"
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +103,7 @@ struct Listing: Decodable, Identifiable, Equatable {
             images = []
         }
         amenities            = (try? c.decode([String].self, forKey: .amenities)) ?? []
+        feedImage            = try? c.decode(String.self, forKey: .feedImage)
     }
 
     private static let priceFormatter: NumberFormatter = {
@@ -148,6 +151,13 @@ struct Listing: Decodable, Identifiable, Equatable {
             if path.hasPrefix("http") { return URL(string: path) }
             return URL(string: base + path)
         }
+    }
+
+    /// Pre-cropped portrait image for the feed (9:16). Falls back to first image.
+    var feedImageURL: URL? {
+        guard let fi = feedImage, !fi.isEmpty else { return firstImageURL }
+        if fi.hasPrefix("http") { return URL(string: fi) }
+        return URL(string: APIService.baseURL + fi)
     }
 }
 
