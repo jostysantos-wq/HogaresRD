@@ -1189,6 +1189,62 @@ class APIService: ObservableObject {
         _ = try? await session.data(for: req)
     }
 
+    // MARK: - Notifications inbox
+
+    /// One row in the user's notifications inbox.
+    struct AppNotification: Identifiable, Decodable {
+        let id: String
+        let type: String
+        let title: String?
+        let body: String?
+        let url: String?
+        let read_at: String?
+        let created_at: String
+        var isRead: Bool { read_at != nil }
+    }
+
+    /// Fetch the current user's notifications inbox plus the unread count.
+    /// Pass `unreadOnly: true` to filter to unread.
+    func fetchNotifications(limit: Int = 50, unreadOnly: Bool = false) async throws -> (items: [AppNotification], unreadCount: Int) {
+        guard token != nil else { throw APIError.server("No autenticado") }
+        var comps = URLComponents(string: "\(apiBase)/api/notifications")!
+        comps.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if unreadOnly { comps.queryItems?.append(URLQueryItem(name: "unreadOnly", value: "1")) }
+        let req = try authedRequest(comps.url!)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando notificaciones")
+        struct Resp: Decodable { let notifications: [AppNotification]; let unreadCount: Int }
+        let parsed = try JSONDecoder().decode(Resp.self, from: data)
+        return (parsed.notifications, parsed.unreadCount)
+    }
+
+    /// Just the unread count — cheap call for nav badges and polling.
+    func fetchUnreadNotificationCount() async -> Int {
+        guard token != nil else { return 0 }
+        guard let url = URL(string: "\(apiBase)/api/notifications/unread-count") else { return 0 }
+        guard let req = try? authedRequest(url) else { return 0 }
+        guard let (data, _) = try? await session.data(for: req) else { return 0 }
+        struct Resp: Decodable { let count: Int }
+        return (try? JSONDecoder().decode(Resp.self, from: data))?.count ?? 0
+    }
+
+    /// Mark a single notification as read. Server triggers a silent badge
+    /// refresh, so the icon reflects the new count without the app being open.
+    func markNotificationRead(id: String) async throws {
+        let url = apiURL("/api/notifications/\(id)/read")
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error marcando notificación")
+    }
+
+    /// Mark every unread notification as read in one call.
+    func markAllNotificationsRead() async throws {
+        let url = apiURL("/api/notifications/mark-all-read")
+        let req = try authedRequest(url, method: "POST")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error marcando notificaciones")
+    }
+
     /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
     /// conversation so no further messages can be sent from either side.
     func closeConversation(id: String, reason: String) async throws -> Conversation {

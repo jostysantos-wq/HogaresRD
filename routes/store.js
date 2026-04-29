@@ -315,6 +315,7 @@ let _blogPosts = [];
 let _pageContent = [];
 let _reports = [];
 let _tasks = [];
+let _notifications = [];
 let _metaLeads = [];
 let _leadQueue = [];
 let _contributionScores = [];
@@ -376,6 +377,16 @@ async function _loadCache() {
         action TEXT NOT NULL, data JSONB DEFAULT '{}', created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log (user_id, created_at);
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+        type TEXT NOT NULL, title TEXT, body TEXT, url TEXT,
+        data JSONB DEFAULT '{}', read_at TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_created
+        ON notifications (user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_notifications_unread
+        ON notifications (user_id) WHERE read_at IS NULL;
       CREATE TABLE IF NOT EXISTS messages (
         id              TEXT PRIMARY KEY,
         conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -391,7 +402,7 @@ async function _loadCache() {
     `);
 
     const [users, subs, apps, convs, tours, avail, twofa, push, revoked,
-           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs, privLog, iPost, iReview] = await Promise.all([
+           searches, blog, pages, reports, tasks, meta, lq, cs, delReqs, privLog, iPost, iReview, notifs] = await Promise.all([
       query('SELECT * FROM users'),
       query('SELECT * FROM submissions'),
       query('SELECT * FROM applications'),
@@ -413,6 +424,7 @@ async function _loadCache() {
       query('SELECT * FROM privacy_log'),
       query('SELECT * FROM inmobiliaria_posts'),
       query('SELECT * FROM inmobiliaria_reviews'),
+      query('SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5000'),
     ]);
     _users = users;
     _submissions = subs;
@@ -435,6 +447,7 @@ async function _loadCache() {
     _privacyLog = privLog;
     _inmobPosts = iPost;
     _inmobReviews = iReview;
+    _notifications = notifs;
     _cacheReady = true;
     console.log(`[store-pg] Cache loaded: ${users.length} users, ${subs.length} listings, ${apps.length} apps, ${lq.length} lead queue, ${cs.length} scores`);
   } catch (err) {
@@ -1286,6 +1299,85 @@ function deleteTask(id) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS — in-app notification history that drives the iOS badge
+//                 and the future notifications inbox UI.
+// ══════════════════════════════════════════════════════════════════════════
+
+function _hydrateNotification(row) {
+  if (!row) return null;
+  const obj = { ...row };
+  if (typeof obj.data === 'string') obj.data = _jsonParse(obj.data, {});
+  if (!obj.data) obj.data = {};
+  return obj;
+}
+
+function getNotificationsByUser(userId, { limit = 50, unreadOnly = false } = {}) {
+  let rows = _notifications.filter(n => n.user_id === userId);
+  if (unreadOnly) rows = rows.filter(n => !n.read_at);
+  rows.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  return rows.slice(0, limit).map(_hydrateNotification);
+}
+
+function getUnreadNotificationCount(userId) {
+  let count = 0;
+  for (const n of _notifications) {
+    if (n.user_id === userId && !n.read_at) count++;
+  }
+  return count;
+}
+
+function saveNotification(notif) {
+  const NOTIF_COLS = ['id', 'user_id', 'type', 'title', 'body', 'url', 'data', 'read_at', 'created_at'];
+  const row = {};
+  for (const col of NOTIF_COLS) {
+    if (notif[col] !== undefined) row[col] = notif[col];
+  }
+  if (row.data && typeof row.data !== 'string') row.data = JSON.stringify(row.data);
+  const { sql, values } = buildUpsert('notifications', row, 'id');
+  pool.query(sql, values).catch(err => _dbWriteError('saveNotification', err));
+  // Cache: parse data back to object
+  const cacheRow = { ...row, data: typeof row.data === 'string' ? _jsonParse(row.data, {}) : (row.data || {}) };
+  const idx = _notifications.findIndex(n => n.id === notif.id);
+  if (idx >= 0) _notifications[idx] = cacheRow;
+  else _notifications.unshift(cacheRow); // newest first to match load order
+  // Soft cap on cache to avoid unbounded growth — DB still has full history
+  if (_notifications.length > 5000) _notifications = _notifications.slice(0, 5000);
+}
+
+function markNotificationRead(id, userId) {
+  const idx = _notifications.findIndex(n => n.id === id && n.user_id === userId);
+  if (idx < 0) return false;
+  if (_notifications[idx].read_at) return true; // already read
+  const readAt = new Date().toISOString();
+  _notifications[idx].read_at = readAt;
+  pool.query('UPDATE notifications SET read_at = $1 WHERE id = $2 AND user_id = $3',
+    [readAt, id, userId]).catch(err => _dbWriteError('markNotificationRead', err));
+  return true;
+}
+
+function markAllNotificationsRead(userId) {
+  const readAt = new Date().toISOString();
+  let touched = 0;
+  for (const n of _notifications) {
+    if (n.user_id === userId && !n.read_at) { n.read_at = readAt; touched++; }
+  }
+  if (touched > 0) {
+    pool.query('UPDATE notifications SET read_at = $1 WHERE user_id = $2 AND read_at IS NULL',
+      [readAt, userId]).catch(err => _dbWriteError('markAllNotificationsRead', err));
+  }
+  return touched;
+}
+
+function deleteNotification(id, userId) {
+  const idx = _notifications.findIndex(n => n.id === id && n.user_id === userId);
+  if (idx < 0) return false;
+  _notifications.splice(idx, 1);
+  pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2',
+    [id, userId]).catch(err => _dbWriteError('deleteNotification', err));
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // ACTIVITY LOG
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -1546,6 +1638,8 @@ module.exports = {
   getReports, getReportById, saveReport,
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
   saveTask, deleteTask,
+  getNotificationsByUser, getUnreadNotificationCount,
+  saveNotification, markNotificationRead, markAllNotificationsRead, deleteNotification,
   withTransaction,
   getInmobPosts, getInmobPostById, getPublishedInmobPosts, saveInmobPost, deleteInmobPost,
   getInmobReviews, getApprovedInmobReviews, getInmobReviewById, saveInmobReview, deleteInmobReview,

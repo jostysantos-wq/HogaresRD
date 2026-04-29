@@ -451,7 +451,12 @@ router.get('/:id', requireLogin, async (req, res) => {
     const isClientSide = conv.clientId === user.sub;
     if (!isClientSide && conv.unreadBroker) { conv.unreadBroker = 0; dirty = true; }
     if (isClientSide && conv.unreadClient)  { conv.unreadClient = 0; dirty = true; }
-    if (dirty) store.saveConversation(conv);
+    if (dirty) {
+      store.saveConversation(conv);
+      // Silent push so the icon badge reflects the new (lower) unread count
+      // even while the app is closed on other devices.
+      try { require('./push').refreshBadge(user.sub); } catch {}
+    }
   }
 
   res.json({ ...conv, messages, hasMore, totalMessages, clientAvatar, brokerAvatar });
@@ -830,6 +835,7 @@ router.put('/:id/read', requireLogin, (req, res) => {
   if (isAssignedBroker || isOrgOwner || (isAdmin && !isClientSide)) conv.unreadBroker = 0;
 
   store.saveConversation(conv);
+  try { require('./push').refreshBadge(user.sub); } catch {}
   res.json({ ok: true, unreadClient: conv.unreadClient || 0, unreadBroker: conv.unreadBroker || 0 });
 });
 

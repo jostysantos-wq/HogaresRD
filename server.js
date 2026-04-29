@@ -306,6 +306,7 @@ app.use('/api/inventory',          requireActiveSubscription, require('./routes/
 app.use('/api/reports',            require('./routes/reports').router);
 app.use('/api/paid-ads',          require('./routes/paid-ads'));
 app.use('/api/push',              require('./routes/push').router);
+app.use('/api/notifications',     require('./routes/notifications'));
 app.use('/api/saved-searches',    savedSearchRouter);
 app.use('/api/tasks',             requireActiveSubscription, require('./routes/tasks'));
 

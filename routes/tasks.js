@@ -27,7 +27,7 @@ const express    = require('express');
 const crypto     = require('crypto');
 const store      = require('./store');
 const { userAuth } = require('./auth');
-const { notify: pushNotify } = require('./push');
+const { notify: pushNotify, refreshBadge: pushRefreshBadge } = require('./push');
 const { createTransport } = require('./mailer');
 const et = require('../utils/email-templates');
 
@@ -386,6 +386,8 @@ router.post('/:id/complete', userAuth, (req, res) => {
       url:   '/broker',
     });
   }
+  // Assignee just removed an item from their pending list — refresh icon
+  pushRefreshBadge(req.user.sub).catch(() => {});
   res.json(enrichTask(task));
 });
 
@@ -421,6 +423,9 @@ router.post('/:id/approve', userAuth, (req, res) => {
     body:  task.title.slice(0, 80),
     url:   '/broker',
   });
+  // Approver finished a pending_review task → their badge drops.
+  // The assignee's pending push (sent above) already recomputes their badge.
+  pushRefreshBadge(req.user.sub).catch(() => {});
 
   res.json(enrichTask(task));
 });
@@ -461,6 +466,8 @@ router.post('/:id/reject', userAuth, (req, res) => {
     body:  (note || task.title).slice(0, 80),
     url:   '/broker',
   });
+  // Approver's pending_review item moved off their plate.
+  pushRefreshBadge(req.user.sub).catch(() => {});
 
   res.json(enrichTask(task));
 });
@@ -500,6 +507,8 @@ router.post('/:id/not-applicable', userAuth, (req, res) => {
       url:   '/broker',
     });
   }
+  // The actor's badge dropped (one fewer pending/review item on their plate)
+  pushRefreshBadge(req.user.sub).catch(() => {});
   res.json(enrichTask(task));
 });
 

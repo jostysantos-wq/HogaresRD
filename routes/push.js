@@ -23,6 +23,7 @@ const http2      = require('http2');
 const jwt        = require('jsonwebtoken');
 const fs         = require('fs');
 const path       = require('path');
+const crypto     = require('crypto');
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ function getApnsJwt() {
 /**
  * Send a push notification via APNs HTTP/2
  */
-async function sendApns(deviceToken, payload) {
+async function sendApns(deviceToken, payload, opts = {}) {
   const token = getApnsJwt();
   if (!token) {
     console.warn('[Push] APNs not configured — skipping iOS push');
@@ -123,13 +124,16 @@ async function sendApns(deviceToken, payload) {
     });
 
     const body = JSON.stringify(payload);
+    // Default to a foreground alert push. Silent/background pushes (e.g.
+    // refreshBadge) override these via opts so iOS treats them as
+    // background updates — no banner, no sound, just a state refresh.
     const headers = {
       ':method': 'POST',
       ':path': `/3/device/${deviceToken}`,
       'authorization': `bearer ${token}`,
       'apns-topic': _apnsBundleId,
-      'apns-push-type': 'alert',
-      'apns-priority': '10',
+      'apns-push-type': opts.pushType || 'alert',
+      'apns-priority': opts.priority || '10',
       'apns-expiration': '0',
       'content-type': 'application/json',
       'content-length': Buffer.byteLength(body),
@@ -341,12 +345,92 @@ function pendingTaskCount(userId, user) {
   return count;
 }
 
+function leadQueueCount(userId, user) {
+  // Count active lead_queue items where the user is in the CURRENT tier
+  // and the lead's inmobiliaria scope (if any) matches the user's org.
+  // We lazy-require cascade-engine to avoid a circular import at module
+  // load time — cascade-engine imports push for notifications.
+  if (!user) return 0;
+  let cascadeEngine;
+  try { cascadeEngine = require('./cascade-engine'); } catch { return 0; }
+  if (!cascadeEngine?.getTierAgents) return 0;
+  const userOrgId = ['inmobiliaria', 'constructora'].includes(user.role)
+    ? user.id : user.inmobiliaria_id;
+  let count = 0;
+  const active = store.getActiveLeadQueue ? store.getActiveLeadQueue() : [];
+  for (const item of active) {
+    if (item.inmobiliaria_scope && item.inmobiliaria_scope !== userOrgId) continue;
+    const listing = store.getListingById(item.listing_id);
+    if (!listing) continue;
+    const tiers = cascadeEngine.getTierAgents(listing, item.inmobiliaria_scope || null);
+    const currentTierAgents = { 1: tiers.tier1, 2: tiers.tier2, 3: tiers.tier3 }[item.current_tier] || [];
+    if (currentTierAgents.includes(userId)) count++;
+  }
+  return count;
+}
+
+function unreadNotificationCount(userId) {
+  return store.getUnreadNotificationCount ? store.getUnreadNotificationCount(userId) : 0;
+}
+
 function computeBadgeCount(userId) {
   const user = store.getUserById(userId);
   if (!user) return 0;
-  const total = unreadConversationCount(userId, user) + pendingTaskCount(userId, user);
+  const total =
+    unreadConversationCount(userId, user) +
+    pendingTaskCount(userId, user) +
+    leadQueueCount(userId, user) +
+    unreadNotificationCount(userId);
   // iOS displays "99+" beyond 99; clamping prevents weird wide-digit badges.
   return Math.max(0, Math.min(99, total));
+}
+
+// ── Notification history persistence ──────────────────────────────────────
+// Every notification we send via notify() is also written to a history
+// row so the user has an inbox they can revisit. Unread rows count toward
+// the badge, which makes the icon stay accurate even if pushes were
+// silenced / lost — the next launch reads from the DB, not from APNs.
+function persistNotification(userId, notification) {
+  if (!userId || !notification) return null;
+  if (!store.saveNotification) return null;
+  const id = 'notif_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
+  const row = {
+    id,
+    user_id:    userId,
+    type:       notification.type || 'general',
+    title:      notification.title || 'HogaresRD',
+    body:       notification.body || '',
+    url:        notification.url || '/',
+    data:       notification.data || {},
+    read_at:    null,
+    created_at: new Date().toISOString(),
+  };
+  try { store.saveNotification(row); } catch (e) { console.error('[Push] persistNotification failed:', e.message); }
+  return row;
+}
+
+// ── refreshBadge — silent APNs background push to update icon count ──────
+// Call this after server-side state changes that affect a user's unread
+// count but don't generate a user-facing notification (e.g. they read a
+// conversation on web, completed a task, marked a notification read).
+// Updates the icon while the app is closed without any banner/sound.
+async function refreshBadge(userId) {
+  try {
+    if (!userId) return;
+    const userSubs = store.getPushSubscriptionsByUser(userId);
+    if (!userSubs?.ios?.length) return;
+    const badgeValue = computeBadgeCount(userId);
+    const apnsPayload = { aps: { 'content-available': 1, badge: badgeValue } };
+    await Promise.allSettled(
+      userSubs.ios.map(token => sendApns(token, apnsPayload, {
+        pushType: 'background',
+        priority: '5', // low-priority background, conserves battery + bypasses banner
+      }))
+    );
+  } catch (e) {
+    // Never throw — a failed badge refresh shouldn't break the calling flow.
+    console.error('[Push] refreshBadge error:', e.message);
+  }
 }
 
 // POST /badge-reset — kept for iOS-app backward compat; now a no-op since
@@ -380,6 +464,10 @@ async function notify(userId, notification) {
       console.log(`[Push] Skipped — user ${userId} disabled ${notification.type}`);
       return;
     }
+
+    // Persist a notification-history row BEFORE sending the push so the
+    // badge count (computed below) includes this notification.
+    persistNotification(userId, notification);
 
     const webPayload = JSON.stringify({
       title: notification.title || 'HogaresRD',
@@ -513,4 +601,4 @@ async function broadcastNewListing(listing) {
   }
 }
 
-module.exports = { router, notify, broadcastNewListing, NotificationType };
+module.exports = { router, notify, refreshBadge, computeBadgeCount, broadcastNewListing, NotificationType };
