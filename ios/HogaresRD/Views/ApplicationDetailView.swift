@@ -27,6 +27,10 @@ struct ApplicationDetailView: View {
     @State private var showDocsSheet     = false
     @State private var showMessageSheet  = false
     @State private var showCommissionSheet = false
+    @State private var showSkipDocsSheet = false
+    @State private var skipDocsNote      = ""
+    @State private var skipDocsBusy      = false
+    @State private var skipDocsError: String?
 
     // Workflow action bar state
     @State private var workflowBusy      = false
@@ -121,6 +125,81 @@ struct ApplicationDetailView: View {
                     Task { await load() }
                 }
                 .environmentObject(api)
+            }
+        }
+        .sheet(isPresented: $showSkipDocsSheet) {
+            skipDocsSheetBody
+        }
+    }
+
+    // MARK: - Skip-documents sheet
+    //
+    // Presented from the Documentos tab when there's at least one pending
+    // request. Captures a mandatory note (server-side minimum 5 chars) and
+    // calls /documents/skip, which marks every pending request as 'skipped'
+    // with that reason and advances the status out of the doc-cycle. The
+    // note ends up in the application's audit timeline.
+    @ViewBuilder
+    private var skipDocsSheetBody: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Confirma que ya tienes los documentos del cliente y que no necesitas que los suba.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Section("Comentario") {
+                    TextEditor(text: $skipDocsNote)
+                        .frame(minHeight: 110)
+                    Text("Mínimo 5 caracteres. Quedará registrado en el historial de la aplicación.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                if let err = skipDocsError {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Omitir documentos")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { showSkipDocsSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if skipDocsBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Button("Confirmar") {
+                            Task { await performSkipDocs() }
+                        }
+                        .disabled(skipDocsNote.trimmingCharacters(in: .whitespacesAndNewlines).count < 5)
+                    }
+                }
+            }
+        }
+    }
+
+    private func performSkipDocs() async {
+        guard let id = detail?.id else { return }
+        skipDocsBusy = true
+        skipDocsError = nil
+        defer { skipDocsBusy = false }
+        do {
+            let updated = try await api.skipApplicationDocuments(id: id, note: skipDocsNote)
+            await MainActor.run {
+                detail = updated
+                showSkipDocsSheet = false
+                skipDocsNote = ""
+            }
+        } catch {
+            await MainActor.run {
+                skipDocsError = (error as? APIError).map { e in
+                    if case .server(let msg) = e { return msg } else { return error.localizedDescription }
+                } ?? error.localizedDescription
             }
         }
     }
@@ -321,6 +400,31 @@ struct ApplicationDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+
+        // Skip-documents action — only meaningful when there's at least one
+        // pending request. Used when the broker already has the documents
+        // offline and doesn't want the client to upload anything.
+        let pendingCount = (d.documents_requested ?? []).filter {
+            ($0.status ?? "pending") == "pending"
+        }.count
+        if pendingCount > 0 {
+            Button {
+                skipDocsNote = ""
+                skipDocsError = nil
+                showSkipDocsSheet = true
+            } label: {
+                Label("Omitir documentos pendientes", systemImage: "checkmark.circle")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(Color.rdBlue)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.rdBlue.opacity(0.4), lineWidth: 1.5)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
 
         // Requested documents
         let requested = d.documents_requested ?? []

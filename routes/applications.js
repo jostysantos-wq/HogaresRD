@@ -1557,6 +1557,131 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
   res.json(decryptAppPII(app));
 });
 
+// ── POST /:id/documents/skip  — Broker bypasses the document gate ─
+// Used when the broker already has the documents offline (received via
+// WhatsApp, in person, etc.) and doesn't need the client to upload
+// anything. Marks every pending document request as `skipped`,
+// auto-completes any pending tasks, advances the status out of the
+// document-collection cycle, and writes a full audit-trail entry with
+// the agent's mandatory note. The skip is recorded per-doc so the
+// origin of each completion is auditable later.
+router.post('/:id/documents/skip', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker       = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary    = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin          = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  // Subscription re-check: same gate the status-change endpoint uses.
+  if (!admin && (isBroker || isInmobiliaria) && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripción no está activa. Renueva tu plan para continuar.',
+      needsSubscription: true,
+    });
+  }
+
+  // Block on terminal statuses — symmetric with the request endpoint.
+  if (['rechazado', 'completado'].includes(app.status))
+    return res.status(400).json({ error: 'No se puede saltar documentos en una aplicación finalizada.' });
+
+  const note = (req.body?.note || '').toString().trim();
+  if (note.length < 5)
+    return res.status(400).json({
+      error: 'Se requiere un comentario explicando por qué se omiten los documentos (mínimo 5 caracteres).',
+      code: 'note_required',
+    });
+
+  const requested = Array.isArray(app.documents_requested) ? app.documents_requested : [];
+  const pendingDocs = requested.filter(d => d.status === 'pending');
+
+  // Mark every pending request as skipped with the agent's reason.
+  // Approved / uploaded docs are left alone — those reflect real client
+  // submissions that should remain in the trail.
+  const now = new Date().toISOString();
+  for (const d of pendingDocs) {
+    d.status        = 'skipped';
+    d.skipped_at    = now;
+    d.skipped_by    = req.user.sub;
+    d.skip_reason   = note.slice(0, 500);
+  }
+
+  // Audit event — keeps the full reason in the timeline alongside the
+  // labels of each doc that was skipped, so reviewers can see what the
+  // agent considered already covered.
+  addEvent(app, 'documents_skipped',
+    `Documentos omitidos por el agente — ${note.slice(0, 200)}`,
+    req.user.sub, user?.name || 'Agente',
+    {
+      reason:        note,
+      skipped_count: pendingDocs.length,
+      skipped_docs:  pendingDocs.map(d => ({ id: d.id, type: d.type, label: d.label })),
+      skipped_by:    req.user.sub,
+      skipped_role:  user?.role || null,
+    }
+  );
+
+  // Status advance: if the app is sitting in any of the doc-cycle
+  // statuses, move it to en_aprobacion so the broker can keep working.
+  // Don't force a status change if the app is already past the gate
+  // (e.g. someone clicked skip from en_aprobacion already).
+  const docCycleStatuses = new Set([
+    'documentos_requeridos',
+    'documentos_enviados',
+    'documentos_insuficientes',
+  ]);
+  if (docCycleStatuses.has(app.status)) {
+    const from = app.status;
+    app.status = 'en_aprobacion';
+    addEvent(app, 'status_change',
+      `Estado avanzado a ${STATUS_LABELS['en_aprobacion']} (documentos omitidos)`,
+      req.user.sub, user?.name || 'Agente',
+      { from, to: 'en_aprobacion', via: 'documents_skipped' });
+  }
+
+  store.saveApplication(app);
+
+  // Close out any client-side tasks tied to the document gate so the
+  // client doesn't keep seeing "upload your documents" after the agent
+  // explicitly waived it.
+  autoCompleteTasksByEvent(app.id, 'documents_requested');
+  autoCompleteTasksByEvent(app.id, 'documents_rejected');
+
+  // Notify the client (push + email) so they understand they no longer
+  // need to upload anything.
+  if (app.client?.user_id) {
+    pushNotify(app.client.user_id, {
+      type:  'document_reviewed',
+      title: 'No es necesario subir documentos',
+      body:  `${user?.name || 'Tu agente'} confirmó que ya tiene los documentos para ${app.listing_title || 'tu aplicación'}.`,
+      url:   `/my-applications?id=${app.id}`,
+    });
+  }
+  if (app.client?.email) {
+    sendNotification(app.client.email,
+      `HogaresRD — No es necesario subir documentos para ${app.listing_title || 'tu aplicación'}`,
+      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+         <p>Hola <strong>${app.client.name || ''}</strong>,</p>
+         <p>${user?.name || 'Tu agente'} indicó que ya cuenta con la documentación necesaria, así que no necesitas subir nada por ahora.</p>
+         <p style="background:#F1F5F9;border-radius:8px;padding:12px;border-left:3px solid #2563eb;font-size:0.9rem;">
+           <strong>Comentario del agente:</strong> ${note.replace(/[<>]/g, '')}
+         </p>
+         <a href="${BASE_URL}/my-applications" style="display:inline-block;background:#2563eb;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Ver mi aplicación</a>
+       </div>`
+    );
+  }
+
+  res.json({
+    ok: true,
+    skipped_count: pendingDocs.length,
+    application: decryptAppPII(app),
+  });
+});
+
 // ── POST /:id/initial-upload  — Public: attach documents right after creation
 // Accepts multipart uploads from anonymous/guest users during initial apply.
 // Only usable within 10 minutes of creation and limited to 10 files total per app.

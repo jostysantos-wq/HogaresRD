@@ -3832,12 +3832,19 @@
     const requested = docs.filter(d => d.status === 'requested' || d.status === 'pending');
     const uploaded = docs.filter(d => ['uploaded','approved','rejected'].includes(d.status));
 
+    const pendingCount = requested.length;
     document.getElementById('pane-documentos').innerHTML = `
-      <div style="margin-bottom:1rem;">
+      <div style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
         <button class="btn btn-primary" onclick="openDocModal()">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM16 18H8v-2h8v2zm0-4H8v-2h8v2zm-2-6V3.5L19.5 9H14z"/></svg>
           Solicitar Documentos
         </button>
+        ${pendingCount > 0 ? `
+          <button class="btn btn-outline" onclick="skipDocsPrompt()" title="Si ya tienes los documentos, márcalo aquí.">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Omitir documentos pendientes
+          </button>
+        ` : ''}
       </div>
       ${requested.length ? `
         <div class="info-section">
@@ -3976,6 +3983,34 @@
       currentApp = data.application || data;
       renderDocumentos(currentApp);
     } catch(e) { toast(e.message, 'error'); }
+  };
+
+  // Bypass the document gate when the agent already has everything
+  // offline. Mandatory note ends up in the audit timeline. Server
+  // enforces a 5-character minimum and authorization.
+  window.skipDocsPrompt = async function() {
+    const note = prompt(
+      'Comentario obligatorio — explica por qué se omiten los documentos.\n\nQuedará registrado en el historial de la aplicación.',
+      ''
+    );
+    if (note === null) return;
+    const trimmed = (note || '').trim();
+    if (trimmed.length < 5) {
+      toast('El comentario debe tener al menos 5 caracteres.', 'error');
+      return;
+    }
+    try {
+      await API(`/api/applications/${currentApp._id||currentApp.id}/documents/skip`, {
+        method: 'POST',
+        body: { note: trimmed },
+      });
+      toast('Documentos omitidos. La aplicación avanzó a la siguiente etapa.');
+      const data = await API(`/api/applications/${currentApp._id||currentApp.id}`);
+      currentApp = data.application || data;
+      renderDocumentos(currentApp);
+      // Refresh the status pill / overview if the page renders one
+      if (typeof renderResumen === 'function') renderResumen(currentApp);
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   // ── Tours Tab ──────────────────────────────────────────────

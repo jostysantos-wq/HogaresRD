@@ -1531,6 +1531,34 @@ class APIService: ObservableObject {
         return try decoder.decode(ApplicationDetail.self, from: data)
     }
 
+    /// Skip the document-collection step of the application workflow.
+    /// Used when the broker already has the documents offline and doesn't
+    /// need the client to upload anything. The note is mandatory and is
+    /// recorded in the application's audit trail.
+    /// POST /api/applications/:id/documents/skip
+    /// Body: { note: <string, min 5 chars> }
+    @discardableResult
+    func skipApplicationDocuments(id: String, note: String) async throws -> ApplicationDetail {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 5 else {
+            throw APIError.server("El comentario es obligatorio (mínimo 5 caracteres).")
+        }
+        let url = apiURL("/api/applications/\(id)/documents/skip")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["note": trimmed])
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            throw APIError.server((json?["error"] as? String) ?? "Error al omitir documentos")
+        }
+        struct Resp: Decodable { let application: ApplicationDetail }
+        return try decoder.decode(Resp.self, from: data).application
+    }
+
     /// Send an in-app message to the application's client from the broker.
     /// POST /api/applications/:id/contact-client — creates/reuses the
     /// client↔broker conversation and pushes a notification to the client.
