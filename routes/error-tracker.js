@@ -7,9 +7,22 @@ const express = require('express');
 // ── Config ────────────────────────────────────────────────────────
 const LOG_FILE      = path.join(__dirname, '..', 'data', 'errors.log');
 const MAX_LOG_LINES = 10_000;
+// Hard cap on file size. Once the log exceeds this we truncate to zero
+// rather than try to read it into memory (which would OOM the process —
+// and in production left the file at 55 GB / 75 M lines after that's
+// exactly what happened in the EPIPE feedback loop).
+const MAX_LOG_BYTES = 100 * 1024 * 1024;
 const SLOW_REQ_MS   = 2000;
 const TRIM_INTERVAL = 60 * 60 * 1000; // trim log every hour
 const STATS_WINDOW  = 24 * 60 * 60 * 1000; // 24 hours
+
+// stderr write that never throws — used from places that must not
+// surface a downstream EPIPE (uncaughtException handler + log-write
+// failure paths), since console.error there can re-trigger the
+// uncaughtException it's reporting.
+function safeStderr(msg) {
+  try { process.stderr.write(String(msg) + '\n'); } catch {}
+}
 
 // ── In-memory error aggregation (last 24h) ────────────────────────
 const errorCounts = []; // { route, method, timestamp }
@@ -28,18 +41,34 @@ function recordError(method, url) {
 }
 
 // ── File logging ──────────────────────────────────────────────────
+// Async appendFile so a heavy error stream doesn't block the event
+// loop (the previous appendFileSync stalled the server during error
+// bursts). The callback ignores errors — if logging fails, surfacing
+// it via console.error from inside an uncaught-exception path would
+// re-enter the same handler.
 function appendLog(entry) {
   try {
     const line = JSON.stringify(entry) + '\n';
-    fs.appendFileSync(LOG_FILE, line, 'utf8');
+    fs.appendFile(LOG_FILE, line, 'utf8', (err) => {
+      if (err) safeStderr(`[error-tracker] Failed to write log: ${err.message}`);
+    });
   } catch (e) {
-    console.error('[error-tracker] Failed to write log:', e.message);
+    safeStderr(`[error-tracker] appendLog threw: ${e && e.message}`);
   }
 }
 
 function trimLogFile() {
   try {
     if (!fs.existsSync(LOG_FILE)) return;
+    const stats = fs.statSync(LOG_FILE);
+    // Hard size cap: if the file is huge (e.g. PM2 left it at multi-GB
+    // after a restart loop), do NOT read it into memory — truncate to
+    // zero. We lose the historical lines but keep the process alive.
+    if (stats.size > MAX_LOG_BYTES) {
+      fs.writeFileSync(LOG_FILE, '');
+      console.log(`[error-tracker] Log file exceeded ${MAX_LOG_BYTES} bytes (was ${stats.size}) — truncated`);
+      return;
+    }
     const content = fs.readFileSync(LOG_FILE, 'utf8');
     const lines = content.split('\n').filter(Boolean);
     if (lines.length > MAX_LOG_LINES) {
@@ -48,7 +77,7 @@ function trimLogFile() {
       console.log(`[error-tracker] Trimmed log from ${lines.length} to ${MAX_LOG_LINES} lines`);
     }
   } catch (e) {
-    console.error('[error-tracker] Failed to trim log:', e.message);
+    safeStderr(`[error-tracker] Failed to trim log: ${e && e.message}`);
   }
 }
 
@@ -130,31 +159,51 @@ function errorHandler(err, req, res, next) {
 }
 
 // ── Process-level handlers ────────────────────────────────────────
+// Transport-level errors that aren't application bugs and that, if
+// reported via console.error, can re-throw and re-enter this handler
+// — the cause of the 75 M-line / 55 GB EPIPE feedback loop in prod.
+const TRANSPORT_ERROR_CODES = new Set(['EPIPE', 'ECONNRESET', 'ECONNABORTED', 'EAI_AGAIN']);
+
+function isTransportNoise(err) {
+  return err && err.code && TRANSPORT_ERROR_CODES.has(err.code);
+}
+
 function initProcessHandlers() {
   process.on('uncaughtException', (err) => {
-    console.error('[error-tracker] Uncaught exception:', err);
+    // EPIPE on stderr (typical when the parent process or PM2 log
+    // pipe goes away) used to fire console.error, which writes to
+    // stderr again, which throws another EPIPE, and so on forever.
+    // Drop transport noise silently — it is not actionable from code.
+    if (isTransportNoise(err)) return;
+
+    safeStderr(`[error-tracker] Uncaught exception: ${err && err.message}`);
     appendLog({
       level: 'fatal',
       type: 'uncaught_exception',
       timestamp: new Date().toISOString(),
-      message: err.message || 'Unknown',
-      stack: err.stack || null,
+      message: (err && err.message) || 'Unknown',
+      code:    (err && err.code) || null,
+      stack:   (err && err.stack) || null,
     });
   });
 
   process.on('unhandledRejection', (reason) => {
     const err = reason instanceof Error ? reason : new Error(String(reason));
-    console.error('[error-tracker] Unhandled rejection:', err);
+    if (isTransportNoise(err)) return;
+
+    safeStderr(`[error-tracker] Unhandled rejection: ${err.message}`);
     appendLog({
       level: 'fatal',
       type: 'unhandled_rejection',
       timestamp: new Date().toISOString(),
       message: err.message || 'Unknown',
-      stack: err.stack || null,
+      code:    err.code || null,
+      stack:   err.stack || null,
     });
   });
 
-  // Trim log on startup
+  // Trim log on startup — protected by the size cap added above so it
+  // can't OOM on a multi-GB legacy log left by the EPIPE storm.
   trimLogFile();
 
   // Periodic trim
