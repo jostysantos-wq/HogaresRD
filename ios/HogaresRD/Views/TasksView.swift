@@ -460,7 +460,6 @@ struct TaskDetailSheet: View {
     @State private var showNASheet = false
     @State private var naNote = ""
     @State private var markingNA = false
-    @State private var paymentAmount = ""
     @State private var showFileImporter = false
 
     // The current user, for action-gating
@@ -714,20 +713,11 @@ struct TaskDetailSheet: View {
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
 
-                            // Amount input for client payment tasks
-                            if isPaymentTask && !isBrokerPaymentTask {
-                                TextField("Monto del pago (ej: 150000)", text: $paymentAmount)
-                                    .keyboardType(.decimalPad)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-
                             if uploadSuccess {
                                 Label("Documento subido correctamente", systemImage: "checkmark.circle.fill")
                                     .font(.subheadline.bold())
                                     .foregroundStyle(Color.rdGreen)
                             } else {
-                                let amountText = paymentAmount.trimmingCharacters(in: .whitespaces)
-                                let needsAmount = isPaymentTask && !isBrokerPaymentTask && (amountText.isEmpty || Double(amountText.replacingOccurrences(of: ",", with: ".")) == nil)
                                 Button { showPicker = true } label: {
                                     HStack {
                                         if uploading {
@@ -741,10 +731,10 @@ struct TaskDetailSheet: View {
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
-                                    .background(needsAmount ? Color.gray : taskColor, in: RoundedRectangle(cornerRadius: 12))
+                                    .background(taskColor, in: RoundedRectangle(cornerRadius: 12))
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(uploading || needsAmount)
+                                .disabled(uploading)
 
                                 Button { showFileImporter = true } label: {
                                     HStack {
@@ -752,19 +742,13 @@ struct TaskDetailSheet: View {
                                         Text("Seleccionar PDF")
                                             .font(.subheadline.bold())
                                     }
-                                    .foregroundStyle(needsAmount ? .gray : taskColor)
+                                    .foregroundStyle(taskColor)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(needsAmount ? Color.gray : taskColor, lineWidth: 1.5))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(taskColor, lineWidth: 1.5))
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(uploading || needsAmount)
-
-                                if needsAmount {
-                                    Text("Ingresa el monto del pago para continuar")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
+                                .disabled(uploading)
                             }
                         }
                         .padding(16)
@@ -1059,9 +1043,21 @@ struct TaskDetailSheet: View {
                     applicationId: appId, fileData: data, filename: filename
                 )
             } else if isPaymentTask {
-                try await api.uploadPaymentReceipt(
-                    applicationId: appId, amount: paymentAmount, notes: task.title,
-                    fileData: data, filename: filename
+                // Client uploading proof of an installment payment.
+                // Resolve the first installment that still needs a proof —
+                // the legacy /payment/upload endpoint refuses uploads
+                // whenever a payment plan exists, which is exactly when
+                // payment_plan_created tasks are created.
+                let installments = try await api.fetchInstallments(applicationId: appId)
+                guard let next = installments.first(where: { i in
+                    let s = i.status ?? ""
+                    return s != "approved" && s != "proof_uploaded"
+                }) else {
+                    throw APIError.server("Todas las cuotas ya fueron pagadas o están en revisión")
+                }
+                try await api.uploadInstallmentProof(
+                    applicationId: appId, installmentId: next.id,
+                    fileData: data, filename: filename, notes: task.title
                 )
             } else {
                 try await api.uploadDocument(

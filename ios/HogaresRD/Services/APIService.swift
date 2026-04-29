@@ -2404,6 +2404,57 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "Error subiendo comprobante")
     }
 
+    /// Fetches the application's payment plan installments. Used to resolve
+    /// which installment a client's "upload proof" task targets.
+    struct PaymentPlanInstallment: Decodable {
+        let id: String
+        let status: String?
+        let number: Int?
+        let label: String?
+    }
+    func fetchInstallments(applicationId: String) async throws -> [PaymentPlanInstallment] {
+        let url = apiURL("/api/applications/\(applicationId)")
+        let req = try authedRequest(url)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error cargando aplicación")
+        struct Wrapper: Decodable {
+            let payment_plan: PaymentPlanWrap?
+            struct PaymentPlanWrap: Decodable { let installments: [PaymentPlanInstallment]? }
+        }
+        let parsed = try JSONDecoder().decode(Wrapper.self, from: data)
+        return parsed.payment_plan?.installments ?? []
+    }
+
+    /// Upload proof of payment for a single installment of a payment plan.
+    /// This is the correct endpoint when the application has a payment plan;
+    /// the legacy /payment/upload endpoint refuses such uploads.
+    func uploadInstallmentProof(applicationId: String, installmentId: String, fileData: Data, filename: String, notes: String = "") async throws {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = apiURL("/api/applications/\(applicationId)/payment-plan/\(installmentId)/upload")
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"proof\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        let mime = mimeType(for: filename)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        if !notes.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"notes\"\r\n\r\n\(notes)\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error subiendo comprobante de cuota")
+    }
+
     /// Upload processed receipt (broker/agent side) after verifying payment
     func uploadProcessedReceipt(applicationId: String, fileData: Data, filename: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
