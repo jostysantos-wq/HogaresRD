@@ -31,12 +31,17 @@ const BASE_URL  = process.env.BASE_URL || 'http://localhost:3000';
 // ── Rate limiter for anonymous application creation (Item 11) ────────────
 // 5 new applications per IP per hour — stops spam/flooding without
 // impacting legitimate use (real clients submit once per listing).
+//
+// `skipFailedRequests: true` so 4xx responses don't burn the budget —
+// a user filling the form wrong shouldn't get locked out for an hour.
+// Successful 2xx submissions are what we actually care about throttling.
 const appCreateLimiter = rateLimit({
-  windowMs:        60 * 60 * 1000, // 1 hour
-  max:             5,
-  standardHeaders: true,
-  legacyHeaders:   false,
-  message:         { error: 'Demasiadas solicitudes. Por favor espera antes de enviar otra aplicación.' },
+  windowMs:           60 * 60 * 1000, // 1 hour
+  max:                5,
+  skipFailedRequests: true,           // don't count 4xx/5xx towards the cap
+  standardHeaders:    true,
+  legacyHeaders:      false,
+  message:            { error: 'Demasiadas solicitudes. Por favor espera antes de enviar otra aplicación.' },
   handler: (req, res, next, options) => {
     logSec('app_spam_blocked', req, { listing_id: req.body?.listing_id });
     res.status(429).json(options.message);
@@ -368,15 +373,27 @@ router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
   if (!name || !phone || !listing_id)
     return res.status(400).json({ error: 'name, phone y listing_id son requeridos' });
 
-  // Verify the listing actually exists and is reachable. Without this
-  // guard, an attacker could spam the admin's orphan-lead inbox by
-  // submitting applications with bogus listing_ids — the cascade would
-  // return null, fall back to the agency loop, find no agencies, and
-  // fire the "ORPHANED LEAD" admin alert on every submission.
+  // Verify the listing actually exists, is approved, and is still on
+  // the market. Without this guard, an attacker could spam the admin's
+  // orphan-lead inbox with bogus listing_ids, and clients could apply
+  // to drafts or already-sold properties.
   {
     const listingPreflight = store.getListingById(listing_id);
     if (!listingPreflight) {
       return res.status(404).json({ error: 'Propiedad no encontrada.' });
+    }
+    // Only `approved` listings should accept new applications. Drafts,
+    // pending review, rejected, or sold listings should not. Treat the
+    // legacy `submitted` value the same as approved for backward compat
+    // (very old rows that pre-date the approval workflow).
+    const lstStatus = listingPreflight.status || '';
+    const acceptableStatuses = new Set(['approved', 'submitted']);
+    if (!acceptableStatuses.has(lstStatus)) {
+      return res.status(400).json({
+        error: 'Esta propiedad no está disponible para nuevas aplicaciones.',
+        code: 'listing_not_available',
+        listing_status: lstStatus,
+      });
     }
   }
 
@@ -397,6 +414,12 @@ router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
   // Phone: allow digits, spaces, dashes, parentheses, leading +
   if (!/^\+?[\d\s\-().]{7,20}$/.test(phoneTrimmed))
     return res.status(400).json({ error: 'Número de teléfono inválido' });
+
+  // Cap free-text notes at 2000 chars so an attacker can't post huge
+  // payloads through this endpoint. Real users typing one or two
+  // paragraphs stay well under this.
+  if (typeof notes === 'string' && notes.length > 2000)
+    return res.status(400).json({ error: 'Las notas son demasiado largas (máximo 2000 caracteres).' });
 
   // ── Step 1 required fields ──────────────────────────────────────
   if (!emailTrimmed)
@@ -1030,12 +1053,44 @@ router.get('/', userAuth, (req, res) => {
 });
 
 // ── GET /my  — Client's own applications ─────────────────────────
+//
+// Two-step lookup so applications submitted anonymously (before the
+// user registered) get attached to the right account once they sign
+// up with the matching email:
+//   1. Anything currently attributed to user.id.
+//   2. Anything submitted with no user_id but the same email — those
+//      are auto-claimed (we set client.user_id = user.id and save) so
+//      future calls don't need the email scan.
+//
+// Email auth is gated by verification, so by the time req.user.sub is
+// set, the user has proven control of that email — claiming anon apps
+// submitted with it is safe.
 router.get('/my', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
-  const apps = store.getApplicationsByClient(user.id).length
-    ? store.getApplicationsByClient(user.id)
-    : store.getApplicationsByClient(user.email);
+
+  let apps = store.getApplicationsByClient(user.id);
+
+  // Auto-claim any anonymous apps that match this user's email.
+  if (user.email) {
+    const lowerEmail = user.email.toLowerCase();
+    const claimable = (store.getApplications() || []).filter(a => {
+      if (!a.client) return false;
+      if (a.client.user_id) return false; // already attributed
+      const ce = (a.client.email || '').toLowerCase();
+      return ce && ce === lowerEmail;
+    });
+    if (claimable.length > 0) {
+      const now = new Date().toISOString();
+      for (const a of claimable) {
+        a.client.user_id = user.id;
+        a.updated_at = now;
+        store.saveApplication(a);
+      }
+      // Re-pull so the response includes the freshly claimed ones.
+      apps = store.getApplicationsByClient(user.id);
+    }
+  }
 
   // Enrich with listing cover image + city for the card UI.
   // decryptAppPII first so the spread doesn't propagate ciphertext.
