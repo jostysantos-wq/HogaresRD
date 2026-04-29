@@ -2750,10 +2750,11 @@
         }
         const data = await res.json();
         if (data.success) {
-          // Show focal point picker for feed image (if images exist)
+          // Mandatory feed-image step (skipped only for claim flow,
+          // which doesn't create a new listing of the user's own).
           const listingId = data.listingId || data.id || EDIT_LISTING_ID;
-          if (listingId && body.images && body.images.length > 0 && !isClaim) {
-            await showFocalPointPicker(listingId, body.images);
+          if (listingId && !isClaim) {
+            await showFocalPointPicker(listingId, body.images || []);
           }
 
           document.getElementById('successText').textContent = IS_EDIT_MODE
@@ -3071,103 +3072,209 @@
     loadForEdit();
 
     // ══════════════════════════════════════════════════════════════
-    // ── Focal point picker for feed image ──────────────────────────
+    // ── Feed image picker (mandatory) ──────────────────────────────
+    // Two paths:
+    //   1) Pick a focal point on an existing photo → server crops to 9:16
+    //   2) Upload a custom portrait image (recommended for best quality)
+    // The modal cannot be dismissed without a successful save.
     // ══════════════════════════════════════════════════════════════
     function showFocalPointPicker(listingId, images) {
       return new Promise((resolve) => {
-        const firstImg = images[0];
+        const firstImg = images && images[0];
         const imgUrl = typeof firstImg === 'string' ? firstImg : firstImg?.url;
-        if (!imgUrl) return resolve();
 
-        // Build modal
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
         modal.innerHTML = `
-          <div style="background:var(--bg-card);max-width:560px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px;padding:1.5rem;">
+          <div style="background:var(--bg-card);max-width:560px;width:100%;max-height:94vh;overflow-y:auto;border-radius:16px;padding:1.5rem;">
             <div style="text-align:center;margin-bottom:1rem;">
-              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 0.3rem;">Elige el punto focal para el feed</h2>
-              <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">Toca la parte más atractiva de tu foto. Se usará un recorte vertical (9:16) para el feed.</p>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 0.3rem;">Imagen del feed (obligatoria)</h2>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">El feed muestra fotos verticales (9:16). Sube una imagen vertical o elige el punto focal de una foto existente.</p>
             </div>
-            <div id="fpImageWrap" style="position:relative;width:100%;border-radius:12px;overflow:hidden;cursor:crosshair;background:#111;">
-              <img id="fpImage" src="${imgUrl}" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none;" alt="" />
-              <div id="fpMarker" style="display:none;position:absolute;width:32px;height:32px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,0.6),0 0 12px rgba(0,0,0,0.5);transform:translate(-50%,-50%);pointer-events:none;"></div>
-              <div id="fpCrop" style="display:none;position:absolute;border:2px solid #006AFF;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;"></div>
+
+            <div id="fpModeTabs" style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+              <button id="fpTabUpload" type="button" style="flex:1;padding:0.6rem;border:1.5px solid var(--accent);background:var(--accent);color:#fff;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.85rem;">Subir vertical (recomendado)</button>
+              <button id="fpTabFocal" type="button" style="flex:1;padding:0.6rem;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:10px;font-weight:600;cursor:pointer;font-size:0.85rem;">Usar foto existente</button>
             </div>
-            <p id="fpHint" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin:0.75rem 0;">Toca la imagen para marcar el punto focal</p>
-            <div style="display:flex;gap:0.5rem;margin-top:1rem;">
-              <button id="fpSkip" type="button" style="flex:1;padding:0.75rem;background:none;border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-weight:600;cursor:pointer;">Omitir</button>
-              <button id="fpSave" type="button" disabled style="flex:2;padding:0.75rem;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;opacity:0.5;">Guardar Punto Focal</button>
+
+            <div id="fpUploadPane">
+              <label id="fpUploadDrop" for="fpFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;padding:2rem 1rem;border:2px dashed var(--border);border-radius:12px;cursor:pointer;background:rgba(0,106,255,0.04);min-height:220px;">
+                <svg viewBox="0 0 24 24" style="width:42px;height:42px;fill:var(--accent)"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <strong style="font-size:0.95rem;">Subir imagen vertical</strong>
+                <span style="font-size:0.78rem;color:var(--text-muted);text-align:center;line-height:1.4;">Recomendado: 1080×1920 (9:16). Si subes una foto en otro formato, se recortará automáticamente al centro.</span>
+                <input id="fpFile" type="file" accept="image/*" style="display:none;" />
+              </label>
+              <div id="fpUploadPreview" style="display:none;margin-top:0.75rem;">
+                <div style="position:relative;width:200px;margin:0 auto;border-radius:12px;overflow:hidden;aspect-ratio:9/16;background:#111;">
+                  <img id="fpUploadImg" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                </div>
+                <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin:0.6rem 0 0;">Vista previa del feed</p>
+              </div>
+              <div id="fpUploadStatus" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+            </div>
+
+            <div id="fpFocalPane" style="display:none;">
+              <div id="fpImageWrap" style="position:relative;width:100%;border-radius:12px;overflow:hidden;cursor:crosshair;background:#111;${imgUrl ? '' : 'display:none;'}">
+                ${imgUrl ? `<img id="fpImage" src="${imgUrl}" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none;" alt="" />` : ''}
+                <div id="fpMarker" style="display:none;position:absolute;width:32px;height:32px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,0.6),0 0 12px rgba(0,0,0,0.5);transform:translate(-50%,-50%);pointer-events:none;"></div>
+                <div id="fpCrop" style="display:none;position:absolute;border:2px solid #006AFF;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;"></div>
+              </div>
+              ${imgUrl ? '' : '<p style="text-align:center;font-size:0.85rem;color:var(--text-muted);padding:2rem 1rem;">No subiste fotos. Usa la opción de subir vertical.</p>'}
+              <p id="fpHint" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin:0.75rem 0;">Toca la imagen para marcar el punto focal</p>
+            </div>
+
+            <div style="margin-top:1rem;">
+              <button id="fpSave" type="button" disabled style="width:100%;padding:0.85rem;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;opacity:0.5;">Guardar imagen del feed</button>
+              <p style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin:0.6rem 0 0;">La imagen del feed es obligatoria para publicar.</p>
             </div>
           </div>
         `;
         document.body.appendChild(modal);
 
+        // ── Mode switching ─────────────────────────────────────────
+        const tabUpload = modal.querySelector('#fpTabUpload');
+        const tabFocal  = modal.querySelector('#fpTabFocal');
+        const paneUpload = modal.querySelector('#fpUploadPane');
+        const paneFocal  = modal.querySelector('#fpFocalPane');
+        const saveBtn = modal.querySelector('#fpSave');
+        let mode = 'upload';
+
+        function setMode(next) {
+          mode = next;
+          if (next === 'upload') {
+            tabUpload.style.background = 'var(--accent)';
+            tabUpload.style.color = '#fff';
+            tabUpload.style.borderColor = 'var(--accent)';
+            tabFocal.style.background = 'none';
+            tabFocal.style.color = 'var(--text)';
+            tabFocal.style.borderColor = 'var(--border)';
+            paneUpload.style.display = 'block';
+            paneFocal.style.display = 'none';
+            saveBtn.disabled = !uploadedPortraitUrl;
+          } else {
+            tabFocal.style.background = 'var(--accent)';
+            tabFocal.style.color = '#fff';
+            tabFocal.style.borderColor = 'var(--accent)';
+            tabUpload.style.background = 'none';
+            tabUpload.style.color = 'var(--text)';
+            tabUpload.style.borderColor = 'var(--border)';
+            paneFocal.style.display = 'block';
+            paneUpload.style.display = 'none';
+            saveBtn.disabled = !hasSelection;
+          }
+          saveBtn.style.opacity = saveBtn.disabled ? '0.5' : '1';
+        }
+        tabUpload.addEventListener('click', () => setMode('upload'));
+        tabFocal.addEventListener('click', () => {
+          if (!imgUrl) return; // no existing photo to use
+          setMode('focal');
+        });
+        if (!imgUrl) tabFocal.style.opacity = '0.5';
+
+        // ── Custom portrait upload path ────────────────────────────
+        const fileInput = modal.querySelector('#fpFile');
+        const uploadPreview = modal.querySelector('#fpUploadPreview');
+        const uploadImg = modal.querySelector('#fpUploadImg');
+        const uploadStatus = modal.querySelector('#fpUploadStatus');
+        let uploadedPortraitUrl = null;
+
+        fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          // Local preview
+          uploadImg.src = URL.createObjectURL(file);
+          uploadPreview.style.display = 'block';
+          uploadStatus.textContent = 'Subiendo…';
+          saveBtn.disabled = true; saveBtn.style.opacity = '0.5';
+
+          const fd = new FormData();
+          fd.append('photos', file);
+          try {
+            const r = await fetch('/api/upload/photos', {
+              method: 'POST', credentials: 'include', body: fd
+            });
+            if (!r.ok) throw new Error('Error ' + r.status);
+            const data = await r.json();
+            uploadedPortraitUrl = data?.urls?.[0];
+            if (!uploadedPortraitUrl) throw new Error('Respuesta de subida inválida');
+            uploadStatus.textContent = 'Imagen lista. Pulsa Guardar para confirmar.';
+            uploadStatus.style.color = 'var(--accent)';
+            if (mode === 'upload') { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+          } catch (err) {
+            uploadStatus.textContent = 'Error subiendo imagen: ' + err.message;
+            uploadStatus.style.color = '#c00';
+            uploadedPortraitUrl = null;
+          }
+        });
+
+        // ── Focal-point pick path ──────────────────────────────────
         const img = modal.querySelector('#fpImage');
         const wrap = modal.querySelector('#fpImageWrap');
         const marker = modal.querySelector('#fpMarker');
         const crop = modal.querySelector('#fpCrop');
         const hint = modal.querySelector('#fpHint');
-        const saveBtn = modal.querySelector('#fpSave');
         let focalX = 0.5, focalY = 0.5, hasSelection = false;
 
         function updateCropPreview() {
-          // Show 9:16 crop overlay on the displayed image
+          if (!img) return;
           const imgW = img.clientWidth;
           const imgH = img.clientHeight;
           const ratio = 9 / 16;
           let cropW, cropH;
-          if (imgW / imgH > ratio) {
-            cropH = imgH;
-            cropW = cropH * ratio;
-          } else {
-            cropW = imgW;
-            cropH = cropW / ratio;
-          }
+          if (imgW / imgH > ratio) { cropH = imgH; cropW = cropH * ratio; }
+          else { cropW = imgW; cropH = cropW / ratio; }
           let cropLeft = Math.max(0, Math.min(focalX * imgW - cropW / 2, imgW - cropW));
-          let cropTop = Math.max(0, Math.min(focalY * imgH - cropH / 2, imgH - cropH));
+          let cropTop  = Math.max(0, Math.min(focalY * imgH - cropH / 2, imgH - cropH));
           crop.style.left = cropLeft + 'px';
-          crop.style.top = cropTop + 'px';
-          crop.style.width = cropW + 'px';
+          crop.style.top  = cropTop + 'px';
+          crop.style.width  = cropW + 'px';
           crop.style.height = cropH + 'px';
           crop.style.display = 'block';
-
           marker.style.left = (focalX * imgW) + 'px';
-          marker.style.top = (focalY * imgH) + 'px';
+          marker.style.top  = (focalY * imgH) + 'px';
           marker.style.display = 'block';
         }
 
-        wrap.addEventListener('click', (e) => {
-          const rect = img.getBoundingClientRect();
-          focalX = (e.clientX - rect.left) / rect.width;
-          focalY = (e.clientY - rect.top) / rect.height;
-          focalX = Math.max(0, Math.min(1, focalX));
-          focalY = Math.max(0, Math.min(1, focalY));
-          hasSelection = true;
-          updateCropPreview();
-          hint.textContent = 'Vista previa del recorte 9:16 · Toca otra zona para ajustar';
-          saveBtn.disabled = false;
-          saveBtn.style.opacity = '1';
-        });
+        if (wrap && img) {
+          wrap.addEventListener('click', (e) => {
+            const rect = img.getBoundingClientRect();
+            focalX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            focalY = Math.max(0, Math.min(1, (e.clientY - rect.top)  / rect.height));
+            hasSelection = true;
+            updateCropPreview();
+            hint.textContent = 'Vista previa del recorte 9:16 · Toca otra zona para ajustar';
+            if (mode === 'focal') { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+          });
+        }
 
-        modal.querySelector('#fpSkip').addEventListener('click', () => {
-          document.body.removeChild(modal);
-          resolve();
-        });
-
+        // ── Save ───────────────────────────────────────────────────
         saveBtn.addEventListener('click', async () => {
-          if (!hasSelection) return;
-          saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+          const originalLabel = saveBtn.textContent;
+          saveBtn.disabled = true; saveBtn.textContent = 'Guardando…';
           try {
-            await fetch(`/api/listings/${listingId}/feed-image`, {
+            const body = mode === 'upload'
+              ? { feedImageUrl: uploadedPortraitUrl }
+              : { imageIndex: 0, x: focalX, y: focalY };
+            const r = await fetch(`/api/listings/${listingId}/feed-image`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ imageIndex: 0, x: focalX, y: focalY })
+              body: JSON.stringify(body)
             });
-          } catch (e) { console.warn('[feed-image] save failed:', e); }
-          document.body.removeChild(modal);
-          resolve();
+            if (!r.ok) {
+              const err = await r.json().catch(() => ({}));
+              throw new Error(err.error || ('Error ' + r.status));
+            }
+            document.body.removeChild(modal);
+            resolve(true);
+          } catch (e) {
+            alert('No se pudo guardar la imagen del feed: ' + e.message);
+            saveBtn.disabled = false; saveBtn.textContent = originalLabel;
+            saveBtn.style.opacity = '1';
+          }
         });
+
+        setMode('upload');
       });
     }
   </script>

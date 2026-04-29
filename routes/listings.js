@@ -728,49 +728,76 @@ router.post('/:id/feed-image', userAuth, async (req, res) => {
   if (!isOwner && !isOrg && !isAdmin)
     return res.status(403).json({ error: 'No autorizado' });
 
-  const { imageIndex = 0, x = 0.5, y = 0.5 } = req.body;
-  if (typeof x !== 'number' || typeof y !== 'number' || x < 0 || x > 1 || y < 0 || y > 1)
-    return res.status(400).json({ error: 'Coordenadas inválidas (x, y deben ser 0–1)' });
-
-  // Resolve source image URL
-  const images = Array.isArray(listing.images) ? listing.images : [];
-  const idx = Math.min(Math.max(0, Math.floor(imageIndex)), images.length - 1);
-  if (images.length === 0)
-    return res.status(400).json({ error: 'La propiedad no tiene imágenes' });
-
-  const imgEntry = images[idx];
-  const imgUrl = typeof imgEntry === 'string' ? imgEntry : imgEntry?.url;
-  if (!imgUrl) return res.status(400).json({ error: 'Imagen no encontrada' });
+  const { feedImageUrl } = req.body;
+  const useCustomUpload = typeof feedImageUrl === 'string' && feedImageUrl.length > 0;
 
   try {
-    // Fetch source image
-    const fullUrl = imgUrl.startsWith('http') ? imgUrl : `${process.env.BASE_URL || 'https://hogaresrd.com'}${imgUrl}`;
-    const imgRes = await fetch(fullUrl);
-    if (!imgRes.ok) throw new Error('No se pudo descargar la imagen fuente');
-    const sourceBuf = Buffer.from(await imgRes.arrayBuffer());
+    let sourceBuf;
+    let feedFocal;
 
-    // Generate 1080x1920 portrait crop centered on focal point
-    const img = sharp(sourceBuf);
-    const meta = await img.metadata();
-    const targetW = 1080, targetH = 1920;
-    const ratio = targetW / targetH; // 0.5625
-
-    let cropW, cropH;
-    if (meta.width / meta.height > ratio) {
-      cropH = meta.height;
-      cropW = Math.round(cropH * ratio);
+    if (useCustomUpload) {
+      // ── Custom portrait upload — fetch user-supplied image directly ──
+      const fullUrl = feedImageUrl.startsWith('http')
+        ? feedImageUrl
+        : `${process.env.BASE_URL || 'https://hogaresrd.com'}${feedImageUrl}`;
+      const imgRes = await fetch(fullUrl);
+      if (!imgRes.ok) throw new Error('No se pudo descargar la imagen subida');
+      sourceBuf = Buffer.from(await imgRes.arrayBuffer());
+      feedFocal = { source: 'custom', url: feedImageUrl };
     } else {
-      cropW = meta.width;
-      cropH = Math.round(cropW / ratio);
-    }
-    const left = Math.max(0, Math.min(Math.round(x * meta.width - cropW / 2), meta.width - cropW));
-    const top  = Math.max(0, Math.min(Math.round(y * meta.height - cropH / 2), meta.height - cropH));
+      // ── Focal-point crop from an existing listing photo ──
+      const { imageIndex = 0, x = 0.5, y = 0.5 } = req.body;
+      if (typeof x !== 'number' || typeof y !== 'number' || x < 0 || x > 1 || y < 0 || y > 1)
+        return res.status(400).json({ error: 'Coordenadas inválidas (x, y deben ser 0–1)' });
 
-    const feedBuf = await sharp(sourceBuf)
-      .extract({ left, top, width: cropW, height: cropH })
-      .resize(targetW, targetH)
-      .jpeg({ quality: 88, mozjpeg: true })
-      .toBuffer();
+      const images = Array.isArray(listing.images) ? listing.images : [];
+      if (images.length === 0)
+        return res.status(400).json({ error: 'La propiedad no tiene imágenes' });
+      const idx = Math.min(Math.max(0, Math.floor(imageIndex)), images.length - 1);
+      const imgEntry = images[idx];
+      const imgUrl = typeof imgEntry === 'string' ? imgEntry : imgEntry?.url;
+      if (!imgUrl) return res.status(400).json({ error: 'Imagen no encontrada' });
+
+      const fullUrl = imgUrl.startsWith('http') ? imgUrl : `${process.env.BASE_URL || 'https://hogaresrd.com'}${imgUrl}`;
+      const imgRes = await fetch(fullUrl);
+      if (!imgRes.ok) throw new Error('No se pudo descargar la imagen fuente');
+      sourceBuf = Buffer.from(await imgRes.arrayBuffer());
+      feedFocal = { imageIndex: idx, x, y };
+    }
+
+    // ── Generate 1080x1920 portrait output ──
+    // For focal-point crops we extract a 9:16 region centered on the focal point.
+    // For custom uploads we cover-fit (resize+center-crop) to guarantee 9:16 even
+    // if the user accidentally uploaded a non-portrait image.
+    const targetW = 1080, targetH = 1920;
+    let feedBuf;
+
+    if (useCustomUpload) {
+      feedBuf = await sharp(sourceBuf)
+        .rotate()
+        .resize(targetW, targetH, { fit: 'cover', position: 'attention' })
+        .jpeg({ quality: 88, mozjpeg: true })
+        .toBuffer();
+    } else {
+      const meta = await sharp(sourceBuf).metadata();
+      const ratio = targetW / targetH; // 0.5625
+      const { x, y } = feedFocal;
+      let cropW, cropH;
+      if (meta.width / meta.height > ratio) {
+        cropH = meta.height;
+        cropW = Math.round(cropH * ratio);
+      } else {
+        cropW = meta.width;
+        cropH = Math.round(cropW / ratio);
+      }
+      const left = Math.max(0, Math.min(Math.round(x * meta.width - cropW / 2), meta.width - cropW));
+      const top  = Math.max(0, Math.min(Math.round(y * meta.height - cropH / 2), meta.height - cropH));
+      feedBuf = await sharp(sourceBuf)
+        .extract({ left, top, width: cropW, height: cropH })
+        .resize(targetW, targetH)
+        .jpeg({ quality: 88, mozjpeg: true })
+        .toBuffer();
+    }
 
     // Upload to CDN or save locally
     const feedKey = `feed/${listing.id}_feed.jpg`;
@@ -788,12 +815,13 @@ router.post('/:id/feed-image', userAuth, async (req, res) => {
       feedUrl = `/uploads/feed/${listing.id}_feed.jpg`;
     }
 
-    // Save on listing
-    listing.feed_image = feedUrl;
-    listing.feed_focal = { imageIndex: idx, x, y };
+    // Cache-bust so re-uploads replace the previous frame in CDNs / clients
+    const versioned = `${feedUrl}${feedUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+    listing.feed_image = versioned;
+    listing.feed_focal = feedFocal;
     store.saveListing(listing);
 
-    res.json({ feed_image: feedUrl, feed_focal: listing.feed_focal });
+    res.json({ feed_image: versioned, feed_focal: listing.feed_focal });
   } catch (e) {
     console.error('[feed-image] Error generating feed crop:', e.message);
     res.status(500).json({ error: 'Error generando imagen del feed: ' + e.message });

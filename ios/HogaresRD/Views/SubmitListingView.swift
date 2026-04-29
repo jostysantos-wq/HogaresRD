@@ -76,6 +76,18 @@ struct SubmitListingView: View {
     @State private var uploadedBlueprintURLs: [String] = []
     @State private var uploadingBlueprints = false
 
+    // Feed image (mandatory portrait 9:16 image used in the Reels feed).
+    // Two paths: a custom portrait upload OR a focal point picked on an
+    // existing photo. Either path satisfies validation.
+    enum FeedImageMode { case upload, focalPoint }
+    @State private var feedImageMode: FeedImageMode = .upload
+    @State private var feedPhotoItem: PhotosPickerItem? = nil
+    @State private var feedImage: UIImage? = nil
+    @State private var feedFocalIndex: Int = 0
+    @State private var feedFocalX: Double = 0.5
+    @State private var feedFocalY: Double = 0.5
+    @State private var feedFocalSet: Bool = false
+
     // Project-specific
     @State private var constructionCompany = ""
     @State private var unitsTotal    = ""
@@ -559,6 +571,11 @@ struct SubmitListingView: View {
                         }
                     }
 
+                    // ── Feed image (mandatory) ──────────────────────
+                    FormSection(title: "Imagen del Feed *", icon: "play.rectangle.fill", color: .purple) {
+                        feedImageSection
+                    }
+
                     // ── Planos / Blueprints ─────────────────────────
                     FormSection(title: "Planos / Blueprints", icon: "doc.richtext.fill", color: Color.rdBlue) {
                         PhotosPicker(selection: $blueprintItems,
@@ -681,11 +698,242 @@ struct SubmitListingView: View {
 
     // MARK: - Validation
 
+    private var feedImageReady: Bool {
+        switch feedImageMode {
+        case .upload:     return feedImage != nil
+        case .focalPoint: return feedFocalSet && !selectedImages.isEmpty
+        }
+    }
+
     private var canSubmit: Bool {
         !title.isEmpty && !propertyType.isEmpty && !condition.isEmpty &&
         !description.isEmpty && !price.isEmpty && !province.isEmpty &&
         !city.isEmpty && !contactName.isEmpty && !contactEmail.isEmpty && !contactPhone.isEmpty &&
-        acceptedTerms
+        acceptedTerms && feedImageReady
+    }
+
+    // MARK: - Feed image section
+
+    @ViewBuilder
+    private var feedImageSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("El feed muestra fotos verticales (9:16). Sube una imagen vertical o elige el punto focal de una foto existente.")
+                .font(.caption).foregroundStyle(.secondary)
+
+            // Mode tabs
+            HStack(spacing: 8) {
+                feedTabButton(title: "Subir vertical", isOn: feedImageMode == .upload) {
+                    feedImageMode = .upload
+                }
+                feedTabButton(title: "Usar foto existente",
+                              isOn: feedImageMode == .focalPoint,
+                              disabled: selectedImages.isEmpty) {
+                    if !selectedImages.isEmpty { feedImageMode = .focalPoint }
+                }
+            }
+
+            switch feedImageMode {
+            case .upload:
+                feedUploadPane
+            case .focalPoint:
+                feedFocalPane
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: feedImageReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .foregroundStyle(feedImageReady ? Color.rdGreen : .orange)
+                Text(feedImageReady ? "Imagen del feed lista" : "Imagen del feed obligatoria")
+                    .font(.caption2)
+                    .foregroundStyle(feedImageReady ? Color.rdGreen : .secondary)
+            }
+        }
+    }
+
+    private func feedTabButton(title: String, isOn: Bool, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption).bold()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isOn ? Color.rdBlue : Color.clear)
+                .foregroundStyle(isOn ? .white : (disabled ? .secondary : Color.rdBlue))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isOn ? Color.rdBlue : (disabled ? Color(.systemGray4) : Color.rdBlue.opacity(0.5)), lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
+    }
+
+    private var feedUploadPane: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            PhotosPicker(selection: $feedPhotoItem, matching: .images) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right.fill")
+                    Text(feedImage == nil ? "Seleccionar imagen vertical (9:16)" : "Cambiar imagen")
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: feedPhotoItem) { _, item in
+                Task { await loadFeedImage(item) }
+            }
+
+            if let img = feedImage {
+                HStack {
+                    Spacer()
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 120, height: 213) // 9:16
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue.opacity(0.3), lineWidth: 1)
+                        )
+                    Spacer()
+                }
+                Text("Recomendado: 1080×1920. Si no es 9:16 se recortará al centro automáticamente.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var feedFocalPane: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let firstImg = selectedImages.first {
+                GeometryReader { geo in
+                    ZStack(alignment: .topLeading) {
+                        Image(uiImage: firstImg)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                            .onTapGesture { location in
+                                let displayed = displayedImageRect(for: firstImg, in: geo.size)
+                                guard displayed.contains(location) else { return }
+                                feedFocalX = Double((location.x - displayed.minX) / displayed.width)
+                                feedFocalY = Double((location.y - displayed.minY) / displayed.height)
+                                feedFocalX = min(max(feedFocalX, 0), 1)
+                                feedFocalY = min(max(feedFocalY, 0), 1)
+                                feedFocalSet = true
+                            }
+
+                        if feedFocalSet {
+                            let displayed = displayedImageRect(for: firstImg, in: geo.size)
+                            let cropRect = focalCropRect(in: displayed)
+                            // 9:16 crop preview
+                            Rectangle()
+                                .stroke(Color.rdBlue, lineWidth: 2)
+                                .frame(width: cropRect.width, height: cropRect.height)
+                                .offset(x: cropRect.minX, y: cropRect.minY)
+                            // Focal marker
+                            Circle()
+                                .stroke(Color.white, lineWidth: 3)
+                                .background(Circle().fill(Color.black.opacity(0.3)))
+                                .frame(width: 24, height: 24)
+                                .offset(
+                                    x: displayed.minX + CGFloat(feedFocalX) * displayed.width - 12,
+                                    y: displayed.minY + CGFloat(feedFocalY) * displayed.height - 12
+                                )
+                        }
+                    }
+                }
+                .frame(height: feedFocalImageHeight(for: firstImg))
+
+                Text(feedFocalSet
+                     ? "Vista previa del recorte 9:16 · Toca otra zona para ajustar"
+                     : "Toca la imagen para marcar el punto focal")
+                    .font(.caption2).foregroundStyle(.secondary)
+            } else {
+                Text("Sube primero al menos una foto de la propiedad para usar esta opción.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            }
+        }
+    }
+
+    /// Aspect-fit rect of a UIImage drawn into the given container size.
+    private func displayedImageRect(for image: UIImage, in container: CGSize) -> CGRect {
+        let imgRatio = image.size.width / max(image.size.height, 1)
+        let boxRatio = container.width / max(container.height, 1)
+        var w: CGFloat, h: CGFloat
+        if imgRatio > boxRatio {
+            w = container.width
+            h = container.width / imgRatio
+        } else {
+            h = container.height
+            w = container.height * imgRatio
+        }
+        let x = (container.width - w) / 2
+        let y = (container.height - h) / 2
+        return CGRect(x: x, y: y, width: w, height: h)
+    }
+
+    /// 9:16 crop rect inside the displayed image, clamped to image bounds.
+    private func focalCropRect(in displayed: CGRect) -> CGRect {
+        let target: CGFloat = 9.0 / 16.0
+        var cw: CGFloat, ch: CGFloat
+        if displayed.width / displayed.height > target {
+            ch = displayed.height
+            cw = ch * target
+        } else {
+            cw = displayed.width
+            ch = cw / target
+        }
+        var cx = displayed.minX + CGFloat(feedFocalX) * displayed.width  - cw / 2
+        var cy = displayed.minY + CGFloat(feedFocalY) * displayed.height - ch / 2
+        cx = max(displayed.minX, min(cx, displayed.maxX - cw))
+        cy = max(displayed.minY, min(cy, displayed.maxY - ch))
+        return CGRect(x: cx, y: cy, width: cw, height: ch)
+    }
+
+    /// Approximate display height for the focal-point image so the
+    /// GeometryReader has a sensible intrinsic frame.
+    private func feedFocalImageHeight(for image: UIImage) -> CGFloat {
+        let assumedWidth: CGFloat = 320 // typical content width on iPhone
+        let r = image.size.height / max(image.size.width, 1)
+        return min(420, max(180, assumedWidth * r))
+    }
+
+    private func loadFeedImage(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        if let data = try? await item.loadTransferable(type: Data.self),
+           let img = UIImage(data: data) {
+            await MainActor.run { feedImage = img }
+        }
+    }
+
+    /// Upload the feed image to the photos endpoint and return its URL.
+    private func uploadFeedImage() async throws -> String? {
+        guard let img = feedImage else { return nil }
+        guard let token = api.token else { return nil }
+        guard let jpeg = img.jpegData(compressionQuality: 0.9) else { return nil }
+
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: URL(string: "\(apiBase)/api/upload/photos")!)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var data = Data()
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        data.append("Content-Disposition: form-data; name=\"photos\"; filename=\"feed.jpg\"\r\n".data(using: .utf8)!)
+        data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        data.append(jpeg)
+        data.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = data
+
+        let (responseData, resp) = try await URLSession.shared.data(for: request)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw APIError.server("Error subiendo imagen del feed")
+        }
+        struct UploadResponse: Decodable { let urls: [String] }
+        return try JSONDecoder().decode(UploadResponse.self, from: responseData).urls.first
     }
 
     private var deliveryDateFormatted: String {
@@ -874,7 +1122,26 @@ struct SubmitListingView: View {
             ]]
         }
         do {
-            try await api.submitListing(body)
+            let listingId = try await api.submitListing(body)
+            // ── Feed image (mandatory) ─────────────────────────────
+            // Listing is created on the server; now attach the feed image.
+            // If this fails we surface the error and let the user retry —
+            // we do NOT mark success until the feed image is saved.
+            if !listingId.isEmpty {
+                if feedImageMode == .upload {
+                    if let feedUrl = try await uploadFeedImage() {
+                        try await api.setFeedImageFromUpload(listingId: listingId, feedImageUrl: feedUrl)
+                    } else {
+                        throw APIError.server("No se pudo subir la imagen del feed")
+                    }
+                } else {
+                    try await api.setFeedImageFromFocalPoint(
+                        listingId: listingId,
+                        imageIndex: feedFocalIndex,
+                        x: feedFocalX, y: feedFocalY
+                    )
+                }
+            }
             await MainActor.run { success = true }
         } catch { self.error = error.localizedDescription }
         loading = false

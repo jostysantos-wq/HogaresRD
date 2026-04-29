@@ -1319,7 +1319,10 @@ class APIService: ObservableObject {
 
     // MARK: - Submit Listing
 
-    func submitListing(_ body: [String: Any]) async throws {
+    /// Submit a new listing. Returns the new listing id so callers can
+    /// follow up with related operations (e.g. setting the feed image).
+    @discardableResult
+    func submitListing(_ body: [String: Any]) async throws -> String {
         let url = apiURL("/submit")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -1331,6 +1334,45 @@ class APIService: ObservableObject {
             if let err = try? JSONDecoder().decode([String: String].self, from: data),
                let msg = err["error"] { throw APIError.server(msg) }
             throw APIError.server("Error al enviar la propiedad")
+        }
+        struct SubmitResp: Decodable { let id: String? }
+        let parsed = try? JSONDecoder().decode(SubmitResp.self, from: data)
+        return parsed?.id ?? ""
+    }
+
+    /// Set the feed image for a listing using a custom portrait upload.
+    /// The server will normalize/crop to 9:16 (1080×1920).
+    func setFeedImageFromUpload(listingId: String, feedImageUrl: String) async throws {
+        let url = apiURL("/api/listings/\(listingId)/feed-image")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["feedImageUrl": feedImageUrl])
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error guardando imagen del feed")
+        }
+    }
+
+    /// Set the feed image for a listing using a focal-point crop on
+    /// one of the listing's existing photos.
+    func setFeedImageFromFocalPoint(listingId: String, imageIndex: Int, x: Double, y: Double) async throws {
+        let url = apiURL("/api/listings/\(listingId)/feed-image")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "imageIndex": imageIndex, "x": x, "y": y
+        ])
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            if let err = try? JSONDecoder().decode([String: String].self, from: data),
+               let msg = err["error"] { throw APIError.server(msg) }
+            throw APIError.server("Error guardando imagen del feed")
         }
     }
 
