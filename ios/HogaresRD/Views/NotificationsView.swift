@@ -4,111 +4,317 @@ struct NotificationsView: View {
     @EnvironmentObject var api:   APIService
     @EnvironmentObject var saved: SavedStore
 
+    @State private var items: [APIService.AppNotification] = []
+    @State private var unreadCount: Int = 0
+    @State private var loading = false
+    @State private var loadedOnce = false
+    @State private var errorMsg: String?
+    @State private var markingAll = false
+
     var body: some View {
         NavigationStack {
             notificationsContent
                 .navigationTitle("Alertas")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink {
-                            ProfileMenuView()
-                        } label: {
-                            if let user = api.currentUser {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.rdBlue)
-                                        .frame(width: 32, height: 32)
-                                    Text(user.initials)
-                                        .font(.caption2).bold()
-                                        .foregroundStyle(.white)
-                                }
-                            } else {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color.rdBlue)
-                            }
-                        }
-                    }
+                .toolbar { toolbarContent }
+                .task {
+                    if api.currentUser != nil { await load() }
+                }
+                .refreshable {
+                    if api.currentUser != nil { await load() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .pushNotificationReceived)) { _ in
+                    // A new push just arrived — pull the inbox so the new row
+                    // appears without waiting for the next refresh.
+                    Task { await load() }
                 }
         }
     }
 
-    // MARK: - Notifications Content
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        if api.currentUser != nil && unreadCount > 0 {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    Task { await markAllRead() }
+                } label: {
+                    if markingAll {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Marcar todo")
+                            .font(.caption.bold())
+                    }
+                }
+                .disabled(markingAll)
+            }
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            NavigationLink {
+                ProfileMenuView()
+            } label: {
+                if let user = api.currentUser {
+                    ZStack {
+                        Circle().fill(Color.rdBlue).frame(width: 32, height: 32)
+                        Text(user.initials)
+                            .font(.caption2).bold()
+                            .foregroundStyle(.white)
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.rdBlue)
+                }
+            }
+        }
+    }
+
+    // MARK: - Content
 
     @ViewBuilder
     private var notificationsContent: some View {
-        if api.currentUser != nil {
-            List {
+        if api.currentUser == nil {
+            loggedOutPlaceholder
+        } else if !loadedOnce && loading {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if items.isEmpty {
+            emptyInboxPlaceholder
+        } else {
+            notificationsList
+        }
+    }
+
+    private var notificationsList: some View {
+        List {
+            if let err = errorMsg {
                 Section {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                            Image(systemName: "bell.badge.fill")
-                                .foregroundStyle(Color.rdBlue)
-                        }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Bienvenido a HogaresRD")
-                                .font(.subheadline).bold()
-                            Text("Recibirás notificaciones sobre propiedades y actualizaciones aquí.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section("Alertas de precio") {
-                    emptyNotificationRow(
-                        icon: "arrow.down.circle.fill",
-                        color: .rdGreen,
-                        title: "Bajas de precio",
-                        subtitle: "Guarda propiedades para recibir alertas de cambio de precio"
-                    )
-                }
-
-                Section("Nuevas propiedades") {
-                    emptyNotificationRow(
-                        icon: "sparkles",
-                        color: .rdBlue,
-                        title: "Propiedades nuevas",
-                        subtitle: "Configura alertas para recibir notificaciones de nuevos listados"
-                    )
+                    Label(err, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
-        } else {
-            VStack(spacing: 24) {
-                Spacer()
-                ZStack {
-                    Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 110, height: 110)
-                    Image(systemName: "bell.circle")
-                        .font(.system(size: 52))
-                        .foregroundStyle(Color.rdBlue)
+            ForEach(items) { item in
+                Button {
+                    Task { await tap(item) }
+                } label: {
+                    NotificationRow(notification: item)
                 }
-                VStack(spacing: 8) {
-                    Text("Tus alertas")
-                        .font(.title2).bold()
-                    Text("Inicia sesión para recibir\nnotificaciones de propiedades.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        Task { await deleteItem(item) }
+                    } label: {
+                        Label("Eliminar", systemImage: "trash")
+                    }
                 }
-                Spacer()
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    private var loggedOutPlaceholder: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            ZStack {
+                Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 110, height: 110)
+                Image(systemName: "bell.circle")
+                    .font(.system(size: 52))
+                    .foregroundStyle(Color.rdBlue)
+            }
+            VStack(spacing: 8) {
+                Text("Tus alertas")
+                    .font(.title2).bold()
+                Text("Inicia sesión para recibir\nnotificaciones de propiedades.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Spacer()
+        }
+    }
+
+    private var emptyInboxPlaceholder: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            ZStack {
+                Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 96, height: 96)
+                Image(systemName: "bell.slash.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Color.rdBlue.opacity(0.6))
+            }
+            VStack(spacing: 6) {
+                Text("Sin notificaciones")
+                    .font(.headline)
+                Text("Cuando recibas mensajes, asignaciones de leads u otras alertas, aparecerán aquí.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Actions
+
+    private func load() async {
+        loading = true
+        defer {
+            loading = false
+            loadedOnce = true
+        }
+        do {
+            let result = try await api.fetchNotifications(limit: 100)
+            await MainActor.run {
+                items = result.items
+                unreadCount = result.unreadCount
+                errorMsg = nil
+            }
+        } catch {
+            await MainActor.run { errorMsg = "No se pudieron cargar las notificaciones." }
+        }
+    }
+
+    private func tap(_ item: APIService.AppNotification) async {
+        // Optimistic mark-read locally so the UI updates instantly.
+        if !item.isRead {
+            await MainActor.run {
+                if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                    items[idx] = APIService.AppNotification(
+                        id: item.id, type: item.type, title: item.title,
+                        body: item.body, url: item.url,
+                        read_at: ISO8601DateFormatter().string(from: Date()),
+                        created_at: item.created_at
+                    )
+                }
+                unreadCount = max(0, unreadCount - 1)
+            }
+            try? await api.markNotificationRead(id: item.id)
+        }
+
+        // Deep-link to the notification's URL via the universal-link path,
+        // which the app's existing handleDeepLink picks up. Falls back to
+        // opening in Safari for URLs the app doesn't claim.
+        if let urlStr = item.url, !urlStr.isEmpty {
+            let full = urlStr.hasPrefix("http")
+                ? urlStr
+                : "https://hogaresrd.com" + urlStr
+            if let u = URL(string: full) {
+                await UIApplication.shared.open(u)
             }
         }
     }
 
-    private func emptyNotificationRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: 14) {
+    private func markAllRead() async {
+        markingAll = true
+        defer { markingAll = false }
+        do {
+            try await api.markAllNotificationsRead()
+            await load()
+        } catch {
+            await MainActor.run { errorMsg = "No se pudieron marcar las notificaciones." }
+        }
+    }
+
+    private func deleteItem(_ item: APIService.AppNotification) async {
+        await MainActor.run {
+            items.removeAll { $0.id == item.id }
+            if !item.isRead { unreadCount = max(0, unreadCount - 1) }
+        }
+        try? await api.deleteNotification(id: item.id)
+    }
+}
+
+// MARK: - Row
+
+private struct NotificationRow: View {
+    let notification: APIService.AppNotification
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
             ZStack {
-                Circle().fill(color.opacity(0.1)).frame(width: 40, height: 40)
-                Image(systemName: icon).foregroundStyle(color)
+                Circle().fill(iconColor.opacity(0.15)).frame(width: 40, height: 40)
+                Image(systemName: iconName).foregroundStyle(iconColor)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline).bold()
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                if let title = notification.title, !title.isEmpty {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(notification.isRead ? .regular : .bold)
+                        .lineLimit(2)
+                }
+                if let body = notification.body, !body.isEmpty {
+                    Text(body)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                Text(relativeTime)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer(minLength: 4)
+
+            if !notification.isRead {
+                Circle().fill(Color.rdBlue).frame(width: 8, height: 8)
+                    .padding(.top, 6)
             }
         }
-        .padding(.vertical, 2)
+    }
+
+    private var iconName: String {
+        switch notification.type {
+        case "new_message":         return "bubble.left.fill"
+        case "new_application":     return "doc.text.fill"
+        case "status_changed":      return "arrow.triangle.swap"
+        case "tour_update":         return "calendar.badge.clock"
+        case "payment_approved":    return "checkmark.seal.fill"
+        case "lead_cascade":        return "person.crop.circle.badge.exclamationmark"
+        case "document_reviewed":   return "doc.badge.checkmark"
+        case "secretary_action":    return "person.fill.badge.plus"
+        case "saved_search_match":  return "magnifyingglass"
+        case "new_listing":         return "house.fill"
+        case "new_affiliation":     return "person.2.badge.gearshape"
+        case "task_pending_review",
+             "task_completed",
+             "task_approved",
+             "task_rejected",
+             "task_not_applicable": return "checklist"
+        default:                    return "bell.fill"
+        }
+    }
+
+    private var iconColor: Color {
+        switch notification.type {
+        case "payment_approved", "task_approved":   return .rdGreen
+        case "task_rejected", "lead_cascade":       return .rdRed
+        case "task_pending_review":                 return .orange
+        case "new_listing", "saved_search_match":   return .purple
+        default:                                    return .rdBlue
+        }
+    }
+
+    private var relativeTime: String {
+        // Server timestamps come from `new Date().toISOString()` which always
+        // includes fractional seconds (e.g. 2026-04-29T03:21:34.567Z). Try
+        // both with and without fractional seconds so we don't silently
+        // return "" if the format ever drifts.
+        let withFrac = ISO8601DateFormatter()
+        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+        let date = withFrac.date(from: notification.created_at)
+                  ?? plain.date(from: notification.created_at)
+        guard let date else { return "" }
+        let elapsed = Date().timeIntervalSince(date)
+        if elapsed < 60          { return "ahora" }
+        if elapsed < 3600        { return "hace \(Int(elapsed / 60)) min" }
+        if elapsed < 86400       { return "hace \(Int(elapsed / 3600)) h" }
+        if elapsed < 604800      { return "hace \(Int(elapsed / 86400)) d" }
+        let fmt = DateFormatter()
+        fmt.dateStyle = .medium
+        fmt.timeStyle = .none
+        return fmt.string(from: date)
     }
 }
 

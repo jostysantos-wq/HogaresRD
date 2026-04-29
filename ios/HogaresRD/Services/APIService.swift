@@ -1245,6 +1245,14 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "Error marcando notificaciones")
     }
 
+    /// Remove a notification from the user's inbox history.
+    func deleteNotification(id: String) async throws {
+        let url = apiURL("/api/notifications/\(id)")
+        let req = try authedRequest(url, method: "DELETE")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "Error eliminando notificación")
+    }
+
     /// Pros only (agent/broker/inmobiliaria/constructora). Closes the
     /// conversation so no further messages can be sent from either side.
     func closeConversation(id: String, reason: String) async throws -> Conversation {
