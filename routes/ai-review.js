@@ -62,15 +62,22 @@ async function reviewListing(listingId) {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 1024,
+      system: [
+        {
+          type: 'text',
+          text: 'You are a real estate listing quality reviewer for HogaresRD, a Dominican Republic real estate platform. Review listing submissions and return a JSON object with your assessment. Return ONLY valid JSON — no markdown, no explanation outside JSON.\n\nJSON shape:\n{"score":<1-10>,"status":"<approve|review|reject>","summary":"<1-2 sentences in Spanish>","issues":[{"type":"<missing_info|quality|duplicate|pricing|spam|photos>","severity":"<high|medium|low>","message":"<Spanish>"}],"suggestions":["<Spanish>"],"duplicateRisk":<true|false>,"duplicateIds":["<id>"]}\n\nScoring: 8-10 approve, 5-7 review, 1-4 reject. Write all user-facing text in Spanish.',
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content?.[0]?.text || '';
+    const text = response.content?.[0]?.text || '{}';
     let review;
     try {
-      // Extract JSON from the response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      review = jsonMatch ? JSON.parse(jsonMatch[0]) : { raw: text };
+      // Tolerate markdown fencing — extract the first JSON object.
+      const match = text.match(/\{[\s\S]*\}/);
+      review = match ? JSON.parse(match[0]) : { raw: text };
     } catch {
       review = { raw: text };
     }
@@ -95,12 +102,10 @@ async function reviewListing(listingId) {
 
 function buildPrompt(listing, duplicates) {
   const dupSection = duplicates.length > 0
-    ? `\n\nPOSSIBLE DUPLICATES (existing approved listings with similar attributes):\n${JSON.stringify(duplicates, null, 2)}`
-    : '\n\nNo potential duplicates found in the database.';
+    ? `\nPOSSIBLE DUPLICATES:\n${JSON.stringify(duplicates, null, 2)}`
+    : '\nNo potential duplicates found.';
 
-  return `You are a real estate listing quality reviewer for HogaresRD, a Dominican Republic real estate platform. Review this listing submission and return a JSON object with your assessment.
-
-LISTING TO REVIEW:
+  return `LISTING TO REVIEW:
 - Title: ${listing.title || '(empty)'}
 - Type: ${listing.type || '(empty)'}
 - Condition: ${listing.condition || '(empty)'}
@@ -113,27 +118,7 @@ LISTING TO REVIEW:
 - Images: ${(listing.images || []).length} photo(s)
 - Amenities: ${(listing.amenities || []).join(', ') || '(none)'}
 - Submitter: ${listing.name || '(empty)'} (${listing.email || 'no email'})
-${dupSection}
-
-Return ONLY a JSON object (no markdown, no explanation outside JSON):
-{
-  "score": <1-10 quality score>,
-  "status": "<approve|review|reject>",
-  "summary": "<1-2 sentence overall assessment in Spanish>",
-  "issues": [
-    {"type": "<missing_info|quality|duplicate|pricing|spam|photos>", "severity": "<high|medium|low>", "message": "<description in Spanish>"}
-  ],
-  "suggestions": ["<improvement suggestion in Spanish>", ...],
-  "duplicateRisk": <true|false>,
-  "duplicateIds": ["<listing ID if duplicate detected>"]
-}
-
-Scoring guide:
-- 8-10: Ready to approve with minor or no issues
-- 5-7: Needs review — some issues but publishable with edits
-- 1-4: Should be rejected — major quality/spam/duplicate concerns
-
-Be concise. Focus on actionable issues. Write all user-facing text in Spanish.`;
+${dupSection}`;
 }
 
 module.exports = { reviewListing };

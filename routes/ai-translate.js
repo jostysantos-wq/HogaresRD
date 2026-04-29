@@ -98,23 +98,25 @@ async function translateListing(listing, targetLang) {
       const response = await anthropic.messages.create({
         model: 'claude-haiku-4-5',
         max_tokens: 1024,
+        system: [
+          {
+            type: 'text',
+            text: 'You are a real estate translator for HogaresRD. Translate Dominican Republic real estate listings from Spanish to English. Keep translations natural, professional, and appealing to US-based Dominican buyers. Preserve location names (Piantini, Punta Cana, etc.) as-is. Return ONLY valid JSON with "title" and "description" keys.',
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages: [{
           role: 'user',
-          content: `Translate this Dominican Republic real estate listing from Spanish to English. Keep it natural, professional, and appealing to US-based Dominican buyers. Preserve location names (Piantini, Punta Cana, etc.) as-is. Return ONLY valid JSON with "title" and "description" keys.
-
-Title: ${listing.title || ''}
-Description: ${listing.description || ''}`,
+          content: `Title: ${listing.title || ''}\nDescription: ${listing.description || ''}`,
         }],
       });
 
-      const text = response.content[0]?.text || '';
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        result.title = parsed.title || listing.title;
-        result.description = parsed.description || listing.description;
-      }
+      const text = response.content[0]?.text || '{}';
+      // Tolerate markdown fencing — extract the first JSON object.
+      const match = text.match(/\{[\s\S]*\}/);
+      const parsed = match ? JSON.parse(match[0]) : {};
+      result.title = parsed.title || listing.title;
+      result.description = parsed.description || listing.description;
     } catch (err) {
       console.error('[ai-translate] Translation error:', err.message);
       // Fall back to original

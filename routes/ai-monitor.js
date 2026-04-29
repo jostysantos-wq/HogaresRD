@@ -145,37 +145,25 @@ async function aiQualityCheck(listings) {
     delivery_date: l.delivery_date || '',
   }));
 
-  const prompt = `Eres un analista de calidad de anuncios inmobiliarios para HogaresRD (República Dominicana).
-
-Revisa estos anuncios y detecta problemas. Responde SOLO con un JSON array válido, sin markdown ni explicaciones.
-
-Para cada anuncio con problemas, reporta:
-{ "id": "listing_id", "issues": [{ "type": "tipo", "severity": "low|medium|high", "message": "descripción en español" }] }
-
-Tipos de problemas a buscar:
-- pricing_anomaly: precio parece demasiado alto o bajo para la zona y tipo de propiedad
-- spam_content: descripción parece spam, texto placeholder, o relleno genérico
-- misleading_info: título o descripción no coincide con los detalles de la propiedad
-- quality_concern: cualquier otro problema de calidad que afecte la experiencia del comprador
-
-Si un anuncio no tiene problemas, NO lo incluyas en el resultado.
-
-Anuncios a revisar:
-${JSON.stringify(batch, null, 2)}`;
-
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
+      system: [
+        {
+          type: 'text',
+          text: 'Eres un analista de calidad de anuncios inmobiliarios para HogaresRD (República Dominicana). Revisa anuncios y detecta problemas. Responde SOLO con un JSON object válido: {"results":[...]}. Sin markdown ni explicaciones fuera del JSON.\n\nFormato por anuncio con problemas: {"id":"listing_id","issues":[{"type":"tipo","severity":"low|medium|high","message":"descripción en español"}]}\n\nTipos: pricing_anomaly, spam_content, misleading_info, quality_concern. Si un anuncio no tiene problemas, NO lo incluyas en results.',
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [{ role: 'user', content: `Anuncios a revisar:\n${JSON.stringify(batch, null, 2)}` }],
     });
 
-    const text = response.content?.[0]?.text || '[]';
-    // Extract JSON array from response (Claude sometimes wraps it)
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
-
-    const results = JSON.parse(jsonMatch[0]);
+    const text = response.content?.[0]?.text || '{"results":[]}';
+    // Be tolerant of stray markdown fencing — extract the first JSON value.
+    const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const parsed = match ? JSON.parse(match[0]) : { results: [] };
+    const results = Array.isArray(parsed) ? parsed : (parsed.results || []);
     const flags = [];
     for (const r of results) {
       if (!r.id || !Array.isArray(r.issues)) continue;
@@ -212,13 +200,7 @@ async function generateReport(summary, byListing, listings) {
     };
   });
 
-  const prompt = `Eres el asistente de administración de HogaresRD, una plataforma inmobiliaria en República Dominicana.
-
-Acabo de ejecutar un escaneo automático del catálogo. Escribe un reporte ejecutivo breve (3-5 párrafos) en español, como si fueras un asistente informándole al administrador lo que encontraste.
-
-Tono: profesional pero cercano. Usa "usted" formal. Sé directo y prioriza las acciones más urgentes.
-
-Datos del escaneo:
+  const scanData = `Datos del escaneo:
 - Total propiedades escaneadas: ${summary.totalListings}
 - Propiedades con problemas: ${summary.flaggedListings}
 - Problemas críticos (alta): ${summary.bySeverity.high}
@@ -226,21 +208,21 @@ Datos del escaneo:
 - Problemas bajos: ${summary.bySeverity.low}
 - Tipos de problemas: ${JSON.stringify(summary.byType)}
 
-Detalle de propiedades con problemas:
-${JSON.stringify(flaggedDetails, null, 2)}
-
-Instrucciones:
-1. Empieza con un resumen general del estado del catálogo
-2. Menciona los problemas más urgentes con nombres de propiedades específicas
-3. Da recomendaciones concretas de qué hacer primero
-4. Si hay duplicados, menciónalo explícitamente
-5. Termina con una nota positiva si hay propiedades que están bien`;
+Detalle:
+${JSON.stringify(flaggedDetails, null, 2)}`;
 
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
+      system: [
+        {
+          type: 'text',
+          text: 'Eres el asistente de administración de HogaresRD, una plataforma inmobiliaria en República Dominicana. Escribe reportes ejecutivos breves (3-5 párrafos) en español sobre escaneos del catálogo. Tono: profesional pero cercano, usa "usted" formal. Sé directo y prioriza acciones urgentes. Estructura: (1) resumen general, (2) problemas más urgentes con nombres específicos, (3) recomendaciones concretas, (4) menciona duplicados si los hay, (5) nota positiva si hay propiedades sin problemas.',
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [{ role: 'user', content: scanData }],
     });
     return response.content?.[0]?.text || 'No se pudo generar el reporte.';
   } catch (err) {
