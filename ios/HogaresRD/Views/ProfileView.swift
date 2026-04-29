@@ -1367,8 +1367,11 @@ struct MyListingCard: View {
 
                         // QR Code
                         Button {
-                            showQR = true
+                            // Set the URL FIRST so the sheet body sees it on
+                            // the very first render — SwiftUI batches state
+                            // changes, but mutation order is the safer bet.
                             qrURL = "https://hogaresrd.com/listing/\(listing.id)?ref=\(ref)"
+                            showQR = true
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "qrcode")
@@ -1394,13 +1397,19 @@ struct MyListingCard: View {
             NavigationStack {
                 VStack(spacing: 20) {
                     Spacer()
-                    // Generate QR from CoreImage
+                    // Generate QR from CoreImage.
+                    // Wrap in a white-padded card and apply the rounded
+                    // corners to the WRAPPER, not the QR itself — clipping
+                    // the QR's outer pixels mangles the corner finder
+                    // patterns and breaks scanners.
                     if let qrImage = generateQRCode(from: qrURL) {
                         Image(uiImage: qrImage)
                             .interpolation(.none)
                             .resizable()
                             .scaledToFit()
                             .frame(width: 220, height: 220)
+                            .padding(16) // quiet zone around the QR
+                            .background(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     Text(listing.title)
@@ -1445,7 +1454,13 @@ struct MyListingCard: View {
     }
 
     private func generateQRCode(from string: String) -> UIImage? {
-        guard let data = string.data(using: .ascii),
+        // Skip if the URL hasn't been populated yet — encoding an empty
+        // string yields a tiny QR that scans as "" and looks broken.
+        guard !string.isEmpty else { return nil }
+        // UTF-8 is the safer default. ASCII rejects ANY non-ASCII byte
+        // (returns nil), and some scanners are fussier about ECI mode
+        // when the input was encoded as ISO-8859-1.
+        guard let data = string.data(using: .utf8),
               let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
         filter.setValue(data, forKey: "inputMessage")
         filter.setValue("M", forKey: "inputCorrectionLevel")
