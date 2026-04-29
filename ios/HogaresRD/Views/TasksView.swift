@@ -472,7 +472,7 @@ struct TaskDetailSheet: View {
     /// Does this task require a file upload?
     private var needsUpload: Bool {
         guard task.status != "completada" else { return false }
-        let uploadEvents = ["documents_requested", "documents_insufficient", "payment_plan_created", "payment_uploaded"]
+        let uploadEvents = ["documents_requested", "documents_rejected", "payment_plan_created", "payment_uploaded"]
         return task.applicationId != nil && uploadEvents.contains(task.sourceEvent ?? "")
     }
 
@@ -499,7 +499,7 @@ struct TaskDetailSheet: View {
 
     private var taskIcon: String {
         switch task.sourceEvent {
-        case "documents_requested", "documents_insufficient": return "doc.text.fill"
+        case "documents_requested", "documents_rejected": return "doc.text.fill"
         case "payment_plan_created": return "creditcard.fill"
         case "payment_uploaded": return "checkmark.seal.fill"
         case "receipt_ready": return "doc.badge.checkmark"
@@ -510,7 +510,7 @@ struct TaskDetailSheet: View {
 
     private var taskColor: Color {
         switch task.sourceEvent {
-        case "documents_requested", "documents_insufficient": return .orange
+        case "documents_requested", "documents_rejected": return .orange
         case "payment_plan_created": return Color.rdBlue
         case "payment_uploaded": return Color.rdGreen
         case "receipt_ready": return Color.rdGreen

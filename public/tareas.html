@@ -495,8 +495,10 @@
           : `<span style="color:var(--accent);font-weight:700;font-size:0.82rem;">&#10003; Completada</span>`;
 
         // Upload section for document/payment tasks
-        const docEvents = ['documents_requested', 'documents_insufficient'];
-        const payEvents = ['payment_required', 'payment_rejected'];
+        // These must match the source_event values written by the backend
+        // (routes/applications.js). Mismatches hide the upload UI.
+        const docEvents = ['documents_requested', 'documents_rejected'];
+        const payEvents = ['payment_plan_created'];
         const sourceEvent = task.source_event || '';
         const needsUpload = task.status !== 'completada' && task.application_id && (docEvents.includes(sourceEvent) || payEvents.includes(sourceEvent));
         const isPayment = payEvents.includes(sourceEvent);
