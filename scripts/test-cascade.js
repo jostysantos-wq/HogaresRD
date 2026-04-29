@@ -10,8 +10,36 @@
 // ══════════════════════════════════════════════════════════════════════════
 
 process.env.ENABLE_CASCADE = 'true';
+// Bypass the 11 PM – 8 AM overnight freeze so escalation tests run regardless
+// of wall-clock time. The freeze logic is exercised separately if needed.
+process.env.CASCADE_FORCE_MARKET_OPEN = 'true';
 
 const store = require('../routes/store');
+
+// ── Mock pool.query for the lead_queue atomic UPDATE ─────────────────────
+// claimLead does a CAS via Postgres `UPDATE ... WHERE status='active' AND
+// current_tier=$N`. In test we have no DB, so we replay that CAS against
+// the in-memory cache. Single-process tests don't need the cluster-safe
+// guarantees of the real pool.
+if (store.pool) {
+  const originalQuery = store.pool.query.bind(store.pool);
+  store.pool.query = async function(sql, params) {
+    if (typeof sql === 'string' &&
+        sql.includes('UPDATE lead_queue') &&
+        sql.includes("status = 'active'")) {
+      const [, , leadQueueId, validatedTier] = params;
+      const item = store.getLeadQueueById(leadQueueId);
+      if (item && item.status === 'active' &&
+          (validatedTier == null || item.current_tier === validatedTier)) {
+        return { rowCount: 1, rows: [{ id: leadQueueId }] };
+      }
+      return { rowCount: 0, rows: [] };
+    }
+    try { return await originalQuery(sql, params); }
+    catch { return { rowCount: 0, rows: [] }; }
+  };
+}
+
 const cascade = require('../routes/cascade-engine');
 
 // ── Test helpers ────────────────────────────────────────────────────────
@@ -41,6 +69,10 @@ const LISTING_ID   = 'test_listing_001';
 function seedTestData() {
   section('SEEDING TEST DATA');
 
+  // Pro-role users need an active subscription — getTierAgents filters
+  // out anyone whose subscription isn't active/trialing/past_due.
+  const PRO_SUBSCRIPTION = { subscriptionStatus: 'active' };
+
   // Create users
   store.saveUser({
     id: CREATOR_ID,
@@ -51,6 +83,7 @@ function seedTestData() {
     agency: { name: 'Inmobiliaria MC', license: 'L001', phone: '8091111111' },
     passwordHash: 'test',
     createdAt: new Date().toISOString(),
+    ...PRO_SUBSCRIPTION,
   });
   console.log('  → Seeded user: Maria Creator (listing creator)');
 
@@ -63,6 +96,7 @@ function seedTestData() {
     agency: { name: 'RE/MAX Test', license: 'L002', phone: '8092222222' },
     passwordHash: 'test',
     createdAt: new Date().toISOString(),
+    ...PRO_SUBSCRIPTION,
   });
   console.log('  → Seeded user: Juan Contributor (contributing affiliate)');
 
@@ -75,6 +109,7 @@ function seedTestData() {
     agency: { name: 'Century Test', license: 'L003', phone: '8093333333' },
     passwordHash: 'test',
     createdAt: new Date().toISOString(),
+    ...PRO_SUBSCRIPTION,
   });
   console.log('  → Seeded user: Ana Affiliate (tagged affiliate)');
 
@@ -203,7 +238,12 @@ function testStartCascade() {
   assert(item !== null, 'startCascade returns a lead_queue item');
   assert(item.current_tier === 1, 'Cascade starts at tier 1');
   assert(item.status === 'active', 'Status is active');
-  assert(item.tier1_notified_at !== null, 'Tier 1 notification timestamp set');
+  // Tier 1 notification timestamp is set during business hours, but stays
+  // null when the cascade enters overnight-freeze mode (timer resumes at
+  // 8 AM and stamps the field then).
+  const isOvernight = !cascade.isMarketOpen?.() && item.tier1_notified_at === null;
+  assert(item.tier1_notified_at !== null || isOvernight,
+         'Tier 1 notification timestamp set (or null during overnight freeze)');
   assert(item.buyer_name === 'Carlos Buyer', 'Buyer name captured');
 
   // Verify it's in the store
@@ -212,7 +252,7 @@ function testStartCascade() {
   assert(stored.status === 'active', 'Stored status is active');
 }
 
-function testClaimByCreator() {
+async function testClaimByCreator() {
   section('TEST 4: Claim by Creator (Tier 1)');
 
   // Start a new cascade
@@ -222,7 +262,7 @@ function testClaimByCreator() {
   });
 
   // Creator claims it
-  const result = cascade.claimLead(item.id, CREATOR_ID);
+  const result = await cascade.claimLead(item.id, CREATOR_ID);
   assert(result.success === true, 'Creator successfully claims lead');
 
   const updated = store.getLeadQueueById(item.id);
@@ -231,7 +271,7 @@ function testClaimByCreator() {
   assert(updated.claimed_at !== null, 'claimed_at timestamp set');
 }
 
-function testClaimByWrongTier() {
+async function testClaimByWrongTier() {
   section('TEST 5: Claim Rejected for Wrong Tier');
 
   const item = cascade.startCascade('lead', 'test_lead_003', LISTING_ID, {
@@ -239,19 +279,25 @@ function testClaimByWrongTier() {
   });
 
   // Affiliate tries to claim during Tier 1
-  const result = cascade.claimLead(item.id, AFFILIATE_ID);
+  const result = await cascade.claimLead(item.id, AFFILIATE_ID);
   assert(result.success === false, 'Affiliate cannot claim during Tier 1');
   assert(result.error.includes('prioridad'), 'Error message mentions priority');
 
+  // Verify the rejected claim did NOT mutate the row (regression test for
+  // the "stuck-claim" bug where validation happened after the DB UPDATE).
+  const stillActive = store.getLeadQueueById(item.id);
+  assert(stillActive.status === 'active', 'Rejected claim leaves status=active');
+  assert(stillActive.claimed_by == null, 'Rejected claim leaves claimed_by=null');
+
   // Contributor also can't claim during Tier 1
-  const result2 = cascade.claimLead(item.id, CONTRIB_ID);
+  const result2 = await cascade.claimLead(item.id, CONTRIB_ID);
   assert(result2.success === false, 'Contributor cannot claim during Tier 1');
 
-  // Clean up — escalate and claim by creator
-  cascade.claimLead(item.id, CREATOR_ID);
+  // Clean up — claim by creator
+  await cascade.claimLead(item.id, CREATOR_ID);
 }
 
-function testDoubleClaim() {
+async function testDoubleClaim() {
   section('TEST 6: Double Claim Prevention');
 
   const item = cascade.startCascade('lead', 'test_lead_004', LISTING_ID, {
@@ -259,11 +305,11 @@ function testDoubleClaim() {
   });
 
   // Creator claims
-  const r1 = cascade.claimLead(item.id, CREATOR_ID);
+  const r1 = await cascade.claimLead(item.id, CREATOR_ID);
   assert(r1.success === true, 'First claim succeeds');
 
   // Try to claim again
-  const r2 = cascade.claimLead(item.id, CREATOR_ID);
+  const r2 = await cascade.claimLead(item.id, CREATOR_ID);
   assert(r2.success === false, 'Second claim rejected');
   assert(r2.error.includes('reclamado'), 'Error says already claimed');
 }
@@ -301,7 +347,7 @@ function testEscalation() {
   assert(updated3.claimed_at !== null, 'Auto-assign timestamp set');
 }
 
-function testClaimAfterEscalation() {
+async function testClaimAfterEscalation() {
   section('TEST 8: Claim at Tier 2 by Contributor');
 
   const item = cascade.startCascade('lead', 'test_lead_006', LISTING_ID, {
@@ -312,7 +358,7 @@ function testClaimAfterEscalation() {
   cascade.escalateTier(item.id);
 
   // Contributor claims at tier 2
-  const result = cascade.claimLead(item.id, CONTRIB_ID);
+  const result = await cascade.claimLead(item.id, CONTRIB_ID);
   assert(result.success === true, 'Contributor claims at tier 2');
 
   const updated = store.getLeadQueueById(item.id);
@@ -374,7 +420,7 @@ function testEmptyTierSkip() {
   assert(updated.claimed_by === CREATOR_ID, 'Solo listing: auto-assigned to creator');
 }
 
-function testApplicationCascade() {
+async function testApplicationCascade() {
   section('TEST 10: Application Inquiry Type');
 
   // Simulate saving an application first
@@ -395,7 +441,7 @@ function testApplicationCascade() {
   });
 
   // Creator claims the application
-  const result = cascade.claimLead(item.id, CREATOR_ID);
+  const result = await cascade.claimLead(item.id, CREATOR_ID);
   assert(result.success === true, 'Creator claims application lead');
 
   // Verify application broker was updated
@@ -405,7 +451,7 @@ function testApplicationCascade() {
   assert(app.broker_id === CREATOR_ID, 'Application broker_id set');
 }
 
-function testContributionScoreAutoCreate() {
+async function testContributionScoreAutoCreate() {
   section('TEST 11: Auto-Create Contribution Score on Claim');
 
   // Create a new user with no existing score
@@ -418,6 +464,7 @@ function testContributionScoreAutoCreate() {
     role: 'agency',
     passwordHash: 'test',
     createdAt: new Date().toISOString(),
+    subscriptionStatus: 'active',
   });
 
   // Add new agent to listing agencies
@@ -434,7 +481,7 @@ function testContributionScoreAutoCreate() {
   cascade.escalateTier(item.id); // → tier 3
 
   // New agent claims at tier 3
-  const result = cascade.claimLead(item.id, newAgentId);
+  const result = await cascade.claimLead(item.id, newAgentId);
   assert(result.success === true, 'New agent claims at tier 3');
 
   // Verify score was auto-created
@@ -484,7 +531,7 @@ function testRecovery() {
     status: 'active',
     claimed_by: null,
     claimed_at: null,
-    tier1_notified_at: new Date(Date.now() - 11 * 60 * 1000).toISOString(), // 11 min ago (past 10-min window)
+    tier1_notified_at: new Date(Date.now() - 16 * 60 * 1000).toISOString(), // 16 min ago (past 15-min tier 1 window)
     tier2_notified_at: null,
     tier3_notified_at: null,
     auto_responded_at: null,
@@ -501,7 +548,7 @@ function testRecovery() {
 
 // ── Run all tests ───────────────────────────────────────────────────────
 
-function run() {
+async function run() {
   console.log('\n🧪 HOGARESRD CASCADE SYSTEM — INTEGRATION TESTS\n');
   console.log('Running against in-memory cache (no database required).\n');
 
@@ -509,14 +556,14 @@ function run() {
   testFeatureFlag();
   testTierIdentification();
   testStartCascade();
-  testClaimByCreator();
-  testClaimByWrongTier();
-  testDoubleClaim();
+  await testClaimByCreator();
+  await testClaimByWrongTier();
+  await testDoubleClaim();
   testEscalation();
-  testClaimAfterEscalation();
+  await testClaimAfterEscalation();
   testEmptyTierSkip();
-  testApplicationCascade();
-  testContributionScoreAutoCreate();
+  await testApplicationCascade();
+  await testContributionScoreAutoCreate();
   testAutoResponseNoAgents();
   testRecovery();
 
@@ -529,4 +576,4 @@ function run() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-run();
+run().catch(err => { console.error(err); process.exit(1); });

@@ -27,6 +27,9 @@ const CONTRIB_THRESHOLD = 10;            // Minimum score for Tier 2
 // ── Time-aware cascade windows (Dominican Republic, AST = UTC-4) ────────
 const MARKET_OPEN  = 8;   // 8 AM — cascade timers start/resume
 const MARKET_CLOSE = 23;  // 11 PM — cascade freezes overnight
+// Dominican Republic is on AST year-round (no DST observed), so a static
+// UTC offset is correct. Do not switch to dynamic offset lookup — it would
+// silently break on machines whose locale data drifts.
 const TZ_OFFSET_HOURS = -4; // AST (Atlantic Standard Time)
 
 // Tier durations in milliseconds — higher tier = more time (they're more important)
@@ -37,8 +40,11 @@ function getLocalHour() {
   return (new Date().getUTCHours() + 24 + TZ_OFFSET_HOURS) % 24;
 }
 
-/** Returns true during active cascade hours (8 AM – 11 PM, any day) */
+/** Returns true during active cascade hours (8 AM – 11 PM, any day).
+ *  Set CASCADE_FORCE_MARKET_OPEN=true to bypass the overnight freeze in tests.
+ */
 function isMarketOpen() {
+  if (process.env.CASCADE_FORCE_MARKET_OPEN === 'true') return true;
   const h = getLocalHour();
   return h >= MARKET_OPEN && h < MARKET_CLOSE;
 }
@@ -143,6 +149,10 @@ function getTierAgents(listing, inmobiliariaScope = null) {
   const inUpperTiers = new Set([...tier1, ...tier2]);
   const tier3 = allAgentIds.filter(id => !inUpperTiers.has(id));
 
+  // Note: no per-agent concurrent-lead cap. By design, a high-performing
+  // agent can be offered multiple leads simultaneously — we bias toward
+  // responsiveness over fairness. If you ever need to throttle, do it
+  // here by filtering out agents with too many active claims.
   return { tier1, tier2, tier3 };
 }
 
@@ -296,37 +306,51 @@ async function claimLead(leadQueueId, userId) {
   _claimLocks.add(leadQueueId);
 
   try {
-    // Atomic DB claim: only succeeds if status is still 'active'
-    // This prevents double-claims even across multiple Node processes
-    const dbResult = await store.pool.query(
-      `UPDATE lead_queue SET status = 'claimed', claimed_by = $1, claimed_at = $2
-       WHERE id = $3 AND status = 'active' RETURNING id`,
-      [userId, now(), leadQueueId]
-    ).catch(() => ({ rowCount: 0 }));
-
-    if (!dbResult.rowCount) {
+    // ── 1) Pre-flight validation (BEFORE any DB mutation) ──
+    // Doing the eligibility/subscription checks before the atomic UPDATE
+    // ensures a rejected claim never leaves the row stuck in 'claimed'
+    // state owned by an ineligible user.
+    const item = store.getLeadQueueById(leadQueueId);
+    if (!item || item.status !== 'active') {
       return { success: false, error: 'Este lead ya fue reclamado.' };
     }
-
-    const item = store.getLeadQueueById(leadQueueId);
-    if (!item) return { success: false, error: 'Lead no encontrado.' };
-    // Update in-memory cache to match DB
-    item.status = 'claimed';
-    item.claimed_by = userId;
-    item.claimed_at = now();
 
     const listing = store.getListingById(item.listing_id);
     if (!listing) return { success: false, error: 'Propiedad no encontrada.' };
 
-    // Validate agent is eligible for current tier (respecting inmobiliaria scope)
     const { tier1, tier2, tier3 } = getTierAgents(listing, item.inmobiliaria_scope || null);
     const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[item.current_tier] || [];
-
     if (!currentTierAgents.includes(userId)) {
       return { success: false, error: 'No tienes prioridad para reclamar este lead en la ronda actual.' };
     }
 
-    // Sync in-memory cache (DB already updated atomically above)
+    // Defensive: re-verify subscription at claim time. getTierAgents already
+    // filters subscribers, but agents can cancel between escalation and claim.
+    const claimingUser = store.getUserById(userId);
+    if (!claimingUser || !isSubscriptionActive(claimingUser)) {
+      return { success: false, error: 'Tu suscripción no está activa. No puedes reclamar leads.' };
+    }
+
+    // ── 2) Atomic DB claim ──
+    // Match status='active' AND current_tier=<the tier we just validated>.
+    // The tier guard prevents a race where the tier escalates between
+    // our validation and the UPDATE — in that case rowCount=0 and the
+    // agent is asked to refresh, instead of claiming under stale rules.
+    const validatedTier = item.current_tier;
+    const dbResult = await store.pool.query(
+      `UPDATE lead_queue SET status = 'claimed', claimed_by = $1, claimed_at = $2
+       WHERE id = $3 AND status = 'active' AND current_tier = $4 RETURNING id`,
+      [userId, now(), leadQueueId, validatedTier]
+    ).catch(() => ({ rowCount: 0 }));
+
+    if (!dbResult.rowCount) {
+      return { success: false, error: 'Este lead ya fue reclamado o cambió de ronda.' };
+    }
+
+    // ── 3) Sync in-memory cache + post-claim work ──
+    item.status = 'claimed';
+    item.claimed_by = userId;
+    item.claimed_at = now();
     store.saveLeadQueueItem(item);
 
     // Cancel timer
@@ -400,7 +424,10 @@ function escalateTier(leadQueueId) {
   }
 
   if (nextTier > 3) {
-    // All tiers exhausted — auto-assign to first eligible agent as fallback
+    // All tiers exhausted — auto-assign to first eligible agent as fallback.
+    // Order is intentional (creator > contributor > affiliate): when nobody
+    // claimed in time, the listing's primary owner is the right default. This
+    // is NOT round-robin or random — high-priority agents get the leftover.
     const fallbackAgent = allTiers[1][0] || allTiers[2][0] || allTiers[3][0];
     if (fallbackAgent) {
       item.status = 'claimed';
@@ -530,6 +557,10 @@ function assignBrokerToInquiry(item, userId) {
       app.broker_id = userId;
       app.inmobiliaria_id = user.inmobiliaria_id || null;
       store.saveApplication(app);
+    } else {
+      // The lead is marked claimed but the inquiry vanished between cascade
+      // start and claim. Surface this so the orphaned lead is investigable.
+      console.warn(`[cascade] assignBrokerToInquiry: application ${item.inquiry_id} not found for claimed lead ${item.id}`);
     }
   } else if (item.inquiry_type === 'conversation') {
     const conv = store.getConversationById(item.inquiry_id);
@@ -550,6 +581,8 @@ function assignBrokerToInquiry(item, userId) {
       conv.lastMessage = sysMsg.text;
       conv.updatedAt = new Date().toISOString();
       store.saveConversation(conv);
+    } else {
+      console.warn(`[cascade] assignBrokerToInquiry: conversation ${item.inquiry_id} not found for claimed lead ${item.id}`);
     }
   } else if (item.inquiry_type === 'lead') {
     // Update lead: set referred_by so admin panel shows the agent,
@@ -597,7 +630,10 @@ function updateAgentResponseTime(userId, listingId, responseMs) {
   cs.response_count = count;
   cs.updated_at = now();
 
-  // Bonus: fast responder gets +10 if avg < 2 min
+  // Bonus: fast responder gets +10 if avg < 2 min.
+  // Intentionally one-shot — once awarded, the bonus stays even if the
+  // agent's avg degrades later. Treat it as a permanent gamification badge,
+  // not a live performance metric.
   const breakdown = cs.score_breakdown || {};
   if (newAvg < 120000 && !breakdown.fast_responder) {
     breakdown.fast_responder = 10;
@@ -621,6 +657,7 @@ module.exports = {
   recoverStaleCascades,
   getTierAgents,
   isEnabled,
+  isMarketOpen,
   CASCADE_WINDOW_MS,
   TIER_WINDOWS,
   CONTRIB_THRESHOLD,
