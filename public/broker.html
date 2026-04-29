@@ -5802,13 +5802,25 @@
       document.getElementById('homeKpiDays').textContent = Math.round(analyticsRes?.avg_days_to_close ?? 0);
 
       // ── Pipeline ──
+      // Backend keys mirror the actual application status names from
+      // routes/applications.js. Group related statuses so each tile
+      // represents a meaningful stage instead of a single status.
       const p = analyticsRes?.pipeline || {};
+      const inReview = (p.en_revision || 0)
+                     + (p.documentos_requeridos || 0)
+                     + (p.documentos_enviados || 0)
+                     + (p.documentos_insuficientes || 0)
+                     + (p.en_aprobacion || 0)
+                     + (p.reservado || 0);
+      const closed   = (p.completado || 0) + (p.pago_aprobado || 0);
+      const inPayment = (p.pendiente_pago || 0) + (p.pago_enviado || 0);
       const stages = [
-        { label: 'Enviadas', count: p.submitted || 0, color: '#0038A8', status: 'submitted' },
-        { label: 'Revision', count: p.reviewing || 0, color: '#f59e0b', status: 'reviewing' },
-        { label: 'Aprobadas', count: p.approved || 0, color: '#1b7a3e', status: 'approved' },
-        { label: 'Rechazadas', count: p.rejected || 0, color: '#ef4444', status: 'rejected' },
-        { label: 'Cerradas', count: p.closed || 0, color: '#7c3aed', status: 'closed' },
+        { label: 'Enviadas',   count: p.aplicado || 0, color: '#0038A8', status: 'aplicado' },
+        { label: 'Revisión',   count: inReview,        color: '#f59e0b', status: 'en_revision' },
+        { label: 'Aprobadas',  count: p.aprobado || 0, color: '#1b7a3e', status: 'aprobado' },
+        { label: 'Pago',       count: inPayment,       color: '#0891b2', status: 'pendiente_pago' },
+        { label: 'Rechazadas', count: p.rechazado || 0, color: '#ef4444', status: 'rechazado' },
+        { label: 'Cerradas',   count: closed,          color: '#7c3aed', status: 'completado' },
       ];
       document.getElementById('homePipeline').innerHTML = stages.map((s, i) =>
         `<button onclick="showSection('aplicaciones')" style="cursor:pointer;border:1px solid ${s.color}22;background:${s.color}0D;border-radius:10px;padding:0.6rem 0.8rem;text-align:center;min-width:80px;flex:1">` +

@@ -137,8 +137,13 @@ router.get('/analytics', (req, res) => {
   const top_listings = Object.values(listingCounts).sort((a, b) => b.count - a.count).slice(0, 10);
 
   // New this week / month
+  // Compute the "month start" anchored to Dominican Republic time (UTC-4,
+  // no DST) so the count matches what users see on their local calendars,
+  // regardless of the server's configured timezone.
+  const TZ_OFFSET_MS = -4 * 3600 * 1000;
+  const drNow = new Date(Date.now() + TZ_OFFSET_MS);
+  const monthAgo = new Date(Date.UTC(drNow.getUTCFullYear(), drNow.getUTCMonth(), 1) - TZ_OFFSET_MS);
   const weekAgo = new Date(Date.now() - 7 * 86400000);
-  const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
   const new_this_week = apps.filter(a => new Date(a.created_at) >= weekAgo).length;
   const new_this_month = apps.filter(a => new Date(a.created_at) >= monthAgo).length;
 
@@ -163,8 +168,22 @@ router.get('/sales', (req, res) => {
     return res.status(403).json({ error: 'Acceso restringido para secretarias' });
   const apps = brokerApps(req.brokerUser);
 
+  // Only count sales whose payment was actually verified. An app marked
+  // 'completado' or 'pago_aprobado' with a missing/rejected payment proof
+  // would otherwise inflate revenue. Single-payment flows live on
+  // app.payment.verification_status; installment plans are 'paid' once
+  // every installment is approved.
+  const isPaymentVerified = (a) => {
+    if (a.payment?.verification_status === 'approved') return true;
+    const insts = a.payment_plan?.installments;
+    if (Array.isArray(insts) && insts.length > 0) {
+      return insts.every(i => i.status === 'approved');
+    }
+    return false;
+  };
+
   const completedApps = apps.filter(a =>
-    ['completado', 'pago_aprobado'].includes(a.status)
+    ['completado', 'pago_aprobado'].includes(a.status) && isPaymentVerified(a)
   );
 
   const completed_sales = completedApps.map(a => {
