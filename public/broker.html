@@ -2699,16 +2699,13 @@
             <textarea id="arDesc" rows="2" placeholder="Texto del anuncio..." style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;resize:vertical;background:var(--bg);color:var(--text);"></textarea>
           </div>
           <div>
-            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Imagen * (1200×628 recomendado)</label>
+            <label id="arImgLabel" style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Imagen *</label>
             <div id="arImgZone" style="border:2px dashed var(--border);border-radius:8px;padding:1.2rem;text-align:center;cursor:pointer;" onclick="document.getElementById('arFileInput').click()">
               <input type="file" id="arFileInput" accept="image/*" style="display:none" onchange="arUploadImage(this)">
               <div style="font-size:0.85rem;color:var(--text-muted);">Haz clic para subir imagen</div>
             </div>
             <div id="arImgPreview" style="margin-top:0.5rem;display:none;"></div>
-            <div style="margin-top:0.5rem;font-size:0.7rem;color:var(--text-muted);">
-              <strong>Tamaño recomendado:</strong> 1200 × 628 px (formato horizontal).<br>
-              La imagen se mostrará completa en el popup. En el feed se centra sobre fondo oscuro.
-            </div>
+            <div id="arImgSpec" style="margin-top:0.5rem;font-size:0.7rem;color:var(--text-muted);"></div>
           </div>
           <div>
             <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.3rem;">URL de destino</label>
@@ -9906,22 +9903,51 @@ async function submitNewTask() {
 <script>
 // ── Ad Request System ─────────────────────────────────────────
 let _arUploadedUrl = '';
+let _arUploadedFile = null; // remembered so we can re-upload at the new spec when type changes
 
-async function arUploadImage(input) {
-  const file = input.files?.[0];
+// Canonical dimensions per ad_type (kept in sync with routes/ads.js)
+const AD_SPEC_MAP = {
+  banner:     { width: 1200, height: 628,  label: 'Banner web (horizontal, 1.91:1)' },
+  card:       { width: 1080, height: 1080, label: 'Tarjeta cuadrada (1:1)' },
+  popup:      { width: 1080, height: 1350, label: 'Popup vertical (4:5)' },
+  fullscreen: { width: 1080, height: 1920, label: 'Pantalla completa (9:16)' },
+};
+const AD_PRICE_MAP = { banner: 29, card: 49, popup: 79, fullscreen: 99 };
+
+function arCurrentAdType() {
+  return (document.getElementById('arType')?.value || 'fullscreen').toLowerCase();
+}
+
+function arRefreshSpecLabel() {
+  const t = arCurrentAdType();
+  const spec = AD_SPEC_MAP[t] || AD_SPEC_MAP.fullscreen;
+  const labelEl = document.getElementById('arImgLabel');
+  const specEl  = document.getElementById('arImgSpec');
+  if (labelEl) labelEl.textContent = `Imagen * (${spec.width} × ${spec.height} px recomendado)`;
+  if (specEl) specEl.innerHTML = `<strong>Recomendado:</strong> ${spec.width} × ${spec.height} px — ${spec.label}.<br>Si la imagen no coincide, se recortará automáticamente al centro.`;
+}
+
+async function arUploadImage(input, fileOverride) {
+  const file = fileOverride || input?.files?.[0];
   if (!file) return;
+  _arUploadedFile = file;
   const fd = new FormData();
   fd.append('image', file);
+  fd.append('ad_type', arCurrentAdType()); // server resizes per type
   try {
     const r = await fetch('/api/ads/upload', { method: 'POST', body: fd, credentials: 'include' });
     const data = await r.json();
     if (data.url) {
       _arUploadedUrl = data.url;
+      const spec = AD_SPEC_MAP[arCurrentAdType()] || AD_SPEC_MAP.fullscreen;
+      // Use the spec aspect ratio for the preview frame so brokers see exactly
+      // how their ad will display in production.
+      const aspect = `${spec.width} / ${spec.height}`;
       document.getElementById('arImgPreview').innerHTML = `
         <div style="background:linear-gradient(135deg,#030d26,#002366);border-radius:12px;padding:16px;text-align:center;position:relative;">
           <div style="position:absolute;top:8px;left:8px;font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:50px;">Publicidad</div>
-          <img src="${data.url}" style="max-width:100%;max-height:200px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-          <div style="color:#fff;font-size:0.8rem;font-weight:700;margin-top:10px;text-align:left;">Vista previa del feed</div>
+          <img src="${data.url}" style="display:block;margin:0 auto;max-width:100%;width:240px;aspect-ratio:${aspect};object-fit:cover;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <div style="color:#fff;font-size:0.8rem;font-weight:700;margin-top:10px;text-align:left;">Vista previa</div>
         </div>`;
       document.getElementById('arImgPreview').style.display = '';
       document.getElementById('arImgZone').style.borderColor = 'var(--accent)';
@@ -9932,13 +9958,20 @@ async function arUploadImage(input) {
   } catch { document.getElementById('arMsg').textContent = 'Error de red'; }
 }
 
-const AD_PRICE_MAP = { banner: 29, card: 49, popup: 79, fullscreen: 99 };
-
-// Update price display when ad type changes
+// Update price + spec label when ad type changes. If a file was already
+// uploaded, re-upload it so the server applies the new spec's crop.
 document.getElementById('arType')?.addEventListener('change', function() {
-  const price = AD_PRICE_MAP[this.value] || 99;
+  const t = (this.value || 'fullscreen').toLowerCase();
+  const price = AD_PRICE_MAP[t] || 99;
   document.getElementById('arPriceAmount').textContent = '$' + price;
+  arRefreshSpecLabel();
+  if (_arUploadedFile) {
+    arUploadImage(null, _arUploadedFile);
+  }
 });
+
+// Initial spec label for the default selection
+arRefreshSpecLabel();
 
 async function submitAdCheckout() {
   const btn = document.getElementById('arSubmitBtn');

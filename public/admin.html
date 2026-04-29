@@ -957,7 +957,7 @@
               <div id="adImgUploadZone" style="border:2px dashed var(--border);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color .2s;" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleAdDrop(event)" onclick="document.getElementById('adFileInput').click()">
                 <input type="file" id="adFileInput" accept="image/*" style="display:none" onchange="handleAdFileSelect(this)">
                 <div style="font-size:.85rem;color:var(--text-muted);">Arrastra una imagen o <strong style="color:var(--accent)">haz clic</strong></div>
-                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">JPG, PNG, WEBP — max 5MB — se optimiza a 1200x628</div>
+                <div id="adSpecHint" style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;">JPG, PNG, WEBP — max 5MB</div>
               </div>
               <div id="adImgUrlZone" style="display:none;">
                 <input type="url" id="adImageUrl" placeholder="https://..." style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.6rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);" oninput="previewAdImg(this.value)">
@@ -975,10 +975,10 @@
             <div class="ads-field">
               <label>Tipo de anuncio</label>
               <select id="adType" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.55rem .8rem;font-size:.85rem;background:var(--bg);color:var(--text);">
-                <option value="fullscreen">Fullscreen (Feed)</option>
-                <option value="popup">Popup (App Launch)</option>
-                <option value="banner">Banner (728x90)</option>
-                <option value="card">Card (300x250)</option>
+                <option value="fullscreen">Fullscreen (1080×1920, 9:16)</option>
+                <option value="popup">Popup (1080×1350, 4:5)</option>
+                <option value="card">Card (1080×1080, 1:1)</option>
+                <option value="banner">Banner (1200×628, 1.91:1)</option>
               </select>
             </div>
             <div class="ads-field">
@@ -2695,13 +2695,43 @@
     const img = document.getElementById('adPreviewImg');
     if (url) { img.src = url; preview.style.display = ''; } else { preview.style.display = 'none'; }
   }
+  // Canonical dimensions per ad_type (kept in sync with routes/ads.js)
+  const AD_SPEC_MAP = {
+    banner:     { width: 1200, height: 628,  label: 'Banner web (1.91:1)' },
+    card:       { width: 1080, height: 1080, label: 'Tarjeta (1:1)' },
+    popup:      { width: 1080, height: 1350, label: 'Popup (4:5)' },
+    fullscreen: { width: 1080, height: 1920, label: 'Fullscreen (9:16)' },
+  };
+  let _adLastFile = null; // re-upload at new spec when ad_type changes
+
+  function adCurrentType() {
+    return (document.getElementById('adType')?.value || 'fullscreen').toLowerCase();
+  }
+  function adRefreshSpecHint() {
+    const t = adCurrentType();
+    const spec = AD_SPEC_MAP[t] || AD_SPEC_MAP.fullscreen;
+    const hint = document.getElementById('adSpecHint');
+    if (hint) hint.textContent = `Recomendado: ${spec.width} × ${spec.height} px — ${spec.label}. Se recortará automáticamente.`;
+  }
+
   async function uploadAdImage(file) {
-    const fd = new FormData(); fd.append('image', file);
+    _adLastFile = file;
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('ad_type', adCurrentType()); // server resizes per type
     const res = await fetch('/api/ads/upload', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.url) { _adUploadedUrl = data.url; previewAdImg(data.url); }
     else throw new Error(data.error || 'Upload failed');
   }
+
+  // Re-upload at the new spec if the type changes after an image was attached
+  document.getElementById('adType')?.addEventListener('change', () => {
+    adRefreshSpecHint();
+    if (_adLastFile) uploadAdImage(_adLastFile).catch(e => alert(e.message));
+  });
+  // Initial hint
+  adRefreshSpecHint();
   function handleAdFileSelect(input) {
     if (input.files[0]) uploadAdImage(input.files[0]).catch(e => alert(e.message));
   }

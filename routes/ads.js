@@ -23,6 +23,26 @@ const adUpload = multer({
   },
 });
 
+// Per-ad-type canonical dimensions. The renderer assumes uploaded ads
+// already match these — we resize on upload (fit:cover with attention
+// crop) so legacy or wrong-spec uploads still produce a clean image.
+//
+// banner     — inline web banner (1.91:1, Facebook OG-style)
+// card       — in-feed card on web/list views (1:1)
+// popup      — center-screen modal on iOS (4:5 portrait)
+// fullscreen — full-screen interstitial / Reels ad on iOS (9:16)
+const AD_TYPE_DIMENSIONS = {
+  banner:     { width: 1200, height: 628  },
+  card:       { width: 1080, height: 1080 },
+  popup:      { width: 1080, height: 1350 },
+  fullscreen: { width: 1080, height: 1920 },
+};
+const DEFAULT_AD_TYPE = 'popup';
+
+function dimensionsForAdType(adType) {
+  return AD_TYPE_DIMENSIONS[adType] || AD_TYPE_DIMENSIONS[DEFAULT_AD_TYPE];
+}
+
 // ── GET /api/ads/active  (public — used by the mobile app) ─────
 // Optional ?type=popup to filter by ad_type
 router.get('/active', async (req, res) => {
@@ -44,28 +64,41 @@ router.get('/active', async (req, res) => {
 });
 
 // ── POST /api/ads/upload  (admin — upload ad image) ────────────
+// Accepts an `ad_type` field (banner/card/popup/fullscreen). The image
+// is resized to the canonical dimensions for that type using cover-fit
+// with attention-based smart cropping, so the most visually salient
+// region survives the crop.
 router.post('/upload', adminSessionAuth, adUpload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
   try {
     const { uploadToSpaces, isConfigured: spacesConfigured } = require('../utils/spaces');
-    const fname = `ad_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.webp`;
+    const adType = (req.body.ad_type || DEFAULT_AD_TYPE).toLowerCase();
+    const { width, height } = dimensionsForAdType(adType);
+    const fname = `ad_${adType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.webp`;
     const buf = await sharp(req.file.buffer)
-      .resize(1200, 628, { fit: 'cover' })
+      .rotate()
+      .resize(width, height, { fit: 'cover', position: 'attention' })
       .webp({ quality: 85 })
       .toBuffer();
     // Upload to Spaces CDN if configured
     if (spacesConfigured()) {
       try {
         const cdnUrl = await uploadToSpaces(buf, `ads/${fname}`, 'image/webp');
-        if (cdnUrl) return res.json({ url: cdnUrl });
+        if (cdnUrl) return res.json({ url: cdnUrl, width, height, ad_type: adType });
       } catch (e) { console.warn('[ads] Spaces upload failed:', e.message); }
     }
     // Fallback: save to local disk
     await sharp(buf).toFile(path.join(ADS_UPLOAD_DIR, fname));
-    res.json({ url: `/uploads/ads/${fname}` });
+    res.json({ url: `/uploads/ads/${fname}`, width, height, ad_type: adType });
   } catch (e) {
     res.status(500).json({ error: 'Error al procesar imagen: ' + e.message });
   }
+});
+
+// Expose the canonical dimensions so frontends can render hints and
+// previews without duplicating the map.
+router.get('/spec', (_req, res) => {
+  res.json(AD_TYPE_DIMENSIONS);
 });
 
 // ── GET /api/ads  (admin) ──────────────────────────────────────
