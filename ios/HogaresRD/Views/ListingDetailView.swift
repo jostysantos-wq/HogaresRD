@@ -10,6 +10,80 @@ private struct ScrollOffsetKey: PreferenceKey {
     }
 }
 
+// MARK: - Design Tokens (light + dark)
+
+/// Listing-detail palette. Mirrors the editorial dark prototype but adapts
+/// to light mode via UITraitCollection-aware UIColor closures.
+private enum LD {
+    static let bg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x0E/255, green: 0x12/255, blue: 0x19/255, alpha: 1)
+            : UIColor.systemBackground
+    })
+    static let surface = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x16/255, green: 0x1B/255, blue: 0x25/255, alpha: 1)
+            : UIColor.secondarySystemBackground
+    })
+    static let surfaceDeep = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x1E/255, green: 0x25/255, blue: 0x31/255, alpha: 1)
+            : UIColor.tertiarySystemBackground
+    })
+    static let line = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.14)
+            : UIColor(white: 0, alpha: 0.10)
+    })
+    static let lineSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.08)
+            : UIColor(white: 0, alpha: 0.06)
+    })
+    static let trayBg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.04)
+            : UIColor(white: 0, alpha: 0.025)
+    })
+    static let chipBg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.06)
+            : UIColor(white: 0, alpha: 0.04)
+    })
+    static let textSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0xC2/255, green: 0xC8/255, blue: 0xD2/255, alpha: 1)
+            : UIColor.label.withAlphaComponent(0.75)
+    })
+    static let textMute = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x97/255, green: 0xA0/255, blue: 0xAF/255, alpha: 1)
+            : UIColor.secondaryLabel
+    })
+    /// Vivid accent used by the design (matches #006AFF). Keeps the same
+    /// rendered weight against both light and dark surfaces.
+    static let brand = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x4D/255, green: 0x9E/255, blue: 0xFF/255, alpha: 1)
+            : UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 1)
+    })
+    static let brandSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 0.16)
+            : UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 0.10)
+    })
+    static let green = Color(red: 0x2B/255, green: 0xD2/255, blue: 0x7A/255)
+    static let red   = Color(red: 0xF2/255, green: 0x51/255, blue: 0x51/255)
+    static let amber = Color(red: 0xF5/255, green: 0xB5/255, blue: 0x47/255)
+    /// Card sits inverted vs page bg — white in dark, black in light.
+    static let primaryCTABg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? .white : UIColor(white: 0.06, alpha: 1)
+    })
+    static let primaryCTAFg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(red: 0x0E/255, green: 0x12/255, blue: 0x19/255, alpha: 1) : .white
+    })
+}
+
 struct ListingDetailView: View {
     let id: String
     @EnvironmentObject var saved: SavedStore
@@ -115,11 +189,14 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func detailBody(_ l: Listing) -> some View {
         ZStack(alignment: .top) {
+            // Page background — adapts to dark/light. The hero image still
+            // covers the top portion; this bg only shows once you scroll past.
+            LD.bg.ignoresSafeArea()
+
             // Main scroll with images INSIDE (not behind)
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Invisible probe that emits scroll offset via preference key.
-                    // Placed above the hero so its minY tracks the scroll origin.
+                    // Scroll-offset probe so the floating overlay bar can fade.
                     GeometryReader { geo in
                         Color.clear.preference(
                             key: ScrollOffsetKey.self,
@@ -128,111 +205,42 @@ struct ListingDetailView: View {
                     }
                     .frame(height: 0)
 
-                    // Image carousel — horizontal TabView inside vertical ScrollView
-                    // The .page style handles horizontal swipes independently
+                    // Hero gallery — horizontal swipes via TabView page style
                     heroImages(l)
 
-                    // Content card with rounded top corners — overlaps image bottom
-                    VStack(alignment: .leading, spacing: 24) {
+                    // Body card lifts up over the hero with rounded top
+                    // corners (22pt), then fills with editorial dark/light surface
+                    VStack(alignment: .leading, spacing: 22) {
 
-                        // ── Badges + Price + Save ─────────────────────
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Type + condition badges ABOVE price
-                            HStack(spacing: 8) {
-                                Text(l.typeLabel)
-                                    .font(.caption).bold()
-                                    .padding(.horizontal, 10).padding(.vertical, 4)
-                                    .background(l.type == "venta" ? Color.rdGreen : l.type == "alquiler" ? Color.rdBlue : Color.rdRed)
-                                    .foregroundStyle(.white).clipShape(Capsule())
-                                if let cond = l.condition, !cond.isEmpty {
-                                    Text(cond)
-                                        .font(.caption).bold()
-                                        .padding(.horizontal, 10).padding(.vertical, 4)
-                                        .background(Color(.systemGray5))
-                                        .foregroundStyle(.secondary).clipShape(Capsule())
-                                }
-                            }
-                            HStack(alignment: .top) {
-                                Text(l.priceFormatted)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundStyle(Color.rdBlue)
-                                Spacer()
-                                Button { saved.toggle(l.id) } label: {
-                                    VStack(spacing: 2) {
-                                        Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
-                                            .font(.title2)
-                                            .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .secondary)
-                                        let count = (l.favoriteCount ?? 0) + (saved.isSaved(l.id) ? 1 : 0)
-                                        if count > 0 {
-                                            Text("\(count)")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top, 20)
+                        // Thumbnail strip (skipped if no extra images)
+                        thumbsStrip(l)
 
-                        // ── Title & Location ──────────────────────────
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(l.title).font(.title3).bold()
-                            let parts = [l.sector, l.city, l.province].compactMap { v in (v?.isEmpty == false) ? v : nil }
-                            if !parts.isEmpty {
-                                Label(parts.joined(separator: ", "), systemImage: "mappin.circle.fill")
-                                    .foregroundStyle(.secondary).font(.subheadline)
-                            }
-                            if let addr = l.address, !addr.isEmpty {
-                                Label(addr, systemImage: "map")
-                                    .foregroundStyle(.secondary).font(.caption)
-                            }
-                        }
+                        // Status pill row (En venta / type)
+                        statusRow(l)
 
-                        // ── Quick Stats Bar ───────────────────────────
+                        // Big price headline + Est. /mes
+                        priceHeadline(l)
+
+                        // Address row with pin icon
+                        addressRow(l)
+
+                        // Quick stats pill row
                         quickStatsBar(l)
 
-                        Divider()
+                        // 2x2 meta cards (Tipo / Año / Parqueos / Solar)
+                        metaGrid(l)
 
-                        // ── Description (collapsible) ─────────────────
+                        // Description with inline "Leer más"
                         if let desc = l.description, !desc.isEmpty {
-                            sectionBlock("Descripción") {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(desc)
-                                        .font(.body)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(descriptionExpanded ? nil : 3)
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.25)) { descriptionExpanded.toggle() }
-                                    } label: {
-                                        Text(descriptionExpanded ? "Ver menos" : "Ver más")
-                                            .font(.caption).bold()
-                                            .foregroundStyle(Color.rdBlue)
-                                    }
-                                }
-                            }
+                            descriptionSection(desc)
                         }
 
-                        // ── Amenidades ─────────────────────────────────
-                        // Tags are hidden from the detail view — they power search/
-                        // discovery but add visual noise next to amenities.
+                        // Amenities — soft tray with chip grid
                         if !l.amenities.isEmpty {
-                            sectionBlock("Amenidades") {
-                                FlowLayout(spacing: 8) {
-                                    ForEach(l.amenities, id: \.self) { a in
-                                        Text(a)
-                                            .font(.caption).bold()
-                                            .padding(.horizontal, 10).padding(.vertical, 5)
-                                            .background(Color.rdBlue.opacity(0.08))
-                                            .foregroundStyle(Color.rdBlue)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                            }
+                            amenitiesSection(l.amenities)
                         }
 
-                        Divider()
-
-                        // ── Specs Grid ─────────────────────────────
+                        // ── Specs grid (extras only — terreno, pisos, entrega) ──
                         specsSection(l)
 
                         // ── Project Meta (proyecto only) ───────────
@@ -245,41 +253,7 @@ struct ListingDetailView: View {
 
                         // ── Live Inventory ─────────────────────────
                         if let inv = l.unitInventory, !inv.isEmpty {
-                            let availableUnits = Array(inv.filter { $0.status == "available" }.prefix(6))
-                            let totalAvailable = inv.filter { $0.status == "available" }.count
-
-                            sectionBlock("Disponibilidad en Tiempo Real") {
-                                InventoryBadgeView(units: inv)
-
-                                VStack(spacing: 6) {
-                                    ForEach(availableUnits) { unit in
-                                        HStack(spacing: 8) {
-                                            Circle().fill(Color.rdGreen).frame(width: 8, height: 8)
-                                            Text(unit.label)
-                                                .font(.caption).bold()
-                                            if let type = unit.type, !type.isEmpty {
-                                                Text(type)
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            Spacer()
-                                            Text("Disponible")
-                                                .font(.caption2)
-                                                .foregroundStyle(Color.rdGreen)
-                                        }
-                                    }
-                                    if totalAvailable > 6 {
-                                        Text("+ \(totalAvailable - 6) unidades mas disponibles")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                            .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding(.top, 4)
-                                    }
-                                }
-                                .padding(10)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
+                            liveInventorySection(inv)
                         }
 
                         // ── Blueprints ─────────────────────────────
@@ -287,16 +261,9 @@ struct ListingDetailView: View {
                             blueprintsSection(bps, l: l)
                         }
 
-                        Divider()
-
                         // ── Mortgage Calculator ────────────────────
                         if let priceNum = Double(l.price), priceNum > 0 {
                             mortgageCalculatorSection(price: priceNum)
-                        }
-
-                        // ── Map ────────────────────────────────────
-                        if let lat = l.lat, let lng = l.lng {
-                            mapSection(lat: lat, lng: lng, title: l.title, address: l.address)
                         }
 
                         // ── Construction Company ───────────────────
@@ -304,20 +271,29 @@ struct ListingDetailView: View {
                             builderSection(builder)
                         }
 
-                        // ── Agency ─────────────────────────────────
+                        // ── Map ────────────────────────────────────
+                        if let lat = l.lat, let lng = l.lng {
+                            mapSection(lat: lat, lng: lng, title: l.title, address: l.address)
+                        }
+
+                        // ── Agents (last block, per design) ────────
                         if let agencies = l.agencies, !agencies.isEmpty {
                             agencySection(agencies, listing: l)
                         }
 
-                        Color.clear.frame(height: 90)
+                        Color.clear.frame(height: 110)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+                    .padding(.bottom, 24)
                     .background(
-                        Color(.systemBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                            .shadow(color: .black.opacity(0.15), radius: 16, y: -6)
+                        UnevenRoundedRectangle(
+                            cornerRadii: .init(topLeading: 22, bottomLeading: 0, bottomTrailing: 0, topTrailing: 22),
+                            style: .continuous
+                        )
+                        .fill(LD.bg)
                     )
-                    .offset(y: -24) // overlap the image bottom for card effect
+                    .offset(y: -22) // lift the body over the hero
                 }
             }
             .coordinateSpace(name: "listingScroll")
@@ -325,8 +301,7 @@ struct ListingDetailView: View {
                 scrollOffset = value
             }
 
-            // Floating top bar (back, share, image counter)
-            // Fades out as user scrolls past the hero image.
+            // Floating top bar (back, heart, share, more)
             heroOverlayBar(l)
                 .opacity(heroOverlayOpacity)
                 .allowsHitTesting(heroOverlayOpacity > 0.2)
@@ -347,253 +322,599 @@ struct ListingDetailView: View {
     /// Horizontal swipeable image gallery — tap to open full-screen.
     /// Uses TabView with page style for smooth horizontal swiping
     /// without conflicting with the main vertical ScrollView.
-    private let imageSlotHeight: CGFloat = UIScreen.main.bounds.height * 0.42
-
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
-        Group {
-            if !l.images.isEmpty {
-                TabView(selection: $imageIndex) {
-                    ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
-                        let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
-                        ZStack {
-                            // Opaque background prevents bleed-through during swipe
-                            Color(.systemGray6)
-                            CachedAsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                default:
-                                    Image(systemName: "photo")
-                                        .font(.system(size: 36))
-                                        .foregroundStyle(Color(.systemGray3))
+        ZStack(alignment: .bottom) {
+            Group {
+                if !l.images.isEmpty {
+                    TabView(selection: $imageIndex) {
+                        ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
+                            let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
+                            ZStack {
+                                Color(red: 0x2a/255, green: 0x2f/255, blue: 0x3a/255)
+                                CachedAsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                    default:
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 36))
+                                            .foregroundStyle(.white.opacity(0.4))
+                                    }
                                 }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipped()
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                imageIndex = i
+                                showFullGallery = true
+                            }
+                            .tag(i)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            imageIndex = i
-                            showFullGallery = true
-                        }
-                        .tag(i)
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                } else {
+                    Rectangle()
+                        .fill(Color(red: 0x2a/255, green: 0x2f/255, blue: 0x3a/255))
+                        .overlay(
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 50))
+                                .foregroundStyle(.white.opacity(0.35))
+                        )
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-            } else {
-                Rectangle()
-                    .fill(Color(.systemGray6))
-                    .overlay(
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 50))
-                            .foregroundStyle(Color(.systemGray3))
-                    )
             }
+
+            // Top → bottom gradient that fades into the body bg color
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.45), location: 0.00),
+                    .init(color: .black.opacity(0.00), location: 0.28),
+                    .init(color: .black.opacity(0.15), location: 0.60),
+                    .init(color: LD.bg.opacity(0.85),  location: 0.88),
+                    .init(color: LD.bg,                location: 1.00),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            // Hero bottom: 3D-tour play button (left) + photo counter (right)
+            heroBottomBar(l)
         }
         .frame(height: heroHeight)
         .clipped()
     }
 
-    // MARK: - Hero Overlay Bar
+    // MARK: - Hero Bottom Bar
 
     @ViewBuilder
-    private func heroOverlayBar(_ l: Listing) -> some View {
+    private func heroBottomBar(_ l: Listing) -> some View {
         HStack {
-            // Back button
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .bold))
+            // Future: 3D tour entrypoint — for now opens full gallery as a placeholder
+            Button {
+                showFullGallery = true
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                    .frame(width: 46, height: 46)
+                    .background(.ultraThinMaterial.opacity(0.6), in: Circle())
+                    .overlay(
+                        Circle().strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
             }
 
             Spacer()
 
-            // Photo count badge (current / total)
-            if l.images.count > 1 {
-                HStack(spacing: 4) {
+            // Photo counter
+            if !l.images.isEmpty {
+                HStack(spacing: 6) {
                     Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("\(imageIndex + 1)/\(l.images.count)")
-                        .font(.caption.bold())
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("\(imageIndex + 1) / \(l.images.count)")
+                        .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
-                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-            }
-
-            // Share button
-            Button { shareListing(l) } label: {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-            }
-
-            // Report button
-            Button { showReport = true } label: {
-                Image(systemName: "flag")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(.ultraThinMaterial.opacity(0.7), in: Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                .padding(.horizontal, 14)
+                .frame(height: 36)
+                .background(.ultraThinMaterial.opacity(0.65), in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .lineLimit(1).fixedSize()
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 54)
+        .padding(.bottom, 18)
     }
 
-    // MARK: - Quick Stats Bar
+    // MARK: - Hero Overlay Bar (top floating: back + heart + share + more)
+
+    @ViewBuilder
+    private func heroOverlayBar(_ l: Listing) -> some View {
+        HStack {
+            glassButton(systemImage: "chevron.left") { dismiss() }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                // Save / heart — flips to a solid white pill with red heart when saved
+                Button { saved.toggle(l.id) } label: {
+                    Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(saved.isSaved(l.id) ? LD.red : .white)
+                        .frame(width: 42, height: 42)
+                        .background(
+                            saved.isSaved(l.id)
+                                ? AnyShapeStyle(.white.opacity(0.92))
+                                : AnyShapeStyle(.ultraThinMaterial.opacity(0.55))
+                        )
+                        .clipShape(Circle())
+                        .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                }
+
+                glassButton(systemImage: "square.and.arrow.up") { shareListing(l) }
+                glassButton(systemImage: "ellipsis") { showReport = true }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 56)
+    }
+
+    /// Translucent round button used in the hero overlay.
+    @ViewBuilder
+    private func glassButton(systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 42, height: 42)
+                .background(.ultraThinMaterial.opacity(0.55), in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        }
+    }
+
+    // MARK: - Quick Stats — outlined pill row + expand button
 
     @ViewBuilder
     private func quickStatsBar(_ l: Listing) -> some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             if let b = l.bedrooms, !b.isEmpty {
-                statPill(icon: "bed.double.fill", value: b, label: "Hab.")
+                statPill(systemImage: "bed.double", text: "\(b) Hab.")
             }
             if let b = l.bathrooms, !b.isEmpty {
-                statPill(icon: "shower.fill", value: b, label: "Baños")
+                statPill(systemImage: "shower", text: "\(b) Baños")
             }
             if let a = l.area_const, !a.isEmpty {
-                statPill(icon: "ruler", value: "\(a) m²", label: "Área")
+                statPill(systemImage: "ruler", text: "\(a) m²")
             }
-            if let p = l.parking, !p.isEmpty {
-                statPill(icon: "car.fill", value: p, label: "Parqueo")
+            // Expand button — opens the full gallery as a fullscreen tour
+            Button {
+                showFullGallery = true
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 40, height: 40)
+                    .overlay(Circle().strokeBorder(LD.line, lineWidth: 1))
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color.rdBlue.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private func statPill(icon: String, value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(Color.rdBlue)
-            Text(value).font(.subheadline.bold())
-            Text(label).font(.system(size: 10)).foregroundStyle(.secondary)
+    private func statPill(systemImage: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(LD.textSoft)
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
         }
-        .frame(maxWidth: .infinity)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, minHeight: 40)
+        .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
     }
 
-    // MARK: - Sticky CTA
+    // MARK: - Sticky CTA dock
 
     @ViewBuilder
     private func stickyCTA(_ l: Listing) -> some View {
         let hasBroker = l.agencies?.first(where: { $0.userId != nil }) != nil
         let isOwner = isMyListing(l)
 
-        HStack(spacing: 8) {
-            if isOwner {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color.rdGreen)
-                    Text("Tu propiedad")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.rdGreen)
-                }
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .background(Color.rdGreen.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-            } else {
-                if hasBroker {
-                    Button { showTourBooking = true } label: {
-                        Label("Agendar Visita", systemImage: "calendar.badge.clock")
-                            .font(.caption).bold()
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
-                            .foregroundStyle(Color.rdBlue)
+        ZStack(alignment: .bottom) {
+            // Gradient fade — clear at top, page bg at bottom
+            LinearGradient(
+                stops: [
+                    .init(color: LD.bg.opacity(0.0),  location: 0.0),
+                    .init(color: LD.bg.opacity(0.85), location: 0.35),
+                    .init(color: LD.bg.opacity(0.96), location: 1.0),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 110)
+            .allowsHitTesting(false)
+
+            HStack(spacing: 10) {
+                if isOwner {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(LD.green)
+                        Text("Tu propiedad")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(LD.green)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(LD.green.opacity(0.10), in: Capsule())
+                    .overlay(Capsule().strokeBorder(LD.green.opacity(0.25), lineWidth: 1))
+                } else {
+                    Button {
+                        showContactAgent = true
+                    } label: {
+                        Text("Consultar")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(LD.chipBg, in: Capsule())
+                            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
+                    }
+
+                    Button {
+                        if hasBroker { showTourBooking = true }
+                        else { showApply = true }
+                    } label: {
+                        Text(hasBroker ? "Agendar visita" : "Aplicar")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(LD.primaryCTAFg)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(LD.primaryCTABg, in: Capsule())
+                            .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                     }
                 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 26)
+        }
+    }
 
-                Button { showContactAgent = true } label: {
-                    Label("Consultar", systemImage: "bubble.left.fill")
-                        .font(.caption).bold()
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdBlue, lineWidth: 1.5))
-                        .foregroundStyle(Color.rdBlue)
-                }
+    // MARK: - Thumbnail strip (3-up under hero)
 
-                Button { showApply = true } label: {
-                    Label("Aplicar", systemImage: "doc.text.fill")
-                        .font(.subheadline).bold()
-                        .padding(.vertical, 14)
+    @ViewBuilder
+    private func thumbsStrip(_ l: Listing) -> some View {
+        let urls = l.allImageURLs
+        if urls.count >= 2 {
+            // Show next 3 images after the hero (first one is the big hero up top)
+            let pool = Array(urls.dropFirst().prefix(3))
+            let extra = max(0, urls.count - 4)
+            HStack(spacing: 8) {
+                ForEach(Array(pool.enumerated()), id: \.offset) { i, url in
+                    let isLast = (i == pool.count - 1) && extra > 0
+                    Button {
+                        imageIndex = i + 1
+                        showFullGallery = true
+                    } label: {
+                        ZStack {
+                            CachedAsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let img):
+                                    img.resizable().scaledToFill()
+                                default:
+                                    LD.surfaceDeep
+                                }
+                            }
+                            if isLast {
+                                ZStack {
+                                    Color.black.opacity(0.55)
+                                    Text("+\(extra)")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                        }
                         .frame(maxWidth: .infinity)
-                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
-                        .foregroundStyle(.white)
+                        .aspectRatio(4.0/3.0, contentMode: .fit)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.regularMaterial)
     }
 
-    // MARK: - Header
+    // MARK: - Status row (En venta + optional condition badge)
 
     @ViewBuilder
-    private func headerSection(_ l: Listing) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Badges row
+    private func statusRow(_ l: Listing) -> some View {
+        let dotColor: Color = {
+            switch l.type {
+            case "venta":    return LD.green
+            case "alquiler": return LD.brand
+            case "proyecto": return LD.amber
+            default:         return LD.green
+            }
+        }()
+        HStack {
             HStack(spacing: 8) {
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 7, height: 7)
+                    .overlay(Circle().fill(dotColor.opacity(0.18)).frame(width: 13, height: 13))
                 Text(l.typeLabel)
-                    .font(.caption).bold()
-                    .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(l.type == "venta" ? Color.rdGreen : l.type == "alquiler" ? Color.rdBlue : Color.rdRed)
-                    .foregroundStyle(.white).clipShape(Capsule())
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
 
-                if let cond = l.condition, !cond.isEmpty {
-                    Text(cond)
-                        .font(.caption).bold()
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color(.systemGray5))
-                        .foregroundStyle(.secondary).clipShape(Capsule())
-                }
+            Spacer()
 
-                if let stage = l.project_stage, !stage.isEmpty {
-                    Text(stage)
-                        .font(.caption).bold()
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color.rdBlue.opacity(0.12))
-                        .foregroundStyle(Color.rdBlue).clipShape(Capsule())
-                }
+            if let stage = l.project_stage, !stage.isEmpty {
+                Text(stage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.brand)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .overlay(Capsule().strokeBorder(LD.brand.opacity(0.4), lineWidth: 1))
+            } else if let cond = l.condition, !cond.isEmpty {
+                Text(cond)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.textSoft)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
+            }
+        }
+    }
 
-                Spacer()
-                if let views = l.views {
-                    Label("\(views)", systemImage: "eye")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+    // MARK: - Price headline
+
+    @ViewBuilder
+    private func priceHeadline(_ l: Listing) -> some View {
+        // Inline mortgage estimate using current calculator defaults — keeps
+        // the headline in sync with the calc widget below if user adjusts.
+        let monthlyEst: Double? = {
+            guard let p = Double(l.price), p > 0 else { return nil }
+            let down = p * mcDownPercent / 100
+            let loan = p - down
+            let r = mcRate / 100 / 12
+            let n = Double(mcTermYears * 12)
+            guard r > 0, n > 0, loan > 0 else { return nil }
+            let factor = pow(1 + r, n)
+            guard factor > 1 else { return nil }
+            return loan * (r * factor) / (factor - 1)
+        }()
+
+        // Decompose priceFormatted into currency prefix + number for the
+        // small/large split styling shown in the design (US$ small + amount big).
+        let formatted = l.priceFormatted // e.g. "$475,000"
+        let amount = formatted.drop(while: { !$0.isNumber }).prefix(while: { $0.isNumber || $0 == "," || $0 == "." })
+
+        HStack(alignment: .lastTextBaseline, spacing: 12) {
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text("US$")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(LD.textMute)
+                    .baselineOffset(2)
+                Text(amount.isEmpty ? formatted : String(amount))
+                    .font(.system(size: 36, weight: .bold))
+                    .kerning(-0.5)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
 
-            Text(l.title).font(.title2).bold()
+            if let m = monthlyEst {
+                (Text("Est. ")
+                    .foregroundStyle(LD.textMute)
+                 + Text(formatCurrency(m))
+                    .foregroundStyle(LD.textSoft).fontWeight(.semibold)
+                 + Text("/mes")
+                    .foregroundStyle(LD.textMute))
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
 
-            Text(l.priceFormatted).font(.title).bold().foregroundStyle(Color.rdBlue)
+            Spacer(minLength: 0)
+        }
+    }
 
-            // Full location: sector → city → province + address
-            VStack(alignment: .leading, spacing: 4) {
-                let parts = [l.sector, l.city, l.province].compactMap { v in (v?.isEmpty == false) ? v : nil }
-                if !parts.isEmpty {
-                    Label(parts.joined(separator: ", "), systemImage: "mappin.circle.fill")
-                        .foregroundStyle(.secondary).font(.subheadline)
+    // MARK: - Address row
+
+    @ViewBuilder
+    private func addressRow(_ l: Listing) -> some View {
+        let parts = [l.sector, l.city, l.province]
+            .compactMap { ($0?.isEmpty == false) ? $0 : nil }
+        let primary: String? = l.address?.isEmpty == false ? l.address : (parts.isEmpty ? nil : parts.joined(separator: ", "))
+        if let line = primary {
+            HStack(spacing: 8) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.textMute)
+                Text(line + (l.address != nil && !parts.isEmpty ? ", " + parts.joined(separator: ", ") : ""))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(LD.textSoft)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    // MARK: - Meta grid (Tipo / Año / Parqueos / Solar)
+
+    private struct MetaItem {
+        let icon: String
+        let label: String
+        let value: String
+    }
+
+    /// Collect the available meta values for the 2-col grid, trimmed to an
+    /// even count so the layout stays balanced.
+    private func metaItems(_ l: Listing) -> [MetaItem] {
+        var items: [MetaItem] = []
+        items.append(.init(icon: "house", label: "Tipo", value: l.typeLabel))
+        if let f = l.floors {
+            items.append(.init(icon: "building.2", label: "Pisos", value: "\(f)"))
+        }
+        if let p = l.parking, !p.isEmpty {
+            items.append(.init(icon: "car", label: "Parqueos", value: p))
+        }
+        if let a = l.area_land, !a.isEmpty {
+            items.append(.init(icon: "leaf", label: "Solar", value: "\(a) m²"))
+        }
+        if let d = l.delivery_date, !d.isEmpty {
+            items.append(.init(icon: "calendar", label: "Entrega", value: d))
+        }
+        return items.count > 1
+            ? Array(items.prefix((items.count / 2) * 2))
+            : items
+    }
+
+    @ViewBuilder
+    private func metaGrid(_ l: Listing) -> some View {
+        let items = metaItems(l)
+        if !items.isEmpty {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, m in
+                    metaCard(icon: m.icon, label: m.label, value: m.value)
                 }
-                if let addr = l.address, !addr.isEmpty {
-                    Label(addr, systemImage: "map")
-                        .foregroundStyle(.secondary).font(.caption)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func metaCard(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(LD.textSoft)
+                .frame(width: 36, height: 36)
+                .overlay(Circle().strokeBorder(LD.line, lineWidth: 1))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(LD.textMute)
+                Text(value)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 78)
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(LD.line, lineWidth: 1))
+    }
+
+    // MARK: - Description section
+
+    @ViewBuilder
+    private func descriptionSection(_ desc: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Descripción")
+            VStack(alignment: .leading, spacing: 8) {
+                Text(desc)
+                    .font(.system(size: 14.5))
+                    .foregroundStyle(LD.textSoft)
+                    .lineSpacing(2.5)
+                    .lineLimit(descriptionExpanded ? nil : 4)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { descriptionExpanded.toggle() }
+                } label: {
+                    Text(descriptionExpanded ? "Leer menos" : "Leer más")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LD.brand)
                 }
+            }
+        }
+    }
+
+    // MARK: - Amenities (soft tray with chip grid)
+
+    @ViewBuilder
+    private func amenitiesSection(_ amenities: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Amenidades", trailing: amenities.count > 6 ? "Ver todas" : nil)
+            let visible = Array(amenities.prefix(6))
+            VStack {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(visible, id: \.self) { a in
+                        Text(a)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 42)
+                            .background(LD.chipBg, in: Capsule())
+                            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                }
+            }
+            .padding(14)
+            .background(LD.trayBg, in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(LD.lineSoft, lineWidth: 1))
+        }
+    }
+
+    // MARK: - Live inventory section (extracted for the new layout)
+
+    @ViewBuilder
+    private func liveInventorySection(_ inv: [UnitInventoryItem]) -> some View {
+        let availableUnits = Array(inv.filter { $0.status == "available" }.prefix(6))
+        let totalAvailable = inv.filter { $0.status == "available" }.count
+
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Disponibilidad en Tiempo Real")
+            InventoryBadgeView(units: inv)
+            VStack(spacing: 6) {
+                ForEach(availableUnits) { unit in
+                    HStack(spacing: 8) {
+                        Circle().fill(LD.green).frame(width: 8, height: 8)
+                        Text(unit.label).font(.caption).bold()
+                        if let type = unit.type, !type.isEmpty {
+                            Text(type)
+                                .font(.caption2)
+                                .foregroundStyle(LD.textMute)
+                        }
+                        Spacer()
+                        Text("Disponible")
+                            .font(.caption2)
+                            .foregroundStyle(LD.green)
+                    }
+                }
+                if totalAvailable > 6 {
+                    Text("+ \(totalAvailable - 6) unidades más disponibles")
+                        .font(.caption2)
+                        .foregroundStyle(LD.textMute)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 4)
+                }
+            }
+            .padding(12)
+            .background(LD.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(LD.lineSoft, lineWidth: 1))
+        }
+    }
+
+    // MARK: - Section header (h3 + optional trailing accessory)
+
+    @ViewBuilder
+    private func sectionHeader(_ title: String, trailing: String? = nil) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 17, weight: .bold))
+                .kerning(-0.2)
+                .foregroundStyle(.primary)
+            Spacer()
+            if let t = trailing {
+                Text(t)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(LD.brand)
             }
         }
     }
@@ -1034,72 +1355,151 @@ struct ListingDetailView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Map
+    // MARK: - Map preview (with floating area tag)
 
     @ViewBuilder
     private func mapSection(lat: Double, lng: Double, title: String, address: String?) -> some View {
-        sectionBlock("Ubicación") {
-            VStack(alignment: .leading, spacing: 8) {
-                if let addr = address, !addr.isEmpty {
-                    Label(addr, systemImage: "mappin.circle.fill")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
+        let parts = [listing?.sector, listing?.city, listing?.province]
+            .compactMap { ($0?.isEmpty == false) ? $0 : nil }
+        let areaLabel = parts.prefix(2).joined(separator: ", ")
+
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Ubicación", trailing: "Abrir mapa")
+
+            ZStack(alignment: .bottomLeading) {
                 Map(initialPosition: .region(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                     span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
                 ))) {
                     Marker(title, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng))
-                        .tint(Color.rdRed)
+                        .tint(LD.brand)
                 }
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(height: 180)
                 .disabled(false)
+
+                if !areaLabel.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(areaLabel)
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                    .padding(12)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LD.line, lineWidth: 1))
+        }
+    }
+
+    // MARK: - Agents (multi-agent cards)
+
+    @ViewBuilder
+    private func agencySection(_ agencies: [Agency], listing: Listing) -> some View {
+        // We never expose raw phone/email. Users press "Consultar" and the
+        // inquiry routes through the inquiry system so leads are tracked.
+        let trailing = agencies.count > 1 ? "\(agencies.count) asignados" : nil
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Agentes")
+                    .font(.system(size: 17, weight: .bold))
+                    .kerning(-0.2)
+                Spacer()
+                if let t = trailing {
+                    Text(t)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LD.textMute)
+                }
+            }
+            VStack(spacing: 8) {
+                ForEach(Array(agencies.enumerated()), id: \.offset) { idx, agency in
+                    agentRow(agency, accentIndex: idx)
+                }
             }
         }
     }
 
-    // MARK: - Agency Contact
-
     @ViewBuilder
-    private func agencySection(_ agencies: [Agency], listing: Listing) -> some View {
-        // Like the web: we never expose raw phone/email. Users press
-        // "Contactar Agente" and the inquiry is routed + tracked through
-        // the inquiry system so we can attribute leads and notify the agent.
-        let isOwner = isMyListing(listing)
+    private func agentRow(_ agency: Agency, accentIndex: Int) -> some View {
+        let palette: [(Color, Color)] = [
+            (Color(red: 0xB8/255, green: 0xA0/255, blue: 0x7E/255),
+             Color(red: 0x6E/255, green: 0x58/255, blue: 0x47/255)),
+            (Color(red: 0x4D/255, green: 0x9E/255, blue: 0xFF/255),
+             Color(red: 0x1E/255, green: 0x3A/255, blue: 0x66/255)),
+            (Color(red: 0x2B/255, green: 0xD2/255, blue: 0x7A/255),
+             Color(red: 0x0F/255, green: 0x6B/255, blue: 0x43/255)),
+        ]
+        let pair = palette[accentIndex % palette.count]
+        let initials: String = {
+            guard let n = agency.name, !n.isEmpty else { return "AG" }
+            let parts = n.split(separator: " ").prefix(2)
+            return parts.map { String($0.prefix(1)) }.joined().uppercased()
+        }()
 
-        return sectionBlock("Agencia") {
-            VStack(spacing: 10) {
-                ForEach(Array(agencies.enumerated()), id: \.offset) { _, agency in
-                    VStack(spacing: 10) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                                Image(systemName: "building.2.fill").foregroundStyle(Color.rdBlue)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                if let name = agency.name, !name.isEmpty {
-                                    Text(name).font(.subheadline).bold()
-                                }
-                                Text("Agente verificado")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if let slug = agency.slug {
-                                NavigationLink { AgencyPortfolioView(slug: slug) } label: {
-                                    Text("Ver todo")
-                                        .font(.caption).bold()
-                                        .foregroundStyle(Color.rdBlue)
-                                }
-                            }
+        let row = HStack(spacing: 12) {
+            // Gradient avatar
+            Group {
+                if let url = agency.avatarImageURL {
+                    CachedAsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img): img.resizable().scaledToFill()
+                        default:
+                            LinearGradient(colors: [pair.0, pair.1], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                .overlay(
+                                    Text(initials)
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(.white)
+                                )
                         }
-
                     }
-                    .padding(12)
-                    .background(Color.rdBlue.opacity(0.04))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    LinearGradient(colors: [pair.0, pair.1], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        .overlay(
+                            Text(initials)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
                 }
             }
+            .frame(width: 48, height: 48)
+            .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(agency.name ?? "Agente")
+                        .font(.system(size: 14.5, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    // Verified badge — every agency on the platform is verified
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(LD.brand)
+                }
+                Text("Agente verificado")
+                    .font(.system(size: 12))
+                    .foregroundStyle(LD.textMute)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(LD.textMute)
+        }
+        .padding(14)
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LD.line, lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+
+        if let slug = agency.slug {
+            NavigationLink { AgencyPortfolioView(slug: slug) } label: { row }
+                .buttonStyle(.plain)
+        } else {
+            row
         }
     }
 
@@ -1107,8 +1507,8 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func sectionBlock<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(title)
             content()
         }
     }
