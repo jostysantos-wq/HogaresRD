@@ -1085,6 +1085,19 @@ function decryptAppPII(app) {
   return copy;
 }
 
+// Save the application with financial fields encrypted at rest. Use
+// this anywhere commission or payment_plan amounts were just assigned
+// numerically — the cache + DB row store ciphertext while the local
+// `app` reference keeps plaintext numbers so post-save code (event
+// payloads, email builders, push notifications) can format amounts
+// without re-decrypting. decryptAppPII on every read path normalizes
+// the rest of the system.
+function saveApplicationEncryptingFinancials(app) {
+  const clone = JSON.parse(JSON.stringify(app));
+  encryptFinancials(clone);
+  store.saveApplication(clone);
+}
+
 // Helper: encrypt financial fields before saving
 function encryptFinancials(app) {
   // Commission amounts
@@ -2527,7 +2540,7 @@ router.post('/:id/commission', userAuth, (req, res) => {
       ? ` — inmobiliaria $${payload.inmobiliaria_amount.toLocaleString()}`
       : ''),
     user.id, user.name || 'Agente', { commission: payload });
-  store.saveApplication(app);
+  saveApplicationEncryptingFinancials(app);
 
   // Notify the inmobiliaria owner if the broker belongs to one.
   if (app.inmobiliaria_id) {
@@ -2646,7 +2659,7 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
                            `Comisión rechazada por ${user.name || 'inmobiliaria'}`,
     user.id, user.name || '', { commission: app.commission });
 
-  store.saveApplication(app);
+  saveApplicationEncryptingFinancials(app);
 
   // Notify the submitting agent
   const agentUser = app.commission.submitted_by
@@ -2873,7 +2886,7 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
       : `Plan de pagos creado: ${installments.length} cuota(s) · ${fmtAmt(total_amount, currency||'DOP')}`,
     req.user.sub, user?.name || 'Broker',
     { type: 'plan_created', installments: installments.length });
-  store.saveApplication(app);
+  saveApplicationEncryptingFinancials(app);
   if (!isEdit && app.client.email)
     sendNotification(app.client.email, 'HogaresRD — Plan de Pagos Creado', buildPaymentPlanEmail(app));
 
