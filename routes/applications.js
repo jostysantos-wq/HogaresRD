@@ -992,7 +992,7 @@ router.get('/', userAuth, (req, res) => {
   const { status } = req.query;
   if (status) apps = apps.filter(a => a.status === status);
 
-  res.json(apps);
+  res.json(apps.map(decryptAppPII));
 });
 
 // ── GET /my  — Client's own applications ─────────────────────────
@@ -1003,12 +1003,14 @@ router.get('/my', userAuth, (req, res) => {
     ? store.getApplicationsByClient(user.id)
     : store.getApplicationsByClient(user.email);
 
-  // Enrich with listing cover image + city for the card UI
+  // Enrich with listing cover image + city for the card UI.
+  // decryptAppPII first so the spread doesn't propagate ciphertext.
   const enriched = apps.map(a => {
+    const dec = decryptAppPII(a);
     const listing = a.listing_id ? store.getListingById(a.listing_id) : null;
     const images = Array.isArray(listing?.images) ? listing.images : [];
     return {
-      ...a,
+      ...dec,
       listing_image: images[0] || null,
       listing_city:  listing?.city || null,
     };
@@ -1288,7 +1290,7 @@ router.put('/:id/status', userAuth, (req, res) => {
   // just uploaded a receipt, auto-advancing to pago_enviado). Now
   // we just return the current application so the client reconciles.
   if (app.status === status) {
-    return res.json(app);
+    return res.json(decryptAppPII(app));
   }
 
   // ── Ownership gate: broker can only set broker-owned statuses.
@@ -1392,7 +1394,7 @@ router.put('/:id/status', userAuth, (req, res) => {
     });
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -1512,7 +1514,7 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
     );
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── POST /:id/initial-upload  — Public: attach documents right after creation
@@ -1782,7 +1784,7 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
     );
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── GET /:id/documents/:docId/file  — Serve uploaded document ───
@@ -1876,7 +1878,7 @@ router.post('/:id/tours', userAuth, (req, res) => {
     );
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── PUT /:id/tours/:tourId  — Update tour ────────────────────────
@@ -1908,7 +1910,7 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
   }
 
   store.saveApplication(app);
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -2077,7 +2079,7 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
     });
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── GET /:id/payment/receipt  — Serve payment receipt ────────────
@@ -2265,7 +2267,7 @@ router.post('/:id/message', userAuth, (req, res) => {
     );
   }
 
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── POST /:id/contact-client — Broker starts or continues an in-app
@@ -3003,7 +3005,7 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
             <p>Por favor sube un nuevo comprobante.</p>
             <a href="${BASE_URL}/my-applications" style="background:#DC2626;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;">Subir nuevo comprobante</a>
            </div>`);
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── POST /:id/payment-plan/:iid/notify  — Send payment reminder ──
@@ -3071,7 +3073,7 @@ router.put('/:id/assign', userAuth, (req, res) => {
     'admin', 'Admin', { broker: app.broker });
 
   store.saveApplication(app);
-  res.json(app);
+  res.json(decryptAppPII(app));
 });
 
 module.exports = router;
