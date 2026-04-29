@@ -497,25 +497,38 @@
         // Upload section for document/payment tasks
         // These must match the source_event values written by the backend
         // (routes/applications.js). Mismatches hide the upload UI.
-        const docEvents = ['documents_requested', 'documents_rejected'];
-        const payEvents = ['payment_plan_created'];
+        const docEvents       = ['documents_requested', 'documents_rejected'];
+        const clientPayEvents = ['payment_plan_created'];
+        const brokerPayEvents = ['payment_uploaded']; // broker-side: verify + upload processed receipt
         const sourceEvent = task.source_event || '';
-        const needsUpload = task.status !== 'completada' && task.application_id && (docEvents.includes(sourceEvent) || payEvents.includes(sourceEvent));
-        const isPayment = payEvents.includes(sourceEvent);
+        const needsUpload = task.status !== 'completada' && task.application_id &&
+          (docEvents.includes(sourceEvent) || clientPayEvents.includes(sourceEvent) || brokerPayEvents.includes(sourceEvent));
+        const isClientPayment = clientPayEvents.includes(sourceEvent);
+        const isBrokerPayment = brokerPayEvents.includes(sourceEvent);
+        const isPayment = isClientPayment || isBrokerPayment;
+        const uploadType = isBrokerPayment ? 'broker_payment'
+                         : isClientPayment ? 'payment'
+                         : 'document';
 
         let uploadHTML = '';
         if (needsUpload) {
           const uploadId = 'upload_' + task.id;
+          const titleLabel = isBrokerPayment ? 'Subir recibo procesado'
+                           : isClientPayment ? 'Subir comprobante de pago'
+                           : 'Subir documento';
+          const subLabel = isBrokerPayment ? 'Recibo oficial procesado para el cliente'
+                         : isClientPayment ? 'Foto o PDF del comprobante'
+                         : 'Foto de tu documento (cedula, comprobante, etc.)';
           uploadHTML = `
             <div class="task-upload" id="uploadSection_${task.id}">
               <svg viewBox="0 0 24 24"><path d="${isPayment
                 ? 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z'
                 : 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z'}"/></svg>
               <div class="task-upload-info">
-                <strong>${isPayment ? 'Subir comprobante de pago' : 'Subir documento'}</strong>
-                <span>${isPayment ? 'Foto o PDF del comprobante' : 'Foto de tu documento (cedula, comprobante, etc.)'}</span>
+                <strong>${titleLabel}</strong>
+                <span>${subLabel}</span>
               </div>
-              <input type="file" id="${uploadId}" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;" onchange="handleTaskUpload('${task.id}', '${task.application_id}', '${isPayment ? 'payment' : 'document'}', this)" />
+              <input type="file" id="${uploadId}" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;" onchange="handleTaskUpload('${task.id}', '${task.application_id}', '${uploadType}', this)" />
               <button class="btn-upload ${isPayment ? 'payment' : ''}" onclick="document.getElementById('${uploadId}').click()">
                 Subir archivo
               </button>
@@ -574,7 +587,17 @@
       }
     }
 
-    /* ── Upload for task ── */
+    /* ── Upload for task ──
+     * Routes per uploadType:
+     *   document        → POST /api/applications/:id/documents/upload          (field: files)
+     *   payment         → POST /api/applications/:id/payment-plan/:iid/upload  (field: proof)
+     *   broker_payment  → POST /api/applications/:id/payment/processed-receipt (field: receipt)
+     *
+     * For client payments we look up the first installment that still needs a
+     * proof, since the legacy /payment/upload endpoint refuses uploads when an
+     * installment plan exists (which is exactly when payment_plan_created
+     * tasks are created).
+     */
     async function handleTaskUpload(taskId, applicationId, uploadType, fileInput) {
       const file = fileInput.files[0];
       if (!file) return;
@@ -583,20 +606,30 @@
       const btn = section?.querySelector('.btn-upload');
       if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
 
-      const fd = new FormData();
-      if (uploadType === 'payment') {
-        fd.append('receipt', file);
-        fd.append('amount', '0');
-        fd.append('notes', '');
-      } else {
-        fd.append('files', file);
-        fd.append('type', 'other');
-      }
-
       try {
-        const endpoint = uploadType === 'payment'
-          ? `/api/applications/${applicationId}/payment/upload`
-          : `/api/applications/${applicationId}/documents/upload`;
+        const fd = new FormData();
+        let endpoint;
+
+        if (uploadType === 'broker_payment') {
+          fd.append('receipt', file);
+          endpoint = `/api/applications/${applicationId}/payment/processed-receipt`;
+        } else if (uploadType === 'payment') {
+          // Client uploading proof of an installment payment.
+          // Resolve the first installment that needs a proof.
+          const appRes = await fetch(`/api/applications/${applicationId}`, { credentials: 'include' });
+          if (!appRes.ok) throw new Error('No se pudo cargar la aplicación');
+          const app = await appRes.json();
+          const installments = app?.payment_plan?.installments || [];
+          if (!installments.length) throw new Error('No hay plan de pagos activo');
+          const next = installments.find(i => i.status !== 'approved' && i.status !== 'proof_uploaded');
+          if (!next) throw new Error('Todas las cuotas ya fueron pagadas o están en revisión');
+          fd.append('proof', file);
+          endpoint = `/api/applications/${applicationId}/payment-plan/${next.id}/upload`;
+        } else {
+          fd.append('files', file);
+          fd.append('type', 'other');
+          endpoint = `/api/applications/${applicationId}/documents/upload`;
+        }
 
         const res = await fetch(endpoint, {
           method: 'POST',
