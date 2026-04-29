@@ -786,26 +786,24 @@ router.post('/', appCreateLimiter, (req, res) => {
   }
 
   if (useCascade) {
-    // Cascade path: send response first, then start cascade in background.
-    // If the cascade engine returns null because NO agents on the listing
-    // are linked to registered users (e.g. the agencies array only has
-    // email/phone contact info), we fall back to emailing every agency
-    // contact directly so the application still reaches a human.
-    res.status(201).json({ ok: true, id: app.id });
-
+    // Cascade path. We do the synchronous broker-assignment work BEFORE
+    // sending the response so a client polling /api/applications/:id
+    // immediately after creation sees the resolved broker (or null only
+    // when the lead is truly orphaned). Notification fan-out below the
+    // res.json runs as fire-and-forget so the response doesn't wait on
+    // it.
     const buyerInfo = { name: app.client.name, phone: app.client.phone, email: app.client.email };
     // If this came from an inmobiliaria affiliate link, scope cascade to their team only
     const cascadeScope = referredByInmobiliaria ? referredByInmobiliaria.id : null;
     const cascadeResult = cascadeEngine.startCascade('application', app.id, listing_id, buyerInfo, cascadeScope);
 
+    // Synchronous fallback: if the cascade engine returns null because
+    // NO agents on the listing are linked to registered users (e.g. the
+    // agencies array only has email/phone contact info), assign the
+    // first resolvable subscribed agent BEFORE we respond.
+    let assignedUser = null;
     if (!cascadeResult) {
       console.warn('[applications] Cascade returned null — falling back to direct agency notifications for app', app.id);
-
-      // Fallback: try to resolve the first agency contact to a
-      // registered user. If we can, ASSIGN them as the broker on
-      // this application (so it shows up in their dashboard). If
-      // not, we still email every agency contact as a last-resort.
-      let assignedUser = null;
       for (const agency of agencies) {
         const resolved = resolveAgencyToUser(agency);
         if (resolved && isSubscriptionActive(resolved)) { assignedUser = resolved; break; }
@@ -834,7 +832,12 @@ router.post('/', appCreateLimiter, (req, res) => {
           { from: null, to: assignedUser.id, via: 'cascade-fallback' });
         store.saveApplication(app);
       }
+    }
 
+    // Broker assignment is now final — respond.
+    res.status(201).json({ ok: true, id: app.id });
+
+    if (!cascadeResult) {
       // Notifications — email every agency card + push/WhatsApp to
       // any resolvable user (not just the first one, so multi-agency
       // listings still broadcast).
@@ -1294,6 +1297,21 @@ router.put('/:id/status', userAuth, (req, res) => {
   if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
+  // Subscription re-check: status transitions are pro-only writes.
+  // The middleware on /api/applications already gates list reads, but
+  // a broker whose plan lapsed mid-deal could still drive an
+  // application to 'completado' and trigger commission/notification
+  // side-effects. Block them here. Admins are exempt; secretaries
+  // inherit from their inmobiliaria via the same gate elsewhere.
+  if (!admin && (isBroker || isInmobiliaria)) {
+    if (!isSubscriptionActive(user)) {
+      return res.status(402).json({
+        error: 'Tu suscripción no está activa. Renueva tu plan para continuar.',
+        needsSubscription: true,
+      });
+    }
+  }
+
   const { status, reason } = req.body;
   if (!status) return res.status(400).json({ error: 'status es requerido' });
 
@@ -1727,9 +1745,13 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
     req.user.sub, user?.name || 'Broker',
     { doc_id: doc.id, status, note });
 
-  // If any required doc rejected → documentos_insuficientes
-  const hasRejected = app.documents_uploaded.some(d => d.review_status === 'rejected');
-  if (hasRejected && STATUS_FLOW[app.status]?.includes('documentos_insuficientes')) {
+  // If any REQUIRED doc rejected → documentos_insuficientes.
+  // Optional docs failing review are noted in the timeline but don't
+  // demote the application's status — the buyer hasn't blocked progress.
+  const hasRejectedRequired = app.documents_uploaded.some(d =>
+    d.review_status === 'rejected' && d.required === true
+  );
+  if (hasRejectedRequired && STATUS_FLOW[app.status]?.includes('documentos_insuficientes')) {
     const old = app.status;
     app.status = 'documentos_insuficientes';
     addEvent(app, 'status_change', 'Documentos insuficientes — se requieren correcciones',
@@ -3000,6 +3022,10 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
       req.user.sub, user?.name || 'Broker', { from, to: 'pago_aprobado' });
   }
   store.saveApplication(app);
+  // Mirror the single-payment /verify path: clear the broker's
+  // "verify payment" task so it doesn't linger after the review,
+  // regardless of whether the installment was approved or rejected.
+  autoCompleteTasksByEvent(app.id, 'payment_uploaded');
   if (app.client.email)
     sendNotification(app.client.email,
       approved ? `HogaresRD — Pago #${inst.number} Aprobado ✓`
