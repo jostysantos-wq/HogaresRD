@@ -549,15 +549,24 @@ router.post('/', appCreateLimiter, (req, res) => {
       const u = store.getUserByEmail(agency.email);
       if (u) return u;
     }
-    // Best-effort phone lookup (no dedicated helper — linear scan is fine at this scale)
+    // Best-effort phone lookup. Match on the last 8 digits (covers DR
+    // local-form 8095551234 vs international +1-809-555-1234) AND
+    // require both numbers to be at least 8 digits long, so accidental
+    // collisions on short numbers don't route the lead to the wrong
+    // person. If multiple users match, log it and fall through — we'd
+    // rather orphan the lead than mis-route it.
     if (agency.phone) {
       const cleanPhone = String(agency.phone).replace(/\D/g, '');
-      if (cleanPhone.length >= 7) {
-        const match = (store.getUsers() || []).find(u => {
+      if (cleanPhone.length >= 8) {
+        const tail = cleanPhone.slice(-8);
+        const matches = (store.getUsers() || []).filter(u => {
           const up = String(u.phone || '').replace(/\D/g, '');
-          return up && up.endsWith(cleanPhone.slice(-7));
+          return up.length >= 8 && up.endsWith(tail);
         });
-        if (match) return match;
+        if (matches.length === 1) return matches[0];
+        if (matches.length > 1) {
+          console.warn(`[applications] resolveAgencyToUser: ambiguous phone match for ${tail} — ${matches.length} users — declining to route`);
+        }
       }
     }
     return null;
@@ -2714,6 +2723,34 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
   }
 
   res.json({ success: true, commission: app.commission });
+});
+
+// ── GET /:id/commission/history — audit trail of commission changes ──
+// Every commission submit / resubmit / approve / adjust / reject pushes
+// an entry onto app.commission.history. Until now nothing exposed it,
+// so the audit trail was write-only. Returning it here lets brokers and
+// inmobiliarias see who did what and when.
+router.get('/:id/commission/history', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  // Decrypt before returning so any commission snapshots in the
+  // history (sale_amount, agent_amount, etc.) aren't ciphertext.
+  const dec = decryptAppPII(app);
+  const history = Array.isArray(dec.commission?.history) ? dec.commission.history : [];
+  res.json({
+    application_id: app.id,
+    status: dec.commission?.status || null,
+    history,
+  });
 });
 
 // GET /commissions/summary — per-user aggregated view

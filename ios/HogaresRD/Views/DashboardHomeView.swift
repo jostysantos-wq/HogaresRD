@@ -77,6 +77,12 @@ struct DashboardHomeView: View {
         }
         .refreshable { await loadAll() }
         .task { await loadAll() }
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationReceived)) { _ in
+            // A push just arrived — refresh KPIs so the dashboard reflects
+            // the new server-side state (new application, status change,
+            // payment review, etc.) without waiting for the user to pull.
+            Task { await loadAll() }
+        }
     }
 
     // MARK: - Data Loading

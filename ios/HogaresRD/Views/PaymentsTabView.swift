@@ -79,6 +79,12 @@ struct PaymentsTabView: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationReceived)) { _ in
+            // Refresh stats when a payment-related push arrives so the
+            // counters reflect new state (proof uploaded, plan created,
+            // installment approved/rejected) without manual pull.
+            Task { await load() }
+        }
         .sheet(isPresented: $showCreatePlan) {
             CreatePaymentPlanView()
                 .environmentObject(api)
