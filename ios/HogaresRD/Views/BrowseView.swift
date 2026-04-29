@@ -286,7 +286,10 @@ struct BrowseView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .padding(.top, 110) // below search bar + status bar
+                        // Clear the floating search bar + filter chip row
+                        // overlay above (status bar 56 + search ~40 + spacing 8
+                        // + chips ~32 ≈ 136 + a few pt of breathing room).
+                        .padding(.top, 148)
                         .background(Color(.systemBackground))
 
                         Divider()
