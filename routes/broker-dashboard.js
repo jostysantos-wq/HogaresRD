@@ -622,21 +622,23 @@ router.post('/team-broadcast', async (req, res) => {
       });
     } catch {}
 
-    // Email notification
+    // Email notification. mailer.sendMail returns a Promise, so a sync
+    // try/catch around it caught only validation throws — async network
+    // / SMTP failures fell through as unhandledRejection and (after the
+    // recent error-tracker hardening) get dropped silently. Use .catch
+    // so failures land in the error log with the failing recipient.
     if (member.email) {
-      try {
-        mailer.sendMail({
-          to: member.email,
-          subject: `Anuncio del equipo — ${user.companyName || user.name}`,
-          department: 'noreply',
-          html: et.layout({
-            title: 'Anuncio del Equipo',
-            subtitle: user.companyName || user.name,
-            body: `<p>${message.trim().replace(/\n/g, '<br>')}</p>`,
-            cta: { label: 'Ir al Dashboard', url: 'https://hogaresrd.com/broker' },
-          }),
-        });
-      } catch {}
+      mailer.sendMail({
+        to: member.email,
+        subject: `Anuncio del equipo — ${user.companyName || user.name}`,
+        department: 'noreply',
+        html: et.layout({
+          title: 'Anuncio del Equipo',
+          subtitle: user.companyName || user.name,
+          body: `<p>${message.trim().replace(/\n/g, '<br>')}</p>`,
+          cta: { label: 'Ir al Dashboard', url: 'https://hogaresrd.com/broker' },
+        }),
+      }).catch(err => console.error(`[broker-dashboard] Team broadcast email failed for ${member.email}:`, err.message));
     }
     sent++;
   }

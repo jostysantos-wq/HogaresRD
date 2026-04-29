@@ -262,7 +262,15 @@ router.post('/request-data-download', userAuth, async (req, res) => {
     const savedSearches = store.getSavedSearchesByUser(userId);
     const tasks = store.getTasksByUser(userId);
     const activity = [];
-    try { const a = await store.getActivityByUser(userId, { limit: 500 }); activity.push(...a); } catch {}
+    try {
+      const a = await store.getActivityByUser(userId, { limit: 500 });
+      activity.push(...a);
+    } catch (err) {
+      // Activity is non-essential to a data export — keep going so the
+      // user still gets the rest of their data, but log so we know the
+      // export was incomplete. (Visible in the error log.)
+      console.warn(`[user] Data export: activity load failed for user ${userId}:`, err.message);
+    }
 
     // Strip sensitive fields
     const { passwordHash, resetToken, resetTokenExpiry, biometricTokenHash, ...safeUser } = user;
