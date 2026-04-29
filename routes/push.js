@@ -254,30 +254,106 @@ router.put('/preferences', userAuth, (req, res) => {
   res.json({ ...DEFAULT_PREFERENCES, ...sanitized });
 });
 
-// ── Per-user badge counter ────────────────────────────────────────────────
-// Tracks the cumulative unread badge value for each user's iOS app icon.
-// Incremented on every push, reset when the app calls POST /badge-reset.
-const _badgeCounts = new Map();
+// ── Badge count: computed from actual unread state ───────────────────────
+// The iOS app icon badge should reflect REAL unread items, not a counter
+// of pushes sent. We re-derive it from the source of truth (unread
+// conversations + actionable tasks) every time we send a push so it stays
+// in sync even when the user clears items via the web (or another device).
+const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 
-function getBadgeCount(userId) {
-  return _badgeCounts.get(userId) || 0;
+function unreadConversationCount(userId, user) {
+  // Mirror of /api/conversations/unread, kept in sync with that route.
+  if (!user) return 0;
+
+  if (user.role === 'user') {
+    const convs = store.getConversationsByClient(userId);
+    return convs.filter(c => !c.closed && !c.archived && (c.unreadClient || 0) > 0).length;
+  }
+
+  if (PRO_ROLES.includes(user.role)) {
+    const seen = new Set();
+    const convs = [];
+    const push = (c) => { if (!seen.has(c.id)) { seen.add(c.id); convs.push(c); } };
+    store.getConversationsForBroker(userId).forEach(push);
+    store.getConversationsByClient(userId).forEach(push);
+
+    // Org-scoped + orphaned conversations on this org's listings
+    const inmId = ['inmobiliaria', 'constructora'].includes(user.role)
+      ? user.id : user.inmobiliaria_id;
+    if (inmId) {
+      for (const c of store.getConversations()) {
+        if (c.brokerId || seen.has(c.id)) continue;
+        if (c.inmobiliariaId === inmId) { push(c); continue; }
+        if (!c.inmobiliariaId && c.propertyId) {
+          const listing = store.getListingById(c.propertyId);
+          if (listing && (listing.creator_user_id === inmId ||
+            (Array.isArray(listing.agencies) && listing.agencies.some(a => a.user_id === inmId)))) {
+            push(c);
+          }
+        }
+      }
+    }
+
+    return convs.filter(c => {
+      if (c.closed || c.archived) return false;
+      const isClientHere = c.clientId === userId;
+      if (isClientHere) return (c.unreadClient || 0) > 0;
+      return (c.unreadBroker || 0) > 0;
+    }).length;
+  }
+  return 0;
 }
 
-function incrementBadge(userId) {
-  const cur = _badgeCounts.get(userId) || 0;
-  _badgeCounts.set(userId, cur + 1);
-  return cur + 1;
+function pendingTaskCount(userId, user) {
+  // Mirror of /api/tasks/badge-count.
+  if (!user) return 0;
+  const userOrgId = ['inmobiliaria', 'constructora'].includes(user.role)
+    ? user.id : user.inmobiliaria_id;
+
+  let count = 0;
+  for (const row of (store._tasks || [])) {
+    const t = store.getTaskById(row.id);
+    if (!t) continue;
+    if (t.status === 'completada' || t.status === 'no_aplica') continue;
+
+    if (userOrgId) {
+      const creator = store.getUserById(t.assigned_by);
+      const creatorOrgId = creator
+        ? (['inmobiliaria', 'constructora'].includes(creator.role) ? creator.id : creator.inmobiliaria_id)
+        : null;
+      let inOrg = creatorOrgId === userOrgId;
+      if (!inOrg && t.application_id) {
+        const app = store.getApplicationById(t.application_id);
+        inOrg = !!(app && app.inmobiliaria_id === userOrgId);
+      }
+      if (!inOrg) continue;
+    }
+
+    const approverId = t.approver_id || t.approverId || null;
+    if (t.assigned_to === userId && (t.status === 'pendiente' || t.status === 'en_progreso')) {
+      count++;
+      continue;
+    }
+    if (approverId === userId && t.assigned_to !== userId && t.status === 'pending_review') {
+      count++;
+    }
+  }
+  return count;
 }
 
-function resetBadge(userId) {
-  _badgeCounts.set(userId, 0);
+function computeBadgeCount(userId) {
+  const user = store.getUserById(userId);
+  if (!user) return 0;
+  const total = unreadConversationCount(userId, user) + pendingTaskCount(userId, user);
+  // iOS displays "99+" beyond 99; clamping prevents weird wide-digit badges.
+  return Math.max(0, Math.min(99, total));
 }
 
-// POST /badge-reset — iOS app calls this when it becomes active to sync
-// the server-side badge counter to zero. This prevents stale badge values
-// from being sent with the next push notification.
-router.post('/badge-reset', userAuth, (req, res) => {
-  resetBadge(req.user.sub);
+// POST /badge-reset — kept for iOS-app backward compat; now a no-op since
+// the badge count is recomputed from real state on every push. The iOS
+// app calls UNUserNotificationCenter.setBadgeCount(0) locally on launch
+// which is what actually clears the icon.
+router.post('/badge-reset', userAuth, (_req, res) => {
   res.json({ ok: true });
 });
 
@@ -337,7 +413,7 @@ async function notify(userId, notification) {
 
     // ── iOS APNs ──────────────────────────────────────────────────────────
     if (userSubs.ios && userSubs.ios.length > 0) {
-      const badgeValue = incrementBadge(userId);
+      const badgeValue = computeBadgeCount(userId);
       const apnsPayload = {
         aps: {
           alert: {
