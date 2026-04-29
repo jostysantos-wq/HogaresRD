@@ -6,7 +6,7 @@ const multer     = require('multer');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
-const { userAuth } = require('./auth');
+const { userAuth, optionalAuth } = require('./auth');
 const { logSec } = require('./security-log');
 const { createAutoTask, autoCompleteTasksByEvent } = require('./tasks');
 const notify     = require('../utils/twilio');
@@ -327,10 +327,16 @@ function buildPaymentReminderEmail(app, inst) {
 // ══════════════════════════════════════════════════════════════════
 // ── POST /  — Create application ─────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
-router.post('/', appCreateLimiter, (req, res) => {
+// optionalAuth so the endpoint stays public (anonymous applies are a
+// real product feature) but, when an authenticated session IS present,
+// we can derive the client identity from req.user.sub. The previous
+// behavior of trusting req.body.user_id let an anonymous attacker
+// attribute an application to any victim's account; that attribution
+// is now ignored in favor of the JWT-verified subject.
+router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
   const {
     listing_id, listing_title, listing_price, listing_type,
-    name, phone, email, user_id,
+    name, phone, email,
     financing, pre_approved, contact_method, budget, timeline, intent, notes,
     // ── Extended fields (all optional) ───────────────────────────────
     id_type,             // 'cedula' | 'passport'
@@ -361,6 +367,18 @@ router.post('/', appCreateLimiter, (req, res) => {
 
   if (!name || !phone || !listing_id)
     return res.status(400).json({ error: 'name, phone y listing_id son requeridos' });
+
+  // Verify the listing actually exists and is reachable. Without this
+  // guard, an attacker could spam the admin's orphan-lead inbox by
+  // submitting applications with bogus listing_ids — the cascade would
+  // return null, fall back to the agency loop, find no agencies, and
+  // fire the "ORPHANED LEAD" admin alert on every submission.
+  {
+    const listingPreflight = store.getListingById(listing_id);
+    if (!listingPreflight) {
+      return res.status(404).json({ error: 'Propiedad no encontrada.' });
+    }
+  }
 
   // ── Input validation (Sprint 3, Item 11 + incomplete-submission fix) ─────
   //
@@ -695,7 +713,11 @@ router.post('/', appCreateLimiter, (req, res) => {
       name:    nameTrimmed,
       phone:   phoneTrimmed,
       email:   emailTrimmed,
-      user_id: user_id || null,
+      // Authenticated session takes precedence; body's user_id is
+      // ignored entirely. Anonymous submissions land with user_id=null
+      // and can be auto-claimed later when the email matches a
+      // registered user (see the email-based fallback in /my).
+      user_id: req.user?.sub || null,
       ...clientExtended,
     },
     co_applicant:   coApplicant,
