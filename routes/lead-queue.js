@@ -25,17 +25,19 @@ router.get('/', (req, res) => {
     const listing = store.getListingById(item.listing_id);
     if (!listing) continue;
 
-    // Hydrate the full item to get _extra fields (like inmobiliaria_scope)
+    // Hydrate the full item to get _extra fields if any
     const fullItem = store.getLeadQueueById(item.id) || item;
+    // Read new column, fall back to legacy _extra field for unmigrated rows
+    const scope = fullItem.org_scope_id || fullItem.inmobiliaria_scope || null;
 
-    // Safety net: if lead is scoped to an inmobiliaria, skip if user doesn't belong to that org
-    if (fullItem.inmobiliaria_scope) {
+    // Safety net: if lead is scoped to an org, skip if user doesn't belong to it
+    if (scope) {
       const userOrgId = ['inmobiliaria','constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
-      if (userOrgId !== fullItem.inmobiliaria_scope) continue;
+      if (userOrgId !== scope) continue;
     }
 
-    // Respect inmobiliaria scope — only show leads to agents in the scoped org
-    const { tier1, tier2, tier3 } = cascade.getTierAgents(listing, fullItem.inmobiliaria_scope || null);
+    // Respect org scope — only show leads to agents in the scoped org
+    const { tier1, tier2, tier3 } = cascade.getTierAgents(listing, scope);
     const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[fullItem.current_tier] || [];
 
     if (currentTierAgents.includes(userId)) {

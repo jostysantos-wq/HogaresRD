@@ -338,8 +338,18 @@ async function _loadCache() {
         current_tier INTEGER DEFAULT 1, status TEXT DEFAULT 'active',
         claimed_by TEXT, claimed_at TEXT, tier1_notified_at TEXT, tier2_notified_at TEXT,
         tier3_notified_at TEXT, auto_responded_at TEXT, created_at TEXT NOT NULL,
+        org_scope_id TEXT,
         _extra JSONB DEFAULT '{}'
       );
+      ALTER TABLE lead_queue ADD COLUMN IF NOT EXISTS org_scope_id TEXT;
+      CREATE INDEX IF NOT EXISTS idx_lead_queue_org_scope ON lead_queue (org_scope_id);
+      -- Data migration: backfill org_scope_id from the legacy _extra.inmobiliaria_scope
+      -- key. Idempotent: only fills empty rows. The old field handled both
+      -- inmobiliaria and constructora, so the rename is purely a clarity fix.
+      UPDATE lead_queue
+         SET org_scope_id = (_extra->>'inmobiliaria_scope')
+       WHERE org_scope_id IS NULL
+         AND _extra ? 'inmobiliaria_scope';
       CREATE TABLE IF NOT EXISTS contribution_scores (
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL, listing_id TEXT NOT NULL,
         role TEXT DEFAULT 'affiliate', score INTEGER DEFAULT 0,
@@ -1447,7 +1457,7 @@ function saveLeadQueueItem(item) {
   const extra = {};
   const LQ_COLS = ['id','inquiry_type','inquiry_id','listing_id','buyer_name','buyer_phone','buyer_email',
     'current_tier','status','claimed_by','claimed_at','tier1_notified_at','tier2_notified_at',
-    'tier3_notified_at','auto_responded_at','created_at'];
+    'tier3_notified_at','auto_responded_at','created_at','org_scope_id'];
   for (const [k, v] of Object.entries(item)) {
     if (LQ_COLS.includes(k)) row[k] = v === undefined ? null : v;
     else extra[k] = v;

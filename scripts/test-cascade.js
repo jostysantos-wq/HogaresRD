@@ -546,6 +546,139 @@ function testRecovery() {
   assert(recovered.current_tier > 1, `Stale cascade escalated (now tier ${recovered.current_tier})`);
 }
 
+// ── TEST 13: Constructora-scoped cascade ────────────────────────────────
+//
+// Verifies that when a buyer arrives via a constructora's affiliate link,
+// the cascade:
+//   1. Persists the constructora id in the new `org_scope_id` column
+//      (not the legacy `_extra.inmobiliaria_scope` JSONB blob).
+//   2. Restricts the candidate pool to that constructora's team members,
+//      even if the listing has agencies belonging to other orgs.
+//   3. Excludes brokers who belong to a different inmobiliaria.
+//
+// This is the integration gap the standalone scope unit tests didn't cover:
+// the full path from `startCascade(..., orgScope=constructoraId)` to the
+// agents that actually receive notifications.
+
+const CONSTRUCTORA_ID    = 'test_constructora_010';
+const C_BROKER1_ID       = 'test_c_broker1_011';
+const C_BROKER2_ID       = 'test_c_broker2_012';
+const RIVAL_INMO_ID      = 'test_rival_inmo_013';
+const RIVAL_BROKER_ID    = 'test_rival_broker_014';
+const PROJECT_LISTING_ID = 'test_project_listing_010';
+
+function seedConstructoraFixtures() {
+  const PRO = { subscriptionStatus: 'active' };
+  const nowIso = new Date().toISOString();
+
+  // Constructora (developer/builder)
+  store.saveUser({
+    id: CONSTRUCTORA_ID, email: 'constructora@test.com', name: 'Constructora Caribe',
+    phone: '8095555555', role: 'constructora', passwordHash: 'test',
+    createdAt: nowIso, ...PRO,
+  });
+
+  // Two in-house brokers under the constructora
+  store.saveUser({
+    id: C_BROKER1_ID, email: 'cbroker1@test.com', name: 'Pedro CBroker',
+    phone: '8096666666', role: 'broker', inmobiliaria_id: CONSTRUCTORA_ID,
+    passwordHash: 'test', createdAt: nowIso, ...PRO,
+  });
+  store.saveUser({
+    id: C_BROKER2_ID, email: 'cbroker2@test.com', name: 'Sofia CBroker',
+    phone: '8097777777', role: 'broker', inmobiliaria_id: CONSTRUCTORA_ID,
+    passwordHash: 'test', createdAt: nowIso, ...PRO,
+  });
+
+  // Rival org + broker — must be excluded from the scoped cascade
+  store.saveUser({
+    id: RIVAL_INMO_ID, email: 'rivalinmo@test.com', name: 'Rival Realty',
+    phone: '8098888888', role: 'inmobiliaria', passwordHash: 'test',
+    createdAt: nowIso, ...PRO,
+  });
+  store.saveUser({
+    id: RIVAL_BROKER_ID, email: 'rivalbroker@test.com', name: 'Rival Broker',
+    phone: '8099999999', role: 'broker', inmobiliaria_id: RIVAL_INMO_ID,
+    passwordHash: 'test', createdAt: nowIso, ...PRO,
+  });
+
+  // Project listing whose agencies span BOTH orgs — the scope filter is
+  // what should keep the rival broker out of the cascade.
+  store.saveListing({
+    id: PROJECT_LISTING_ID,
+    title: 'Proyecto Cap Cana Towers',
+    type: 'proyecto', status: 'approved',
+    creator_user_id: CONSTRUCTORA_ID,
+    province: 'La Altagracia', city: 'Punta Cana',
+    price: '350000',
+    agencies: [
+      { user_id: CONSTRUCTORA_ID,  name: 'Constructora Caribe' },
+      { user_id: C_BROKER1_ID,     name: 'Pedro CBroker' },
+      { user_id: C_BROKER2_ID,     name: 'Sofia CBroker' },
+      { user_id: RIVAL_BROKER_ID,  name: 'Rival Broker' },
+    ],
+    submittedAt: nowIso, approvedAt: nowIso,
+  });
+}
+
+function testConstructoraScope() {
+  section('TEST 13: Constructora-scoped Cascade');
+  seedConstructoraFixtures();
+
+  // 1) Tier composition under scope
+  const { tier1, tier2, tier3 } = cascade.getTierAgents(
+    store.getListingById(PROJECT_LISTING_ID),
+    CONSTRUCTORA_ID
+  );
+  const allTierAgents = [...tier1, ...tier2, ...tier3];
+
+  assert(allTierAgents.includes(CONSTRUCTORA_ID),
+    'Scoped cascade includes the constructora owner');
+  assert(allTierAgents.includes(C_BROKER1_ID),
+    'Scoped cascade includes constructora broker 1');
+  assert(allTierAgents.includes(C_BROKER2_ID),
+    'Scoped cascade includes constructora broker 2');
+  assert(!allTierAgents.includes(RIVAL_BROKER_ID),
+    'Scoped cascade EXCLUDES rival inmobiliaria broker (would leak leads)');
+
+  // 2) startCascade persists scope as the new column, not _extra
+  const item = cascade.startCascade(
+    'application',
+    'test_app_constructora_001',
+    PROJECT_LISTING_ID,
+    { name: 'Test Buyer', phone: '8091112233', email: 'buyer@test.com' },
+    CONSTRUCTORA_ID
+  );
+  assert(item != null, 'Cascade item created for constructora-scoped lead');
+  assert(item.org_scope_id === CONSTRUCTORA_ID,
+    `Scope persists in org_scope_id column (got: ${item.org_scope_id})`);
+  assert(item.inmobiliaria_scope === undefined,
+    'Legacy inmobiliaria_scope field is NOT set on new rows');
+
+  // 3) Hydrated read still surfaces the scope so consumers (lead-queue,
+  // push, broker-dashboard) keep working
+  const hydrated = store.getLeadQueueById(item.id);
+  assert(hydrated.org_scope_id === CONSTRUCTORA_ID,
+    'getLeadQueueById hydrates org_scope_id from the new column');
+
+  // 4) Scope override even when listing has rival agencies
+  const onlyConstructoraTeam = allTierAgents.every(id =>
+    [CONSTRUCTORA_ID, C_BROKER1_ID, C_BROKER2_ID].includes(id)
+  );
+  assert(onlyConstructoraTeam,
+    'Every tier agent belongs to the constructora team — no cross-org leakage');
+
+  // 5) Without scope, the rival broker WOULD be reachable (sanity check
+  // that the filter is actually doing work)
+  const unscoped = cascade.getTierAgents(
+    store.getListingById(PROJECT_LISTING_ID),
+    null
+  );
+  const unscopedAll = [...unscoped.tier1, ...unscoped.tier2, ...unscoped.tier3];
+  assert(unscopedAll.includes(RIVAL_BROKER_ID),
+    'Sanity: unscoped cascade DOES reach rival broker (proves scope is the filter)');
+}
+
 // ── Run all tests ───────────────────────────────────────────────────────
 
 async function run() {
@@ -566,6 +699,7 @@ async function run() {
   await testContributionScoreAutoCreate();
   testAutoResponseNoAgents();
   testRecovery();
+  testConstructoraScope();
 
   section('RESULTS');
   console.log(`  Passed: ${passed}`);

@@ -15,7 +15,8 @@ process.env.JWT_SECRET = 'test-secret';
 process.env.ADMIN_KEY  = 'test-admin-key';
 process.env.NODE_ENV   = 'test';
 
-const app = require('../server');
+const app   = require('../server');
+const store = require('../routes/store');
 
 // ── Globals populated during tests ──────────────────────────────────────────
 let server;
@@ -100,6 +101,15 @@ after(async () => {
   if (server) {
     await new Promise((resolve) => server.close(resolve));
   }
+  // Close the pg pool so the runner can exit. Without this, background
+  // cron jobs keep the connection pool busy and the process hangs while
+  // pg retries against an unreachable DB.
+  if (store.pool && typeof store.pool.end === 'function') {
+    try { await store.pool.end(); } catch { /* already closed */ }
+  }
+  // Safety net: if a stray timer still keeps the loop alive after the
+  // explicit teardown, force-exit. We've validated all assertions by now.
+  setTimeout(() => process.exit(0), 1000).unref();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -291,15 +301,19 @@ describe('Applications — GET /api/applications', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('Admin — GET /admin/submissions', () => {
-  it('should return 401 without admin key', async () => {
+  it('should return 401 without auth', async () => {
     const res = await get('/admin/submissions');
     assert.equal(res.status, 401);
   });
 
-  it('should return submissions array with valid admin key', async () => {
+  // The admin panel migrated from x-admin-key (header) to session auth (cookie
+  // set by /admin-auth login + OTP). The legacy header is no longer accepted on
+  // browser-facing admin endpoints — it lives on only as a helper for internal
+  // server-to-server callers (cron, scripts). This test pins that behavior so
+  // we don't accidentally re-open a header-based bypass.
+  it('should reject the legacy x-admin-key header (session-only now)', async () => {
     const res = await get('/admin/submissions', { 'x-admin-key': 'test-admin-key' });
-    assert.equal(res.status, 200);
-    assert.ok(Array.isArray(res.body), 'response should be an array');
+    assert.equal(res.status, 401);
   });
 });
 

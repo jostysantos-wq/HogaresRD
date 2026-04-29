@@ -471,10 +471,16 @@ router.get('/team-performance', (req, res) => {
     ? allConvs.filter(c => c.createdAt >= since.toISOString())
     : allConvs;
 
-  // Lead queue items scoped to this inmobiliaria
+  // Lead queue items scoped to this org (inmobiliaria or constructora)
   const allLeads = store.getLeadQueue().filter(q => {
-    const extra = typeof q._extra === 'string' ? (function() { try { return JSON.parse(q._extra); } catch { return {}; } })() : (q._extra || {});
-    return extra.inmobiliaria_scope === user.id || teamIds.has(q.claimed_by);
+    // Prefer the new org_scope_id column; legacy rows still carry the
+    // value in _extra.inmobiliaria_scope until they get rewritten.
+    let scope = q.org_scope_id || null;
+    if (!scope) {
+      const extra = typeof q._extra === 'string' ? (function() { try { return JSON.parse(q._extra); } catch { return {}; } })() : (q._extra || {});
+      scope = extra.inmobiliaria_scope || null;
+    }
+    return scope === user.id || teamIds.has(q.claimed_by);
   });
   const leads = since
     ? allLeads.filter(q => q.created_at >= since.toISOString())

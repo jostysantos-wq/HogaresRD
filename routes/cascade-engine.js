@@ -106,24 +106,24 @@ function getMailer() {
  * Returns arrays of user_ids eligible for each tier on this listing.
  *
  * @param {object} listing — the listing object
- * @param {string|null} inmobiliariaScope — if set, restrict ALL tiers to
- *   agents belonging to this inmobiliaria. Used when leads arrive through
- *   an inmobiliaria's affiliate link: the cascade should only rotate among
- *   that inmobiliaria's team, not the listing's full agency set.
+ * @param {string|null} orgScope — if set, restrict ALL tiers to agents
+ *   belonging to this org (an inmobiliaria OR constructora). Used when leads
+ *   arrive through an org's affiliate link: the cascade should only rotate
+ *   among that org's team, not the listing's full agency set.
  */
-function getTierAgents(listing, inmobiliariaScope = null) {
+function getTierAgents(listing, orgScope = null) {
   const creatorId = listing.creator_user_id || null;
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
   let allAgentIds = agencies.map(a => a.user_id).filter(Boolean);
 
-  // If scoped to an inmobiliaria, restrict to only that org's agents
-  if (inmobiliariaScope) {
-    const teamMembers = store.getUsersByInmobiliaria(inmobiliariaScope);
+  // If scoped to an org, restrict to only that org's agents
+  if (orgScope) {
+    const teamMembers = store.getUsersByInmobiliaria(orgScope);
     const teamIds = new Set(teamMembers.map(u => u.id));
-    // Also include the inmobiliaria owner themselves
-    teamIds.add(inmobiliariaScope);
+    // Also include the org owner themselves
+    teamIds.add(orgScope);
     allAgentIds = allAgentIds.filter(id => teamIds.has(id));
-    // If none of the listing's agencies are in this inmobiliaria,
+    // If none of the listing's agencies are in this org,
     // use the full team as the candidate pool instead
     if (allAgentIds.length === 0) {
       allAgentIds = [...teamIds];
@@ -217,12 +217,12 @@ function sendAutoResponse(item) {
  * @param {string} inquiryId
  * @param {string} listingId
  * @param {{ name?: string, phone?: string, email?: string }} buyerInfo
- * @param {string|null} inmobiliariaScope — if set, restrict cascade to
- *   agents belonging to this inmobiliaria only. Used for inmobiliaria
- *   affiliate links where the lead should rotate within the org's team.
+ * @param {string|null} orgScope — if set, restrict cascade to agents
+ *   belonging to this org (inmobiliaria OR constructora) only. Used for
+ *   org affiliate links where the lead should rotate within the team.
  * @returns {object|null} The created lead_queue item, or null if cascade not applicable
  */
-function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, inmobiliariaScope = null) {
+function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, orgScope = null) {
   const listing = store.getListingById(listingId);
   if (!listing) {
     console.warn('[cascade] Listing not found:', listingId);
@@ -230,12 +230,12 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, inmobil
   }
 
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-  if (agencies.length === 0 && !inmobiliariaScope) {
+  if (agencies.length === 0 && !orgScope) {
     console.log('[cascade] No agencies on listing, skipping cascade:', listingId);
     return null;
   }
 
-  const { tier1, tier2, tier3 } = getTierAgents(listing, inmobiliariaScope);
+  const { tier1, tier2, tier3 } = getTierAgents(listing, orgScope);
 
   // Determine starting tier (skip empty tiers)
   let startTier = 1;
@@ -263,7 +263,7 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, inmobil
     tier2_notified_at: null,
     tier3_notified_at: null,
     auto_responded_at: null,
-    inmobiliaria_scope: inmobiliariaScope || null,
+    org_scope_id: orgScope || null,
     created_at: now(),
   };
 
@@ -318,7 +318,7 @@ async function claimLead(leadQueueId, userId) {
     const listing = store.getListingById(item.listing_id);
     if (!listing) return { success: false, error: 'Propiedad no encontrada.' };
 
-    const { tier1, tier2, tier3 } = getTierAgents(listing, item.inmobiliaria_scope || null);
+    const { tier1, tier2, tier3 } = getTierAgents(listing, item.org_scope_id || item.inmobiliaria_scope || null);
     const currentTierAgents = { 1: tier1, 2: tier2, 3: tier3 }[item.current_tier] || [];
     if (!currentTierAgents.includes(userId)) {
       return { success: false, error: 'No tienes prioridad para reclamar este lead en la ronda actual.' };

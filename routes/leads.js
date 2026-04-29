@@ -52,9 +52,9 @@ router.post('/', leadLimiter, (req, res) => {
     updated_at:    new Date().toISOString()
   };
 
-  // Resolve referring agent or inmobiliaria
+  // Resolve referring agent or org (inmobiliaria/constructora)
   let refUser = null;
-  let inmobiliariaScope = null;
+  let orgScope = null;
   if (lead.ref_token) {
     refUser = store.getUserByRefToken(lead.ref_token);
     if (refUser) {
@@ -63,9 +63,9 @@ router.post('/', leadLimiter, (req, res) => {
       if (['agency', 'broker'].includes(refUser.role)) {
         lead.status = 'en_proceso';
       }
-      // Inmobiliaria links cascade within team; broker links skip cascade entirely
+      // Org links cascade within team; broker links skip cascade entirely
       if (['inmobiliaria', 'constructora'].includes(refUser.role)) {
-        inmobiliariaScope = refUser.id;
+        orgScope = refUser.id;
       }
     }
   }
@@ -89,7 +89,7 @@ router.post('/', leadLimiter, (req, res) => {
   if (cascadeEngine.isEnabled() && !isBrokerRef && lead.listing_id) {
     cascadeEngine.startCascade('lead', lead.id, lead.listing_id, {
       name: lead.name || '', phone: lead.phone || '', email: lead.email || '',
-    }, inmobiliariaScope);
+    }, orgScope);
   }
 });
 

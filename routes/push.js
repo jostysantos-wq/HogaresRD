@@ -359,10 +359,12 @@ function leadQueueCount(userId, user) {
   let count = 0;
   const active = store.getActiveLeadQueue ? store.getActiveLeadQueue() : [];
   for (const item of active) {
-    if (item.inmobiliaria_scope && item.inmobiliaria_scope !== userOrgId) continue;
+    // Read new column, fall back to legacy _extra field for unmigrated rows
+    const scope = item.org_scope_id || item.inmobiliaria_scope || null;
+    if (scope && scope !== userOrgId) continue;
     const listing = store.getListingById(item.listing_id);
     if (!listing) continue;
-    const tiers = cascadeEngine.getTierAgents(listing, item.inmobiliaria_scope || null);
+    const tiers = cascadeEngine.getTierAgents(listing, scope);
     const currentTierAgents = { 1: tiers.tier1, 2: tiers.tier2, 3: tiers.tier3 }[item.current_tier] || [];
     if (currentTierAgents.includes(userId)) count++;
   }
