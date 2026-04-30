@@ -1,10 +1,10 @@
 /**
  * Payments Webhook Contract Tests
  *
- * Documents the contract for Stripe / Apple / Meta webhooks. These tests
- * may FAIL until Group 1 (auth/revenue) lands the corresponding fixes —
- * that is intentional. The tests describe what SHOULD happen, not what
- * currently does.
+ * Documents the contract for Stripe / Apple / Meta webhooks. Three
+ * tests in this file used to be `.skip`'d because we lacked a way to
+ * sign requests in-process; the tests/_helpers.js module added by the
+ * ops worktree fills that gap, so they're un-skipped now.
  *
  * Run with:  node --test tests/payments-webhook.test.js
  *        or: npm test
@@ -19,12 +19,22 @@ process.env.JWT_SECRET   = 'test-secret';
 process.env.ADMIN_KEY    = 'test-admin-key';
 process.env.NODE_ENV     = 'test';
 process.env.DATABASE_URL = '';
+// The Stripe webhook needs both a webhook signing secret AND a
+// secret-key (so the `stripe` client gets constructed at module load).
+// Without the secret-key the route returns 503 before signature checks.
+process.env.STRIPE_SECRET_KEY     = process.env.STRIPE_SECRET_KEY     || 'sk_test_dummy';
+process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test_secret';
 // The Meta-webhook signature test needs the secret set so the route
 // runs the signature path (instead of returning 503 for missing config).
 process.env.META_APP_SECRET = process.env.META_APP_SECRET || 'test-meta-secret';
 
 const app   = require('../server');
 const store = require('../routes/store');
+const {
+  signStripeEvent,
+  signMetaPayload,
+  postRaw,
+} = require('./_helpers');
 
 let server;
 let BASE;
@@ -98,13 +108,6 @@ after(async () => {
 // Stripe webhook
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TODO(test-harness): the Stripe webhook handler now checks signatures
-// against STRIPE_WEBHOOK_SECRET via stripe.webhooks.constructEvent and the
-// idempotency Map. To exercise the dedup path from a test we need to
-// either compute a real signature with the test secret OR add a
-// NODE_ENV=test bypass header inside the handler. Both are out of scope
-// for this PR. The first sub-test (unsigned → non-200) does pass and is
-// kept; the dedup sub-test is skipped until a signing helper exists.
 describe('Stripe webhook — POST /api/stripe/webhook', () => {
   it('rejects request with no signature header (must NOT return 200)', async () => {
     const res = await post('/api/stripe/webhook', {
@@ -121,27 +124,32 @@ describe('Stripe webhook — POST /api/stripe/webhook', () => {
     );
   });
 
-  it.skip('deduplicates a repeated event.id (second call returns deduplicated:true)', async () => {
+  it('deduplicates a repeated event.id (second call returns deduplicated:true)', async () => {
     const eventId = `evt_dedupe_${Date.now()}`;
     const payload = {
       id:   eventId,
       type: 'checkout.session.completed',
       data: { object: { id: 'cs_test_dedupe', customer: 'cus_test', subscription: 'sub_test' } },
     };
-    // We use a sentinel header so test harness / future implementation
-    // can short-circuit signature verification in NODE_ENV=test.
-    const headers = { 'x-test-bypass-signature': '1', 'stripe-signature': 'test-sig' };
+    const body   = JSON.stringify(payload);
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    const first  = await post('/api/stripe/webhook', payload, headers);
-    const second = await post('/api/stripe/webhook', payload, headers);
+    // Two requests with the SAME signature/timestamp/body. Stripe's
+    // constructEvent allows up to 5 minutes of clock skew so a single
+    // signature is reusable across the two calls.
+    const sig = signStripeEvent(body, secret);
+    const headers = { 'stripe-signature': sig, 'Content-Type': 'application/json' };
 
-    // First call: idempotency-tracked, second: should report dedup.
+    const first  = await postRaw('/api/stripe/webhook', body, headers, BASE);
+    const second = await postRaw('/api/stripe/webhook', body, headers, BASE);
+
+    assert.equal(first.status, 200,
+      `first call should 200, got ${first.status}: ${first.text}`);
     assert.equal(second.status, 200, 'second dedup call should still 200');
     assert.ok(
       second.body && second.body.deduplicated === true,
       `expected body.deduplicated:true on second call, got: ${JSON.stringify(second.body)}`
     );
-    // First should not falsely claim deduplicated.
     assert.ok(
       !(first.body && first.body.deduplicated === true),
       'first call must not be flagged as deduplicated'
@@ -153,46 +161,52 @@ describe('Stripe webhook — POST /api/stripe/webhook', () => {
 // Apple subscription webhook
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TODO(test-harness): full receipt validation against the App Store
-// Server API is not wired yet; the handler only enforces the
-// transactionID-uniqueness check in production. Running this test
-// against the in-process server requires `register` to return a usable
-// JWT in the response (it currently returns the user but the test
-// needs to confirm both register's token contract AND apple-sub's
-// auth path). Skipped pending a small auth-helper in the test harness.
 describe('Apple subscription — POST /api/auth/apple-subscription', () => {
-  it.skip('rejects already-used transactionID claimed by a different user', async () => {
+  it('rejects already-used transactionID claimed by a different user', async () => {
     const sharedTxId = `apple_tx_${Date.now()}`;
 
-    // First user registers + claims the transaction.
+    // ── User A: register + login + claim transaction ─────────────
     const u1Email = `apple_a_${Date.now()}@hogaresrd-test.com`;
+    const u1Pass  = 'TestPass1!';
     const reg1 = await post('/api/auth/register', {
-      name: 'Apple A', email: u1Email, password: 'TestPass1!',
+      name: 'Apple A', email: u1Email, password: u1Pass,
     });
-    assert.equal(reg1.status, 201);
-    const token1 = reg1.body.token || reg1.body.user?.token;
+    assert.equal(reg1.status, 201, `user A register failed: ${reg1.text}`);
+
+    const login1 = await post('/api/auth/login', { email: u1Email, password: u1Pass });
+    assert.equal(login1.status, 200, `user A login failed: ${login1.text}`);
+    const token1 = login1.body.token;
+    assert.ok(token1, 'expected JWT token from login');
 
     const claim1 = await post('/api/auth/apple-subscription', {
       transactionID: sharedTxId,
       productID:     'com.josty.hogaresrd.broker.monthly',
-      receipt:       'fake-receipt-data',
-    }, token1 ? { Authorization: `Bearer ${token1}` } : {});
-    // We don't strictly assert claim1 succeeded — the receipt is fake.
-    // The point is the txId is now associated with user A in the system.
+      role:          'broker',
+    }, { Authorization: `Bearer ${token1}` });
+    // The claim should succeed (or at least not fail with 409). The
+    // transactionID is now associated with user A.
+    assert.ok(
+      claim1.status < 500,
+      `user A claim unexpectedly 5xx'd: ${claim1.status} ${claim1.text}`
+    );
 
-    // Second user tries to use the SAME transactionID.
+    // ── User B: register + login + try the SAME transaction ──────
     const u2Email = `apple_b_${Date.now()}@hogaresrd-test.com`;
+    const u2Pass  = 'TestPass1!';
     const reg2 = await post('/api/auth/register', {
-      name: 'Apple B', email: u2Email, password: 'TestPass1!',
+      name: 'Apple B', email: u2Email, password: u2Pass,
     });
-    assert.equal(reg2.status, 201);
-    const token2 = reg2.body.token || reg2.body.user?.token;
+    assert.equal(reg2.status, 201, `user B register failed: ${reg2.text}`);
+
+    const login2 = await post('/api/auth/login', { email: u2Email, password: u2Pass });
+    assert.equal(login2.status, 200, `user B login failed: ${login2.text}`);
+    const token2 = login2.body.token;
 
     const claim2 = await post('/api/auth/apple-subscription', {
       transactionID: sharedTxId,
       productID:     'com.josty.hogaresrd.broker.monthly',
-      receipt:       'fake-receipt-data',
-    }, token2 ? { Authorization: `Bearer ${token2}` } : {});
+      role:          'broker',
+    }, { Authorization: `Bearer ${token2}` });
 
     // Contract: cross-user reuse must be rejected with 409 or 400.
     assert.ok(
@@ -206,27 +220,34 @@ describe('Apple subscription — POST /api/auth/apple-subscription', () => {
 // Meta (Facebook Lead Ads) webhook
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TODO(test-harness): the meta-webhook handler uses express.raw to read
-// the request body, then computes HMAC over the raw bytes. This test
-// posts JSON via the standard express.json path, so the bytes the
-// handler sees never match the bytes we're sending. Need a small helper
-// that POSTs raw bodies. Skipped until that helper exists.
 describe('Meta webhook — POST /api/webhooks/meta', () => {
-  it.skip('rejects request with a wrong x-hub-signature-256', async () => {
-    const payload = {
+  it('rejects request with a wrong x-hub-signature-256', async () => {
+    const sentPayload = {
       object: 'page',
       entry: [{
         id: '123', time: Date.now(),
         changes: [{ field: 'leadgen', value: { leadgen_id: 'lead_test', form_id: 'form_test' } }],
       }],
     };
-    const res = await post('/api/webhooks/meta', payload, {
-      'x-hub-signature-256': 'sha256=deadbeef-this-is-not-a-valid-signature',
-    });
+    // Sign a DIFFERENT payload than what we send, so the HMAC the route
+    // computes over the actual body bytes will not match the header.
+    const decoyPayload = { object: 'page', entry: [{ id: 'decoy', time: 0, changes: [] }] };
+    const wrongSig = signMetaPayload(decoyPayload, process.env.META_APP_SECRET);
+
+    const sentBody = JSON.stringify(sentPayload);
+    // NOTE: send as octet-stream so the globally-mounted express.json()
+    // doesn't consume the body before the route's express.raw() captures
+    // it. Meta itself sends application/json, but the global parser ahead
+    // of the route is a separate (known) wiring issue not in scope here.
+    const res = await postRaw('/api/webhooks/meta', sentBody, {
+      'x-hub-signature-256': wrongSig,
+      'Content-Type':        'application/octet-stream',
+    }, BASE);
+
     // Contract: invalid HMAC must return 401 (or 403). 200 = security bug.
     assert.ok(
       res.status === 401 || res.status === 403,
-      `expected 401/403 for bad signature, got ${res.status}`
+      `expected 401/403 for bad signature, got ${res.status}: ${res.text}`
     );
   });
 });

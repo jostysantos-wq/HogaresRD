@@ -65,7 +65,17 @@ else
   echo "❌ Health check FAILED: $HEALTH"
   echo "   Rolling back to previous SHA: $PREV_SHA"
   git reset --hard "$PREV_SHA"
-  npm ci --production
+  # If the rollback's npm ci itself fails (network blip, registry hiccup),
+  # the box is in an in-between state: code is back at $PREV_SHA but
+  # node_modules may be partial. Bail with exit 3 so the operator knows
+  # the rollback ITSELF broke and the running process is no longer trust-
+  # worthy. Manual intervention required.
+  if ! npm ci --production; then
+    echo "🚨 ERROR: rollback 'npm ci' failed; manual intervention required"
+    echo "   The box is at SHA $PREV_SHA but node_modules may be partial."
+    echo "   SSH in, fix npm/network, then re-run: cd $APP_DIR && npm ci --production && pm2 reload hogaresrd --update-env"
+    exit 3
+  fi
   pm2 reload hogaresrd --update-env
   sleep 3
   ROLLBACK_HEALTH=$(curl -sf http://localhost:3000/api/health 2>/dev/null || echo '{"status":"FAIL"}')
