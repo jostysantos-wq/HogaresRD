@@ -10,8 +10,28 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+      --bg: #FBF6EE; --bg-section: #F4F1EA;
+      --ink: #131318; --ink-soft: #36363E; --ink-muted: #8A8A93;
+      --line: rgba(19,19,24,0.10);
+      --serif: ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill: 999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop: 0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --accent: #131318; --accent-hover: #000; --accent-light: rgba(19,19,24,0.06);
+    }
+    [data-theme="dark"] {
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+      --bg: #15131A; --bg-section: #1A1820;
+      --ink: #F5F1EA; --ink-soft: #C9C5BC; --ink-muted: #8B867E;
+      --line: rgba(245,241,234,0.12);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop: 0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --accent: #F5F1EA; --accent-hover: #fff; --accent-light: rgba(245,241,234,0.10);
+    }
+    .btn-dark { background: var(--ink); color: var(--bg); border: 1px solid var(--ink); border-radius: var(--r-pill); font-weight: 600; padding: 0.55rem 1.25rem; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s, background 0.2s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-dark:hover { background: #000; transform: translateY(-1px); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
@@ -72,23 +92,23 @@
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
     .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; text-decoration: none; }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-    /* Dominican flag red — Iniciar Sesión nav button */
-    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
-    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
-    .btn-primary-nav { background: var(--accent); border: none; color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-decoration: none; }
-    .btn-primary-nav:hover { background: var(--accent-hover); }
+    /* Iniciar Sesión nav button — editorial ink pill (was Dominican-flag red #CF142B, legacy) */
+    .btn-login { background: var(--ink); border: 1px solid var(--ink); color: var(--bg) !important; font-size: 0.9rem; font-weight: 600; padding: 0.55rem 1.25rem; border-radius: var(--r-pill); cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #000; transform: translateY(-1px); }
+    .btn-primary-nav { background: var(--ink); border: 1px solid var(--ink); color: var(--bg); font-size: 0.9rem; font-weight: 600; padding: 0.55rem 1.25rem; border-radius: var(--r-pill); cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; }
+    .btn-primary-nav:hover { background: #000; transform: translateY(-1px); }
 
-    /* HERO */
-    .hero { background: linear-gradient(135deg, #001230 0%, #0038A8 55%, #0055d0 100%); position: relative; overflow: hidden; }
+    /* HERO — editorial cream (was navy gradient #001230 → #0055d0, legacy) */
+    .hero { background: var(--bg-section); position: relative; overflow: hidden; }
     .hero-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .hero-shape { position: absolute; border-radius: 50%; opacity: 0.06; background: var(--ink); }
     .hero-shape-1 { width: 520px; height: 520px; top: -220px; right: -80px; }
     .hero-shape-2 { width: 280px; height: 280px; bottom: -100px; left: 5%; }
     .hero-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 5rem 2rem 4.5rem; }
-    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(207,20,43,0.9); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.3rem 0.9rem; border-radius: 50px; margin-bottom: 1.25rem; }
-    .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1.1rem; max-width: 620px; }
-    .hero-title em { font-style: normal; color: #7ab8f5; }
-    .hero-sub { color: rgba(255,255,255,0.72); font-size: 1.05rem; max-width: 540px; line-height: 1.7; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--ink-soft); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.3rem 0; border-radius: 0; margin-bottom: 1.25rem; }
+    .hero-title { font-family: var(--serif); font-style: italic; font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 400; color: var(--ink); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.1rem; max-width: 720px; }
+    .hero-title em { font-style: italic; color: var(--ink); }
+    .hero-sub { color: var(--ink-soft); font-size: 1.05rem; max-width: 540px; line-height: 1.7; }
 
     /* CONTACT LAYOUT */
     .contact-section { max-width: 1280px; margin: 0 auto; padding: 5rem 2rem; display: grid; grid-template-columns: 1fr 1.4fr; gap: 4rem; align-items: start; }
@@ -99,7 +119,8 @@
     .info-card:hover { box-shadow: var(--shadow-md); }
     .info-icon { width: 44px; height: 44px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .info-icon svg { width: 22px; height: 22px; fill: #fff; }
-    .info-icon.blue   { background: linear-gradient(135deg, #002D62, #0055b3); }
+    .info-icon.blue   { background: var(--bg-section); color: var(--ink); } /* was navy gradient #002D62→#0055b3, legacy */
+    .info-icon.blue svg { fill: var(--ink); }
     .info-icon.red    { background: linear-gradient(135deg, #CF142B, #a81022); }
     .info-icon.green  { background: linear-gradient(135deg, #1B7A3E, #22a855); }
     .info-card-body h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.2rem; }
@@ -118,10 +139,10 @@
       padding: 0.7rem 1rem; font-size: 0.92rem; color: var(--text);
       transition: border-color 0.2s; outline: none; width: 100%; font-family: inherit;
     }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(19,19,24,0.08); }
     .form-group textarea { resize: vertical; min-height: 130px; }
-    .btn-submit { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0.9rem 1.5rem; font-size: 0.97rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.5rem; }
-    .btn-submit:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-submit { width: 100%; min-height: 54px; background: var(--ink); color: var(--bg); border: 1px solid var(--ink); border-radius: var(--r-pill); padding: 0.95rem 1.5rem; font-size: 0.97rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 0.5rem; }
+    .btn-submit:hover { background: #000; transform: translateY(-1px); }
     .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
     .form-success { display: none; text-align: center; padding: 2rem; }
     .form-success .check { width: 56px; height: 56px; background: linear-gradient(135deg, #1B7A3E, #22a855); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
