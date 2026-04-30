@@ -59,30 +59,44 @@ struct ContentView: View {
     @State private var unreadPollTask: Task<Void, Never>?
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            FeedView()
-                .tabItem { Label("Inicio", systemImage: "newspaper.fill") }
-                .tag(0)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                FeedView()
+                    .tabItem { Label("Inicio", systemImage: "newspaper.fill") }
+                    .tag(0)
 
-            LazyView(BrowseView())
-                .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
-                .tag(1)
+                LazyView(BrowseView())
+                    .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
+                    .tag(1)
 
-            LazyView(MessagesTabView())
-                .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
-                .badge(unreadMessages)
-                .tag(2)
+                LazyView(MessagesTabView())
+                    .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
+                    .badge(unreadMessages)
+                    .tag(2)
 
-            LazyView(TasksTabView())
-                .tabItem { Label("Tareas", systemImage: "checklist") }
-                .badge(unreadTasks)
-                .tag(3)
+                LazyView(TasksTabView())
+                    .tabItem { Label("Tareas", systemImage: "checklist") }
+                    .badge(unreadTasks)
+                    .tag(3)
 
-            LazyView(ProfileTabView())
-                .tabItem { Label("Perfil", systemImage: "person.fill") }
-                .tag(4)
+                LazyView(ProfileTabView())
+                    .tabItem { Label("Perfil", systemImage: "person.fill") }
+                    .tag(4)
+            }
+            .tint(Color.rdBlue)
+            // Hide the system tab bar so the floating bar below is the
+            // only visible chrome. Each tab content gets a 90pt bottom
+            // safe-area inset via the modifier on this ZStack so its
+            // scrollables don't sit underneath the floating capsule.
+            .toolbar(.hidden, for: .tabBar)
+
+            FloatingTabBar(
+                selection: $selectedTab,
+                unreadMessages: unreadMessages,
+                unreadTasks: unreadTasks
+            )
+            .ignoresSafeArea(.keyboard) // capsule stays put when keyboard rises
         }
-        .tint(Color.rdBlue)
         .overlay {
             if showPopup, let user = api.currentUser {
                 reminderPopup(user)
@@ -920,5 +934,101 @@ struct ProfileTabView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - FloatingTabBar
+//
+// Custom glass tab bar matching the home screenshot — capsule
+// background with .ultraThinMaterial blur, dark forest-green active
+// pill, icon-only items. Hidden behind the system TabView for
+// accessibility (system bar still owns labels via .toolbar(.hidden)
+// → still scoped via tabItem labels).
+
+struct FloatingTabBar: View {
+    @Binding var selection: Int
+    var unreadMessages: Int = 0
+    var unreadTasks: Int = 0
+
+    private let forest = Color(red: 31/255, green: 61/255, blue: 51/255)
+
+    private struct Item {
+        let tag: Int
+        let icon: String
+        let label: String
+        let badge: Int
+    }
+
+    private var items: [Item] {
+        [
+            Item(tag: 0, icon: "house.fill",       label: "Inicio",   badge: 0),
+            Item(tag: 1, icon: "location.fill",    label: "Explorar", badge: 0),
+            Item(tag: 2, icon: "bubble.left.fill", label: "Mensajes", badge: unreadMessages),
+            Item(tag: 3, icon: "checklist",        label: "Tareas",   badge: unreadTasks),
+            Item(tag: 4, icon: "person.fill",      label: "Perfil",   badge: 0),
+        ]
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items, id: \.tag) { item in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        selection = item.tag
+                    }
+                } label: {
+                    cell(for: item)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(item.label)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 64)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.06), radius: 4,  x: 0, y: 2)
+        .padding(.horizontal, 28)
+        .padding(.bottom, 14)
+    }
+
+    @ViewBuilder
+    private func cell(for item: Item) -> some View {
+        let active = (selection == item.tag)
+
+        ZStack {
+            if active {
+                Circle()
+                    .fill(forest)
+                    .frame(width: 46, height: 46)
+                    .transition(.scale.combined(with: .opacity))
+            }
+
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 18, weight: active ? .semibold : .regular))
+                    .foregroundStyle(active ? .white : Color.black.opacity(0.62))
+                    .frame(width: 44, height: 44)
+
+                if item.badge > 0 {
+                    Text(item.badge > 99 ? "99+" : "\(item.badge)")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.red, in: Capsule())
+                        .offset(x: 4, y: -2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .contentShape(Rectangle())
     }
 }
