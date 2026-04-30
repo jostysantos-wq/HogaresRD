@@ -57,7 +57,7 @@ function enrichTask(task) {
       // First image is the "cover photo" — same rule the rest of the
       // site uses when it needs a single thumbnail for a listing.
       const images = Array.isArray(listing.images) ? listing.images : [];
-      out.listing_image = images[0] || null;
+      out.listing_image = images[0]?.url || images[0] || null;
       out.listing_city  = listing.city || null;
       out.listing_price = listing.price || null;
     }
@@ -71,7 +71,7 @@ function enrichTask(task) {
       if (listing) {
         out.listing_title = out.listing_title || listing.title || null;
         const images = Array.isArray(listing.images) ? listing.images : [];
-        out.listing_image = out.listing_image || images[0] || null;
+        out.listing_image = out.listing_image || images[0]?.url || images[0] || null;
         out.listing_city  = out.listing_city || listing.city || null;
       }
     }

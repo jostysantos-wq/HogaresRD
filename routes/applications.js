@@ -1100,7 +1100,7 @@ router.get('/my', userAuth, (req, res) => {
     const images = Array.isArray(listing?.images) ? listing.images : [];
     return {
       ...dec,
-      listing_image: images[0] || null,
+      listing_image: images[0]?.url || images[0] || null,
       listing_city:  listing?.city || null,
     };
   });

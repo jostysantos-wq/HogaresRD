@@ -204,7 +204,7 @@ router.post('/meta/campaigns', userAuth, requireBroker, async (req, res) => {
   if (!isListingOwner) return res.status(403).json({ error: 'Solo puedes crear anuncios para tus propias propiedades.' });
 
   const listingUrl = `https://hogaresrd.com/listing/${listing_id}`;
-  const imageUrl   = listing.images?.[0] || null;
+  const imageUrl   = listing.images?.[0]?.url || listing.images?.[0] || null;
 
   try {
     // 1. Create Campaign
