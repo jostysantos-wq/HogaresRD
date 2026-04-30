@@ -10,24 +10,41 @@
    fonts — no FOUT, no extra request, and the UI stays consistent
    with the rest of the OS the user is on. */
 
+/*
+ * Tokens harmonized with public/home.html's editorial palette.
+ * --accent is now ink (formerly #006AFF blue) so any var(--accent)
+ * usage across the site renders as warm-cream-friendly ink-on-paper.
+ * Pages can opt into legacy blue by overriding --accent locally;
+ * none currently do.
+ */
 /* ── Design Tokens — Light Mode ────────────────────────────────── */
 :root {
-  /* Palette — clean white portal */
-  --bg:              #FFFFFF;
+  /* Editorial palette — warm cream + ink (synced with home.html) */
+  --bg:              #FBF6EE;
   --bg-card:         #FFFFFF;
-  --bg-secondary:    #F4F6F9;
+  --bg-section:      #F4F1EA;
+  --bg-secondary:    #F4F1EA;
   --bg-hover:        #EBF0F8;
-  --text:            #1A2535;
-  --text-secondary:  #4A5568;
-  --text-muted:      #6B7280;  /* WCAG AA compliant on white */
-  --border:          #E2E8F0;
-  --border-strong:   #CBD5E1;
+  --ink:             #131318;
+  --ink-soft:        #36363E;
+  --ink-muted:       #8A8A93;
+  --line:            rgba(19,19,24,0.10);
+  --line-soft:       rgba(19,19,24,0.06);
+  --shadow-soft:     0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+  --shadow-pop:      0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
 
-  /* Accent — professional blue */
-  --accent:          #006AFF;
-  --accent-hover:    #0052CC;
-  --accent-light:    #EBF3FF;
-  --blue:            #006AFF;   /* alias */
+  /* Legacy aliases — re-pointed at the editorial palette */
+  --text:            #131318;
+  --text-secondary:  #36363E;
+  --text-muted:      #8A8A93;
+  --border:          rgba(19,19,24,0.10);
+  --border-strong:   rgba(19,19,24,0.18);
+
+  /* Accent — ink replaces legacy portal blue (#006AFF) */
+  --accent:          #131318;
+  --accent-hover:    #000000;
+  --accent-light:    rgba(19,19,24,0.06);
+  --blue:            #006AFF;   /* alias — kept for any explicit blue need */
 
   /* Semantic */
   --red:             #E53E3E;
@@ -55,7 +72,11 @@
   /* Typography scale */
   --font:            -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-serif:      ui-serif, 'New York', Charter, Georgia, 'Cambria', serif;
+  --serif:           ui-serif, 'New York', Charter, Georgia, Cambria, serif;
   --font-mono:       ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Pill radius shared with home.html */
+  --r-pill:          999px;
   --font-size-xs:    0.72rem;
   --font-size-sm:    0.85rem;
   --font-size-base:  1rem;
@@ -80,19 +101,30 @@
 
 /* ── Design Tokens — Dark Mode ─────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:              #0F1623;
-  --bg-card:         #1A2235;
-  --bg-secondary:    #202D42;
+  /* Editorial palette — dark variant (synced with home.html) */
+  --bg:              #15131A;
+  --bg-card:         #1F1C24;
+  --bg-section:      #1A1820;
+  --bg-secondary:    #1A1820;
   --bg-hover:        #263450;
-  --text:            #EDF2F7;
-  --text-secondary:  #A0AEBE;
-  --text-muted:      #7A8A9E;  /* WCAG AA on dark bg */
-  --border:          #2D3F58;
-  --border-strong:   #3D5275;
+  --ink:             #F5F1EA;
+  --ink-soft:        #C9C5BC;
+  --ink-muted:       #8B867E;
+  --line:            rgba(245,241,234,0.12);
+  --line-soft:       rgba(245,241,234,0.06);
+  --shadow-soft:     0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+  --shadow-pop:      0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
 
-  --accent:          #4D9EFF;
-  --accent-hover:    #70B3FF;
-  --accent-light:    #1A2F4F;
+  /* Legacy aliases — re-pointed */
+  --text:            #F5F1EA;
+  --text-secondary:  #C9C5BC;
+  --text-muted:      #8B867E;
+  --border:          rgba(245,241,234,0.12);
+  --border-strong:   rgba(245,241,234,0.20);
+
+  --accent:          #F5F1EA;
+  --accent-hover:    #FFFFFF;
+  --accent-light:    rgba(245,241,234,0.10);
   --blue:            #4D9EFF;
 
   --red:             #FC5C5C;
