@@ -8833,9 +8833,14 @@
     document.getElementById('brkThreadTitle').textContent = conv.clientName;
     document.getElementById('brkThreadSub').innerHTML     = `<a href="/listing/${conv.propertyId}" style="color:var(--accent);text-decoration:none;">${esc(conv.propertyTitle)} →</a>`;
     document.getElementById('brkClientChip').textContent  = `Iniciado el ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
-    // Avatar: client initial
+    // Avatar: prefer client photo, fall back to initial
     const _initial = (conv.clientName || '?').trim().charAt(0).toUpperCase() || '·';
-    document.getElementById('brkThreadAvatar').innerHTML = `<span>${esc(_initial)}</span>`;
+    const _avatarEl = document.getElementById('brkThreadAvatar');
+    if (conv.clientAvatar) {
+      _avatarEl.innerHTML = `<img src="${conv.clientAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='<span>'+${JSON.stringify(esc(_initial))}+'</span>'">`;
+    } else {
+      _avatarEl.innerHTML = `<span>${esc(_initial)}</span>`;
+    }
 
     // Show the Transfer button only when the current user is the
     // assigned broker on this conversation AND is in a pro role AND
