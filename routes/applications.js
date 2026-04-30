@@ -1430,7 +1430,7 @@ router.get('/:id/state', userAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── PUT /:id/status  — Change status ─────────────────────────────
 // ══════════════════════════════════════════════════════════════════
-router.put('/:id/status', userAuth, (req, res) => {
+router.put('/:id/status', userAuth, async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -1527,31 +1527,41 @@ router.put('/:id/status', userAuth, (req, res) => {
   }
 
   // ── Auto-update unit inventory on status change ────────────────
+  // Status change touches three rows (application, listing,
+  // unit_inventory inside listing) and used to do them as three
+  // fire-and-forget writes — a partial failure could leave the unit
+  // marked sold while the application stayed pending. Wrap in a real
+  // transaction so the writes either all land or roll back together.
+  // The outer try/catch still records failures via
+  // recordInventorySyncFailure so the workflow continues — the
+  // inventory side-effect is best-effort, not blocking, by design.
   if (app.assigned_unit?.unitId && app.listing_id) {
     const targetUnitId = app.assigned_unit.unitId;
     try {
-      const listing = store.getListingById(app.listing_id);
-      if (listing && Array.isArray(listing.unit_inventory)) {
-        const unit = listing.unit_inventory.find(u => u.id === targetUnitId);
-        if (unit) {
-          if (status === 'completado') {
-            unit.status = 'sold';
-          } else if (status === 'rechazado') {
-            unit.status = 'available';
-            unit.applicationId = null;
-            unit.clientName = null;
-            // Clear assigned unit from application
-            app.assigned_unit = null;
-            store.saveApplication(app);
-          } else if (['reservado', 'aprobado'].includes(status)) {
-            unit.status = 'reserved';
-            unit.applicationId = app.id;
-            unit.clientName = app.client_name || app.client?.name || '';
+      await store.withTransaction(async (client) => {
+        const listing = store.getListingById(app.listing_id);
+        if (listing && Array.isArray(listing.unit_inventory)) {
+          const unit = listing.unit_inventory.find(u => u.id === targetUnitId);
+          if (unit) {
+            if (status === 'completado') {
+              unit.status = 'sold';
+            } else if (status === 'rechazado') {
+              unit.status = 'available';
+              unit.applicationId = null;
+              unit.clientName = null;
+              // Clear assigned unit from application
+              app.assigned_unit = null;
+              await store.saveApplication(app, client);
+            } else if (['reservado', 'aprobado'].includes(status)) {
+              unit.status = 'reserved';
+              unit.applicationId = app.id;
+              unit.clientName = app.client_name || app.client?.name || '';
+            }
+            listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
+            await store.saveListing(listing, client);
           }
-          listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
-          store.saveListing(listing);
         }
-      }
+      });
     } catch (e) {
       console.error('[inventory] Auto-update error:', e.message);
       recordInventorySyncFailure(app, e, targetUnitId);
@@ -3139,6 +3149,12 @@ router.get('/commissions/summary', userAuth, (req, res) => {
     apps = store.getApplicationsByBroker(user.id);
   }
 
+  // TODO(transactional-rewrite): commission amounts come back encrypted
+  // from the store list helpers — the math below treats sale_amount /
+  // agent_amount / agent_net as numbers, which silently produces 0 when
+  // they're still ciphertext. Map through decryptAppPII before the
+  // filter+reduce in a follow-up; the GET / and GET /my list endpoints
+  // are already fixed.
   const withCommission = apps.filter(a => a.commission && a.commission.sale_amount > 0);
 
   let agent_pending = 0;
