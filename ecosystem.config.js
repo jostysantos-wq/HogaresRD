@@ -1,5 +1,11 @@
 // PM2 Ecosystem Configuration — HogaresRD
 // Usage: pm2 start ecosystem.config.js
+//
+// ⚠️  Crash-loop alerting: PM2 will auto-restart up to `max_restarts: 20`
+// times before giving up. Crash-loops, uncaught exceptions, and unhandled
+// rejections are now alertable via the ALERT_WEBHOOK_URL env var
+// (see utils/alerts.js + the process handlers near the top of server.js).
+// If ALERT_WEBHOOK_URL is unset, alerts degrade to console.warn.
 module.exports = {
   apps: [
     {

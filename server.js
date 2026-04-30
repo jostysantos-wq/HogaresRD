@@ -77,6 +77,31 @@ const { router: newsletterRouter, sendNewsletter } = require('./routes/newslette
 const { router: savedSearchRouter, checkSavedSearchMatches } = require('./routes/saved-searches');
 
 const store = require('./routes/store');
+const { sendAlert } = require('./utils/alerts');
+
+// ── Process crash alerts ──────────────────────────────────────
+// Fire an alert BEFORE error-tracker's handler runs (Node calls listeners
+// in registration order). We don't change process behavior — error-tracker
+// still logs and PM2 still restarts on a real crash. Throttling inside
+// sendAlert prevents flood loops if the same crash repeats.
+process.on('uncaughtException', (err) => {
+  try {
+    sendAlert('error', 'Uncaught exception', {
+      message: (err && err.message) || String(err),
+      stack:   (err && err.stack) || null,
+    });
+  } catch (_) { /* never block the original handler */ }
+});
+process.on('unhandledRejection', (reason) => {
+  try {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    sendAlert('error', 'Unhandled rejection', {
+      message: err.message,
+      stack:   err.stack || null,
+    });
+  } catch (_) { /* never block */ }
+});
+
 const errorTracker = require('./routes/error-tracker');
 errorTracker.initProcessHandlers();
 
@@ -2207,6 +2232,7 @@ const ARCHIVE_BATCH_SIZE  = 500;
 cron.schedule('0 12 * * *', () => {
   if (_newsletterRunning) {
     console.warn('[cron newsletter] previous run still in flight, skipping');
+    sendAlert('warning', 'newsletter cron overlapping run', {});
     return;
   }
   _newsletterRunning = true;
@@ -2221,6 +2247,7 @@ cron.schedule('0 12 * * *', () => {
 cron.schedule('0 */2 * * *', () => {
   if (_savedSearchRunning) {
     console.warn('[cron saved-search] previous run still in flight, skipping');
+    sendAlert('warning', 'saved-search cron overlapping run', {});
     return;
   }
   _savedSearchRunning = true;
@@ -2238,6 +2265,7 @@ cron.schedule('0 */2 * * *', () => {
 cron.schedule('17 * * * *', () => {
   if (_archiveRunning) {
     console.warn('[cron archive] previous run still in flight, skipping');
+    sendAlert('warning', 'archive cron overlapping run', {});
     return;
   }
   _archiveRunning = true;
@@ -2588,6 +2616,68 @@ if (process.env.ENABLE_AI_MONITOR === '1') {
 } else {
   console.log('[ai-monitor] Daily cron disabled (set ENABLE_AI_MONITOR=1 to enable)');
 }
+
+// ── Health-check cron (every 5 minutes) ─────────────────────────────
+// Inlines the same DB probe + notification-failure check as /api/health.
+// Fires alerts when:
+//   - DB is 'unreachable' for two consecutive runs (transient blips ignored)
+//   - notification_failures count exceeds 50
+// The existing _running guard pattern prevents overlapping runs.
+let _healthCheckRunning = false;
+let _healthDbUnreachableStreak = 0;
+cron.schedule('*/5 * * * *', async () => {
+  if (_healthCheckRunning) {
+    console.warn('[cron health-check] previous run still in flight, skipping');
+    sendAlert('warning', 'health-check cron overlapping run', {});
+    return;
+  }
+  _healthCheckRunning = true;
+  try {
+    // DB probe — same logic as /api/health (2s race timeout).
+    let db = 'skipped';
+    if (process.env.DATABASE_URL && store && store.pool && typeof store.pool.query === 'function') {
+      try {
+        await Promise.race([
+          store.pool.query('SELECT 1'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('db probe timeout')), 2000)),
+        ]);
+        db = 'ok';
+      } catch (e) {
+        db = 'unreachable';
+      }
+    }
+
+    if (db === 'unreachable') {
+      _healthDbUnreachableStreak++;
+      if (_healthDbUnreachableStreak >= 2) {
+        const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+        sendAlert('critical', 'DB unreachable from app process', {
+          memory: `${memMB}MB`,
+          uptime: Math.round(process.uptime()),
+          consecutive_failures: _healthDbUnreachableStreak,
+        });
+      }
+    } else {
+      _healthDbUnreachableStreak = 0;
+    }
+
+    // Notification-failure count — same source as /api/health.
+    try {
+      const failPath = path.join(DATA_DIR, 'notification-failures.log');
+      if (fs.existsSync(failPath)) {
+        const raw = fs.readFileSync(failPath, 'utf8');
+        const count = raw.split('\n').filter(l => l.trim().length > 0).length;
+        if (count > 50) {
+          sendAlert('warning', 'High notification failure count', { count });
+        }
+      }
+    } catch (_) { /* non-fatal */ }
+  } catch (e) {
+    console.error('[cron health-check] error:', e.message);
+  } finally {
+    _healthCheckRunning = false;
+  }
+}, { timezone: 'America/Santo_Domingo' });
 
 // ── Admin: AI monitor endpoints ─────────────────────────────────────
 app.get('/admin/monitor/results', adminSessionAuth, (req, res) => {
