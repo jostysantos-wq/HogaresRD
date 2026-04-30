@@ -6,80 +6,111 @@
   <title>Crear Cuenta — HogaresRD</title>
   <link rel="stylesheet" href="/css/core.css">
   <style>
+    /* Editorial palette — overrides core.css tokens for this page only */
     :root {
+      --bg:          #FBF6EE;
+      --bg-card:     #FFFFFF;
+      --bg-section:  #F4F1EA;
+      --ink:         #131318;
+      --ink-soft:    #36363E;
+      --ink-muted:   #8A8A93;
+      --line:        rgba(19,19,24,0.10);
+      --serif:       ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill:      999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop:  0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --accent:      #131318;
+      --text:        #131318;
+      --text-muted:  #8A8A93;
+      --text-secondary: #36363E;
+      --border:      rgba(19,19,24,0.10);
       --toggle-bg: #CBD5E1;
       --toggle-knob: #FFFFFF;
     }
     [data-theme="dark"] {
+      --bg:          #15131A;
+      --bg-card:     #1F1C24;
+      --bg-section:  #1A1820;
+      --ink:         #F5F1EA;
+      --ink-soft:    #C9C5BC;
+      --ink-muted:   #8B867E;
+      --line:        rgba(245,241,234,0.12);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop:  0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --accent:      #F5F1EA;
+      --text:        #F5F1EA;
+      --text-muted:  #8B867E;
+      --text-secondary: #C9C5BC;
+      --border:      rgba(245,241,234,0.12);
       --toggle-bg: #2D3F58;
       --toggle-knob: #EDF2F7;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: var(--font); background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; }
 
-    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
-    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
-    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    nav { background: var(--bg-section); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--ink); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: var(--ink); }
 
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem; }
 
     .selector-wrap { width: 100%; max-width: 580px; }
 
-    .selector-title { font-size: 1.7rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 0.4rem; }
-    .selector-sub { font-size: 0.95rem; color: var(--text-muted); text-align: center; margin-bottom: 2.25rem; }
+    .selector-title { font-family: var(--serif); font-size: 28px; font-weight: 400; color: var(--ink); text-align: center; margin-bottom: 0.4rem; letter-spacing: -0.01em; }
+    .selector-sub { font-size: 0.95rem; color: var(--ink-muted); text-align: center; margin-bottom: 2.25rem; }
 
     .account-cards { display: flex; flex-direction: column; gap: 1rem; }
 
     .account-card {
       display: flex; align-items: center; gap: 1.1rem;
-      background: var(--bg-card); border: 2px solid var(--border);
-      border-radius: 8px; padding: 1.25rem 1.4rem;
+      background: var(--bg-card); border: 1px solid var(--line);
+      border-radius: 22px; padding: 1.25rem 1.4rem;
       text-decoration: none; cursor: pointer;
       transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-soft);
     }
     .account-card:hover {
-      border-color: var(--border-strong);
-      box-shadow: var(--shadow-md);
+      border-color: var(--ink);
+      box-shadow: var(--shadow-pop);
       transform: translateY(-2px);
     }
 
     .card-icon {
-      width: 52px; height: 52px; border-radius: 6px;
+      width: 52px; height: 52px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .card-icon svg { width: 26px; height: 26px; fill: #fff; }
 
-    .icon-user    { background: var(--text); }
-    .icon-broker  { background: var(--text-secondary); }
-    .icon-inm     { background: var(--text-secondary); }
+    .icon-user    { background: var(--ink); }
+    .icon-broker  { background: var(--ink-soft); }
+    .icon-inm     { background: var(--ink-soft); }
 
     .card-body { flex: 1; min-width: 0; }
-    .card-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem; }
-    .card-desc  { font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
+    .card-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); margin-bottom: 0.2rem; }
+    .card-desc  { font-size: 0.82rem; color: var(--ink-muted); line-height: 1.45; }
 
     .card-badge {
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px;
-      text-transform: uppercase; padding: 3px 9px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+      padding: 4px 10px; border-radius: 999px;
       flex-shrink: 0; white-space: nowrap;
+      background: var(--bg-section); color: var(--ink-soft);
     }
-    .badge-free    { background: var(--bg-secondary); color: var(--text-secondary); }
-    .badge-pro     { background: rgba(202,138,4,0.12); color: #92610a; }
-    .badge-empresa { background: rgba(124,58,237,0.12); color: #7c3aed; }
-    [data-theme="dark"] .badge-pro { color: #fbbf24; background: rgba(251,191,36,0.15); }
+    .badge-free    { background: var(--bg-section); color: var(--ink-soft); }
+    .badge-pro     { background: var(--bg-section); color: var(--ink-soft); }
+    .badge-empresa { background: var(--bg-section); color: var(--ink-soft); }
 
-    .card-arrow { color: var(--text-muted); font-size: 1.3rem; flex-shrink: 0; transition: transform 0.18s, color 0.18s; }
-    .account-card:hover .card-arrow { transform: translateX(4px); color: var(--accent); }
+    .card-arrow { color: var(--ink-muted); font-size: 1.3rem; flex-shrink: 0; transition: transform 0.18s, color 0.18s; }
+    .account-card:hover .card-arrow { transform: translateX(4px); color: var(--ink); }
 
     .divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.75rem 0 1.25rem; }
-    .divider-line { flex: 1; height: 1px; background: var(--border); }
-    .divider-text { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+    .divider-line { flex: 1; height: 1px; background: var(--line); }
+    .divider-text { font-size: 0.78rem; color: var(--ink-muted); white-space: nowrap; }
 
-    .auth-links { text-align: center; font-size: 0.88rem; color: var(--text-muted); }
-    .auth-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .auth-links { text-align: center; font-size: 0.88rem; color: var(--ink-muted); }
+    .auth-links a { color: var(--ink); text-decoration: none; font-weight: 600; }
     .auth-links a:hover { text-decoration: underline; }
 
-    footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+    footer { text-align: center; padding: 1.25rem; font-size: 0.82rem; color: var(--ink-muted); border-top: 1px solid var(--line); }
 
     @media (max-width: 480px) {
       .card-badge { display: none; }
@@ -142,7 +173,7 @@
 
         <!-- Constructora -->
         <a href="/register-constructora" class="account-card">
-          <div class="card-icon" style="background:#7c3aed;">
+          <div class="card-icon" style="background:var(--ink-soft);">
             <svg viewBox="0 0 24 24"><path d="M13 2v8h8c0-4.42-3.58-8-8-8zm6.32 13.89C20.37 14.54 21 12.84 21 11H6.44l-.95-2H1v2h2.22s1.89 4.07 2.12 4.42c-1.1.59-1.84 1.75-1.84 3.08C3.5 20.43 5.07 22 7 22c1.76 0 3.22-1.3 3.46-3h2.08c.24 1.7 1.7 3 3.46 3 1.93 0 3.5-1.57 3.5-3.5 0-1.04-.46-1.97-1.18-2.61zM7 20c-.83 0-1.5-.67-1.5-1.5S6.17 17 7 17s1.5.67 1.5 1.5S7.83 20 7 20zm9 0c-.83 0-1.5-.67-1.5-1.5S15.17 17 16 17s1.5.67 1.5 1.5S16.83 20 16 20z"/></svg>
           </div>
           <div class="card-body">
