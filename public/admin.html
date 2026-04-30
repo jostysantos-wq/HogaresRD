@@ -2007,6 +2007,7 @@
 
   // ── Auth ─────────────────────────────────────────────────────
   async function logout() {
+    if (!confirm('¿Cerrar sesión?')) return;
     try { await fetch(ADMIN_BASE + '/logout', { method: 'POST' }); } catch {}
     location.href = ADMIN_BASE + '/login';
   }

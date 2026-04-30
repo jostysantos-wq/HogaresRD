@@ -217,15 +217,44 @@
       `;
     }
 
-    function renderAlreadyVerified() {
-      let dashLink = '/home';
+    async function renderAlreadyVerified() {
+      let meUser = null;
       try {
-        const u = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
-        if (u && ['agency','broker','inmobiliaria'].includes(u.role)) dashLink = '/broker';
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (r.ok) {
+          meUser = await r.json();
+          try { localStorage.setItem('hogaresrd_user', JSON.stringify(meUser)); } catch {}
+        }
       } catch {}
+      if (!meUser) {
+        try { meUser = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch {}
+      }
+
+      const proRoles = ['agency','broker','inmobiliaria','constructora'];
+      const proRole  = meUser && proRoles.includes(meUser.role);
+      let dashLink   = proRole ? '/broker' : '/home';
+
+      // Mirror renderSuccess: pros without active subscription must go to /subscribe.
+      if (proRole) {
+        try {
+          const r = await fetch('/api/stripe/status', { credentials: 'include' });
+          if (r.ok) {
+            const status = await r.json();
+            if (status.required && status.canAccessDashboard !== true) {
+              dashLink = '/subscribe';
+            }
+          } else {
+            dashLink = '/subscribe';
+          }
+        } catch {
+          dashLink = '/subscribe';
+        }
+      }
+
+      const buttonLabel = dashLink === '/subscribe' ? 'Activar mi cuenta →' : 'Ir a mi cuenta →';
       render('✔️', 'Ya verificado',
         'Este correo ya fue verificado anteriormente.',
-        `<a href="${dashLink}" class="btn">Ir a mi cuenta →</a>`
+        `<a href="${dashLink}" class="btn">${buttonLabel}</a>`
       );
     }
 
