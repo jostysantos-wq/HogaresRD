@@ -34,6 +34,9 @@ struct ConversationThreadView: View {
     @State private var transferError:     String?
     @State private var transferred:       Bool = false
     @State private var emptyPolls:        Int  = 0
+    @State private var showQuickReplies:  Bool = false
+
+    @Environment(\.colorScheme) private var colorScheme
 
     private var myId: String { api.currentUser?.id ?? "" }
     private var myRole: String { api.currentUser?.role ?? "user" }
@@ -72,265 +75,32 @@ struct ConversationThreadView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Closed banner ───────────────────────────────────────
-            if isClosed {
-                HStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .font(.caption).foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Conversación cerrada")
-                            .font(.caption).bold()
-                            .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
-                        if let name = closedByName {
-                            Text("Cerrada por \(name)" + (closedReason.map { " — \($0)" } ?? ""))
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05).opacity(0.85))
-                                .lineLimit(2)
-                        }
+        ZStack {
+            chatBackground.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                customHeader
+
+                if conversation.claimRequired == true && !claimed {
+                    claimRequiredView
+                } else {
+                    propertyCard
+
+                    if isClosed { closedBanner }
+                    if let err = loadError { errorBanner(err) }
+
+                    messagesScroll
+
+                    if isClosed {
+                        closedInputPlaceholder
+                    } else {
+                        inputArea
                     }
-                    Spacer()
-                }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background(Color(red: 1.0, green: 0.95, blue: 0.78))
-                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color(red: 0.99, green: 0.90, blue: 0.61)), alignment: .bottom)
-            }
-
-            // ── Claim required prompt ──────────────────────────────
-            if conversation.claimRequired == true && !claimed {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "shield.lefthalf.filled")
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color.rdBlue)
-                    Text("Conversación pendiente")
-                        .font(.title3).bold()
-                    Text("\(conversation.clientName) envió \(conversation.messageCount ?? 0) mensaje(s) sobre \(conversation.propertyTitle). Reclama esta conversación para ver los mensajes y responder.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                    Button {
-                        Task { await claimConv() }
-                    } label: {
-                        if claiming {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Reclamar conversación")
-                                .font(.subheadline).bold()
-                        }
-                    }
-                    .frame(width: 220)
-                    .padding(.vertical, 12)
-                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.white)
-                    .disabled(claiming)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-
-            // ── Error banner (visible to user) ──────────────────────
-            if let err = loadError {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(err)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                    Spacer()
-                    Button("Reintentar") { Task { await loadMessages() } }
-                        .font(.caption2).bold()
-                }
-                .padding(10)
-                .background(Color.orange.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(.horizontal, 10)
-            }
-
-            // ── Message list ────────────────────────────────────────
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if messagesLoaded && messages.isEmpty {
-                            Text("No hay mensajes aún")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .padding(.top, 40)
-                        }
-                        // Date-grouped messages
-                        ForEach(groupedMessages, id: \.date) { group in
-                            // Date separator
-                            Text(group.dateLabel)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 14).padding(.vertical, 5)
-                                .background(Color(.systemGray6))
-                                .clipShape(Capsule())
-                                .padding(.vertical, 10)
-
-                            ForEach(group.messages) { msg in
-                                if msg.senderRole == "system" {
-                                    SystemMessagePill(text: msg.text)
-                                        .id(msg.id)
-                                } else {
-                                    MessageBubble(
-                                        msg: msg,
-                                        isMe: isMyMessage(msg),
-                                        showSender: shouldShowSender(msg, in: group.messages)
-                                    )
-                                    .id(msg.id)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                }
-                .onChange(of: messages.count) { _, _ in scrollToBottom(proxy) }
-                .onAppear { scrollToBottom(proxy) }
-            }
-
-            Divider()
-
-            // ── Input bar (hidden when closed) ───────────────────────
-            if isClosed {
-                HStack {
-                    Spacer()
-                    Text("No puedes enviar mensajes en una conversación cerrada.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                }
-                .padding(.horizontal, 14).padding(.vertical, 14)
-                .background(Color(.systemBackground))
-            } else {
-                VStack(spacing: 0) {
-                    // Quick reply chips — shown when input is empty and few messages
-                    if input.isEmpty && messages.count < 6 {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(quickReplies, id: \.self) { reply in
-                                    Button {
-                                        input = reply
-                                    } label: {
-                                        Text(reply)
-                                            .font(.caption)
-                                            .foregroundStyle(Color.rdBlue)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 7)
-                                            .background(Color.rdBlue.opacity(0.08))
-                                            .clipShape(Capsule())
-                                            .overlay(Capsule().stroke(Color.rdBlue.opacity(0.2), lineWidth: 0.5))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                        }
-                        .background(Color(.systemBackground))
-                    }
-
-                    HStack(spacing: 10) {
-                        TextField("Escribe un mensaje...", text: $input, axis: .vertical)
-                            .lineLimit(1...4)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                        Button {
-                            Task { await send() }
-                        } label: {
-                            Image(systemName: sending ? "clock" : "paperplane.fill")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 40, height: 40)
-                                .background(canSend ? Color.rdBlue : Color(.systemGray4))
-                                .clipShape(Circle())
-                        }
-                        .disabled(!canSend)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.systemBackground))
-                }
-            }
-            } // end else (claim required check)
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("")
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                NavigationLink {
-                    ListingDetailView(id: conversation.propertyId)
-                } label: {
-                    HStack(spacing: 8) {
-                        if let imgStr = conversation.propertyImage, let url = URL(string: imgStr) {
-                            CachedAsyncImage(url: url, maxPixelSize: 80) { phase in
-                                switch phase {
-                                case .success(let img):
-                                    img.resizable().scaledToFill()
-                                default:
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color(.systemGray5))
-                                }
-                            }
-                            .frame(width: 32, height: 32)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(conversation.propertyTitle)
-                                .font(.subheadline).bold()
-                                .lineLimit(1)
-                            Text(conversation.brokerName ?? conversation.clientName)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-            if canToggleClose || canTransfer {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        if canTransfer && !isClosed {
-                            Button {
-                                openTransferSheet()
-                            } label: {
-                                Label("Transferir a otro agente", systemImage: "person.crop.circle.badge.arrow.right")
-                            }
-                        }
-                        if canToggleClose {
-                            if isClosed {
-                                Button {
-                                    Task { await toggleClose() }
-                                } label: {
-                                    Label("Reabrir conversación", systemImage: "lock.open")
-                                }
-                            } else {
-                                Button(role: .destructive) {
-                                    closeReasonInput = ""
-                                    showCloseSheet = true
-                                } label: {
-                                    Label("Cerrar conversación", systemImage: "lock")
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 17, weight: .semibold))
-                    }
-                    .disabled(toggling)
                 }
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showCloseSheet) {
             closeReasonSheet
         }
@@ -349,6 +119,397 @@ struct ConversationThreadView: View {
                 try? await Task.sleep(for: .seconds(interval))
                 await pollNew()
             }
+        }
+    }
+
+    // MARK: - Theme
+
+    static let chatTeal = Color(red: 96/255, green: 178/255, blue: 170/255)
+
+    private var chatBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.07, green: 0.08, blue: 0.09)
+            : Color(red: 0.95, green: 0.94, blue: 0.91)
+    }
+    private var cardBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.13, green: 0.14, blue: 0.16)
+            : .white
+    }
+    private var theirBubbleBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.16, green: 0.17, blue: 0.19)
+            : .white
+    }
+    private var sendButtonColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+    private var sendIconColor: Color {
+        colorScheme == .dark ? .black : .white
+    }
+
+    private var headerTitle: String {
+        if conversation.clientId == myId {
+            return conversation.brokerName ?? "Conversación"
+        }
+        return conversation.clientName
+    }
+
+    private var headerAvatarURL: URL? {
+        conversation.otherPartyAvatarURL(myId: myId)
+    }
+
+    private var headerInitial: String {
+        String(headerTitle.prefix(1)).uppercased()
+    }
+
+    // MARK: - Header
+
+    private var customHeader: some View {
+        HStack(spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(cardBackground))
+                    .overlay(Circle().stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            Text(headerTitle)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            if canToggleClose || canTransfer {
+                Menu {
+                    if canTransfer && !isClosed {
+                        Button {
+                            openTransferSheet()
+                        } label: {
+                            Label("Transferir a otro agente", systemImage: "person.crop.circle.badge.arrow.right")
+                        }
+                    }
+                    if canToggleClose {
+                        if isClosed {
+                            Button {
+                                Task { await toggleClose() }
+                            } label: {
+                                Label("Reabrir conversación", systemImage: "lock.open")
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                closeReasonInput = ""
+                                showCloseSheet = true
+                            } label: {
+                                Label("Cerrar conversación", systemImage: "lock")
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(cardBackground))
+                        .overlay(Circle().stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
+                }
+                .disabled(toggling)
+            } else {
+                Color.clear.frame(width: 38, height: 38)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+    }
+
+    // MARK: - Property card
+
+    private var propertyCard: some View {
+        NavigationLink {
+            ListingDetailView(id: conversation.propertyId)
+        } label: {
+            HStack(spacing: 12) {
+                Group {
+                    if let url = headerAvatarURL {
+                        CachedAsyncImage(url: url, maxPixelSize: 100) { phase in
+                            switch phase {
+                            case .success(let img):
+                                img.resizable().scaledToFill()
+                            default:
+                                avatarFallback
+                            }
+                        }
+                    } else {
+                        avatarFallback
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(conversation.propertyTitle)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text("Publicado por \(headerTitle)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                if let imgStr = conversation.propertyImage, let url = URL(string: imgStr) {
+                    CachedAsyncImage(url: url, maxPixelSize: 160) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray5))
+                        }
+                    }
+                    .frame(width: 60, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+            .padding(12)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 10)
+    }
+
+    private var avatarFallback: some View {
+        ZStack {
+            Circle().fill(Self.chatTeal.opacity(0.18))
+            Text(headerInitial)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Self.chatTeal)
+        }
+    }
+
+    // MARK: - Banners
+
+    private var closedBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.caption).foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Conversación cerrada")
+                    .font(.caption).bold()
+                    .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
+                if let name = closedByName {
+                    Text("Cerrada por \(name)" + (closedReason.map { " — \($0)" } ?? ""))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05).opacity(0.85))
+                        .lineLimit(2)
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(Color(red: 1.0, green: 0.95, blue: 0.78))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 14)
+        .padding(.bottom, 6)
+    }
+
+    private func errorBanner(_ err: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(err)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+            Spacer()
+            Button("Reintentar") { Task { await loadMessages() } }
+                .font(.caption2).bold()
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 14)
+        .padding(.bottom, 6)
+    }
+
+    // MARK: - Claim required prompt
+
+    private var claimRequiredView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.system(size: 44))
+                .foregroundStyle(Self.chatTeal)
+            Text("Conversación pendiente")
+                .font(.title3).bold()
+            Text("\(conversation.clientName) envió \(conversation.messageCount ?? 0) mensaje(s) sobre \(conversation.propertyTitle). Reclama esta conversación para ver los mensajes y responder.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                Task { await claimConv() }
+            } label: {
+                if claiming {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("Reclamar conversación")
+                        .font(.subheadline).bold()
+                }
+            }
+            .frame(width: 220)
+            .padding(.vertical, 12)
+            .background(Self.chatTeal, in: RoundedRectangle(cornerRadius: 12))
+            .foregroundStyle(.white)
+            .disabled(claiming)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Messages scroll
+
+    private var messagesScroll: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if messagesLoaded && messages.isEmpty {
+                        Text("No hay mensajes aún")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 40)
+                    }
+                    ForEach(groupedMessages, id: \.date) { group in
+                        Text(group.dateLabel)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14).padding(.vertical, 5)
+                            .background(cardBackground.opacity(0.7))
+                            .clipShape(Capsule())
+                            .padding(.vertical, 10)
+
+                        ForEach(group.messages) { msg in
+                            if msg.senderRole == "system" {
+                                SystemMessagePill(text: msg.text)
+                                    .id(msg.id)
+                            } else {
+                                MessageBubble(
+                                    msg: msg,
+                                    isMe: isMyMessage(msg),
+                                    showSender: shouldShowSender(msg, in: group.messages),
+                                    theirBackground: theirBubbleBackground
+                                )
+                                .id(msg.id)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+            }
+            .onChange(of: messages.count) { _, _ in scrollToBottom(proxy) }
+            .onAppear { scrollToBottom(proxy) }
+        }
+    }
+
+    // MARK: - Input area
+
+    private var closedInputPlaceholder: some View {
+        HStack {
+            Spacer()
+            Text("No puedes enviar mensajes en una conversación cerrada.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 14)
+        .background(chatBackground)
+    }
+
+    private var inputArea: some View {
+        VStack(spacing: 0) {
+            if showQuickReplies && input.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(quickReplies, id: \.self) { reply in
+                            Button {
+                                input = reply
+                                showQuickReplies = false
+                            } label: {
+                                Text(reply)
+                                    .font(.caption)
+                                    .foregroundStyle(Self.chatTeal)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(Self.chatTeal.opacity(0.12))
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(Self.chatTeal.opacity(0.3), lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showQuickReplies.toggle()
+                    }
+                } label: {
+                    Image(systemName: showQuickReplies ? "xmark" : "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Self.chatTeal)
+                        .frame(width: 38, height: 38)
+                        .overlay(Circle().stroke(Self.chatTeal, lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+
+                TextField("Escribe un mensaje...", text: $input, axis: .vertical)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+                    )
+
+                Button {
+                    Task { await send() }
+                } label: {
+                    Image(systemName: sending ? "clock" : "paperplane.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(canSend ? sendIconColor : .white)
+                        .frame(width: 40, height: 40)
+                        .background(canSend ? sendButtonColor : Color(.systemGray3))
+                        .clipShape(Circle())
+                }
+                .disabled(!canSend)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(chatBackground)
         }
     }
 
@@ -824,86 +985,76 @@ struct MessageBubble: View {
     let msg:        ConvMessage
     let isMe:       Bool
     var showSender: Bool = true
+    var theirBackground: Color = .white
+
+    private static let myColor = ConversationThreadView.chatTeal
+    private static let avatarDiameter: CGFloat = 26
 
     var body: some View {
-        HStack(alignment: .bottom) {
-            if isMe { Spacer(minLength: 60) }
-
-            VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
-                // Sender avatar + name + role badge (only for other party, and only when sender changes)
-                if !isMe && showSender {
-                    HStack(spacing: 6) {
-                        if let avatarURL = msg.senderAvatarURL {
-                            CachedAsyncImage(url: avatarURL, maxPixelSize: 60) { phase in
-                                switch phase {
-                                case .success(let img):
-                                    img.resizable().scaledToFill()
-                                default:
-                                    Text(String(msg.senderName.prefix(1)))
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .frame(width: 22, height: 22)
-                                        .background(roleColor, in: Circle())
-                                }
-                            }
-                            .frame(width: 22, height: 22)
-                            .clipShape(Circle())
-                        } else {
-                            Text(String(msg.senderName.prefix(1)))
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 22, height: 22)
-                                .background(roleColor, in: Circle())
-                        }
-                        Text(msg.senderName)
-                            .font(.caption2).bold()
-                            .foregroundStyle(roleColor)
-                        Text(roleLabel)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(roleColor)
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(roleColor.opacity(0.12))
-                            .clipShape(Capsule())
-                    }
-                    .padding(.leading, 6)
-                    .padding(.top, showSender ? 6 : 0)
-                }
-
-                // Bubble
-                HStack(alignment: .bottom, spacing: 6) {
-                    Text(msg.text)
-                        .font(.subheadline)
-                        .foregroundStyle(isMe ? .white : .primary)
-
-                    Text(timeString)
-                        .font(.system(size: 9))
-                        .foregroundStyle(isMe ? .white.opacity(0.6) : .secondary)
-                }
-                .padding(.horizontal, 13)
-                .padding(.vertical, 9)
-                .background(isMe ? Color.rdBlue : Color(.systemGray6))
-                .clipShape(ChatBubbleShape(isMe: isMe))
+        HStack(alignment: .top, spacing: 8) {
+            if isMe {
+                Spacer(minLength: 50)
+            } else if showSender {
+                senderAvatar
+            } else {
+                Color.clear.frame(width: Self.avatarDiameter)
             }
 
-            if !isMe { Spacer(minLength: 60) }
+            VStack(alignment: isMe ? .trailing : .leading, spacing: 3) {
+                if !isMe && showSender {
+                    Text(msg.senderName)
+                        .font(.caption2).bold()
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                }
+
+                Text(msg.text)
+                    .font(.system(size: 15))
+                    .foregroundStyle(isMe ? .white : .primary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(isMe ? Self.myColor : theirBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(isMe ? Color.clear : Color.primary.opacity(0.05), lineWidth: 0.5)
+                    )
+
+                Text(timeString)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+            }
+
+            if !isMe { Spacer(minLength: 50) }
         }
-        .padding(.vertical, showSender ? 2 : 1)
+        .padding(.vertical, showSender ? 6 : 2)
     }
 
-    private var roleColor: Color {
-        switch msg.senderRole {
-        case "broker":  return Color.rdBlue
-        case "client":  return Color.rdGreen
-        default:        return .secondary
+    @ViewBuilder
+    private var senderAvatar: some View {
+        if let url = msg.senderAvatarURL {
+            CachedAsyncImage(url: url, maxPixelSize: 70) { phase in
+                switch phase {
+                case .success(let img):
+                    img.resizable().scaledToFill()
+                default:
+                    avatarInitial
+                }
+            }
+            .frame(width: Self.avatarDiameter, height: Self.avatarDiameter)
+            .clipShape(Circle())
+        } else {
+            avatarInitial
         }
     }
 
-    private var roleLabel: String {
-        switch msg.senderRole {
-        case "broker":  return "Agente"
-        case "client":  return "Cliente"
-        default:        return msg.senderRole
-        }
+    private var avatarInitial: some View {
+        Text(String(msg.senderName.prefix(1)).uppercased())
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: Self.avatarDiameter, height: Self.avatarDiameter)
+            .background(Self.myColor.opacity(0.7), in: Circle())
     }
 
     private var timeString: String {
@@ -930,40 +1081,4 @@ private let _iso8601NoFrac: ISO8601DateFormatter = {
 
 private func parseISO(_ s: String) -> Date? {
     _iso8601Frac.date(from: s) ?? _iso8601NoFrac.date(from: s)
-}
-
-// MARK: - Chat Bubble Shape (tail on one side)
-
-struct ChatBubbleShape: Shape {
-    let isMe: Bool
-    private let cornerRadius: CGFloat = 16
-    private let tailSize: CGFloat = 6
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-
-        if isMe {
-            // Rounded rect with small tail on bottom-right
-            path.addRoundedRect(
-                in: CGRect(x: rect.minX, y: rect.minY, width: rect.width - tailSize, height: rect.height),
-                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
-            )
-            // Tail
-            path.move(to: CGPoint(x: rect.maxX - tailSize, y: rect.maxY - 8))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.maxX - tailSize - 4, y: rect.maxY))
-        } else {
-            // Rounded rect with small tail on bottom-left
-            path.addRoundedRect(
-                in: CGRect(x: rect.minX + tailSize, y: rect.minY, width: rect.width - tailSize, height: rect.height),
-                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
-            )
-            // Tail
-            path.move(to: CGPoint(x: rect.minX + tailSize, y: rect.maxY - 8))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX + tailSize + 4, y: rect.maxY))
-        }
-
-        return path
-    }
 }
