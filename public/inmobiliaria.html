@@ -352,6 +352,7 @@
       <button class="profile-tab" onclick="switchTab('posts', this)" id="tabPosts" style="display:none;">Noticias</button>
       <button class="profile-tab" onclick="switchTab('reviews', this)" id="tabReviews">Reseñas</button>
       <button class="profile-tab" onclick="switchTab('contact', this)">Contacto</button>
+      <button class="profile-tab" onclick="switchTab('ownerDashboard', this); loadOwnerDashboard();" id="tabOwnerDashboard" style="display:none;">Panel</button>
     </div>
   </div>
   <style>
@@ -426,6 +427,70 @@
     <section id="sectionContact" class="profile-section" style="padding:2rem 0;">
       <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Contacto</h2>
       <div id="contactInfo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;"></div>
+    </section>
+
+    <!-- D5/D9: CONSTRUCTORA DASHBOARD — only visible to the logged-in owner.
+         Aggregated inventory, capacity-aware cascade toggle, and pending
+         status approvals queue. Hidden by default; populated by JS once
+         we confirm the viewer is the owner. -->
+    <section id="sectionOwnerDashboard" class="profile-section" style="padding:2rem 0;display:none;">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;">Panel del Propietario</h2>
+
+      <!-- D5: Inventory aggregates -->
+      <div style="background:var(--bg-section);border:1px solid var(--line);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:1rem;">Inventario por Proyecto</h3>
+        <div id="inventorySummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;margin-bottom:1.25rem;"></div>
+        <div style="overflow-x:auto;">
+          <table id="inventoryByListing" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <thead><tr style="text-align:left;border-bottom:1px solid var(--line);">
+              <th style="padding:0.5rem 0.75rem;">Proyecto</th>
+              <th style="padding:0.5rem 0.75rem;">Total</th>
+              <th style="padding:0.5rem 0.75rem;">Disponibles</th>
+              <th style="padding:0.5rem 0.75rem;">Reservadas</th>
+              <th style="padding:0.5rem 0.75rem;">Vendidas</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin:1.25rem 0 0.5rem;">Por Agente</h4>
+        <div style="overflow-x:auto;">
+          <table id="inventoryByBroker" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <thead><tr style="text-align:left;border-bottom:1px solid var(--line);">
+              <th style="padding:0.5rem 0.75rem;">Agente</th>
+              <th style="padding:0.5rem 0.75rem;">Unidades vendidas</th>
+              <th style="padding:0.5rem 0.75rem;">Aplicaciones completadas</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin:1.25rem 0 0.5rem;">Últimos 12 meses</h4>
+        <div style="overflow-x:auto;">
+          <table id="inventoryByMonth" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <thead><tr style="text-align:left;border-bottom:1px solid var(--line);">
+              <th style="padding:0.5rem 0.75rem;">Mes</th>
+              <th style="padding:0.5rem 0.75rem;">Vendidas</th>
+              <th style="padding:0.5rem 0.75rem;">Reservadas</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- D9: Cascade capacity toggle -->
+      <div style="background:var(--bg-section);border:1px solid var(--line);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:0.5rem;">Cascada Inteligente</h3>
+        <p style="font-size:0.88rem;color:var(--ink-muted);margin-bottom:0.85rem;">Cuando está activo, los nuevos leads se distribuyen primero a los agentes con menor carga abierta (aplicaciones + conversaciones).</p>
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+          <input type="checkbox" id="cascadeCapacityToggle" onchange="toggleCascadeCapacity(this.checked)">
+          <span>Distribuir según capacidad del equipo</span>
+        </label>
+      </div>
+
+      <!-- D2: Pending status approvals -->
+      <div style="background:var(--bg-section);border:1px solid var(--line);border-radius:14px;padding:1.5rem;">
+        <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:0.85rem;">Aprobaciones Pendientes</h3>
+        <div id="pendingApprovalsList" style="font-size:0.9rem;"></div>
+      </div>
     </section>
 
   </div>
@@ -774,6 +839,7 @@
       const sectionMap = {
         about: 'sectionAbout', listings: 'sectionListings', team: 'sectionTeam',
         posts: 'sectionPosts', reviews: 'sectionReviews', contact: 'sectionContact',
+        ownerDashboard: 'sectionOwnerDashboard',
       };
       const section = document.getElementById(sectionMap[tab]);
       if (section) section.classList.add('active');
@@ -785,6 +851,103 @@
       }
     }
     window.switchTab = switchTab;
+
+    // ── Constructora dashboard wiring ────────────────────────────────
+    // Show the Panel tab only when the logged-in user is the owner of
+    // the inmobiliaria/constructora being viewed. We rely on /api/auth/me
+    // returning {id, role}; if either piece is missing we just hide.
+    async function _getCurrentUser() {
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch { return null; }
+    }
+    async function _maybeShowOwnerTab() {
+      const me = await _getCurrentUser();
+      if (!me || !me.id) return;
+      // _inmId is the slug/id of the page's inmobiliaria. Show the panel
+      // only if the viewer matches.
+      if (me.id !== _inmId) return;
+      const tab = document.getElementById('tabOwnerDashboard');
+      if (tab) tab.style.display = '';
+    }
+    _maybeShowOwnerTab();
+
+    let _ownerDashboardLoaded = false;
+    async function loadOwnerDashboard() {
+      if (_ownerDashboardLoaded) return;
+      _ownerDashboardLoaded = true;
+      // Inventory aggregates
+      try {
+        const r = await fetch('/api/inventory/by-owner/' + encodeURIComponent(_inmId), { credentials: 'include' });
+        if (r.ok) {
+          const d = await r.json();
+          const sum = document.getElementById('inventorySummary');
+          sum.innerHTML = [
+            ['Proyectos', d.totalListings || 0],
+            ['Unidades',  d.totalUnits || 0],
+            ['Disponibles', d.available || 0],
+            ['Reservadas',  d.reserved || 0],
+            ['Vendidas',    d.sold || 0],
+          ].map(([k, v]) => `<div style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0.85rem 1rem;text-align:center;"><strong style="font-size:1.4rem;display:block;">${v}</strong><span style="font-size:0.78rem;color:var(--ink-muted);">${k}</span></div>`).join('');
+
+          const tbL = document.querySelector('#inventoryByListing tbody');
+          tbL.innerHTML = (d.byListing || []).map(b =>
+            `<tr><td style="padding:0.5rem 0.75rem;">${esc(b.title)}</td><td style="padding:0.5rem 0.75rem;">${b.total}</td><td style="padding:0.5rem 0.75rem;">${b.available}</td><td style="padding:0.5rem 0.75rem;">${b.reserved}</td><td style="padding:0.5rem 0.75rem;">${b.sold}</td></tr>`).join('') || `<tr><td colspan="5" style="padding:0.5rem 0.75rem;color:var(--ink-muted);">Sin datos</td></tr>`;
+
+          const tbB = document.querySelector('#inventoryByBroker tbody');
+          tbB.innerHTML = (d.byBroker || []).map(b =>
+            `<tr><td style="padding:0.5rem 0.75rem;">${esc(b.broker_name || b.broker_user_id)}</td><td style="padding:0.5rem 0.75rem;">${b.units_sold}</td><td style="padding:0.5rem 0.75rem;">${b.applications_completed}</td></tr>`).join('') || `<tr><td colspan="3" style="padding:0.5rem 0.75rem;color:var(--ink-muted);">Sin datos</td></tr>`;
+
+          const tbM = document.querySelector('#inventoryByMonth tbody');
+          tbM.innerHTML = (d.byMonth || []).map(m =>
+            `<tr><td style="padding:0.5rem 0.75rem;">${esc(m.ym)}</td><td style="padding:0.5rem 0.75rem;">${m.sold}</td><td style="padding:0.5rem 0.75rem;">${m.reserved}</td></tr>`).join('') || `<tr><td colspan="3" style="padding:0.5rem 0.75rem;color:var(--ink-muted);">Sin datos</td></tr>`;
+        }
+      } catch (e) { console.warn('inventory-by-owner failed', e); }
+
+      // Capacity-aware toggle (read current state from /profile)
+      try {
+        const r = await fetch('/api/inmobiliaria/profile', { credentials: 'include' });
+        if (r.ok) {
+          const p = await r.json();
+          document.getElementById('cascadeCapacityToggle').checked = !!p.cascade_capacity_aware;
+        }
+      } catch {}
+
+      // Pending approvals queue
+      try {
+        const r = await fetch('/api/inmobiliaria/pending-approvals', { credentials: 'include' });
+        const list = document.getElementById('pendingApprovalsList');
+        if (r.ok) {
+          const d = await r.json();
+          if (!d.pending || !d.pending.length) {
+            list.innerHTML = '<p style="color:var(--ink-muted);">No hay aprobaciones pendientes.</p>';
+          } else {
+            list.innerHTML = d.pending.map(p =>
+              `<div style="border:1px solid var(--line);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.6rem;">
+                 <div style="font-weight:700;">${esc(p.requested_status)}</div>
+                 <div style="font-size:0.85rem;color:var(--ink-muted);">Solicitado por ${esc(p.requested_by_name || p.requested_by)} el ${esc((p.requested_at || '').slice(0,10))}</div>
+                 ${p.reason ? `<div style="font-size:0.85rem;margin-top:0.3rem;">${esc(p.reason)}</div>` : ''}
+                 <div style="font-size:0.78rem;color:var(--ink-muted);margin-top:0.3rem;">Aplicación: ${esc(p.application_id)}</div>
+               </div>`).join('');
+          }
+        }
+      } catch {}
+    }
+    window.loadOwnerDashboard = loadOwnerDashboard;
+
+    async function toggleCascadeCapacity(enabled) {
+      try {
+        await fetch('/api/inmobiliaria/cascade-capacity', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ enabled: !!enabled }),
+        });
+      } catch (e) { console.warn('cascade-capacity toggle failed', e); }
+    }
+    window.toggleCascadeCapacity = toggleCascadeCapacity;
 
     loadPage(1);
   </script>

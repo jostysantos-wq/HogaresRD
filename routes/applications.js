@@ -236,6 +236,17 @@ function addEvent(app, type, description, actor, actorName, data = {}) {
   app.updated_at = new Date().toISOString();
 }
 
+// D2 helper: derive the actor's effective access level. Owners
+// (inmobiliaria/constructora/admin) are always max (3 — Director).
+// Team members with explicit access_level use that; everyone else
+// (brokers, clients, etc.) get 0. Used to gate aprobado/completado.
+function OWNER_ACCESS_LEVEL_LIMIT(user) {
+  if (!user) return 0;
+  if (['inmobiliaria', 'constructora', 'admin'].includes(user.role)) return 3;
+  if (user.inmobiliaria_id) return Number(user.access_level) || 1;
+  return 0;
+}
+
 // Persist a failed delivery onto the application so it's auditable
 // and can be surfaced (or retried) later. Side-effect-only — never
 // throws; if even the recording itself blows up we just log it.
@@ -1620,6 +1631,21 @@ router.put('/:id/status', userAuth, async (req, res) => {
   const { status, reason } = req.body;
   if (!status) return res.status(400).json({ error: 'status es requerido' });
 
+  // ── D2: approval-delegation gate ────────────────────────────
+  // Critical-stage transitions (`aprobado`, `completado`) require an
+  // owner-level actor. effectiveAccessLevel is NOT yet wired across
+  // all user records, so per the audit spec we fall back to
+  // role==='secretary' as the escalation trigger only — brokers,
+  // owners, and admins are unaffected. Secretaries get pushed to the
+  // /recommend-status flow. When access_level rolls out broadly,
+  // tighten this to also gate Asistente-level (level<2) team members.
+  if (['aprobado', 'completado'].includes(status) && user?.role === 'secretary') {
+    return res.status(403).json({
+      error: 'Necesitas autorización del propietario para aprobar esta etapa.',
+      code:  'requires_escalation',
+    });
+  }
+
   // ── Idempotency: no-op if already in the requested state ─────
   // This used to throw "Transición no válida: X → X" whenever the
   // broker's UI was one tick behind the server (e.g. the client had
@@ -1668,6 +1694,10 @@ router.put('/:id/status', userAuth, async (req, res) => {
 
   store.saveApplication(app);
 
+  // D2: clear any pending-approval rows tied to this app — the owner
+  // accepted the transition (or moved past it).
+  try { store.removePendingApprovalsForApp(app.id); } catch {}
+
   // ── Cancel pending tasks + void commission on terminal statuses ──
   if (status === 'rechazado' || status === 'completado') {
     // Cancel all active tasks for this application
@@ -1698,6 +1728,45 @@ router.put('/:id/status', userAuth, async (req, res) => {
         // Outer route already responded — log and continue. Inventory-sync
         // path follows; this failure does not block the status change.
       }
+    }
+  }
+
+  // ── D3: auto-assign a unit on completado when none was reserved ──
+  // The constructora workflow normally reserves a unit at `reservado`
+  // and flips it to `sold` here, but some teams skip the reservation
+  // step (manual sales, off-platform deals). On `completado` with no
+  // pre-reserved unit, grab the first available unit from the
+  // listing's inventory so the constructora's stock count stays
+  // accurate. Logged via `completed_without_unit` when stock is empty.
+  if (status === 'completado' && !app.assigned_unit?.unitId && app.listing_id) {
+    try {
+      await store.withTransaction(async (client) => {
+        const listing = store.getListingById(app.listing_id);
+        if (listing && Array.isArray(listing.unit_inventory) && listing.unit_inventory.length) {
+          const unit = listing.unit_inventory.find(u => u.status === 'available');
+          if (unit) {
+            unit.status        = 'sold';
+            unit.applicationId = app.id;
+            unit.clientName    = app.client_name || app.client?.name || '';
+            listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
+            await store.saveListing(listing, client);
+
+            app.assigned_unit = { unitId: unit.id, unitLabel: unit.label, unitType: unit.type };
+            addEvent(app, 'unit_auto_assigned',
+              `Unidad ${unit.label} asignada automáticamente al completar la venta`,
+              'system', 'Sistema', { unit_id: unit.id, unit_label: unit.label });
+            await store.saveApplication(app, client);
+          } else {
+            addEvent(app, 'completed_without_unit',
+              'Aplicación completada sin unidad asignada — inventario agotado',
+              'system', 'Sistema', { listing_id: listing.id, reason: 'inventory_exhausted' });
+            await store.saveApplication(app, client);
+          }
+        }
+      });
+    } catch (e) {
+      console.error('[inventory] Auto-assign on completed error:', e.message);
+      recordInventorySyncFailure(app, e, null);
     }
   }
 
@@ -3190,6 +3259,7 @@ router.post('/:id/commission', userAuth, (req, res) => {
 });
 
 // PUT /:id/commission/review — inmobiliaria owner approves / adjusts / rejects
+// SECRETARY-GATE: HTML hide handled in broker.html commission card; check role===secretary
 router.put('/:id/commission/review', userAuth, async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
@@ -3215,6 +3285,17 @@ router.put('/:id/commission/review', userAuth, async (req, res) => {
   const action = (req.body?.action || '').toString();
   if (!['approve', 'adjust', 'reject'].includes(action)) {
     return res.status(400).json({ error: 'Acción inválida.' });
+  }
+
+  // D6: secretaries can submit/upload commissions but cannot APPROVE them.
+  // The owner-only check above already blocks role==='secretary' (since they
+  // hit that branch), but be explicit for the `approve` action so the error
+  // code is meaningful to the client UI (which may want to hide the button).
+  if (action === 'approve' && user.role === 'secretary') {
+    return res.status(403).json({
+      error: 'Solo el propietario puede aprobar comisiones.',
+      code:  'requires_owner',
+    });
   }
 
   if (action === 'adjust') {
@@ -3318,7 +3399,10 @@ router.put('/:id/commission/review', userAuth, async (req, res) => {
     }
   }
 
-  res.json({ success: true, commission: app.commission });
+  // D6: surface `secretary_can_approve` so the broker dashboard UI can
+  // hide the "Aprobar" button for secretaries reactively. Always false
+  // for now — the gate above already blocks role==='secretary'.
+  res.json({ success: true, commission: app.commission, secretary_can_approve: false });
 });
 
 // ── GET /:id/commission/history — audit trail of commission changes ──
@@ -4076,6 +4160,57 @@ router.post('/bulk', userAuth, async (req, res) => {
   });
 
   res.json({ ok: true, action, results });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── D2: POST /:id/recommend-status ───────────────────────────────
+// Secretaries (or any actor without authorization to flip a
+// critical-stage status directly) can RECOMMEND a status change.
+// This persists a pending-approval row for the inmobiliaria owner
+// and emits a `status_recommended` event — but does NOT change
+// app.status. The owner accepts/rejects via the normal
+// PUT /:id/status endpoint, which clears the pending row.
+// ══════════════════════════════════════════════════════════════════
+router.post('/:id/recommend-status', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  // Caller must be tied to this application: broker, owner, secretary,
+  // or admin. (Same auth surface as PUT /:id/status.)
+  const isBroker       = app.broker?.user_id === user.id;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user.role) && app.inmobiliaria_id === user.id;
+  const isSecretary    = user.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin          = user.role === 'admin' || isAdmin(req);
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  const status = (req.body?.status || '').toString();
+  const reason = (req.body?.reason || '').toString().slice(0, 500);
+  if (!status) return res.status(400).json({ error: 'status es requerido' });
+  if (!STATUS_LABELS[status])
+    return res.status(400).json({ error: `Estado desconocido: ${status}` });
+
+  const approval = {
+    id:                 'pa_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    application_id:     app.id,
+    requested_status:   status,
+    reason,
+    requested_by:       user.id,
+    requested_by_name:  user.name || '',
+    requested_at:       new Date().toISOString(),
+    inmobiliaria_id:    app.inmobiliaria_id || null,
+  };
+  store.addPendingApproval(approval);
+
+  addEvent(app, 'status_recommended',
+    `Recomendado: cambiar estado a ${STATUS_LABELS[status]}${reason ? ' (' + reason + ')' : ''}`,
+    user.id, user.name || '', { requested_status: status, reason, approval_id: approval.id });
+  store.saveApplication(app);
+
+  res.status(201).json({ success: true, approval });
 });
 
 module.exports = router;

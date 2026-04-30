@@ -56,7 +56,9 @@ function getOptionalUser(req) {
   return store.getUserById(payload.sub);
 }
 
-/** Check if user is affiliated to a listing (via agencies array) */
+/** Check if user is affiliated to a listing (via agencies array) — used
+ * for READ access. Anyone listed as an agency on the listing, plus team
+ * members of the owning inmobiliaria/constructora, can see buyer info. */
 function isAffiliated(user, listing) {
   if (!user || !listing.agencies || !Array.isArray(listing.agencies)) return false;
   // Direct match
@@ -68,6 +70,15 @@ function isAffiliated(user, listing) {
     return listing.agencies.some(a => a.user_id && teamIds.has(a.user_id));
   }
   return false;
+}
+
+/** D4: write-protection. Only the developer (constructora role) who
+ * created the listing can mutate its unit inventory. Brokers, agencies,
+ * and inmobiliaria-team members are read-only — they were previously
+ * granted write access through `isAffiliated` which was far too lax. */
+function isOwner(user, listing) {
+  if (!user || !listing) return false;
+  return user.role === 'constructora' && user.id === listing.creator_user_id;
 }
 
 /** Strip buyer PII (clientName, clientEmail, clientPhone, applicationId)
@@ -105,7 +116,7 @@ router.get('/:listingId', (req, res) => {
 });
 
 // ── POST /api/inventory/:listingId/units ──────────────────────────────────
-// Broker/inmobiliaria adds a unit to inventory
+// Constructora owner adds a unit to inventory (D4: owner-only write).
 router.post('/:listingId/units', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
@@ -114,8 +125,8 @@ router.post('/:listingId/units', userAuth, (req, res) => {
   const listing = store.getListingById(req.params.listingId);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-  if (!isAffiliated(user, listing))
-    return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
+  if (!isOwner(user, listing))
+    return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   const { unit: payload, error: vErr } = validateUnitPayload(req.body);
   if (vErr) return res.status(400).json({ error: vErr });
@@ -157,8 +168,8 @@ router.post('/:listingId/units/batch', userAuth, (req, res) => {
 
   const listing = store.getListingById(req.params.listingId);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
-  if (!isAffiliated(user, listing))
-    return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
+  if (!isOwner(user, listing))
+    return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   const { units } = req.body;
   if (!Array.isArray(units) || !units.length)
@@ -217,8 +228,8 @@ router.delete('/:listingId/units/:unitId', userAuth, (req, res) => {
 
   const listing = store.getListingById(req.params.listingId);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
-  if (!isAffiliated(user, listing))
-    return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
+  if (!isOwner(user, listing))
+    return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   try {
     const result = store.withTransaction(() => {
@@ -249,8 +260,8 @@ router.post('/:listingId/units/:unitId/assign', userAuth, (req, res) => {
 
   const listing = store.getListingById(req.params.listingId);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
-  if (!isAffiliated(user, listing))
-    return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
+  if (!isOwner(user, listing))
+    return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   const { applicationId } = req.body;
   if (!applicationId) return res.status(400).json({ error: 'applicationId requerido' });
@@ -305,8 +316,8 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
 
   const listing = store.getListingById(req.params.listingId);
   if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
-  if (!isAffiliated(user, listing))
-    return res.status(403).json({ error: 'No estas afiliado a esta propiedad' });
+  if (!isOwner(user, listing))
+    return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   try {
     const result = store.withTransaction(() => {
@@ -342,6 +353,98 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message || 'Error' });
   }
+});
+
+// ── GET /api/inventory/by-owner/:userId ───────────────────────────────────
+// D5: project-level inventory aggregates for a constructora owner.
+// Used by the constructora dashboard. Owner-only (or admin).
+router.get('/by-owner/:userId', userAuth, (req, res) => {
+  const caller = store.getUserById(req.user.sub);
+  if (!caller) return res.status(401).json({ error: 'No autenticado' });
+
+  const ownerId = req.params.userId;
+  const isSelf  = caller.id === ownerId;
+  const isAdmin = caller.role === 'admin';
+  if (!isSelf && !isAdmin) {
+    return res.status(403).json({ error: 'Solo el propietario puede ver estos datos.' });
+  }
+
+  const allListings = store.getListings ? store.getListings() : [];
+  const listings = allListings.filter(l => l && l.creator_user_id === ownerId);
+
+  let totalUnits = 0, available = 0, reserved = 0, sold = 0;
+  const byListing = [];
+  const brokerStats = new Map(); // user_id → { name, units_sold, applications_completed }
+
+  for (const listing of listings) {
+    const inv = Array.isArray(listing.unit_inventory) ? listing.unit_inventory : [];
+    const lAvailable = inv.filter(u => u.status === 'available').length;
+    const lReserved  = inv.filter(u => u.status === 'reserved').length;
+    const lSold      = inv.filter(u => u.status === 'sold').length;
+    totalUnits += inv.length;
+    available  += lAvailable;
+    reserved   += lReserved;
+    sold       += lSold;
+    byListing.push({
+      listing_id: listing.id,
+      title:      listing.title || '',
+      total:      inv.length,
+      available:  lAvailable,
+      reserved:   lReserved,
+      sold:       lSold,
+    });
+  }
+
+  // byBroker + byMonth come from completed applications on the owner's listings.
+  // Cheap scan — small per-owner volume, no need for a DB aggregation here.
+  const allApps = store.getApplications ? store.getApplications() : [];
+  const ownerListingIds = new Set(listings.map(l => l.id));
+  const completedApps   = allApps.filter(a =>
+    a.status === 'completado' && ownerListingIds.has(a.listing_id)
+  );
+
+  for (const app of completedApps) {
+    const brokerId = app.broker?.user_id;
+    if (!brokerId) continue;
+    if (!brokerStats.has(brokerId)) {
+      brokerStats.set(brokerId, {
+        broker_user_id:         brokerId,
+        broker_name:            app.broker?.name || '',
+        units_sold:             0,
+        applications_completed: 0,
+      });
+    }
+    const s = brokerStats.get(brokerId);
+    s.applications_completed += 1;
+    if (app.assigned_unit?.unitId) s.units_sold += 1;
+  }
+
+  // byMonth — last 12 months of sold/reserved activity
+  const months = {};
+  const now    = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months[ym] = { ym, sold: 0, reserved: 0 };
+  }
+  for (const app of completedApps) {
+    if (!app.updated_at) continue;
+    const ym = app.updated_at.slice(0, 7);
+    if (months[ym]) months[ym].sold += 1;
+  }
+  // Reserved this month: best-effort count from current inventory (point-in-time)
+  // — we can't reconstruct the historical reservation timeline from the JSON
+  // blob, so just attribute current `reserved` units to the current month.
+  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  if (months[currentYm]) months[currentYm].reserved = reserved;
+
+  res.json({
+    totalListings: listings.length,
+    totalUnits, available, reserved, sold,
+    byListing,
+    byBroker: Array.from(brokerStats.values()).sort((a, b) => b.units_sold - a.units_sold),
+    byMonth:  Object.values(months),
+  });
 });
 
 // ── Helper ────────────────────────────────────────────────────────────────

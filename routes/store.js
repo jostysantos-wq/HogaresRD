@@ -348,6 +348,11 @@ let _deletionRequests = [];
 let _privacyLog = [];
 let _inmobPosts = [];
 let _inmobReviews = [];
+// D2: in-memory queue for status escalations awaiting owner approval.
+// Low-volume, ephemeral, no DB table — survives until process restart.
+// Each row: { id, application_id, requested_status, reason, requested_by,
+// requested_by_name, requested_at, inmobiliaria_id }.
+let _pendingApprovals = [];
 let _cacheReady = false;
 
 // ── Initial cache load ──────────────────────────────────────────────────
@@ -1733,6 +1738,33 @@ function deleteInmobReview(id) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// PENDING APPROVALS (D2 — secretary-recommended status changes)
+// In-memory only. Each row: { id, application_id, requested_status, reason,
+// requested_by, requested_by_name, requested_at, inmobiliaria_id }.
+// ══════════════════════════════════════════════════════════════════════════
+
+function getPendingApprovals(inmobiliariaId) {
+  if (!inmobiliariaId) return _pendingApprovals.slice();
+  return _pendingApprovals.filter(p => p.inmobiliaria_id === inmobiliariaId);
+}
+
+function addPendingApproval(approval) {
+  if (!approval || !approval.id) return;
+  // Replace existing same-id if any (idempotent)
+  const idx = _pendingApprovals.findIndex(p => p.id === approval.id);
+  if (idx >= 0) _pendingApprovals[idx] = approval;
+  else _pendingApprovals.push(approval);
+}
+
+function removePendingApproval(id) {
+  _pendingApprovals = _pendingApprovals.filter(p => p.id !== id);
+}
+
+function removePendingApprovalsForApp(applicationId) {
+  _pendingApprovals = _pendingApprovals.filter(p => p.application_id !== applicationId);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // PRIVACY LOG (CCPA compliance — 24-month retention)
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -1810,6 +1842,7 @@ module.exports = {
   withTransaction,
   getInmobPosts, getInmobPostById, getPublishedInmobPosts, saveInmobPost, deleteInmobPost,
   getInmobReviews, getApprovedInmobReviews, getInmobReviewById, saveInmobReview, deleteInmobReview,
+  getPendingApprovals, addPendingApproval, removePendingApproval, removePendingApprovalsForApp,
   getPrivacyLog, appendPrivacyLog,
   getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,

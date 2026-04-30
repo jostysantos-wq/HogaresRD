@@ -110,8 +110,12 @@ function getMailer() {
  *   belonging to this org (an inmobiliaria OR constructora). Used when leads
  *   arrive through an org's affiliate link: the cascade should only rotate
  *   among that org's team, not the listing's full agency set.
+ * @param {object} [opts]
+ * @param {boolean} [opts.useCapacity] — D9: when true, prefer brokers
+ *   whose currentLoad (open applications + open conversations) is below
+ *   the team average. Tiebreaker: original tier order (round-robin).
  */
-function getTierAgents(listing, orgScope = null) {
+function getTierAgents(listing, orgScope = null, opts = {}) {
   const creatorId = listing.creator_user_id || null;
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
   let allAgentIds = agencies.map(a => a.user_id).filter(Boolean);
@@ -149,11 +153,49 @@ function getTierAgents(listing, orgScope = null) {
   const inUpperTiers = new Set([...tier1, ...tier2]);
   const tier3 = allAgentIds.filter(id => !inUpperTiers.has(id));
 
+  // D9: capacity-aware ordering. Agency owners opt in via
+  // user.cascade_capacity_aware on their record (read at startCascade
+  // time and threaded down here). When enabled, sort each tier by
+  // currentLoad (open apps + open convs); ties keep the existing
+  // round-robin (insertion) order.
+  if (opts.useCapacity) {
+    const reorder = (ids) => {
+      if (ids.length <= 1) return ids;
+      const loads = new Map();
+      for (const id of ids) loads.set(id, _agentLoad(id));
+      // Stable sort: lower load first, original index breaks ties.
+      return ids
+        .map((id, i) => ({ id, load: loads.get(id), idx: i }))
+        .sort((a, b) => (a.load - b.load) || (a.idx - b.idx))
+        .map(o => o.id);
+    };
+    return { tier1: reorder(tier1), tier2: reorder(tier2), tier3: reorder(tier3) };
+  }
+
   // Note: no per-agent concurrent-lead cap. By design, a high-performing
   // agent can be offered multiple leads simultaneously — we bias toward
   // responsiveness over fairness. If you ever need to throttle, do it
   // here by filtering out agents with too many active claims.
   return { tier1, tier2, tier3 };
+}
+
+/** D9: count an agent's currently-open workload — open applications +
+ * open conversations. Terminal application states and closed convs are
+ * excluded so the signal reflects active capacity, not lifetime volume. */
+function _agentLoad(userId) {
+  const TERMINAL_APP = ['rechazado', 'completado'];
+  let openApps = 0, openConvs = 0;
+  try {
+    const apps = store.getApplicationsByBroker(userId) || [];
+    openApps = apps.filter(a => !TERMINAL_APP.includes(a.status)).length;
+  } catch {}
+  try {
+    const convs = store.getConversationsForBroker
+      ? (store.getConversationsForBroker(userId) || [])
+      : [];
+    openConvs = convs.filter(c => !c.closed && !c.archived).length;
+  } catch {}
+  return openApps + openConvs;
 }
 
 // ── Notification ────────────────────────────────────────────────────────
@@ -222,7 +264,7 @@ function sendAutoResponse(item) {
  *   org affiliate links where the lead should rotate within the team.
  * @returns {object|null} The created lead_queue item, or null if cascade not applicable
  */
-function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, orgScope = null) {
+function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, orgScope = null, opts = {}) {
   const listing = store.getListingById(listingId);
   if (!listing) {
     console.warn('[cascade] Listing not found:', listingId);
@@ -235,7 +277,16 @@ function startCascade(inquiryType, inquiryId, listingId, buyerInfo = {}, orgScop
     return null;
   }
 
-  const { tier1, tier2, tier3 } = getTierAgents(listing, orgScope);
+  // D9: capacity-aware mode. Caller can opt in via opts.useCapacity, or
+  // an agency owner can flip cascade_capacity_aware on their user record
+  // (read here so callers don't have to look it up).
+  let useCapacity = !!opts.useCapacity;
+  if (!useCapacity && orgScope) {
+    const owner = store.getUserById(orgScope);
+    if (owner && owner.cascade_capacity_aware === true) useCapacity = true;
+  }
+
+  const { tier1, tier2, tier3 } = getTierAgents(listing, orgScope, { useCapacity });
 
   // Determine starting tier (skip empty tiers)
   let startTier = 1;
