@@ -4,8 +4,11 @@
    Clean white base, professional blue accent, crisp typography.
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── Google Fonts ──────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ── Typography ────────────────────────────────────────────────────
+   Use the platform's native system font: SF Pro on Apple devices,
+   Segoe UI on Windows, Roboto on Android, etc. Pulls in zero web
+   fonts — no FOUT, no extra request, and the UI stays consistent
+   with the rest of the OS the user is on. */
 
 /* ── Design Tokens — Light Mode ────────────────────────────────── */
 :root {
@@ -50,7 +53,9 @@
   --nav-border:      rgba(226,232,240,0.9);
 
   /* Typography scale */
-  --font:            'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font:            -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif:      ui-serif, 'New York', Charter, Georgia, 'Cambria', serif;
+  --font-mono:       ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   --font-size-xs:    0.72rem;
   --font-size-sm:    0.85rem;
   --font-size-base:  1rem;

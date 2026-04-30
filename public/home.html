@@ -14,9 +14,6 @@
   <meta property="og:image" content="https://hogaresrd.com/img/og-default.jpg">
   <meta property="og:url" content="https://hogaresrd.com/home">
   <link rel="stylesheet" href="/css/core.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     /* ════════════════════════════════════════════════════════════
        Redesign — editorial / luxury aesthetic.
@@ -33,8 +30,13 @@
       --ink-muted:   #8A8A93;
       --line:        rgba(19,19,24,0.10);
       --line-soft:   rgba(19,19,24,0.06);
-      --serif:       'Instrument Serif', 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-      --sans:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      /* Native platform fonts — SF Pro on Apple devices, system-ui
+         elsewhere. The hero used to mix Instrument Serif with Inter;
+         now the editorial display lines reach for the OS serif (New
+         York on Apple, Georgia on Windows) and everything else uses
+         the OS UI font. No web-font requests. */
+      --sans:        -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --serif:       ui-serif, 'New York', Charter, Georgia, Cambria, serif;
       --r-pill:      999px;
       --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
       --shadow-pop:  0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
@@ -1221,7 +1223,7 @@
         var(--bg-section) 14px 28px
       );
       color: color-mix(in oklch, var(--accent) 40%, var(--text-muted));
-      font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      font-family: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
       font-size: 0.66rem;
       font-weight: 600;
       letter-spacing: 0.05em;
