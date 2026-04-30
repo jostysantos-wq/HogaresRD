@@ -8,13 +8,12 @@ struct AuthView: View {
     @Environment(\.dismiss) var dismiss
 
     enum Mode: Identifiable, Hashable {
-        case welcome, login, pickRole, registerUser, registerBroker, registerInmobiliaria, registerConstructora
+        case welcome, login, pickRole, registerBroker, registerInmobiliaria, registerConstructora
         var id: String {
             switch self {
             case .welcome: return "welcome"
             case .login: return "login"
             case .pickRole: return "pickRole"
-            case .registerUser: return "registerUser"
             case .registerBroker: return "registerBroker"
             case .registerInmobiliaria: return "registerInmobiliaria"
             case .registerConstructora: return "registerConstructora"
@@ -23,6 +22,7 @@ struct AuthView: View {
     }
 
     @State private var mode: Mode
+    @State private var prefill: RegisterPrefill?
     private let initialMode: Mode
 
     init(initialMode: Mode = .welcome) {
@@ -30,18 +30,8 @@ struct AuthView: View {
         _mode = State(initialValue: initialMode)
     }
 
-    @ViewBuilder
-    private func modeTab(title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline).bold()
-                .foregroundStyle(isActive ? .white : .primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(isActive ? Color.rdBlue : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
+    private var isFullBleed: Bool {
+        mode == .welcome || mode == .pickRole || mode == .login
     }
 
     var body: some View {
@@ -56,11 +46,33 @@ struct AuthView: View {
                         onRegister: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
                         onSuccess:  { dismiss() }
                     )
+                } else if mode == .pickRole {
+                    // Full-bleed welcome register — design ported from
+                    // Claude Design (ios-register.html). Replaces the old
+                    // role-picker list with a single form: name / email /
+                    // password / role dropdown / terms / CTA.
+                    WelcomeRegisterScreen(
+                        prefill: prefill,
+                        onLogin:   { withAnimation(.easeInOut(duration: 0.22)) { mode = .login } },
+                        onSuccess: { dismiss() },
+                        onAdvancedRole: { newMode, p in
+                            prefill = p
+                            withAnimation(.easeInOut(duration: 0.22)) { mode = newMode }
+                        }
+                    )
+                } else if mode == .login {
+                    // Full-bleed login form — same hero / sheet layout as
+                    // the register screen. Inline 2FA is handled by the
+                    // screen itself (no separate mode).
+                    WelcomeLoginFormScreen(
+                        onRegister: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                        onSuccess:  { dismiss() }
+                    )
                 } else {
-                    // Existing chrome (header + tab picker + form) for
-                    // login + register flows. Reachable from the
-                    // welcome screen's "Iniciar sesión con Email" and
-                    // "Regístrate" links.
+                    // Chrome shell — only the role-specific register
+                    // flows (Broker / Inmobiliaria / Constructora) still
+                    // use this layout because they need a long scrolling
+                    // form with section dividers and a section header.
                     ScrollView {
                         VStack(spacing: 0) {
                             ZStack {
@@ -75,60 +87,30 @@ struct AuthView: View {
                                     Text("HogaresRD")
                                         .font(.title2).bold()
                                         .foregroundStyle(.white)
-                                    if mode == .pickRole {
-                                        Text("Elige tu tipo de cuenta")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.white.opacity(0.8))
-                                    }
                                 }
                                 .padding(.vertical, 36)
                             }
 
-                            if mode == .login || mode == .pickRole {
-                                HStack(spacing: 0) {
-                                    modeTab(title: "Iniciar sesión", isActive: mode == .login) {
-                                        withAnimation(.easeInOut(duration: 0.18)) { mode = .login }
-                                    }
-                                    modeTab(title: "Crear cuenta", isActive: mode == .pickRole) {
-                                        withAnimation(.easeInOut(duration: 0.18)) { mode = .pickRole }
-                                    }
-                                }
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .padding()
-                            }
-
                             switch mode {
-                            case .welcome:
+                            case .welcome, .pickRole, .login:
                                 EmptyView() // handled above
-                            case .login:
-                                LoginForm(onSuccess: { dismiss() })
-                            case .pickRole:
-                                RolePickerView(
-                                    onPickUser: { mode = .registerUser },
-                                    onPickBroker: { mode = .registerBroker },
-                                    onPickInmobiliaria: { mode = .registerInmobiliaria },
-                                    onPickConstructora: { mode = .registerConstructora }
-                                )
-                            case .registerUser:
-                                RegisterForm(
-                                    onSuccess: { dismiss() },
-                                    onBack: { mode = .pickRole }
-                                )
                             case .registerBroker:
                                 BrokerRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { mode = .pickRole }
+                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    prefill: prefill
                                 )
                             case .registerInmobiliaria:
                                 InmobiliariaRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { mode = .pickRole }
+                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    prefill: prefill
                                 )
                             case .registerConstructora:
                                 ConstructoraRegisterForm(
                                     onSuccess: { dismiss() },
-                                    onBack: { mode = .pickRole }
+                                    onBack: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                                    prefill: prefill
                                 )
                             }
                         }
@@ -144,20 +126,20 @@ struct AuthView: View {
                         Button("Cerrar") { dismiss() }
                             .foregroundStyle(.white)
                     }
+                } else if mode == .pickRole || mode == .login {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("← Volver") {
+                            withAnimation(.easeInOut(duration: 0.22)) { mode = .welcome }
+                        }
+                        .foregroundStyle(.white)
+                    }
                 } else {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(mode == .login ? "Cerrar" : "← Volver") {
-                            if mode == .login {
-                                // From login form go back to the welcome screen
-                                withAnimation(.easeInOut(duration: 0.22)) { mode = .welcome }
-                            } else {
-                                dismiss()
-                            }
-                        }
+                        Button("← Volver") { dismiss() }
                     }
                 }
             }
-            .toolbarBackground(mode == .welcome ? .hidden : .automatic, for: .navigationBar)
+            .toolbarBackground(isFullBleed ? .hidden : .automatic, for: .navigationBar)
         }
     }
 }
@@ -365,7 +347,6 @@ struct WelcomeLoginScreen: View {
         return s
     }
 
-    // ── Apple Sign-In wiring (mirrors LoginForm.handleAppleSignIn) ──
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
         switch result {
         case .success(let auth):
@@ -397,308 +378,771 @@ struct WelcomeLoginScreen: View {
     }
 }
 
-// MARK: - Role Picker
+// MARK: - Welcome Register Screen
+// Ported from Claude Design (hogaresrd/project/ios-register.html).
+// Full-bleed architectural hero photo with a deep-blue tint, brand
+// mark + headline anchored above a white sheet that holds the form
+// (name / email / password / role dropdown / terms / CTA).
+//
+// On submit:
+// - Comprador (cliente) registers inline via api.register(...).
+// - Broker / Inmobiliaria / Constructora route to the existing
+//   detailed form so role-specific fields (license, job title,
+//   company name, etc.) can be collected. Basic fields are passed
+//   through as a prefill so the user doesn't retype them.
 
-struct RolePickerView: View {
-    var onPickUser: () -> Void
-    var onPickBroker: () -> Void
-    var onPickInmobiliaria: () -> Void
-    var onPickConstructora: () -> Void = {}
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Text("¿Cómo usarás HogaresRD?")
-                .font(.headline)
-                .padding(.top, 8)
-
-            // Cliente card
-            RoleCard(
-                icon: "person.fill",
-                title: "Cliente",
-                subtitle: "Busca propiedades, guarda favoritos y aplica a hogares en venta o alquiler.",
-                badge: "Gratis",
-                color: Color.rdBlue,
-                action: onPickUser
-            )
-
-            // Agente / Broker card
-            RoleCard(
-                icon: "person.text.rectangle.fill",
-                title: "Agente / Broker",
-                subtitle: "Gestiona clientes, publica propiedades y haz seguimiento de tu pipeline de ventas.",
-                badge: "Plan mensual",
-                color: Color(red: 0.16, green: 0.65, blue: 0.45),
-                action: onPickBroker
-            )
-
-            // Inmobiliaria card
-            RoleCard(
-                icon: "building.2.fill",
-                title: "Inmobiliaria",
-                subtitle: "Administra tu empresa, vincula agentes a tu equipo y supervisa todas las operaciones.",
-                badge: "Plan mensual",
-                color: Color(red: 0.55, green: 0.27, blue: 0.68),
-                action: onPickInmobiliaria
-            )
-
-            // Constructora card
-            RoleCard(
-                icon: "hammer.fill",
-                title: "Constructora",
-                subtitle: "Publica proyectos, gestiona inventario de unidades, vincula agentes y controla entregas.",
-                badge: "Plan mensual",
-                color: Color(red: 0.7, green: 0.35, blue: 0.04),
-                action: onPickConstructora
-            )
-
-            Text("Podrás cambiar tu tipo de cuenta más adelante desde ajustes.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 4)
+enum RegisterRole: String, CaseIterable, Identifiable {
+    case comprador, broker, inmobiliaria, constructora
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .comprador:    return "🏠 Comprador / Inquilino"
+        case .broker:       return "🤝 Agente Broker"
+        case .inmobiliaria: return "🏢 Inmobiliaria"
+        case .constructora: return "🔨 Constructora"
         }
-        .padding(.horizontal)
-        .padding(.bottom, 32)
     }
 }
 
-struct RoleCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    var badge: String? = nil
-    let color: Color
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(color)
-                        .frame(width: 48, height: 48)
-                    Image(systemName: icon)
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(title)
-                            .font(.subheadline).bold()
-                            .foregroundStyle(.primary)
-                        if let badge {
-                            Text(badge)
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(color)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(color.opacity(0.12), in: Capsule())
-                        }
-                    }
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(color)
-            }
-            .padding(14)
-            .background(color.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(color.opacity(0.2), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
+struct RegisterPrefill: Equatable {
+    var name: String = ""
+    var email: String = ""
+    var password: String = ""
 }
 
-// MARK: - Login Form
-
-struct LoginForm: View {
+struct WelcomeRegisterScreen: View {
+    var prefill: RegisterPrefill?
+    var onLogin: () -> Void
     var onSuccess: () -> Void
+    var onAdvancedRole: (AuthView.Mode, RegisterPrefill) -> Void
+
     @EnvironmentObject var api: APIService
-    @State private var email = ""
-    @State private var password = ""
+    @State private var name: String
+    @State private var email: String
+    @State private var password: String
+    @State private var showPassword = false
+    @State private var role: RegisterRole?
+    @State private var termsAccepted = false
     @State private var loading = false
     @State private var error: String?
-    @State private var show2FA = false
-    @State private var twoFASessionId = ""
-    @State private var twoFACode = ""
-    @State private var twoFALoading = false
-    @State private var twoFAError: String?
-    @State private var showForgot = false
 
-    private let bio = BiometricService.shared
+    init(
+        prefill: RegisterPrefill? = nil,
+        onLogin: @escaping () -> Void,
+        onSuccess: @escaping () -> Void,
+        onAdvancedRole: @escaping (AuthView.Mode, RegisterPrefill) -> Void
+    ) {
+        self.prefill = prefill
+        self.onLogin = onLogin
+        self.onSuccess = onSuccess
+        self.onAdvancedRole = onAdvancedRole
+        _name     = State(initialValue: prefill?.name ?? "")
+        _email    = State(initialValue: prefill?.email ?? "")
+        _password = State(initialValue: prefill?.password ?? "")
+    }
+
+    // Same Unsplash hero used in the design mock. Falls back to a
+    // dark blue gradient if the network request fails or the user is
+    // offline — the rest of the layout doesn't depend on it.
+    private static let heroURL = URL(string:
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80"
+    )!
+
+    private let blue      = Color(red:   0/255, green: 106/255, blue: 255/255)
+    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255)
+    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255)
+    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255)
+    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255)
+    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255)
 
     var body: some View {
-        VStack(spacing: 16) {
-            if !show2FA {
-                FloatingField(label: "Correo electrónico", text: $email)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                FloatingField(label: "Contraseña", text: $password, isSecure: true)
+        GeometryReader { geo in
+            let heroHeight = geo.size.height * 0.48
+            let panelTop   = geo.size.height * 0.43
 
-                if let err = error { ErrorBanner(message: err) }
+            ZStack(alignment: .topLeading) {
+                darkBg.ignoresSafeArea()
 
-                ActionButton(label: "Iniciar sesión", color: Color.rdBlue, loading: loading,
-                             disabled: email.isEmpty || password.isEmpty) {
-                    Task { await login() }
-                }
-
-                // Forgot password link
-                Button {
-                    showForgot = true
-                } label: {
-                    Text("¿Olvidaste tu contraseña?")
-                        .font(.caption).bold()
-                        .foregroundStyle(Color.rdBlue)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 2)
-
-                // Biometric login button
-                if bio.isAvailable, let savedEmail = bio.savedBiometricEmail(),
-                   bio.hasBiometricToken(for: savedEmail) {
-                    Button {
-                        Task { await loginWithBiometric(savedEmail) }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: bio.biometricIcon)
-                                .font(.title3)
-                            Text("Iniciar con \(bio.biometricLabel)")
-                                .font(.subheadline).bold()
+                // ── Hero (top 48%) ──
+                ZStack {
+                    AsyncImage(url: Self.heroURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        default:
+                            LinearGradient(colors: [
+                                Color(red: 0.08, green: 0.16, blue: 0.30),
+                                Color(red: 0.04, green: 0.07, blue: 0.13)
+                            ], startPoint: .top, endPoint: .bottom)
                         }
-                        .foregroundStyle(Color.rdBlue)
+                    }
+
+                    LinearGradient(stops: [
+                        .init(color: Color(red:  0/255, green:  40/255, blue: 100/255).opacity(0.55), location: 0),
+                        .init(color: darkBg.opacity(0.92),                                            location: 1)
+                    ], startPoint: .top, endPoint: .bottom)
+
+                    // Logo + headline + sub
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(blue)
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .shadow(color: blue.opacity(0.4), radius: 12, x: 0, y: 8)
+                        .padding(.bottom, 18)
+
+                        Text("Crea tu cuenta en\nHogaresRD")
+                            .font(.system(size: 24, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                            .padding(.bottom, 10)
+
+                        Text("Accede a miles de propiedades en República Dominicana y gestiona todo desde un solo lugar.")
+                            .font(.system(size: 13.5))
+                            .foregroundStyle(.white.opacity(0.65))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                            .frame(maxWidth: 260)
+                    }
+                    .padding(.horizontal, 28)
+                }
+                .frame(width: geo.size.width, height: heroHeight)
+                .clipped()
+                .ignoresSafeArea(edges: .top)
+
+                // ── Bottom white sheet ──
+                ScrollView {
+                    VStack(spacing: 12) {
+                        textField("Nombre completo", text: $name, autocaps: .words)
+
+                        textField(
+                            "Correo electrónico",
+                            text: $email,
+                            keyboardType: .emailAddress,
+                            autocaps: .never,
+                            autocorrect: false
+                        )
+
+                        passwordField()
+
+                        roleDropdown()
+
+                        termsRow()
+
+                        if let err = error {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(.red)
+                                Text(err)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.vertical, 2)
+                        }
+
+                        Button(action: { Task { await submit() } }) {
+                            ZStack {
+                                if loading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Crear cuenta")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(blue, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: blue.opacity(0.35), radius: 12, x: 0, y: 8)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(loading)
+                        .padding(.top, 4)
+
+                        HStack(spacing: 4) {
+                            Text("¿Ya tienes cuenta?")
+                                .foregroundStyle(textMuted)
+                            Button(action: onLogin) {
+                                Text("Iniciar sesión")
+                                    .foregroundStyle(blue)
+                                    .fontWeight(.bold)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .font(.system(size: 13.5))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.rdBlue.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.top, 2)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 22)
+                    .padding(.top, 24)
+                    .padding(.bottom, 28)
                 }
-                // Sign in with Apple — divider + button
-                HStack {
-                    Rectangle().fill(Color(.separator)).frame(height: 0.5)
-                    Text("o").font(.caption).foregroundStyle(.secondary)
-                    Rectangle().fill(Color(.separator)).frame(height: 0.5)
-                }
-                .padding(.vertical, 4)
-
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.fullName, .email]
-                } onCompletion: { result in
-                    Task { await handleAppleSignIn(result) }
-                }
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            } else {
-                // 2FA Code Entry
-                VStack(spacing: 16) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color.rdBlue)
-
-                    Text("Verificación en dos pasos")
-                        .font(.headline)
-                    Text("Ingresa el código de 6 dígitos enviado a tu correo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-
-                    TextField("000000", text: $twoFACode)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 32, weight: .bold, design: .monospaced))
-                        .frame(maxWidth: 200)
-                        .padding()
-                        .background(Color(.secondarySystemFill))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .onChange(of: twoFACode) { _, val in
-                            twoFACode = String(val.filter(\.isNumber).prefix(6))
-                        }
-
-                    if let err = twoFAError { ErrorBanner(message: err) }
-
-                    ActionButton(label: "Verificar", color: Color.rdBlue, loading: twoFALoading,
-                                 disabled: twoFACode.count != 6) {
-                        Task { await verify2FA() }
-                    }
-
-                    Button("Reenviar código") {
-                        Task { await resend2FA() }
-                    }
-                    .font(.subheadline).bold()
-                    .foregroundStyle(Color.rdBlue)
-
-                    Button("← Volver") {
-                        show2FA = false
-                        twoFACode = ""
-                        twoFAError = nil
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
+                .scrollIndicators(.hidden)
+                .frame(width: geo.size.width, height: geo.size.height - panelTop)
+                .background(Color.white)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        cornerRadii: .init(topLeading: 28, topTrailing: 28),
+                        style: .continuous
+                    )
+                )
+                .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: -4)
+                .offset(y: panelTop)
+                .ignoresSafeArea(edges: .bottom)
             }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 32)
-        .sheet(isPresented: $showForgot) {
-            ForgotPasswordSheet(prefillEmail: email).environmentObject(api)
         }
     }
 
-    private func login() async {
-        loading = true; error = nil
-        do {
-            let result = try await api.login(email: email, password: password)
-            switch result {
-            case .success:
-                onSuccess()
-            case .requires2FA(let sid, _):
-                twoFASessionId = sid
-                show2FA = true
-            }
-        } catch { self.error = error.localizedDescription }
-        loading = false
+    // MARK: - Sub-views
+
+    @ViewBuilder
+    private func textField(
+        _ placeholder: String,
+        text: Binding<String>,
+        keyboardType: UIKeyboardType = .default,
+        autocaps: TextInputAutocapitalization = .sentences,
+        autocorrect: Bool = true
+    ) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboardType)
+            .textInputAutocapitalization(autocaps)
+            .autocorrectionDisabled(!autocorrect)
+            .font(.system(size: 15))
+            .foregroundStyle(textInk)
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
-        switch result {
-        case .success(let auth):
-            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
-                  let identityToken = credential.identityToken,
-                  let tokenStr = String(data: identityToken, encoding: .utf8) else {
-                self.error = "No se pudo obtener el token de Apple"
-                return
+    @ViewBuilder
+    private func passwordField() -> some View {
+        HStack(spacing: 10) {
+            Group {
+                if showPassword {
+                    TextField("Contraseña", text: $password)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } else {
+                    SecureField("Contraseña", text: $password)
+                }
             }
+            .font(.system(size: 15))
+            .foregroundStyle(textInk)
+
+            Button(action: { showPassword.toggle() }) {
+                Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(textMuted)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func roleDropdown() -> some View {
+        Menu {
+            ForEach(RegisterRole.allCases) { r in
+                Button(r.label) { role = r }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Text(role?.label ?? "Tipo de usuario")
+                    .font(.system(size: 15))
+                    .foregroundStyle(role == nil ? textMuted : textInk)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(textMuted)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func termsRow() -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button(action: { termsAccepted.toggle() }) {
+                ZStack {
+                    if termsAccepted {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(blue)
+                            .frame(width: 20, height: 20)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(.white)
+                    } else {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(Color(red: 200/255, green: 203/255, blue: 216/255), lineWidth: 2)
+                            .frame(width: 20, height: 20)
+                    }
+                }
+                .padding(.top, 1)
+            }
+            .buttonStyle(.plain)
+
+            (
+                Text("Acepto los ")
+                    .foregroundStyle(textBody)
+                + Text("Términos de Servicio")
+                    .foregroundStyle(blue).fontWeight(.semibold).underline()
+                + Text(" y la ")
+                    .foregroundStyle(textBody)
+                + Text("Política de Privacidad")
+                    .foregroundStyle(blue).fontWeight(.semibold).underline()
+                + Text(" de HogaresRD.")
+                    .foregroundStyle(textBody)
+            )
+            .font(.system(size: 13))
+            .lineSpacing(3)
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - Submit
+
+    @MainActor
+    private func submit() async {
+        let trimmedName  = name.trimmingCharacters(in: .whitespaces)
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces).lowercased()
+
+        guard !trimmedName.isEmpty else  { error = "Ingresa tu nombre completo."; return }
+        guard !trimmedEmail.isEmpty else { error = "Ingresa tu correo electrónico."; return }
+        guard !password.isEmpty else     { error = "Ingresa una contraseña."; return }
+        guard let role else              { error = "Selecciona el tipo de cuenta."; return }
+        guard termsAccepted else         { error = "Debes aceptar los términos para continuar."; return }
+
+        let pf = RegisterPrefill(name: trimmedName, email: trimmedEmail, password: password)
+        switch role {
+        case .comprador:
             loading = true; error = nil
             do {
-                let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
-                    .compactMap { $0 }.joined(separator: " ")
-                try await api.loginWithApple(
-                    identityToken: tokenStr,
-                    name: fullName.isEmpty ? nil : fullName,
-                    email: credential.email
+                _ = try await api.register(
+                    name: trimmedName, email: trimmedEmail,
+                    password: password, marketingOptIn: true
                 )
                 onSuccess()
             } catch {
                 self.error = error.localizedDescription
             }
             loading = false
-        case .failure(let err):
-            if (err as NSError).code != ASAuthorizationError.canceled.rawValue {
-                self.error = "Error de Apple Sign In: \(err.localizedDescription)"
+        case .broker:
+            onAdvancedRole(.registerBroker, pf)
+        case .inmobiliaria:
+            onAdvancedRole(.registerInmobiliaria, pf)
+        case .constructora:
+            onAdvancedRole(.registerConstructora, pf)
+        }
+    }
+}
+
+// MARK: - Welcome Login Form Screen
+// Companion to WelcomeRegisterScreen — same hero / blue tint / logo /
+// white sheet, but with the email-login form (and the 2FA code-entry
+// step inline). Both states swap headline, sub, and panel content
+// without changing the layout shell.
+//
+// Reached from WelcomeLoginScreen → "Iniciar sesión con Email".
+// Apple Sign-In stays on the welcome screen so we don't duplicate it.
+
+struct WelcomeLoginFormScreen: View {
+    var onRegister: () -> Void
+    var onSuccess: () -> Void
+
+    @EnvironmentObject var api: APIService
+
+    @State private var email = ""
+    @State private var password = ""
+    @State private var showPassword = false
+    @State private var loading = false
+    @State private var error: String?
+
+    // 2FA
+    @State private var show2FA = false
+    @State private var twoFASessionId = ""
+    @State private var twoFACode = ""
+    @State private var twoFALoading = false
+    @State private var twoFAError: String?
+
+    @State private var showForgot = false
+
+    private let bio = BiometricService.shared
+
+    private static let heroURL = URL(string:
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80"
+    )!
+
+    private let blue      = Color(red:   0/255, green: 106/255, blue: 255/255)
+    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255)
+    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255)
+    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255)
+    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255)
+    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255)
+
+    var body: some View {
+        GeometryReader { geo in
+            let heroHeight = geo.size.height * 0.48
+            let panelTop   = geo.size.height * 0.43
+
+            ZStack(alignment: .topLeading) {
+                darkBg.ignoresSafeArea()
+
+                // ── Hero (top 48%) ──
+                ZStack {
+                    AsyncImage(url: Self.heroURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        default:
+                            LinearGradient(colors: [
+                                Color(red: 0.08, green: 0.16, blue: 0.30),
+                                Color(red: 0.04, green: 0.07, blue: 0.13)
+                            ], startPoint: .top, endPoint: .bottom)
+                        }
+                    }
+
+                    LinearGradient(stops: [
+                        .init(color: Color(red:  0/255, green:  40/255, blue: 100/255).opacity(0.55), location: 0),
+                        .init(color: darkBg.opacity(0.92),                                            location: 1)
+                    ], startPoint: .top, endPoint: .bottom)
+
+                    // Logo + headline + sub — swaps when 2FA is active
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(blue)
+                                .frame(width: 44, height: 44)
+                            Image(systemName: show2FA ? "lock.shield.fill" : "house.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .shadow(color: blue.opacity(0.4), radius: 12, x: 0, y: 8)
+                        .padding(.bottom, 18)
+
+                        Text(show2FA ? "Verifica tu\nidentidad" : "Inicia sesión en\nHogaresRD")
+                            .font(.system(size: 24, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                            .padding(.bottom, 10)
+
+                        Text(show2FA
+                             ? "Ingresa el código de 6 dígitos que enviamos a tu correo."
+                             : "Accede a tus propiedades, aplicaciones y conversaciones desde un solo lugar.")
+                            .font(.system(size: 13.5))
+                            .foregroundStyle(.white.opacity(0.65))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                            .frame(maxWidth: 280)
+                    }
+                    .padding(.horizontal, 28)
+                }
+                .frame(width: geo.size.width, height: heroHeight)
+                .clipped()
+                .ignoresSafeArea(edges: .top)
+
+                // ── Bottom white sheet ──
+                ScrollView {
+                    if show2FA { twoFAPanel } else { loginPanel }
+                }
+                .scrollIndicators(.hidden)
+                .frame(width: geo.size.width, height: geo.size.height - panelTop)
+                .background(Color.white)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        cornerRadii: .init(topLeading: 28, topTrailing: 28),
+                        style: .continuous
+                    )
+                )
+                .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: -4)
+                .offset(y: panelTop)
+                .ignoresSafeArea(edges: .bottom)
             }
         }
+        .sheet(isPresented: $showForgot) {
+            ForgotPasswordSheet(prefillEmail: email).environmentObject(api)
+        }
+    }
+
+    // MARK: - Panels
+
+    @ViewBuilder
+    private var loginPanel: some View {
+        VStack(spacing: 12) {
+            textField(
+                "Correo electrónico",
+                text: $email,
+                keyboardType: .emailAddress,
+                autocaps: .never,
+                autocorrect: false
+            )
+
+            passwordField()
+
+            // Forgot password — right-aligned link
+            HStack(spacing: 0) {
+                Spacer()
+                Button(action: { showForgot = true }) {
+                    Text("¿Olvidaste tu contraseña?")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(blue)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, -2)
+
+            if let err = error {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 2)
+            }
+
+            primaryCTA(
+                "Iniciar sesión",
+                loading: loading,
+                disabled: email.isEmpty || password.isEmpty
+            ) {
+                Task { await login() }
+            }
+
+            // Biometric — only shown when previously enrolled
+            if bio.isAvailable,
+               let savedEmail = bio.savedBiometricEmail(),
+               bio.hasBiometricToken(for: savedEmail) {
+                Button(action: { Task { await loginWithBiometric(savedEmail) } }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: bio.biometricIcon)
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Iniciar con \(bio.biometricLabel)")
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    .foregroundStyle(blue)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Register link
+            HStack(spacing: 4) {
+                Text("¿No tienes cuenta?")
+                    .foregroundStyle(textMuted)
+                Button(action: onRegister) {
+                    Text("Regístrate")
+                        .foregroundStyle(blue)
+                        .fontWeight(.bold)
+                }
+                .buttonStyle(.plain)
+            }
+            .font(.system(size: 13.5))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 24)
+        .padding(.bottom, 28)
+    }
+
+    @ViewBuilder
+    private var twoFAPanel: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(blue.opacity(0.10))
+                    .frame(width: 64, height: 64)
+                Image(systemName: "envelope.badge.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(blue)
+            }
+            .padding(.top, 4)
+
+            Text("Verificación en dos pasos")
+                .font(.system(size: 17, weight: .heavy))
+                .foregroundStyle(textInk)
+
+            Text("Por seguridad, te enviamos un código de 6 dígitos. Ingrésalo aquí para continuar.")
+                .font(.system(size: 13))
+                .foregroundStyle(textBody)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+                .padding(.horizontal, 8)
+
+            TextField("000000", text: $twoFACode)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .foregroundStyle(textInk)
+                .padding(.horizontal, 24)
+                .frame(height: 64)
+                .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .onChange(of: twoFACode) { _, val in
+                    twoFACode = String(val.filter(\.isNumber).prefix(6))
+                }
+                .padding(.top, 4)
+
+            if let err = twoFAError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 2)
+            }
+
+            primaryCTA("Verificar", loading: twoFALoading, disabled: twoFACode.count != 6) {
+                Task { await verify2FA() }
+            }
+
+            Button(action: { Task { await resend2FA() } }) {
+                Text("Reenviar código")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(blue)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+
+            Button(action: {
+                show2FA = false
+                twoFACode = ""
+                twoFAError = nil
+            }) {
+                Text("← Volver al inicio de sesión")
+                    .font(.system(size: 13))
+                    .foregroundStyle(textMuted)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 28)
+        .padding(.bottom, 28)
+    }
+
+    // MARK: - Sub-views
+
+    @ViewBuilder
+    private func textField(
+        _ placeholder: String,
+        text: Binding<String>,
+        keyboardType: UIKeyboardType = .default,
+        autocaps: TextInputAutocapitalization = .sentences,
+        autocorrect: Bool = true
+    ) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboardType)
+            .textInputAutocapitalization(autocaps)
+            .autocorrectionDisabled(!autocorrect)
+            .font(.system(size: 15))
+            .foregroundStyle(textInk)
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func passwordField() -> some View {
+        HStack(spacing: 10) {
+            Group {
+                if showPassword {
+                    TextField("Contraseña", text: $password)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } else {
+                    SecureField("Contraseña", text: $password)
+                }
+            }
+            .font(.system(size: 15))
+            .foregroundStyle(textInk)
+            .submitLabel(.go)
+            .onSubmit { Task { await login() } }
+
+            Button(action: { showPassword.toggle() }) {
+                Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(textMuted)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func primaryCTA(
+        _ label: String,
+        loading: Bool,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            ZStack {
+                if loading {
+                    ProgressView().tint(.white)
+                } else {
+                    Text(label)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                disabled
+                ? Color(red: 200/255, green: 203/255, blue: 216/255)
+                : blue,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .shadow(color: disabled ? .clear : blue.opacity(0.35), radius: 12, x: 0, y: 8)
+        }
+        .buttonStyle(.plain)
+        .disabled(loading || disabled)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Actions
+
+    private func login() async {
+        let trimmed = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !password.isEmpty else { return }
+        loading = true; error = nil
+        do {
+            let result = try await api.login(email: trimmed, password: password)
+            switch result {
+            case .success:
+                onSuccess()
+            case .requires2FA(let sid, _):
+                twoFASessionId = sid
+                withAnimation(.easeInOut(duration: 0.22)) { show2FA = true }
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+        loading = false
     }
 
     private func loginWithBiometric(_ savedEmail: String) async {
@@ -718,7 +1162,7 @@ struct LoginForm: View {
             case .requires2FA(let sid, _):
                 email = savedEmail
                 twoFASessionId = sid
-                show2FA = true
+                withAnimation(.easeInOut(duration: 0.22)) { show2FA = true }
             }
         } catch {
             self.error = error.localizedDescription
@@ -867,155 +1311,6 @@ struct ForgotPasswordSheet: View {
     }
 }
 
-// MARK: - User Register Form
-
-struct RegisterForm: View {
-    var onSuccess: () -> Void
-    var onBack: () -> Void
-    @EnvironmentObject var api: APIService
-    @State private var name = ""
-    @State private var email = ""
-    @State private var phone = ""
-    @State private var password = ""
-    @State private var confirm = ""
-    @State private var termsAccepted = false
-    @State private var marketing = true
-    @State private var loading = false
-    @State private var error: String?
-
-    var canSubmit: Bool {
-        !name.isEmpty && !email.isEmpty && !password.isEmpty &&
-        PasswordStrength.isValid(password) && password == confirm && termsAccepted
-    }
-
-    var body: some View {
-        VStack(spacing: 16) {
-
-            // Back button
-            BackToRoleButton(action: onBack)
-
-            // Role badge
-            RoleBadge(icon: "person.fill", title: "Cuenta de Cliente", color: Color.rdBlue)
-
-            Text("Gratis. Recibe recomendaciones personalizadas y guarda tus favoritas.")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Quick register with Apple
-            SignInWithAppleButton(.signUp) { request in
-                request.requestedScopes = [.fullName, .email]
-            } onCompletion: { result in
-                Task { await handleAppleRegister(result) }
-            }
-            .signInWithAppleButtonStyle(.black)
-            .frame(height: 48)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            // Divider
-            HStack {
-                Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1)
-                Text("o completa el formulario")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .fixedSize()
-                Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1)
-            }
-            .padding(.vertical, 4)
-
-            // Fields
-            FloatingField(label: "Nombre completo", text: $name)
-            FloatingField(label: "Correo electrónico", text: $email)
-                .keyboardType(.emailAddress)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            FloatingField(label: "Teléfono (opcional — para notificaciones SMS)", text: $phone)
-                .keyboardType(.phonePad)
-
-            SectionDivider(title: "Seguridad")
-
-            FloatingField(label: "Contraseña", text: $password, isSecure: true)
-            PasswordStrengthView(password: password)
-            FloatingField(label: "Confirmar contraseña", text: $confirm, isSecure: true)
-
-            // Terms
-            Toggle(isOn: $termsAccepted) {
-                Text("He leido y acepto los ")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                + Text("Terminos y Condiciones de Uso")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.rdBlue)
-                    .underline()
-                + Text(" de HogaresRD.")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-            }
-            .tint(Color.rdBlue)
-            .padding(.horizontal, 4)
-
-            // Marketing
-            Toggle(isOn: $marketing) {
-                Text("Quiero recibir ofertas, novedades y propiedades destacadas de HogaresRD por correo electronico. Puedo cancelar en cualquier momento.")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-            }
-            .tint(Color.rdBlue)
-            .padding(.horizontal, 4)
-
-            if let err = error { ErrorBanner(message: err) }
-
-            ActionButton(label: "Crear Cuenta", color: Color.rdBlue, loading: loading,
-                         disabled: !canSubmit) {
-                Task { await register() }
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 32)
-    }
-
-    private func register() async {
-        guard password == confirm else { error = "Las contraseñas no coinciden."; return }
-        guard PasswordStrength.isValid(password) else { error = "La contraseña no cumple los requisitos."; return }
-        loading = true; error = nil
-        do {
-            _ = try await api.register(name: name, email: email, password: password, marketingOptIn: marketing)
-            onSuccess()
-        } catch { self.error = error.localizedDescription }
-        loading = false
-    }
-
-    private func handleAppleRegister(_ result: Result<ASAuthorization, Error>) async {
-        switch result {
-        case .success(let auth):
-            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
-                  let identityToken = credential.identityToken,
-                  let tokenStr = String(data: identityToken, encoding: .utf8) else {
-                self.error = "No se pudo obtener el token de Apple"
-                return
-            }
-            loading = true; error = nil
-            do {
-                let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
-                    .compactMap { $0 }.joined(separator: " ")
-                try await api.loginWithApple(
-                    identityToken: tokenStr,
-                    name: fullName.isEmpty ? nil : fullName,
-                    email: credential.email
-                )
-                onSuccess()
-            } catch {
-                self.error = error.localizedDescription
-            }
-            loading = false
-        case .failure(let err):
-            if (err as NSError).code != ASAuthorizationError.canceled.rawValue {
-                self.error = "Error: \(err.localizedDescription)"
-            }
-        }
-    }
-}
-
 // MARK: - Broker Register Form
 
 struct BrokerRegisterForm: View {
@@ -1023,17 +1318,29 @@ struct BrokerRegisterForm: View {
     var onBack: () -> Void
     @EnvironmentObject var api: APIService
 
-    @State private var name = ""
-    @State private var email = ""
+    @State private var name: String
+    @State private var email: String
     @State private var phone = ""
     @State private var licenseNumber = ""
     @State private var jobTitle = ""
     @State private var customJobTitle = ""
-    @State private var password = ""
+    @State private var password: String
     @State private var confirm = ""
     @State private var termsAccepted = false
     @State private var loading = false
     @State private var error: String?
+
+    init(
+        onSuccess: @escaping () -> Void,
+        onBack: @escaping () -> Void,
+        prefill: RegisterPrefill? = nil
+    ) {
+        self.onSuccess = onSuccess
+        self.onBack    = onBack
+        _name     = State(initialValue: prefill?.name ?? "")
+        _email    = State(initialValue: prefill?.email ?? "")
+        _password = State(initialValue: prefill?.password ?? "")
+    }
 
     private static let jobTitles: [(category: String, titles: [String])] = [
         ("Ventas", ["Agente Inmobiliario", "Agente Senior", "Asesor de Ventas", "Ejecutivo de Ventas", "Director de Ventas"]),
@@ -1186,18 +1493,30 @@ struct InmobiliariaRegisterForm: View {
     var onBack: () -> Void
     @EnvironmentObject var api: APIService
 
-    @State private var name = ""
-    @State private var email = ""
+    @State private var name: String
+    @State private var email: String
     @State private var phone = ""
     @State private var companyName = ""
     @State private var licenseNumber = ""
-    @State private var password = ""
+    @State private var password: String
     @State private var confirm = ""
     @State private var termsAccepted = false
     @State private var loading = false
     @State private var error: String?
 
     private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+
+    init(
+        onSuccess: @escaping () -> Void,
+        onBack: @escaping () -> Void,
+        prefill: RegisterPrefill? = nil
+    ) {
+        self.onSuccess = onSuccess
+        self.onBack    = onBack
+        _name     = State(initialValue: prefill?.name ?? "")
+        _email    = State(initialValue: prefill?.email ?? "")
+        _password = State(initialValue: prefill?.password ?? "")
+    }
 
     var canSubmit: Bool {
         !name.isEmpty && !email.isEmpty && !phone.isEmpty &&
@@ -1325,18 +1644,30 @@ struct ConstructoraRegisterForm: View {
     var onBack: () -> Void
     @EnvironmentObject var api: APIService
 
-    @State private var name = ""
-    @State private var email = ""
+    @State private var name: String
+    @State private var email: String
     @State private var phone = ""
     @State private var companyName = ""
     @State private var yearsExperience = ""
-    @State private var password = ""
+    @State private var password: String
     @State private var confirm = ""
     @State private var termsAccepted = false
     @State private var loading = false
     @State private var error: String?
 
     private let orangeColor = Color(red: 0.7, green: 0.35, blue: 0.04)
+
+    init(
+        onSuccess: @escaping () -> Void,
+        onBack: @escaping () -> Void,
+        prefill: RegisterPrefill? = nil
+    ) {
+        self.onSuccess = onSuccess
+        self.onBack    = onBack
+        _name     = State(initialValue: prefill?.name ?? "")
+        _email    = State(initialValue: prefill?.email ?? "")
+        _password = State(initialValue: prefill?.password ?? "")
+    }
 
     var canSubmit: Bool {
         !name.isEmpty && !email.isEmpty && !phone.isEmpty &&
