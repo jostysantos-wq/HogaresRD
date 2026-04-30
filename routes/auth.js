@@ -117,9 +117,37 @@ function validateEmail(email) {
 
 // ── Login anomaly detection ────────────────────────────────────────────────
 // Hash IPs (never store raw) and compare against the user's known set.
-// Unknown IP triggers an email alert. Keeps last 10 known IP hashes.
+// Unknown IP triggers an email alert. Keeps last 20 known IP hashes.
+//
+// hashIP: emits v2 format (128-bit, 'v2:'-prefixed). ipHashMatches()
+// accepts either the new format OR the legacy bare 16-char hex so
+// existing user.knownIPs arrays keep matching until they get
+// rewritten on next successful login. After ~3 months of organic
+// login activity most active users will be on v2; a one-shot
+// migration script can clear residual legacy hashes.
+//
+// TODO(ip-hash-pepper): rotating JWT_SECRET invalidates all stored
+// hashes and triggers false 'new device' emails. Move to a
+// dedicated IP_HASH_SECRET env var (defaulting to JWT_SECRET for
+// back-compat) so JWT rotation doesn't trip this path.
 function hashIP(ip) {
-  return crypto.createHash('sha256').update(String(ip || '') + JWT_SECRET).digest('hex').slice(0, 16);
+  // Always emit v2 going forward (32 hex chars = 128 bits).
+  const h = crypto.createHash('sha256').update(String(ip || '') + JWT_SECRET).digest('hex').slice(0, 32);
+  return 'v2:' + h;
+}
+
+// Compare a stored hash (could be legacy 16-char or v2:32-char) against an IP.
+// Recomputes BOTH formats and checks either match — so existing knownIPs
+// arrays keep working until they're rewritten.
+function ipHashMatches(storedHash, ip) {
+  if (!storedHash || typeof storedHash !== 'string') return false;
+  // v2 format
+  if (storedHash.startsWith('v2:')) {
+    return storedHash === hashIP(ip);
+  }
+  // Legacy 16-char format — recompute the old way
+  const legacy = crypto.createHash('sha256').update(String(ip || '') + JWT_SECRET).digest('hex').slice(0, 16);
+  return storedHash === legacy;
 }
 
 function clientIPFromReq(req) {
@@ -133,15 +161,19 @@ function clientIPFromReq(req) {
  * to the user (fire-and-forget). Returns true if alert was sent. */
 function trackLoginAndAlert(user, req) {
   const ip    = clientIPFromReq(req);
-  const ipHash = hashIP(ip);
+  const newHash = hashIP(ip);
   const ua     = (req.headers['user-agent'] || '').slice(0, 200);
   const known  = Array.isArray(user.knownIPs) ? user.knownIPs : [];
-  const isNew  = !known.includes(ipHash);
+  const isNew  = !known.some(h => ipHashMatches(h, ip));
 
-  const updated = isNew ? [...known, ipHash].slice(-10) : known;
+  // Drop any prior entries (legacy or v2) that match this IP, then append
+  // the v2 hash. This rewrites legacy entries to v2 organically and avoids
+  // accumulating duplicate forms of the same IP.
+  const filtered = known.filter(h => !ipHashMatches(h, ip));
+  const updated  = [...filtered, newHash].slice(-20);
   user.knownIPs   = updated;
   user.lastLoginAt = new Date().toISOString();
-  user.lastLoginIPHash = ipHash;
+  user.lastLoginIPHash = newHash;
   store.saveUser(user);
 
   if (isNew && known.length > 0) {
