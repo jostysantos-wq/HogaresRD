@@ -1131,16 +1131,18 @@ function getBookedSlots(brokerId, dateStr) {
   return _tours.filter(t => t.broker_id === brokerId && t.requested_date === dateStr && ['confirmed', 'pending'].includes(t.status)).map(hydrateTour);
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveTour(tour) {
+function saveTour(tour, client = null) {
   const row = dehydrateTour(tour);
   const { sql, values } = buildUpsert('tours', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveTour', err));
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   const idx = _tours.findIndex(t => t.id === tour.id);
   if (idx >= 0) _tours[idx] = cacheRow;
   else _tours.push(cacheRow);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveTour', err));
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1236,20 +1238,21 @@ function getPushSubscriptionsByUser(userId) {
   };
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function savePushSubscription(userId, current) {
+function savePushSubscription(userId, current, client = null) {
   const web = JSON.stringify(current.web || []);
   const ios = JSON.stringify(current.ios || []);
   const prefs = JSON.stringify(current.preferences || {});
-  pool.query(
-    `INSERT INTO push_subscriptions ("userId", web, ios, preferences) VALUES ($1, $2, $3, $4)
-     ON CONFLICT ("userId") DO UPDATE SET web = $2, ios = $3, preferences = $4`,
-    [userId, web, ios, prefs]
-  ).catch(() => {});
+  const sql = `INSERT INTO push_subscriptions ("userId", web, ios, preferences) VALUES ($1, $2, $3, $4)
+     ON CONFLICT ("userId") DO UPDATE SET web = $2, ios = $3, preferences = $4`;
+  const values = [userId, web, ios, prefs];
   const idx = _pushSubs.findIndex(p => p.userId === userId);
   const row = { userId, web: current.web, ios: current.ios, preferences: current.preferences };
   if (idx >= 0) _pushSubs[idx] = row;
   else _pushSubs.push(row);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(() => {});
 }
 
 function removePushSubscription(userId, type, identifier) {
@@ -1280,15 +1283,17 @@ function getSavedSearchesByUser(userId) { return _savedSearches.filter(s => s.us
 function getSavedSearchById(id) { return _savedSearches.find(s => s.id === id) || null; }
 function getAllNotifiableSavedSearches() { return _savedSearches.filter(s => s.notify); }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveSavedSearch(search) {
+function saveSavedSearch(search, client = null) {
   const cols = Object.keys(search);
   const vals = cols.map(c => typeof search[c] === 'object' ? JSON.stringify(search[c]) : search[c]);
   const { sql, values } = buildUpsert('saved_searches', Object.fromEntries(cols.map((c, i) => [c, vals[i]])), 'id');
-  pool.query(sql, values).catch(() => {});
   const idx = _savedSearches.findIndex(s => s.id === search.id);
   if (idx >= 0) _savedSearches[idx] = search;
   else _savedSearches.push(search);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(() => {});
 }
 
 function deleteSavedSearch(id) {
@@ -1304,8 +1309,7 @@ function getBlogPosts() { return _blogPosts; }
 function getBlogPostById(id) { return _blogPosts.find(p => p.id === id) || null; }
 function getBlogPostBySlug(slug) { return _blogPosts.find(p => p.slug === slug) || null; }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveBlogPost(post) {
+function saveBlogPost(post, client = null) {
   // Deep clone so we can dehydrate (_extra → JSON string) into the DB row
   // without mutating the caller's object. Previously the cache stored the
   // input reference after we already stringified its _extra in place, which
@@ -1317,12 +1321,15 @@ function saveBlogPost(post) {
   const row = { ...cloned };
   if (row._extra && typeof row._extra === 'object') row._extra = JSON.stringify(row._extra);
   const { sql, values } = buildUpsert('blog_posts', row, 'id');
-  pool.query(sql, values).catch(() => {});
   // Cache the un-mutated parsed form so getBlogPostById returns a clean
   // object (not the row with a stringified _extra).
   const idx = _blogPosts.findIndex(p => p.id === post.id);
   if (idx >= 0) _blogPosts[idx] = cloned;
   else _blogPosts.push(cloned);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(() => {});
 }
 
 function deleteBlogPost(id) {
@@ -1369,15 +1376,16 @@ function getReportById(id) {
   return row ? (typeof row.data === 'object' ? row.data : _jsonParse(row.data, row)) : null;
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveReport(report) {
-  pool.query(
-    `INSERT INTO reports (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2`,
-    [report.id, JSON.stringify(report)]
-  ).catch(() => {});
+function saveReport(report, client = null) {
+  const sql = `INSERT INTO reports (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2`;
+  const values = [report.id, JSON.stringify(report)];
   const idx = _reports.findIndex(r => r.id === report.id);
   if (idx >= 0) _reports[idx] = { id: report.id, data: report };
   else _reports.push({ id: report.id, data: report });
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(() => {});
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1402,8 +1410,7 @@ function getTasksByAssignee(userId) { return _tasks.filter(t => t.assigned_to ==
 function getTaskById(id) { return hydrateTask(_tasks.find(t => t.id === id)); }
 function getTasksByApplication(appId) { return _tasks.filter(t => t.application_id === appId).map(hydrateTask); }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveTask(task) {
+function saveTask(task, client = null) {
   const row = {};
   const extra = {};
   const TASK_COLS = ['id','title','description','status','priority','due_date','assigned_to','assigned_by','application_id','listing_id','source_event','completed_at','created_at','updated_at'];
@@ -1413,11 +1420,14 @@ function saveTask(task) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('tasks', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveTask', err));
   const cacheRow = { ...row, _extra: extra }; // store parsed object in cache
   const idx = _tasks.findIndex(t => t.id === task.id);
   if (idx >= 0) _tasks[idx] = cacheRow;
   else _tasks.push(cacheRow);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveTask', err));
 }
 
 function deleteTask(id) {
@@ -1453,8 +1463,7 @@ function getUnreadNotificationCount(userId) {
   return count;
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveNotification(notif) {
+function saveNotification(notif, client = null) {
   const NOTIF_COLS = ['id', 'user_id', 'type', 'title', 'body', 'url', 'data', 'read_at', 'created_at'];
   const row = {};
   for (const col of NOTIF_COLS) {
@@ -1462,7 +1471,6 @@ function saveNotification(notif) {
   }
   if (row.data && typeof row.data !== 'string') row.data = JSON.stringify(row.data);
   const { sql, values } = buildUpsert('notifications', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveNotification', err));
   // Cache: parse data back to object
   const cacheRow = { ...row, data: typeof row.data === 'string' ? _jsonParse(row.data, {}) : (row.data || {}) };
   const idx = _notifications.findIndex(n => n.id === notif.id);
@@ -1470,6 +1478,10 @@ function saveNotification(notif) {
   else _notifications.unshift(cacheRow); // newest first to match load order
   // Soft cap on cache to avoid unbounded growth — DB still has full history
   if (_notifications.length > 5000) _notifications = _notifications.slice(0, 5000);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveNotification', err));
 }
 
 function markNotificationRead(id, userId) {
@@ -1570,8 +1582,7 @@ function getActiveLeadQueue() {
   return _leadQueue.filter(r => r.status === 'active');
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveLeadQueueItem(item) {
+function saveLeadQueueItem(item, client = null) {
   const row = {};
   const extra = {};
   const LQ_COLS = ['id','inquiry_type','inquiry_id','listing_id','buyer_name','buyer_phone','buyer_email',
@@ -1583,11 +1594,14 @@ function saveLeadQueueItem(item) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('lead_queue', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveLeadQueueItem', err));
   const cacheRow = { ...row, _extra: extra };
   const idx = _leadQueue.findIndex(r => r.id === item.id);
   if (idx >= 0) _leadQueue[idx] = cacheRow;
   else _leadQueue.push(cacheRow);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveLeadQueueItem', err));
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1616,8 +1630,7 @@ function getContributionScore(userId, listingId) {
   return obj;
 }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveContributionScore(cs) {
+function saveContributionScore(cs, client = null) {
   const row = {};
   const extra = {};
   const CS_COLS = ['id','user_id','listing_id','role','score','score_breakdown','avg_response_ms',
@@ -1632,13 +1645,16 @@ function saveContributionScore(cs) {
   }
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('contribution_scores', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveContributionScore', err));
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   if (typeof cacheRow.score_breakdown === 'string') { try { cacheRow.score_breakdown = JSON.parse(cacheRow.score_breakdown); } catch { cacheRow.score_breakdown = {}; } }
   const idx = _contributionScores.findIndex(r => r.id === cs.id);
   if (idx >= 0) _contributionScores[idx] = cacheRow;
   else _contributionScores.push(cacheRow);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveContributionScore', err));
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1679,13 +1695,15 @@ function getInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id
 function getInmobPostById(id) { return _inmobPosts.find(p => p.id === id) || null; }
 function getPublishedInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id === inmId && p.published); }
 
-// TODO(transactional-rewrite): accept optional client for transactional callers
-function saveInmobPost(post) {
+function saveInmobPost(post, client = null) {
   const { sql, values } = buildUpsert('inmobiliaria_posts', post, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveInmobPost', err));
   const idx = _inmobPosts.findIndex(p => p.id === post.id);
   if (idx >= 0) _inmobPosts[idx] = post;
   else _inmobPosts.push(post);
+  if (client) {
+    return client.query(sql, values);
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveInmobPost', err));
 }
 
 function deleteInmobPost(id) {
