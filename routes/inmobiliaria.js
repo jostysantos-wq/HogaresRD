@@ -25,6 +25,18 @@ const LEVEL_DIRECTOR  = 3;
 const LEVEL_LABELS = { 1: 'Asistente', 2: 'Gerente', 3: 'Director' };
 const OWNER_ROLES = ['inmobiliaria', 'constructora'];
 
+// P1 #21 — bump tokenVersion to invalidate any JWT the user is still
+// holding when their role/access is downgraded. verifyJWT in auth.js
+// rejects tokens whose version is below the user's current version, so
+// after a bump the demoted/removed user is forced to re-authenticate.
+//
+// IMPORTANT: only call on demotion / removal — never on lateral changes
+// or upgrades, otherwise we churn tokens for no security benefit.
+function bumpTokenVersion(user) {
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  return user;
+}
+
 // ── Role middlewares ──────────────────────────────────────────────────────
 function brokerAuth(req, res, next) {
   const user = store.getUserById(req.user.sub);
@@ -246,6 +258,10 @@ router.post('/leave', userAuth, brokerAuth, async (req, res) => {
   broker.inmobiliaria_name        = null;
   broker.inmobiliaria_join_status = null;
   broker.inmobiliaria_joined_at   = null;
+  // P1 #21 — broker voluntarily left; their JWT still carries the old
+  // inmobiliaria_id and access_level. Invalidate to force re-login so
+  // teamAuth can't be exploited mid-session against the stale claim.
+  bumpTokenVersion(broker);
   store.saveUser(broker);
 
   res.json({ success: true });
@@ -459,6 +475,10 @@ router.post('/brokers/:brokerId/remove', userAuth, teamAuth(LEVEL_DIRECTOR), asy
   broker.inmobiliaria_joined_at   = null;
   broker.access_level             = null;
   broker.team_title               = null;
+  // P1 #21 — broker was removed from the team; their JWT may still
+  // carry inmobiliaria_id/access_level claims (or be relied on by
+  // teamAuth elsewhere), so invalidate it.
+  bumpTokenVersion(broker);
   store.saveUser(broker);
 
   res.json({ success: true });
@@ -609,6 +629,8 @@ router.post('/secretaries/:id/remove', userAuth, teamAuth(LEVEL_DIRECTOR), (req,
   secretary.role = 'deactivated';
   secretary.inmobiliaria_id = null;
   secretary.deactivatedAt = new Date().toISOString();
+  // P1 #21 — secretary lost their role; revoke any existing JWT.
+  bumpTokenVersion(secretary);
   store.saveUser(secretary);
 
   res.json({ success: true });
@@ -667,16 +689,23 @@ router.put('/team/:userId/role', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) 
     return res.status(400).json({ error: 'No se puede cambiar el nivel del propietario' });
 
   const { access_level, team_title } = req.body;
+  // P1 #21 — capture the prior level so we can detect a *downgrade*
+  // and bump tokenVersion only in that direction. Lateral moves (same
+  // level, title-only edits) and upgrades do not invalidate tokens.
+  const priorLevel = Number(target.access_level || LEVEL_ASISTENTE);
+  let didDowngrade = false;
   if (access_level !== undefined) {
     const level = Number(access_level);
     if (![LEVEL_ASISTENTE, LEVEL_GERENTE, LEVEL_DIRECTOR].includes(level))
       return res.status(400).json({ error: 'Nivel de acceso inválido (1, 2 o 3)' });
+    if (level < priorLevel) didDowngrade = true;
     target.access_level = level;
   }
   if (team_title !== undefined) {
     target.team_title = String(team_title).trim().slice(0, 100);
   }
 
+  if (didDowngrade) bumpTokenVersion(target);
   store.saveUser(target);
   res.json({
     success: true,

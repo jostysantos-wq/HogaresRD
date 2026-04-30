@@ -732,14 +732,6 @@ function getListings(filters = {}) {
 function saveListing(listing, client) {
   const row = dehydrateSubmission(listing);
   const { sql, values } = buildUpsert('submissions', row, 'id');
-  let writePromise = null;
-  if (client) {
-    // Awaitable — caller is inside withTransaction; a rejected promise
-    // bubbles out of the callback and triggers ROLLBACK.
-    writePromise = client.query(sql, values);
-  } else {
-    pool.query(sql, values).catch(err => _dbWriteError('saveListing', err));
-  }
   // Parse JSON strings back to objects for cache consistency
   const cacheRow = { ...row };
   for (const col of SUBMISSION_JSON_COLS) {
@@ -747,11 +739,25 @@ function saveListing(listing, client) {
       try { cacheRow[col] = JSON.parse(cacheRow[col]); } catch {}
     }
   }
-  const idx = _submissions.findIndex(s => s.id === listing.id);
-  if (idx >= 0) _submissions[idx] = cacheRow;
-  else _submissions.push(cacheRow);
-  _invalidateCache();
-  return writePromise; // null when not in a transaction
+  function commitCache() {
+    const idx = _submissions.findIndex(s => s.id === listing.id);
+    if (idx >= 0) _submissions[idx] = cacheRow;
+    else _submissions.push(cacheRow);
+    _invalidateCache();
+  }
+  if (client) {
+    // P1 #15: defer cache mutation until the inner write resolves so a
+    // ROLLBACK in the surrounding withTransaction doesn't leave a
+    // phantom row in the in-memory submissions cache. See the longer
+    // comment above saveApplication for the trade-off.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
+  }
+  pool.query(sql, values).catch(err => _dbWriteError('saveListing', err));
+  commitCache();
+  return null;
 }
 
 function deleteListing(id) {
@@ -854,31 +860,64 @@ function _encryptAppFinancials(app) {
 // atomically. Today most of those sites still call saveApplication(app)
 // fire-and-forget, leaving a small window where commission state can
 // land in the DB while the paired payment update is still in-flight.
+//
+// P1 #15 (cache vs DB commit): when `client` is non-null we DO NOT
+// mutate the in-memory cache until the inner client.query() resolves.
+// That means a transaction that throws after BEGIN but before our
+// query no longer leaves a phantom cache row. There is still a small
+// window between the inner query resolving and the surrounding COMMIT
+// — if that COMMIT fails (network / constraint), the cache momentarily
+// holds an "in-tx but never committed" row until the process is
+// restarted. We accept that trade-off because: (a) the inner query
+// succeeding means PG validated our row, so it's far less likely to
+// fail at COMMIT than to fail at row-write; (b) suppressing all cache
+// updates until COMMIT would require threading the COMMIT step
+// through every save helper and is too invasive to land in this fix.
+//
+// P1 #29 (ciphertext in cache): the encrypted row goes to the DB ONLY.
+// The in-memory cache holds the plaintext clone so subsequent reads
+// (getApplicationsByBroker, /commissions/summary) see real numbers.
 function saveApplication(app, client) {
-  // Deep clone before encrypting so the in-memory object stays usable
-  const toSave = JSON.parse(JSON.stringify(app));
-  _encryptAppFinancials(toSave);
-  const row = dehydrateApplication(toSave);
-  const { sql, values } = buildUpsert('applications', row, 'id');
-  let writePromise = null;
-  if (client) {
-    writePromise = client.query(sql, values);
-  } else {
-    pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
-  }
-  const cacheRow = { ...row };
+  // Two clones: one we encrypt for the DB, one we keep plaintext for
+  // the cache. Both are deep clones so callers' mutations don't bleed.
+  const dbClone = JSON.parse(JSON.stringify(app));
+  _encryptAppFinancials(dbClone);
+  const dbRow = dehydrateApplication(dbClone);
+  const { sql, values } = buildUpsert('applications', dbRow, 'id');
+
+  // Cache row is built from the plaintext clone — same JSON-rehydration
+  // pass as before so callers can navigate nested fields without parse.
+  const cacheClone = JSON.parse(JSON.stringify(app));
+  const cacheRow = dehydrateApplication(cacheClone);
   for (const col of APP_JSON_COLS) {
     if (typeof cacheRow[col] === 'string') {
       try { cacheRow[col] = JSON.parse(cacheRow[col]); } catch {}
     }
   }
-  const idx = _applications.findIndex(a => a.id === app.id);
-  if (idx >= 0) _applications[idx] = cacheRow;
-  else _applications.push(cacheRow);
-  // Notify any open SSE streams subscribed to this application.
-  // Fire-and-forget — the bus is in-process and never blocks.
-  appEvents.publish(app.id);
-  return writePromise; // null when not in a transaction
+
+  function commitCache() {
+    const idx = _applications.findIndex(a => a.id === app.id);
+    if (idx >= 0) _applications[idx] = cacheRow;
+    else _applications.push(cacheRow);
+    // Notify any open SSE streams subscribed to this application.
+    // Fire-and-forget — the bus is in-process and never blocks.
+    appEvents.publish(app.id);
+  }
+
+  if (client) {
+    // Defer cache mutation until the inner write resolves so a
+    // mutator that throws after BEGIN never leaves phantom rows.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
+  }
+
+  // Non-tx path: fire-and-forget (unchanged), cache update is immediate
+  // because there is no surrounding tx to roll us back.
+  pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
+  commitCache();
+  return null;
 }
 
 /**
@@ -1052,14 +1091,17 @@ function saveConversation(conv, client) {
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`;
   const params = [conv.id, conv.clientId, conv.brokerId, jsonData, conv.message_count || 0];
-  let writePromise = null;
   if (client) {
-    writePromise = client.query(sql, params);
-  } else {
-    pool.query(sql, params).catch(err => _dbWriteError('saveConversation', err));
+    // P1 #15: defer cache update until inner query resolves so a tx
+    // ROLLBACK does not leave a phantom conversation row in the cache.
+    return client.query(sql, params).then((result) => {
+      _updateConversationCache(conv);
+      return result;
+    });
   }
+  pool.query(sql, params).catch(err => _dbWriteError('saveConversation', err));
   _updateConversationCache(conv);
-  return writePromise; // null when not in a transaction
+  return null;
 }
 
 /// Awaitable version of saveConversation — use for critical writes
@@ -1219,13 +1261,22 @@ function saveTour(tour, client = null) {
   const { sql, values } = buildUpsert('tours', row, 'id');
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
-  const idx = _tours.findIndex(t => t.id === tour.id);
-  if (idx >= 0) _tours[idx] = cacheRow;
-  else _tours.push(cacheRow);
+  function commitCache() {
+    const idx = _tours.findIndex(t => t.id === tour.id);
+    if (idx >= 0) _tours[idx] = cacheRow;
+    else _tours.push(cacheRow);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves so ROLLBACK
+    // does not leave phantom rows.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveTour', err));
+  commitCache();
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1328,14 +1379,22 @@ function savePushSubscription(userId, current, client = null) {
   const sql = `INSERT INTO push_subscriptions ("userId", web, ios, preferences) VALUES ($1, $2, $3, $4)
      ON CONFLICT ("userId") DO UPDATE SET web = $2, ios = $3, preferences = $4`;
   const values = [userId, web, ios, prefs];
-  const idx = _pushSubs.findIndex(p => p.userId === userId);
   const row = { userId, web: current.web, ios: current.ios, preferences: current.preferences };
-  if (idx >= 0) _pushSubs[idx] = row;
-  else _pushSubs.push(row);
+  function commitCache() {
+    const idx = _pushSubs.findIndex(p => p.userId === userId);
+    if (idx >= 0) _pushSubs[idx] = row;
+    else _pushSubs.push(row);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(() => {});
+  commitCache();
+  return null;
 }
 
 function removePushSubscription(userId, type, identifier) {
@@ -1370,13 +1429,21 @@ function saveSavedSearch(search, client = null) {
   const cols = Object.keys(search);
   const vals = cols.map(c => typeof search[c] === 'object' ? JSON.stringify(search[c]) : search[c]);
   const { sql, values } = buildUpsert('saved_searches', Object.fromEntries(cols.map((c, i) => [c, vals[i]])), 'id');
-  const idx = _savedSearches.findIndex(s => s.id === search.id);
-  if (idx >= 0) _savedSearches[idx] = search;
-  else _savedSearches.push(search);
+  function commitCache() {
+    const idx = _savedSearches.findIndex(s => s.id === search.id);
+    if (idx >= 0) _savedSearches[idx] = search;
+    else _savedSearches.push(search);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(() => {});
+  commitCache();
+  return null;
 }
 
 function deleteSavedSearch(id) {
@@ -1406,13 +1473,21 @@ function saveBlogPost(post, client = null) {
   const { sql, values } = buildUpsert('blog_posts', row, 'id');
   // Cache the un-mutated parsed form so getBlogPostById returns a clean
   // object (not the row with a stringified _extra).
-  const idx = _blogPosts.findIndex(p => p.id === post.id);
-  if (idx >= 0) _blogPosts[idx] = cloned;
-  else _blogPosts.push(cloned);
+  function commitCache() {
+    const idx = _blogPosts.findIndex(p => p.id === post.id);
+    if (idx >= 0) _blogPosts[idx] = cloned;
+    else _blogPosts.push(cloned);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(() => {});
+  commitCache();
+  return null;
 }
 
 function deleteBlogPost(id) {
@@ -1462,13 +1537,21 @@ function getReportById(id) {
 function saveReport(report, client = null) {
   const sql = `INSERT INTO reports (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2`;
   const values = [report.id, JSON.stringify(report)];
-  const idx = _reports.findIndex(r => r.id === report.id);
-  if (idx >= 0) _reports[idx] = { id: report.id, data: report };
-  else _reports.push({ id: report.id, data: report });
+  function commitCache() {
+    const idx = _reports.findIndex(r => r.id === report.id);
+    if (idx >= 0) _reports[idx] = { id: report.id, data: report };
+    else _reports.push({ id: report.id, data: report });
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(() => {});
+  commitCache();
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1504,13 +1587,21 @@ function saveTask(task, client = null) {
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('tasks', row, 'id');
   const cacheRow = { ...row, _extra: extra }; // store parsed object in cache
-  const idx = _tasks.findIndex(t => t.id === task.id);
-  if (idx >= 0) _tasks[idx] = cacheRow;
-  else _tasks.push(cacheRow);
+  function commitCache() {
+    const idx = _tasks.findIndex(t => t.id === task.id);
+    if (idx >= 0) _tasks[idx] = cacheRow;
+    else _tasks.push(cacheRow);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveTask', err));
+  commitCache();
+  return null;
 }
 
 function deleteTask(id) {
@@ -1556,15 +1647,23 @@ function saveNotification(notif, client = null) {
   const { sql, values } = buildUpsert('notifications', row, 'id');
   // Cache: parse data back to object
   const cacheRow = { ...row, data: typeof row.data === 'string' ? _jsonParse(row.data, {}) : (row.data || {}) };
-  const idx = _notifications.findIndex(n => n.id === notif.id);
-  if (idx >= 0) _notifications[idx] = cacheRow;
-  else _notifications.unshift(cacheRow); // newest first to match load order
-  // Soft cap on cache to avoid unbounded growth — DB still has full history
-  if (_notifications.length > 5000) _notifications = _notifications.slice(0, 5000);
+  function commitCache() {
+    const idx = _notifications.findIndex(n => n.id === notif.id);
+    if (idx >= 0) _notifications[idx] = cacheRow;
+    else _notifications.unshift(cacheRow); // newest first to match load order
+    // Soft cap on cache to avoid unbounded growth — DB still has full history
+    if (_notifications.length > 5000) _notifications = _notifications.slice(0, 5000);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveNotification', err));
+  commitCache();
+  return null;
 }
 
 function markNotificationRead(id, userId) {
@@ -1678,13 +1777,21 @@ function saveLeadQueueItem(item, client = null) {
   row._extra = JSON.stringify(extra);
   const { sql, values } = buildUpsert('lead_queue', row, 'id');
   const cacheRow = { ...row, _extra: extra };
-  const idx = _leadQueue.findIndex(r => r.id === item.id);
-  if (idx >= 0) _leadQueue[idx] = cacheRow;
-  else _leadQueue.push(cacheRow);
+  function commitCache() {
+    const idx = _leadQueue.findIndex(r => r.id === item.id);
+    if (idx >= 0) _leadQueue[idx] = cacheRow;
+    else _leadQueue.push(cacheRow);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveLeadQueueItem', err));
+  commitCache();
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1731,13 +1838,21 @@ function saveContributionScore(cs, client = null) {
   const cacheRow = { ...row };
   if (typeof cacheRow._extra === 'string') { try { cacheRow._extra = JSON.parse(cacheRow._extra); } catch { cacheRow._extra = {}; } }
   if (typeof cacheRow.score_breakdown === 'string') { try { cacheRow.score_breakdown = JSON.parse(cacheRow.score_breakdown); } catch { cacheRow.score_breakdown = {}; } }
-  const idx = _contributionScores.findIndex(r => r.id === cs.id);
-  if (idx >= 0) _contributionScores[idx] = cacheRow;
-  else _contributionScores.push(cacheRow);
+  function commitCache() {
+    const idx = _contributionScores.findIndex(r => r.id === cs.id);
+    if (idx >= 0) _contributionScores[idx] = cacheRow;
+    else _contributionScores.push(cacheRow);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveContributionScore', err));
+  commitCache();
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1780,13 +1895,21 @@ function getPublishedInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobi
 
 function saveInmobPost(post, client = null) {
   const { sql, values } = buildUpsert('inmobiliaria_posts', post, 'id');
-  const idx = _inmobPosts.findIndex(p => p.id === post.id);
-  if (idx >= 0) _inmobPosts[idx] = post;
-  else _inmobPosts.push(post);
+  function commitCache() {
+    const idx = _inmobPosts.findIndex(p => p.id === post.id);
+    if (idx >= 0) _inmobPosts[idx] = post;
+    else _inmobPosts.push(post);
+  }
   if (client) {
-    return client.query(sql, values);
+    // P1 #15: defer cache update until inner query resolves.
+    return client.query(sql, values).then((result) => {
+      commitCache();
+      return result;
+    });
   }
   pool.query(sql, values).catch(err => _dbWriteError('saveInmobPost', err));
+  commitCache();
+  return null;
 }
 
 function deleteInmobPost(id) {
