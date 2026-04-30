@@ -376,6 +376,78 @@ function recordInventorySyncFailure(app, error, unitId) {
   }
 }
 
+// ── Shared rejection side-effects ─────────────────────────────────
+// Applies the side-effects of moving an application to `rechazado`:
+//   • flips `app.status` + `status_reason`
+//   • voids any approved commission (and clears stale payout pointers)
+//   • releases the assigned `unit_inventory` slot back to `available`
+//   • writes an audit event capturing from→to + reason
+//
+// MUST be invoked inside an open transaction — the caller is
+// responsible for `await store.saveApplication(app, client)` after this
+// returns. Listing writes (when an inventory release happens) join the
+// same transaction so rejection + inventory release commit together.
+//
+// Notifications (email/push) and task auto-completion are
+// intentionally deferred to the caller and executed AFTER the txn
+// resolves, mirroring the established pattern at PUT /:id/status.
+//
+// Returns metadata so the caller can drive post-txn side-effects:
+//   { from, voidedCommission, releasedUnitId }
+async function applyRejection(app, { reason, actorId, actorName, client, bulk = false } = {}) {
+  const from = app.status;
+  app.status = 'rechazado';
+  app.status_reason = reason || '';
+
+  const rejectionLabel = bulk
+    ? `Aplicación rechazada (acción en lote)${reason ? ': ' + reason : ''}`
+    : `Estado cambiado a ${STATUS_LABELS['rechazado']}${reason ? ': ' + reason : ''}`;
+  addEvent(app, 'status_change', rejectionLabel,
+    actorId, actorName,
+    { from, to: 'rechazado', reason: reason || '', bulk });
+
+  // Void approved commission: a rejected sale shouldn't pay out.
+  let voidedCommission = false;
+  if (app.commission?.status === 'approved') {
+    app.commission.status     = 'voided';
+    app.commission.voided_at  = new Date().toISOString();
+    if (app.commission.payout_id)  app.commission.payout_id  = null;
+    if (app.commission.payout_ref) app.commission.payout_ref = null;
+    addEvent(app, 'commission_voided',
+      'Comisión anulada por rechazo de la aplicación',
+      'system', 'Sistema', { reason: 'application_rejected', bulk });
+    voidedCommission = true;
+  }
+
+  // Release the assigned unit so a teammate can offer it again.
+  let releasedUnitId = null;
+  if (app.assigned_unit?.unitId && app.listing_id) {
+    const targetUnitId = app.assigned_unit.unitId;
+    try {
+      const listing = store.getListingById(app.listing_id);
+      if (listing && Array.isArray(listing.unit_inventory)) {
+        const unit = listing.unit_inventory.find(u => u.id === targetUnitId);
+        if (unit) {
+          unit.status        = 'available';
+          unit.applicationId = null;
+          unit.clientName    = null;
+          listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
+          await store.saveListing(listing, client);
+          releasedUnitId = targetUnitId;
+          app.assigned_unit = null;
+        }
+      }
+    } catch (e) {
+      // Inventory sync is best-effort, like the existing PUT /:id/status
+      // path — record the failure on the app but don't block the reject.
+      console.error('[applyRejection] inventory release failed:', e.message);
+      recordInventorySyncFailure(app, e, targetUnitId);
+    }
+  }
+
+  return { from, voidedCommission, releasedUnitId };
+}
+
 // Fire-and-forget email sender. When given an app context, a failed
 // delivery is recorded on that application (timeline event +
 // notification_failures entry) so the broker can see that the
@@ -1825,17 +1897,21 @@ router.put('/:id/status', userAuth, async (req, res) => {
 
   // ── D2: approval-delegation gate ────────────────────────────
   // Critical-stage transitions (`aprobado`, `completado`) require an
-  // owner-level actor. effectiveAccessLevel is NOT yet wired across
-  // all user records, so per the audit spec we fall back to
-  // role==='secretary' as the escalation trigger only — brokers,
-  // owners, and admins are unaffected. Secretaries get pushed to the
-  // /recommend-status flow. When access_level rolls out broadly,
-  // tighten this to also gate Asistente-level (level<2) team members.
-  if (['aprobado', 'completado'].includes(status) && user?.role === 'secretary') {
-    return res.status(403).json({
-      error: 'Necesitas autorización del propietario para aprobar esta etapa.',
-      code:  'requires_escalation',
-    });
+  // owner-level (Director, access_level=3) actor. Secretaries are
+  // ALWAYS blocked. Other team members (Asistente / Agente) under an
+  // inmobiliaria are also blocked when their access level is below 3 —
+  // OWNER_ACCESS_LEVEL_LIMIT returns 3 for inmobiliaria/constructora/admin
+  // owners and the user's access_level (default 1) for everyone else
+  // affiliated to an inmobiliaria. Admins are exempt.
+  if (['aprobado', 'completado'].includes(status)) {
+    const isLowAccessTeam = user?.role !== 'admin' && user?.inmobiliaria_id &&
+                            OWNER_ACCESS_LEVEL_LIMIT(user) < 3;
+    if (user?.role === 'secretary' || isLowAccessTeam) {
+      return res.status(403).json({
+        error: 'Necesitas autorización del propietario para aprobar esta etapa.',
+        code:  'requires_escalation',
+      });
+    }
   }
 
   // ── Idempotency: no-op if already in the requested state ─────
@@ -1872,55 +1948,66 @@ router.put('/:id/status', userAuth, async (req, res) => {
   if (!allowed || !allowed.includes(status))
     return res.status(400).json({ error: `Transición no válida: ${app.status} → ${status}` });
 
-  if (status === 'rechazado' && !reason)
-    return res.status(400).json({ error: 'Se requiere una razón para rechazar' });
+  // Reject reason length parity with skip-phase / bulk reject — at least
+  // 5 characters of explanation so the timeline event is meaningful.
+  if (status === 'rechazado') {
+    const trimmedReason = (reason || '').toString().trim();
+    if (trimmedReason.length < 5) {
+      return res.status(400).json({
+        error: 'Se requiere una razón (mínimo 5 caracteres) para rechazar.',
+      });
+    }
+  }
 
   const oldStatus = app.status;
-  app.status = status;
-  app.status_reason = reason || '';
 
-  addEvent(app, 'status_change',
-    `Estado cambiado a ${STATUS_LABELS[status]}${reason ? ': ' + reason : ''}`,
-    req.user.sub, user?.name || 'Broker',
-    { from: oldStatus, to: status, reason });
+  // Atomic status mutation: SELECT … FOR UPDATE on the app row, run the
+  // mutation, save inside the same txn. Two simultaneous writers (e.g.
+  // owner approves while broker rejects) can no longer both succeed.
+  let claimed;
+  try {
+    claimed = await store.claimApplicationAtomic(req.params.id, app.updated_at || null, async (a, client) => {
+      a.status = status;
+      a.status_reason = reason || '';
 
-  store.saveApplication(app);
+      if (status === 'rechazado') {
+        // applyRejection writes the status_change event with the right
+        // wording AND voids commission + releases inventory inside the
+        // same transaction.
+        await applyRejection(a, {
+          reason,
+          actorId:   req.user.sub,
+          actorName: user?.name || 'Broker',
+          client,
+          bulk:      false,
+        });
+      } else {
+        addEvent(a, 'status_change',
+          `Estado cambiado a ${STATUS_LABELS[status]}${reason ? ': ' + reason : ''}`,
+          req.user.sub, user?.name || 'Broker',
+          { from: oldStatus, to: status, reason });
+      }
+    });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
+  }
+
+  // Refresh local reference to the post-mutation row for downstream
+  // side-effects (notifications, push, inventory sync on completado).
+  Object.assign(app, claimed);
 
   // D2: clear any pending-approval rows tied to this app — the owner
   // accepted the transition (or moved past it).
   try { store.removePendingApprovalsForApp(app.id); } catch {}
 
-  // ── Cancel pending tasks + void commission on terminal statuses ──
+  // ── Cancel pending tasks on terminal statuses ─────────────────
   if (status === 'rechazado' || status === 'completado') {
-    // Cancel all active tasks for this application
     const allEvents = ['documents_requested', 'documents_rejected', 'document_uploaded',
                        'payment_plan_created', 'payment_uploaded', 'payment_rejected', 'receipt_ready'];
     for (const evt of allEvents) autoCompleteTasksByEvent(app.id, evt);
-
-    // Void approved commission if application is rejected (sale didn't happen)
-    // Wrap the status flip + audit event + save in a transaction so commission
-    // status and the timeline event always commit together. Clear any payout
-    // pointer so a voided commission cannot be paid out by a stale reference.
-    if (status === 'rechazado' && app.commission?.status === 'approved') {
-      try {
-        await store.withTransaction(async (client) => {
-          app.commission.status = 'voided';
-          app.commission.voided_at = new Date().toISOString();
-          // Clear any payout pointer so a voided commission can't be paid
-          // out by a stale reference left over from the approved state.
-          if (app.commission.payout_id) app.commission.payout_id = null;
-          if (app.commission.payout_ref) app.commission.payout_ref = null;
-          addEvent(app, 'commission_voided',
-            'Comisión anulada por rechazo de la aplicación',
-            'system', 'Sistema', { reason: 'application_rejected' });
-          await store.saveApplication(app, client);
-        });
-      } catch (err) {
-        console.error('[commission/void] transaction failed:', err.message);
-        // Outer route already responded — log and continue. Inventory-sync
-        // path follows; this failure does not block the status change.
-      }
-    }
   }
 
   // ── D3: auto-assign a unit on completado when none was reserved ──
@@ -1971,7 +2058,11 @@ router.put('/:id/status', userAuth, async (req, res) => {
   // The outer try/catch still records failures via
   // recordInventorySyncFailure so the workflow continues — the
   // inventory side-effect is best-effort, not blocking, by design.
-  if (app.assigned_unit?.unitId && app.listing_id) {
+  //
+  // Note: rechazado is handled inside applyRejection() above (releases
+  // the unit and clears app.assigned_unit inside the claim txn) — the
+  // block here only covers completado / reservado / aprobado.
+  if (status !== 'rechazado' && app.assigned_unit?.unitId && app.listing_id) {
     const targetUnitId = app.assigned_unit.unitId;
     try {
       await store.withTransaction(async (client) => {
@@ -1981,13 +2072,6 @@ router.put('/:id/status', userAuth, async (req, res) => {
           if (unit) {
             if (status === 'completado') {
               unit.status = 'sold';
-            } else if (status === 'rechazado') {
-              unit.status = 'available';
-              unit.applicationId = null;
-              unit.clientName = null;
-              // Clear assigned unit from application
-              app.assigned_unit = null;
-              await store.saveApplication(app, client);
             } else if (['reservado', 'aprobado'].includes(status)) {
               unit.status = 'reserved';
               unit.applicationId = app.id;
@@ -2039,7 +2123,7 @@ router.put('/:id/status', userAuth, async (req, res) => {
 // must be provided. Everything else (subscription gate, ownership
 // validation, terminal-state guard, transition validation, status
 // notifications) mirrors the regular PUT /:id/status.
-router.post('/:id/skip-phase', userAuth, (req, res) => {
+router.post('/:id/skip-phase', userAuth, async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -2065,6 +2149,23 @@ router.post('/:id/skip-phase', userAuth, (req, res) => {
   const { status, reason } = req.body || {};
   if (!status) return res.status(400).json({ error: 'status es requerido' });
 
+  // ── D2: approval-delegation gate (parity with PUT /:id/status) ──
+  // Skip-phase is the broker escape hatch; without this gate a
+  // secretary or low-access team member could leapfrog `aprobado` /
+  // `completado` from `en_aprobacion` and bypass owner approval. Same
+  // shape and `requires_escalation` code so the client UI handles
+  // both endpoints identically.
+  if (['aprobado', 'completado'].includes(status)) {
+    const isLowAccessTeam = user?.role !== 'admin' && user?.inmobiliaria_id &&
+                            OWNER_ACCESS_LEVEL_LIMIT(user) < 3;
+    if (user?.role === 'secretary' || isLowAccessTeam) {
+      return res.status(403).json({
+        error: 'Necesitas autorización del propietario para aprobar esta etapa.',
+        code:  'requires_escalation',
+      });
+    }
+  }
+
   const note = (reason || '').toString().trim();
   if (note.length < 5)
     return res.status(400).json({
@@ -2085,24 +2186,35 @@ router.post('/:id/skip-phase', userAuth, (req, res) => {
     return res.status(400).json({ error: `Transición no válida: ${app.status} → ${status}` });
 
   const oldStatus = app.status;
-  app.status = status;
-  app.status_reason = note;
 
-  // Single audit event so the override is obvious in the timeline.
-  // Includes both the from/to and the broker's stated reason.
-  addEvent(app, 'status_change',
-    `Etapa saltada: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[status]} — ${note.slice(0, 200)}`,
-    req.user.sub, user?.name || 'Agente',
-    {
-      from:        oldStatus,
-      to:          status,
-      reason:      note,
-      manual_skip: true,
-      skipped_by:  req.user.sub,
-      skipped_role: user?.role || null,
+  // Atomic mutation — same OCC pattern as PUT /:id/status. Two skips
+  // racing on the same app (or a skip racing a normal status change)
+  // can no longer overwrite each other.
+  let claimed;
+  try {
+    claimed = await store.claimApplicationAtomic(req.params.id, app.updated_at || null, async (a /* , client */) => {
+      a.status = status;
+      a.status_reason = note;
+      addEvent(a, 'status_change',
+        `Etapa saltada: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[status]} — ${note.slice(0, 200)}`,
+        req.user.sub, user?.name || 'Agente',
+        {
+          from:        oldStatus,
+          to:          status,
+          reason:      note,
+          manual_skip: true,
+          skipped_by:  req.user.sub,
+          skipped_role: user?.role || null,
+        });
     });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
+  }
 
-  store.saveApplication(app);
+  Object.assign(app, claimed);
 
   // Notify the client (same wording as PUT /:id/status — they don't
   // need to know it was skipped, just that the stage moved).
@@ -2547,9 +2659,22 @@ router.put('/:id/documents/:docId/review', userAuth, async (req, res) => {
   if (!initial) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
+  const isBroker    = initial.broker.user_id === req.user.sub;
   const isSecretary = user?.role === 'secretary' && initial.inmobiliaria_id === user.inmobiliaria_id;
-  if (initial.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
+  const admin       = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
+
+  // Subscription re-check: review endpoints are pro-only writes that
+  // can drive app.status forward (rejected required doc → documentos_insuficientes).
+  // Mirror the gate at PUT /:id/status so a lapsed broker can't push a
+  // deal sideways via this surface.
+  if (!admin && isBroker && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripcion no esta activa.',
+      needsSubscription: true,
+    });
+  }
 
   const docInitial = initial.documents_uploaded.find(d => d.id === req.params.docId);
   if (!docInitial) return res.status(404).json({ error: 'Documento no encontrado' });
@@ -2984,9 +3109,22 @@ router.put('/:id/payment/verify', userAuth, async (req, res) => {
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
+  const isBroker    = app.broker.user_id === req.user.sub;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
-  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
+  const admin       = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isSecretary && !admin)
     return res.status(403).json({ error: 'No autorizado' });
+
+  // Subscription re-check: payment verification flips app.status
+  // forward (pago_aprobado) and emits client notifications, so it must
+  // honor the same gate as PUT /:id/status. Defense-in-depth for the
+  // case where the route-level middleware ever changes shape.
+  if (!admin && isBroker && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripcion no esta activa.',
+      needsSubscription: true,
+    });
+  }
 
   const { approved, notes } = req.body;
 
@@ -4014,6 +4152,16 @@ router.put('/:id/payment-plan/:iid/review', userAuth, (req, res) => {
   // Only inmobiliaria, secretary, or admin can verify payments (not the broker — separation of duties)
   if (!isInmobiliaria && !isSecretary && !admin)
     return res.status(403).json({ error: 'Solo la inmobiliaria o secretaria pueden aprobar pagos' });
+
+  // Subscription re-check: approving an installment can advance the app
+  // to pago_aprobado. Mirror the PUT /:id/status gate so a lapsed
+  // inmobiliaria can't drive deals forward via this surface.
+  if (!admin && isInmobiliaria && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripcion no esta activa.',
+      needsSubscription: true,
+    });
+  }
   const inst = app.payment_plan.installments.find(i => i.id === req.params.iid);
   if (!inst) return res.status(404).json({ error: 'Cuota no encontrada' });
   if (inst.status !== 'proof_uploaded')
@@ -4404,7 +4552,25 @@ router.post('/bulk', userAuth, async (req, res) => {
     return res.status(400).json({ error: 'reason ≥ 5 caracteres es requerido para rechazar.' });
 
   const admin = isAdmin(req) || user.role === 'admin';
+
+  // Subscription re-check at the route boundary — same pattern as the
+  // single-status path. Bulk reject is the highest-leverage write in the
+  // file (one call can reject 200 deals); a lapsed broker should not get
+  // to use it.
+  const isInmobiliariaActor = ['inmobiliaria', 'constructora'].includes(user.role);
+  if (!admin && (user.role === 'broker' || isInmobiliariaActor) && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripcion no esta activa.',
+      needsSubscription: true,
+    });
+  }
+
   const results = [];
+  // Track apps successfully rejected so we can drive notifications and
+  // task auto-completion AFTER the transaction resolves — same shape as
+  // PUT /:id/status. Holding network I/O inside the txn would lengthen
+  // the row-lock window unnecessarily.
+  const rejectedForPostTxn = [];
 
   await store.withTransaction(async (client) => {
     for (const id of ids) {
@@ -4414,7 +4580,7 @@ router.post('/bulk', userAuth, async (req, res) => {
         continue;
       }
       const isBroker       = app.broker?.user_id === req.user.sub;
-      const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user.role) && app.inmobiliaria_id === user.id;
+      const isInmobiliaria = isInmobiliariaActor && app.inmobiliaria_id === user.id;
       const isSecretary    = user.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
       if (!isBroker && !isInmobiliaria && !isSecretary && !admin) {
         results.push({ id, ok: false, code: 'forbidden' });
@@ -4427,13 +4593,17 @@ router.post('/bulk', userAuth, async (req, res) => {
             results.push({ id, ok: false, code: 'terminal_state' });
             continue;
           }
-          const old = app.status;
-          app.status = 'rechazado';
-          app.status_reason = note;
-          addEvent(app, 'status_change',
-            `Aplicación rechazada (acción en lote): ${note}`,
-            req.user.sub, user.name || 'Broker',
-            { from: old, to: 'rechazado', reason: note, bulk: true });
+          // Shared helper: same status flip + commission void +
+          // inventory release as the single-status reject path.
+          const oldStatus = app.status;
+          await applyRejection(app, {
+            reason:    note,
+            actorId:   req.user.sub,
+            actorName: user.name || 'Broker',
+            client,
+            bulk:      true,
+          });
+          rejectedForPostTxn.push({ app, oldStatus });
         } else if (action === 'archive') {
           app.archived = true;
           addEvent(app, 'application_archived',
@@ -4452,6 +4622,33 @@ router.post('/bulk', userAuth, async (req, res) => {
       }
     }
   });
+
+  // ── Post-transaction side-effects for rejected apps ─────────────
+  // Mirror the PUT /:id/status reject path: cancel pending tasks, email
+  // and push the client. Email failures are recorded on each app via
+  // the existing `recordNotificationFailure` chain in sendNotification.
+  for (const { app, oldStatus } of rejectedForPostTxn) {
+    const taskEvents = ['documents_requested', 'documents_rejected', 'document_uploaded',
+                        'payment_plan_created', 'payment_uploaded', 'payment_rejected', 'receipt_ready'];
+    for (const evt of taskEvents) {
+      try { autoCompleteTasksByEvent(app.id, evt); } catch (_) {}
+    }
+
+    if (app.client?.email) {
+      const email = statusEmail(app, oldStatus, 'rechazado', note);
+      sendNotification(app.client.email, email.subject, email.html, { app, purpose: 'bulk_reject' });
+    }
+    if (app.client?.user_id) {
+      try {
+        pushNotify(app.client.user_id, {
+          type:  'status_changed',
+          title: 'Estado Actualizado',
+          body:  `Tu aplicación para ${app.listing_title} cambió a: ${STATUS_LABELS['rechazado']}`,
+          url:   `/my-applications?id=${app.id}`,
+        });
+      } catch (_) { /* best-effort */ }
+    }
+  }
 
   res.json({ ok: true, action, results });
 });
