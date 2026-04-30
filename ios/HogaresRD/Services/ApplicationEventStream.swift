@@ -66,15 +66,17 @@ final class ApplicationEventStream {
         guard let api = api else { throw StreamError.notAuthenticated }
         guard let token = await api.token else { throw StreamError.notAuthenticated }
 
-        // The SSE endpoint uses the ?token= fallback because URLSession
-        // cannot attach custom headers to async-bytes streaming requests
-        // on all OS versions. The server only honors query-string tokens
-        // on GET, so this is safe.
-        var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/events")!
-        comps.queryItems = [URLQueryItem(name: "token", value: token)]
-        guard let url = comps.url else { throw StreamError.badURL }
+        // Pass the JWT via the standard Authorization header. iOS 17 supports
+        // custom headers on `URLSession.bytes(for:)` streaming requests, so
+        // we no longer need the ?token= query-string fallback that older
+        // builds used. Tokens in URLs would otherwise leak via nginx access
+        // logs, OSLog, and Console.app captures.
+        guard let url = URL(string: "\(apiBase)/api/applications/\(applicationId)/events") else {
+            throw StreamError.badURL
+        }
 
         var req = URLRequest(url: url)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         req.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         // Disable the default 60s timeout since this is a long-lived stream

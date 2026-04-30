@@ -124,11 +124,28 @@ class APIService: ObservableObject {
     }()
 
     private init() {
-        if let data = UserDefaults.standard.data(forKey: "rd_user"),
+        // Prefer Keychain. Fall back to UserDefaults for users upgrading
+        // from a build that stored credentials in plist; on a fallback hit
+        // we migrate the value into Keychain and clear the legacy slot so
+        // the next launch reads exclusively from Keychain.
+        // TODO(2026-Q3): drop UserDefaults legacy fallback.
+        if let data = KeychainStore.loadData(account: "rd_user"),
            let user = try? decoder.decode(User.self, from: data) {
             currentUser = user
+        } else if let data = UserDefaults.standard.data(forKey: "rd_user"),
+                  let user = try? decoder.decode(User.self, from: data) {
+            currentUser = user
+            KeychainStore.saveData(data, account: "rd_user")
+            UserDefaults.standard.removeObject(forKey: "rd_user")
         }
-        token = UserDefaults.standard.string(forKey: "rd_token")
+
+        if let t = KeychainStore.loadString(account: "rd_token") {
+            token = t
+        } else if let t = UserDefaults.standard.string(forKey: "rd_token") {
+            token = t
+            KeychainStore.saveString(t, account: "rd_token")
+            UserDefaults.standard.removeObject(forKey: "rd_token")
+        }
     }
 
     // MARK: - Listings
@@ -562,7 +579,9 @@ class APIService: ObservableObject {
               let user = try? decoder.decode(User.self, from: data) else { return }
         await MainActor.run {
             self.currentUser = user
-            UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
+            if let encoded = try? JSONEncoder().encode(user) {
+                KeychainStore.saveData(encoded, account: "rd_user")
+            }
         }
     }
 
@@ -638,6 +657,10 @@ class APIService: ObservableObject {
 
         currentUser = nil
         token = nil
+        KeychainStore.delete(account: "rd_user")
+        KeychainStore.delete(account: "rd_token")
+        // Also clear any legacy UserDefaults entries so a stale build can't
+        // resurrect them. TODO(2026-Q3): drop UserDefaults legacy fallback.
         UserDefaults.standard.removeObject(forKey: "rd_user")
         UserDefaults.standard.removeObject(forKey: "rd_token")
         cache.clear() // Flush cached API responses
@@ -2456,8 +2479,10 @@ class APIService: ObservableObject {
     private func persist(user: User, token: String) {
         self.currentUser = user
         self.token = token
-        UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
-        UserDefaults.standard.set(token, forKey: "rd_token")
+        if let encoded = try? JSONEncoder().encode(user) {
+            KeychainStore.saveData(encoded, account: "rd_user")
+        }
+        KeychainStore.saveString(token, account: "rd_token")
         // Re-register the push token whenever a fresh JWT lands. The push
         // service captured the device token at app launch; the server needs
         // it associated with the new authenticated user/session.
