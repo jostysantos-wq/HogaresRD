@@ -245,6 +245,7 @@ struct WelcomeLoginScreen: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .disabled(loading)
 
                     // Apple — native button styled to match
                     SignInWithAppleButton(.continue) { request in
@@ -255,6 +256,7 @@ struct WelcomeLoginScreen: View {
                     .signInWithAppleButtonStyle(.white)
                     .frame(height: 54)
                     .clipShape(Capsule())
+                    .disabled(loading)
 
                     // TODO: enable when Google OAuth is wired
                     // Hidden for App Store Review — a button that only
@@ -281,9 +283,18 @@ struct WelcomeLoginScreen: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .disabled(loading)
                     */
                 }
                 .padding(.bottom, 20)
+
+                if loading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, 12)
+                }
 
                 if let err = error {
                     Text(err)
@@ -791,6 +802,7 @@ struct WelcomeLoginFormScreen: View {
     @State private var twoFALoading = false
     @State private var twoFAError: String?
     @State private var resendCooldown: Int = 0
+    @FocusState private var twoFAFocus: Bool
 
     @State private var showForgot = false
 
@@ -1015,6 +1027,7 @@ struct WelcomeLoginFormScreen: View {
                 .padding(.horizontal, 24)
                 .frame(height: 64)
                 .background(panelBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .focused($twoFAFocus)
                 .onChange(of: twoFACode) { _, val in
                     twoFACode = String(val.filter(\.isNumber).prefix(6))
                 }
@@ -1203,6 +1216,12 @@ struct WelcomeLoginFormScreen: View {
         } catch {
             twoFAError = error.localizedDescription
             twoFACode = ""
+            // Re-focus the 6-digit field so the user can retry without
+            // tapping it again. A brief delay lets the field redraw first.
+            Task {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                twoFAFocus = true
+            }
         }
         twoFALoading = false
     }
