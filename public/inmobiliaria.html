@@ -162,6 +162,40 @@
     .footer-col a:hover { color: var(--accent); }
     .footer-bottom { max-width: 1280px; margin: 0 auto; padding: 1.25rem 2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
 
+    /* ── FOGO-style polish overrides ──────────────────────────── */
+    :root {
+      --card-radius: 18px;
+      --card-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 6px 18px rgba(15,23,42,0.05);
+      --card-shadow-hover: 0 1px 3px rgba(15,23,42,0.06), 0 12px 28px rgba(15,23,42,0.09);
+    }
+    body { background: #F1F3F6; }
+    nav { background: rgba(255,255,255,0.92); }
+    .prop-card,
+    .sk-card {
+      border-radius: var(--card-radius); border: none;
+      box-shadow: var(--card-shadow);
+    }
+    .prop-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-3px); }
+    .card-img { border-radius: var(--card-radius) var(--card-radius) 0 0; }
+    .profile-tab {
+      padding: 9px 16px; font-size: 0.84rem; font-weight: 600;
+      color: var(--text-muted); cursor: pointer;
+      border-bottom: none; border-radius: 999px;
+      transition: background 0.15s, color 0.15s;
+      margin: 6px 4px;
+    }
+    .profile-tab:hover { background: var(--bg-secondary); color: var(--text); }
+    .profile-tab.active {
+      color: #fff; background: var(--accent); border-bottom-color: transparent;
+      box-shadow: 0 6px 14px rgba(0,106,255,0.28);
+    }
+    #profileTabs > div { padding: 6px 2rem !important; gap: 4px; }
+    .page-btn { border-radius: 999px; border: 1px solid var(--border); }
+    .btn-ghost, .btn-nav-primary { border-radius: 999px; }
+    .btn-login { border-radius: 999px; }
+    .empty-state svg { fill: var(--accent-light); }
+    .badge { font-weight: 700; padding: 4px 10px; }
+
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .footer-inner { grid-template-columns: 1fr 1fr; }
@@ -295,9 +329,21 @@
     </div>
   </div>
   <style>
-    .profile-tab { padding: 0.85rem 1.5rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
-    .profile-tab:hover { color: var(--text); }
-    .profile-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .profile-tab {
+      padding: 9px 16px; border: none; background: none;
+      font-size: 0.84rem; font-weight: 600;
+      color: var(--text-muted); cursor: pointer;
+      border-bottom: none; border-radius: 999px;
+      transition: background 0.15s, color 0.15s;
+      margin: 6px 4px;
+      white-space: nowrap;
+    }
+    .profile-tab:hover { color: var(--text); background: var(--bg-secondary, #F4F6F9); }
+    .profile-tab.active {
+      color: #fff; background: var(--accent);
+      border-bottom-color: transparent;
+      box-shadow: 0 6px 14px rgba(0,106,255,0.28);
+    }
     .profile-section { display: none; }
     .profile-section.active { display: block; }
   </style>
