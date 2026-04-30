@@ -8,12 +8,59 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
+    /* Editorial palette — overrides core.css tokens for this page only.
+       NOTE: previous version used `var(--primary)` which is undefined in
+       core.css, so buttons rendered with no defined color. All
+       `var(--primary)` usages have been switched to `var(--ink)`. */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --bg:          #FBF6EE;
+      --bg-card:     #FFFFFF;
+      --bg-section:  #F4F1EA;
+      --ink:         #131318;
+      --ink-soft:    #36363E;
+      --ink-muted:   #8A8A93;
+      --line:        rgba(19,19,24,0.10);
+      --serif:       ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill:      999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop:  0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --accent:      #131318;
+      --text:        #131318;
+      --muted:       #8A8A93;
+      --border:      rgba(19,19,24,0.10);
+      --success:     #15803D;
+      --success-bg:  #ECFDF5;
+      --success-border: rgba(21,128,61,0.25);
+      --error:       #B42318;
+      --error-bg:    rgba(180,35,24,0.08);
+      --error-border: rgba(180,35,24,0.25);
+      --warn:        #92400E;
+      --warn-bg:     #FEF3C7;
+      --warn-border: rgba(217,119,6,0.25);
+      --card:        #FFFFFF;
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+    }
+    [data-theme="dark"] {
+      --bg:          #15131A;
+      --bg-card:     #1F1C24;
+      --bg-section:  #1A1820;
+      --ink:         #F5F1EA;
+      --ink-soft:    #C9C5BC;
+      --ink-muted:   #8B867E;
+      --line:        rgba(245,241,234,0.12);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop:  0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --accent:      #F5F1EA;
+      --text:        #F5F1EA;
+      --muted:       #8B867E;
+      --border:      rgba(245,241,234,0.12);
+      --card:        #1F1C24;
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+    }
     body {
       background: var(--bg);
-      color: var(--text);
+      color: var(--ink);
       font-family: var(--font);
       min-height: 100vh;
       display: flex;
@@ -23,14 +70,14 @@
       padding: 24px 16px;
     }
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
       padding: 48px 40px;
       max-width: 460px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 4px 24px rgba(17,17,16,0.06);
+      box-shadow: var(--shadow-soft);
     }
     .icon {
       font-size: 3rem;
@@ -38,23 +85,27 @@
       display: block;
     }
     h1 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: var(--text);
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--ink);
       margin-bottom: 12px;
+      letter-spacing: -0.01em;
     }
     p {
       font-size: 0.95rem;
-      color: var(--muted);
+      color: var(--ink-muted);
       line-height: 1.6;
       margin-bottom: 28px;
     }
     .btn {
       display: inline-block;
-      background: var(--primary);
+      background: var(--ink);
       color: #fff;
-      padding: 12px 28px;
-      border-radius: 10px;
+      height: 54px;
+      line-height: 54px;
+      padding: 0 28px;
+      border-radius: var(--r-pill);
       text-decoration: none;
       font-weight: 700;
       font-size: 0.95rem;
@@ -65,14 +116,15 @@
     .btn:hover { opacity: 0.88; }
     .btn-outline {
       background: transparent;
-      color: var(--primary);
-      border: 2px solid var(--primary);
+      color: var(--ink);
+      border: 1px solid var(--line);
       margin-top: 12px;
     }
-    [data-theme="dark"] .btn-outline { color: #7ab3ff; border-color: #7ab3ff; }
-    .btn-sm { padding: 9px 20px; font-size: 0.85rem; }
+    .btn-outline:hover { border-color: var(--ink); }
+    [data-theme="dark"] .btn-outline { color: var(--ink); border-color: var(--line); }
+    .btn-sm { height: 42px; line-height: 42px; padding: 0 20px; font-size: 0.85rem; }
     .alert {
-      border-radius: 10px;
+      border-radius: 14px;
       padding: 14px 18px;
       font-size: 0.88rem;
       margin-bottom: 24px;
@@ -89,14 +141,14 @@
       text-decoration: none;
       font-weight: 900;
       font-size: 1.05rem;
-      color: var(--primary);
+      color: var(--ink);
       margin-bottom: 36px;
     }
-    [data-theme="dark"] .logo-link { color: #7ab3ff; }
+    [data-theme="dark"] .logo-link { color: var(--ink); }
     .spinner {
       width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
+      border: 3px solid var(--line);
+      border-top-color: var(--ink);
       border-radius: 50%;
       animation: spin .7s linear infinite;
       margin: 0 auto 20px;
