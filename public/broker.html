@@ -1746,6 +1746,14 @@
     /* Affiliation banner & inline blue cards */
     #affiliationBanner > * { border-radius: var(--card-radius) !important; }
 
+    /* #41 ext — Mobile bulk toolbar: collapse buttons into an
+       overflow <details> menu and pin the toolbar to the viewport. */
+    @media (max-width: 640px) {
+      .bulk-toolbar { position: fixed !important; bottom: 0; left: 0; right: 0; margin: 0 !important; border-radius: 14px 14px 0 0 !important; box-shadow: 0 -8px 24px rgba(0,0,0,0.18); z-index: 200; padding: 0.7rem 0.85rem !important; }
+      .bulk-toolbar .bulk-actions-wrap { display: none !important; }
+      .bulk-toolbar .bulk-actions-overflow { display: inline-block !important; }
+    }
+
     /* ── RESPONSIVE ───────────────────────────────────────────── */
     @media (max-width: 900px) {
       .sidebar { position: fixed; top: 0; left: 0; transform: translateX(-100%); transition: transform 0.25s, width 0.25s; z-index: 999; width: var(--sidebar-w) !important; height: 100vh; }
@@ -4106,6 +4114,9 @@
       El nuevo agente recibirá la aplicación y se notificará a ambos por correo. Solo puedes reasignar a miembros de tu equipo.
     </p>
     <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.35rem;">Nuevo agente</label>
+    <input type="text" id="reassignFilter"
+           placeholder="Buscar por nombre o correo…" autocomplete="off"
+           style="width:100%;padding:0.55rem 0.8rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.85rem;font-family:inherit;margin-bottom:0.45rem;" />
     <select id="reassignSelect"
             style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;margin-bottom:0.8rem;">
       <option value="">— Selecciona un agente —</option>
@@ -4628,23 +4639,50 @@
   // ── App List ───────────────────────────────────────────────
   const appListContainer = document.getElementById('appListContainer');
 
+  // Per-filter empty-state copy. Falls back to the generic message.
+  const EMPTY_STATE_BY_FILTER = {
+    all:                       'Aún no tienes aplicaciones.',
+    aplicado:                  'No hay aplicaciones nuevas.',
+    en_revision:               'No hay aplicaciones en revisión.',
+    documentos_requeridos:     'No hay aplicaciones con documentos pendientes.',
+    documentos_enviados:       'No hay documentos pendientes de revisión.',
+    documentos_insuficientes:  'No hay aplicaciones con documentos insuficientes.',
+    aprobado:                  'Aún no has aprobado ninguna aplicación.',
+    pendiente_pago:            'No hay aplicaciones esperando pago.',
+    pago_enviado:              'No hay pagos pendientes de confirmación.',
+    pago_aprobado:             'No hay aplicaciones con pago aprobado.',
+    completado:                'Aún no has completado ninguna aplicación.',
+    rechazado:                 'Aún no has rechazado ninguna aplicación.',
+  };
+
   function renderAppList() {
     const filtered = currentFilter === 'all' ? applications : applications.filter(a => a.status === currentFilter);
     if (!filtered.length) {
+      const msg = EMPTY_STATE_BY_FILTER[currentFilter] || `No hay aplicaciones${currentFilter!=='all'?' con este estado':''}.`;
       appListContainer.innerHTML = `<div class="empty-state">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        <p>No hay aplicaciones${currentFilter!=='all'?' con este estado':''}.</p>
+        <p>${esc(msg)}</p>
       </div>`;
       return;
     }
     // C7: bulk-action toolbar (hidden until at least one row is selected)
     // and master checkbox in the header. Selection is kept in `bulkSelected`.
     appListContainer.innerHTML = `
-      <div id="bulkToolbar" style="display:none;align-items:center;gap:0.6rem;flex-wrap:wrap;background:var(--bg-section);padding:0.55rem 0.75rem;border-radius:10px;margin-bottom:0.6rem;">
+      <div id="bulkToolbar" class="bulk-toolbar" style="display:none;align-items:center;gap:0.6rem;flex-wrap:wrap;background:var(--bg-section);padding:0.55rem 0.75rem;border-radius:10px;margin-bottom:0.6rem;">
         <strong style="font-size:0.85rem;"><span id="bulkCount">0</span> seleccionada(s)</strong>
-        <button class="btn btn-danger btn-sm" type="button" onclick="openBulkReasonDialog('reject')">Rechazar seleccionadas</button>
-        <button class="btn btn-outline btn-sm" type="button" onclick="openBulkReasonDialog('archive')">Archivar seleccionadas</button>
-        <button class="btn btn-outline btn-sm" type="button" onclick="openBulkReasonDialog('mark_stale')">Marcar como obsoletas</button>
+        <div class="bulk-actions-wrap" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-danger btn-sm" type="button" onclick="openBulkReasonDialog('reject')">Rechazar seleccionadas</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="openBulkReasonDialog('archive')">Archivar seleccionadas</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="openBulkReasonDialog('mark_stale')">Marcar como obsoletas</button>
+        </div>
+        <details class="bulk-actions-overflow" style="display:none;margin-left:auto;position:relative;">
+          <summary class="btn btn-outline btn-sm" style="list-style:none;cursor:pointer;">Acciones (<span id="bulkOverflowCount">0</span>)</summary>
+          <div style="position:absolute;right:0;bottom:calc(100% + 0.4rem);background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.4rem;box-shadow:0 8px 24px rgba(0,0,0,0.18);min-width:220px;display:flex;flex-direction:column;gap:0.35rem;z-index:5;">
+            <button class="btn btn-danger btn-sm" type="button" onclick="this.closest('details').open=false;openBulkReasonDialog('reject')">Rechazar seleccionadas</button>
+            <button class="btn btn-outline btn-sm" type="button" onclick="this.closest('details').open=false;openBulkReasonDialog('archive')">Archivar seleccionadas</button>
+            <button class="btn btn-outline btn-sm" type="button" onclick="this.closest('details').open=false;openBulkReasonDialog('mark_stale')">Marcar como obsoletas</button>
+          </div>
+        </details>
         <button class="btn btn-outline btn-sm" type="button" onclick="bulkClearSelection()" style="margin-left:auto;">Limpiar selección</button>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem 0.5rem;font-size:0.78rem;color:var(--text-muted);">
@@ -4739,7 +4777,7 @@
 
     try {
       const data = await API(`/api/applications/${id}`);
-      currentApp = data.application || data;
+      currentApp = normalizeUnassignedBroker(data.application || data);
       renderDetail();
     } catch(e) {
       toast(e.message, 'error');
@@ -4974,7 +5012,7 @@
           Rechazar Aplicacion
         </button>
         <div class="reason-box" id="reasonBox">
-          <textarea id="reasonText" placeholder="Razón del rechazo (mínimo 10 caracteres)…"></textarea>
+          <textarea id="reasonText" oninput="this.dispatchEvent(new Event('reasoninput',{bubbles:true}))" placeholder="Razón del rechazo (mínimo 5 caracteres)…"></textarea>
           <button class="btn btn-danger btn-send" id="confirmReject" disabled>Confirmar Rechazo</button>
         </div>
       </div>
@@ -5051,20 +5089,21 @@
       };
     }
 
-    // Reject — C2: gate the actual reject behind a native <dialog>
-    // confirm + require ≥10 chars in the rejection reason. The
-    // Confirm button shows a spinner while the request is in-flight.
+    // Reject — C2 / #44: gate the actual reject behind a native <dialog>
+    // confirm + require ≥5 chars in the rejection reason (matches the
+    // server-side enforcement from Wave 5-A). The Confirm button shows
+    // a spinner while the request is in-flight.
     const rejectBtn = document.getElementById('rejectBtn');
     if (rejectBtn) rejectBtn.onclick = () => document.getElementById('reasonBox').classList.add('show');
 
     const reasonText = document.getElementById('reasonText');
     const confirmBtn = document.getElementById('confirmReject');
 
-    // Disabled until the textarea passes the 10-char minimum.
+    // Disabled until the textarea passes the 5-char minimum.
     const refreshConfirmEnable = () => {
       if (!confirmBtn || !reasonText) return;
       const txt = (reasonText.value || '').trim();
-      confirmBtn.disabled = txt.length < 10;
+      confirmBtn.disabled = txt.length < 5;
     };
     if (reasonText) {
       reasonText.addEventListener('input', refreshConfirmEnable);
@@ -5074,8 +5113,8 @@
     if (confirmBtn) {
       confirmBtn.onclick = () => {
         const reason = (reasonText?.value || '').trim();
-        if (reason.length < 10) {
-          toast('La razón debe tener al menos 10 caracteres.', 'error');
+        if (reason.length < 5) {
+          toast('La razón debe tener al menos 5 caracteres.', 'error');
           return;
         }
         const dlg = document.getElementById('rejectConfirmDialog');
@@ -5162,6 +5201,19 @@
           </button>
         ` : ''}
       </div>
+      <!-- Drag-and-drop / paste zone for broker-side uploads on behalf
+           of the client. Falls back to a click-to-pick file input. -->
+      <div id="brokerDocDropZone" tabindex="0"
+           style="margin-bottom:1rem;border:2px dashed var(--border);border-radius:10px;padding:0.95rem 1rem;text-align:center;cursor:pointer;background:var(--bg-section);transition:border-color 0.15s,background 0.15s;outline:none;"
+           role="button"
+           aria-label="Arrastra archivos aquí o haz clic para subir documentos por el cliente">
+        <input type="file" id="brokerDocFileInput" multiple
+               accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
+               style="display:none;">
+        <div style="font-size:0.86rem;color:var(--text);font-weight:600;margin-bottom:0.2rem;">Subir documento por el cliente</div>
+        <div style="font-size:0.76rem;color:var(--text-muted);">Arrastra archivos aquí, pega una imagen (Cmd/Ctrl + V) o haz clic para elegir.</div>
+        <div id="brokerDocDropStatus" style="font-size:0.76rem;color:var(--text-muted);margin-top:0.4rem;min-height:1rem;"></div>
+      </div>
       ${requested.length ? `
         <div class="info-section">
           <div class="info-section-title">Documentos Solicitados</div>
@@ -5217,6 +5269,106 @@
       ` : ''}
       ${!requested.length && !uploaded.length ? '<div class="empty-state"><p>No hay documentos todavia.</p></div>' : ''}
     `;
+    wireBrokerDocDropZone(a);
+  }
+
+  // Drag-and-drop / paste-to-upload on the broker documents panel.
+  // POSTs to the existing /:id/documents/upload endpoint — server is
+  // the source of truth for who's allowed to upload (admin / broker
+  // overrides). On 403 the toast shows the server's friendly message.
+  function wireBrokerDocDropZone(app) {
+    const zone   = document.getElementById('brokerDocDropZone');
+    const input  = document.getElementById('brokerDocFileInput');
+    const status = document.getElementById('brokerDocDropStatus');
+    if (!zone || !input) return;
+
+    const setStatus = (txt) => { if (status) status.textContent = txt || ''; };
+
+    const uploadFiles = async (files) => {
+      const list = Array.from(files || []).filter(Boolean);
+      if (!list.length) return;
+      const appId = app._id || app.id;
+      setStatus(`Subiendo ${list.length} archivo${list.length === 1 ? '' : 's'}…`);
+      try {
+        const fd = new FormData();
+        list.forEach(f => fd.append('files', f));
+        // Default type — broker can re-categorise after upload via the
+        // doc review tools. Server enforces the allowed MIME set.
+        fd.append('type', 'other');
+        const res = await fetch(`/api/applications/${appId}/documents/upload`, {
+          method:      'POST',
+          credentials: 'include',
+          body:        fd,
+        });
+        if (!res.ok) {
+          let msg = 'Error al subir documentos.';
+          try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (_) {}
+          throw new Error(msg);
+        }
+        toast(`${list.length} documento${list.length === 1 ? '' : 's'} subido${list.length === 1 ? '' : 's'}`);
+        setStatus('');
+        // Refresh detail to show the new uploads.
+        try {
+          const data = await API(`/api/applications/${appId}`);
+          currentApp = data.application || data;
+          renderDocumentos(currentApp);
+          renderTimeline(currentApp);
+        } catch (_) {}
+      } catch (e) {
+        setStatus('');
+        toast(e.message || 'Error al subir documentos.', 'error');
+      }
+    };
+
+    // Click → open file picker
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+    });
+
+    // File input change
+    input.addEventListener('change', () => {
+      uploadFiles(input.files);
+      input.value = '';
+    });
+
+    // Drag over / drop
+    ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.style.borderColor = 'var(--accent)';
+      zone.style.background  = 'var(--accent-light, rgba(0,106,255,0.08))';
+    }));
+    ['dragleave', 'dragend', 'drop'].forEach(ev => zone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.style.borderColor = '';
+      zone.style.background  = 'var(--bg-section)';
+    }));
+    zone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) uploadFiles(files);
+    });
+
+    // Paste — only fire when the documents pane is visible AND focus is
+    // on the dropzone or no input is currently focused. Avoids hijacking
+    // pastes inside the timeline message box.
+    const onPaste = (e) => {
+      const pane = document.getElementById('pane-documentos');
+      if (!pane || pane.offsetParent === null) return;
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && active.id !== 'brokerDocFileInput') return;
+      const items = (e.clipboardData && e.clipboardData.files) ? e.clipboardData.files : null;
+      if (!items || !items.length) return;
+      e.preventDefault();
+      uploadFiles(items);
+    };
+    // Detach any prior listener bound by a previous render to avoid dupes.
+    if (window.__brokerDocPasteHandler) {
+      document.removeEventListener('paste', window.__brokerDocPasteHandler);
+    }
+    window.__brokerDocPasteHandler = onPaste;
+    document.addEventListener('paste', onPaste);
   }
 
   // ── Contact client modal ─────────────────────────────
@@ -5392,30 +5544,52 @@
     if (!app) return;
     const dlg = document.getElementById('reassignDialog');
     const sel = document.getElementById('reassignSelect');
+    const filterEl = document.getElementById('reassignFilter');
     const reasonEl = document.getElementById('reassignReason');
     const errEl = document.getElementById('reassignError');
     const cancelBtn = document.getElementById('reassignCancel');
     const confirmBtn = document.getElementById('reassignConfirm');
 
     sel.innerHTML = '<option value="">— Cargando equipo… —</option>';
+    if (filterEl) filterEl.value = '';
     reasonEl.value = '';
     errEl.textContent = '';
     if (!dlg.open) dlg.showModal();
 
     const candidates = await loadReassignCandidates(app.broker?.user_id);
-    if (!candidates.length) {
-      sel.innerHTML = '<option value="">— No hay otros agentes en tu equipo —</option>';
-      confirmBtn.disabled = true;
-    } else {
-      sel.innerHTML = '<option value="">— Selecciona un agente —</option>' + candidates.map(b =>
-        `<option value="${b.id}">${esc(b.name || b.email || b.id)}</option>`
+    const renderOptions = (filterTxt) => {
+      const q = (filterTxt || '').trim().toLowerCase();
+      const filtered = q
+        ? candidates.filter(b => {
+            const name  = (b.name || '').toLowerCase();
+            const email = (b.email || '').toLowerCase();
+            return name.includes(q) || email.includes(q);
+          })
+        : candidates;
+      if (!candidates.length) {
+        sel.innerHTML = '<option value="">— No hay otros agentes en tu equipo —</option>';
+        confirmBtn.disabled = true;
+        return;
+      }
+      if (!filtered.length) {
+        sel.innerHTML = '<option value="">— Sin resultados —</option>';
+        confirmBtn.disabled = true;
+        return;
+      }
+      sel.innerHTML = '<option value="">— Selecciona un agente —</option>' + filtered.map(b =>
+        `<option value="${b.id}">${esc(b.name || b.email || b.id)}${b.email && b.name ? ' · ' + esc(b.email) : ''}</option>`
       ).join('');
       confirmBtn.disabled = false;
-    }
+    };
+    renderOptions('');
+
+    const onFilterInput = () => renderOptions(filterEl.value);
+    if (filterEl) filterEl.addEventListener('input', onFilterInput);
 
     const cleanup = () => {
       cancelBtn.removeEventListener('click', onCancel);
       confirmBtn.removeEventListener('click', onConfirm);
+      if (filterEl) filterEl.removeEventListener('input', onFilterInput);
     };
     const onCancel = () => { try { dlg.close(); } catch {} cleanup(); };
     const onConfirm = async () => {
@@ -5459,6 +5633,8 @@
       bar.style.display = 'flex';
       const cnt = document.getElementById('bulkCount');
       if (cnt) cnt.textContent = String(count);
+      const ovf = document.getElementById('bulkOverflowCount');
+      if (ovf) ovf.textContent = String(count);
     } else {
       bar.style.display = 'none';
     }
@@ -7162,9 +7338,12 @@
                   "Notas internas" (team-only). Tabs sit at top. -->
       <div class="tl-section">
         <div class="tl-section-head" style="flex-direction:column;align-items:stretch;gap:0.45rem;">
-          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;" id="noteModeTabs">
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;" id="noteModeTabs">
             <button class="btn btn-outline btn-sm note-tab-btn active" data-mode="public" type="button">Mensaje al cliente</button>
-            <button class="btn btn-outline btn-sm note-tab-btn" data-mode="internal" type="button">Notas internas</button>
+            <button class="btn btn-outline btn-sm note-tab-btn" data-mode="internal" type="button" style="position:relative;">
+              Notas internas
+              <span id="internalUnreadBadge" style="display:none;margin-left:0.4rem;background:var(--red);color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:0.05rem 0.45rem;line-height:1.4;vertical-align:middle;">0</span>
+            </button>
           </div>
           <span id="noteInternalBadge" style="display:none;font-size:0.7rem;background:#fef3c7;color:#92400e;border-radius:999px;padding:0.18rem 0.6rem;align-self:flex-start;">
             Solo visible para el equipo
@@ -7179,6 +7358,32 @@
         </div>
       </div>
     `;
+
+    // #43: Internal-notes unread badge — count messages whose
+    // created_at is newer than the last time the user clicked
+    // the "Notas internas" tab on this app. Persisted in localStorage.
+    const appIdForBadge = a._id || a.id;
+    const lastSeenKey = `lastInternalSeen-${appIdForBadge}`;
+    const computeUnread = () => {
+      let last = 0;
+      try { last = Number(localStorage.getItem(lastSeenKey) || '0') || 0; } catch (_) {}
+      return internalNotes.reduce((n, ev) => {
+        const ts = Date.parse(ev.created_at || ev.date || 0) || 0;
+        return ts > last ? n + 1 : n;
+      }, 0);
+    };
+    const refreshUnreadBadge = () => {
+      const badgeEl = document.getElementById('internalUnreadBadge');
+      if (!badgeEl) return;
+      const n = computeUnread();
+      if (n > 0) {
+        badgeEl.style.display = 'inline-block';
+        badgeEl.textContent = n > 99 ? '99+' : String(n);
+      } else {
+        badgeEl.style.display = 'none';
+      }
+    };
+    refreshUnreadBadge();
 
     let noteMode = 'public';
     const renderNoteList = () => {
@@ -7203,6 +7408,12 @@
         btn.classList.add('active');
         noteMode = btn.dataset.mode;
         renderNoteList();
+        // #43: clicking "Notas internas" marks all current internal
+        // notes as seen — persist now() so subsequent renders show 0.
+        if (noteMode === 'internal') {
+          try { localStorage.setItem(lastSeenKey, String(Date.now())); } catch (_) {}
+          refreshUnreadBadge();
+        }
       });
     });
 
@@ -7227,17 +7438,45 @@
     });
   }
 
+  // #48: server returns "Pendiente de asignación" as the broker name
+  // for unassigned applications. The broker dashboard prefers the
+  // shorter "Sin asignar" label. Normalize once at load time so any
+  // downstream renderer reads the cleaner value.
+  function normalizeUnassignedBroker(app) {
+    if (app && app.broker && typeof app.broker.name === 'string'
+        && /pendiente de asignaci[oó]n/i.test(app.broker.name)) {
+      app.broker.name = 'Sin asignar';
+    }
+    return app;
+  }
+
   // ── Load Data ──────────────────────────────────────────────
   async function loadApplications() {
+    // #41: clear any stale bulk selection so post-bulk-action state stays
+    // consistent — otherwise a re-render after a bulk reject keeps ghost
+    // checkboxes referring to ids that no longer exist in the list.
+    try { bulkClearSelection(); } catch (_) {}
     try {
       const data = await API('/api/applications');
-      applications = data.applications || data || [];
+      applications = (data.applications || data || []).map(normalizeUnassignedBroker);
       updateStats();
       renderAppList();
     } catch(e) {
       appListContainer.innerHTML = `<div class="empty-state"><p>Error al cargar aplicaciones: ${esc(e.message)}</p></div>`;
     }
   }
+
+  // #41: global Escape handler — clears the bulk selection when any
+  // rows are selected. Scoped to this script so it only runs on the
+  // broker dashboard page.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && bulkSelected && bulkSelected.size > 0) {
+      // Don't fight a native <dialog> — if one is open, let it close first.
+      const openDlg = document.querySelector('dialog[open]');
+      if (openDlg) return;
+      bulkClearSelection();
+    }
+  });
 
   // ── Section Navigation ─────────────────────────────────────
   let currentSection = 'aplicaciones';
