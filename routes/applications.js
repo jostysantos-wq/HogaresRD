@@ -1131,7 +1131,9 @@ router.get('/my', userAuth, (req, res) => {
   let apps = store.getApplicationsByClient(user.id);
 
   // Auto-claim any anonymous apps that match this user's email.
-  if (user.email) {
+  // Gate by emailVerified — otherwise registering with someone else's
+  // leaked email would let an attacker claim their submitted apps.
+  if (user.email && user.emailVerified === true) {
     const lowerEmail = user.email.toLowerCase();
     const claimable = (store.getApplications() || []).filter(a => {
       if (!a.client) return false;
@@ -1186,7 +1188,7 @@ router.get('/:id', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
 
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
@@ -1299,7 +1301,7 @@ router.get('/:id/events', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
@@ -1394,7 +1396,7 @@ router.get('/:id/state', userAuth, (req, res) => {
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const admin = isAdmin(req) || user?.role === 'admin';
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
@@ -1999,7 +2001,7 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
 
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   if (!isClient && !isAdmin(req))
     return res.status(403).json({ error: 'Solo el cliente puede subir documentos' });
 
@@ -2213,7 +2215,7 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -2350,7 +2352,7 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
 
   const user = store.getUserById(req.user.sub);
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isBroker = app.broker.user_id === req.user.sub;
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
@@ -2508,7 +2510,7 @@ router.get('/:id/payment/receipt', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -2578,7 +2580,7 @@ router.get('/:id/payment/processed-receipt', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
   const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   if (!isBroker && !isClient && !isInmobiliaria && !isSecretary && !isAdmin(req))
@@ -2606,7 +2608,7 @@ router.post('/:id/message', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
   const isClient = app.client.user_id === req.user.sub ||
-                   (!app.client.user_id && user && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
   if (!isBroker && !isClient && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 

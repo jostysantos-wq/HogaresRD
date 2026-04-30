@@ -2,6 +2,8 @@ const express    = require('express');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 const crypto     = require('crypto');
+const fs         = require('fs');
+const path       = require('path');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
@@ -1156,10 +1158,55 @@ router.post('/register/secretary', authLimiter, async (req, res, next) => {
 });
 
 // ── 2FA: Verify code ──────────────────────────────────────────────────────
-// Per-user 2FA attempt tracking (prevents brute-force across multiple sessions)
-const _twoFAUserAttempts = new Map(); // userId → { count, lockedUntil }
+// Per-user 2FA attempt tracking (prevents brute-force across multiple sessions).
+//
+// PM2 runs us in fork mode, so this Map is per-process. To survive reloads
+// (an attacker who notices a deploy must not get a fresh attempt budget),
+// we mirror the Map to a small JSON file under /data with a 5s debounced
+// flush. The file is tiny (kilobytes) so writeFileSync is fine.
 const TWOFA_USER_MAX = 10;           // max attempts across ALL sessions
 const TWOFA_USER_LOCKOUT_MS = 30 * 60 * 1000; // 30-minute lockout
+const _twoFAAttemptsFile = path.join(__dirname, '..', 'data', '2fa-attempts.json');
+
+const _twoFAUserAttempts = (() => {
+  const map = new Map();
+  // Warm from disk on boot.
+  try {
+    if (fs.existsSync(_twoFAAttemptsFile)) {
+      const raw = fs.readFileSync(_twoFAAttemptsFile, 'utf8');
+      const obj = JSON.parse(raw || '{}');
+      for (const [k, v] of Object.entries(obj)) {
+        if (v && typeof v === 'object') map.set(k, v);
+      }
+    }
+  } catch (err) {
+    // Corrupt file shouldn't block startup — just log and start fresh.
+    console.warn('[auth] failed to load 2fa-attempts.json:', err.message);
+  }
+
+  let flushTimer = null;
+  const scheduleFlush = () => {
+    if (flushTimer) return;
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      try {
+        const obj = {};
+        for (const [k, v] of map.entries()) obj[k] = v;
+        fs.writeFileSync(_twoFAAttemptsFile, JSON.stringify(obj));
+      } catch (err) {
+        console.warn('[auth] failed to flush 2fa-attempts.json:', err.message);
+      }
+    }, 5000);
+    if (typeof flushTimer.unref === 'function') flushTimer.unref();
+  };
+
+  // Wrap mutators so every write triggers a debounced disk flush.
+  const origSet = map.set.bind(map);
+  const origDelete = map.delete.bind(map);
+  map.set = (k, v) => { const r = origSet(k, v); scheduleFlush(); return r; };
+  map.delete = (k) => { const r = origDelete(k); scheduleFlush(); return r; };
+  return map;
+})();
 
 router.post('/2fa/verify', twoFALimiter, (req, res) => {
   const { twoFASessionId, code } = req.body;
