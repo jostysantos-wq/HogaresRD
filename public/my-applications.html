@@ -739,8 +739,17 @@
     let expandedAppId = null;
     let appDetails = {};
     // B7: SSE subscription map { appId → EventSource }. Cleared on
-    // page navigation so we don't leak open streams.
+    // page navigation, when the tab is hidden, or when more than
+    // MAX_CONCURRENT_STREAMS cards have been expanded.
     let appEventStreams = {};
+    // LRU of recently expanded app IDs (most recent first). Streams
+    // are torn down for entries past index MAX_CONCURRENT_STREAMS - 1.
+    const expandOrder = [];
+    const MAX_CONCURRENT_STREAMS = 5;
+    // True while the tab is hidden — we close all streams on
+    // visibilitychange and reopen for every currently-expanded card
+    // when it becomes visible again.
+    let _streamsPausedForVisibility = false;
 
     /* ── B7: SSE subscriptions ── */
     function subscribeToApplicationEvents(appId) {
@@ -783,8 +792,49 @@
       Object.values(appEventStreams).forEach(es => { try { es.close(); } catch (_) {} });
       appEventStreams = {};
     }
+    function tearDownStream(appId) {
+      const es = appEventStreams[appId];
+      if (es) { try { es.close(); } catch (_) {} }
+      delete appEventStreams[appId];
+    }
+    // Apply LRU cap: keep only the MAX_CONCURRENT_STREAMS most recently
+    // expanded streams. Older ones are torn down.
+    function enforceStreamCap() {
+      const keep = new Set(expandOrder.slice(0, MAX_CONCURRENT_STREAMS));
+      Object.keys(appEventStreams).forEach(id => {
+        if (!keep.has(id)) tearDownStream(id);
+      });
+      // Keep expandOrder bounded too — anything past the cap can't
+      // have a stream, so the entry is just historical noise.
+      while (expandOrder.length > MAX_CONCURRENT_STREAMS) expandOrder.pop();
+    }
+    function markRecentlyExpanded(appId) {
+      const idx = expandOrder.indexOf(appId);
+      if (idx >= 0) expandOrder.splice(idx, 1);
+      expandOrder.unshift(appId);
+      enforceStreamCap();
+    }
     window.addEventListener('beforeunload', tearDownAllStreams);
     window.addEventListener('pagehide', tearDownAllStreams);
+    // Pause streams while the tab is hidden so we don't keep server
+    // connections open in the background; reopen when visible again.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        _streamsPausedForVisibility = true;
+        tearDownAllStreams();
+      } else if (_streamsPausedForVisibility) {
+        _streamsPausedForVisibility = false;
+        // Reopen streams for currently-expanded cards (capped to
+        // MAX_CONCURRENT_STREAMS via the LRU).
+        document.querySelectorAll('.app-detail.open').forEach(el => {
+          const id = el.id.replace(/^detail-/, '');
+          if (id) {
+            markRecentlyExpanded(id);
+            subscribeToApplicationEvents(id);
+          }
+        });
+      }
+    });
 
     function updateAppRow(appId) {
       const card = document.getElementById(`app-${appId}`);
@@ -895,10 +945,12 @@
         if (header) toggleDetail(header.dataset.appId);
       });
 
-      // B7: open one SSE stream per application so status / timeline
-      // changes show up without a manual refresh.
+      // B7: SSE streams are no longer opened up-front — they would leak
+      // when many apps are visible. Each card opens its own stream when
+      // expanded (see toggleDetail) and closes it on collapse, capped to
+      // MAX_CONCURRENT_STREAMS via an LRU.
       tearDownAllStreams();
-      applications.forEach(a => subscribeToApplicationEvents(a.id));
+      expandOrder.length = 0;
     }
 
     /* ── Toggle detail ── */
@@ -911,16 +963,30 @@
         detail.classList.remove('open');
         if (card) card.classList.remove('expanded');
         expandedAppId = null;
+        // Close the SSE stream for this collapsed card.
+        tearDownStream(appId);
+        const idx = expandOrder.indexOf(appId);
+        if (idx >= 0) expandOrder.splice(idx, 1);
         return;
       }
 
-      // Close any other open detail + remove accent
-      document.querySelectorAll('.app-detail.open').forEach(d => d.classList.remove('open'));
+      // Close any other open detail + remove accent (and tear down their streams)
+      document.querySelectorAll('.app-detail.open').forEach(d => {
+        d.classList.remove('open');
+        const id = d.id.replace(/^detail-/, '');
+        if (id) tearDownStream(id);
+      });
       document.querySelectorAll('.app-card.expanded').forEach(c => c.classList.remove('expanded'));
 
       detail.classList.add('open');
       if (card) card.classList.add('expanded');
       expandedAppId = appId;
+
+      // Open SSE stream for this card now that it's visible. The
+      // LRU cap caps total concurrent streams at MAX_CONCURRENT_STREAMS
+      // and tears down older ones automatically.
+      markRecentlyExpanded(appId);
+      if (!_streamsPausedForVisibility) subscribeToApplicationEvents(appId);
 
       // Load detail if not cached
       if (!appDetails[appId]) {
@@ -953,6 +1019,8 @@
       let html = '<div class="detail-sections">';
 
       /* Status section */
+      const TERMINAL_STATUSES = ['rechazado', 'completado'];
+      const canWithdraw = !TERMINAL_STATUSES.includes(app.status);
       html += `
         <div class="detail-section">
           <div class="detail-section-header">
@@ -976,6 +1044,17 @@
                       ${broker.phone ? `<a href="tel:${esc(broker.phone)}">${esc(broker.phone)}</a>` : ''}
                     </div>
                   </div>
+                </div>
+              ` : ''}
+              ${canWithdraw ? `
+                <div style="margin-top:0.85rem;display:flex;justify-content:flex-end;">
+                  <button type="button" class="btn-withdraw"
+                    style="background:transparent;color:var(--red,#CF142B);border:1.5px solid var(--red,#CF142B);border-radius:10px;padding:.55rem 1.1rem;font-weight:700;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;"
+                    onclick="openWithdrawDialog('${esc(String(appId))}', this)"
+                    aria-haspopup="dialog">
+                    <svg viewBox="0 0 24 24" width="14" height="14" style="fill:currentColor;"><path d="M9 3v1H4v2h16V4h-5V3zm-3 6v11c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V9zm2 2h6v9H8z"/></svg>
+                    Retirar aplicación
+                  </button>
                 </div>
               ` : ''}
             </div>
@@ -1641,6 +1720,76 @@
       }
     }
 
+    /* ── Withdraw application (B7 — applies the same flow as track.html) ── */
+    let _withdrawAppId = null;
+    let _withdrawTrigger = null;
+
+    window.openWithdrawDialog = function(appId, triggerEl) {
+      _withdrawAppId = appId;
+      _withdrawTrigger = triggerEl || null;
+      const dlg = document.getElementById('withdrawDialog');
+      const reasonEl = document.getElementById('withdrawReason');
+      const errEl = document.getElementById('withdrawError');
+      if (reasonEl) reasonEl.value = '';
+      if (errEl) errEl.textContent = '';
+      // <dialog> with showModal handles focus + Escape natively.
+      if (dlg && typeof dlg.showModal === 'function') {
+        dlg.showModal();
+      } else if (dlg) {
+        // Fallback: native dialog unsupported — fake-show.
+        dlg.setAttribute('open', 'open');
+      }
+      setTimeout(() => { reasonEl && reasonEl.focus(); }, 50);
+    };
+
+    function closeWithdrawDialog() {
+      const dlg = document.getElementById('withdrawDialog');
+      if (dlg) {
+        if (typeof dlg.close === 'function') dlg.close();
+        else dlg.removeAttribute('open');
+      }
+      // Restore focus to the trigger
+      if (_withdrawTrigger && typeof _withdrawTrigger.focus === 'function') {
+        try { _withdrawTrigger.focus(); } catch (_) {}
+      }
+      _withdrawAppId = null;
+      _withdrawTrigger = null;
+    }
+
+    async function confirmWithdraw() {
+      const appId = _withdrawAppId;
+      const btn = document.getElementById('withdrawConfirmBtn');
+      const errEl = document.getElementById('withdrawError');
+      const reasonEl = document.getElementById('withdrawReason');
+      if (!appId) { closeWithdrawDialog(); return; }
+      const reason = (reasonEl && reasonEl.value || '').trim();
+      if (errEl) errEl.textContent = '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Retirando…'; }
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(appId)}/withdraw`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason }),
+        });
+        if (res.status === 401) { handle401(); return; }
+        if (!res.ok) {
+          let msg = 'No pudimos retirar la aplicación.';
+          try { const j = await res.json(); if (j?.error) msg = j.error; } catch (_) {}
+          if (errEl) errEl.textContent = msg;
+          if (btn) { btn.disabled = false; btn.textContent = 'Sí, retirar'; }
+          return;
+        }
+        // Refresh the list and re-render
+        delete appDetails[appId];
+        closeWithdrawDialog();
+        await loadApplications();
+      } catch (_) {
+        if (errEl) errEl.textContent = 'Error de red. Inténtalo de nuevo.';
+        if (btn) { btn.disabled = false; btn.textContent = 'Sí, retirar'; }
+      }
+    }
+
     /* ── Init ── */
     if (user && user.id) {
       loadApplications().then(() => {
@@ -1651,6 +1800,36 @@
           toggleDetail(targetId);
         }
       });
+      // Wire dialog buttons once the DOM has the dialog (rendered below).
+      document.addEventListener('DOMContentLoaded', () => {
+        const cancelBtn  = document.getElementById('withdrawCancelBtn');
+        const confirmBtn = document.getElementById('withdrawConfirmBtn');
+        if (cancelBtn)  cancelBtn.addEventListener('click', closeWithdrawDialog);
+        if (confirmBtn) confirmBtn.addEventListener('click', confirmWithdraw);
+        const dlg = document.getElementById('withdrawDialog');
+        if (dlg) {
+          // <dialog>'s native cancel event fires on Escape — restore focus.
+          dlg.addEventListener('cancel', closeWithdrawDialog);
+          // Click outside the dialog body closes it.
+          dlg.addEventListener('click', (e) => {
+            if (e.target === dlg) closeWithdrawDialog();
+          });
+        }
+      });
+      // If DOMContentLoaded already fired (script is at end of body), wire immediately.
+      if (document.readyState !== 'loading') {
+        const cancelBtn  = document.getElementById('withdrawCancelBtn');
+        const confirmBtn = document.getElementById('withdrawConfirmBtn');
+        if (cancelBtn)  cancelBtn.addEventListener('click', closeWithdrawDialog);
+        if (confirmBtn) confirmBtn.addEventListener('click', confirmWithdraw);
+        const dlg = document.getElementById('withdrawDialog');
+        if (dlg) {
+          dlg.addEventListener('cancel', closeWithdrawDialog);
+          dlg.addEventListener('click', (e) => {
+            if (e.target === dlg) closeWithdrawDialog();
+          });
+        }
+      }
     }
   </script>
 <script src="/js/i18n.js" defer></script>
@@ -1668,6 +1847,31 @@
   <p style="margin-top:0.5rem;"><a href="/privacidad">Privacidad</a> &middot; <a href="/terminos">T&eacute;rminos</a> &middot; <a href="/contacto">Contacto</a></p>
   <p style="margin-top:0.75rem;font-size:0.72rem;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.6;"><strong>Aviso Legal:</strong> HogaresRD es una plataforma informativa de bienes ra&iacute;ces. No somos corredores, agentes ni intermediarios inmobiliarios. Toda la informaci&oacute;n es proporcionada por terceros y debe ser verificada de forma independiente.</p>
 </footer>
+<!-- Withdraw confirmation dialog (native <dialog>) -->
+<dialog id="withdrawDialog" aria-labelledby="withdrawDialogTitle"
+        style="border:none;border-radius:14px;padding:0;max-width:480px;width:calc(100% - 2rem);background:var(--bg-card,#fff);color:var(--text);box-shadow:0 12px 48px rgba(0,0,0,0.25);">
+  <div style="padding:1.5rem;">
+    <h3 id="withdrawDialogTitle" style="font-size:1.1rem;font-weight:800;margin-bottom:.5rem;">Confirmar retiro</h3>
+    <p style="font-size:.88rem;color:var(--text-muted,#666);margin-bottom:.75rem;line-height:1.5;">
+      ¿Estás seguro de retirar esta aplicación? Cuéntanos brevemente por qué (opcional):
+    </p>
+    <textarea id="withdrawReason" maxlength="500" rows="4" placeholder="Motivo (opcional)…"
+      aria-label="Motivo del retiro"
+      style="width:100%;padding:.65rem;font-family:inherit;font-size:.9rem;border:1px solid var(--border,#e4e4e7);border-radius:8px;resize:vertical;color:var(--text);background:var(--bg);"></textarea>
+    <div id="withdrawError" role="alert" style="font-size:.85rem;color:var(--red,#CF142B);margin-top:.5rem;min-height:1.1em;"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;">
+      <button id="withdrawCancelBtn" type="button"
+        style="background:none;color:var(--accent);border:1.5px solid var(--border,#e4e4e7);border-radius:10px;padding:.55rem 1.1rem;font-weight:600;font-size:.85rem;cursor:pointer;">
+        Cancelar
+      </button>
+      <button id="withdrawConfirmBtn" type="button"
+        style="background:var(--red,#CF142B);color:#fff;border:none;border-radius:10px;padding:.55rem 1.1rem;font-weight:700;font-size:.85rem;cursor:pointer;">
+        Sí, retirar
+      </button>
+    </div>
+  </div>
+</dialog>
+
 <script src="/js/error-reporter.js"></script>
 <script src="/js/cookie-consent.js"></script>
 </body>
