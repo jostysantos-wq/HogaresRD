@@ -255,11 +255,15 @@
     }
     .topbar-bell:hover { border-color: var(--accent); }
     .topbar-bell svg { width: 18px; height: 18px; fill: var(--text); }
-    .topbar-bell-dot {
-      position: absolute; top: 10px; right: 12px; width: 8px; height: 8px;
-      border-radius: 50%; background: #94A3B8; border: 2px solid var(--bg-card);
+    .topbar-bell-badge {
+      position: absolute; top: 4px; right: 2px;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      border-radius: 999px; background: var(--red, #E53E3E); color: #fff;
+      border: 2px solid var(--bg-card);
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; pointer-events: none; box-sizing: border-box;
     }
-    .topbar-bell-dot.on { background: var(--accent); }
     .topbar-user {
       display: flex; align-items: center; gap: 10px;
       padding: 5px 14px 5px 5px;
@@ -439,6 +443,13 @@
     /* ── NOTIFICACIONES ──────────────────────────────────────── */
     .notif-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .notif-count { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); }
+    .push-pref-card { display: flex; align-items: center; gap: 14px; background: var(--bg-card); border-radius: var(--card-radius, 18px); box-shadow: var(--card-shadow, 0 1px 2px rgba(15,23,42,0.04), 0 6px 18px rgba(15,23,42,0.05)); padding: 16px 20px; margin: 18px 0; }
+    .push-pref-icon { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-light, #EBF3FF); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .push-pref-icon svg { width: 20px; height: 20px; fill: currentColor; }
+    .push-pref-body { flex: 1; min-width: 0; }
+    .push-pref-title { font-size: 0.92rem; font-weight: 700; color: var(--text); margin-bottom: 0.15rem; }
+    .push-pref-sub { font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; }
+    .push-pref-card #pushToggleBtn { flex-shrink: 0; }
     .notif-item { display: flex; gap: 0.85rem; padding: 0.9rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 0.6rem; transition: border-color 0.2s; cursor: default; }
     .notif-item.unread { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--bg-card)); }
     .notif-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
@@ -1618,9 +1629,9 @@
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
       <input id="topbarSearch" type="search" placeholder="Buscar propiedades, clientes…" aria-label="Buscar" />
     </div>
-    <button id="pushToggleBtn" class="topbar-bell" onclick="window._togglePush()" title="Notificaciones" type="button">
+    <button id="topbarBellBtn" class="topbar-bell" title="Notificaciones" type="button">
       <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-      <span id="pushDot" class="topbar-bell-dot"></span>
+      <span id="topbarBellBadge" class="topbar-bell-badge" style="display:none">0</span>
     </button>
     <a href="#perfil" class="topbar-user" id="topbarUser" onclick="if(typeof showPage==='function'){event.preventDefault();showPage('perfil');}">
       <div class="topbar-user-avatar" id="userInitials">?</div>
@@ -2714,6 +2725,19 @@
 
   <!-- ═══ PAGE: NOTIFICACIONES ══════════════════════════════ -->
   <div class="page-section" id="page-notificaciones">
+    <div class="push-pref-card">
+      <div class="push-pref-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </div>
+      <div class="push-pref-body">
+        <div class="push-pref-title">Notificaciones push del navegador</div>
+        <div class="push-pref-sub" id="pushPrefSub">Recibe alertas instantáneas en tu navegador cuando lleguen nuevos mensajes, aplicaciones o tours.</div>
+      </div>
+      <button id="pushToggleBtn" class="btn btn-outline" type="button" onclick="window._togglePush()">
+        <span id="pushDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9ca3af;margin-right:0.4rem;"></span>
+        <span id="pushBtnLabel">Activar</span>
+      </button>
+    </div>
     <div class="notif-toolbar">
       <span class="notif-count" id="notifCount">0 notificaciones</span>
       <button class="btn btn-outline btn-sm" id="markAllReadBtn">Marcar todo como leido</button>
@@ -6321,7 +6345,7 @@
     });
     document.getElementById('page-' + page).classList.add('active');
     document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
-    if (page === 'notificaciones') loadNotifications();
+    if (page === 'notificaciones') { loadNotifications(); markBellSeen(); }
     if (page === '2fa') load2FAStatus();
     if (page === 'perfil') loadProfilePage();
     if (page === 'team-members' || page === 'team-requests' || page === 'team-performance') loadEquipo();
@@ -6597,6 +6621,58 @@
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('sidebarOverlay').classList.remove('visible');
   };
+
+  // ── Topbar Bell — unread badge + click-to-open ──────────────
+  // Pulls timeline events across the broker's applications and counts
+  // events newer than the last-seen timestamp (saved when the user
+  // visits the notifications page). Same data source as loadNotifications
+  // below — keeps the badge consistent with the page contents.
+  const BELL_SEEN_KEY = 'broker_notif_seen_ts';
+  async function fetchNotifEvents() {
+    try {
+      const data = await API('/api/applications');
+      const apps = data.applications || data || [];
+      const events = [];
+      apps.forEach(app => {
+        (app.timeline_events || []).forEach(ev => {
+          events.push(ev);
+        });
+      });
+      events.sort((a, b) => new Date(b.timestamp || b.created_at) - new Date(a.timestamp || a.created_at));
+      return events;
+    } catch { return []; }
+  }
+  async function updateBellBadge() {
+    const badge = document.getElementById('topbarBellBadge');
+    if (!badge) return;
+    const events = await fetchNotifEvents();
+    const seen = parseInt(localStorage.getItem(BELL_SEEN_KEY) || '0', 10);
+    const unread = events.filter(ev => {
+      const ts = new Date(ev.timestamp || ev.created_at).getTime();
+      return Number.isFinite(ts) && ts > seen;
+    }).length;
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? '99+' : String(unread);
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  function markBellSeen() {
+    try { localStorage.setItem(BELL_SEEN_KEY, String(Date.now())); } catch {}
+    const badge = document.getElementById('topbarBellBadge');
+    if (badge) badge.style.display = 'none';
+  }
+  window.updateBellBadge = updateBellBadge;
+  window.markBellSeen = markBellSeen;
+
+  // Wire the topbar bell — click opens the notifications page
+  const _bellBtn = document.getElementById('topbarBellBtn');
+  if (_bellBtn) _bellBtn.addEventListener('click', () => showPage('notificaciones'));
+
+  // Refresh the badge on load and every 60s while the tab is focused
+  updateBellBadge();
+  setInterval(() => { if (!document.hidden) updateBellBadge(); }, 60000);
 
   // ── Notifications ───────────────────────────────────────────
   let notifLoaded = false;
@@ -8976,8 +9052,10 @@
   function updatePushUI(subscribed) {
     const btn = document.getElementById('pushToggleBtn');
     const dot = document.getElementById('pushDot');
+    const lbl = document.getElementById('pushBtnLabel');
     if (btn) btn.title = subscribed ? 'Notificaciones activadas' : 'Activar notificaciones';
     if (dot) dot.style.background = subscribed ? '#22c55e' : '#9ca3af';
+    if (lbl) lbl.textContent = subscribed ? 'Activadas' : 'Activar';
   }
 
   function urlBase64ToUint8Array(base64String) {
