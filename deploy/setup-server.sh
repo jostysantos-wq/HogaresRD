@@ -118,6 +118,13 @@ VAPID_PRIVATE_KEY=
 
 # CORS
 ALLOWED_ORIGINS=https://hogaresrd.com,https://www.hogaresrd.com
+
+# Ops alerting (Slack-incoming-webhook URL — Discord-compatible too)
+# When set, server posts alerts on cron overlap, DB unreachable, high
+# notification-failure count, and uncaught exceptions / unhandled
+# rejections. Leave blank to disable (alerts degrade to console.warn).
+# See utils/alerts.js for the throttle + payload format.
+ALERT_WEBHOOK_URL=
 ENVEOF
     echo ""
     echo "  ⚠️  IMPORTANT: Edit $APP_DIR/.env with your actual secrets!"
