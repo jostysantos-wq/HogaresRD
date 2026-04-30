@@ -3810,7 +3810,7 @@
           <td>${u.role}</td>
           <td>${u.marketingOptIn ? '<span style="color:var(--success);font-weight:700;">✓ Sí</span>' : '<span style="color:var(--text-muted);">No</span>'}</td>
           <td>${u.emailVerified ? '✓' : '—'}</td>
-          <td>${u.marketingOptIn ? `<button onclick="adminUnsub('${esc(u.email)}')" style="font-size:.7rem;background:var(--danger);color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">Cancelar</button>` : '<span style="font-size:.7rem;color:var(--text-muted);">Cancelado</span>'}</td>
+          <td>${u.marketingOptIn ? `<button class="admin-unsub-btn" data-email="${esc(u.email)}" style="font-size:.7rem;background:var(--danger);color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">Cancelar</button>` : '<span style="font-size:.7rem;color:var(--text-muted);">Cancelado</span>'}</td>
         </tr>`).join('');
       }).catch(() => {});
   }
@@ -4988,6 +4988,14 @@
     document.getElementById('csc-tab-agents').style.display = tab === 'agents' ? '' : 'none';
     document.getElementById('csc-tab-listings').style.display = tab === 'listings' ? '' : 'none';
   }
+
+  // Delegated handler for newsletter unsubscribe buttons. Avoids inline
+  // onclick="adminUnsub('${email}')" which breaks when an email contains a
+  // single-quote (rare but valid in the local-part).
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.admin-unsub-btn');
+    if (b) adminUnsub(b.dataset.email);
+  });
 </script>
 <script src="/js/pixel.js" defer></script>
 </body>

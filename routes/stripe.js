@@ -12,9 +12,10 @@ const INM_PRICE_ID    = process.env.STRIPE_INM_PRICE_ID;       // $25/month
 const WEBHOOK_SECRET  = process.env.STRIPE_WEBHOOK_SECRET;
 const BASE_URL        = process.env.BASE_URL || 'http://localhost:3000';
 
-const JWT_SECRET      = process.env.JWT_SECRET;
-const jwt             = require('jsonwebtoken');
 const cookieParser    = require('cookie-parser');
+// Use the shared verifier from auth.js so JWT rotation grace
+// (JWT_SECRET_PREV fallback) works the same here as in userAuth.
+const { verifyJWT }   = require('./auth');
 
 // ── Helper: resolve user from cookie or Bearer token ─────────────────────
 function getUser(req) {
@@ -23,7 +24,7 @@ function getUser(req) {
     const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
     const token = cookieToken || headerToken;
     if (!token) return null;
-    return jwt.verify(token, JWT_SECRET);
+    return verifyJWT(token);
   } catch { return null; }
 }
 
@@ -190,8 +191,15 @@ router.post('/cancel-feedback', requireAuth, requireStripe, async (req, res) => 
 
     const { reason, feedback, accepted_offer } = req.body;
 
-    // Store cancellation feedback
+    // _extra may come back from PostgreSQL as a JSON string. Parse it before
+    // mutating so we don't accidentally treat the string as a non-object and
+    // wipe existing keys.
+    if (typeof user._extra === 'string') {
+      try { user._extra = JSON.parse(user._extra); } catch { user._extra = {}; }
+    }
     if (!user._extra || typeof user._extra !== 'object') user._extra = {};
+
+    // Store cancellation feedback
     user._extra.cancelFeedback = {
       reason: reason || '',
       feedback: feedback || '',

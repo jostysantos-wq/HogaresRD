@@ -37,6 +37,14 @@ function clientIp(req) {
 const { createTransport } = require('./mailer');
 const transporter = createTransport();
 
+// Cap an array to a max length and clamp string elements. Used to bound
+// user-supplied list fields (amenities, tags, unit_types, agency strings)
+// so an attacker can't persist a 50MB JSON blob.
+function capArray(arr, maxItems, maxLen) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, maxItems).map(v => typeof v === 'string' ? v.slice(0, maxLen) : v);
+}
+
 // GET /api/listings?q=&province=&city=&type=&condition=&propertyType=&priceMin=&priceMax=&bedroomsMin=&tags=&page=&limit=
 router.get('/', (req, res) => {
   const filters = {
@@ -293,13 +301,21 @@ router.get('/:id', (req, res) => {
   // Non-approved: require auth and ownership (or admin)
   const { verifyJWT } = require('./auth');
   let user = null;
+  let tokenPayload = null;
   try {
     const token = req.cookies?.hrdt || (req.headers['authorization'] || '').replace('Bearer ', '').trim();
     if (token) {
-      const payload = verifyJWT(token);
-      user = store.getUserById(payload.sub);
+      tokenPayload = verifyJWT(token);
+      user = store.getUserById(tokenPayload.sub);
     }
   } catch {}
+
+  // If user is authenticated, check whether their token has been revoked
+  // (logout / blacklist). Without this, a revoked token could still read
+  // pending/rejected listings via this endpoint.
+  if (tokenPayload && tokenPayload.jti && store.isTokenRevoked(tokenPayload.jti)) {
+    return res.status(401).json({ error: 'Sesión revocada' });
+  }
 
   if (!user) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
@@ -564,6 +580,24 @@ router.put('/:id', userAuth, (req, res) => {
   };
   if (Array.isArray(incoming.images)) incoming.images = sanitizeMedia(incoming.images, 'images');
   if (Array.isArray(incoming.blueprints)) incoming.blueprints = sanitizeMedia(incoming.blueprints, 'blueprints');
+
+  // Cap user-supplied list fields so an attacker can't persist megabytes of
+  // JSON via amenities/tags/unit_types/agencies. Each list item is also
+  // truncated to a reasonable max length.
+  if (Array.isArray(incoming.amenities))  incoming.amenities  = capArray(incoming.amenities,  50, 100);
+  if (Array.isArray(incoming.tags))       incoming.tags       = capArray(incoming.tags,       20, 40);
+  if (Array.isArray(incoming.unit_types)) incoming.unit_types = capArray(incoming.unit_types, 30, 200);
+  if (Array.isArray(incoming.agencies)) {
+    incoming.agencies = incoming.agencies.slice(0, 50).map(a => {
+      if (!a || typeof a !== 'object') return a;
+      const out = { ...a };
+      if (typeof out.name === 'string')    out.name    = out.name.slice(0, 200);
+      if (typeof out.contact === 'string') out.contact = out.contact.slice(0, 200);
+      if (typeof out.email === 'string')   out.email   = out.email.slice(0, 200);
+      if (typeof out.phone === 'string')   out.phone   = out.phone.slice(0, 200);
+      return out;
+    });
+  }
 
   // Extra safety: if the sanitized images array is EMPTY but the
   // existing listing had images, block the update. This prevents a
