@@ -15,6 +15,10 @@ struct MyDocumentsView: View {
     @State private var pickerContext: PickerContext?
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var successMessage: String?
+    @State private var errorMessage: String?
+    // #40: 0…1 progress driven by URLSessionTaskDelegate while a multipart
+    // upload is in flight. -1 means "uploading but progress unknown".
+    @State private var uploadProgress: Double = 0
     // B6: per-application amount + currency for payment-receipt uploads.
     // Keyed by application id so each card preserves its draft input.
     @State private var paymentAmounts:    [String: String] = [:]
@@ -75,6 +79,32 @@ struct MyDocumentsView: View {
                 .task {
                     try? await Task.sleep(for: .seconds(3))
                     withAnimation { successMessage = nil }
+                }
+            }
+            // #27 / #40: error toast surfacing the server's >=400 message
+            // so the buyer knows what went wrong instead of silently
+            // staring at an unchanged form.
+            if let err = errorMessage {
+                VStack {
+                    Spacer()
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.white)
+                        Text(err)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding(.horizontal, 20).padding(.vertical, 12)
+                    .background(Color.rdRed, in: RoundedRectangle(cornerRadius: 14))
+                    .shadow(radius: 8)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task {
+                    try? await Task.sleep(for: .seconds(5))
+                    withAnimation { errorMessage = nil }
                 }
             }
         }
@@ -246,13 +276,27 @@ struct MyDocumentsView: View {
                 }
             }
 
-            // Upload progress
+            // Upload progress — #40: surface granular percent driven by
+            // URLSessionTaskDelegate. Falls back to indeterminate spinner
+            // when the OS hasn't reported any progress yet.
             if uploadingFor == appId {
-                HStack {
-                    ProgressView().scaleEffect(0.8)
-                    Text("Subiendo...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        if uploadProgress > 0 && uploadProgress < 1 {
+                            Text("Subiendo \(Int(uploadProgress * 100))%")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView().scaleEffect(0.8)
+                            Text("Subiendo...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if uploadProgress > 0 {
+                        ProgressView(value: min(max(uploadProgress, 0), 1))
+                            .tint(Color.rdBlue)
+                    }
                 }
             }
         }
@@ -461,59 +505,7 @@ struct MyDocumentsView: View {
     private func handlePickedPhoto(item: PhotosPickerItem, context: PickerContext) async {
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         let filename = "document_\(Date().timeIntervalSince1970).jpg"
-
-        uploadingFor = context.applicationId
-        do {
-            if context.type == "payment_receipt" {
-                // B6: validate amount > 0 client-side and send currency too.
-                let amountStr = (context.amount ?? "")
-                    .trimmingCharacters(in: .whitespaces)
-                    .replacingOccurrences(of: ",", with: ".")
-                guard let amt = Double(amountStr), amt > 0 else {
-                    withAnimation { successMessage = nil }
-                    uploadingFor = nil
-                    return
-                }
-                try await uploadPaymentReceiptWithCurrency(
-                    applicationId: context.applicationId,
-                    amount: String(amt),
-                    currency: context.currency ?? "DOP",
-                    fileData: data,
-                    filename: filename,
-                    mimeType: "image/jpeg"
-                )
-            } else if context.type == "installment_proof", let instId = context.requestId {
-                // Use the payment plan upload endpoint
-                guard let t = api.token else { throw APIError.server("No autenticado") }
-                let url = URL(string: "\(APIService.baseURL)/api/applications/\(context.applicationId)/payment-plan/\(instId)/upload")!
-                let boundary = "Boundary-\(UUID().uuidString)"
-                var req = URLRequest(url: url)
-                req.httpMethod = "POST"
-                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-                req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-                let safeFilename = sanitizeMultipartFilename(filename)
-                var body = Data()
-                body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
-                body.append(("Content-Disposition: form-data; name=\"proof\"; filename=\"\(safeFilename)\"\r\nContent-Type: image/jpeg\r\n\r\n").data(using: .utf8) ?? Data())
-                body.append(data)
-                body.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
-                req.httpBody = body
-                let (_, _) = try await URLSession.shared.data(for: req)
-            } else {
-                try await api.uploadDocument(
-                    applicationId: context.applicationId,
-                    requestId: context.requestId,
-                    type: context.type,
-                    fileData: data,
-                    filename: filename
-                )
-            }
-            withAnimation { successMessage = "\(context.label) subido correctamente" }
-            await load()
-        } catch {
-            withAnimation { successMessage = nil }
-        }
-        uploadingFor = nil
+        await runUpload(context: context, data: data, filename: filename, mimeType: "image/jpeg")
     }
 
     // MARK: - File Handling (from Files app)
@@ -529,17 +521,31 @@ struct MyDocumentsView: View {
         case "heic": mimeType = "image/heic"
         default: mimeType = "application/octet-stream"
         }
+        await runUpload(context: context, data: data, filename: filename, mimeType: mimeType)
+    }
 
+    // MARK: - Unified upload runner (#40, #27)
+    //
+    // Handles all three upload variants (general document, payment
+    // receipt, installment proof) with progress driven by
+    // `URLSessionTaskDelegate.didSendBodyData`, plus surfaces the server's
+    // >=400 error message instead of silently swallowing it.
+    private func runUpload(context: PickerContext, data: Data, filename: String, mimeType: String) async {
         uploadingFor = context.applicationId
+        uploadProgress = 0
+        defer {
+            Task { @MainActor in
+                uploadingFor = nil
+                uploadProgress = 0
+            }
+        }
         do {
             if context.type == "payment_receipt" {
-                // B6: validate amount > 0 client-side and send currency too.
                 let amountStr = (context.amount ?? "")
                     .trimmingCharacters(in: .whitespaces)
                     .replacingOccurrences(of: ",", with: ".")
                 guard let amt = Double(amountStr), amt > 0 else {
-                    withAnimation { successMessage = nil }
-                    uploadingFor = nil
+                    withAnimation { errorMessage = "Ingresa un monto mayor a 0 antes de subir." }
                     return
                 }
                 try await uploadPaymentReceiptWithCurrency(
@@ -551,42 +557,45 @@ struct MyDocumentsView: View {
                     mimeType: mimeType
                 )
             } else if context.type == "installment_proof", let instId = context.requestId {
-                guard let t = api.token else { throw APIError.server("No autenticado") }
-                let url = URL(string: "\(APIService.baseURL)/api/applications/\(context.applicationId)/payment-plan/\(instId)/upload")!
-                let boundary = "Boundary-\(UUID().uuidString)"
-                var req = URLRequest(url: url)
-                req.httpMethod = "POST"
-                req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-                req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-                let safeFilename = sanitizeMultipartFilename(filename)
-                var body = Data()
-                body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
-                body.append(("Content-Disposition: form-data; name=\"proof\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8) ?? Data())
-                body.append(data)
-                body.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
-                req.httpBody = body
-                let (_, _) = try await URLSession.shared.data(for: req)
+                try await uploadInstallmentProof(
+                    applicationId: context.applicationId,
+                    installmentId: instId,
+                    fileData: data,
+                    filename: filename,
+                    mimeType: mimeType
+                )
             } else {
-                try await api.uploadDocument(
+                try await uploadGeneralDocument(
                     applicationId: context.applicationId,
                     requestId: context.requestId,
                     type: context.type,
-                    fileData: data, filename: filename
+                    fileData: data,
+                    filename: filename,
+                    mimeType: mimeType
                 )
             }
             withAnimation { successMessage = "\(context.label) subido correctamente" }
             await load()
         } catch {
-            withAnimation { successMessage = nil }
+            // #27: surface the actual server error (already a string) so
+            // the buyer knows what went wrong. Falls back to a generic
+            // localized description for transport failures.
+            let msg: String = {
+                if case .server(let s)? = error as? APIError { return s }
+                return error.localizedDescription
+            }()
+            withAnimation { errorMessage = msg }
         }
-        uploadingFor = nil
     }
 
     // MARK: - Helpers
 
-    /// B6: Upload a payment receipt with explicit amount + currency.
-    /// We POST directly here (instead of going through APIService.uploadPaymentReceipt)
-    /// because that helper does not accept a currency field.
+    /// B6 / #40: Upload a payment receipt with explicit amount + currency.
+    /// We POST directly (instead of going through APIService.uploadPaymentReceipt)
+    /// because that helper does not accept a currency field. Progress is
+    /// driven by `UploadProgressDelegate`; the body is built into a temp
+    /// file so URLSession can stream it and the OS reports byte-by-byte
+    /// progress.
     private func uploadPaymentReceiptWithCurrency(
         applicationId: String,
         amount: String,
@@ -596,7 +605,9 @@ struct MyDocumentsView: View {
         mimeType: String
     ) async throws {
         guard let t = api.token else { throw APIError.server("No autenticado") }
-        let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/payment/upload")!
+        guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/payment/upload") else {
+            throw APIError.server("URL inválida")
+        }
         let boundary = "Boundary-\(UUID().uuidString)"
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -604,18 +615,97 @@ struct MyDocumentsView: View {
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         let safeFilename = sanitizeMultipartFilename(filename)
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8) ?? Data())
         body.append(fileData)
-        body.append("\r\n--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(("Content-Disposition: form-data; name=\"amount\"\r\n\r\n\(amount)\r\n").data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(("Content-Disposition: form-data; name=\"currency\"\r\n\r\n\(currency)\r\n").data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        req.httpBody = body
-        let (_, resp) = try await URLSession.shared.data(for: req)
-        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-            throw APIError.server("Error subiendo comprobante (\(http.statusCode))")
+        body.append("\r\n--\(boundary)\r\n".data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"amount\"\r\n\r\n\(amount)\r\n").data(using: .utf8) ?? Data())
+        body.append("--\(boundary)\r\n".data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"currency\"\r\n\r\n\(currency)\r\n").data(using: .utf8) ?? Data())
+        body.append("--\(boundary)--\r\n".data(using: .utf8) ?? Data())
+        try await runMultipartUpload(request: req, body: body, fallbackError: "Error subiendo comprobante")
+    }
+
+    /// #40 / #27: replacement for the inline installment-proof upload
+    /// that went through `URLSession.shared.data(for:)` without checking
+    /// HTTP status codes.
+    private func uploadInstallmentProof(
+        applicationId: String,
+        installmentId: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String
+    ) async throws {
+        guard let t = api.token else { throw APIError.server("No autenticado") }
+        guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/payment-plan/\(installmentId)/upload") else {
+            throw APIError.server("URL inválida")
+        }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let safeFilename = sanitizeMultipartFilename(filename)
+        var body = Data()
+        body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"proof\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8) ?? Data())
+        body.append(fileData)
+        body.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
+        try await runMultipartUpload(request: req, body: body, fallbackError: "Error subiendo prueba de pago")
+    }
+
+    /// #40 / #27: same shape as APIService.uploadDocument but goes through
+    /// URLSessionUploadTask so we can drive a progress bar.
+    private func uploadGeneralDocument(
+        applicationId: String,
+        requestId: String?,
+        type: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String
+    ) async throws {
+        guard let t = api.token else { throw APIError.server("No autenticado") }
+        guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/documents/upload") else {
+            throw APIError.server("URL inválida")
+        }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let safeFilename = sanitizeMultipartFilename(filename)
+        // Server uses `multer.array('files', 10)` so the field name is `files`.
+        var body = Data()
+        body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"files\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8) ?? Data())
+        body.append(fileData)
+        body.append(("\r\n--\(boundary)\r\n").data(using: .utf8) ?? Data())
+        body.append(("Content-Disposition: form-data; name=\"type\"\r\n\r\n\(type)\r\n").data(using: .utf8) ?? Data())
+        if let rId = requestId, !rId.isEmpty {
+            body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+            body.append(("Content-Disposition: form-data; name=\"request_id\"\r\n\r\n\(rId)\r\n").data(using: .utf8) ?? Data())
+        }
+        body.append(("--\(boundary)--\r\n").data(using: .utf8) ?? Data())
+        try await runMultipartUpload(request: req, body: body, fallbackError: "Error subiendo documento")
+    }
+
+    /// #40: shared multipart upload runner. Drives `uploadProgress` via
+    /// the delegate's `didSendBodyData` callback and surfaces server-side
+    /// error messages on >=400 instead of swallowing them.
+    private func runMultipartUpload(request: URLRequest, body: Data, fallbackError: String) async throws {
+        let delegate = UploadProgressDelegate { progress in
+            Task { @MainActor in
+                self.uploadProgress = progress
+            }
+        }
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+
+        let (data, response) = try await session.upload(for: request, from: body)
+        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+            // Surface the server's `error` field if present.
+            let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+            throw APIError.server(serverMsg ?? "\(fallbackError) (\(http.statusCode))")
         }
     }
 
@@ -670,11 +760,36 @@ struct MyDocumentsView: View {
         }()
 
         return Text(statusLabel(status))
-            .font(.system(size: 10, weight: .bold))
+            .font(.caption2.bold())
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(color.opacity(0.1))
             .clipShape(Capsule())
+    }
+}
+
+// MARK: - Upload Progress Delegate (#40)
+//
+// Receives `didSendBodyData` callbacks for the duration of an upload and
+// forwards a 0…1 progress fraction to the closure. We use a per-upload
+// URLSession so the delegate's lifecycle is bounded — `runMultipartUpload`
+// invalidates the session in its defer block.
+
+final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate {
+    private let onProgress: (Double) -> Void
+
+    init(_ onProgress: @escaping (Double) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    didSendBodyData bytesSent: Int64,
+                    totalBytesSent: Int64,
+                    totalBytesExpectedToSend: Int64) {
+        guard totalBytesExpectedToSend > 0 else { return }
+        let progress = Double(totalBytesSent) / Double(totalBytesExpectedToSend)
+        onProgress(progress)
     }
 }
 

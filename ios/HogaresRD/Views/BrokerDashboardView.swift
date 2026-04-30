@@ -288,6 +288,41 @@ struct DashboardApplicationsTab: View {
     @State private var loading = true
     @State private var filterStatus = "all"
 
+    // #58: bulk-action state. `multiSelectMode` toggles row mode between
+    // navigation and check-to-select. `selectedIds` holds the picks
+    // (preserved across filter changes so the broker can mix groups).
+    // `pendingBulkAction` opens the reason-input sheet.
+    @State private var multiSelectMode = false
+    @State private var selectedIds: Set<String> = []
+    @State private var pendingBulkAction: BulkAction? = nil
+    @State private var bulkSubmitting = false
+    @State private var bulkErrorMsg: String?
+
+    enum BulkAction: String, Identifiable {
+        case reject     = "Rechazar"
+        case archive    = "Archivar"
+        case markStale  = "Marcar obsoletas"
+        var id: String { rawValue }
+
+        var serverValue: String {
+            switch self {
+            case .reject:    return "reject"
+            case .archive:   return "archive"
+            case .markStale: return "mark_stale"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .reject:    return "xmark.circle.fill"
+            case .archive:   return "archivebox.fill"
+            case .markStale: return "clock.badge.exclamationmark"
+            }
+        }
+
+        var requiresLongReason: Bool { self == .reject }
+    }
+
     private var filtered: [Application] {
         if filterStatus == "all" { return applications }
         // Filter groups mirror the web dashboard's filter pills. Each
@@ -308,8 +343,36 @@ struct DashboardApplicationsTab: View {
     }
 
     var body: some View {
+        ZStack(alignment: .bottom) {
         ScrollView {
             VStack(spacing: 16) {
+                // #58: multi-select toggle bar.
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if multiSelectMode {
+                                multiSelectMode = false
+                                selectedIds.removeAll()
+                            } else {
+                                multiSelectMode = true
+                            }
+                        }
+                    } label: {
+                        Label(multiSelectMode ? "Listo" : "Seleccionar",
+                              systemImage: multiSelectMode ? "checkmark" : "checklist")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(multiSelectMode ? Color.rdBlue : Color(.tertiarySystemFill))
+                            .foregroundStyle(multiSelectMode ? .white : .primary)
+                            .clipShape(Capsule())
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+
                 // Stats row
                 if let a = analytics {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -355,22 +418,142 @@ struct DashboardApplicationsTab: View {
                 } else {
                     LazyVStack(spacing: 10) {
                         ForEach(filtered) { app in
-                            NavigationLink {
-                                ApplicationDetailView(id: app.id)
-                                    .environmentObject(api)
-                            } label: {
-                                ApplicationRow(app: app)
+                            if multiSelectMode {
+                                Button {
+                                    if selectedIds.contains(app.id) {
+                                        selectedIds.remove(app.id)
+                                    } else {
+                                        selectedIds.insert(app.id)
+                                    }
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: selectedIds.contains(app.id)
+                                              ? "checkmark.circle.fill"
+                                              : "circle")
+                                            .font(.title3)
+                                            .foregroundStyle(selectedIds.contains(app.id) ? Color.rdBlue : .secondary)
+                                        ApplicationRow(app: app)
+                                    }
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                NavigationLink {
+                                    ApplicationDetailView(id: app.id)
+                                        .environmentObject(api)
+                                } label: {
+                                    ApplicationRow(app: app)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
+                    // Padding so the bottom action bar doesn't cover rows.
+                    if multiSelectMode && !selectedIds.isEmpty {
+                        Color.clear.frame(height: 80)
+                    }
                 }
             }
             .padding(.vertical)
         }
         .task { await load() }
         .refreshable { await load() }
+
+        // #58: bottom action bar shown when at least one row is selected.
+        if multiSelectMode && !selectedIds.isEmpty {
+            HStack(spacing: 8) {
+                Text("\(selectedIds.count) seleccionada\(selectedIds.count == 1 ? "" : "s")")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button { pendingBulkAction = .reject } label: {
+                    bulkChip("Rechazar", icon: "xmark.circle.fill", color: .red)
+                }
+                .buttonStyle(.plain)
+                Button { pendingBulkAction = .archive } label: {
+                    bulkChip("Archivar", icon: "archivebox.fill", color: .gray)
+                }
+                .buttonStyle(.plain)
+                Button { pendingBulkAction = .markStale } label: {
+                    bulkChip("Obsoletas", icon: "clock.badge.exclamationmark", color: .orange)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .overlay(Rectangle().fill(Color(.separator)).frame(height: 0.5), alignment: .top)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+        }
+        .sheet(item: $pendingBulkAction) { action in
+            bulkActionSheet(action: action)
+        }
+    }
+
+    private func bulkChip(_ label: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text(label)
+        }
+        .font(.caption.bold())
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .frame(minHeight: 44)
+        .background(color.opacity(0.15))
+        .foregroundStyle(color)
+        .clipShape(Capsule())
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func bulkActionSheet(action: BulkAction) -> some View {
+        BulkActionReasonSheet(
+            action: action,
+            count: selectedIds.count,
+            submitting: $bulkSubmitting,
+            errorMsg: $bulkErrorMsg
+        ) { reason in
+            await performBulk(action: action, reason: reason)
+        }
+    }
+
+    private func performBulk(action: BulkAction, reason: String) async {
+        bulkSubmitting = true
+        bulkErrorMsg = nil
+        defer { bulkSubmitting = false }
+        do {
+            guard let url = URL(string: "\(APIService.baseURL)/api/applications/bulk") else {
+                throw APIError.server("URL inválida")
+            }
+            var req = try api.authedRequest(url, method: "POST")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "ids":    Array(selectedIds),
+                "action": action.serverValue,
+                "reason": reason,
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                throw APIError.server(serverMsg ?? "Error procesando acción (\(http.statusCode))")
+            }
+            // Reset selection + close sheet, refresh list.
+            await MainActor.run {
+                selectedIds.removeAll()
+                multiSelectMode = false
+                pendingBulkAction = nil
+            }
+            await load()
+        } catch {
+            if case .server(let s)? = error as? APIError {
+                bulkErrorMsg = s
+            } else {
+                bulkErrorMsg = error.localizedDescription
+            }
+        }
     }
 
     private func filterPill(_ label: String, value: String) -> some View {
@@ -394,6 +577,88 @@ struct DashboardApplicationsTab: View {
         analytics = await analyticsTask
         applications = await appsTask ?? []
         loading = false
+    }
+}
+
+// MARK: - Bulk Action Reason Sheet (#58)
+//
+// Reason-input modal driving POST /api/applications/bulk. Reject requires
+// >= 5 chars; archive and mark_stale accept any reason (or none). The
+// closure callback runs the network call from the parent so the parent
+// owns the spinner state and selection clearing.
+
+struct BulkActionReasonSheet: View {
+    let action: DashboardApplicationsTab.BulkAction
+    let count: Int
+    @Binding var submitting: Bool
+    @Binding var errorMsg: String?
+    var onSubmit: (String) async -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var reason: String = ""
+
+    private var minLength: Int { action.requiresLongReason ? 5 : 0 }
+
+    private var canSubmit: Bool {
+        reason.trimmingCharacters(in: .whitespaces).count >= minLength
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: action.icon)
+                            .font(.title2)
+                            .foregroundStyle(Color.rdBlue)
+                        VStack(alignment: .leading) {
+                            Text(action.rawValue)
+                                .font(.subheadline.bold())
+                            Text("Acción sobre \(count) aplicación\(count == 1 ? "" : "es")")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Section {
+                    TextField(
+                        action.requiresLongReason
+                          ? "Explica por qué rechazas estas aplicaciones…"
+                          : "Notas internas…",
+                        text: $reason,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...6)
+                } header: {
+                    Text(action.requiresLongReason ? "Motivo (obligatorio)" : "Motivo (opcional)")
+                } footer: {
+                    if action.requiresLongReason {
+                        Text("Mínimo 5 caracteres.")
+                            .font(.caption2)
+                    }
+                }
+                if let err = errorMsg {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle(action.rawValue)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(submitting ? "…" : "Confirmar") {
+                        Task { await onSubmit(reason.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                    }
+                    .disabled(!canSubmit || submitting)
+                }
+            }
+        }
     }
 }
 

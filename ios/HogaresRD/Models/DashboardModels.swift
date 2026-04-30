@@ -438,6 +438,41 @@ struct ArchiveDocument: Decodable, Identifiable {
             fileSize = try? c.decode(String.self, forKey: .fileSize)
         }
     }
+
+    /// Synthetic initializer used when adapting in-memory data (e.g. an
+    /// `AppDocumentUploaded` row from `ApplicationDetail`) to render
+    /// inside `ReviewDocumentSheet`. The ID falls back to docId so
+    /// SwiftUI's `sheet(item:)` re-presents the sheet when a different
+    /// document is tapped.
+    init(id: String,
+         appId: String?,
+         docId: String?,
+         name: String?,
+         filename: String?,
+         type: String?,
+         status: String?,
+         client: String?,
+         clientEmail: String?,
+         property: String?,
+         listingId: String?,
+         uploadDate: String?,
+         fileSize: String?,
+         reviewNote: String?) {
+        self.id          = id
+        self.appId       = appId
+        self.docId       = docId
+        self.name        = name
+        self.filename    = filename
+        self.type        = type
+        self.status      = status
+        self.client      = client
+        self.clientEmail = clientEmail
+        self.property    = property
+        self.listingId   = listingId
+        self.uploadDate  = uploadDate
+        self.fileSize    = fileSize
+        self.reviewNote  = reviewNote
+    }
 }
 
 // MARK: - Audit Log

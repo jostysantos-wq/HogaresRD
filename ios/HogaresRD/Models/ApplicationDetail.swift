@@ -175,6 +175,10 @@ struct AppTimelineEvent: Decodable, Identifiable, Equatable {
     let description: String?
     let actor_name:  String?
     let created_at:  String?
+    /// #59: server flags broker-only notes with `is_internal: true`.
+    /// The iOS timeline renders these with a lock icon and muted tint
+    /// so the team can spot them at a glance.
+    let is_internal: Bool?
 }
 
 // MARK: - Status catalog (mirrors backend STATUS_LABELS + STATUS_FLOW)

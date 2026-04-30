@@ -120,4 +120,8 @@ extension Notification.Name {
     /// Fired when a Universal Link opens the app with a listing ID.
     /// ContentView navigates to the listing detail.
     static let deepLinkListing = Notification.Name("rd.deepLinkListing")
+    /// Fired when a push notification carrying an application_id is
+    /// tapped. ApplicationsView listens and pushes the relevant detail
+    /// view onto its NavigationStack.
+    static let deepLinkApplication = Notification.Name("rd.deepLinkApplication")
 }

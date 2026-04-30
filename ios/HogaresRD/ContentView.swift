@@ -1,11 +1,52 @@
 import SwiftUI
 
 // MARK: - Brand Colors
+//
+// Brand tokens adapt to light + dark mode via UITraitCollection. Avoid
+// hard-coded `Color(red:…)` literals in views — they ignore Dark Mode and
+// produce invisible text on dark backgrounds. If you need a new tonal
+// step, add it here so it updates everywhere at once.
 extension Color {
-    static let rdBlue  = Color(red: 0/255,  green: 56/255,  blue: 168/255)
-    static let rdRed   = Color(red: 207/255, green: 20/255,  blue: 43/255)
-    static let rdGreen = Color(red: 27/255,  green: 122/255, blue: 62/255)
-    static let rdBg    = Color(red: 242/255, green: 246/255, blue: 255/255)
+    static let rdBlue  = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.56, blue: 0.96, alpha: 1)
+            : UIColor(red: 0.0,  green: 0.22, blue: 0.66, alpha: 1)
+    })
+    static let rdRed   = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.97, green: 0.36, blue: 0.40, alpha: 1)
+            : UIColor(red: 0.81, green: 0.08, blue: 0.17, alpha: 1)
+    })
+    static let rdGreen = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.78, blue: 0.55, alpha: 1)
+            : UIColor(red: 0.11, green: 0.48, blue: 0.24, alpha: 1)
+    })
+    static let rdBg    = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.10, blue: 0.16, alpha: 1)
+            : UIColor(red: 0.95, green: 0.96, blue: 1.00, alpha: 1)
+    })
+
+    // ── Status palette tokens (adaptive) ──
+    // Used by application/status pills throughout the app. Shipping
+    // dark-mode variants here keeps the badges legible on dark
+    // backgrounds. Names mirror the semantic meaning, not the hue.
+    static let rdOrange = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.99, green: 0.62, blue: 0.18, alpha: 1)
+            : UIColor(red: 0.85, green: 0.47, blue: 0.02, alpha: 1)
+    })
+    static let rdPurple = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.74, green: 0.46, blue: 0.95, alpha: 1)
+            : UIColor(red: 0.55, green: 0.24, blue: 0.78, alpha: 1)
+    })
+    static let rdTeal = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.80, blue: 0.80, alpha: 1)
+            : UIColor(red: 0.18, green: 0.60, blue: 0.60, alpha: 1)
+    })
 }
 
 // MARK: - Lazy Tab Helper
@@ -455,6 +496,13 @@ struct ContentView: View {
     }
 
     /// Handle push notification tap — navigate to relevant tab
+    ///
+    /// #34: Application-related pushes carry `application_id` (and an
+    /// optional `url` web fallback). When present we route into the
+    /// Profile → Mis Aplicaciones list and post `.deepLinkApplication`
+    /// so `ApplicationsView` can push the detail view onto its
+    /// NavigationStack. The receiving view chooses buyer vs broker
+    /// detail based on the current user's role.
     private func handlePushTap(_ userInfo: [AnyHashable: Any]?) {
         guard let info = userInfo else { return }
         let type = info["type"] as? String ?? ""
@@ -476,6 +524,20 @@ struct ContentView: View {
             selectedTab = 4 // Profile tab (tours are in profile)
         case "new_application", "status_changed", "payment_approved", "document_reviewed":
             selectedTab = 4 // Profile tab (applications are in profile)
+            // Deep-link to the specific application if the payload carries one.
+            if let appId = info["application_id"] as? String, !appId.isEmpty {
+                // Small delay so the Profile tab settles before we
+                // post — otherwise NavigationStack may swallow the
+                // push if ApplicationsView hasn't subscribed yet.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    NotificationCenter.default.post(
+                        name: .deepLinkApplication,
+                        object: nil,
+                        userInfo: ["applicationId": appId]
+                    )
+                }
+            }
         case "saved_search_match", "new_listing":
             selectedTab = 1 // Browse/Explore tab
         default:
