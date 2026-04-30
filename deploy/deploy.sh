@@ -39,6 +39,17 @@ else
   git stash pop || { echo "ERROR: stash pop failed (likely conflict). Resolve manually."; exit 1; }
 fi
 
+# ── 3.5. Pre-deploy DB check (against currently-running process) ──
+# Confirms the OLD process can still talk to PostgreSQL before we
+# swap in new code. If the DB is unreachable now, shipping new code
+# (which depends on the same DB) would just compound the outage.
+# exit 5 = pre-flight DB check failed.
+echo "→ Pre-deploy DB check..."
+if ! curl -fsS http://127.0.0.1:3000/api/health | node -e 'process.stdin.on("data",d=>{const j=JSON.parse(d);process.exit(j.db==="ok"?0:1)})'; then
+  echo "ERROR: DB not reachable from current process. Aborting deploy."
+  exit 5
+fi
+
 # ── 4. Install/update dependencies ───────────────────────────────
 echo "→ Installing dependencies..."
 npm ci --production

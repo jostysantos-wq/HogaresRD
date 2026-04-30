@@ -2189,29 +2189,73 @@ app.get('/unsubscribe', (req, res) => {
   res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>HogaresRD — Cancelar suscripción</title></head><body style="font-family:'Segoe UI',sans-serif;text-align:center;padding:80px 20px;background:#eef3fa;color:#1a2b40;"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,45,98,0.10);"><div style="font-size:2.5rem;margin-bottom:16px;">✉️</div><h2 style="font-size:1.4rem;font-weight:800;color:#002D62;margin-bottom:12px;">Suscripción cancelada</h2><p style="color:#4d6a8a;line-height:1.7;margin-bottom:28px;">Has sido eliminado de nuestra lista de correos. Ya no recibirás actualizaciones del mercado inmobiliario de HogaresRD.</p><a href="/home" style="display:inline-block;background:#002D62;color:#fff;font-weight:700;padding:12px 32px;border-radius:8px;text-decoration:none;">Volver al inicio</a></div></body></html>`);
 });
 
+// ── Cron concurrency guards ────────────────────────────────────────────
+// Each long-running cron has a Boolean "in flight" flag — if a prior run
+// hasn't finished by the time the next tick fires, we skip rather than
+// stack work. Prevents duplicate emails / duplicate writes under load.
+let _newsletterRunning    = false;
+let _savedSearchRunning   = false;
+let _archiveRunning       = false;
+// Pagination cursor for the conversation auto-archive job. Bounded work
+// per fire (max 500 convs) so the cron never balloons as cache grows.
+// Cursor is module-scoped (in memory); a crash resets to 0, which is fine
+// — every conv gets visited within ~ceil(N/500) hourly fires regardless.
+let _archiveCursor        = 0;
+const ARCHIVE_BATCH_SIZE  = 500;
+
 // ── Daily newsletter cron (8 AM Dominican Time = UTC-4 → 12:00 UTC) ────────
 cron.schedule('0 12 * * *', () => {
+  if (_newsletterRunning) {
+    console.warn('[cron newsletter] previous run still in flight, skipping');
+    return;
+  }
+  _newsletterRunning = true;
   console.log('[Cron] Sending daily newsletter…');
   sendNewsletter()
     .then(r => console.log('[Cron] Newsletter done:', r))
-    .catch(e => console.error('[Cron] Newsletter error:', e.message));
+    .catch(e => console.error('[Cron] Newsletter error:', e.message))
+    .finally(() => { _newsletterRunning = false; });
 }, { timezone: 'America/Santo_Domingo' });
 
 // ── Saved search alerts cron (every 2 hours) ────────────────────────────────
 cron.schedule('0 */2 * * *', () => {
+  if (_savedSearchRunning) {
+    console.warn('[cron saved-search] previous run still in flight, skipping');
+    return;
+  }
+  _savedSearchRunning = true;
   console.log('[Cron] Checking saved search matches…');
   checkSavedSearchMatches()
     .then(r => console.log('[Cron] Saved search check done:', r))
-    .catch(e => console.error('[Cron] Saved search error:', e.message));
+    .catch(e => console.error('[Cron] Saved search error:', e.message))
+    .finally(() => { _savedSearchRunning = false; });
 }, { timezone: 'America/Santo_Domingo' });
 
 // ── Auto-archive closed conversations after 24h (hourly check) ──────────
+// Bounded per-run work (ARCHIVE_BATCH_SIZE) + concurrency guard. The
+// cursor advances each fire and wraps to 0 once it passes the array
+// length, so every conversation is eventually checked.
 cron.schedule('17 * * * *', () => {
+  if (_archiveRunning) {
+    console.warn('[cron archive] previous run still in flight, skipping');
+    return;
+  }
+  _archiveRunning = true;
   try {
     const allConvs = store.getConversations();
+    const total = allConvs.length;
+    if (total === 0) { _archiveRunning = false; return; }
+
+    // Wrap cursor if it's outside the array (cache may have shrunk)
+    if (_archiveCursor >= total) _archiveCursor = 0;
+
+    const start = _archiveCursor;
+    const end   = Math.min(start + ARCHIVE_BATCH_SIZE, total);
     const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24h ago
     let archived = 0;
-    for (const conv of allConvs) {
+
+    for (let i = start; i < end; i++) {
+      const conv = allConvs[i];
       if (conv.closed && !conv.archived && conv.closedAt) {
         if (new Date(conv.closedAt).getTime() <= cutoff) {
           conv.archived   = true;
@@ -2223,9 +2267,17 @@ cron.schedule('17 * * * *', () => {
         }
       }
     }
-    if (archived > 0) console.log(`[Cron] Auto-archived ${archived} conversation(s) closed >24h`);
+
+    // Advance cursor; wrap to 0 once we've passed the end of the array
+    _archiveCursor = end >= total ? 0 : end;
+
+    if (archived > 0) {
+      console.log(`[Cron] Auto-archived ${archived} conversation(s) closed >24h (slice ${start}..${end} of ${total})`);
+    }
   } catch (e) {
     console.error('[Cron] Auto-archive error:', e.message);
+  } finally {
+    _archiveRunning = false;
   }
 }, { timezone: 'America/Santo_Domingo' });
 
@@ -2571,15 +2623,55 @@ app.post('/admin/ai-review/:id', adminSessionAuth, async (req, res) => {
 app.use('/api/admin', errorTracker.router);
 
 // ── Health check endpoint (must be before 404 catch-all) ──────────
-app.get('/api/health', (req, res) => {
+// Called by deploy.sh and external monitors — must complete in <2.5s even
+// when the DB is unreachable. We race the SELECT 1 probe against a 2s
+// timeout and treat any failure as 'unreachable' rather than blocking.
+app.get('/api/health', async (req, res) => {
   const uptime = process.uptime();
   const cacheReady = store._cacheReady !== false;
   const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+
+  // DB probe — skip when DATABASE_URL is empty (test/dev), else SELECT 1 with 2s timeout
+  let db = 'skipped';
+  if (process.env.DATABASE_URL && store && store.pool && typeof store.pool.query === 'function') {
+    try {
+      await Promise.race([
+        store.pool.query('SELECT 1'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('db probe timeout')), 2000)),
+      ]);
+      db = 'ok';
+    } catch (e) {
+      db = 'unreachable';
+      console.error('[health] DB probe failed:', e.message);
+    }
+  }
+
+  // Email + Stripe config presence
+  const email  = process.env.RESEND_API_KEY ? 'configured' : 'missing';
+  const stripe = (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET)
+    ? 'configured' : 'missing';
+
+  // Count notification failures (line-delimited log file)
+  let notification_failures = 0;
+  try {
+    const failPath = path.join(DATA_DIR, 'notification-failures.log');
+    if (fs.existsSync(failPath)) {
+      const raw = fs.readFileSync(failPath, 'utf8');
+      notification_failures = raw.split('\n').filter(l => l.trim().length > 0).length;
+    }
+  } catch (e) {
+    // non-fatal — leave count at 0
+  }
+
   res.json({
     status: cacheReady ? 'ok' : 'warming',
     uptime: Math.round(uptime),
     memory: `${memMB}MB`,
     cacheReady,
+    db,
+    email,
+    stripe,
+    notification_failures,
     version: require('./package.json').version,
     timestamp: new Date().toISOString(),
   });
