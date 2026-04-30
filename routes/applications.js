@@ -1240,10 +1240,14 @@ function decryptAppPII(app) {
 // payloads, email builders, push notifications) can format amounts
 // without re-decrypting. decryptAppPII on every read path normalizes
 // the rest of the system.
-function saveApplicationEncryptingFinancials(app) {
+// `client` is an optional 2nd arg — when invoked inside `withTransaction`,
+// the route passes the pg client so the underlying saveApplication write
+// joins the surrounding BEGIN/COMMIT and the function returns the query
+// promise for the caller to await.
+function saveApplicationEncryptingFinancials(app, client) {
   const clone = JSON.parse(JSON.stringify(app));
   encryptFinancials(clone);
-  store.saveApplication(clone);
+  return store.saveApplication(clone, client);
 }
 
 // Helper: encrypt financial fields before saving
@@ -1516,13 +1520,28 @@ router.put('/:id/status', userAuth, async (req, res) => {
     for (const evt of allEvents) autoCompleteTasksByEvent(app.id, evt);
 
     // Void approved commission if application is rejected (sale didn't happen)
+    // Wrap the status flip + audit event + save in a transaction so commission
+    // status and the timeline event always commit together. Clear any payout
+    // pointer so a voided commission cannot be paid out by a stale reference.
     if (status === 'rechazado' && app.commission?.status === 'approved') {
-      app.commission.status = 'voided';
-      app.commission.voided_at = new Date().toISOString();
-      addEvent(app, 'commission_voided',
-        'Comisión anulada por rechazo de la aplicación',
-        'system', 'Sistema', { reason: 'application_rejected' });
-      store.saveApplication(app);
+      try {
+        await store.withTransaction(async (client) => {
+          app.commission.status = 'voided';
+          app.commission.voided_at = new Date().toISOString();
+          // Clear any payout pointer so a voided commission can't be paid
+          // out by a stale reference left over from the approved state.
+          if (app.commission.payout_id) app.commission.payout_id = null;
+          if (app.commission.payout_ref) app.commission.payout_ref = null;
+          addEvent(app, 'commission_voided',
+            'Comisión anulada por rechazo de la aplicación',
+            'system', 'Sistema', { reason: 'application_rejected' });
+          await store.saveApplication(app, client);
+        });
+      } catch (err) {
+        console.error('[commission/void] transaction failed:', err.message);
+        // Outer route already responded — log and continue. Inventory-sync
+        // path follows; this failure does not block the status change.
+      }
     }
   }
 
@@ -2441,7 +2460,7 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
 });
 
 // ── PUT /:id/payment/verify  — Broker verifies payment ──────────
-router.put('/:id/payment/verify', userAuth, (req, res) => {
+router.put('/:id/payment/verify', userAuth, async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -2452,29 +2471,41 @@ router.put('/:id/payment/verify', userAuth, (req, res) => {
 
   const { approved, notes } = req.body;
 
-  app.payment.verification_status = approved ? 'approved' : 'rejected';
-  app.payment.verified_at = new Date().toISOString();
-  app.payment.verified_by = req.user.sub;
-  if (notes) app.payment.notes = notes;
+  // Wrap the multi-field state mutation + persistence in a single transaction
+  // so payment-verification status, application status flip, timeline events,
+  // and the final saveApplication either all land or all roll back together.
+  // Previously a partial DB failure could leave verification_status approved
+  // while app.status remained pendiente_pago.
+  try {
+    await store.withTransaction(async (client) => {
+      app.payment.verification_status = approved ? 'approved' : 'rejected';
+      app.payment.verified_at = new Date().toISOString();
+      app.payment.verified_by = req.user.sub;
+      if (notes) app.payment.notes = notes;
 
-  if (approved && STATUS_FLOW[app.status]?.includes('pago_aprobado')) {
-    const old = app.status;
-    app.status = 'pago_aprobado';
-    addEvent(app, 'status_change', 'Pago verificado y aprobado',
-      req.user.sub, user?.name || 'Broker', { from: old, to: 'pago_aprobado' });
-  } else if (!approved) {
-    // Payment rejected — always revert to pendiente_pago so client can re-upload
-    const old = app.status;
-    app.status = 'pendiente_pago';
-    addEvent(app, 'status_change', `Pago rechazado${notes ? ': ' + notes : ''}`,
-      req.user.sub, user?.name || 'Broker', { from: old, to: 'pendiente_pago' });
+      if (approved && STATUS_FLOW[app.status]?.includes('pago_aprobado')) {
+        const old = app.status;
+        app.status = 'pago_aprobado';
+        addEvent(app, 'status_change', 'Pago verificado y aprobado',
+          req.user.sub, user?.name || 'Broker', { from: old, to: 'pago_aprobado' });
+      } else if (!approved) {
+        // Payment rejected — always revert to pendiente_pago so client can re-upload
+        const old = app.status;
+        app.status = 'pendiente_pago';
+        addEvent(app, 'status_change', `Pago rechazado${notes ? ': ' + notes : ''}`,
+          req.user.sub, user?.name || 'Broker', { from: old, to: 'pendiente_pago' });
+      }
+
+      addEvent(app, 'payment_reviewed',
+        `Pago ${approved ? 'aprobado' : 'rechazado'}${notes ? ': ' + notes : ''}`,
+        req.user.sub, user?.name || 'Broker', { approved, notes });
+
+      await store.saveApplication(app, client);
+    });
+  } catch (err) {
+    console.error('[payment/verify] transaction failed:', err.message);
+    return res.status(500).json({ error: 'Error al verificar el pago' });
   }
-
-  addEvent(app, 'payment_reviewed',
-    `Pago ${approved ? 'aprobado' : 'rechazado'}${notes ? ': ' + notes : ''}`,
-    req.user.sub, user?.name || 'Broker', { approved, notes });
-
-  store.saveApplication(app);
 
   // Auto-complete the "verify payment" task
   autoCompleteTasksByEvent(app.id, 'payment_uploaded');
@@ -2986,7 +3017,7 @@ router.post('/:id/commission', userAuth, (req, res) => {
 });
 
 // PUT /:id/commission/review — inmobiliaria owner approves / adjusts / rejects
-router.put('/:id/commission/review', userAuth, (req, res) => {
+router.put('/:id/commission/review', userAuth, async (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -3013,22 +3044,7 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
     return res.status(400).json({ error: 'Acción inválida.' });
   }
 
-  const now = new Date().toISOString();
-  const { history: _bh, ...snapshotBefore } = app.commission;
-
-  if (action === 'reject') {
-    app.commission.status          = 'rejected';
-    app.commission.reviewed_by     = user.id;
-    app.commission.reviewer_name   = user.name || '';
-    app.commission.reviewed_at     = now;
-    app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
-  } else if (action === 'approve') {
-    app.commission.status          = 'approved';
-    app.commission.reviewed_by     = user.id;
-    app.commission.reviewer_name   = user.name || '';
-    app.commission.reviewed_at     = now;
-    app.commission.adjustment_note = '';
-  } else if (action === 'adjust') {
+  if (action === 'adjust') {
     const recomputed = commissionComputed(req.body || {});
     if (recomputed.sale_amount <= 0 || recomputed.agent_percent <= 0) {
       return res.status(400).json({ error: 'Monto o porcentaje inválido.' });
@@ -3038,33 +3054,66 @@ router.put('/:id/commission/review', userAuth, (req, res) => {
         error: 'La comisión de la inmobiliaria no puede ser mayor que la del agente.',
       });
     }
-    Object.assign(app.commission, recomputed);
-    app.commission.status          = 'approved';
-    app.commission.reviewed_by     = user.id;
-    app.commission.reviewer_name   = user.name || '';
-    app.commission.reviewed_at     = now;
-    app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+    // Stash on req so the transaction body can use the validated values
+    req._commissionRecomputed = recomputed;
   }
 
-  if (!Array.isArray(app.commission.history)) app.commission.history = [];
-  app.commission.history.push({
-    at:       now,
-    by:       user.id,
-    byName:   user.name || '',
-    action,
-    snapshotBefore,
-    snapshotAfter: (() => { const { history: _ah, ...rest } = app.commission; return rest; })(),
-    note:     (req.body?.note || '').toString().slice(0, 300),
-  });
-  app.updated_at = now;
+  const now = new Date().toISOString();
+  const { history: _bh, ...snapshotBefore } = app.commission;
 
-  addEvent(app, 'commission_' + action,
-    action === 'approve' ? `Comisión aprobada por ${user.name || 'inmobiliaria'}` :
-    action === 'adjust'  ? `Comisión ajustada por ${user.name || 'inmobiliaria'}` :
-                           `Comisión rechazada por ${user.name || 'inmobiliaria'}`,
-    user.id, user.name || '', { commission: app.commission });
+  // Wrap commission state mutation + audit event + save in a transaction
+  // so the new commission status, history entry, timeline event, and DB row
+  // all commit together. Clear payout pointers on rejection so a rejected
+  // commission can't be paid out by a stale reference.
+  try {
+    await store.withTransaction(async (client) => {
+      if (action === 'reject') {
+        app.commission.status          = 'rejected';
+        app.commission.reviewed_by     = user.id;
+        app.commission.reviewer_name   = user.name || '';
+        app.commission.reviewed_at     = now;
+        app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+        if (app.commission.payout_id) app.commission.payout_id = null;
+        if (app.commission.payout_ref) app.commission.payout_ref = null;
+      } else if (action === 'approve') {
+        app.commission.status          = 'approved';
+        app.commission.reviewed_by     = user.id;
+        app.commission.reviewer_name   = user.name || '';
+        app.commission.reviewed_at     = now;
+        app.commission.adjustment_note = '';
+      } else if (action === 'adjust') {
+        Object.assign(app.commission, req._commissionRecomputed);
+        app.commission.status          = 'approved';
+        app.commission.reviewed_by     = user.id;
+        app.commission.reviewer_name   = user.name || '';
+        app.commission.reviewed_at     = now;
+        app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+      }
 
-  saveApplicationEncryptingFinancials(app);
+      if (!Array.isArray(app.commission.history)) app.commission.history = [];
+      app.commission.history.push({
+        at:       now,
+        by:       user.id,
+        byName:   user.name || '',
+        action,
+        snapshotBefore,
+        snapshotAfter: (() => { const { history: _ah, ...rest } = app.commission; return rest; })(),
+        note:     (req.body?.note || '').toString().slice(0, 300),
+      });
+      app.updated_at = now;
+
+      addEvent(app, 'commission_' + action,
+        action === 'approve' ? `Comisión aprobada por ${user.name || 'inmobiliaria'}` :
+        action === 'adjust'  ? `Comisión ajustada por ${user.name || 'inmobiliaria'}` :
+                               `Comisión rechazada por ${user.name || 'inmobiliaria'}`,
+        user.id, user.name || '', { commission: app.commission });
+
+      await saveApplicationEncryptingFinancials(app, client);
+    });
+  } catch (err) {
+    console.error('[commission/review] transaction failed:', err.message);
+    return res.status(500).json({ error: 'Error al revisar la comisión' });
+  }
 
   // Notify the submitting agent
   const agentUser = app.commission.submitted_by

@@ -955,17 +955,28 @@ async function claimConversationAtomic(convId, brokerId, brokerName, now, system
   }
 }
 
-function saveConversation(conv) {
+// `client` is an optional 2nd arg — when invoked inside `withTransaction`,
+// the route passes the pg client so the write joins the surrounding
+// BEGIN/COMMIT and the function returns the query promise for the caller
+// to await. Without `client` it falls back to fire-and-forget (current
+// behavior for the other call sites). Mirrors the saveListing /
+// saveApplication overload.
+function saveConversation(conv, client) {
   const jsonData = JSON.stringify(_stripMessagesFromData(conv));
   // message_count is set on INSERT (new conversations) but NOT overwritten on UPDATE —
   // addMessage() is the sole authority for incrementing the counter.
-  pool.query(
-    `INSERT INTO conversations (id, "clientId", "brokerId", data, message_count)
+  const sql = `INSERT INTO conversations (id, "clientId", "brokerId", data, message_count)
      VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`,
-    [conv.id, conv.clientId, conv.brokerId, jsonData, conv.message_count || 0]
-  ).catch(err => _dbWriteError('saveConversation', err));
+     ON CONFLICT (id) DO UPDATE SET "clientId" = $2, "brokerId" = $3, data = $4`;
+  const params = [conv.id, conv.clientId, conv.brokerId, jsonData, conv.message_count || 0];
+  let writePromise = null;
+  if (client) {
+    writePromise = client.query(sql, params);
+  } else {
+    pool.query(sql, params).catch(err => _dbWriteError('saveConversation', err));
+  }
   _updateConversationCache(conv);
+  return writePromise; // null when not in a transaction
 }
 
 /// Awaitable version of saveConversation — use for critical writes
@@ -1120,6 +1131,7 @@ function getBookedSlots(brokerId, dateStr) {
   return _tours.filter(t => t.broker_id === brokerId && t.requested_date === dateStr && ['confirmed', 'pending'].includes(t.status)).map(hydrateTour);
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveTour(tour) {
   const row = dehydrateTour(tour);
   const { sql, values } = buildUpsert('tours', row, 'id');
@@ -1224,6 +1236,7 @@ function getPushSubscriptionsByUser(userId) {
   };
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function savePushSubscription(userId, current) {
   const web = JSON.stringify(current.web || []);
   const ios = JSON.stringify(current.ios || []);
@@ -1267,6 +1280,7 @@ function getSavedSearchesByUser(userId) { return _savedSearches.filter(s => s.us
 function getSavedSearchById(id) { return _savedSearches.find(s => s.id === id) || null; }
 function getAllNotifiableSavedSearches() { return _savedSearches.filter(s => s.notify); }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveSavedSearch(search) {
   const cols = Object.keys(search);
   const vals = cols.map(c => typeof search[c] === 'object' ? JSON.stringify(search[c]) : search[c]);
@@ -1290,6 +1304,7 @@ function getBlogPosts() { return _blogPosts; }
 function getBlogPostById(id) { return _blogPosts.find(p => p.id === id) || null; }
 function getBlogPostBySlug(slug) { return _blogPosts.find(p => p.slug === slug) || null; }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveBlogPost(post) {
   // Deep clone so we can dehydrate (_extra → JSON string) into the DB row
   // without mutating the caller's object. Previously the cache stored the
@@ -1354,6 +1369,7 @@ function getReportById(id) {
   return row ? (typeof row.data === 'object' ? row.data : _jsonParse(row.data, row)) : null;
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveReport(report) {
   pool.query(
     `INSERT INTO reports (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2`,
@@ -1386,6 +1402,7 @@ function getTasksByAssignee(userId) { return _tasks.filter(t => t.assigned_to ==
 function getTaskById(id) { return hydrateTask(_tasks.find(t => t.id === id)); }
 function getTasksByApplication(appId) { return _tasks.filter(t => t.application_id === appId).map(hydrateTask); }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveTask(task) {
   const row = {};
   const extra = {};
@@ -1436,6 +1453,7 @@ function getUnreadNotificationCount(userId) {
   return count;
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveNotification(notif) {
   const NOTIF_COLS = ['id', 'user_id', 'type', 'title', 'body', 'url', 'data', 'read_at', 'created_at'];
   const row = {};
@@ -1552,6 +1570,7 @@ function getActiveLeadQueue() {
   return _leadQueue.filter(r => r.status === 'active');
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveLeadQueueItem(item) {
   const row = {};
   const extra = {};
@@ -1597,6 +1616,7 @@ function getContributionScore(userId, listingId) {
   return obj;
 }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveContributionScore(cs) {
   const row = {};
   const extra = {};
@@ -1659,6 +1679,7 @@ function getInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id
 function getInmobPostById(id) { return _inmobPosts.find(p => p.id === id) || null; }
 function getPublishedInmobPosts(inmId) { return _inmobPosts.filter(p => p.inmobiliaria_id === inmId && p.published); }
 
+// TODO(transactional-rewrite): accept optional client for transactional callers
 function saveInmobPost(post) {
   const { sql, values } = buildUpsert('inmobiliaria_posts', post, 'id');
   pool.query(sql, values).catch(err => _dbWriteError('saveInmobPost', err));

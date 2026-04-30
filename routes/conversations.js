@@ -497,6 +497,12 @@ router.post('/:id/claim', requireLogin, async (req, res) => {
     timestamp:  now,
   };
 
+  // claimConversationAtomic already wraps the conversation UPDATE + system
+  // message INSERT in its own BEGIN/COMMIT. This route does NOT mutate the
+  // application (no broker assignment writeback yet), so a single atomic
+  // call is sufficient. If a future change starts touching app.assigned_broker
+  // or saveConversation here, wrap both in store.withTransaction(...) so all
+  // writes commit together.
   try {
     const result = await store.claimConversationAtomic(req.params.id, user.sub, user.name, now, sysMsg);
     if (!result) {
