@@ -80,8 +80,19 @@ function signToken(user) {
   // 14-day expiry — shorter than the original 30d so stolen tokens decay
   // faster. Users who want long-lived sessions can enable "Remember me"
   // (bumps to 30d) or biometric on iOS (regenerates on demand).
+  // tokenVersion (E6): a per-user counter that's bumped whenever the
+  // user's role changes. verifyJWT compares the payload's tokenVersion
+  // against the current user record and rejects mismatches — so an
+  // old token signed with role='user' is invalidated the moment the
+  // admin upgrades that user to 'broker'. Default 0 for legacy users
+  // who don't yet have the field.
   const jti = crypto.randomUUID();
-  return jwt.sign({ sub: user.id, role: user.role, name: user.name, jti }, JWT_SECRET, { expiresIn: '14d' });
+  const tokenVersion = Number.isFinite(user.tokenVersion) ? user.tokenVersion : 0;
+  return jwt.sign(
+    { sub: user.id, role: user.role, name: user.name, jti, tokenVersion },
+    JWT_SECRET,
+    { expiresIn: '14d' }
+  );
 }
 
 function safeUser(user) {
@@ -289,6 +300,19 @@ function userAuth(req, res, next) {
     // Sprint 3: check revocation list (handles forced logout / stolen-token invalidation)
     if (payload.jti && store.isTokenRevoked(payload.jti)) {
       logSec('token_rejected', req, { reason: 'revoked', userId: payload.sub });
+      return res.status(401).json({ error: 'Sesión inválida. Inicia sesión de nuevo.' });
+    }
+
+    // E6: tokenVersion check — invalidates stale tokens after role changes.
+    // Old tokens (signed before this rollout) lack a tokenVersion claim;
+    // those are accepted as long as the user record is still at version 0.
+    // Once admin bumps the version, ALL prior tokens (versioned or legacy)
+    // are revoked.
+    const u = store.getUserById(payload.sub);
+    const userVersion = u && Number.isFinite(u.tokenVersion) ? u.tokenVersion : 0;
+    const tokenV = Number.isFinite(payload.tokenVersion) ? payload.tokenVersion : 0;
+    if (u && tokenV !== userVersion) {
+      logSec('token_rejected', req, { reason: 'token_version_mismatch', userId: payload.sub });
       return res.status(401).json({ error: 'Sesión inválida. Inicia sesión de nuevo.' });
     }
 
@@ -1505,6 +1529,11 @@ function optionalAuth(req, res, next) {
   try {
     const decoded = verifyJWT(token);
     if (decoded.jti && store.isTokenRevoked(decoded.jti)) { req.user = null; return next(); }
+    // E6: drop stale tokens after a role change
+    const u = store.getUserById(decoded.sub);
+    const userVersion = u && Number.isFinite(u.tokenVersion) ? u.tokenVersion : 0;
+    const tokenV = Number.isFinite(decoded.tokenVersion) ? decoded.tokenVersion : 0;
+    if (u && tokenV !== userVersion) { req.user = null; return next(); }
     req.user = decoded;
   } catch { req.user = null; }
   next();
@@ -1840,6 +1869,11 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
     // Update user role
     const previousRole = user.role;
     user.role = effectiveRole;
+    // E6: bump tokenVersion so any old token (still claiming the
+    // previous role) is rejected by userAuth on the next request.
+    if (previousRole !== effectiveRole) {
+      user.tokenVersion = (Number.isFinite(user.tokenVersion) ? user.tokenVersion : 0) + 1;
+    }
 
     // When upgrading to org-level role, initialize org fields
     if (['inmobiliaria', 'constructora'].includes(effectiveRole) && !['inmobiliaria', 'constructora'].includes(previousRole)) {

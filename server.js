@@ -1513,6 +1513,28 @@ app.post('/admin/users/:id/unlock', adminSessionAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Admin: Change user role ────────────────────────────────────────────
+// E6: bumping `tokenVersion` invalidates every JWT that was issued under
+// the previous role (server-side, on the next userAuth call). The user
+// has to re-login to get a token with the new role baked in.
+const ALLOWED_ADMIN_ROLES = new Set([
+  'user', 'broker', 'inmobiliaria', 'constructora', 'secretary', 'admin',
+]);
+app.put('/admin/users/:id/role', adminSessionAuth, (req, res) => {
+  const user = store.getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  const { role } = req.body || {};
+  if (!role || !ALLOWED_ADMIN_ROLES.has(role))
+    return res.status(400).json({ error: 'Rol inválido' });
+  const prev = user.role;
+  if (prev === role) return res.json({ success: true, role, unchanged: true });
+  user.role = role;
+  user.tokenVersion = (Number.isFinite(user.tokenVersion) ? user.tokenVersion : 0) + 1;
+  store.saveUser(user);
+  console.log(`[admin] Role changed for ${user.email}: ${prev} → ${role} (tokenVersion=${user.tokenVersion})`);
+  res.json({ success: true, role, tokenVersion: user.tokenVersion });
+});
+
 // ── Admin: Delete user account ──────────────────────────────────────────
 app.delete('/admin/users/:id', adminSessionAuth, async (req, res) => {
   const user = store.getUserById(req.params.id);

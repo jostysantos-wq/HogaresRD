@@ -215,5 +215,21 @@
     "in": "en",
     "sqm": "m²",
     "per_month": "/mes"
+  },
+
+  "application_status": {
+    "aplicado":                 "Aplicado",
+    "en_revision":              "En Revisión",
+    "documentos_requeridos":    "Documentos Requeridos",
+    "documentos_enviados":      "Documentos Enviados",
+    "documentos_insuficientes": "Documentos Insuficientes",
+    "en_aprobacion":            "En Aprobación",
+    "reservado":                "Reservado",
+    "aprobado":                 "Aprobado",
+    "pendiente_pago":           "Pendiente de Pago",
+    "pago_enviado":             "Pago Enviado",
+    "pago_aprobado":            "Pago Aprobado",
+    "completado":               "Completado",
+    "rechazado":                "Rechazado"
   }
 }

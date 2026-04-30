@@ -2742,16 +2742,37 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "Error revisando documento")
     }
 
-    /// Returns a URL to open an uploaded document in Safari. The server
-    /// validates authorization against the listing owner / admin before
-    /// serving the file. Includes the access token as a query param.
+    /// Returns the URL of the uploaded document. The server validates
+    /// authorization against the listing owner / admin before serving
+    /// the file.
+    ///
+    /// E5: the previous implementation appended `?token=<jwt>` so the URL
+    /// could be opened in SFSafariViewController without setting headers.
+    /// That leaks the JWT into URL history, server logs, and any
+    /// copy-paste of the link. Callers must now download the bytes via
+    /// `downloadDocument(...)` (which sets `Authorization: Bearer …`)
+    /// and present the result from a sandbox URL.
     func documentDownloadURL(applicationId: String, documentId: String) -> URL? {
-        guard let t = token else { return nil }
-        guard var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/file") else {
-            return nil
+        return URL(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/file")
+    }
+
+    /// Downloads an uploaded document with header auth and returns the
+    /// raw bytes plus the resolved MIME type. Use this for previews —
+    /// pipe `data` through `UIDocumentInteractionController`, write to
+    /// a temp URL, or hand to a `QLPreviewController`.
+    func downloadDocument(applicationId: String, documentId: String) async throws -> (data: Data, mime: String?) {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        guard let url = documentDownloadURL(applicationId: applicationId, documentId: documentId) else {
+            throw APIError.server("URL inválida")
         }
-        comps.queryItems = [URLQueryItem(name: "token", value: t)]
-        return comps.url
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            throw APIError.server("Error \(http.statusCode) descargando documento")
+        }
+        let mime = (resp as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type")
+        return (data, mime)
     }
 
     // MARK: - Payment Review (broker verifies client proof)
