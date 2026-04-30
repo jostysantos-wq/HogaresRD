@@ -44,6 +44,9 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     'RESEND_API_KEY',
     'META_WEBHOOK_VERIFY_TOKEN',
     'META_APP_SECRET',
+    // Apple IAP receipt validation: the JWS bundleId claim must equal
+    // this. Falls back to 'com.josty.hogaresrd' when unset.
+    'APPLE_BUNDLE_ID',
   ];
   const missingOptional = optional.filter(k => !process.env[k]);
   if (missingOptional.length) {
