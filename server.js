@@ -33,6 +33,20 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     console.error('    Create a .env file with these values before starting the server.\n');
     process.exit(1);
   }
+  // Soft warnings — these are needed for full production functionality
+  // (payments, webhooks) but the server can boot without them.
+  const optional = [
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_BROKER_PRICE_ID',
+    'STRIPE_INM_PRICE_ID',
+    'RESEND_API_KEY',
+    'META_WEBHOOK_VERIFY_TOKEN',
+    'META_APP_SECRET',
+  ];
+  const missingOptional = optional.filter(k => !process.env[k]);
+  if (missingOptional.length) {
+    console.warn(`[boot] Missing optional env: ${missingOptional.join(', ')}`);
+  }
 })();
 
 // ── Ensure documents directory exists (uploads go to filesystem) ───────────
@@ -2584,8 +2598,36 @@ app.use(errorTracker.errorHandler);
 })();
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`HogaresRD running at http://localhost:${PORT}`);
+
+    // ── Graceful shutdown on SIGTERM (PM2 reload / deploy) ─────────────────
+    // PM2's default kill_timeout is 5s; without this handler in-flight requests
+    // are aborted. We stop accepting new connections, drain existing ones,
+    // close the pg pool, and force-exit if shutdown stalls beyond 30s.
+    process.on('SIGTERM', () => {
+      console.log('[shutdown] SIGTERM received — closing server gracefully');
+      const hardTimer = setTimeout(() => {
+        console.error('[shutdown] Hard timeout (30s) — forcing exit');
+        process.exit(1);
+      }, 30000);
+      hardTimer.unref();
+
+      server.close(async (err) => {
+        if (err) console.error('[shutdown] server.close error:', err.message);
+        else console.log('[shutdown] HTTP server closed');
+        try {
+          if (store && store.pool && typeof store.pool.end === 'function') {
+            await store.pool.end();
+            console.log('[shutdown] pg pool drained');
+          }
+        } catch (e) {
+          console.error('[shutdown] pg pool drain error:', e.message);
+        }
+        clearTimeout(hardTimer);
+        process.exit(0);
+      });
+    });
 
     // Signal PM2 that the process is ready to serve traffic.
     // PM2 waits for this before killing the old process (zero-downtime reload).
