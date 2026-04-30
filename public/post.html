@@ -244,7 +244,7 @@
         </div>` : ''}
 
         <div class="post-content">
-          <div class="post-body">${post.content || '<p>Contenido no disponible.</p>'}</div>
+          <div class="post-body">${post.content ? sanitizeHtml(post.content) : '<p>Contenido no disponible.</p>'}</div>
         </div>
 
         <div class="share-bar">
@@ -283,6 +283,62 @@
     }
     function escAttr(s) {
       return String(s || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // Minimal allow-list HTML sanitizer for rich-text blog bodies.
+    // Allowed tags: p, br, a (href only), strong, em, h1-h6, ul, ol, li, img (src + alt), blockquote, code, pre.
+    // All on*= and other attributes are stripped. javascript:/data: URLs blocked.
+    function sanitizeHtml(dirty) {
+      const ALLOWED = {
+        p: [], br: [], strong: [], em: [], b: [], i: [],
+        h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
+        ul: [], ol: [], li: [], blockquote: [], code: [], pre: [],
+        a: ['href'], img: ['src', 'alt']
+      };
+      const doc = new DOMParser().parseFromString(String(dirty || ''), 'text/html');
+      function isSafeUrl(u) {
+        if (!u) return false;
+        const trimmed = String(u).trim().toLowerCase();
+        if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) return false;
+        return true;
+      }
+      function clean(node) {
+        // Walk children backwards because we mutate as we go
+        const kids = Array.from(node.childNodes);
+        for (const child of kids) {
+          if (child.nodeType === 1) { // element
+            const tag = child.tagName.toLowerCase();
+            if (!Object.prototype.hasOwnProperty.call(ALLOWED, tag)) {
+              // Replace disallowed element with its (cleaned) text children
+              while (child.firstChild) node.insertBefore(child.firstChild, child);
+              node.removeChild(child);
+              continue;
+            }
+            // Strip every attribute that isn't on the allow list
+            const allowedAttrs = ALLOWED[tag];
+            for (const attr of Array.from(child.attributes)) {
+              const name = attr.name.toLowerCase();
+              if (!allowedAttrs.includes(name)) {
+                child.removeAttribute(attr.name);
+                continue;
+              }
+              if ((name === 'href' || name === 'src') && !isSafeUrl(attr.value)) {
+                child.removeAttribute(attr.name);
+              }
+            }
+            // Force safe link target
+            if (tag === 'a' && child.hasAttribute('href')) {
+              child.setAttribute('rel', 'noopener noreferrer');
+              child.setAttribute('target', '_blank');
+            }
+            clean(child);
+          } else if (child.nodeType === 8) { // comment
+            node.removeChild(child);
+          }
+        }
+      }
+      clean(doc.body);
+      return doc.body.innerHTML;
     }
 
     // Theme
