@@ -26,7 +26,21 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       // Restart policy
-      max_restarts: 10,
+      //
+      // ⚠️  Crash-loop alerting is currently log-only. PM2 will give up
+      // after `max_restarts` consecutive failed boots within `min_uptime`,
+      // but it does not page anyone — outages are only visible by tailing
+      // /var/log/hogaresrd/error.log or running `pm2 status`.
+      //
+      // Future options for active alerting (out of scope for this PR):
+      //   • `pm2 monit`          — local TTY dashboard (manual, not paging)
+      //   • `pm2 plus` / Keymetrics — hosted metrics + restart alerts
+      //   • A simple cron that grep's the error log and POSTs to Slack
+      //
+      // For now we bump max_restarts to 20 so a flappy crash gets a bit
+      // more headroom before PM2 stops trying — better than truly silent
+      // 10-restart cap.
+      max_restarts: 20,
       min_uptime: '10s',
       restart_delay: 4000,
       autorestart: true,

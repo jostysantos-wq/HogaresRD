@@ -158,6 +158,20 @@ pm2 save
 # ── 15. Reload Nginx ─────────────────────────────────────────────
 systemctl reload nginx
 
+# ── 16. Install daily DB backup cron ─────────────────────────────
+# Idempotent: only adds the line if it isn't already in the user's
+# crontab. Cron does NOT inherit a login shell, so we source .env first
+# to make DATABASE_URL available to pg_dump.
+echo "→ Installing daily DB backup cron..."
+BACKUP_CRON='0 3 * * * set -a; . /var/www/hogaresrd/.env; set +a; /var/www/hogaresrd/deploy/db-backup.sh >> /var/log/hogaresrd/backup.log 2>&1'
+if ! (crontab -l 2>/dev/null | grep -Fq '/var/www/hogaresrd/deploy/db-backup.sh'); then
+    (crontab -l 2>/dev/null; echo "$BACKUP_CRON") | crontab -
+    echo "  Cron installed: pg_dump runs daily at 03:00 UTC"
+else
+    echo "  Cron already present, skipping"
+fi
+chmod +x /var/www/hogaresrd/deploy/db-backup.sh || true
+
 echo ""
 echo "═══════════════════════════════════════════════════"
 echo "  ✅ Setup complete!"
