@@ -9,6 +9,10 @@
  *   - Regular users (role: 'user') are never blocked — no subscription needed
  *   - Admins are never blocked
  *   - Secretaries inherit from their inmobiliaria's subscription status
+ *   - Brokers/agencies affiliated to an inmobiliaria pass when EITHER their
+ *     own row OR the parent inmobiliaria has an active subscription, so a
+ *     broker under a paid agency does not get 402-blocked when their personal
+ *     subscriptionStatus drifts to 'none'
  *   - 'active' and 'trialing' always pass
  *   - 'past_due' passes (Stripe grace period ~3 weeks of retries)
  *   - Legacy trial (paywallRequired !== true, trialEndsAt > now) passes
@@ -108,6 +112,17 @@ function requireActiveSubscription(req, res, next) {
   if (!PRO_ROLES.includes(user.role)) return next();
 
   if (isSubscriptionActive(user)) return next();
+
+  // Broker/agency/constructora affiliated to an inmobiliaria → inherit
+  // from the parent's subscription. A broker under a paid agency must
+  // keep working even if their own row drifts to 'none'.
+  if (
+    ['broker', 'agency', 'constructora'].includes(user.role) &&
+    user.inmobiliaria_id
+  ) {
+    const parent = store.getUserById(user.inmobiliaria_id);
+    if (parent && isSubscriptionActive(parent)) return next();
+  }
 
   return res.status(402).json({
     error: 'Tu suscripcion no esta activa. Renueva tu plan para continuar.',
