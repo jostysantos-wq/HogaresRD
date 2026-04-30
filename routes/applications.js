@@ -397,7 +397,7 @@ function buildPaymentReminderEmail(app, inst) {
 // behavior of trusting req.body.user_id let an anonymous attacker
 // attribute an application to any victim's account; that attribution
 // is now ignored in favor of the JWT-verified subject.
-router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
+router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
   const {
     listing_id, listing_title, listing_price, listing_type,
     name, phone, email,
@@ -865,7 +865,19 @@ router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
     }
   }
 
-  store.saveApplication(app);
+  // Commit the new application row inside a real transaction BEFORE we
+  // respond 201. Previously the save was fire-and-forget via the pool, so
+  // a failed pg INSERT would silently leave the cache populated while the
+  // DB stayed empty — pm2 reload then lost the row entirely. The
+  // transactional path mirrors the PUT /:id/status pattern.
+  try {
+    await store.withTransaction(async (client) => {
+      await store.saveApplication(app, client);
+    });
+  } catch (err) {
+    console.error('[applications/create] transaction failed:', err.message);
+    return res.status(500).json({ error: 'No se pudo registrar la aplicación. Inténtalo de nuevo.' });
+  }
 
   // Meta CAPI — Lead (fire-and-forget)
   setImmediate(async () => {
@@ -943,7 +955,15 @@ router.post('/', appCreateLimiter, optionalAuth, (req, res) => {
           `Agente auto-asignado: ${assignedUser.name || assignedUser.email}`,
           'system', 'Sistema',
           { from: null, to: assignedUser.id, via: 'cascade-fallback' });
-        store.saveApplication(app);
+        try {
+          await store.withTransaction(async (client) => {
+            await store.saveApplication(app, client);
+          });
+        } catch (err) {
+          console.error('[applications/create] cascade-fallback save failed:', err.message);
+          // Initial create already committed; assignment will be retried by
+          // the next write touching this row. Don't fail the response.
+        }
       }
     }
 
