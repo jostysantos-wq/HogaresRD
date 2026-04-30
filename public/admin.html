@@ -1328,6 +1328,34 @@
             </tbody>
           </table>
         </div>
+
+        <!-- ── E2 — Entregas fallidas (notification failures) ──── -->
+        <div style="margin-top:1.5rem;padding:1rem 1.1rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-bottom:0.75rem;">
+            <div>
+              <div style="font-size:0.95rem;font-weight:800;color:var(--text);">Entregas fallidas</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Correos que el sistema intentó enviar pero rebotaron. Revisa con el cliente para confirmar que recibió el mensaje por otro canal.</div>
+            </div>
+            <button class="btn-secondary" style="font-size:0.78rem;padding:0.45rem 0.85rem;" onclick="loadNotificationFailures()">Refrescar</button>
+          </div>
+          <div class="leads-table-wrap">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th>Cuándo</th>
+                  <th>Aplicación</th>
+                  <th>Cliente</th>
+                  <th>Asunto</th>
+                  <th>Destinatario</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody id="notifFailuresBody">
+                <tr><td colspan="6" class="leads-empty">Cargando entregas fallidas…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- ── SOLICITAR EDICIONES MODAL ───────────────────────
@@ -2056,7 +2084,7 @@
     else if (page === 'leads')       { loadLeads(); }
     else if (page === 'anuncios')      { loadAds(); }
     else if (page === 'ad-analytics') { loadAdAnalytics(); }
-    else if (page === 'aplicaciones') { loadApps(); }
+    else if (page === 'aplicaciones') { loadApps(); loadNotificationFailures(); }
     else if (page === 'catalogo')    { loadCatalogue(); }
     else if (page === 'usuarios')    { loadUsers(); }
     else if (page === 'newsletter')  { loadNewsletter(); }
@@ -3176,6 +3204,45 @@
       renderApps(currentlyFilteredApps());
     }).catch(() => {
       document.getElementById('appsTableBody').innerHTML = '<tr><td colspan="8" class="leads-empty">Error al cargar aplicaciones.</td></tr>';
+    });
+  }
+
+  // E2 — Pull `notification_failures` arrays from the admin endpoint
+  // and render the most-recent 50 entries in the dashboard widget.
+  function loadNotificationFailures() {
+    const tbody = document.getElementById('notifFailuresBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="leads-empty">Cargando entregas fallidas…</td></tr>';
+    fetch('/api/applications/notification-failures').then(r => {
+      if (!r.ok) throw new Error('http_' + r.status);
+      return r.json();
+    }).then(data => {
+      const rows = [];
+      for (const entry of (Array.isArray(data) ? data : [])) {
+        for (const f of (entry.failures || [])) {
+          rows.push({ ...f, application_id: entry.application_id, listing_title: entry.listing_title, client_name: entry.client_name });
+        }
+      }
+      rows.sort((a, b) => (b.failed_at || '').localeCompare(a.failed_at || ''));
+      const limited = rows.slice(0, 50);
+      if (!limited.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="leads-empty">Sin entregas fallidas. Todo entregado correctamente.</td></tr>';
+        return;
+      }
+      const esc = (s) => String(s || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+      tbody.innerHTML = limited.map(r => {
+        const when = r.failed_at ? new Date(r.failed_at).toLocaleString('es-DO') : '—';
+        return `<tr>
+          <td>${esc(when)}</td>
+          <td>${esc(r.listing_title || r.application_id)}</td>
+          <td>${esc(r.client_name || '')}</td>
+          <td>${esc(r.subject || '')}</td>
+          <td>${esc(r.recipient || '')}</td>
+          <td style="color:var(--danger);">${esc(r.error || '')}</td>
+        </tr>`;
+      }).join('');
+    }).catch(() => {
+      tbody.innerHTML = '<tr><td colspan="6" class="leads-empty">Error al cargar entregas fallidas.</td></tr>';
     });
   }
   function updateAppStats(apps) {

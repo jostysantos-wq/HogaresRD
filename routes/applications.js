@@ -1325,6 +1325,36 @@ router.get('/statuses', (req, res) => {
   });
 });
 
+// ── GET /notification-failures  — Admin-only cross-app digest ────
+// Lists applications that have non-empty `notification_failures`
+// arrays so an admin can see which clients didn't actually receive
+// the emails the platform thought it sent. Registered BEFORE the
+// `/:id` param route so it isn't shadowed.
+router.get('/notification-failures', userAuth, (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Solo admin' });
+  const apps = store.getApplications();
+  const out = [];
+  for (const app of apps) {
+    const failures = Array.isArray(app.notification_failures) ? app.notification_failures : [];
+    if (!failures.length) continue;
+    out.push({
+      application_id: app.id,
+      listing_title:  app.listing_title || '',
+      client_name:    app.client?.name || '',
+      broker_name:    app.broker?.name || '',
+      inmobiliaria_id: app.inmobiliaria_id || null,
+      failures,
+    });
+  }
+  // Most-recent failure first across all apps
+  out.sort((a, b) => {
+    const at = a.failures[a.failures.length - 1]?.failed_at || '';
+    const bt = b.failures[b.failures.length - 1]?.failed_at || '';
+    return bt.localeCompare(at);
+  });
+  res.json(out);
+});
+
 // ── GET /:id  — Single application detail ────────────────────────
 router.get('/:id', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
@@ -1596,6 +1626,27 @@ router.get('/:id/state', userAuth, (req, res) => {
     // Monotonic-ish key — iOS compares as a string.
     version: `${app.status}|${lastEventAt}|${docCount}|${docPending}|${payStatus}|${installmentPending}`,
   });
+});
+
+// ── GET /:id/notification-failures  — Per-app delivery audit ─────
+// Returns the list of failed notifications recorded by
+// recordNotificationFailure(), so the broker can see which emails
+// to the client / counterparty silently failed and follow up.
+// Same auth surface as GET /:id (broker, owner inmobiliaria,
+// secretary, admin).
+router.get('/:id/notification-failures', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  const isBroker = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  res.json({ failures: Array.isArray(app.notification_failures) ? app.notification_failures : [] });
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -1935,17 +1986,17 @@ router.post('/:id/skip-phase', userAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 
 // ── POST /:id/documents/request  — Broker requests documents ────
-router.post('/:id/documents/request', userAuth, (req, res) => {
-  const app = store.getApplicationById(req.params.id);
-  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+router.post('/:id/documents/request', userAuth, async (req, res) => {
+  const initial = store.getApplicationById(req.params.id);
+  if (!initial) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
-  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
-  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
+  const isSecretary = user?.role === 'secretary' && initial.inmobiliaria_id === user.inmobiliaria_id;
+  if (initial.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   // Block document requests on terminal statuses
-  if (['rechazado', 'completado'].includes(app.status))
+  if (['rechazado', 'completado'].includes(initial.status))
     return res.status(400).json({ error: 'No se pueden solicitar documentos en una aplicación finalizada.' });
 
   let { documents } = req.body; // [{ type, label, required }]
@@ -1966,7 +2017,7 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
 
   // Filter out document types that already have a pending request
   const pendingTypes = new Set(
-    app.documents_requested.filter(d => d.status === 'pending').map(d => d.type)
+    initial.documents_requested.filter(d => d.status === 'pending').map(d => d.type)
   );
   const deduped = documents.filter(d => !pendingTypes.has(d.type || 'other'));
   if (!deduped.length)
@@ -1981,23 +2032,28 @@ router.post('/:id/documents/request', userAuth, (req, res) => {
     status:       'pending',
   }));
 
-  app.documents_requested.push(...newDocs);
-
-  // Update status if applicable
-  const canTransition = STATUS_FLOW[app.status]?.includes('documentos_requeridos');
-  if (canTransition) {
-    const old = app.status;
-    app.status = 'documentos_requeridos';
-    addEvent(app, 'status_change', 'Documentos solicitados al cliente', req.user.sub, user?.name || 'Broker',
-      { from: old, to: 'documentos_requeridos' });
+  let app;
+  try {
+    app = await store.claimApplicationAtomic(req.params.id, initial.updated_at || null, async (app /*, client */) => {
+      app.documents_requested.push(...newDocs);
+      const canTransition = STATUS_FLOW[app.status]?.includes('documentos_requeridos');
+      if (canTransition) {
+        const old = app.status;
+        app.status = 'documentos_requeridos';
+        addEvent(app, 'status_change', 'Documentos solicitados al cliente', req.user.sub, user?.name || 'Broker',
+          { from: old, to: 'documentos_requeridos' });
+      }
+      addEvent(app, 'documents_requested',
+        `Se solicitaron ${newDocs.length} documento(s): ${newDocs.map(d => d.label).join(', ')}`,
+        req.user.sub, user?.name || 'Broker',
+        { documents: newDocs.map(d => d.label) });
+    });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
   }
-
-  addEvent(app, 'documents_requested',
-    `Se solicitaron ${newDocs.length} documento(s): ${newDocs.map(d => d.label).join(', ')}`,
-    req.user.sub, user?.name || 'Broker',
-    { documents: newDocs.map(d => d.label) });
-
-  store.saveApplication(app);
 
   // Auto-task: notify client to upload requested documents
   if (app.client?.user_id) {
@@ -2238,12 +2294,12 @@ router.post('/:id/initial-upload', appCreateLimiter, docUpload.array('files', 10
 
 // ── POST /:id/documents/upload  — Client uploads documents ──────
 router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), async (req, res) => {
-  const app = store.getApplicationById(req.params.id);
-  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+  const initial = store.getApplicationById(req.params.id);
+  if (!initial) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
-  const isClient = app.client.user_id === req.user.sub ||
-                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
+  const isClient = initial.client.user_id === req.user.sub ||
+                   (user?.emailVerified === true && !initial.client.user_id && initial.client.email && user.email && initial.client.email.toLowerCase() === user.email.toLowerCase());
   if (!isClient && !isAdmin(req))
     return res.status(403).json({ error: 'Solo el cliente puede subir documentos' });
 
@@ -2278,33 +2334,40 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
     reviewed_by:   null,
   }));
 
-  app.documents_uploaded.push(...uploaded);
+  let app, allFulfilled = false;
+  try {
+    app = await store.claimApplicationAtomic(req.params.id, initial.updated_at || null, async (app /*, client */) => {
+      app.documents_uploaded.push(...uploaded);
 
-  // Mark the request as fulfilled if linked
-  if (requestId) {
-    const docReq = app.documents_requested.find(d => d.id === requestId);
-    if (docReq) docReq.status = 'uploaded';
-  } else if (docType && docType !== 'other') {
-    // No explicit request_id — try to match by document type
-    const docReq = app.documents_requested.find(d => d.type === docType && d.status === 'pending');
-    if (docReq) docReq.status = 'uploaded';
+      // Mark the request as fulfilled if linked
+      if (requestId) {
+        const docReq = app.documents_requested.find(d => d.id === requestId);
+        if (docReq) docReq.status = 'uploaded';
+      } else if (docType && docType !== 'other') {
+        const docReq = app.documents_requested.find(d => d.type === docType && d.status === 'pending');
+        if (docReq) docReq.status = 'uploaded';
+      }
+
+      // Auto-transition to documentos_enviados if all required docs have uploads
+      const allRequired = app.documents_requested.filter(d => d.required);
+      allFulfilled = allRequired.length > 0 && allRequired.every(d => d.status === 'uploaded');
+      if (allFulfilled && STATUS_FLOW[app.status]?.includes('documentos_enviados')) {
+        const old = app.status;
+        app.status = 'documentos_enviados';
+        addEvent(app, 'status_change', 'Todos los documentos requeridos han sido enviados',
+          'system', 'Sistema', { from: old, to: 'documentos_enviados' });
+      }
+
+      addEvent(app, 'document_uploaded',
+        `${uploaded.length} documento(s) subido(s): ${uploaded.map(d => d.original_name).join(', ')}`,
+        req.user.sub, user?.name || app.client.name, { files: uploaded.map(d => d.original_name) });
+    });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
   }
-
-  // Auto-transition to documentos_enviados if all required docs have uploads
-  const allRequired = app.documents_requested.filter(d => d.required);
-  const allFulfilled = allRequired.length > 0 && allRequired.every(d => d.status === 'uploaded');
-  if (allFulfilled && STATUS_FLOW[app.status]?.includes('documentos_enviados')) {
-    const old = app.status;
-    app.status = 'documentos_enviados';
-    addEvent(app, 'status_change', 'Todos los documentos requeridos han sido enviados',
-      'system', 'Sistema', { from: old, to: 'documentos_enviados' });
-  }
-
-  addEvent(app, 'document_uploaded',
-    `${uploaded.length} documento(s) subido(s): ${uploaded.map(d => d.original_name).join(', ')}`,
-    req.user.sub, user?.name || app.client.name, { files: uploaded.map(d => d.original_name) });
-
-  store.saveApplication(app);
 
   // Auto-task: complete client's "upload docs" task only when ALL required
   // documents are fulfilled — otherwise the client loses their reminder for
@@ -2338,54 +2401,68 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
 });
 
 // ── PUT /:id/documents/:docId/review  — Broker reviews document ─
-router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
-  const app = store.getApplicationById(req.params.id);
-  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+router.put('/:id/documents/:docId/review', userAuth, async (req, res) => {
+  const initial = store.getApplicationById(req.params.id);
+  if (!initial) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   const user = store.getUserById(req.user.sub);
-  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
-  if (app.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
+  const isSecretary = user?.role === 'secretary' && initial.inmobiliaria_id === user.inmobiliaria_id;
+  if (initial.broker.user_id !== req.user.sub && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
-  const doc = app.documents_uploaded.find(d => d.id === req.params.docId);
-  if (!doc) return res.status(404).json({ error: 'Documento no encontrado' });
+  const docInitial = initial.documents_uploaded.find(d => d.id === req.params.docId);
+  if (!docInitial) return res.status(404).json({ error: 'Documento no encontrado' });
 
   const { status, note } = req.body; // 'approved' or 'rejected'
   if (!['approved', 'rejected'].includes(status))
     return res.status(400).json({ error: 'status debe ser approved o rejected' });
-  doc.review_status = status;
-  doc.review_note   = (typeof note === 'string' ? note : '').slice(0, 1000);
-  doc.reviewed_at   = new Date().toISOString();
-  doc.reviewed_by   = req.user.sub;
 
-  // Sync the corresponding documents_requested entry so the client
-  // can re-upload against it (the upload handler matches by status === 'pending').
-  if (status === 'rejected') {
-    const reqEntry = doc.request_id
-      ? app.documents_requested.find(d => d.id === doc.request_id)
-      : app.documents_requested.find(d => d.type === doc.type && d.status === 'uploaded');
-    if (reqEntry) reqEntry.status = 'pending';
+  // Caller may pass the updated_at they observed (form-level optimistic
+  // concurrency). Falls back to the server-side read if they didn't.
+  const expectedUpdatedAt = (typeof req.body.expected_updated_at === 'string' && req.body.expected_updated_at)
+    ? req.body.expected_updated_at
+    : (initial.updated_at || null);
+
+  let app, doc;
+  try {
+    app = await store.claimApplicationAtomic(req.params.id, expectedUpdatedAt, async (app /*, client */) => {
+      doc = app.documents_uploaded.find(d => d.id === req.params.docId);
+      if (!doc) throw new store.ConflictError('document_not_found');
+      doc.review_status = status;
+      doc.review_note   = (typeof note === 'string' ? note : '').slice(0, 1000);
+      doc.reviewed_at   = new Date().toISOString();
+      doc.reviewed_by   = req.user.sub;
+
+      // Sync the corresponding documents_requested entry so the client
+      // can re-upload against it (upload handler matches by status === 'pending').
+      if (status === 'rejected') {
+        const reqEntry = doc.request_id
+          ? app.documents_requested.find(d => d.id === doc.request_id)
+          : app.documents_requested.find(d => d.type === doc.type && d.status === 'uploaded');
+        if (reqEntry) reqEntry.status = 'pending';
+      }
+
+      addEvent(app, 'document_reviewed',
+        `Documento "${doc.original_name}" ${status === 'approved' ? 'aprobado' : 'rechazado'}${note ? ': ' + note : ''}`,
+        req.user.sub, user?.name || 'Broker',
+        { doc_id: doc.id, status, note });
+
+      const hasRejectedRequired = app.documents_uploaded.some(d =>
+        d.review_status === 'rejected' && d.required === true
+      );
+      if (hasRejectedRequired && STATUS_FLOW[app.status]?.includes('documentos_insuficientes')) {
+        const old = app.status;
+        app.status = 'documentos_insuficientes';
+        addEvent(app, 'status_change', 'Documentos insuficientes — se requieren correcciones',
+          req.user.sub, user?.name || 'Broker', { from: old, to: 'documentos_insuficientes' });
+      }
+    });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
   }
-
-  addEvent(app, 'document_reviewed',
-    `Documento "${doc.original_name}" ${status === 'approved' ? 'aprobado' : 'rechazado'}${note ? ': ' + note : ''}`,
-    req.user.sub, user?.name || 'Broker',
-    { doc_id: doc.id, status, note });
-
-  // If any REQUIRED doc rejected → documentos_insuficientes.
-  // Optional docs failing review are noted in the timeline but don't
-  // demote the application's status — the buyer hasn't blocked progress.
-  const hasRejectedRequired = app.documents_uploaded.some(d =>
-    d.review_status === 'rejected' && d.required === true
-  );
-  if (hasRejectedRequired && STATUS_FLOW[app.status]?.includes('documentos_insuficientes')) {
-    const old = app.status;
-    app.status = 'documentos_insuficientes';
-    addEvent(app, 'status_change', 'Documentos insuficientes — se requieren correcciones',
-      req.user.sub, user?.name || 'Broker', { from: old, to: 'documentos_insuficientes' });
-  }
-
-  store.saveApplication(app);
 
   // Auto-task: tell client to re-upload
   autoCompleteTasksByEvent(app.id, 'document_uploaded');
@@ -2584,61 +2661,69 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
 // When the agent uploads on behalf of the client, the client's upload
 // task is auto-completed and no self-verify task is created.
 router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async (req, res) => {
-  const app = store.getApplicationById(req.params.id);
-  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+  const initial = store.getApplicationById(req.params.id);
+  if (!initial) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
   // If a payment plan exists, use the installment upload instead
-  if (app.payment_plan && app.payment_plan.installments?.length > 0) {
+  if (initial.payment_plan && initial.payment_plan.installments?.length > 0) {
     return res.status(400).json({ error: 'Esta aplicación tiene un plan de pagos. Suba el comprobante en la cuota correspondiente.' });
   }
 
   const user = store.getUserById(req.user.sub);
-  const isClient = app.client.user_id === req.user.sub ||
-                   (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
-  const isBroker = app.broker.user_id === req.user.sub;
-  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
-  const isSecretary = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const isClient = initial.client.user_id === req.user.sub ||
+                   (user?.emailVerified === true && !initial.client.user_id && initial.client.email && user.email && initial.client.email.toLowerCase() === user.email.toLowerCase());
+  const isBroker = initial.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && initial.inmobiliaria_id === user.id;
+  const isSecretary = user?.role === 'secretary' && initial.inmobiliaria_id === user.inmobiliaria_id;
   if (!isClient && !isBroker && !isInmobiliaria && !isSecretary && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   if (!req.file) return res.status(400).json({ error: 'Recibo es requerido' });
 
   // Block upload if a receipt is already pending verification
-  if (app.payment?.verification_status === 'pending')
+  if (initial.payment?.verification_status === 'pending')
     return res.status(400).json({ error: 'Ya tienes un recibo pendiente de revisión. Espera la verificación antes de subir otro.' });
 
   // Block re-upload after payment was already approved
-  if (app.payment?.verification_status === 'approved')
+  if (initial.payment?.verification_status === 'approved')
     return res.status(400).json({ error: 'El pago ya fue aprobado.' });
 
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
     return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
 
-  if (!app.payment) app.payment = {};
-  app.payment.receipt_path = req.file.path;
-  app.payment.receipt_filename = req.file.filename;
-  app.payment.receipt_original = req.file.originalname;
-  app.payment.receipt_uploaded_at = new Date().toISOString();
-  const paymentAmount = Number(req.body.amount) || Number(app.listing_price) || 0;
+  const paymentAmount = Number(req.body.amount) || Number(initial.listing_price) || 0;
   if (paymentAmount <= 0) return res.status(400).json({ error: 'Monto de pago inválido' });
-  app.payment.amount = paymentAmount;
-  app.payment.verification_status = 'pending';
-  app.payment.notes = req.body.notes || '';
 
-  // Transition status
-  if (STATUS_FLOW[app.status]?.includes('pago_enviado')) {
-    const old = app.status;
-    app.status = 'pago_enviado';
-    addEvent(app, 'status_change', 'Recibo de pago enviado', 'system', 'Sistema',
-      { from: old, to: 'pago_enviado' });
+  let app;
+  try {
+    app = await store.claimApplicationAtomic(req.params.id, initial.updated_at || null, async (app /*, client */) => {
+      if (!app.payment) app.payment = {};
+      app.payment.receipt_path = req.file.path;
+      app.payment.receipt_filename = req.file.filename;
+      app.payment.receipt_original = req.file.originalname;
+      app.payment.receipt_uploaded_at = new Date().toISOString();
+      app.payment.amount = paymentAmount;
+      app.payment.verification_status = 'pending';
+      app.payment.notes = req.body.notes || '';
+
+      if (STATUS_FLOW[app.status]?.includes('pago_enviado')) {
+        const old = app.status;
+        app.status = 'pago_enviado';
+        addEvent(app, 'status_change', 'Recibo de pago enviado', 'system', 'Sistema',
+          { from: old, to: 'pago_enviado' });
+      }
+
+      addEvent(app, 'payment_uploaded', `Recibo de pago subido: ${req.file.originalname}`,
+        req.user.sub, user?.name || app.client.name,
+        { filename: req.file.originalname, uploaded_by_role: isClient ? 'client' : 'agent' });
+    });
+  } catch (err) {
+    if (err instanceof store.ConflictError) {
+      return res.status(409).json({ error: 'La aplicación fue actualizada por otra persona; recarga.' });
+    }
+    throw err;
   }
-
-  addEvent(app, 'payment_uploaded', `Recibo de pago subido: ${req.file.originalname}`,
-    req.user.sub, user?.name || app.client.name,
-    { filename: req.file.originalname, uploaded_by_role: isClient ? 'client' : 'agent' });
-
-  store.saveApplication(app);
 
   // Auto-task: broker must verify payment (only when client uploaded)
   if (app.broker?.user_id && isClient) {

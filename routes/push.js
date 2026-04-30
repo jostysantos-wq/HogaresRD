@@ -24,8 +24,20 @@ const jwt        = require('jsonwebtoken');
 const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
+const { createTransport } = require('./mailer');
 
 const router = express.Router();
+
+// Email fallback transport. Lazy-initialized so the mailer factory only
+// runs once. Tests override via _setTransporter to capture sendMail
+// calls without hitting the real Resend/Gmail backends.
+let _emailTransporter = null;
+function _getEmailTransporter() {
+  if (_emailTransporter) return _emailTransporter;
+  try { _emailTransporter = createTransport(); } catch { _emailTransporter = null; }
+  return _emailTransporter;
+}
+function _setTransporter(t) { _emailTransporter = t; }
 
 // ── Notification types ────────────────────────────────────────────────────
 const NotificationType = Object.freeze({
@@ -211,6 +223,18 @@ router.post('/subscribe', userAuth, (req, res) => {
     store.savePushSubscription(userId, existing);
   } else {
     return res.status(400).json({ error: 'type must be "web" or "ios"' });
+  }
+
+  // Clear sticky email-fallback flag — the user has just re-subscribed
+  // so we can trust push delivery again until/unless it fails afresh.
+  try {
+    const u = store.getUserById(userId);
+    if (u && u.pushFallbackToEmail === true) {
+      u.pushFallbackToEmail = false;
+      store.saveUser(u);
+    }
+  } catch (e) {
+    console.error('[Push] Failed to clear pushFallbackToEmail:', e.message);
   }
 
   console.log(`[Push] ${type} subscription saved for user ${userId}`);
@@ -451,14 +475,22 @@ async function notify(userId, notification) {
     if (!userId || !notification) return;
 
     const userSubs = store.getPushSubscriptionsByUser(userId);
+    const user = (typeof store.getUserById === 'function') ? store.getUserById(userId) : null;
+
+    // Always honor the sticky fallback flag, even if push subs are empty.
+    // (Spec E3: "even if there's a subscription on file" — the flag means
+    // we don't trust push delivery for this user until they re-subscribe.)
+    const fallbackToEmail = !!(user && user.pushFallbackToEmail === true);
+
     if (!userSubs) {
       console.log(`[Push] No subscriptions for user ${userId}`);
+      if (fallbackToEmail) await _emailFallback(user, notification);
       return;
     }
 
     const iosCount = userSubs.ios?.length || 0;
     const webCount = userSubs.web?.length || 0;
-    console.log(`[Push] notify(${userId}): type=${notification.type}, ios=${iosCount}, web=${webCount}`);
+    console.log(`[Push] notify(${userId}): type=${notification.type}, ios=${iosCount}, web=${webCount}, fallbackToEmail=${fallbackToEmail}`);
 
     // Check preferences — if the user has explicitly disabled this type, skip
     const prefs = { ...DEFAULT_PREFERENCES, ...(userSubs.preferences || {}) };
@@ -494,6 +526,19 @@ async function notify(userId, notification) {
           if (statusCode === 410 || statusCode === 404) {
             console.log(`[Push] Removing expired web subscription for user ${userId}`);
             store.removePushSubscription(userId, 'web', userSubs.web[i].endpoint);
+            // Sticky flag: once a user's push has failed (subscription
+            // gone), we can't trust push delivery for them until they
+            // explicitly re-subscribe. notify() consults this flag and
+            // forces an email fallback.
+            try {
+              const u = store.getUserById(userId);
+              if (u && u.pushFallbackToEmail !== true) {
+                u.pushFallbackToEmail = true;
+                store.saveUser(u);
+              }
+            } catch (e) {
+              console.error('[Push] Failed to set pushFallbackToEmail:', e.message);
+            }
           } else {
             console.error(`[Push] Web push error for user ${userId}:`, err && err.message);
           }
@@ -551,9 +596,40 @@ async function notify(userId, notification) {
         }
       }
     }
+
+    // Email fallback. Triggered for users whose pushFallbackToEmail flag
+    // is set (a previous web push returned 410/404). Sticky until the
+    // user explicitly re-subscribes via POST /api/push/subscribe.
+    if (fallbackToEmail) {
+      await _emailFallback(user, notification);
+    }
   } catch (err) {
     // notify() must never throw
     console.error('[Push] Unexpected error in notify():', err && err.message);
+  }
+}
+
+// Build a minimal HTML email from a push notification payload and ship
+// it via the central mailer. Never throws — failures are logged.
+async function _emailFallback(user, notification) {
+  try {
+    if (!user || !user.email) return;
+    const t = _getEmailTransporter();
+    if (!t || typeof t.sendMail !== 'function') return;
+    const safe = (s) => String(s || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
+    const subject = notification.title || 'HogaresRD';
+    const body    = notification.body  || '';
+    const url     = notification.url   || '/';
+    const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+      <h2 style="color:#0038A8;">${safe(subject)}</h2>
+      <p>${safe(body)}</p>
+      <p><a href="${safe(url)}" style="display:inline-block;background:#0038A8;color:#fff;padding:0.6rem 1.1rem;border-radius:8px;text-decoration:none;">Abrir en HogaresRD</a></p>
+      <hr style="border:none;border-top:1px solid #e6ecf5;margin-top:1.5rem;">
+      <p style="color:#7a8aa3;font-size:0.78rem;">Recibes este correo porque las notificaciones push están temporalmente desactivadas para tu cuenta. Vuelve a habilitarlas desde tu panel para dejar de recibir estos correos.</p>
+    </div>`;
+    await t.sendMail({ to: user.email, subject, html, department: 'admin' });
+  } catch (e) {
+    console.error('[Push] Email fallback failed:', e && e.message);
   }
 }
 
@@ -604,3 +680,9 @@ async function broadcastNewListing(listing) {
 }
 
 module.exports = { router, notify, refreshBadge, computeBadgeCount, broadcastNewListing, NotificationType };
+
+// Internal hook for tests — replace the email transport with a stub that
+// captures sendMail calls. Not part of the public API.
+module.exports.__test = {
+  _setTransporter,
+};
