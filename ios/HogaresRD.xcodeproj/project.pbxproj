@@ -63,6 +63,7 @@
 		APPLOCK000000000000000002 /* AppLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APPLOCK000000000000000001 /* AppLockManager.swift */; };
 		AVATAR0000000000000000B2 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVATAR0000000000000000B1 /* AvatarView.swift */; };
 		B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */; };
+		KEYCHAIN0000000000000002 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = KEYCHAIN0000000000000001 /* KeychainStore.swift */; };
 		B1F4E7A900000002 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F4E7A900000001 /* NotificationsView.swift */; };
 		B8BE113D2F87AE28000BB5F0 /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */; };
 		COMPARE0000000000000002 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = COMPARE0000000000000001 /* ComparisonView.swift */; };
@@ -142,6 +143,7 @@
 		B1F4E7A900000001 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 		C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
+		KEYCHAIN0000000000000001 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		COMPARE0000000000000001 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
 		D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretaryDashboardView.swift; sourceTree = "<group>"; };
 		ENTITLE0000000000000001 /* HogaresRD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HogaresRD.entitlements; sourceTree = "<group>"; };
@@ -229,6 +231,7 @@
 				SSE0000000000000000000001 /* ApplicationEventStream.swift */,
 				AA55000000000000000012 /* StoreManager.swift */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* BiometricService.swift */,
+				KEYCHAIN0000000000000001 /* KeychainStore.swift */,
 				APPLOCK000000000000000001 /* AppLockManager.swift */,
 				AA77000000000000000000B1 /* LocationManager.swift */,
 				A1B2C3D4E5F60000PUSH0001 /* PushNotificationService.swift */,
@@ -369,6 +372,7 @@
 				AA11000000000000000000C5 /* APIService.swift in Sources */,
 				SSE0000000000000000000002 /* ApplicationEventStream.swift in Sources */,
 				B1C2D3E4F5A6B7C8D9E0F1A2 /* BiometricService.swift in Sources */,
+				KEYCHAIN0000000000000002 /* KeychainStore.swift in Sources */,
 				APPLOCK000000000000000002 /* AppLockManager.swift in Sources */,
 				LOCKSCR000000000000000002 /* LockScreenView.swift in Sources */,
 				SPLASH0000000000000000B2 /* SplashView.swift in Sources */,
