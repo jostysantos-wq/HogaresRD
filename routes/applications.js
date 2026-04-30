@@ -3,6 +3,7 @@ const crypto     = require('crypto');
 const path       = require('path');
 const fs         = require('fs');
 const multer     = require('multer');
+const jwt        = require('jsonwebtoken');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
@@ -387,6 +388,77 @@ function buildPaymentReminderEmail(app, inst) {
     `,
   });
 }
+
+// ── Buyer confirmation email helpers (B3 + B4) ───────────────────
+// `buyerConfirmationHtml` produces the HTML body for the post-submit
+// confirmation email sent to BOTH logged-in clients and anonymous
+// applicants. Anonymous applicants additionally receive a magic-link
+// "track" URL — `signTrackToken` mints the JWT for that link.
+function signTrackToken(applicationId) {
+  // 30-day expiry — same window we tell brokers to expect a buyer to
+  // complete or withdraw before we admin-archive an inactive lead.
+  return jwt.sign(
+    { aid: applicationId, kind: 'track' },
+    process.env.JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}
+
+function buyerConfirmationHtml(app, link) {
+  const brokerLine = app.broker?.name && app.broker?.email
+    ? et.infoRow('Tu agente', `${et.esc(app.broker.name)} <${et.esc(app.broker.email)}>`)
+    : (app.broker?.name ? et.infoRow('Tu agente', et.esc(app.broker.name)) : '');
+  return et.layout({
+    title: 'Recibimos tu aplicación',
+    subtitle: et.esc(app.listing_title || 'HogaresRD'),
+    preheader: 'Hemos recibido tu aplicación — aquí está el enlace para darle seguimiento.',
+    body:
+      et.p('Gracias por aplicar a través de HogaresRD. Tu aplicación ha sido recibida y un agente la revisará pronto.')
+      + et.infoTable(
+          et.infoRow('Propiedad', et.esc(app.listing_title || ''))
+          + et.infoRow('Aplicación #', et.esc(app.id))
+          + brokerLine
+        )
+      + et.button('Dar seguimiento a mi aplicación', link)
+      + et.divider()
+      + et.small('Si no reconoces esta aplicación, ignora este correo o respóndenos para que la archivemos.'),
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── GET /track-token  — Magic-link tracker (B3) ──────────────────
+// ══════════════════════════════════════════════════════════════════
+// Anonymous applicants receive an email link of the form
+//   ${BASE_URL}/track.html?token=<JWT>
+// That page calls this endpoint to fetch the application detail keyed
+// solely on the JWT — no userAuth required. Token `kind` MUST be
+// 'track'.
+//
+// IMPORTANT: this route is registered HERE, before the `GET /:id`
+// handler later in the file. Otherwise `/track-token` would match
+// `/:id`, hit `userAuth`, and 401 the public tracker page. The
+// tradeoff is that the route lives outside the "append at end"
+// region used by other audit items — no sibling worktree touches
+// this header range so the merge stays clean.
+router.get('/track-token', (req, res) => {
+  const token = String(req.query.token || '');
+  if (!token) return res.status(400).json({ error: 'Token requerido.' });
+
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Enlace inválido o expirado.' });
+  }
+  if (!payload || payload.kind !== 'track' || !payload.aid) {
+    return res.status(401).json({ error: 'Enlace inválido.' });
+  }
+
+  const app = store.getApplicationById(payload.aid);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada.' });
+
+  res.json(decryptAppPII(app));
+});
 
 // ══════════════════════════════════════════════════════════════════
 // ── POST /  — Create application ─────────────────────────────────
@@ -970,6 +1042,24 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     // Broker assignment is now final — respond.
     res.status(201).json({ ok: true, id: app.id });
 
+    // ── Buyer confirmation email (B3 anon / B4 logged-in) ────────
+    if (app.client.email) {
+      try {
+        const isAnon = !app.client.user_id;
+        const link = isAnon
+          ? `${BASE_URL}/track.html?token=${signTrackToken(app.id)}`
+          : `${BASE_URL}/my-applications?id=${app.id}`;
+        sendNotification(
+          app.client.email,
+          `Recibimos tu aplicación — ${app.listing_title}`,
+          buyerConfirmationHtml(app, link),
+          { app, purpose: 'buyer_confirmation' }
+        );
+      } catch (e) {
+        console.error('[applications/create] buyer confirmation send failed:', e.message);
+      }
+    }
+
     if (!cascadeResult) {
       // Notifications — email every agency card + push/WhatsApp to
       // any resolvable user (not just the first one, so multi-agency
@@ -1063,6 +1153,24 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     }
 
     res.status(201).json({ ok: true, id: app.id });
+
+    // ── Buyer confirmation email (B3 anon / B4 logged-in) ────────
+    if (app.client.email) {
+      try {
+        const isAnon = !app.client.user_id;
+        const link = isAnon
+          ? `${BASE_URL}/track.html?token=${signTrackToken(app.id)}`
+          : `${BASE_URL}/my-applications?id=${app.id}`;
+        sendNotification(
+          app.client.email,
+          `Recibimos tu aplicación — ${app.listing_title}`,
+          buyerConfirmationHtml(app, link),
+          { app, purpose: 'buyer_confirmation' }
+        );
+      } catch (e) {
+        console.error('[applications/create] buyer confirmation send failed:', e.message);
+      }
+    }
 
     // Push notification → broker (fire-and-forget)
     if (broker.user_id) {
@@ -3600,6 +3708,172 @@ router.put('/:id/assign', userAuth, (req, res) => {
     'admin', 'Admin', { broker: app.broker });
 
   store.saveApplication(app);
+  res.json(decryptAppPII(app));
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── POST /:id/withdraw  — Buyer cancels their own application (B1) ─
+// ══════════════════════════════════════════════════════════════════
+// Authorization: the application's client OR the magic-link bearer for
+// THIS specific application id. Refuses if the app is already terminal.
+// Side-effects mirror the rejection branch of PUT /:id/status.
+router.post('/:id/withdraw', async (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  // ── Authorize: JWT (client owner) or magic-link bearer for this app ──
+  let authorized = false;
+  let actorId    = 'client';
+  let actorName  = app.client?.name || 'Cliente';
+  let viaTrackToken = false;
+
+  // Try Authorization: Bearer <token> first. Could be a userAuth JWT
+  // OR a track-token JWT — disambiguate by `kind`.
+  const authHeader = req.headers.authorization || '';
+  const cookieTok  = req.cookies?.hrdt;
+  const bearer     = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : (cookieTok || '');
+
+  if (bearer) {
+    try {
+      const payload = jwt.verify(bearer, process.env.JWT_SECRET);
+      if (payload?.kind === 'track') {
+        // Track tokens are scoped to a single application id
+        if (payload.aid === app.id) {
+          authorized   = true;
+          actorId      = 'magic-link';
+          actorName    = app.client?.name || 'Cliente (enlace)';
+          viaTrackToken = true;
+        }
+      } else if (payload?.sub) {
+        // Standard user JWT — must own the application
+        if (app.client?.user_id === payload.sub) {
+          authorized = true;
+          actorId    = payload.sub;
+          actorName  = payload.name || app.client?.name || 'Cliente';
+        } else {
+          // Allow auto-claim by verified email match (mirrors GET /:id)
+          const u = store.getUserById(payload.sub);
+          if (u && u.emailVerified === true && !app.client?.user_id
+              && app.client?.email && u.email
+              && app.client.email.toLowerCase() === u.email.toLowerCase()) {
+            authorized = true;
+            actorId    = payload.sub;
+            actorName  = u.name || app.client?.name || 'Cliente';
+          }
+        }
+      }
+    } catch (_) {
+      // fall through — not authorized
+    }
+  }
+
+  if (!authorized) return res.status(403).json({ error: 'No autorizado' });
+
+  // ── Reject if already in a terminal state ─────────────────────
+  if (app.status === 'rechazado' || app.status === 'completado') {
+    return res.status(400).json({ error: 'Esta aplicación ya está finalizada.' });
+  }
+
+  const userReason = typeof req.body?.reason === 'string'
+    ? req.body.reason.trim().slice(0, 500)
+    : '';
+  const oldStatus = app.status;
+
+  // ── Atomic: status flip + timeline event + commission void + inventory sync ──
+  try {
+    await store.withTransaction(async (client) => {
+      app.status = 'rechazado';
+      // Persisted reason is fixed; the user's freeform note is recorded
+      // verbatim in the timeline event for audit but never overwrites
+      // the canonical "withdrawn by client" marker.
+      app.status_reason = 'Retirada por el cliente';
+      app.updated_at = new Date().toISOString();
+
+      addEvent(app, 'status_change',
+        userReason
+          ? `Aplicación retirada por el cliente: ${userReason}`
+          : 'Aplicación retirada por el cliente',
+        actorId, actorName,
+        {
+          from: oldStatus,
+          to:   'rechazado',
+          reason: 'Retirada por el cliente',
+          user_reason: userReason || null,
+          withdrawn_by_client: true,
+          via: viaTrackToken ? 'magic_link' : 'authenticated',
+        });
+
+      // Void approved commission (sale didn't happen)
+      if (app.commission?.status === 'approved') {
+        app.commission.status = 'voided';
+        app.commission.voided_at = new Date().toISOString();
+        if (app.commission.payout_id)  app.commission.payout_id  = null;
+        if (app.commission.payout_ref) app.commission.payout_ref = null;
+        addEvent(app, 'commission_voided',
+          'Comisión anulada por retiro de la aplicación',
+          'system', 'Sistema', { reason: 'application_withdrawn' });
+      }
+
+      // Inventory: assigned unit goes back to 'available'
+      if (app.assigned_unit?.unitId && app.listing_id) {
+        const targetUnitId = app.assigned_unit.unitId;
+        const listing = store.getListingById(app.listing_id);
+        if (listing && Array.isArray(listing.unit_inventory)) {
+          const unit = listing.unit_inventory.find(u => u.id === targetUnitId);
+          if (unit) {
+            unit.status = 'available';
+            unit.applicationId = null;
+            unit.clientName = null;
+            listing.units_available = listing.unit_inventory.filter(u => u.status === 'available').length;
+            await store.saveListing(listing, client);
+          }
+        }
+        app.assigned_unit = null;
+      }
+
+      await store.saveApplication(app, client);
+    });
+  } catch (err) {
+    console.error('[applications/withdraw] transaction failed:', err.message);
+    return res.status(500).json({ error: 'No se pudo retirar la aplicación. Inténtalo de nuevo.' });
+  }
+
+  // Cancel auto-tasks (best-effort, outside the txn — same as PUT /:id/status)
+  const allEvents = ['documents_requested', 'documents_rejected', 'document_uploaded',
+                     'payment_plan_created', 'payment_uploaded', 'payment_rejected', 'receipt_ready'];
+  for (const evt of allEvents) {
+    try { autoCompleteTasksByEvent(app.id, evt); } catch (_) {}
+  }
+
+  // Notify the broker so they aren't surprised
+  if (app.broker?.email) {
+    sendNotification(app.broker.email,
+      `Aplicación retirada — ${app.listing_title}`,
+      et.layout({
+        title: 'Aplicación retirada por el cliente',
+        subtitle: et.esc(app.listing_title || ''),
+        body:
+          et.p(`<strong>${et.esc(app.client?.name || 'El cliente')}</strong> ha retirado su aplicación.`)
+          + (userReason ? et.alertBox(`<strong>Motivo del cliente:</strong> ${et.esc(userReason)}`, 'info') : '')
+          + et.button('Ver en Dashboard', `${BASE_URL}/broker`),
+      }),
+      { app, purpose: 'application_withdrawn' });
+  }
+
+  // Push notification → broker
+  try {
+    if (app.broker?.user_id) {
+      pushNotify(app.broker.user_id, {
+        type:  'application_withdrawn',
+        title: 'Aplicación retirada',
+        body:  `${app.client?.name || 'Cliente'} retiró su aplicación para ${app.listing_title}`,
+        url:   '/broker.html',
+      });
+    }
+  } catch (_) {}
+
   res.json(decryptAppPII(app));
 });
 

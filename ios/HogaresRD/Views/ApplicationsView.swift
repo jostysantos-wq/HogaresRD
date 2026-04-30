@@ -105,7 +105,14 @@ struct ApplicationsView: View {
                     }
                 }
                 .navigationDestination(for: String.self) { appId in
-                    ApplicationDetailView(id: appId).environmentObject(api)
+                    // B2: buyers (user / comprador) get the read-only detail
+                    // view; everyone else (broker, agency, inmobiliaria,
+                    // constructora, secretary, admin) keeps the broker UI.
+                    if isBuyerRole(api.currentUser?.role) {
+                        BuyerApplicationDetailView(id: appId).environmentObject(api)
+                    } else {
+                        ApplicationDetailView(id: appId).environmentObject(api)
+                    }
                 }
             }
         }
@@ -152,6 +159,15 @@ struct ApplicationsView: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// B2: Treat unauthenticated / role==nil sessions as buyers as well —
+    /// only an explicitly broker-side role should land on the broker UI.
+    private func isBuyerRole(_ role: String?) -> Bool {
+        guard let r = role?.lowercased() else { return true }
+        if r == "user" || r == "comprador" { return true }
+        let pro: Set<String> = ["broker", "agency", "inmobiliaria", "constructora", "secretary", "admin"]
+        return !pro.contains(r)
     }
 
     private func load() async {
