@@ -68,6 +68,23 @@ function _dbWriteError(label, err) {
 }
 function getDbWriteFailureCount() { return _dbWriteFailures; }
 
+// Pool checkout with a 10s saturation timeout. The pool itself has a
+// 5s connection timeout (TCP/handshake), but a saturated pool can
+// still leave a request waiting indefinitely for an idle client.
+// Race the checkout so atomic helpers can surface a 503 instead of
+// hanging the request thread.
+async function _connectWithTimeout(timeoutMs = 10000) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('DB pool saturated')), timeoutMs);
+  });
+  try {
+    return await Promise.race([pool.connect(), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 const ACTIVITY_CAP = 200;
 
@@ -213,14 +230,22 @@ const APP_KNOWN_COLS = [
 
 function hydrateApplication(row) {
   if (!row) return null;
-  const obj = { ...row };
+  // Top-level shallow spread isn't enough — the snapshot-stripping below
+  // mutates nested commission.history entries in place. Without a deep
+  // clone, the first read permanently scrubs the cached row's history,
+  // so subsequent reads return commission snapshots with no history.
+  // structuredClone (Node 17+) is the cheapest faithful deep clone here.
+  const obj = typeof structuredClone === 'function'
+    ? structuredClone(row)
+    : JSON.parse(JSON.stringify(row));
   if (obj.pre_approved !== undefined) obj.pre_approved = !!obj.pre_approved;
   const extra = typeof obj._extra === 'string' ? _jsonParse(obj._extra, {}) : (obj._extra || {});
   delete obj._extra;
   for (const [k, v] of Object.entries(extra)) {
     if (!(k in obj)) obj[k] = v;
   }
-  // Strip 'history' from commission snapshots to break any circular refs
+  // Strip 'history' from commission snapshots to break any circular refs.
+  // Safe to mutate now that obj is a deep clone of the cached row.
   if (Array.isArray(obj.commission?.history)) {
     for (const entry of obj.commission.history) {
       if (entry.snapshotBefore) delete entry.snapshotBefore.history;
@@ -679,10 +704,25 @@ function getListings(filters = {}) {
   return items;
 }
 
-function saveListing(listing) {
+// `client` is an optional 2nd arg — when invoked inside `withTransaction`,
+// the route passes the pg client so the write joins the surrounding
+// BEGIN/COMMIT. The helper returns the underlying query promise in
+// that case so the caller can `await` it before COMMIT runs. Without
+// `client` (the default for ~25 other call sites) it falls back to the
+// legacy fire-and-forget pool path so this stays a non-breaking change.
+// TODO(transactional-rewrite): migrate the remaining saveX call sites
+// (subscriptions, conversations, payments, etc.) onto awaited tx writes.
+function saveListing(listing, client) {
   const row = dehydrateSubmission(listing);
   const { sql, values } = buildUpsert('submissions', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveListing', err));
+  let writePromise = null;
+  if (client) {
+    // Awaitable — caller is inside withTransaction; a rejected promise
+    // bubbles out of the callback and triggers ROLLBACK.
+    writePromise = client.query(sql, values);
+  } else {
+    pool.query(sql, values).catch(err => _dbWriteError('saveListing', err));
+  }
   // Parse JSON strings back to objects for cache consistency
   const cacheRow = { ...row };
   for (const col of SUBMISSION_JSON_COLS) {
@@ -694,6 +734,7 @@ function saveListing(listing) {
   if (idx >= 0) _submissions[idx] = cacheRow;
   else _submissions.push(cacheRow);
   _invalidateCache();
+  return writePromise; // null when not in a transaction
 }
 
 function deleteListing(id) {
@@ -754,13 +795,25 @@ function _encryptAppFinancials(app) {
   }
 }
 
-function saveApplication(app) {
+// `client` is an optional 2nd arg — when invoked inside `withTransaction`,
+// the route passes the pg client so the write joins the surrounding
+// BEGIN/COMMIT and the function returns the query promise for the caller
+// to await. Without `client` it falls back to fire-and-forget (current
+// behavior for the other ~25 saveApplication call sites).
+// TODO(transactional-rewrite): migrate the remaining saveApplication
+// call sites onto awaited tx writes.
+function saveApplication(app, client) {
   // Deep clone before encrypting so the in-memory object stays usable
   const toSave = JSON.parse(JSON.stringify(app));
   _encryptAppFinancials(toSave);
   const row = dehydrateApplication(toSave);
   const { sql, values } = buildUpsert('applications', row, 'id');
-  pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
+  let writePromise = null;
+  if (client) {
+    writePromise = client.query(sql, values);
+  } else {
+    pool.query(sql, values).catch(err => _dbWriteError('saveApplication', err));
+  }
   const cacheRow = { ...row };
   for (const col of APP_JSON_COLS) {
     if (typeof cacheRow[col] === 'string') {
@@ -773,6 +826,7 @@ function saveApplication(app) {
   // Notify any open SSE streams subscribed to this application.
   // Fire-and-forget — the bus is in-process and never blocks.
   appEvents.publish(app.id);
+  return writePromise; // null when not in a transaction
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -820,7 +874,7 @@ function getConversationsByInmobiliaria(inmobiliariaId) {
 }
 
 async function claimConversationAtomic(convId, brokerId, brokerName, now, systemMessage) {
-  const client = await pool.connect();
+  const client = await _connectWithTimeout();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
@@ -901,7 +955,7 @@ function _updateConversationCache(conv) {
 
 /// Atomic transfer request — uses FOR UPDATE to prevent duplicate pending requests.
 async function addTransferRequestAtomic(convId, transferReq) {
-  const client = await pool.connect();
+  const client = await _connectWithTimeout();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
@@ -1525,12 +1579,30 @@ function saveContributionScore(cs) {
 // TRANSACTION SUPPORT
 // ══════════════════════════════════════════════════════════════════════════
 
-function withTransaction(fn) {
-  // For sync compatibility, just execute the function directly.
-  // PostgreSQL transactions require async — but the existing code
-  // uses withTransaction for atomic multi-step operations that
-  // are already safe with the in-memory cache + async PG writes.
-  return fn();
+async function withTransaction(fn) {
+  // No DATABASE_URL → no real DB available (test/dev). Fall back to
+  // non-transactional execution so callers still work; saveX helpers
+  // accept a null client and use the fire-and-forget pool path.
+  // TODO(transactional-rewrite): the inventory.js callers still treat
+  // withTransaction synchronously — they will need an async refactor
+  // before their writes are truly transactional in production.
+  if (!_rawUrl) {
+    return await fn(null);
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // await works for both sync (returns value) and async (returns Promise)
+    // callbacks, so existing sync callers stay backwards compatible.
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
