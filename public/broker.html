@@ -26,7 +26,13 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
+    /*
+     * Broker dashboard local palette — overrides the global cream/ink
+     * tokens with the dashboard's own blue accent. Editing here changes
+     * the dashboard's identity color globally for this page.
+     */
     :root {
+      --accent: #006AFF;
       --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
       /* Missing variables from old palette — mapped to new design system */
       --bg-section: #F4F6F9;
@@ -102,7 +108,7 @@
       width: 38px; height: 38px;
       background: var(--accent); border-radius: 11px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      box-shadow: 0 8px 18px rgba(0,106,255,0.30);
+      box-shadow: 0 8px 18px rgba(19,19,24,0.30);
     }
     .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
     .sidebar-logo-text {
@@ -156,7 +162,7 @@
     .sidebar-nav-item:hover { color: var(--text); background: var(--sidebar-hover-bg); }
     .sidebar-nav-item.active {
       color: var(--sidebar-text-active); background: var(--sidebar-active-bg);
-      font-weight: 600; box-shadow: 0 8px 20px rgba(0,106,255,0.28);
+      font-weight: 600; box-shadow: 0 8px 20px rgba(19,19,24,0.28);
     }
     .sidebar-nav-item.active svg { opacity: 1; }
 
@@ -171,9 +177,9 @@
       color: #fff; padding: 18px 16px;
       cursor: pointer; text-decoration: none; display: block;
       transition: transform 0.18s, box-shadow 0.18s;
-      box-shadow: 0 12px 28px rgba(0,106,255,0.30);
+      box-shadow: 0 12px 28px rgba(19,19,24,0.30);
     }
-    .sidebar-promo:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0,106,255,0.36); }
+    .sidebar-promo:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(19,19,24,0.36); }
     .sidebar-promo::before {
       content: ''; position: absolute; right: -22px; bottom: -22px;
       width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.10);
@@ -239,7 +245,7 @@
       font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
     }
     .topbar-search input::placeholder { color: var(--text-muted); }
-    .topbar-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,106,255,0.10); }
+    .topbar-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(19,19,24,0.10); }
     .topbar-search svg {
       position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
       width: 16px; height: 16px; fill: var(--text-muted); pointer-events: none;
@@ -292,7 +298,7 @@
     }
     .tsr-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
     .tsr-loading { padding: 18px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
-    mark { background: rgba(0,106,255,0.18); color: inherit; padding: 0 1px; border-radius: 2px; }
+    mark { background: rgba(19,19,24,0.18); color: inherit; padding: 0 1px; border-radius: 2px; }
     @media (max-width: 600px) {
       .topbar-search-results { left: -50%; right: -10%; }
     }
@@ -538,8 +544,8 @@
     }
     .notif-item-v2:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
     .notif-item-v2.unread {
-      background: rgba(0,106,255,0.06);
-      border-color: rgba(0,106,255,0.16);
+      background: rgba(19,19,24,0.06);
+      border-color: rgba(19,19,24,0.16);
     }
     .notif-item-v2-icon {
       width: 44px; height: 44px; border-radius: 12px;
@@ -630,7 +636,7 @@
     .filters { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.25rem; }
     .filter-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
     .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(0,106,255,0.22); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(19,19,24,0.22); }
 
     /* ── APP LIST ─────────────────────────────────────────────── */
     .app-list { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -819,9 +825,9 @@
       box-shadow: 0 1px 2px rgba(15,23,42,0.04);
     }
     .checklist-item:hover {
-      border-color: rgba(0,106,255,0.35);
+      border-color: rgba(19,19,24,0.35);
       background: linear-gradient(180deg, rgba(235,243,255,0.85) 0%, rgba(235,243,255,0.55) 100%);
-      box-shadow: 0 6px 16px rgba(0,106,255,0.10);
+      box-shadow: 0 6px 16px rgba(19,19,24,0.10);
       transform: translateY(-1px);
     }
     .checklist-item.checked {
@@ -890,7 +896,7 @@
     .skip-box textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
     .skip-box select:focus, .skip-box textarea:focus {
       outline: none; border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(0,106,255,0.12);
+      box-shadow: 0 0 0 4px rgba(19,19,24,0.12);
     }
     [data-theme="dark"] .skip-box select, [data-theme="dark"] .skip-box textarea {
       background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10);
@@ -914,8 +920,8 @@
 
     /* ── FORMS & BUTTONS ─────────────────────────────────────── */
     .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 9px 18px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.12s; font-family: inherit; letter-spacing: 0.01em; }
-    .btn-primary { box-shadow: 0 6px 16px rgba(0,106,255,0.25); }
-    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,106,255,0.32); }
+    .btn-primary { box-shadow: 0 6px 16px rgba(19,19,24,0.25); }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,19,24,0.32); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
@@ -1292,7 +1298,7 @@
     .aff-banner.approved .aff-banner-btn { background: #DCFCE7; color: #166534; }
     .aff-banner.pending  .aff-banner-btn { background: #FEF3C7; color: #92400E; }
     .aff-banner.none     .aff-banner-btn,
-    .aff-banner.rejected .aff-banner-btn { background: #002D62; color: #fff; }
+    .aff-banner.rejected .aff-banner-btn { background: var(--accent); color: #fff; }
 
     /* Inmobiliaria join-request search */
     .inm-search-wrap { position: relative; margin-bottom: 0.5rem; }
@@ -1430,10 +1436,10 @@
       border: none; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
       cursor: pointer; white-space: nowrap; font-family: inherit; flex-shrink: 0;
       transition: background 0.15s, transform 0.12s, box-shadow 0.18s; line-height: 1;
-      box-shadow: 0 6px 16px rgba(0,106,255,0.25);
+      box-shadow: 0 6px 16px rgba(19,19,24,0.25);
     }
     .export-trigger-btn svg { width: 14px; height: 14px; fill: #fff; }
-    .export-trigger-btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,106,255,0.32); }
+    .export-trigger-btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,19,24,0.32); }
     .export-modal { border-radius: var(--card-radius) !important; }
 
     .export-modal-backdrop {
@@ -1567,7 +1573,7 @@
     .metric-card.featured,
     .stat-card.featured {
       background: linear-gradient(155deg, var(--accent) 0%, #0049CC 100%);
-      color: #fff; box-shadow: 0 12px 28px rgba(0,106,255,0.30);
+      color: #fff; box-shadow: 0 12px 28px rgba(19,19,24,0.30);
     }
     .metric-card.featured .metric-label,
     .stat-card.featured .stat-label { color: rgba(255,255,255,0.82); }
@@ -1621,7 +1627,7 @@
     .section-nav-btn:hover { background: var(--bg-secondary); color: var(--text); }
     .section-nav-btn.active {
       background: var(--accent); color: #fff !important; border-bottom-color: transparent;
-      box-shadow: 0 6px 14px rgba(0,106,255,0.28);
+      box-shadow: 0 6px 14px rgba(19,19,24,0.28);
     }
     .section-nav-btn.active svg { fill: #fff; opacity: 1; }
 
@@ -1648,7 +1654,7 @@
     }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus,
     .filter-row select:focus, .search-bar:focus {
-      box-shadow: 0 0 0 4px rgba(0,106,255,0.10) !important; border-color: var(--accent) !important;
+      box-shadow: 0 0 0 4px rgba(19,19,24,0.10) !important; border-color: var(--accent) !important;
     }
     .form-group label { text-transform: none; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0; }
 
@@ -1714,7 +1720,7 @@
       border-radius: 999px;
     }
     .la-range-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
-    .la-range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(0,106,255,0.22); }
+    .la-range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(19,19,24,0.22); }
     .la-range-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
 
     /* ── STATUS PILLS already inline-bg, keep but bump radius & font ── */
@@ -4068,6 +4074,14 @@
 (async function() {
   'use strict';
 
+  // ── Brand colors (centralised palette for charts and inline JS) ──
+  const BRAND_COLORS = {
+    accent:    getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#006AFF',
+    accentAlt: '#0038A8',
+    red:       getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#CF142B',
+    ink:       getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#131318',
+  };
+
   // ── Auth ───────────────────────────────────────────────────
   // JWT lives in an httpOnly cookie — not readable by JS.
   // Role/display data comes from hogaresrd_user stored at login.
@@ -5956,7 +5970,7 @@
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
     overlay.innerHTML = `
       <div style="background:var(--bg-card);border-radius:16px;width:90%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#002D62,#0047A8);padding:1.5rem;color:#fff;">
+        <div style="background:linear-gradient(135deg,var(--accent),#0047A8);padding:1.5rem;color:#fff;">
           <h3 style="margin:0;font-size:1.1rem;font-weight:800;">Asignar Rol</h3>
           <p style="margin:.3rem 0 0;font-size:.82rem;opacity:.7;">${esc(userName)}</p>
         </div>
@@ -6141,7 +6155,7 @@
             datasets: [{
               label: 'Leads',
               data: leadsDay.map(d => d.count),
-              backgroundColor: '#0038A8',
+              backgroundColor: BRAND_COLORS.accentAlt,
               borderRadius: 4,
             }]
           },
@@ -6851,7 +6865,7 @@
 
       let todayHTML = '';
       if (pendingApps > 0) todayHTML += homeTodayRow('📋', `${pendingApps} aplicaciones en revision`, '#f59e0b', 'aplicaciones');
-      if (unreadCount > 0) todayHTML += homeTodayRow('💬', `${unreadCount} mensajes sin leer`, '#0038A8', 'mensajes');
+      if (unreadCount > 0) todayHTML += homeTodayRow('💬', `${unreadCount} mensajes sin leer`, BRAND_COLORS.accentAlt, 'mensajes');
       if (todayTours.length > 0) {
         const nextTime = todayTours[0]?.requested_time || '';
         const h = parseInt(nextTime.split(':')[0]) || 0;
@@ -6888,7 +6902,7 @@
       const closed   = (p.completado || 0) + (p.pago_aprobado || 0);
       const inPayment = (p.pendiente_pago || 0) + (p.pago_enviado || 0);
       const stages = [
-        { label: 'Enviadas',   count: p.aplicado || 0, color: '#0038A8', status: 'aplicado' },
+        { label: 'Enviadas',   count: p.aplicado || 0, color: BRAND_COLORS.accentAlt, status: 'aplicado' },
         { label: 'Revisión',   count: inReview,        color: '#f59e0b', status: 'en_revision' },
         { label: 'Aprobadas',  count: p.aprobado || 0, color: '#1b7a3e', status: 'aprobado' },
         { label: 'Pago',       count: inPayment,       color: '#0891b2', status: 'pendiente_pago' },
@@ -7280,15 +7294,15 @@
   // timeline types from /api/applications; falls through to a generic
   // bell icon for anything else.
   const NOTIF_TYPE_META = {
-    status_change: { svg: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>', bg: 'rgba(0,106,255,0.10)', color: 'var(--accent)' },
+    status_change: { svg: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>', bg: 'rgba(19,19,24,0.10)', color: 'var(--accent)' },
     checklist_complete: { svg: '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>', bg: 'rgba(0,168,120,0.12)', color: 'var(--green)' },
-    checklist_check: { svg: '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>', bg: 'rgba(0,106,255,0.10)', color: 'var(--accent)' },
+    checklist_check: { svg: '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>', bg: 'rgba(19,19,24,0.10)', color: 'var(--accent)' },
     document: { svg: '<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>', bg: 'rgba(245,158,11,0.14)', color: '#D97706' },
     tour: { svg: '<path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/>', bg: 'rgba(0,168,120,0.12)', color: 'var(--green)' },
     payment: { svg: '<path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>', bg: 'rgba(124,58,237,0.12)', color: 'var(--purple, #7C3AED)' },
-    message: { svg: '<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>', bg: 'rgba(0,106,255,0.10)', color: 'var(--accent)' },
+    message: { svg: '<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>', bg: 'rgba(19,19,24,0.10)', color: 'var(--accent)' },
   };
-  const NOTIF_GENERIC = { svg: '<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>', bg: 'rgba(0,106,255,0.10)', color: 'var(--accent)' };
+  const NOTIF_GENERIC = { svg: '<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>', bg: 'rgba(19,19,24,0.10)', color: 'var(--accent)' };
 
   // Map UI tab → set of event types it includes (or 'all' / 'unread')
   const NOTIF_TAB_FILTERS = {
@@ -7803,7 +7817,7 @@
   });
 
   // ── Chart Colors ──────────────────────────────────────────
-  const CHART_COLORS = ['#0038A8','#CF142B','#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
+  const CHART_COLORS = [BRAND_COLORS.accentAlt, BRAND_COLORS.red,'#0a7c4f','#c07c1a','#4a2d9c','#5599ff','#e8374e','#1db87a','#e6a030','#8a6de0'];
   function getChartDefaults() {
     const isDark = document.documentElement.dataset.theme === 'dark';
     return {
@@ -7837,7 +7851,7 @@
         type: 'bar',
         data: {
           labels: daily.map(d => d.date || d._id),
-          datasets: [{ label: 'Aplicaciones', data: daily.map(d => d.count), backgroundColor: '#0038A8', borderRadius: 4 }]
+          datasets: [{ label: 'Aplicaciones', data: daily.map(d => d.count), backgroundColor: BRAND_COLORS.accentAlt, borderRadius: 4 }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
@@ -7864,9 +7878,9 @@
 
       // Pipeline doughnut
       const pipeline = stats.pipeline || [];
-      const statusColors = { aplicado:'#0038A8', en_revision:'#5599ff', documentos_requeridos:'#c07c1a', documentos_enviados:'#e6a030',
+      const statusColors = { aplicado:BRAND_COLORS.accentAlt, en_revision:'#5599ff', documentos_requeridos:'#c07c1a', documentos_enviados:'#e6a030',
         documentos_insuficientes:'#c07c1a', en_aprobacion:'#4a2d9c', reservado:'#8a6de0', aprobado:'#0a7c4f', pendiente_pago:'#5599ff',
-        pago_enviado:'#5599ff', pago_aprobado:'#1db87a', completado:'#0a7c4f', rechazado:'#CF142B' };
+        pago_enviado:'#5599ff', pago_aprobado:'#1db87a', completado:'#0a7c4f', rechazado:BRAND_COLORS.red };
       destroyChart('chartPipeline');
       chartInstances['chartPipeline'] = new Chart(document.getElementById('chartPipeline'), {
         type: 'doughnut',
@@ -8564,7 +8578,7 @@
             datasets: [{
               label: 'Vistas',
               data: summary.views_trend.map(d => d.views),
-              borderColor: '#0038A8',
+              borderColor: BRAND_COLORS.accentAlt,
               backgroundColor: 'rgba(0,56,168,0.08)',
               fill: true,
               tension: 0.3,
@@ -8592,7 +8606,7 @@
           data: {
             labels: top.map(t => t.title.length > 25 ? t.title.slice(0, 25) + '…' : t.title),
             datasets: [
-              { label: 'Vistas', data: top.map(t => t.views), backgroundColor: '#0038A8', borderRadius: 4 },
+              { label: 'Vistas', data: top.map(t => t.views), backgroundColor: BRAND_COLORS.accentAlt, borderRadius: 4 },
               { label: 'Tours', data: top.map(t => t.tours * 5), backgroundColor: '#22c55e', borderRadius: 4 },
               { label: 'Favoritos', data: top.map(t => t.favorites * 3), backgroundColor: '#ef4444', borderRadius: 4 },
             ]
@@ -9423,7 +9437,7 @@
           type: 'line',
           data: {
             labels: d.views_trend.map(v => v.date.slice(5)),
-            datasets: [{ label: 'Vistas', data: d.views_trend.map(v => v.views), borderColor: '#0038A8', backgroundColor: 'rgba(0,56,168,0.08)', fill: true, tension: 0.3, pointRadius: 1 }]
+            datasets: [{ label: 'Vistas', data: d.views_trend.map(v => v.views), borderColor: BRAND_COLORS.accentAlt, backgroundColor: 'rgba(0,56,168,0.08)', fill: true, tension: 0.3, pointRadius: 1 }]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
@@ -9438,7 +9452,7 @@
         const ts = d.tour_status;
         const tsLabels = ['Pendientes', 'Confirmados', 'Completados', 'Cancelados'];
         const tsData = [ts.pending || 0, ts.confirmed || 0, ts.completed || 0, ts.cancelled || 0];
-        const tsColors = ['#f59e0b', '#22c55e', '#0038A8', '#ef4444'];
+        const tsColors = ['#f59e0b', '#22c55e', BRAND_COLORS.accentAlt, '#ef4444'];
         destroyChart('chartDetailTours');
         chartInstances['chartDetailTours'] = new Chart(document.getElementById('chartDetailTours'), {
           type: 'doughnut',
