@@ -1233,8 +1233,16 @@ router.get('/', userAuth, (req, res) => {
     return res.status(403).json({ error: 'No autorizado' });
   }
 
-  const { status } = req.query;
+  const { status, include_archived, include_stale } = req.query;
   if (status) apps = apps.filter(a => a.status === status);
+  // C7: archived/stale apps are hidden from the default list. Pass
+  // ?include_archived=1 / ?include_stale=1 to opt them back in.
+  if (include_archived !== '1' && include_archived !== 'true') {
+    apps = apps.filter(a => a.archived !== true);
+  }
+  if (include_stale !== '1' && include_stale !== 'true') {
+    apps = apps.filter(a => a.stale !== true);
+  }
 
   res.json(apps.map(decryptAppPII));
 });
@@ -1322,7 +1330,15 @@ router.get('/:id', userAuth, (req, res) => {
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
-  res.json(decryptAppPII(app));
+  // C1: scrub is_internal === true events when the requester is a pure client.
+  const decoded = decryptAppPII(app);
+  const isPureClient = isClient && !isBroker && !isInmobiliaria && !isSecretary && !admin;
+  if (isPureClient && Array.isArray(decoded.timeline_events)) {
+    decoded.timeline_events = decoded.timeline_events.filter(ev =>
+      !(ev && (ev.is_internal === true || ev.data?.is_internal === true))
+    );
+  }
+  res.json(decoded);
 });
 
 // Helper: decrypt sensitive PII + financial fields before sending to authorized users
@@ -1450,10 +1466,20 @@ router.get('/:id/events', userAuth, (req, res) => {
   // (some SSE polyfills) start consuming.
   if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
+  // C1: pure clients should not see internal events even at the SSE
+  // envelope level (last_event_type/at would otherwise leak the fact
+  // that the broker just filed an internal note).
+  const isPureClient = isClient && !isBroker && !isInmobiliaria && !isSecretary && !admin;
+  const visibleEvents = (a) => {
+    const all = a.timeline_events || [];
+    if (!isPureClient) return all;
+    return all.filter(ev => !(ev && (ev.is_internal === true || ev.data?.is_internal === true)));
+  };
+
   // Build an envelope that matches the /state endpoint response so
   // iOS can decode both with the same Decodable.
   const buildEnvelope = (a) => {
-    const lastEvent = (a.timeline_events || []).slice(-1)[0];
+    const lastEvent = visibleEvents(a).slice(-1)[0];
     const lastEventAt = lastEvent?.created_at || a.updated_at || a.created_at || '';
     const docCount    = (a.documents_uploaded || []).length;
     const docPending  = (a.documents_uploaded || []).filter(d => !d.review_status || d.review_status === 'pending').length;
@@ -2760,6 +2786,10 @@ router.get('/:id/payment/processed-receipt', userAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 
 // ── POST /:id/message  — Add message/note to timeline ────────────
+// C1 (option b): the same endpoint accepts an `is_internal` flag so the
+// broker can use it for internal notes. When `is_internal === true`,
+// the event is tagged and filtered out of the response shown to clients
+// (see GET /:id and GET /:id/events).
 router.post('/:id/message', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
@@ -2771,15 +2801,28 @@ router.post('/:id/message', userAuth, (req, res) => {
   if (!isBroker && !isClient && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
-  const { message } = req.body;
+  const { message, is_internal } = req.body;
   if (!message) return res.status(400).json({ error: 'Mensaje es requerido' });
+
+  // Only broker/admin can post internal notes; coerce to false for clients.
+  const internal = !!is_internal && (isBroker || isAdmin(req));
 
   const senderRole = isBroker ? 'broker' : 'client';
   addEvent(app, 'message', message,
     req.user.sub, user?.name || (isBroker ? 'Broker' : app.client.name),
-    { role: senderRole });
+    { role: senderRole, is_internal: internal });
+
+  // Mark the event itself with the flag for fast filtering in GET handlers.
+  if (internal && app.timeline_events && app.timeline_events.length) {
+    app.timeline_events[app.timeline_events.length - 1].is_internal = true;
+  }
 
   store.saveApplication(app);
+
+  // Internal notes never sync to conversations or notify the client.
+  if (internal) {
+    return res.json(decryptAppPII(app));
+  }
 
   // ── Sync to Conversations system so messages appear in iOS Messages tab ──
   // Find or create a conversation for this (client, property) pair.
@@ -3875,6 +3918,164 @@ router.post('/:id/withdraw', async (req, res) => {
   } catch (_) {}
 
   res.json(decryptAppPII(app));
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── C4: Broker reassigns an application to a teammate ───────────
+// ══════════════════════════════════════════════════════════════════
+//
+// Allowed callers: the current broker on the app, the inmobiliaria
+// owner whose team owns it, or admin. The new broker MUST be on the
+// same inmobiliaria team. A `broker_reassigned` timeline event is
+// recorded and both brokers are emailed.
+router.post('/:id/reassign', userAuth, async (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user           = store.getUserById(req.user.sub);
+  const isBroker       = app.broker?.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const admin          = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  const { newBrokerUserId, reason } = req.body || {};
+  if (!newBrokerUserId) return res.status(400).json({ error: 'newBrokerUserId es requerido' });
+  const note = (reason || '').toString().trim().slice(0, 500);
+
+  const newBroker = store.getUserById(newBrokerUserId);
+  if (!newBroker) return res.status(400).json({ error: 'Nuevo broker no existe' });
+
+  // Same-team validation. If the app is unattached to an inmobiliaria,
+  // we still need both brokers on the same team to keep ownership coherent.
+  const newBrokerTeam = newBroker.inmobiliaria_id || null;
+  if (app.inmobiliaria_id && newBrokerTeam !== app.inmobiliaria_id) {
+    return res.status(400).json({ error: 'El nuevo broker no pertenece a la misma inmobiliaria.' });
+  }
+
+  if (newBroker.id === app.broker?.user_id) {
+    return res.status(400).json({ error: 'El nuevo broker ya está asignado a esta aplicación.' });
+  }
+
+  const oldBrokerSnap = { ...(app.broker || {}) };
+
+  app.broker = {
+    user_id:     newBroker.id,
+    name:        newBroker.name || newBroker.email || 'Broker',
+    agency_name: newBroker.agency_name || oldBrokerSnap.agency_name || '',
+    email:       newBroker.email || '',
+    phone:       newBroker.phone || '',
+  };
+
+  addEvent(app, 'broker_reassigned',
+    `Aplicación reasignada a ${app.broker.name}${note ? ' — ' + note.slice(0, 200) : ''}`,
+    req.user.sub, user?.name || 'Sistema',
+    {
+      from:   oldBrokerSnap.user_id || null,
+      to:     newBroker.id,
+      reason: note,
+      by:     req.user.sub,
+    });
+
+  await store.withTransaction(async (client) => {
+    await store.saveApplication(app, client);
+  });
+
+  // Notify both brokers (best-effort).
+  if (oldBrokerSnap.email) {
+    sendNotification(oldBrokerSnap.email,
+      `Aplicación reasignada — ${app.listing_title || 'Propiedad'}`,
+      `<p>Hola ${oldBrokerSnap.name || ''},</p>
+       <p>La aplicación de ${app.client?.name || 'el cliente'} para "${app.listing_title || 'una propiedad'}" fue reasignada a <strong>${app.broker.name}</strong>.</p>
+       ${note ? `<p>Motivo: ${note}</p>` : ''}`,
+      { app, purpose: 'broker_reassigned' });
+  }
+  if (app.broker.email) {
+    sendNotification(app.broker.email,
+      `Nueva aplicación asignada — ${app.listing_title || 'Propiedad'}`,
+      `<p>Hola ${app.broker.name || ''},</p>
+       <p>Se te asignó la aplicación de ${app.client?.name || 'un cliente'} para "${app.listing_title || 'una propiedad'}".</p>
+       <p><a href="${BASE_URL}/broker">Ver en el dashboard</a></p>`,
+      { app, purpose: 'broker_reassigned' });
+  }
+
+  res.json(decryptAppPII(app));
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── C7: Bulk operations on a set of applications ────────────────
+// ══════════════════════════════════════════════════════════════════
+//
+// Body: { ids: string[], action: 'reject'|'archive'|'mark_stale', reason?: string }
+// Per-id authorization mirrors GET /:id. Failures are recorded on the
+// per-id result so the loop never throws.
+router.post('/bulk', userAuth, async (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+
+  const { ids, action, reason } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length)
+    return res.status(400).json({ error: 'ids es requerido' });
+  if (ids.length > 200)
+    return res.status(400).json({ error: 'Máximo 200 ids por llamada.' });
+  if (!['reject', 'archive', 'mark_stale'].includes(action))
+    return res.status(400).json({ error: 'action inválida' });
+
+  const note = (reason || '').toString().trim().slice(0, 500);
+  if (action === 'reject' && note.length < 5)
+    return res.status(400).json({ error: 'reason ≥ 5 caracteres es requerido para rechazar.' });
+
+  const admin = isAdmin(req) || user.role === 'admin';
+  const results = [];
+
+  await store.withTransaction(async (client) => {
+    for (const id of ids) {
+      const app = store.getApplicationById(id);
+      if (!app) {
+        results.push({ id, ok: false, code: 'not_found' });
+        continue;
+      }
+      const isBroker       = app.broker?.user_id === req.user.sub;
+      const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user.role) && app.inmobiliaria_id === user.id;
+      const isSecretary    = user.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+      if (!isBroker && !isInmobiliaria && !isSecretary && !admin) {
+        results.push({ id, ok: false, code: 'forbidden' });
+        continue;
+      }
+
+      try {
+        if (action === 'reject') {
+          if (['rechazado', 'completado'].includes(app.status)) {
+            results.push({ id, ok: false, code: 'terminal_state' });
+            continue;
+          }
+          const old = app.status;
+          app.status = 'rechazado';
+          app.status_reason = note;
+          addEvent(app, 'status_change',
+            `Aplicación rechazada (acción en lote): ${note}`,
+            req.user.sub, user.name || 'Broker',
+            { from: old, to: 'rechazado', reason: note, bulk: true });
+        } else if (action === 'archive') {
+          app.archived = true;
+          addEvent(app, 'application_archived',
+            `Aplicación archivada${note ? ': ' + note : ''}`,
+            req.user.sub, user.name || 'Broker', { reason: note, bulk: true });
+        } else if (action === 'mark_stale') {
+          app.stale = true;
+          addEvent(app, 'application_marked_stale',
+            `Aplicación marcada como obsoleta${note ? ': ' + note : ''}`,
+            req.user.sub, user.name || 'Broker', { reason: note, bulk: true });
+        }
+        await store.saveApplication(app, client);
+        results.push({ id, ok: true });
+      } catch (err) {
+        results.push({ id, ok: false, code: 'error', error: err.message });
+      }
+    }
+  });
+
+  res.json({ ok: true, action, results });
 });
 
 module.exports = router;

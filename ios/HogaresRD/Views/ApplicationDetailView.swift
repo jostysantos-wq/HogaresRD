@@ -9,6 +9,13 @@ import SwiftUI
 //
 // Navigation source: DashboardApplicationsTab.ApplicationRow →
 //                    NavigationLink → ApplicationDetailView(id:)
+//
+// TODO(C4 — broker reassign): wire a "Reasignar" action into the
+// Acciones menu. The web counterpart calls
+//   POST /api/applications/:id/reassign  { newBrokerUserId, reason }
+// and pulls candidates from /api/inmobiliaria/brokers. Skipped here
+// because dropping a same-team picker into the existing menu cleanly
+// would require >30 lines of new SwiftUI plus team-fetch plumbing.
 
 struct ApplicationDetailView: View {
     let id: String
