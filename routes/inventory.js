@@ -117,7 +117,7 @@ router.get('/:listingId', (req, res) => {
 
 // ── POST /api/inventory/:listingId/units ──────────────────────────────────
 // Constructora owner adds a unit to inventory (D4: owner-only write).
-router.post('/:listingId/units', userAuth, (req, res) => {
+router.post('/:listingId/units', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias pueden gestionar inventario' });
@@ -132,7 +132,7 @@ router.post('/:listingId/units', userAuth, (req, res) => {
   if (vErr) return res.status(400).json({ error: vErr });
 
   try {
-    const result = store.withTransaction(() => {
+    const result = await store.withTransaction(async (client) => {
       // Re-read listing inside the tx to avoid stale state
       const fresh = store.getListingById(req.params.listingId);
       const inventory = fresh.unit_inventory || [];
@@ -150,18 +150,22 @@ router.post('/:listingId/units', userAuth, (req, res) => {
       inventory.push(unit);
       fresh.unit_inventory    = inventory;
       fresh.units_available   = inventory.filter(u => u.status === 'available').length;
-      store.saveListing(fresh);
-      return { unit, summary: inventorySummary(inventory) };
+      await store.saveListing(fresh, client);
+      return { ok: true, unit, summary: inventorySummary(inventory) };
     });
     res.status(201).json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message || 'Error' });
+    if (err && err.status && err.status !== 500) {
+      return res.status(err.status).json({ error: err.message || 'Error' });
+    }
+    console.error('[inventory] tx failed:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar el cambio. Inténtalo de nuevo.' });
   }
 });
 
 // ── POST /api/inventory/:listingId/units/batch ────────────────────────────
 // Add multiple units at once (for initial setup)
-router.post('/:listingId/units/batch', userAuth, (req, res) => {
+router.post('/:listingId/units/batch', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias' });
@@ -178,7 +182,7 @@ router.post('/:listingId/units/batch', userAuth, (req, res) => {
     return res.status(400).json({ error: `Maximo ${MAX_BATCH} unidades por lote` });
 
   try {
-    const result = store.withTransaction(() => {
+    const result = await store.withTransaction(async (client) => {
       const fresh = store.getListingById(req.params.listingId);
       const inventory = fresh.unit_inventory || [];
       const existingLabels = new Set(inventory.map(u => u.label.toLowerCase()));
@@ -210,18 +214,19 @@ router.post('/:listingId/units/batch', userAuth, (req, res) => {
 
       fresh.unit_inventory    = inventory;
       fresh.units_available   = inventory.filter(u => u.status === 'available').length;
-      store.saveListing(fresh);
-      return { added, skipped, summary: inventorySummary(inventory) };
+      await store.saveListing(fresh, client);
+      return { ok: true, added, skipped, summary: inventorySummary(inventory) };
     });
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Error' });
+    console.error('[inventory] tx failed:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar el cambio. Inténtalo de nuevo.' });
   }
 });
 
 // ── DELETE /api/inventory/:listingId/units/:unitId ────────────────────────
 // Remove a unit (only if available)
-router.delete('/:listingId/units/:unitId', userAuth, (req, res) => {
+router.delete('/:listingId/units/:unitId', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias' });
@@ -232,7 +237,7 @@ router.delete('/:listingId/units/:unitId', userAuth, (req, res) => {
     return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   try {
-    const result = store.withTransaction(() => {
+    const result = await store.withTransaction(async (client) => {
       const fresh = store.getListingById(req.params.listingId);
       const inventory = fresh.unit_inventory || [];
       const idx = inventory.findIndex(u => u.id === req.params.unitId);
@@ -242,18 +247,22 @@ router.delete('/:listingId/units/:unitId', userAuth, (req, res) => {
       inventory.splice(idx, 1);
       fresh.unit_inventory    = inventory;
       fresh.units_available   = inventory.filter(u => u.status === 'available').length;
-      store.saveListing(fresh);
-      return { success: true, summary: inventorySummary(inventory) };
+      await store.saveListing(fresh, client);
+      return { ok: true, success: true, summary: inventorySummary(inventory) };
     });
     res.json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message || 'Error' });
+    if (err && err.status && err.status !== 500) {
+      return res.status(err.status).json({ error: err.message || 'Error' });
+    }
+    console.error('[inventory] tx failed:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar el cambio. Inténtalo de nuevo.' });
   }
 });
 
 // ── POST /api/inventory/:listingId/units/:unitId/assign ───────────────────
 // Assign a unit to an application
-router.post('/:listingId/units/:unitId/assign', userAuth, (req, res) => {
+router.post('/:listingId/units/:unitId/assign', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias' });
@@ -267,7 +276,7 @@ router.post('/:listingId/units/:unitId/assign', userAuth, (req, res) => {
   if (!applicationId) return res.status(400).json({ error: 'applicationId requerido' });
 
   try {
-    const result = store.withTransaction(() => {
+    const result = await store.withTransaction(async (client) => {
       const app = store.getApplicationById(applicationId);
       if (!app) throw Object.assign(new Error('Aplicacion no encontrada'), { status: 404 });
 
@@ -294,22 +303,26 @@ router.post('/:listingId/units/:unitId/assign', userAuth, (req, res) => {
 
       fresh.unit_inventory    = inventory;
       fresh.units_available   = inventory.filter(u => u.status === 'available').length;
-      store.saveListing(fresh);
+      await store.saveListing(fresh, client);
 
       app.assigned_unit = { unitId: unit.id, unitLabel: unit.label, unitType: unit.type };
-      store.saveApplication(app);
+      await store.saveApplication(app, client);
 
-      return { unit, summary: inventorySummary(inventory) };
+      return { ok: true, unit, summary: inventorySummary(inventory) };
     });
     res.json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message || 'Error' });
+    if (err && err.status && err.status !== 500) {
+      return res.status(err.status).json({ error: err.message || 'Error' });
+    }
+    console.error('[inventory] tx failed:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar el cambio. Inténtalo de nuevo.' });
   }
 });
 
 // ── POST /api/inventory/:listingId/units/:unitId/release ──────────────────
 // Release a unit back to available
-router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
+router.post('/:listingId/units/:unitId/release', userAuth, async (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user || !PRO_ROLES.includes(user.role))
     return res.status(403).json({ error: 'Solo agentes o inmobiliarias' });
@@ -320,7 +333,7 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
     return res.status(403).json({ error: 'Solo el desarrollador propietario puede modificar el inventario.', code: 'not_owner' });
 
   try {
-    const result = store.withTransaction(() => {
+    const result = await store.withTransaction(async (client) => {
       const fresh = store.getListingById(req.params.listingId);
       const inventory = fresh.unit_inventory || [];
       const unit = inventory.find(u => u.id === req.params.unitId);
@@ -336,7 +349,7 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
         const app = store.getApplicationById(unit.applicationId);
         if (app) {
           app.assigned_unit = null;
-          store.saveApplication(app);
+          await store.saveApplication(app, client);
         }
       }
 
@@ -346,12 +359,16 @@ router.post('/:listingId/units/:unitId/release', userAuth, (req, res) => {
 
       fresh.unit_inventory    = inventory;
       fresh.units_available   = inventory.filter(u => u.status === 'available').length;
-      store.saveListing(fresh);
-      return { unit, summary: inventorySummary(inventory) };
+      await store.saveListing(fresh, client);
+      return { ok: true, unit, summary: inventorySummary(inventory) };
     });
     res.json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message || 'Error' });
+    if (err && err.status && err.status !== 500) {
+      return res.status(err.status).json({ error: err.message || 'Error' });
+    }
+    console.error('[inventory] tx failed:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar el cambio. Inténtalo de nuevo.' });
   }
 });
 
