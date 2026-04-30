@@ -52,6 +52,38 @@ const appCreateLimiter = rateLimit({
 const { createTransport } = require('./mailer');
 let transporter = createTransport();
 
+// ── In-process idempotency guard (P1 #16) ────────────────────────
+// Two near-simultaneous POST /api/applications/ requests with the
+// same `listing_id|email` could both pass the dedup scan because the
+// row only lands in the cache after `withTransaction` resolves. We
+// add a soft, in-process `_recentSubmits` Map keyed on
+// `listing_id|lower(email)` with a 60s TTL. The first request to
+// reach the handler claims the key; the second sees it and treats
+// the call as a duplicate.
+//
+// This is a SINGLE-PROCESS guard — it depends on PM2 fork mode
+// (already required by this codebase because of the in-memory cache
+// in routes/store.js). Cluster mode or multiple replicas would need
+// a Redis SET NX or DB unique constraint instead.
+const _recentSubmits = new Map(); // key → expiresAt (ms)
+const _RECENT_SUBMIT_TTL_MS = 60 * 1000;
+function _claimRecentSubmit(key) {
+  const now = Date.now();
+  // Best-effort lazy GC so the Map can't grow unbounded.
+  if (_recentSubmits.size > 1000) {
+    for (const [k, exp] of _recentSubmits) {
+      if (exp <= now) _recentSubmits.delete(k);
+    }
+  }
+  const existing = _recentSubmits.get(key);
+  if (existing && existing > now) return false; // already claimed
+  _recentSubmits.set(key, now + _RECENT_SUBMIT_TTL_MS);
+  return true;
+}
+function _releaseRecentSubmit(key) {
+  _recentSubmits.delete(key);
+}
+
 // ── Constants ─────────────────────────────────────────────────────
 const uuid = () => crypto.randomUUID();
 
@@ -674,6 +706,125 @@ router.get('/track-token', (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// ── POST /:id/track-upload — Magic-link document upload (P1 #24) ─
+// ══════════════════════════════════════════════════════════════════
+// Anonymous applicants who deferred documents on the apply form had no
+// way to attach them later — the regular /:id/documents/upload route
+// requires a logged-in client. This route accepts the same magic-link
+// bearer token used by GET /track-token + the standard `docUpload.array`
+// middleware so anon users can upload from the public track.html page.
+//
+// Auth: Authorization: Bearer <jwt> where the JWT was issued by
+// `signTrackToken(applicationId)`. The token's `kind` MUST be 'track'
+// AND `aid` MUST equal the route's :id.
+//
+// File-handling parity with /:id/documents/upload:
+//   • multer disk storage in DOCS_DIR
+//   • magic-byte MIME sniff via validateMime
+//   • appended to app.documents_uploaded with review_status: 'pending'
+//
+// Mutation goes through `claimApplicationAtomic` to avoid losing writes
+// when the buyer uploads multiple files in quick succession.
+//
+// NOTE FOR public/track.html: a follow-up agent will wire the UI. This
+// endpoint expects multipart/form-data with the file under field name
+// `files`, the bearer token in the Authorization header, plus optional
+// `type` / `label` / `request_id` fields mirroring /documents/upload.
+router.post('/:id/track-upload', docUpload.array('files', 10), async (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(404).json({ error: 'Aplicación no encontrada.' });
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const cookieTok  = req.cookies?.hrdt;
+  const bearer     = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : (cookieTok || '');
+  if (!bearer) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(401).json({ error: 'Token requerido.' });
+  }
+
+  let payload;
+  try {
+    payload = verifyJwtAcceptingPrev(bearer);
+  } catch (_) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+  if (!payload || payload.kind !== 'track' || !payload.aid) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(401).json({ error: 'Token inválido.' });
+  }
+  if (payload.aid !== req.params.id) {
+    (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(403).json({ error: 'Token no corresponde a esta aplicación.' });
+  }
+
+  if (!req.files || !req.files.length) {
+    return res.status(400).json({ error: 'No se recibieron archivos.' });
+  }
+
+  // Validate MIME types — same gate as /:id/documents/upload.
+  for (const f of req.files) {
+    const ok = await validateMime(f.path);
+    if (!ok) {
+      req.files.forEach(x => { if (x.path !== f.path) fs.unlink(x.path, () => {}); });
+      return res.status(400).json({
+        error: `Tipo de archivo no permitido: ${f.originalname}. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.`,
+      });
+    }
+  }
+
+  const requestId = req.body.request_id || null;
+  const docType   = String(req.body.type  || 'other').slice(0, 50);
+  const docLabel  = String(req.body.label || DOCUMENT_TYPES[docType] || 'Documento').slice(0, 120);
+
+  const uploaded = req.files.map(f => ({
+    id:            uuid(),
+    request_id:    requestId,
+    type:          docType,
+    label:         docLabel,
+    filename:      f.filename,
+    path:          f.path,
+    original_name: f.originalname,
+    size:          f.size,
+    uploaded_at:   new Date().toISOString(),
+    via_track:     true, // flag so the broker UI can show "subido vía enlace público"
+    review_status: 'pending',
+    review_note:   '',
+    reviewed_at:   null,
+    reviewed_by:   null,
+  }));
+
+  try {
+    await store.claimApplicationAtomic(
+      req.params.id,
+      app.updated_at || null,
+      async (current /*, client */) => {
+        if (!Array.isArray(current.documents_uploaded)) current.documents_uploaded = [];
+        current.documents_uploaded.push(...uploaded);
+        addEvent(current, 'document_uploaded',
+          `${uploaded.length} documento(s) subido(s) vía enlace público: ${uploaded.map(d => d.original_name).join(', ')}`,
+          'magic-link', current.client?.name || 'Cliente (enlace)',
+          { files: uploaded.map(d => d.original_name), via: 'track_token' });
+      }
+    );
+    return res.json({ ok: true, uploaded: uploaded.length });
+  } catch (err) {
+    if (err && err.name === 'ConflictError') {
+      req.files.forEach(f => fs.unlink(f.path, () => {}));
+      return res.status(409).json({ error: 'Conflicto al guardar la aplicación. Intenta de nuevo.' });
+    }
+    console.error('[applications/track-upload] failed:', err.message);
+    req.files.forEach(f => fs.unlink(f.path, () => {}));
+    return res.status(500).json({ error: 'No se pudo guardar la subida. Inténtalo de nuevo.' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
 // ── POST /  — Create application ─────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 // optionalAuth so the endpoint stays public (anonymous applies are a
@@ -1006,7 +1157,32 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
   const inmobiliaria_name = brokerUser?.inmobiliaria_name || null;
 
   // ── Idempotency: dedup identical submissions within 60s (network retry / race) ──
+  // Two-layer guard:
+  //   1. Cache scan finds rows already committed (catches retries that
+  //      fire AFTER the first transaction resolved).
+  //   2. `_recentSubmits` claim is acquired BEFORE the cache scan so two
+  //      simultaneous in-flight requests (the actual race) can't both
+  //      pass — the second request sees the in-process key and bails.
+  // The claim is released after `withTransaction` resolves (or 60s,
+  // whichever comes first via the TTL).
+  let _idemKey = null;
   if (emailTrimmed) {
+    _idemKey = `${listing_id}|${emailTrimmed.toLowerCase()}`;
+    const claimed = _claimRecentSubmit(_idemKey);
+    if (!claimed) {
+      // A concurrent request is already in flight for this key. Look up
+      // any row it may have already committed; if not yet visible, return
+      // an `accepted`-shaped response so the client treats it as a dup.
+      const existing = (store.getApplications() || []).find(a =>
+        a.listing_id === listing_id
+        && a.client && a.client.email && a.client.email.toLowerCase() === emailTrimmed.toLowerCase()
+      );
+      if (existing) {
+        return res.status(200).json({ id: existing.id, duplicate: true });
+      }
+      return res.status(202).json({ id: null, duplicate: true, accepted: true });
+    }
+
     const sixtySecondsAgo = Date.now() - 60 * 1000;
     const existing = (store.getApplications() || []).find(a =>
       a.listing_id === listing_id
@@ -1014,6 +1190,7 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
       && a.created_at && new Date(a.created_at).getTime() >= sixtySecondsAgo
     );
     if (existing) {
+      _releaseRecentSubmit(_idemKey);
       return res.status(200).json({ id: existing.id, duplicate: true });
     }
   }
@@ -1161,8 +1338,12 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('[applications/create] transaction failed:', err.message);
+    if (_idemKey) _releaseRecentSubmit(_idemKey);
     return res.status(500).json({ error: 'No se pudo registrar la aplicación. Inténtalo de nuevo.' });
   }
+  // Best-effort: release the idempotency claim so a third (legitimate)
+  // retry can succeed sooner than the 60s TTL. The TTL is the safety net.
+  if (_idemKey) _releaseRecentSubmit(_idemKey);
 
   // Meta CAPI — Lead (fire-and-forget)
   setImmediate(async () => {
@@ -1321,30 +1502,9 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
         }
       }
 
-      // ── ADMIN FALLBACK: if no agent was assigned, alert admin ─────
-      if (!assignedUser) {
-        const adminEmail = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
-        console.warn(`[applications] ORPHANED LEAD: app ${app.id} — no active agents available for ${app.listing_title}`);
-        sendNotification(adminEmail,
-          `⚠️ Lead sin agente — ${app.client.name} → ${app.listing_title}`,
-          et.layout({
-            title: 'Lead sin agente asignado',
-            headerColor: '#b45309',
-            body: et.alertBox('Este lead no tiene un agente activo asignado. Todos los agentes afiliados tienen suscripción inactiva o no pudieron ser contactados.', 'warning')
-              + et.infoTable(
-                  et.infoRow('Cliente', et.esc(app.client.name))
-                + et.infoRow('Teléfono', et.esc(app.client.phone))
-                + et.infoRow('Email', et.esc(app.client.email))
-                + et.infoRow('Propiedad', et.esc(app.listing_title))
-                + et.infoRow('ID Aplicación', app.id)
-              )
-              + et.button('Reasignar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`)
-          })
-        );
-        addEvent(app, 'orphaned_lead', 'Sin agente activo disponible — admin notificado',
-          'system', 'Sistema', { reason: 'no_active_agents' });
-        store.saveApplication(app);
-      }
+      // ── ADMIN FALLBACK is hoisted out of this branch so the
+      //    non-cascade path (no resolvable agency, cascade disabled)
+      //    also fires it. See the post-branch block below.
     }
   } else {
     // Standard path: notify broker directly
@@ -1417,6 +1577,52 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
         }
       } catch (e) { console.error('[notify-app]', e.message); }
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ── ORPHAN FALLBACK (P1 #20) ─────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // Fires regardless of which branch ran above. The cascade path used
+  // to own this exclusively, but a non-cascade submission with no
+  // resolvable agency (e.g. cascade disabled, agencies array empty,
+  // or every agency without a registered user) would silently drop
+  // the lead. By hoisting here we guarantee the admin always learns
+  // about a truly unassigned application — even if the in-cascade
+  // inmobiliaria notification ALSO fired.
+  if (!app.broker?.user_id && !app.inmobiliaria_id) {
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || 'Jostysantos@gmail.com';
+      console.warn(`[applications] ORPHANED LEAD: app ${app.id} — no resolvable agent or inmobiliaria for ${app.listing_title}`);
+      sendNotification(adminEmail,
+        `⚠️ Lead sin agente — ${app.client.name} → ${app.listing_title}`,
+        et.layout({
+          title: 'Lead sin agente asignado',
+          headerColor: '#b45309',
+          body: et.alertBox('Este lead no tiene un agente activo asignado. Todos los agentes afiliados tienen suscripción inactiva o no pudieron ser contactados.', 'warning')
+            + et.infoTable(
+                et.infoRow('Cliente', et.esc(app.client.name))
+              + et.infoRow('Teléfono', et.esc(app.client.phone))
+              + et.infoRow('Email', et.esc(app.client.email))
+              + et.infoRow('Propiedad', et.esc(app.listing_title))
+              + et.infoRow('ID Aplicación', app.id)
+            )
+            + et.button('Reasignar en Admin', `${BASE_URL}/${process.env.ADMIN_PATH || 'admin'}`)
+        })
+      );
+      addEvent(app, 'orphaned_lead', 'Sin agente activo disponible — admin notificado',
+        'system', 'Sistema', { reason: 'no_active_agents' });
+      try {
+        await store.withTransaction(async (client) => {
+          await store.saveApplication(app, client);
+        });
+      } catch (saveErr) {
+        // Best-effort save outside the txn so the cache picks up the event.
+        try { store.saveApplication(app); } catch (_) {}
+        console.error('[applications/create] orphan-fallback save failed:', saveErr.message);
+      }
+    } catch (e) {
+      console.error('[applications/create] orphan fallback failed:', e.message);
+    }
   }
 });
 
@@ -1999,9 +2205,31 @@ router.put('/:id/status', userAuth, async (req, res) => {
   // side-effects (notifications, push, inventory sync on completado).
   Object.assign(app, claimed);
 
-  // D2: clear any pending-approval rows tied to this app — the owner
-  // accepted the transition (or moved past it).
-  try { store.removePendingApprovalsForApp(app.id); } catch {}
+  // D2 + P1 #26: targeted clear. Only remove pending-approval rows
+  // whose `requested_status` matches the status just applied — those
+  // are now resolved by this transition. Other pending recommendations
+  // for unrelated future statuses must survive (e.g. a secretary
+  // recommending `completado` should NOT be wiped by an unrelated
+  // `aplicado → en_revision` flip). Each cleared row gets a
+  // `pending_approval_dismissed` event so the timeline shows the
+  // resolution.
+  try {
+    const pendings = (typeof store.getPendingApprovalsForApp === 'function')
+      ? store.getPendingApprovalsForApp(app.id)
+      : [];
+    const matched = pendings.filter(p => p && p.requested_status === status);
+    for (const p of matched) {
+      try { store.removePendingApproval(p.id); } catch {}
+      addEvent(app, 'pending_approval_dismissed',
+        `Aprobación pendiente resuelta por el cambio de estado a ${STATUS_LABELS[status] || status}`,
+        req.user.sub, user?.name || 'Sistema',
+        { approval_id: p.id, requested_status: p.requested_status, requested_by: p.requested_by });
+    }
+    if (matched.length > 0) {
+      // Persist the dismissal events.
+      store.saveApplication(app);
+    }
+  } catch (_) { /* best-effort */ }
 
   // ── Cancel pending tasks on terminal statuses ─────────────────
   if (status === 'rechazado' || status === 'completado') {
@@ -3297,20 +3525,28 @@ router.post('/:id/message', userAuth, (req, res) => {
 
   const user = store.getUserById(req.user.sub);
   const isBroker = app.broker.user_id === req.user.sub;
+  // P1 #33: secretaries and inmobiliaria/constructora owners on the same
+  // team must be able to post on team applications. Auth surface mirrors
+  // /:id/contact-client semantics. Internal-note privileges propagate to
+  // these team roles too.
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary    = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
   const isClient = app.client.user_id === req.user.sub ||
                    (user?.emailVerified === true && !app.client.user_id && app.client.email && user.email && app.client.email.toLowerCase() === user.email.toLowerCase());
-  if (!isBroker && !isClient && !isAdmin(req))
+  if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
   const { message, is_internal } = req.body;
   if (!message) return res.status(400).json({ error: 'Mensaje es requerido' });
 
-  // Only broker/admin can post internal notes; coerce to false for clients.
-  const internal = !!is_internal && (isBroker || isAdmin(req));
+  // Internal notes: any team-side actor (broker, inmobiliaria, secretary,
+  // admin) can flag a message internal. Clients always get coerced to false.
+  const isTeamActor = isBroker || isInmobiliaria || isSecretary || isAdmin(req);
+  const internal = !!is_internal && isTeamActor;
 
-  const senderRole = isBroker ? 'broker' : 'client';
+  const senderRole = isTeamActor ? 'broker' : 'client';
   addEvent(app, 'message', message,
-    req.user.sub, user?.name || (isBroker ? 'Broker' : app.client.name),
+    req.user.sub, user?.name || (isTeamActor ? 'Broker' : app.client.name),
     { role: senderRole, is_internal: internal });
 
   // Mark the event itself with the flag for fast filtering in GET handlers.
@@ -3337,7 +3573,7 @@ router.post('/:id/message', userAuth, (req, res) => {
       id:         'msg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
       senderId:   req.user.sub,
       senderRole,
-      senderName: user?.name || (isBroker ? 'Broker' : app.client.name),
+      senderName: user?.name || (isTeamActor ? 'Broker' : app.client.name),
       text:       message,
       timestamp:  new Date().toISOString(),
     };
@@ -3345,8 +3581,8 @@ router.post('/:id/message', userAuth, (req, res) => {
       store.addMessage(conv.id, msgObj);
       conv.lastMessage = message;
       conv.updatedAt   = new Date().toISOString();
-      if (isBroker) conv.unreadClient = (conv.unreadClient || 0) + 1;
-      else          conv.unreadBroker = (conv.unreadBroker || 0) + 1;
+      if (isTeamActor) conv.unreadClient = (conv.unreadClient || 0) + 1;
+      else             conv.unreadBroker = (conv.unreadBroker || 0) + 1;
       store.saveConversation(conv);
     } else {
       conv = {
@@ -3362,15 +3598,15 @@ router.post('/:id/message', userAuth, (req, res) => {
         createdAt:      new Date().toISOString(),
         updatedAt:      new Date().toISOString(),
         lastMessage:    message,
-        unreadBroker:   isBroker ? 0 : 1,
-        unreadClient:   isBroker ? 1 : 0,
+        unreadBroker:   isTeamActor ? 0 : 1,
+        unreadClient:   isTeamActor ? 1 : 0,
         message_count:  1,
       };
       store.saveConversation(conv);
       store.addMessage(conv.id, msgObj);
     }
     // Push notification to the other party
-    const pushTarget = isBroker ? clientId : brokerId;
+    const pushTarget = isTeamActor ? clientId : brokerId;
     pushNotify(pushTarget, {
       type:  'new_message',
       title: `💬 ${user?.name || 'Usuario'}`,
@@ -3380,13 +3616,13 @@ router.post('/:id/message', userAuth, (req, res) => {
   }
 
   // Email notification to the other party
-  const notifyEmail = isBroker ? app.client.email : app.broker.email;
+  const notifyEmail = isTeamActor ? app.client.email : app.broker.email;
   if (notifyEmail) {
     sendNotification(notifyEmail,
       `HogaresRD — Nuevo mensaje sobre ${app.listing_title}`,
       `<p><strong>${user?.name || 'Usuario'}</strong> te ha enviado un mensaje:</p>
        <blockquote style="border-left:3px solid #0038A8;padding:0.5rem 1rem;color:#333;">${message}</blockquote>
-       <a href="${BASE_URL}/${isBroker ? 'my-applications' : 'broker'}">Ver conversación</a>`
+       <a href="${BASE_URL}/${isTeamActor ? 'my-applications' : 'broker'}">Ver conversación</a>`
     );
   }
 
@@ -4431,6 +4667,42 @@ router.post('/:id/withdraw', async (req, res) => {
       { app, purpose: 'application_withdrawn' });
   }
 
+  // P1 #23: confirm to the buyer that the withdrawal succeeded. The
+  // magic-link path used to land silently — they'd click "Retirar" and
+  // never get a paper trail. Logged-in withdrawals also benefit from
+  // a confirmation receipt. Use a fresh track token so the link works
+  // even if the user is not logged in.
+  if (app.client?.email) {
+    try {
+      const isAnon = !app.client.user_id;
+      const link = isAnon
+        ? `${BASE_URL}/track.html?token=${signTrackToken(app.id)}`
+        : `${BASE_URL}/my-applications?id=${app.id}`;
+      const shortId = String(app.id || '').slice(0, 8);
+      sendNotification(app.client.email,
+        'Confirmamos la retirada de tu aplicación',
+        et.layout({
+          title: 'Confirmamos la retirada de tu aplicación',
+          subtitle: et.esc(app.listing_title || ''),
+          preheader: 'Hemos registrado tu solicitud de retirada y notificamos a tu agente.',
+          body:
+            et.p(`Hemos retirado tu aplicación para <strong>${et.esc(app.listing_title || '')}</strong>.`)
+            + et.infoTable(
+                et.infoRow('Aplicación #', et.esc(shortId))
+              + et.infoRow('Propiedad', et.esc(app.listing_title || ''))
+              + (userReason ? et.infoRow('Motivo', et.esc(userReason)) : '')
+            )
+            + et.p('Tu agente ha sido notificado de la retirada.')
+            + et.button('Ver mi aplicación', link)
+            + et.divider()
+            + et.small('Si esta retirada no fue solicitada por ti, responde a este correo de inmediato.'),
+        }),
+        { app, purpose: 'buyer_withdraw_confirmation' });
+    } catch (e) {
+      console.error('[applications/withdraw] buyer confirmation send failed:', e.message);
+    }
+  }
+
   // Push notification → broker
   try {
     if (app.broker?.user_id) {
@@ -4503,8 +4775,82 @@ router.post('/:id/reassign', userAuth, async (req, res) => {
       by:     req.user.sub,
     });
 
+  // P1 #14: also propagate the reassignment to:
+  //   1. Conversations matching (clientId, propertyId).
+  //   2. Auto-tasks for this application currently assigned to the
+  //      old broker that aren't done.
+  //   3. Tour rows embedded in app.tours[] still pointing at the old
+  //      broker (they ride the saveApplication below).
+  // Otherwise the new broker can't see the chat, the old broker still
+  // owns the to-do list, and the buyer keeps seeing the old name on
+  // their tour confirmations.
+  const oldBrokerUserId = oldBrokerSnap.user_id || null;
+  const propagationStats = { conversations: 0, tasks: 0, tours: 0 };
   await store.withTransaction(async (client) => {
     await store.saveApplication(app, client);
+
+    // Conversations — find by (clientId, propertyId). A buyer typically
+    // has a single conversation per property, but we touch all matches
+    // defensively in case earlier data migrations created duplicates.
+    const clientId = app.client?.user_id || null;
+    if (clientId && app.listing_id) {
+      const allConvs = (typeof store.getConversations === 'function')
+        ? store.getConversations()
+        : [];
+      const matching = allConvs.filter(c =>
+        c && c.clientId === clientId && c.propertyId === app.listing_id
+      );
+      for (const conv of matching) {
+        if (conv.brokerId === newBroker.id) continue; // already on the new broker
+        conv.brokerId   = newBroker.id;
+        conv.brokerName = app.broker.name;
+        conv.updatedAt  = new Date().toISOString();
+        try {
+          store.saveConversation(conv, client);
+          propagationStats.conversations += 1;
+        } catch (e) {
+          console.error('[applications/reassign] saveConversation failed:', e.message);
+        }
+      }
+    }
+
+    // Tasks — auto-tasks tied to this application currently assigned to
+    // the old broker. We skip done/cancelled/completed tasks so a closed
+    // checklist item doesn't bounce back to the new broker.
+    if (oldBrokerUserId && typeof store.getTasksByApplication === 'function') {
+      const tasks = store.getTasksByApplication(app.id) || [];
+      for (const t of tasks) {
+        if (!t || t.assigned_to !== oldBrokerUserId) continue;
+        if (t.status === 'done' || t.status === 'completed' || t.status === 'cancelled') continue;
+        t.assigned_to = newBroker.id;
+        t.updated_at  = new Date().toISOString();
+        try {
+          store.saveTask(t, client);
+          propagationStats.tasks += 1;
+        } catch (e) {
+          console.error('[applications/reassign] saveTask failed:', e.message);
+        }
+      }
+    }
+
+    // Tours — embedded inside app.tours[]. Mutate in place; the
+    // saveApplication above already persisted (mutation here updates
+    // the in-memory cached row, and we re-save at the end of the txn
+    // so the new assignments commit).
+    if (oldBrokerUserId && Array.isArray(app.tours)) {
+      for (const tour of app.tours) {
+        if (!tour || tour.assigned_to !== oldBrokerUserId) continue;
+        if (tour.status === 'cancelled' || tour.status === 'completed' || tour.status === 'done') continue;
+        tour.assigned_to    = newBroker.id;
+        tour.broker_user_id = newBroker.id;
+        tour.broker_name    = app.broker.name;
+        propagationStats.tours += 1;
+      }
+      if (propagationStats.tours > 0) {
+        // Re-save so the mutated tour entries land in the DB row.
+        await store.saveApplication(app, client);
+      }
+    }
   });
 
   // Notify both brokers (best-effort).
@@ -4683,6 +5029,17 @@ router.post('/:id/recommend-status', userAuth, (req, res) => {
   if (!status) return res.status(400).json({ error: 'status es requerido' });
   if (!STATUS_LABELS[status])
     return res.status(400).json({ error: `Estado desconocido: ${status}` });
+
+  // P1 #25: only allow recommending statuses the state machine actually
+  // permits from the current state. Without this, a secretary could
+  // queue an approval for a status (e.g. `completado` from `aplicado`)
+  // that the owner couldn't accept anyway — the eventual PUT
+  // /:id/status would 400 on the same STATUS_FLOW guard. Mirror the
+  // skip-phase error format for consistency.
+  const allowed = STATUS_FLOW[app.status];
+  if (!allowed || !allowed.includes(status)) {
+    return res.status(400).json({ error: `Transición no válida: ${app.status} → ${status}` });
+  }
 
   const approval = {
     id:                 'pa_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
