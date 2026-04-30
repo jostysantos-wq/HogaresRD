@@ -1842,6 +1842,14 @@ function removePendingApprovalsForApp(applicationId) {
   _pendingApprovals = _pendingApprovals.filter(p => p.application_id !== applicationId);
 }
 
+// P1 #26: list pending approvals for a specific application — used by
+// PUT /:id/status to scope the removal to rows whose requested_status
+// matches the just-applied status, instead of nuking every pending row
+// on the app.
+function getPendingApprovalsForApp(applicationId) {
+  return _pendingApprovals.filter(p => p.application_id === applicationId);
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // PRIVACY LOG (CCPA compliance — 24-month retention)
 // ══════════════════════════════════════════════════════════════════════════
@@ -1922,6 +1930,7 @@ module.exports = {
   getInmobPosts, getInmobPostById, getPublishedInmobPosts, saveInmobPost, deleteInmobPost,
   getInmobReviews, getApprovedInmobReviews, getInmobReviewById, saveInmobReview, deleteInmobReview,
   getPendingApprovals, addPendingApproval, removePendingApproval, removePendingApprovalsForApp,
+  getPendingApprovalsForApp,
   getPrivacyLog, appendPrivacyLog,
   getDeletionRequests, getDeletionRequestById, saveDeletionRequest, deleteDeletionRequest,
   getDbWriteFailureCount,
