@@ -7,52 +7,94 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+      /* Editorial palette — overrides core.css */
+      --bg:          #FBF6EE;
+      --bg-card:     #FFFFFF;
+      --bg-section:  #F4F1EA;
+      --ink:         #131318;
+      --ink-soft:    #36363E;
+      --ink-muted:   #8A8A93;
+      --line:        rgba(19,19,24,0.10);
+      --line-soft:   rgba(19,19,24,0.06);
+      --serif:       ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill:      999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop:  0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --text:        var(--ink);
+      --text-secondary: var(--ink-soft);
+      --text-muted:  var(--ink-muted);
+      --border:      var(--line);
+      --accent:      var(--ink);
+      --accent-hover: #000;
+      --accent-light: rgba(19,19,24,0.06);
+    }
+    [data-theme="dark"] {
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+      --bg:          #15131A;
+      --bg-card:     #1F1C24;
+      --bg-section:  #1A1820;
+      --ink:         #F5F1EA;
+      --ink-soft:    #C9C5BC;
+      --ink-muted:   #8B867E;
+      --line:        rgba(245,241,234,0.12);
+      --line-soft:   rgba(245,241,234,0.06);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop:  0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --text:        var(--ink);
+      --text-secondary: var(--ink-soft);
+      --text-muted:  var(--ink-muted);
+      --border:      var(--line);
+      --accent:      var(--ink);
+      --accent-hover: #fff;
+      --accent-light: rgba(245,241,234,0.10);
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-    nav { background: var(--accent); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
-    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
-    .nav-logo svg { width: 28px; height: 28px; fill: #fff; }
+    /* Nav — calm cream-tone bar (was solid blue accent) */
+    nav { background: var(--bg-section); border-bottom: 1px solid var(--line); padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--ink); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-logo svg { width: 28px; height: 28px; fill: var(--ink); }
 
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem; }
 
     .wrap { width: 100%; max-width: 520px; }
 
-    /* Trial badge */
+    /* Banners — unified 14px radius, cream-tone bg, semantic left-border */
     .trial-banner {
-      background: var(--green-bg); border: 1.5px solid var(--green);
-      border-radius: 6px; padding: 0.85rem 1.1rem;
+      background: var(--bg-section); border: 1px solid var(--line); border-left: 4px solid var(--green);
+      border-radius: 14px; padding: 0.85rem 1.1rem;
       display: flex; align-items: center; gap: 0.65rem;
-      margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--green); font-weight: 600;
+      margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--ink); font-weight: 600;
     }
     .trial-banner span { font-size: 1.2rem; }
 
-    /* Expired banner */
     .expired-banner {
-      background: #fff5f5; border: 1.5px solid #f87171;
-      border-radius: 6px; padding: 0.85rem 1.1rem;
+      background: var(--bg-section); border: 1px solid var(--line); border-left: 4px solid var(--red);
+      border-radius: 14px; padding: 0.85rem 1.1rem;
       display: flex; align-items: center; gap: 0.65rem;
-      margin-bottom: 1.5rem; font-size: 0.88rem; color: #b91c1c; font-weight: 600;
+      margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--ink); font-weight: 600;
       display: none;
     }
-    [data-theme="dark"] .expired-banner { background: #2d0a0a; border-color: #ef4444; color: #f87171; }
     .expired-banner span { font-size: 1.2rem; }
 
-    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.3rem; color: var(--ink); }
     .page-sub { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 2rem; line-height: 1.5; }
 
-    /* Plan card */
+    /* Plan card — soft shadow, 22px radius, ink border for selected */
     .plan-card {
-      background: var(--bg-card); border: 2px solid var(--accent);
-      border-radius: 8px; padding: 1.75rem;
-      box-shadow: var(--shadow); margin-bottom: 1.5rem;
+      background: var(--bg-card); border: 1px solid var(--line);
+      border-radius: 22px; padding: 1.75rem;
+      box-shadow: var(--shadow-soft); margin-bottom: 1.5rem;
     }
+    .plan-card.selected,
+    .plan-card.active { border: 2px solid var(--ink); }
     .plan-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
-    .plan-name { font-size: 1.1rem; font-weight: 800; }
+    .plan-name { font-size: 1.1rem; font-weight: 800; color: var(--ink); }
     .plan-price { text-align: right; }
-    .plan-amount { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; }
+    .plan-amount { font-size: 2rem; font-weight: 900; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
     .plan-period { font-size: 0.78rem; color: var(--text-muted); }
 
     .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; }
@@ -61,20 +103,22 @@
 
     .plan-trial-note {
       font-size: 0.78rem; color: var(--text-muted);
-      background: var(--bg); border-radius: 8px; padding: 0.6rem 0.85rem;
-      border: 1px solid var(--border); margin-bottom: 1.25rem;
+      background: var(--bg-section); border-radius: 14px; padding: 0.6rem 0.85rem;
+      border: 1px solid var(--line); margin-bottom: 1.25rem;
     }
 
+    /* Checkout CTA — black ink pill */
     .btn-checkout {
       display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      width: 100%; padding: 0.9rem 1.5rem;
-      background: var(--accent); color: #fff;
-      border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
-      cursor: pointer; transition: background 0.2s, transform 0.15s;
+      width: 100%; height: 52px; padding: 0 1.5rem;
+      background: var(--ink); color: #fff;
+      border: 1px solid var(--ink); border-radius: var(--r-pill); font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
       text-decoration: none;
     }
-    .btn-checkout:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    [data-theme="dark"] .btn-checkout { color: var(--bg); }
+    .btn-checkout:hover { transform: translateY(-1px); box-shadow: var(--shadow-soft); }
+    .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn-checkout svg { width: 18px; height: 18px; fill: currentColor; }
 
     .skip-link {
@@ -82,16 +126,15 @@
       font-size: 0.83rem; color: var(--text-muted); text-decoration: none;
       transition: color 0.2s;
     }
-    .skip-link:hover { color: var(--accent); }
+    .skip-link:hover { color: var(--ink); }
 
-    /* Cancelled notice */
+    /* Cancelled notice — unified 14px radius w/ amber left-border */
     .cancelled-notice {
-      background: #fffbeb; border: 1.5px solid #f59e0b;
-      border-radius: 10px; padding: 0.75rem 1rem;
-      font-size: 0.84rem; color: #92400e; margin-bottom: 1.25rem;
+      background: var(--bg-section); border: 1px solid var(--line); border-left: 4px solid #f59e0b;
+      border-radius: 14px; padding: 0.75rem 1rem;
+      font-size: 0.84rem; color: var(--ink); margin-bottom: 1.25rem;
       display: none;
     }
-    [data-theme="dark"] .cancelled-notice { background: #2d1f00; border-color: #d97706; color: #fcd34d; }
 
     .secure-note { display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.76rem; color: var(--text-muted); margin-top: 1.25rem; }
     .secure-note svg { width: 13px; height: 13px; fill: var(--text-muted); }

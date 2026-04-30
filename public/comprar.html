@@ -18,10 +18,48 @@
     :root {
       --toggle-bg: #CBD5E1;
       --toggle-knob: #FFFFFF;
+      /* Editorial palette — overrides core.css for cream/ink portal look */
+      --bg:          #FBF6EE;
+      --bg-card:     #FFFFFF;
+      --bg-section:  #F4F1EA;
+      --ink:         #131318;
+      --ink-soft:    #36363E;
+      --ink-muted:   #8A8A93;
+      --line:        rgba(19,19,24,0.10);
+      --line-soft:   rgba(19,19,24,0.06);
+      --serif:       ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill:      999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop:  0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      /* Repoint downstream tokens to ink-on-cream */
+      --text:        var(--ink);
+      --text-secondary: var(--ink-soft);
+      --text-muted:  var(--ink-muted);
+      --border:      var(--line);
+      --accent:      var(--ink);
+      --accent-hover: #000;
+      --accent-light: rgba(19,19,24,0.06);
     }
     [data-theme="dark"] {
       --toggle-bg: #2D3F58;
       --toggle-knob: #EDF2F7;
+      --bg:          #15131A;
+      --bg-card:     #1F1C24;
+      --bg-section:  #1A1820;
+      --ink:         #F5F1EA;
+      --ink-soft:    #C9C5BC;
+      --ink-muted:   #8B867E;
+      --line:        rgba(245,241,234,0.12);
+      --line-soft:   rgba(245,241,234,0.06);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop:  0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --text:        var(--ink);
+      --text-secondary: var(--ink-soft);
+      --text-muted:  var(--ink-muted);
+      --border:      var(--line);
+      --accent:      var(--ink);
+      --accent-hover: #fff;
+      --accent-light: rgba(245,241,234,0.10);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -83,23 +121,23 @@
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
     .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text); font-size: 0.9rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 6px; cursor: pointer; transition: border-color 0.2s, color 0.2s; text-decoration: none; }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-    /* Dominican flag red — Iniciar Sesión nav button */
-    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
-    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
-    .btn-nav-primary { background: var(--accent); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 6px; text-decoration: none; transition: background 0.2s; }
-    .btn-nav-primary:hover { background: var(--accent-hover); }
+    /* Iniciar Sesión & primary nav CTA — black ink pill (editorial) */
+    .btn-login { background: var(--ink); border: 1px solid var(--ink); color: #fff !important; font-size: 0.9rem; font-weight: 600; padding: 0 1.4rem; height: 44px; border-radius: var(--r-pill); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: var(--shadow-soft); }
+    .btn-nav-primary { background: var(--ink); color: #fff; font-size: 0.9rem; font-weight: 600; padding: 0 1.4rem; height: 44px; border-radius: var(--r-pill); text-decoration: none; display: inline-flex; align-items: center; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .btn-nav-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-soft); }
 
-    /* PAGE HEADER */
-    .page-header { background: linear-gradient(135deg, #001840 0%, #002D62 55%, #003d88 100%); padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+    /* PAGE HEADER — editorial cream tone */
+    .page-header { background: var(--bg-section); color: var(--ink); padding: 3.25rem 2rem 2.75rem; position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
     .page-header-shapes { position: absolute; inset: 0; pointer-events: none; }
-    .ph-shape { position: absolute; border-radius: 50%; opacity: 0.07; background: #fff; }
+    .ph-shape { position: absolute; border-radius: 50%; opacity: 0.05; background: var(--ink); }
     .ph-shape-1 { width: 380px; height: 380px; top: -180px; right: -80px; }
     .ph-shape-2 { width: 180px; height: 180px; bottom: -80px; left: 8%; }
     .page-header-inner { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; }
-    .page-eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(10,124,79,0.85); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.28rem 0.8rem; border-radius: 50px; margin-bottom: 0.9rem; }
-    .page-eyebrow svg { width: 10px; height: 10px; fill: #fff; }
-    .page-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
-    .page-sub { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+    .page-eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--ink-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; padding: 0.28rem 0; border-radius: 0; margin-bottom: 0.9rem; }
+    .page-eyebrow svg { width: 10px; height: 10px; fill: var(--ink-muted); }
+    .page-title { font-family: var(--serif); font-size: clamp(2rem, 4.5vw, 3.25rem); font-weight: 600; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.5rem; line-height: 1.1; }
+    .page-sub { color: var(--ink-muted); font-size: 0.95rem; }
 
     /* FILTERS — Zillow chip-style */
     .filters-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 68px; z-index: 90; }
@@ -132,9 +170,9 @@
     .listings-section { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
     .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
 
-    /* PROPERTY CARD — Zillow/Redfin inspired */
-    .prop-card { background: var(--bg-card); border-radius: 8px; overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s ease, transform 0.2s ease; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .prop-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); transform: translateY(-2px); }
+    /* PROPERTY CARD — editorial soft shadow */
+    .prop-card { background: var(--bg-card); border-radius: 22px; overflow: hidden; text-decoration: none; color: var(--text); transition: box-shadow 0.2s ease, transform 0.2s ease; display: flex; flex-direction: column; box-shadow: var(--shadow-soft); }
+    .prop-card:hover { box-shadow: var(--shadow-pop); transform: translateY(-2px); }
     .card-img { height: 200px; background: #e8ecf2; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; overflow: hidden; }
     .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
     .prop-card:hover .card-img img { transform: scale(1.03); }
@@ -223,7 +261,7 @@
     .card-save { position: absolute; top: 0.75rem; right: 0.75rem; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; transition: background 0.2s; }
     .card-save:hover { background: rgba(0,0,0,0.6); }
     .card-save svg { width: 18px; height: 18px; fill: #fff; transition: fill 0.2s; }
-    .card-save.saved svg { fill: #CF142B; }
+    .card-save.saved svg { fill: var(--red); }
 
     /* MOBILE FILTER DRAWER */
     .filter-toggle-mobile { display: none; }
