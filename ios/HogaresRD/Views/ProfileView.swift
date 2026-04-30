@@ -143,7 +143,7 @@ struct ProfileView: View {
 
             VStack(spacing: 12) {
                 Button {
-                    authSheet = .login
+                    authSheet = .welcome
                 } label: {
                     Text("Iniciar sesión")
                         .font(.headline)

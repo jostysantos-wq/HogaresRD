@@ -371,7 +371,7 @@ struct ProfileMenuView: View {
                             .foregroundStyle(.secondary)
                         HStack(spacing: 10) {
                             Button {
-                                authSheet = .login
+                                authSheet = .welcome
                             } label: {
                                 Text("Iniciar sesión")
                                     .font(.caption).bold()

@@ -94,7 +94,7 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .authRequiredForFavorite)) { _ in
-            favAuthSheet = .login
+            favAuthSheet = .welcome
         }
         .onReceive(NotificationCenter.default.publisher(for: .pushSoftAskTriggered)) { _ in
             // Only show if not already showing the email verification popup
@@ -487,7 +487,7 @@ struct MessagesTabView: View {
             }
         }
         .sheet(isPresented: $showAuth) {
-            AuthView(initialMode: .login).environmentObject(api)
+            AuthView().environmentObject(api)
         }
     }
 
@@ -538,7 +538,7 @@ struct TasksTabView: View {
             }
         }
         .sheet(isPresented: $showAuth) {
-            AuthView(initialMode: .login).environmentObject(api)
+            AuthView().environmentObject(api)
         }
     }
 
@@ -716,7 +716,7 @@ struct ProfileTabView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    authSheet = .login
+                    authSheet = .welcome
                 } label: {
                     Text("Iniciar sesión")
                         .font(.caption).bold()

@@ -8,9 +8,10 @@ struct AuthView: View {
     @Environment(\.dismiss) var dismiss
 
     enum Mode: Identifiable, Hashable {
-        case login, pickRole, registerUser, registerBroker, registerInmobiliaria, registerConstructora
+        case welcome, login, pickRole, registerUser, registerBroker, registerInmobiliaria, registerConstructora
         var id: String {
             switch self {
+            case .welcome: return "welcome"
             case .login: return "login"
             case .pickRole: return "pickRole"
             case .registerUser: return "registerUser"
@@ -24,7 +25,7 @@ struct AuthView: View {
     @State private var mode: Mode
     private let initialMode: Mode
 
-    init(initialMode: Mode = .login) {
+    init(initialMode: Mode = .welcome) {
         self.initialMode = initialMode
         _mode = State(initialValue: initialMode)
     }
@@ -45,92 +46,352 @@ struct AuthView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Header
-                    ZStack {
-                        LinearGradient(colors: [
-                            Color(red: 0, green: 0.07, blue: 0.19), Color.rdBlue
-                        ], startPoint: .topLeading, endPoint: .bottomTrailing)
+            Group {
+                if mode == .welcome {
+                    // Full-bleed welcome screen — design ported from
+                    // Claude Design (ios-login.html). Replaces the old
+                    // gradient header + tab picker for the entry view.
+                    WelcomeLoginScreen(
+                        onEmail:    { withAnimation(.easeInOut(duration: 0.22)) { mode = .login } },
+                        onRegister: { withAnimation(.easeInOut(duration: 0.22)) { mode = .pickRole } },
+                        onSuccess:  { dismiss() }
+                    )
+                } else {
+                    // Existing chrome (header + tab picker + form) for
+                    // login + register flows. Reachable from the
+                    // welcome screen's "Iniciar sesión con Email" and
+                    // "Regístrate" links.
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ZStack {
+                                LinearGradient(colors: [
+                                    Color(red: 0, green: 0.07, blue: 0.19), Color.rdBlue
+                                ], startPoint: .topLeading, endPoint: .bottomTrailing)
 
-                        VStack(spacing: 8) {
-                            Image(systemName: "house.fill")
-                                .font(.largeTitle)
-                                .foregroundStyle(.white)
-                            Text("HogaresRD")
-                                .font(.title2).bold()
-                                .foregroundStyle(.white)
-                            if mode == .pickRole {
-                                Text("Elige tu tipo de cuenta")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.8))
+                                VStack(spacing: 8) {
+                                    Image(systemName: "house.fill")
+                                        .font(.largeTitle)
+                                        .foregroundStyle(.white)
+                                    Text("HogaresRD")
+                                        .font(.title2).bold()
+                                        .foregroundStyle(.white)
+                                    if mode == .pickRole {
+                                        Text("Elige tu tipo de cuenta")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                    }
+                                }
+                                .padding(.vertical, 36)
+                            }
+
+                            if mode == .login || mode == .pickRole {
+                                HStack(spacing: 0) {
+                                    modeTab(title: "Iniciar sesión", isActive: mode == .login) {
+                                        withAnimation(.easeInOut(duration: 0.18)) { mode = .login }
+                                    }
+                                    modeTab(title: "Crear cuenta", isActive: mode == .pickRole) {
+                                        withAnimation(.easeInOut(duration: 0.18)) { mode = .pickRole }
+                                    }
+                                }
+                                .background(Color(.systemGray6))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .padding()
+                            }
+
+                            switch mode {
+                            case .welcome:
+                                EmptyView() // handled above
+                            case .login:
+                                LoginForm(onSuccess: { dismiss() })
+                            case .pickRole:
+                                RolePickerView(
+                                    onPickUser: { mode = .registerUser },
+                                    onPickBroker: { mode = .registerBroker },
+                                    onPickInmobiliaria: { mode = .registerInmobiliaria },
+                                    onPickConstructora: { mode = .registerConstructora }
+                                )
+                            case .registerUser:
+                                RegisterForm(
+                                    onSuccess: { dismiss() },
+                                    onBack: { mode = .pickRole }
+                                )
+                            case .registerBroker:
+                                BrokerRegisterForm(
+                                    onSuccess: { dismiss() },
+                                    onBack: { mode = .pickRole }
+                                )
+                            case .registerInmobiliaria:
+                                InmobiliariaRegisterForm(
+                                    onSuccess: { dismiss() },
+                                    onBack: { mode = .pickRole }
+                                )
+                            case .registerConstructora:
+                                ConstructoraRegisterForm(
+                                    onSuccess: { dismiss() },
+                                    onBack: { mode = .pickRole }
+                                )
                             }
                         }
-                        .padding(.vertical, 36)
                     }
-
-                    // Custom mode toggle — replaces segmented Picker because
-                    // SwiftUI's Picker was briefly flipping to .pickRole on
-                    // first render, opening the wrong tab.
-                    if mode == .login || mode == .pickRole {
-                        HStack(spacing: 0) {
-                            modeTab(title: "Iniciar sesión", isActive: mode == .login) {
-                                withAnimation(.easeInOut(duration: 0.18)) { mode = .login }
-                            }
-                            modeTab(title: "Crear cuenta", isActive: mode == .pickRole) {
-                                withAnimation(.easeInOut(duration: 0.18)) { mode = .pickRole }
-                            }
-                        }
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .padding()
-                    }
-
-                    switch mode {
-                    case .login:
-                        LoginForm(onSuccess: { dismiss() })
-
-                    case .pickRole:
-                        RolePickerView(
-                            onPickUser: { mode = .registerUser },
-                            onPickBroker: { mode = .registerBroker },
-                            onPickInmobiliaria: { mode = .registerInmobiliaria },
-                            onPickConstructora: { mode = .registerConstructora }
-                        )
-
-                    case .registerUser:
-                        RegisterForm(
-                            onSuccess: { dismiss() },
-                            onBack: { mode = .pickRole }
-                        )
-
-                    case .registerBroker:
-                        BrokerRegisterForm(
-                            onSuccess: { dismiss() },
-                            onBack: { mode = .pickRole }
-                        )
-
-                    case .registerInmobiliaria:
-                        InmobiliariaRegisterForm(
-                            onSuccess: { dismiss() },
-                            onBack: { mode = .pickRole }
-                        )
-
-                    case .registerConstructora:
-                        ConstructoraRegisterForm(
-                            onSuccess: { dismiss() },
-                            onBack: { mode = .pickRole }
-                        )
-                    }
+                    .ignoresSafeArea(edges: .top)
                 }
             }
-            .ignoresSafeArea(edges: .top)
             .onAppear { mode = initialMode }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cerrar") { dismiss() }
+                if mode == .welcome {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cerrar") { dismiss() }
+                            .foregroundStyle(.white)
+                    }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(mode == .login ? "Cerrar" : "← Volver") {
+                            if mode == .login {
+                                // From login form go back to the welcome screen
+                                withAnimation(.easeInOut(duration: 0.22)) { mode = .welcome }
+                            } else {
+                                dismiss()
+                            }
+                        }
+                    }
                 }
+            }
+            .toolbarBackground(mode == .welcome ? .hidden : .automatic, for: .navigationBar)
+        }
+    }
+}
+
+// MARK: - Welcome Login Screen
+// Ported from Claude Design (hogaresrd/project/ios-login.html).
+// Full-bleed architectural hero photo, dark gradient fade into a
+// content panel with the brand mark, marquee headline, and three
+// pill CTAs (Email / Apple / Google).
+
+struct WelcomeLoginScreen: View {
+    var onEmail: () -> Void
+    var onRegister: () -> Void
+    var onSuccess: () -> Void
+
+    @EnvironmentObject var api: APIService
+    @State private var error: String?
+    @State private var loading = false
+    @State private var showGoogleNotice = false
+
+    // Same Unsplash hero used in the design mock. Falls back to a
+    // dark blue gradient if the network request fails or the user is
+    // offline — the rest of the layout doesn't depend on it.
+    private static let heroURL = URL(string:
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80"
+    )!
+
+    var body: some View {
+        ZStack {
+            Color(red: 14/255, green: 18/255, blue: 25/255)
+                .ignoresSafeArea()
+
+            // Hero photo — full bleed, occupies the top ~65% of the screen
+            GeometryReader { geo in
+                AsyncImage(url: Self.heroURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    default:
+                        LinearGradient(colors: [
+                            Color(red: 0.08, green: 0.16, blue: 0.30),
+                            Color(red: 0.04, green: 0.07, blue: 0.13)
+                        ], startPoint: .top, endPoint: .bottom)
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height * 0.65)
+                .clipped()
+            }
+            .ignoresSafeArea(.all)
+
+            // Gradient fade — transparent at the top of the panel,
+            // solid #0E1219 by ~45% from the bottom of the screen
+            LinearGradient(stops: [
+                .init(color: .clear,                                                         location: 0.0),
+                .init(color: Color(red: 14/255, green: 18/255, blue: 25/255).opacity(0.6),  location: 0.55),
+                .init(color: Color(red: 14/255, green: 18/255, blue: 25/255),                location: 0.78)
+            ], startPoint: .top, endPoint: .bottom)
+            .ignoresSafeArea()
+
+            // Bottom-anchored content panel
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer(minLength: 0)
+
+                // Brand mark — matches the small house glyph from the design
+                ZStack {
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.95))
+                }
+                .padding(.bottom, 16)
+
+                // Headline — three lines, middle line emphasised
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Encuentra tu")
+                        .font(.system(size: 30, weight: .bold))
+                    Text("Próximo Hogar")
+                        .font(.system(size: 30, weight: .heavy))
+                    Text("en República Dominicana")
+                        .font(.system(size: 30, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .lineSpacing(-2)
+                .padding(.bottom, 32)
+
+                // CTA stack
+                VStack(spacing: 12) {
+                    // Email — primary blue
+                    Button(action: onEmail) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("Iniciar sesión con Email")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(Color(red: 0/255, green: 106/255, blue: 255/255))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    // Apple — native button styled to match
+                    SignInWithAppleButton(.continue) { request in
+                        request.requestedScopes = [.fullName, .email]
+                    } onCompletion: { result in
+                        Task { await handleAppleSignIn(result) }
+                    }
+                    .signInWithAppleButtonStyle(.white)
+                    .frame(height: 54)
+                    .clipShape(Capsule())
+
+                    // Google — visual placeholder; not yet wired to a real provider
+                    Button {
+                        showGoogleNotice = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            googleGlyph
+                                .frame(width: 18, height: 18)
+                            Text("Continuar con Google")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(Color.white.opacity(0.10))
+                        .overlay(
+                            Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 1.5)
+                        )
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.bottom, 20)
+
+                if let err = error {
+                    Text(err)
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.red.opacity(0.20))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.bottom, 12)
+                }
+
+                // Sign-up
+                HStack(spacing: 4) {
+                    Text("¿No tienes cuenta?")
+                        .foregroundStyle(.white.opacity(0.65))
+                    Button(action: onRegister) {
+                        Text("Regístrate")
+                            .foregroundStyle(.white)
+                            .underline()
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .font(.system(size: 13.5))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 16)
+
+                // Legal
+                Text(legalText)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.38))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .padding(.horizontal, 26)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+        .alert("Próximamente", isPresented: $showGoogleNotice) {
+            Button("Entendido", role: .cancel) {}
+        } message: {
+            Text("Iniciar sesión con Google estará disponible pronto. Por ahora puedes usar Email o Apple ID.")
+        }
+    }
+
+    // Multi-color "G" — small inline glyph that matches the four-color
+    // Google brand without bundling a full asset.
+    private var googleGlyph: some View {
+        ZStack {
+            Image(systemName: "g.circle.fill")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.white)
+        }
+    }
+
+    private var legalText: AttributedString {
+        var s = AttributedString("Al crear una cuenta aceptas nuestros Términos de Servicio y Política de Privacidad")
+        if let r = s.range(of: "Términos de Servicio") {
+            s[r].foregroundColor = .white.opacity(0.6)
+            s[r].underlineStyle = .single
+        }
+        if let r = s.range(of: "Política de Privacidad") {
+            s[r].foregroundColor = .white.opacity(0.6)
+            s[r].underlineStyle = .single
+        }
+        return s
+    }
+
+    // ── Apple Sign-In wiring (mirrors LoginForm.handleAppleSignIn) ──
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let auth):
+            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                  let identityToken = credential.identityToken,
+                  let tokenStr = String(data: identityToken, encoding: .utf8) else {
+                self.error = "No se pudo obtener el token de Apple"
+                return
+            }
+            loading = true; error = nil
+            do {
+                let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                    .compactMap { $0 }.joined(separator: " ")
+                try await api.loginWithApple(
+                    identityToken: tokenStr,
+                    name:  fullName.isEmpty ? nil : fullName,
+                    email: credential.email
+                )
+                onSuccess()
+            } catch {
+                self.error = error.localizedDescription
+            }
+            loading = false
+        case .failure(let err):
+            if (err as NSError).code != ASAuthorizationError.canceled.rawValue {
+                self.error = "Error de Apple Sign In: \(err.localizedDescription)"
             }
         }
     }
