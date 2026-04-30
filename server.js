@@ -34,7 +34,9 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     process.exit(1);
   }
   // Soft warnings — these are needed for full production functionality
-  // (payments, webhooks) but the server can boot without them.
+  // (payments, webhooks) but the server can boot without them so dev/test
+  // environments work out of the box. The two webhook secrets get extra
+  // emphasis because missing them turns those endpoints into open doors.
   const optional = [
     'STRIPE_WEBHOOK_SECRET',
     'STRIPE_BROKER_PRICE_ID',
@@ -46,6 +48,14 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   const missingOptional = optional.filter(k => !process.env[k]);
   if (missingOptional.length) {
     console.warn(`[boot] Missing optional env: ${missingOptional.join(', ')}`);
+  }
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.warn('\n⚠️  STRIPE_WEBHOOK_SECRET is not set — /api/stripe/webhook will return 503.');
+    console.warn('    Without this secret the Stripe webhook cannot verify signatures and is unsafe to expose.\n');
+  }
+  if (!process.env.META_APP_SECRET) {
+    console.warn('\n⚠️  META_APP_SECRET is not set — /api/webhooks/meta will return 503.');
+    console.warn('    Without this secret the Meta lead-ad webhook cannot verify X-Hub-Signature-256.\n');
   }
 })();
 

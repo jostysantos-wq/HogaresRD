@@ -7,6 +7,7 @@
 'use strict';
 
 const express = require('express');
+const crypto  = require('crypto');
 const https   = require('https');
 const store   = require('./store');
 
@@ -14,6 +15,19 @@ const router = express.Router();
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || '';
 const ACCESS_TOKEN = process.env.META_ACCESS_TOKEN || '';
+const APP_SECRET   = process.env.META_APP_SECRET || '';
+
+// Constant-time hex comparison. Returns false on any length mismatch
+// (timingSafeEqual throws if buffers differ in length).
+function _safeHexEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+  } catch {
+    return false;
+  }
+}
 
 // ── GET — Webhook verification (Meta sends hub.challenge) ─────────────────
 router.get('/', (req, res) => {
@@ -30,11 +44,45 @@ router.get('/', (req, res) => {
 });
 
 // ── POST — Lead notification ───────────────────────────────────────────────
-router.post('/', express.json(), (req, res) => {
+// We use express.raw here so we can compute the HMAC over the exact bytes
+// Meta sent, then JSON.parse manually. Mounting express.json() before this
+// would re-serialize the body and break signature verification.
+router.post('/', express.raw({ type: '*/*', limit: '1mb' }), (req, res) => {
+  // Refuse to process if the app secret isn't configured — without it we
+  // cannot distinguish real Meta callbacks from forged ones.
+  if (!APP_SECRET) {
+    console.error('[Meta Webhook] META_APP_SECRET is not set — rejecting webhook.');
+    return res.status(503).json({ error: 'webhook not configured' });
+  }
+
+  const sigHeader = req.headers['x-hub-signature-256'] || '';
+  const expectedPrefix = 'sha256=';
+  if (!sigHeader.startsWith(expectedPrefix)) {
+    console.warn('[Meta Webhook] Missing or malformed X-Hub-Signature-256 header');
+    return res.status(401).json({ error: 'invalid signature' });
+  }
+
+  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
+  const expected = crypto.createHmac('sha256', APP_SECRET).update(rawBody).digest('hex');
+  const provided = sigHeader.slice(expectedPrefix.length);
+
+  if (!_safeHexEqual(expected, provided)) {
+    console.warn('[Meta Webhook] Signature mismatch — rejecting');
+    return res.status(401).json({ error: 'invalid signature' });
+  }
+
+  // Parse the JSON ourselves now that the signature has been validated.
+  let body;
+  try {
+    body = JSON.parse(rawBody.toString('utf8') || '{}');
+  } catch (err) {
+    console.warn('[Meta Webhook] Invalid JSON payload:', err.message);
+    return res.status(400).json({ error: 'invalid json' });
+  }
+
   // Acknowledge immediately (Meta requires 200 within 5 s)
   res.status(200).send('EVENT_RECEIVED');
 
-  const body = req.body;
   if (!body || body.object !== 'page') return;
 
   for (const entry of body.entry || []) {

@@ -1415,11 +1415,14 @@ router.post('/biometric/revoke', userAuth, (req, res) => {
 });
 
 // Optional auth — sets req.user if token present, but doesn't reject
+// Mirrors userAuth's token-extraction order so cookie-authenticated browsers
+// (which never send Authorization headers) still get their req.user populated.
 function optionalAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) { req.user = null; return next(); }
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  const token = cookieToken || headerToken;
+  if (!token) { req.user = null; return next(); }
   try {
-    const token   = header.split(' ')[1];
     const decoded = verifyJWT(token);
     if (decoded.jti && store.isTokenRevoked(decoded.jti)) { req.user = null; return next(); }
     req.user = decoded;
@@ -1435,52 +1438,42 @@ let _appleKeysCacheTs = 0;
 async function getApplePublicKeys() {
   const now = Date.now();
   if (_appleKeysCache && (now - _appleKeysCacheTs) < 3600000) return _appleKeysCache; // 1h cache
-  try {
-    const res = await fetch('https://appleid.apple.com/auth/keys');
-    if (!res.ok) throw new Error('Apple JWKS fetch failed: ' + res.status);
-    _appleKeysCache = await res.json();
-    _appleKeysCacheTs = now;
-    return _appleKeysCache;
-  } catch (err) {
-    console.error('[auth] Failed to fetch Apple keys:', err.message);
-    return _appleKeysCache; // Return stale cache if available
-  }
+  // Fetch fresh JWKS. We deliberately throw on failure so callers can
+  // 503 — there is no safe fallback for Apple Sign In.
+  const res = await fetch('https://appleid.apple.com/auth/keys');
+  if (!res.ok) throw new Error('Apple JWKS fetch failed: ' + res.status);
+  _appleKeysCache = await res.json();
+  _appleKeysCacheTs = now;
+  return _appleKeysCache;
 }
 
 async function verifyAppleToken(identityToken) {
   const jwt = require('jsonwebtoken');
-  const jwksClient = require('jwks-rsa');
 
-  // First try full verification with Apple's public keys
-  try {
-    const jwks = await getApplePublicKeys();
-    if (jwks && jwks.keys) {
-      const header = JSON.parse(Buffer.from(identityToken.split('.')[0], 'base64url').toString());
-      const key = jwks.keys.find(k => k.kid === header.kid);
-      if (key) {
-        // Convert JWK to PEM
-        const crypto = require('crypto');
-        const pubKey = crypto.createPublicKey({ key, format: 'jwk' });
-        const pem = pubKey.export({ type: 'spki', format: 'pem' });
-        const decoded = jwt.verify(identityToken, pem, {
-          algorithms: ['RS256'],
-          issuer: 'https://appleid.apple.com',
-          audience: ['com.josty.hogaresrd', 'com.josty.hogaresrd.web'],
-        });
-        return { verified: true, decoded };
-      }
-    }
-  } catch (verifyErr) {
-    console.warn('[auth] Apple token verification failed, falling back to decode:', verifyErr.message);
+  // Verify with Apple's public keys. Any failure (JWKS unreachable, kid
+  // missing, signature invalid) MUST throw — never fall back to an
+  // unverified jwt.decode(), which accepts forged tokens.
+  const jwks = await getApplePublicKeys();
+  if (!jwks || !jwks.keys) {
+    throw new Error('Apple JWKS unavailable');
   }
-
-  // Fallback: decode without verification (for dev/testing)
-  const decoded = jwt.decode(identityToken);
-  if (!decoded || !decoded.sub) return { verified: false, decoded: null };
-  return { verified: false, decoded };
+  const header = JSON.parse(Buffer.from(identityToken.split('.')[0], 'base64url').toString());
+  const key = jwks.keys.find(k => k.kid === header.kid);
+  if (!key) {
+    throw new Error('Apple JWKS does not contain a key for kid=' + header.kid);
+  }
+  const crypto = require('crypto');
+  const pubKey = crypto.createPublicKey({ key, format: 'jwk' });
+  const pem = pubKey.export({ type: 'spki', format: 'pem' });
+  const decoded = jwt.verify(identityToken, pem, {
+    algorithms: ['RS256'],
+    issuer: 'https://appleid.apple.com',
+    audience: ['com.josty.hogaresrd', 'com.josty.hogaresrd.web'],
+  });
+  return { verified: true, decoded };
 }
 
-router.post('/apple', async (req, res) => {
+router.post('/apple', authLimiter, async (req, res) => {
   try {
     const { identityToken, name, email } = req.body;
     if (!identityToken) {
@@ -1488,26 +1481,32 @@ router.post('/apple', async (req, res) => {
       return res.status(400).json({ error: 'Missing identityToken' });
     }
 
-    // Verify and decode the Apple identity token
-    const { verified, decoded } = await verifyAppleToken(identityToken);
-    if (!decoded || !decoded.sub) {
-      console.warn('[auth] Apple Sign In: invalid token (decode failed)');
-      return res.status(400).json({ error: 'Invalid Apple token' });
-    }
-
-    if (!verified) {
-      if (IS_PROD) {
-        console.error('[auth] Apple Sign In: token not cryptographically verified — rejecting in production');
-        return res.status(400).json({ error: 'No se pudo verificar el token de Apple. Intenta de nuevo.' });
+    // Verify and decode the Apple identity token. verifyAppleToken throws
+    // on any failure — there is no unsafe fallback path.
+    let decoded;
+    try {
+      const result = await verifyAppleToken(identityToken);
+      decoded = result.decoded;
+    } catch (verifyErr) {
+      // JWKS unavailable / signature invalid / kid missing — refuse.
+      // 503 specifically when Apple's keys couldn't be fetched.
+      const isJwksFailure = /JWKS/.test(verifyErr.message);
+      console.error('[auth] Apple Sign In: token verification failed —', verifyErr.message);
+      if (isJwksFailure) {
+        return res.status(503).json({ error: 'No se pudo contactar a Apple para verificar el token. Intenta de nuevo en unos minutos.' });
       }
-      console.warn('[auth] Apple Sign In: token not verified (dev mode — proceeding with decoded sub)');
+      return res.status(400).json({ error: 'No se pudo verificar el token de Apple. Intenta de nuevo.' });
+    }
+    if (!decoded || !decoded.sub) {
+      console.warn('[auth] Apple Sign In: invalid token (no sub)');
+      return res.status(400).json({ error: 'Invalid Apple token' });
     }
 
     const appleUserId = decoded.sub;
     const appleEmail = email || decoded.email || `apple_${appleUserId.substring(0, 8)}@hogaresrd.com`;
     const userName = name || (decoded.email ? decoded.email.split('@')[0] : `Usuario Apple`);
 
-    console.log(`[auth] Apple Sign In attempt: sub=${appleUserId.substring(0,8)}…, email=${appleEmail}, verified=${verified}`);
+    console.log(`[auth] Apple Sign In attempt: sub=${appleUserId.substring(0,8)}…, email=${appleEmail}, verified=true`);
 
     // Check if user already exists with this Apple ID (stored in _extra)
     let user = store.getUsers().find(u => {
@@ -1616,10 +1615,22 @@ router.delete('/delete-account', userAuth, async (req, res) => {
 });
 
 // POST /auth/apple-subscription — Sync Apple IAP subscription with user role
-router.post('/apple-subscription', userAuth, async (req, res) => {
+//
+// TODO: Replace this client-trusted flow with server-side Apple receipt
+// validation against the App Store Server API:
+//   POST https://api.storekit.itunes.apple.com/inApps/v1/transactions/{transactionId}
+// (sandbox host: api.storekit-sandbox.itunes.apple.com). Until then, we
+// rely on (a) transactionID uniqueness across users, (b) a 1-year expiration
+// cap, and (c) full security logging so abuse is visible.
+router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
     const { productID, transactionID, originalTransactionID, role, expirationDate } = req.body;
+
+    // Always log every call — this endpoint is client-trusted and abuse-prone.
+    logSec('apple_iap_subscription_call', req, {
+      userId, productID, transactionID, originalTransactionID, role, expirationDate,
+    });
 
     if (!productID || !transactionID || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -1632,6 +1643,41 @@ router.post('/apple-subscription', userAuth, async (req, res) => {
 
     const user = store.getUserById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // ── Security: transactionID must be unique per user ──
+    // If the same Apple transactionID appears on another account, this is
+    // either a replay or a stolen receipt. Reject loudly.
+    const txKey = String(transactionID);
+    const collidingUser = store.getUsers().find(u => {
+      if (u.id === user.id) return false;
+      const extra = typeof u._extra === 'string' ? _jsonParseSafe(u._extra) : (u._extra || {});
+      const sub = extra.appleSubscription;
+      if (!sub) return false;
+      return String(sub.transactionID) === txKey
+          || String(sub.originalTransactionID || '') === txKey;
+    });
+    if (collidingUser) {
+      logSec('apple_iap_transaction_collision', req, {
+        userId, otherUserId: collidingUser.id, transactionID,
+      });
+      return res.status(409).json({ error: 'Esta transaccion ya esta asociada a otra cuenta.' });
+    }
+
+    // ── Security: cap expirationDate at 1 year from now ──
+    // The client supplies this value; without a cap a malicious client
+    // could pass year 2099 and bypass renewal forever.
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+    const maxExpiry = new Date(Date.now() + ONE_YEAR_MS);
+    let cappedExpiration = null;
+    if (expirationDate) {
+      const parsed = new Date(expirationDate);
+      if (!isNaN(parsed.getTime())) {
+        cappedExpiration = (parsed > maxExpiry ? maxExpiry : parsed).toISOString();
+      }
+    }
+    if (!cappedExpiration) {
+      cappedExpiration = maxExpiry.toISOString();
+    }
 
     // ── Security: block upgrade to inmobiliaria/constructora if agent is linked to one ──
     // An agent (broker/agency) who is affiliated with an inmobiliaria must leave
@@ -1690,7 +1736,8 @@ router.post('/apple-subscription', userAuth, async (req, res) => {
       transactionID,
       originalTransactionID,
       role,
-      expirationDate: expirationDate || null,
+      // expirationDate is capped server-side; client cannot push it past 1y.
+      expirationDate: cappedExpiration,
       subscribedAt: new Date().toISOString(),
     };
     user._extra = JSON.stringify(extra);
