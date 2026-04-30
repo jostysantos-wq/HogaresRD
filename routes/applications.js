@@ -49,7 +49,7 @@ const appCreateLimiter = rateLimit({
 });
 
 const { createTransport } = require('./mailer');
-const transporter = createTransport();
+let transporter = createTransport();
 
 // ── Constants ─────────────────────────────────────────────────────
 const uuid = () => crypto.randomUUID();
@@ -235,10 +235,69 @@ function addEvent(app, type, description, actor, actorName, data = {}) {
   app.updated_at = new Date().toISOString();
 }
 
-function sendNotification(to, subject, html) {
+// Persist a failed delivery onto the application so it's auditable
+// and can be surfaced (or retried) later. Side-effect-only — never
+// throws; if even the recording itself blows up we just log it.
+function recordNotificationFailure(app, info) {
+  try {
+    if (!app) return;
+    app.notification_failures = app.notification_failures || [];
+    app.notification_failures.push({
+      id:        uuid(),
+      recipient: info.recipient || '',
+      subject:   info.subject   || '',
+      purpose:   info.purpose   || 'unknown',
+      error:     info.error     || 'unknown',
+      failed_at: new Date().toISOString(),
+      retried:   false,
+    });
+    addEvent(app, 'notification_failed',
+      `No se pudo enviar el email "${info.subject}" a ${info.recipient}: ${info.error}`,
+      'system', 'Sistema',
+      { recipient: info.recipient, subject: info.subject, error: info.error, purpose: info.purpose });
+    store.saveApplication(app);
+  } catch (innerErr) {
+    console.error('[applications] Failed to record notification failure:', innerErr.message);
+  }
+}
+
+// Persist a failed unit-inventory sync so the unit doesn't silently
+// stay `reserved` after a rejection (or stay `available` after a
+// completion). Same shape as recordNotificationFailure — never throws.
+function recordInventorySyncFailure(app, error, unitId) {
+  try {
+    if (!app) return;
+    app.inventory_sync_failed_at = new Date().toISOString();
+    app.inventory_sync_error     = error?.message || String(error);
+    app.inventory_sync_unit_id   = unitId || app.assigned_unit?.unitId || null;
+    addEvent(app, 'inventory_sync_failed',
+      `Falló la sincronización del inventario tras cambio de estado: ${app.inventory_sync_error}`,
+      'system', 'Sistema',
+      { unitId: app.inventory_sync_unit_id, error: app.inventory_sync_error });
+    store.saveApplication(app);
+  } catch (innerErr) {
+    console.error('[applications] Failed to record inventory sync failure:', innerErr.message);
+  }
+}
+
+// Fire-and-forget email sender. When given an app context, a failed
+// delivery is recorded on that application (timeline event +
+// notification_failures entry) so the broker can see that the
+// customer never got the message and follow up out-of-band.
+function sendNotification(to, subject, html, context = {}) {
   if (!to) return;
   transporter.sendMail({ to, subject, html, department: 'admin' })
-    .catch(err => console.error('[applications] Email failed:', subject, '→', to, err.message));
+    .catch(err => {
+      console.error('[applications] Email failed:', subject, '→', to, err.message);
+      if (context.app) {
+        recordNotificationFailure(context.app, {
+          recipient: to,
+          subject,
+          purpose: context.purpose || 'unknown',
+          error:   err.message,
+        });
+      }
+    });
 }
 
 function statusEmail(app, oldStatus, newStatus, reason) {
@@ -1469,10 +1528,11 @@ router.put('/:id/status', userAuth, (req, res) => {
 
   // ── Auto-update unit inventory on status change ────────────────
   if (app.assigned_unit?.unitId && app.listing_id) {
+    const targetUnitId = app.assigned_unit.unitId;
     try {
       const listing = store.getListingById(app.listing_id);
       if (listing && Array.isArray(listing.unit_inventory)) {
-        const unit = listing.unit_inventory.find(u => u.id === app.assigned_unit.unitId);
+        const unit = listing.unit_inventory.find(u => u.id === targetUnitId);
         if (unit) {
           if (status === 'completado') {
             unit.status = 'sold';
@@ -1492,13 +1552,16 @@ router.put('/:id/status', userAuth, (req, res) => {
           store.saveListing(listing);
         }
       }
-    } catch (e) { console.error('[inventory] Auto-update error:', e.message); }
+    } catch (e) {
+      console.error('[inventory] Auto-update error:', e.message);
+      recordInventorySyncFailure(app, e, targetUnitId);
+    }
   }
 
   // Notify client via email
   if (app.client.email) {
     const email = statusEmail(app, oldStatus, status, reason);
-    sendNotification(app.client.email, email.subject, email.html);
+    sendNotification(app.client.email, email.subject, email.html, { app, purpose: 'status_change' });
   }
 
   // Push notification → client
@@ -1599,7 +1662,7 @@ router.post('/:id/skip-phase', userAuth, (req, res) => {
   // need to know it was skipped, just that the stage moved).
   if (app.client.email) {
     const email = statusEmail(app, oldStatus, status, note);
-    sendNotification(app.client.email, email.subject, email.html);
+    sendNotification(app.client.email, email.subject, email.html, { app, purpose: 'skip_phase' });
   }
   if (app.client.user_id) {
     pushNotify(app.client.user_id, {
@@ -3454,3 +3517,16 @@ router.put('/:id/assign', userAuth, (req, res) => {
 });
 
 module.exports = router;
+
+// Internal hooks for tests. Not part of the public API — do not import
+// these from anywhere outside tests/.
+//   - recordNotificationFailure / recordInventorySyncFailure: unit-test
+//     the bookkeeping that turns a swallowed side-effect failure into an
+//     auditable record on the application.
+//   - _setTransporter: replace the mailer with a stub so tests can drive
+//     the email-failure path through the real route handlers.
+module.exports.__test = {
+  recordNotificationFailure,
+  recordInventorySyncFailure,
+  _setTransporter: (t) => { transporter = t; },
+};
