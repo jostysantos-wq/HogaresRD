@@ -281,7 +281,13 @@ struct ListingDetailView: View {
                             agencySection(agencies, listing: l)
                         }
 
-                        Color.clear.frame(height: 110)
+                        // Bottom clearance for the sticky CTA. The gradient
+                        // is 130pt tall and now extends through the home
+                        // indicator (~34pt safe area) for a real visual
+                        // height of ~164pt. Add ~40pt of breath so even
+                        // the page's last content row sits clear of the
+                        // 22pt soft-fade at the top of the CTA backdrop.
+                        Color.clear.frame(height: 210)
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
@@ -306,12 +312,17 @@ struct ListingDetailView: View {
                 .opacity(heroOverlayOpacity)
                 .allowsHitTesting(heroOverlayOpacity > 0.2)
 
-            // Sticky CTA at the bottom
+            // Sticky CTA at the bottom. The wrapping VStack must
+            // ignore the bottom safe area so the gradient inside
+            // stickyCTA can truly extend through the home-indicator
+            // zone — otherwise scroll content scrolling into the
+            // home-indicator area peeks out below the buttons.
             if listing != nil {
                 VStack(spacing: 0) {
                     Spacer()
                     stickyCTA(l)
                 }
+                .ignoresSafeArea(edges: .bottom)
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -526,16 +537,22 @@ struct ListingDetailView: View {
         let isOwner = isMyListing(l)
 
         ZStack(alignment: .bottom) {
-            // Gradient fade — clear at top, page bg at bottom
-            LinearGradient(
-                stops: [
-                    .init(color: LD.bg.opacity(0.0),  location: 0.0),
-                    .init(color: LD.bg.opacity(0.85), location: 0.35),
-                    .init(color: LD.bg.opacity(0.96), location: 1.0),
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 110)
+            // Backdrop — a tiny top-fade (so the bar doesn't have a
+            // hard horizontal line) followed by a solid page-bg slab
+            // that extends THROUGH the home-indicator safe area so
+            // scroll content can't peek out below the buttons.
+            // Earlier versions stopped at the safe-area top, leaving
+            // a sliver of meta-grid chips visible underneath.
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [LD.bg.opacity(0.0), LD.bg.opacity(1.0)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 22)
+                Rectangle().fill(LD.bg)
+            }
+            .frame(height: 130)
+            .ignoresSafeArea(edges: .bottom)
             .allowsHitTesting(false)
 
             HStack(spacing: 10) {
@@ -727,15 +744,31 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func addressRow(_ l: Listing) -> some View {
+        // Compose the address from the most specific identifier we have,
+        // then append parts that AREN'T already present in it. The DB
+        // sometimes stores the full chain in `address` (e.g. "mega
+        // centro, Santo Domingo Este, Santo Domingo") AND in the
+        // sector/city/province columns — so naïvely concatenating
+        // produces "mega centro, Santo Domingo Este, Santo Domingo,
+        // mega centro, Santo Domingo Este, Santo Domingo".
         let parts = [l.sector, l.city, l.province]
             .compactMap { ($0?.isEmpty == false) ? $0 : nil }
-        let primary: String? = l.address?.isEmpty == false ? l.address : (parts.isEmpty ? nil : parts.joined(separator: ", "))
-        if let line = primary {
+
+        let line: String? = {
+            if let addr = l.address, !addr.isEmpty {
+                let lc = addr.lowercased()
+                let extras = parts.filter { !lc.contains($0.lowercased()) }
+                return extras.isEmpty ? addr : (addr + ", " + extras.joined(separator: ", "))
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: ", ")
+        }()
+
+        if let line {
             HStack(spacing: 8) {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(LD.textMute)
-                Text(line + (l.address != nil && !parts.isEmpty ? ", " + parts.joined(separator: ", ") : ""))
+                Text(line)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(LD.textSoft)
                     .lineLimit(2)

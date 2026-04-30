@@ -64,31 +64,31 @@ struct ContentView: View {
                 FeedView()
                     .tabItem { Label("Inicio", systemImage: "newspaper.fill") }
                     .tag(0)
+                    .toolbar(.hidden, for: .tabBar)
 
                 LazyView(BrowseView())
                     .tabItem { Label("Explorar", systemImage: "magnifyingglass") }
                     .tag(1)
+                    .toolbar(.hidden, for: .tabBar)
 
                 LazyView(MessagesTabView())
                     .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill") }
                     .badge(unreadMessages)
                     .tag(2)
+                    .toolbar(.hidden, for: .tabBar)
 
                 LazyView(TasksTabView())
                     .tabItem { Label("Tareas", systemImage: "checklist") }
                     .badge(unreadTasks)
                     .tag(3)
+                    .toolbar(.hidden, for: .tabBar)
 
                 LazyView(ProfileTabView())
                     .tabItem { Label("Perfil", systemImage: "person.fill") }
                     .tag(4)
+                    .toolbar(.hidden, for: .tabBar)
             }
             .tint(Color.rdBlue)
-            // Hide the system tab bar so the floating bar below is the
-            // only visible chrome. Each tab content gets a 90pt bottom
-            // safe-area inset via the modifier on this ZStack so its
-            // scrollables don't sit underneath the floating capsule.
-            .toolbar(.hidden, for: .tabBar)
 
             FloatingTabBar(
                 selection: $selectedTab,
