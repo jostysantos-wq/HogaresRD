@@ -53,7 +53,12 @@ router.put('/comparisons', userAuth, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   const { ids } = req.body;
   if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids debe ser un array' });
-  user.comparisonIds = ids.slice(0, 10); // max 10 comparisons
+  // Reject non-string entries and clamp each id to 64 chars so an attacker
+  // can't persist megabytes of garbage. Cap the overall list at 10.
+  user.comparisonIds = ids
+    .filter(id => typeof id === 'string')
+    .slice(0, 10)
+    .map(id => id.slice(0, 64));
   store.saveUser(user);
   res.json({ ids: user.comparisonIds });
 });
@@ -80,12 +85,35 @@ router.get('/recently-viewed', userAuth, (req, res) => {
   res.json({ ids: user.recentlyViewed || [] });
 });
 
+// Per-user rate limit for /activity. Without this, every authenticated page
+// view writes a row to the activity table — an attacker (or buggy client) can
+// trivially flood the DB. Allow 60 events / 60s per user.
+const _activityWindow = new Map(); // userId → number[] (ms timestamps in the last 60s)
+const ACTIVITY_WINDOW_MS = 60_000;
+const ACTIVITY_MAX       = 60;
+function activityRateLimit(userId) {
+  const now    = Date.now();
+  const cutoff = now - ACTIVITY_WINDOW_MS;
+  const arr    = (_activityWindow.get(userId) || []).filter(t => t > cutoff);
+  if (arr.length >= ACTIVITY_MAX) {
+    _activityWindow.set(userId, arr);
+    return false;
+  }
+  arr.push(now);
+  _activityWindow.set(userId, arr);
+  return true;
+}
+
 // POST /api/user/activity — log a user event and rebuild profile if it's a view
 router.post('/activity', userAuth, (req, res) => {
   const { type, listingId, metadata } = req.body;
   const validTypes = ['view_listing', 'search', 'favorite'];
   if (!type || !validTypes.includes(type))
     return res.status(400).json({ error: 'Tipo de evento inválido' });
+
+  if (!activityRateLimit(req.user.sub)) {
+    return res.status(429).json({ error: 'Demasiados eventos. Intenta de nuevo en un minuto.' });
+  }
 
   store.appendActivity({
     user_id:    req.user.sub,
