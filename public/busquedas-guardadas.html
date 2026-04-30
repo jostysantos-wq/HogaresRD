@@ -8,8 +8,28 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+      --bg: #FBF6EE; --bg-section: #F4F1EA;
+      --ink: #131318; --ink-soft: #36363E; --ink-muted: #8A8A93;
+      --line: rgba(19,19,24,0.10);
+      --serif: ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill: 999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop: 0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --accent: #131318; --accent-hover: #000; --accent-light: rgba(19,19,24,0.06);
+    }
+    [data-theme="dark"] {
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+      --bg: #15131A; --bg-section: #1A1820;
+      --ink: #F5F1EA; --ink-soft: #C9C5BC; --ink-muted: #8B867E;
+      --line: rgba(245,241,234,0.12);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop: 0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --accent: #F5F1EA; --accent-hover: #fff; --accent-light: rgba(245,241,234,0.10);
+    }
+    .btn-dark { background: var(--ink); color: var(--bg); border: 1px solid var(--ink); border-radius: var(--r-pill); font-weight: 600; padding: 0.55rem 1.25rem; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s, background 0.2s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-dark:hover { background: #000; transform: translateY(-1px); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
 
@@ -67,8 +87,9 @@
     .nav-dropdown .nav-see-all:hover { text-decoration: none; opacity: 1; color: var(--accent); }
     .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
-    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
-    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
+    /* Iniciar Sesión nav button — editorial ink pill (was Dominican-flag red #CF142B, legacy) */
+    .btn-login { background: var(--ink); border: 1px solid var(--ink); color: var(--bg) !important; font-size: 0.9rem; font-weight: 600; padding: 0.55rem 1.25rem; border-radius: var(--r-pill); cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #000; transform: translateY(-1px); }
 
     /* PAGE */
     .page { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
@@ -79,12 +100,12 @@
     .breadcrumb a { color: var(--accent); text-decoration: none; }
 
     /* LOGIN GATE */
-    .login-gate { text-align: center; padding: 5rem 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+    .login-gate { text-align: center; padding: 5rem 2rem; background: var(--bg-card); border: 1px solid var(--line); border-radius: 22px; }
     .login-gate-icon { font-size: 3.5rem; margin-bottom: 1rem; }
     .login-gate h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .login-gate p { color: var(--text-muted); margin-bottom: 1.5rem; }
-    .btn-primary { background: var(--accent); color: #fff; border: none; padding: 0.65rem 1.5rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s; }
-    .btn-primary:hover { background: var(--accent-hover); }
+    .login-gate p { color: var(--ink-muted); margin-bottom: 1.5rem; }
+    .btn-primary { background: var(--ink); color: var(--bg); border: 1px solid var(--ink); padding: 0.7rem 1.5rem; border-radius: var(--r-pill); font-weight: 600; font-size: 0.92rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s, transform 0.15s; }
+    .btn-primary:hover { background: #000; transform: translateY(-1px); }
 
     /* SEARCH CARDS */
     .search-list { display: flex; flex-direction: column; gap: 1rem; }

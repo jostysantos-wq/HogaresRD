@@ -10,8 +10,28 @@
   <link rel="stylesheet" href="/css/core.css">
 
   <style>
-    :root { --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF; }
-    [data-theme="dark"] { --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7; }
+    :root {
+      --toggle-bg: #CBD5E1; --toggle-knob: #FFFFFF;
+      --bg: #FBF6EE; --bg-section: #F4F1EA;
+      --ink: #131318; --ink-soft: #36363E; --ink-muted: #8A8A93;
+      --line: rgba(19,19,24,0.10);
+      --serif: ui-serif, 'New York', Charter, Georgia, Cambria, serif;
+      --r-pill: 999px;
+      --shadow-soft: 0 1px 2px rgba(20,30,50,0.04), 0 4px 16px rgba(20,30,50,0.04);
+      --shadow-pop: 0 2px 6px rgba(20,30,50,0.06), 0 18px 50px rgba(20,30,50,0.10);
+      --accent: #131318; --accent-hover: #000; --accent-light: rgba(19,19,24,0.06);
+    }
+    [data-theme="dark"] {
+      --toggle-bg: #2D3F58; --toggle-knob: #EDF2F7;
+      --bg: #15131A; --bg-section: #1A1820;
+      --ink: #F5F1EA; --ink-soft: #C9C5BC; --ink-muted: #8B867E;
+      --line: rgba(245,241,234,0.12);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-pop: 0 2px 6px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.4);
+      --accent: #F5F1EA; --accent-hover: #fff; --accent-light: rgba(245,241,234,0.10);
+    }
+    .btn-dark { background: var(--ink); color: var(--bg); border: 1px solid var(--ink); border-radius: var(--r-pill); font-weight: 600; padding: 0.55rem 1.25rem; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s, background 0.2s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-dark:hover { background: #000; transform: translateY(-1px); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
 
@@ -69,8 +89,9 @@
     .nav-dropdown .nav-see-all:hover { text-decoration: none; opacity: 1; color: var(--accent); }
     .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
     #navAuthArea { display: flex; align-items: center; gap: 0.75rem; }
-    .btn-login { background: #CF142B; border: 1px solid #CF142B; color: #fff !important; font-size: 0.9rem; font-weight: 700; padding: 0.52rem 1.25rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
-    .btn-login:hover { background: #a81022; border-color: #a81022; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(207,20,43,0.35); }
+    /* Iniciar Sesión nav button — editorial ink pill (was Dominican-flag red #CF142B, legacy) */
+    .btn-login { background: var(--ink); border: 1px solid var(--ink); color: var(--bg) !important; font-size: 0.9rem; font-weight: 600; padding: 0.55rem 1.25rem; border-radius: var(--r-pill); cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .btn-login:hover { background: #000; transform: translateY(-1px); }
 
     /* PAGE */
     .page { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
@@ -81,17 +102,17 @@
     .page-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; letter-spacing: -0.5px; }
     .page-sub { color: var(--text-muted); font-size: 0.92rem; margin-top: 0.3rem; }
 
-    /* EMPTY STATE */
+    /* EMPTY STATE — editorial cream (was navy gradient #002D62 → #0050a8, legacy) */
     .empty-state {
       text-align: center; padding: 5rem 2rem;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 8px;
+      background: var(--bg-section); border: 1px solid var(--line);
+      border-radius: 22px;
     }
-    .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
-    .empty-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .empty-sub { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem; max-width: 400px; margin-left: auto; margin-right: auto; }
-    .empty-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent); color: #fff; padding: 0.65rem 1.5rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem; text-decoration: none; transition: background 0.2s; }
-    .empty-btn:hover { background: var(--accent-hover); }
+    .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.65; }
+    .empty-title { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--ink); letter-spacing: -0.02em; }
+    .empty-sub { color: var(--ink-soft); font-size: 0.95rem; margin-bottom: 1.75rem; max-width: 440px; margin-left: auto; margin-right: auto; line-height: 1.65; }
+    .empty-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--ink); color: var(--bg); padding: 0.75rem 1.6rem; border-radius: var(--r-pill); font-weight: 600; font-size: 0.92rem; text-decoration: none; transition: background 0.2s, transform 0.15s; border: 1px solid var(--ink); }
+    .empty-btn:hover { background: #000; transform: translateY(-1px); }
 
     /* LOADING */
     .loading-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
@@ -103,10 +124,10 @@
       display: grid;
       gap: 0;
       background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-soft);
     }
     .compare-grid.cols-2 { grid-template-columns: 180px 1fr 1fr; }
     .compare-grid.cols-3 { grid-template-columns: 180px 1fr 1fr 1fr; }
@@ -137,7 +158,8 @@
     .compare-header-img {
       width: 100%; height: 180px;
       object-fit: cover; display: block;
-      background: linear-gradient(135deg, #002D62, #0050a8);
+      /* placeholder gradient — was navy #002D62→#0050a8, legacy */
+      background: linear-gradient(135deg, var(--bg-section), var(--bg));
     }
     .compare-header-body { padding: 1rem; }
     .compare-header-title {
