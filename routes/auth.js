@@ -8,6 +8,7 @@ const path       = require('path');
 const rateLimit  = require('express-rate-limit');
 const store      = require('./store');
 const { logSec } = require('./security-log');
+const { verifyAppleTransaction } = require('./apple-receipts');
 const et         = require('../utils/email-templates');
 
 const router     = express.Router();
@@ -1695,28 +1696,74 @@ router.delete('/delete-account', userAuth, async (req, res) => {
 
 // POST /auth/apple-subscription — Sync Apple IAP subscription with user role
 //
-// TODO: Replace this client-trusted flow with server-side Apple receipt
-// validation against the App Store Server API:
-//   POST https://api.storekit.itunes.apple.com/inApps/v1/transactions/{transactionId}
-// (sandbox host: api.storekit-sandbox.itunes.apple.com). Until then, we
-// rely on (a) transactionID uniqueness across users, (b) a 1-year expiration
-// cap, and (c) full security logging so abuse is visible.
+// Now validates Apple's `signedTransactionInfo` JWS server-side via
+// routes/apple-receipts.js (signature, bundleId, expiresDate, productId).
+// In production a missing JWS is rejected. In dev/test we still accept
+// the legacy client-trusted payload so the existing iOS build keeps
+// working until the next iOS release ships JWS forwarding.
+//
+// Deferred: the JWS verifier does NOT walk the full X.509 chain to
+// Apple's root CA; it verifies the signature against the leaf cert in
+// x5c[0] and string-matches "Apple" in the issuer. See
+// routes/apple-receipts.js for details.
 router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { productID, transactionID, originalTransactionID, role, expirationDate } = req.body;
+    const {
+      productID, transactionID, originalTransactionID, role, expirationDate,
+      signedTransactionInfo,
+    } = req.body;
 
-    // Always log every call — this endpoint is client-trusted and abuse-prone.
+    // Always log every call — this endpoint historically was client-trusted.
     logSec('apple_iap_subscription_call', req, {
       userId, productID, transactionID, originalTransactionID, role, expirationDate,
+      hasSignedTransaction: !!signedTransactionInfo,
     });
 
-    if (!productID || !transactionID || !role) {
+    // ── Server-side receipt validation path ─────────────────────────
+    // If the client sent a JWS, prefer it over anything else in the body.
+    let validatedTx = null;          // { transactionId, productId, expiresDate, ... }
+    let validatedRole = null;        // 'broker' | 'inmobiliaria' | 'constructora'
+
+    if (signedTransactionInfo) {
+      const result = await verifyAppleTransaction(signedTransactionInfo);
+      if (!result.valid) {
+        logSec('apple_iap_jws_invalid', req, { userId, error: result.error });
+        return res.status(400).json({ error: result.error });
+      }
+      validatedTx = result.transaction;
+
+      // Map productId → role. Only our three SKUs are accepted.
+      const pid = validatedTx.productId;
+      if (pid.includes('.broker.'))             validatedRole = 'broker';
+      else if (pid.includes('.inmobiliaria.'))  validatedRole = 'inmobiliaria';
+      else if (pid.includes('.constructora.'))  validatedRole = 'constructora';
+      else {
+        logSec('apple_iap_unknown_product', req, { userId, productId: pid });
+        return res.status(400).json({ error: `Unknown productId: ${pid}` });
+      }
+    } else {
+      // Legacy client-trusted path — only allowed outside production.
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(400).json({ error: 'signedTransactionInfo es requerido' });
+      }
+      console.warn('[apple-iap] receiving unsigned transaction in non-prod');
+    }
+
+    // Choose the source of truth: prefer validated JWS over client-supplied.
+    const effectiveProductID    = validatedTx ? validatedTx.productId     : productID;
+    const effectiveTransactionID = validatedTx ? validatedTx.transactionId : transactionID;
+    const effectiveOrigTxID     = validatedTx
+      ? (validatedTx.originalTransactionId || validatedTx.transactionId)
+      : originalTransactionID;
+    const effectiveRole         = validatedRole || role;
+
+    if (!effectiveProductID || !effectiveTransactionID || !effectiveRole) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const validRoles = ['broker', 'inmobiliaria', 'constructora'];
-    if (!validRoles.includes(role)) {
+    if (!validRoles.includes(effectiveRole)) {
       return res.status(400).json({ error: 'Invalid subscription role' });
     }
 
@@ -1725,8 +1772,9 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
 
     // ── Security: transactionID must be unique per user ──
     // If the same Apple transactionID appears on another account, this is
-    // either a replay or a stolen receipt. Reject loudly.
-    const txKey = String(transactionID);
+    // either a replay or a stolen receipt. Reject loudly. The transactionID
+    // here is the validated one (from the JWS) when available.
+    const txKey = String(effectiveTransactionID);
     const collidingUser = store.getUsers().find(u => {
       if (u.id === user.id) return false;
       const extra = typeof u._extra === 'string' ? _jsonParseSafe(u._extra) : (u._extra || {});
@@ -1737,32 +1785,36 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
     });
     if (collidingUser) {
       logSec('apple_iap_transaction_collision', req, {
-        userId, otherUserId: collidingUser.id, transactionID,
+        userId, otherUserId: collidingUser.id, transactionID: effectiveTransactionID,
       });
       return res.status(409).json({ error: 'Esta transaccion ya esta asociada a otra cuenta.' });
     }
 
-    // ── Security: cap expirationDate at 1 year from now ──
-    // The client supplies this value; without a cap a malicious client
-    // could pass year 2099 and bypass renewal forever.
-    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-    const maxExpiry = new Date(Date.now() + ONE_YEAR_MS);
-    let cappedExpiration = null;
-    if (expirationDate) {
-      const parsed = new Date(expirationDate);
-      if (!isNaN(parsed.getTime())) {
-        cappedExpiration = (parsed > maxExpiry ? maxExpiry : parsed).toISOString();
+    // ── Expiration ──
+    // If we have a validated JWS, the expiresDate is trustworthy — no cap
+    // needed. Otherwise fall back to a 1-year cap on the client-supplied
+    // value (legacy non-prod path only).
+    let resolvedExpiration;
+    if (validatedTx) {
+      resolvedExpiration = new Date(validatedTx.expiresDate).toISOString();
+    } else {
+      const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+      const maxExpiry = new Date(Date.now() + ONE_YEAR_MS);
+      let cappedExpiration = null;
+      if (expirationDate) {
+        const parsed = new Date(expirationDate);
+        if (!isNaN(parsed.getTime())) {
+          cappedExpiration = (parsed > maxExpiry ? maxExpiry : parsed).toISOString();
+        }
       }
-    }
-    if (!cappedExpiration) {
-      cappedExpiration = maxExpiry.toISOString();
+      resolvedExpiration = cappedExpiration || maxExpiry.toISOString();
     }
 
     // ── Security: block upgrade to inmobiliaria/constructora if agent is linked to one ──
     // An agent (broker/agency) who is affiliated with an inmobiliaria must leave
     // that organization before upgrading to an org-level role. Otherwise they
     // could gain director-level visibility into their current org's data.
-    const isUpgradingToOrg = ['inmobiliaria', 'constructora'].includes(role);
+    const isUpgradingToOrg = ['inmobiliaria', 'constructora'].includes(effectiveRole);
     const isLinkedToOrg    = user.inmobiliaria_id || user.inmobiliaria_join_status === 'pending';
     if (isUpgradingToOrg && isLinkedToOrg) {
       return res.status(400).json({
@@ -1787,10 +1839,10 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
 
     // Update user role
     const previousRole = user.role;
-    user.role = role;
+    user.role = effectiveRole;
 
     // When upgrading to org-level role, initialize org fields
-    if (['inmobiliaria', 'constructora'].includes(role) && !['inmobiliaria', 'constructora'].includes(previousRole)) {
+    if (['inmobiliaria', 'constructora'].includes(effectiveRole) && !['inmobiliaria', 'constructora'].includes(previousRole)) {
       if (!Array.isArray(user.join_requests)) user.join_requests = [];
       // Clear any leftover agent-level affiliation fields
       user.inmobiliaria_id          = null;
@@ -1811,19 +1863,22 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
     // Store subscription info in _extra
     const extra = typeof user._extra === 'string' ? (function() { try { return JSON.parse(user._extra); } catch { return {}; } })() : (user._extra || {});
     extra.appleSubscription = {
-      productID,
-      transactionID,
-      originalTransactionID,
-      role,
-      // expirationDate is capped server-side; client cannot push it past 1y.
-      expirationDate: cappedExpiration,
-      subscribedAt: new Date().toISOString(),
+      productID:             effectiveProductID,
+      transactionID:         effectiveTransactionID,
+      originalTransactionID: effectiveOrigTxID,
+      role:                  effectiveRole,
+      // expirationDate is the validated JWS value when present; otherwise
+      // a 1-year cap on the client-supplied value (legacy non-prod path).
+      expirationDate: resolvedExpiration,
+      verified:       !!validatedTx,
+      environment:    validatedTx ? validatedTx.environment : null,
+      subscribedAt:   new Date().toISOString(),
     };
     user._extra = JSON.stringify(extra);
 
     store.saveUser(user);
 
-    console.log(`[auth] Apple subscription: ${userId} upgraded ${previousRole} → ${role} (product: ${productID})`);
+    console.log(`[auth] Apple subscription: ${userId} upgraded ${previousRole} → ${effectiveRole} (product: ${effectiveProductID}, verified: ${!!validatedTx})`);
 
     const token = signToken(user);
     res.json({ token, user: safeUser(user) });
