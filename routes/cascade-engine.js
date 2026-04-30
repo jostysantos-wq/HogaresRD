@@ -16,6 +16,12 @@
 //   tier — like the stock market closing and reopening.
 //
 // Uses in-memory timers (setTimeout) with cron-based crash recovery.
+//
+// Lead-queue item shape (relevant fields only):
+//   id, inquiry_type, inquiry_id, listing_id, current_tier, status,
+//   org_scope_id  ← canonical org-scope field (inmobiliaria OR constructora)
+//   inmobiliaria_scope ← LEGACY alias kept for back-compat with old rows;
+//     read fallback only. New code MUST write `org_scope_id`.
 // ══════════════════════════════════════════════════════════════════════════
 
 const store = require('./store');
@@ -451,7 +457,11 @@ function escalateTier(leadQueueId) {
   const listing = store.getListingById(item.listing_id);
   if (!listing) return;
 
-  const { tier1, tier2, tier3 } = getTierAgents(listing, item.inmobiliaria_scope || null);
+  // Mirror the canonical accessor used by claimLead: prefer the modern
+  // `org_scope_id`, fall back to the legacy `inmobiliaria_scope` so older
+  // rows still escalate within their original org.
+  const orgScope = item.org_scope_id || item.inmobiliaria_scope || null;
+  const { tier1, tier2, tier3 } = getTierAgents(listing, orgScope);
   const allTiers = { 1: tier1, 2: tier2, 3: tier3 };
 
   // Morning wake-up: if tier_notified_at is null, this is resuming after
@@ -712,4 +722,12 @@ module.exports = {
   CASCADE_WINDOW_MS,
   TIER_WINDOWS,
   CONTRIB_THRESHOLD,
+  // Test-only escape hatch: lets specs invoke internals without
+  // depending on real timers or HTTP plumbing.
+  __test: {
+    getTierAgents,
+    escalateTier,
+    clearEscalation,
+    scheduleEscalation,
+  },
 };
