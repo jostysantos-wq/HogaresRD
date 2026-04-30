@@ -247,6 +247,58 @@
       position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
       width: 16px; height: 16px; fill: var(--text-muted); pointer-events: none;
     }
+    .topbar-search-results {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      max-height: min(70vh, 520px); overflow-y: auto;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(15,23,42,0.14), 0 1px 3px rgba(15,23,42,0.06);
+      z-index: 200; padding: 8px;
+    }
+    .topbar-search-results[hidden] { display: none; }
+    .tsr-group-label {
+      font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-muted);
+      padding: 10px 12px 6px;
+    }
+    .tsr-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 10px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .tsr-row:hover, .tsr-row.tsr-active {
+      background: var(--accent-light, #EBF3FF);
+    }
+    .tsr-row-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-secondary); color: var(--accent);
+      font-weight: 800; font-size: 0.8rem;
+      overflow: hidden;
+    }
+    .tsr-row-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .tsr-row-icon svg { width: 18px; height: 18px; fill: currentColor; }
+    .tsr-row-body { flex: 1; min-width: 0; }
+    .tsr-row-title {
+      font-size: 0.86rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+    }
+    .tsr-row-sub {
+      font-size: 0.74rem; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+      margin-top: 1px;
+    }
+    .tsr-row-tag {
+      font-size: 0.62rem; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+      background: var(--bg-secondary); color: var(--text-muted);
+      flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .tsr-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+    .tsr-loading { padding: 18px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+    mark { background: rgba(0,106,255,0.18); color: inherit; padding: 0 1px; border-radius: 2px; }
+    @media (max-width: 600px) {
+      .topbar-search-results { left: -50%; right: -10%; }
+    }
     .topbar-bell {
       position: relative; width: 44px; height: 44px; border-radius: 50%;
       background: var(--bg-card); border: 1px solid var(--border); cursor: pointer;
@@ -1713,7 +1765,8 @@
     <div class="topbar-spacer"></div>
     <div class="topbar-search">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <input id="topbarSearch" type="search" placeholder="Buscar propiedades, clientes…" aria-label="Buscar" />
+      <input id="topbarSearch" type="search" placeholder="Buscar propiedades, clientes, aplicaciones…" aria-label="Buscar" autocomplete="off" />
+      <div class="topbar-search-results" id="topbarSearchResults" role="listbox" hidden></div>
     </div>
     <button id="topbarBellBtn" class="topbar-bell" title="Notificaciones" type="button">
       <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
@@ -4321,6 +4374,7 @@
     document.getElementById('pane-' + btn.dataset.tab).classList.add('active');
   });
 
+  window.openDetail = openDetail;
   async function openDetail(id) {
     // reset to first tab
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -6774,6 +6828,208 @@
   // Refresh the badge on load and every 60s while the tab is focused
   updateBellBadge();
   setInterval(() => { if (!document.hidden) updateBellBadge(); }, 60000);
+
+  // ── Topbar Search ───────────────────────────────────────────
+  // Single-field global search over the broker's applications,
+  // listings (mis-propiedades), and conversations. Loads all three in
+  // parallel on first focus and caches for 60s; filtering then runs
+  // entirely client-side so the dropdown is instant per keystroke.
+  let _searchCache = null;
+  let _searchCacheTs = 0;
+  const SEARCH_CACHE_MS = 60_000;
+
+  async function loadSearchData() {
+    const now = Date.now();
+    if (_searchCache && (now - _searchCacheTs) < SEARCH_CACHE_MS) return _searchCache;
+    const [appsRes, listingsRes, convsRes] = await Promise.all([
+      API('/api/applications').catch(() => null),
+      authFetch('/api/listing-analytics/listings').then(r => r.ok ? r.json() : null).catch(() => null),
+      API('/api/conversations').catch(() => null),
+    ]);
+    const apps     = Array.isArray(appsRes)     ? appsRes     : (appsRes?.applications || []);
+    const listings = listingsRes?.listings || [];
+    const convs    = Array.isArray(convsRes)    ? convsRes    : (convsRes?.conversations || []);
+    _searchCache = { apps, listings, convs };
+    _searchCacheTs = now;
+    return _searchCache;
+  }
+  // Expose so the cache is invalidated when the broker creates new
+  // data elsewhere on the page (optional hook for future use).
+  window.invalidateSearchCache = () => { _searchCache = null; _searchCacheTs = 0; };
+
+  function searchHighlight(text, q) {
+    if (!text || !q) return esc(text || '');
+    const i = text.toLowerCase().indexOf(q.toLowerCase());
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+  }
+
+  function runSearch(q) {
+    q = (q || '').trim();
+    if (q.length < 2 || !_searchCache) return null;
+    const lower = q.toLowerCase();
+    const { apps, listings, convs } = _searchCache;
+    const matchApps = apps.filter(a => {
+      const c = (a.client?.name || '').toLowerCase();
+      const e = (a.client?.email || '').toLowerCase();
+      const t = (a.listing_title || a.listing?.title || '').toLowerCase();
+      const id = String(a._id || a.id || '').toLowerCase();
+      return c.includes(lower) || e.includes(lower) || t.includes(lower) || id.includes(lower);
+    }).slice(0, 5);
+    const matchListings = listings.filter(l => {
+      const t = (l.title || '').toLowerCase();
+      const c = (l.city || '').toLowerCase();
+      const p = (l.province || '').toLowerCase();
+      const id = String(l.id || '').toLowerCase();
+      return t.includes(lower) || c.includes(lower) || p.includes(lower) || id.includes(lower);
+    }).slice(0, 5);
+    const matchConvs = convs.filter(cv => {
+      const n = (cv.other_name || cv.client_name || cv.name || cv.title || '').toLowerCase();
+      const t = (cv.listing_title || '').toLowerCase();
+      return n.includes(lower) || t.includes(lower);
+    }).slice(0, 5);
+    return { matchApps, matchListings, matchConvs, q };
+  }
+
+  function renderSearchResults(filtered) {
+    const box = document.getElementById('topbarSearchResults');
+    if (!box) return;
+    if (!filtered) { box.hidden = true; box.innerHTML = ''; return; }
+    const { matchApps, matchListings, matchConvs, q } = filtered;
+    const total = matchApps.length + matchListings.length + matchConvs.length;
+    if (total === 0) {
+      box.hidden = false;
+      box.innerHTML = `<div class="tsr-empty">Sin resultados para "${esc(q)}".</div>`;
+      return;
+    }
+    let html = '';
+    if (matchApps.length) {
+      html += '<div class="tsr-group-label">Aplicaciones</div>';
+      html += matchApps.map(a => {
+        const client = a.client || {};
+        const status = a.status || '';
+        const id = a._id || a.id;
+        const initials = (client.name || client.email || 'C').slice(0,1).toUpperCase();
+        return `<div class="tsr-row" data-action="app" data-id="${esc(id)}" role="option">
+          <div class="tsr-row-icon">${esc(initials)}</div>
+          <div class="tsr-row-body">
+            <div class="tsr-row-title">${searchHighlight(client.name || client.email || 'Cliente', q)}</div>
+            <div class="tsr-row-sub">${searchHighlight(a.listing_title || a.listing?.title || 'Propiedad', q)}</div>
+          </div>
+          ${status ? `<span class="tsr-row-tag">${esc(status)}</span>` : ''}
+        </div>`;
+      }).join('');
+    }
+    if (matchListings.length) {
+      html += '<div class="tsr-group-label">Propiedades</div>';
+      html += matchListings.map(l => {
+        const img = l.image ? `<img src="${esc(l.image)}" alt="">` : '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
+        const loc = [l.city, l.province].filter(Boolean).join(', ');
+        return `<div class="tsr-row" data-action="listing" data-id="${esc(l.id)}" role="option">
+          <div class="tsr-row-icon">${img}</div>
+          <div class="tsr-row-body">
+            <div class="tsr-row-title">${searchHighlight(l.title || 'Propiedad', q)}</div>
+            <div class="tsr-row-sub">${searchHighlight(loc, q)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    if (matchConvs.length) {
+      html += '<div class="tsr-group-label">Conversaciones</div>';
+      html += matchConvs.map(cv => {
+        const name = cv.other_name || cv.client_name || cv.name || cv.title || 'Conversación';
+        return `<div class="tsr-row" data-action="conv" data-id="${esc(cv.id)}" role="option">
+          <div class="tsr-row-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></div>
+          <div class="tsr-row-body">
+            <div class="tsr-row-title">${searchHighlight(name, q)}</div>
+            <div class="tsr-row-sub">${searchHighlight(cv.listing_title || '', q)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    box.hidden = false;
+    box.innerHTML = html;
+  }
+
+  function handleSearchResult(action, id) {
+    const box = document.getElementById('topbarSearchResults');
+    const inp = document.getElementById('topbarSearch');
+    if (box) { box.hidden = true; box.innerHTML = ''; }
+    if (inp) { inp.value = ''; inp.blur(); }
+    if (action === 'app') {
+      showPage('dashboard');
+      setTimeout(() => {
+        const sNav = document.querySelector('.section-nav-btn[data-section="aplicaciones"]');
+        if (sNav) sNav.click();
+        if (typeof window.openDetail === 'function') window.openDetail(id);
+      }, 80);
+    } else if (action === 'listing') {
+      showPage('dashboard');
+      setTimeout(() => {
+        const sNav = document.querySelector('.section-nav-btn[data-section="mis-propiedades"]');
+        if (sNav) sNav.click();
+        if (typeof window.openLADetail === 'function') window.openLADetail(id);
+      }, 80);
+    } else if (action === 'conv') {
+      showPage('mensajes');
+      setTimeout(() => { if (typeof window.brkOpenConv === 'function') window.brkOpenConv(id); }, 200);
+    }
+  }
+
+  let _searchDebounce = null;
+  const _searchInput = document.getElementById('topbarSearch');
+  const _searchBox   = document.getElementById('topbarSearchResults');
+  if (_searchInput && _searchBox) {
+    _searchInput.addEventListener('focus', async () => {
+      await loadSearchData().catch(() => null);
+      if (_searchInput.value.trim().length >= 2) {
+        renderSearchResults(runSearch(_searchInput.value));
+      }
+    });
+    _searchInput.addEventListener('input', () => {
+      clearTimeout(_searchDebounce);
+      _searchDebounce = setTimeout(async () => {
+        const q = _searchInput.value.trim();
+        if (q.length < 2) { _searchBox.hidden = true; _searchBox.innerHTML = ''; return; }
+        if (!_searchCache) {
+          _searchBox.hidden = false;
+          _searchBox.innerHTML = '<div class="tsr-loading">Buscando…</div>';
+          await loadSearchData().catch(() => null);
+        }
+        renderSearchResults(runSearch(q));
+      }, 120);
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.topbar-search')) _searchBox.hidden = true;
+    });
+    _searchBox.addEventListener('click', e => {
+      const row = e.target.closest('.tsr-row');
+      if (!row) return;
+      handleSearchResult(row.dataset.action, row.dataset.id);
+    });
+    _searchInput.addEventListener('keydown', e => {
+      if (_searchBox.hidden) return;
+      const rows = Array.from(_searchBox.querySelectorAll('.tsr-row'));
+      if (!rows.length) return;
+      let active = rows.findIndex(r => r.classList.contains('tsr-active'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        active = (active + 1) % rows.length;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = active <= 0 ? rows.length - 1 : active - 1;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const row = rows[active >= 0 ? active : 0];
+        if (row) handleSearchResult(row.dataset.action, row.dataset.id);
+        return;
+      } else if (e.key === 'Escape') {
+        _searchBox.hidden = true; _searchInput.blur(); return;
+      } else { return; }
+      rows.forEach((r, i) => r.classList.toggle('tsr-active', i === active));
+      rows[active]?.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   // ── Notifications page ──────────────────────────────────────
   // Per-item read tracking lives in localStorage so it survives reloads
