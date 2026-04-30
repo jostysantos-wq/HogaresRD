@@ -21,8 +21,14 @@ const assert = require('node:assert/strict');
 const http   = require('node:http');
 const { randomUUID } = require('node:crypto');
 
-process.env.JWT_SECRET = 'test-secret';
-process.env.NODE_ENV   = 'test';
+process.env.JWT_SECRET   = 'test-secret';
+process.env.ADMIN_KEY    = 'test-admin-key';
+process.env.NODE_ENV     = 'test';
+// Disable Postgres so withTransaction takes its in-process short-circuit
+// (`fn(null)`) and `saveX` falls back to the cache-only path. Without
+// this the tests would block on a 30s pool.connect() timeout against the
+// real DATABASE_URL from .env.
+process.env.DATABASE_URL = '';
 
 const app   = require('../server');
 const store = require('../routes/store');
