@@ -166,6 +166,12 @@ function isBrokerSettable(status) {
   return STATUS_OWNERSHIP[status] === 'broker';
 }
 
+// Currencies accepted on payment + payment-plan upload endpoints.
+// Persisted strings flow into receipts, payment-plan rows, and the
+// timeline event labels — letting an arbitrary string through means
+// the UI ends up rendering "BTC" or worse on broker dashboards.
+const VALID_CURRENCIES = ['DOP', 'USD'];
+
 // ── File upload (documents & receipts) ────────────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'data', 'documents');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
@@ -203,7 +209,10 @@ const ALLOWED_MIME_TYPES = new Set([
 
 // Validate a file's actual MIME type (magic bytes) after multer saves it.
 // Deletes the file and returns false if the type is not allowed.
-async function validateMime(filePath) {
+// Routed through the indirection `validateMime` (let-binding) so tests
+// can swap in a stub via __test._setValidateMime — the file-type
+// package doesn't ship a usable test fixture-mode.
+async function _validateMimeImpl(filePath) {
   try {
     const result = await fileTypeFromFile(filePath);
     // result is undefined for plain-text or unknown formats — block them
@@ -217,6 +226,7 @@ async function validateMime(filePath) {
     return false;
   }
 }
+let validateMime = _validateMimeImpl;
 
 // Guard a file path against path-traversal attacks (including symlink escapes).
 // Returns the real absolute path if it is within DOCS_DIR, otherwise null.
@@ -959,13 +969,17 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     return res.status(400).json({ error: 'Número de identificación inválido (paso 2).' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dobRaw))
     return res.status(400).json({ error: 'Fecha de nacimiento es obligatoria y debe tener formato YYYY-MM-DD (paso 2).' });
-  // Basic age sanity (must be 18+ and not in the future)
-  const dob = new Date(dobRaw);
-  const today = new Date();
-  if (isNaN(dob.getTime()) || dob > today)
+  // Basic age sanity (must be 18+ and not in the future).
+  // Anchor the parsed date at noon to dodge timezone edge cases — a
+  // date-string parsed as UTC midnight can land on the previous day
+  // in DR (UTC-4). The 18-year check uses calendar-day arithmetic
+  // (this-year-vs-(birth-year+18)) so leap years and any TZ offset
+  // resolve correctly, instead of hand-rolled `365.25` math.
+  const dob = new Date(dobRaw + 'T12:00:00');
+  if (isNaN(dob.getTime()) || dob > new Date())
     return res.status(400).json({ error: 'Fecha de nacimiento inválida (paso 2).' });
-  const ageYears = (today - dob) / (365.25 * 24 * 60 * 60 * 1000);
-  if (ageYears < 18)
+  const eighteenth = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate());
+  if (eighteenth > new Date())
     return res.status(400).json({ error: 'Debes ser mayor de edad para aplicar (paso 2).' });
 
   if (!addressRaw || addressRaw.length < 5)
@@ -2800,10 +2814,26 @@ router.post('/:id/documents/upload', userAuth, docUpload.array('files', 10), asy
   const requestId = req.body.request_id || null;
   const docType   = req.body.type || 'other';
 
+  // Match the corresponding documents_requested entry up-front so we
+  // can stamp `required` (and `request_id`) onto each uploaded record.
+  // This is belt-and-suspenders for the auto-status logic in the
+  // review handler — that path now ALSO falls back to looking it up
+  // by request_id/type, but copying it here means any future read can
+  // tell at a glance whether a doc was required or optional.
+  const matchedRequest = (() => {
+    const reqs = initial.documents_requested || [];
+    if (requestId) return reqs.find(d => d.id === requestId) || null;
+    if (docType && docType !== 'other') {
+      return reqs.find(d => d.type === docType && d.status === 'pending') || null;
+    }
+    return null;
+  })();
+
   const uploaded = req.files.map(f => ({
     id:            uuid(),
-    request_id:    requestId,
+    request_id:    requestId || (matchedRequest ? matchedRequest.id : null),
     type:          docType,
+    required:      !!(matchedRequest && matchedRequest.required),
     filename:      f.filename,
     path:          f.path,
     original_name: f.originalname,
@@ -2941,9 +2971,26 @@ router.put('/:id/documents/:docId/review', userAuth, async (req, res) => {
         req.user.sub, user?.name || 'Broker',
         { doc_id: doc.id, status, note });
 
-      const hasRejectedRequired = app.documents_uploaded.some(d =>
-        d.review_status === 'rejected' && d.required === true
+      // Compute "required-doc rejected?" by joining each uploaded doc
+      // back to its `documents_requested` row — historically the
+      // upload handler didn't copy `required` onto the uploaded
+      // record, so checking `d.required === true` directly silently
+      // missed every legacy upload. We now stamp it at the upload
+      // site, but the join here is the safety net for old rows.
+      const requiredByRequestId = new Map(
+        (app.documents_requested || []).map(r => [r.id, r])
       );
+      const requiredByType = new Map();
+      for (const r of (app.documents_requested || [])) {
+        if (r && r.required && r.type) requiredByType.set(r.type, r);
+      }
+      const hasRejectedRequired = (app.documents_uploaded || []).some(d => {
+        if (d.review_status !== 'rejected') return false;
+        if (d.required === true) return true; // stamped at upload
+        const matched = (d.request_id && requiredByRequestId.get(d.request_id))
+          || (d.type && requiredByType.get(d.type));
+        return !!(matched && matched.required);
+      });
       if (hasRejectedRequired && STATUS_FLOW[app.status]?.includes('documentos_insuficientes')) {
         const old = app.status;
         app.status = 'documentos_insuficientes';
@@ -3125,13 +3172,19 @@ router.post('/:id/tours', userAuth, (req, res) => {
     return res.status(400).json({ error: 'No se puede programar una visita en el pasado' });
 
   const user = store.getUserById(req.user.sub);
+  // Cap free-text tour fields so a malicious client can't blow up
+  // emails / event log / push payloads with a multi-MB `notes`. 500
+  // chars covers any real "buzz top floor, parking spot 4B" detail
+  // and matches the cap pattern at the payment-plan installment site.
+  const safeLocation = String(location || app.listing_title || '').trim().slice(0, 500);
+  const safeNotes    = String(notes    || '').trim().slice(0, 500);
   const tour = {
     id:             uuid(),
     scheduled_at:   norm.scheduled_at,
     scheduled_date: norm.scheduled_date, // legacy; same source as scheduled_at
     scheduled_time: norm.scheduled_time, // legacy; same source as scheduled_at
-    location:       location || app.listing_title,
-    notes:          notes || '',
+    location:       safeLocation,
+    notes:          safeNotes,
     status:         'scheduled',
     created_at:     new Date().toISOString(),
     completed_at:   null,
@@ -3198,7 +3251,7 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
     tour.scheduled_date = norm.scheduled_date;
     tour.scheduled_time = norm.scheduled_time;
   }
-  if (notes !== undefined) tour.notes = notes;
+  if (notes !== undefined) tour.notes = String(notes || '').trim().slice(0, 500);
   if (status === 'completed') {
     tour.status = 'completed';
     tour.completed_at = new Date().toISOString();
@@ -3250,12 +3303,45 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
   if (initial.payment?.verification_status === 'approved')
     return res.status(400).json({ error: 'El pago ya fue aprobado.' });
 
-  // Validate MIME type via magic bytes
-  if (!(await validateMime(req.file.path)))
-    return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
+  // ── Cheap validations first ──────────────────────────────────────
+  // Currency / amount / notes are all pure-string checks — do them
+  // BEFORE the MIME magic-byte sniff so an obviously-invalid request
+  // (BTC currency, negative amount, etc) doesn't burn disk I/O. Any
+  // of these failing also means we can short-circuit before the
+  // claimApplicationAtomic transaction below.
 
   const paymentAmount = Number(req.body.amount) || Number(initial.listing_price) || 0;
   if (paymentAmount <= 0) return res.status(400).json({ error: 'Monto de pago inválido' });
+
+  // Currency: whitelist DOP / USD. If the client sent nothing, fall
+  // back to the listing's currency, then to the existing payment
+  // currency, then to DOP — preserves the previous default.
+  const rawCurrency = (req.body.currency || '').toString().trim().toUpperCase();
+  let paymentCurrency;
+  if (rawCurrency) {
+    if (!VALID_CURRENCIES.includes(rawCurrency)) {
+      return res.status(400).json({ error: 'Moneda inválida (DOP o USD).' });
+    }
+    paymentCurrency = rawCurrency;
+  } else {
+    const listing = store.getListingById(initial.listing_id);
+    paymentCurrency = (listing?.currency && VALID_CURRENCIES.includes(listing.currency))
+      ? listing.currency
+      : (initial.payment?.currency && VALID_CURRENCIES.includes(initial.payment.currency))
+        ? initial.payment.currency
+        : 'DOP';
+  }
+
+  // Cap payment notes so an attacker can't push a multi-MB string
+  // into the receipt record (which is rendered into broker emails
+  // and the timeline event log).
+  const paymentNotes = String(req.body.notes || '').trim().slice(0, 1000);
+
+  // Validate MIME type via magic bytes — runs LAST among gates so
+  // we don't pay file-type cost on requests that are going to bounce
+  // for a body-shape reason.
+  if (!(await validateMime(req.file.path)))
+    return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
 
   let app;
   try {
@@ -3266,8 +3352,9 @@ router.post('/:id/payment/upload', userAuth, docUpload.single('receipt'), async 
       app.payment.receipt_original = req.file.originalname;
       app.payment.receipt_uploaded_at = new Date().toISOString();
       app.payment.amount = paymentAmount;
+      app.payment.currency = paymentCurrency;
       app.payment.verification_status = 'pending';
-      app.payment.notes = req.body.notes || '';
+      app.payment.notes = paymentNotes;
 
       if (STATUS_FLOW[app.status]?.includes('pago_enviado')) {
         const old = app.status;
@@ -4344,11 +4431,40 @@ router.post('/:id/payment-plan/:iid/upload', userAuth, docUpload.single('proof')
   // Validate MIME type via magic bytes
   if (!(await validateMime(req.file.path)))
     return res.status(400).json({ error: 'Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, HEIC, PDF, DOC(X), XLS(X), TXT, CSV.' });
+
+  // If the client passes a currency override on the proof upload,
+  // whitelist it (DOP/USD). Most uploads don't override, in which
+  // case the installment keeps the plan-level currency. The proof
+  // record never carries a currency of its own; we surface the
+  // mismatch as a 400 instead of silently ignoring an invalid value.
+  if (req.body.currency !== undefined && req.body.currency !== '') {
+    const c = String(req.body.currency).trim().toUpperCase();
+    if (!VALID_CURRENCIES.includes(c)) {
+      return res.status(400).json({ error: 'Moneda inválida (DOP o USD).' });
+    }
+  }
+
+  // Defensive cap on a posted `amount` override — never accept a
+  // value larger than the installment's recorded amount (a client
+  // shouldn't be re-pricing the cuota at upload time). If the body
+  // sends one, reject anything outside [0, inst.amount * 2] so a
+  // typo doesn't trash the plan total.
+  if (req.body.amount !== undefined && req.body.amount !== '') {
+    const a = Number(req.body.amount);
+    if (!isFinite(a) || a <= 0) {
+      return res.status(400).json({ error: 'Monto inválido.' });
+    }
+    const cap = Number(inst.amount) > 0 ? Number(inst.amount) * 2 : Number.MAX_SAFE_INTEGER;
+    if (a > cap) {
+      return res.status(400).json({ error: 'Monto supera el límite permitido para la cuota.' });
+    }
+  }
+
   inst.proof_path        = req.file.path;
   inst.proof_filename    = req.file.filename;
   inst.proof_original    = req.file.originalname;
   inst.proof_uploaded_at = new Date().toISOString();
-  inst.proof_notes       = (req.body.notes || '').trim();
+  inst.proof_notes       = String(req.body.notes || '').trim().slice(0, 500);
   inst.status            = 'proof_uploaded';
   addEvent(app, 'payment',
     `Comprobante subido — Cuota #${inst.number}: ${inst.label}`,
@@ -5074,6 +5190,10 @@ module.exports.__test = {
   recordNotificationFailure,
   recordInventorySyncFailure,
   _setTransporter: (t) => { transporter = t; },
+  // Swap the magic-byte sniff for a stub so multipart-upload tests
+  // can drive the route without committing real binary fixtures.
+  // Pass `null` to restore the real implementation.
+  _setValidateMime: (fn) => { validateMime = fn || _validateMimeImpl; },
   // E4 / E7
   normalizeTourTime,
   statusEmail,
