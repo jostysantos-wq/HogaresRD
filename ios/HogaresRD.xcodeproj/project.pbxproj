@@ -29,6 +29,7 @@
 		AA22000000000000000000F1 /* Commission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000000000000000000F0 /* Commission.swift */; };
 		AA2200000000000000000101 /* ApplicationDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000100 /* ApplicationDetail.swift */; };
 		AA2200000000000000000111 /* ApplicationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000110 /* ApplicationDetailView.swift */; };
+		BUYR2200000000000000B111 /* BuyerApplicationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BUYR2200000000000000B110 /* BuyerApplicationDetailView.swift */; };
 		AA2200000000000000000121 /* WorkflowChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000120 /* WorkflowChecklist.swift */; };
 		AA33000000000000000000D1 /* Ad.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C1 /* Ad.swift */; };
 		AA33000000000000000000D2 /* AdCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33000000000000000000C2 /* AdCard.swift */; };
@@ -105,6 +106,7 @@
 		AA22000000000000000000F0 /* Commission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Commission.swift; sourceTree = "<group>"; };
 		AA2200000000000000000100 /* ApplicationDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDetail.swift; sourceTree = "<group>"; };
 		AA2200000000000000000110 /* ApplicationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDetailView.swift; sourceTree = "<group>"; };
+		BUYR2200000000000000B110 /* BuyerApplicationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuyerApplicationDetailView.swift; sourceTree = "<group>"; };
 		AA2200000000000000000120 /* WorkflowChecklist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowChecklist.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C1 /* Ad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ad.swift; sourceTree = "<group>"; };
 		AA33000000000000000000C2 /* AdCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdCard.swift; sourceTree = "<group>"; };
@@ -247,6 +249,7 @@
 				AA11000000000000000000BA /* AuthView.swift */,
 				AA550000000000000000000000C3 /* BrokerDashboardView.swift */,
 				AA2200000000000000000110 /* ApplicationDetailView.swift */,
+				BUYR2200000000000000B110 /* BuyerApplicationDetailView.swift */,
 				AA550000000000000000000000FF /* DashboardHomeView.swift */,
 				AA55000000000000000000000200 /* ContactsListView.swift */,
 				AA55000000000000000000000202 /* ContactTimelineView.swift */,
@@ -396,6 +399,7 @@
 				AA2200000000000000000101 /* ApplicationDetail.swift in Sources */,
 				AA2200000000000000000121 /* WorkflowChecklist.swift in Sources */,
 				AA2200000000000000000111 /* ApplicationDetailView.swift in Sources */,
+				BUYR2200000000000000B111 /* BuyerApplicationDetailView.swift in Sources */,
 				AA22000000000000000000D2 /* AgencyPortfolioView.swift in Sources */,
 				AA33000000000000000000D1 /* Ad.swift in Sources */,
 				AA33000000000000000000D2 /* AdCard.swift in Sources */,
