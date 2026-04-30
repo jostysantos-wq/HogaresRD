@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seguimiento de aplicación — HogaresRD</title>
+  <meta name="description" content="Da seguimiento al estado de tu aplicación de HogaresRD desde el enlace que recibiste por correo." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="/css/core.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font); background: var(--bg); color: var(--text);
+      line-height: 1.6; min-height: 100vh; padding: 2rem 1rem;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    .brand { display:flex; align-items:center; gap:.6rem; margin-bottom:1.5rem; text-decoration:none; color: var(--text); }
+    .brand-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display:inline-flex; align-items:center; justify-content:center; }
+    .brand-icon svg { width: 22px; height: 22px; }
+    .brand-text { font-size:1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+    .brand-text span { color: var(--accent); }
+
+    .header-card {
+      background: linear-gradient(135deg, #001840 0%, #002D62 55%, #003d88 100%);
+      color:#fff; padding: 1.5rem 1.5rem 1.75rem; border-radius: 14px;
+    }
+    .header-eyebrow {
+      display:inline-flex; align-items:center; gap:.4rem;
+      background: rgba(255,255,255,0.13); color:#fff; font-size:.7rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+      padding:.25rem .8rem; border-radius:50px; margin-bottom:.7rem;
+    }
+    .header-title { font-size: 1.4rem; font-weight: 800; }
+    .header-sub { font-size:.95rem; opacity:.85; margin-top:.4rem; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-top: 1rem; }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; display:flex; align-items:center; gap:.5rem; }
+    .card h2 svg { width: 18px; height: 18px; fill: var(--accent); }
+
+    .status-pill {
+      display: inline-flex; align-items:center; gap:.4rem;
+      font-size:.78rem; font-weight: 700; letter-spacing:.5px; text-transform: uppercase;
+      padding: .35rem .85rem; border-radius: 999px; color:#fff;
+    }
+    .status-blue   { background: #0038A8; }
+    .status-orange { background: #c07c1a; }
+    .status-purple { background: #4a2d9c; }
+    .status-green  { background: #0a7c4f; }
+    .status-red    { background: #CF142B; }
+
+    .timeline { display: flex; flex-direction: column; gap: .75rem; }
+    .ev-row { display: flex; gap: .75rem; align-items: flex-start; padding: .5rem 0; border-bottom: 1px dashed var(--border); }
+    .ev-row:last-child { border-bottom: none; }
+    .ev-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: .4rem; flex-shrink: 0; }
+    .ev-body { flex: 1; min-width: 0; }
+    .ev-desc { font-size: .9rem; }
+    .ev-meta { font-size: .75rem; color: var(--text-muted); margin-top: .15rem; }
+
+    .doc-row, .msg-row {
+      display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem;
+      background: var(--bg-section); border-radius: 8px; margin-bottom: .4rem;
+      flex-wrap: wrap;
+    }
+    .doc-status { font-size: .7rem; font-weight: 700; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; color:#fff; }
+    .doc-status.pending  { background: var(--orange,#c07c1a); }
+    .doc-status.uploaded { background: var(--accent,#002D62); }
+    .doc-status.approved { background: var(--green,#0a7c4f); }
+    .doc-status.rejected { background: var(--red,#CF142B); }
+
+    .msg-actor { font-weight: 700; color: var(--accent); font-size: .8rem; }
+    .msg-text  { font-size: .85rem; }
+
+    .btn-danger {
+      background: var(--red,#CF142B); color:#fff; border:none; border-radius: 10px;
+      padding: .65rem 1.4rem; font-weight: 700; font-size: .9rem; cursor: pointer;
+      display:inline-flex; align-items:center; gap:.45rem;
+    }
+    .btn-danger:hover { background: #a81022; }
+    .btn-danger:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-ghost {
+      background: none; color: var(--accent); border: 1.5px solid var(--border); border-radius: 10px;
+      padding: .55rem 1.1rem; font-weight: 600; font-size: .85rem; cursor: pointer;
+    }
+
+    .hint { font-size: .85rem; color: var(--text-muted); }
+    .alert {
+      padding: .8rem 1rem; border-radius: 10px;
+      margin-top: 1rem; font-size: .9rem;
+    }
+    .alert-error   { background: rgba(207,20,43,0.08); color: var(--red,#CF142B); }
+    .alert-success { background: rgba(10,124,79,0.10); color: var(--green,#0a7c4f); }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal {
+      background: var(--bg-card); border-radius: 14px; padding: 1.5rem;
+      max-width: 480px; width: 100%; box-shadow: var(--shadow-lg);
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: .75rem; }
+    .modal textarea {
+      width: 100%; min-height: 110px; padding: .65rem; font-family: inherit; font-size: .9rem;
+      border: 1px solid var(--border); border-radius: 8px; resize: vertical;
+    }
+    .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/home" class="brand">
+      <span class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3 4 9v12h5v-7h6v7h5V9z"/></svg>
+      </span>
+      <span class="brand-text">Hogares<span>RD</span></span>
+    </a>
+
+    <div class="header-card">
+      <span class="header-eyebrow">
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="#fff"><path d="M12 2 4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5z"/></svg>
+        Seguimiento
+      </span>
+      <h1 class="header-title">Tu aplicación en HogaresRD</h1>
+      <p class="header-sub">Estás viendo este resumen desde un enlace privado enviado a tu correo. Mantenlo a salvo.</p>
+    </div>
+
+    <div id="loadingState" class="card">
+      <p class="hint">Cargando información de tu aplicación…</p>
+    </div>
+
+    <div id="errorState" class="card" hidden>
+      <h2>No pudimos cargar tu aplicación</h2>
+      <p id="errorText" class="hint"></p>
+      <p class="hint" style="margin-top:.7rem;">
+        Si recibiste este enlace por correo, asegúrate de usar el más reciente, o
+        <a href="/login">inicia sesión</a> con el correo con el que aplicaste para
+        ver el detalle completo.
+      </p>
+    </div>
+
+    <main id="content" hidden>
+      <!-- Status -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Estado actual
+        </h2>
+        <div id="statusBlock"></div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10S22 17.52 22 12 17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+          Línea de tiempo
+        </h2>
+        <div id="timelineBlock" class="timeline"></div>
+      </div>
+
+      <!-- Documents -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+          Documentos solicitados
+        </h2>
+        <div id="docsBlock"></div>
+        <p class="hint" style="margin-top:.7rem;">
+          Para subir documentos,
+          <a href="/login">inicia sesión</a> o
+          <a href="/register">crea una cuenta</a> con el correo con el que aplicaste.
+          Tu aplicación se enlazará automáticamente.
+        </p>
+      </div>
+
+      <!-- Conversation -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+          Conversación
+        </h2>
+        <div id="conversationBlock"></div>
+      </div>
+
+      <!-- Withdraw -->
+      <div class="card" id="withdrawCard">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          Retirar mi aplicación
+        </h2>
+        <p class="hint">Si decides ya no continuar con esta solicitud, puedes retirarla. Esta acción notifica al agente y no se puede deshacer.</p>
+        <div style="margin-top:.9rem; display:flex; gap:.5rem; flex-wrap: wrap;">
+          <button id="openWithdraw" class="btn-danger" type="button">
+            <svg viewBox="0 0 24 24" fill="#fff" width="14" height="14"><path d="M9 3v1H4v2h16V4h-5V3zm-3 6v11c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V9zm2 2h6v9H8z"/></svg>
+            Retirar aplicación
+          </button>
+        </div>
+        <div id="withdrawAlert"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Withdraw modal -->
+  <div id="withdrawModal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Confirmar retiro</h3>
+      <p class="hint" style="margin-bottom:.6rem;">¿Estás seguro de retirar esta aplicación? Cuéntanos brevemente por qué (opcional):</p>
+      <textarea id="withdrawReason" placeholder="Motivo (opcional)…" maxlength="500"></textarea>
+      <div class="modal-actions">
+        <button class="btn-ghost" type="button" id="cancelWithdraw">Cancelar</button>
+        <button class="btn-danger" type="button" id="confirmWithdraw">Sí, retirar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const params = new URLSearchParams(window.location.search);
+    const TOKEN  = params.get('token') || '';
+    const STATUS_LABELS = {
+      aplicado: 'Aplicado', en_revision: 'En Revisión',
+      documentos_requeridos: 'Documentos requeridos', documentos_enviados: 'Documentos enviados',
+      documentos_insuficientes: 'Documentos insuficientes', en_aprobacion: 'En aprobación',
+      reservado: 'Reservado', aprobado: 'Aprobado', pendiente_pago: 'Pendiente de pago',
+      pago_enviado: 'Pago enviado', pago_aprobado: 'Pago aprobado',
+      completado: 'Completado', rechazado: 'Rechazado',
+    };
+    function statusColor(s) {
+      if (['aprobado','pago_aprobado','completado'].includes(s)) return 'green';
+      if (['rechazado','documentos_insuficientes'].includes(s))  return 'red';
+      if (['documentos_requeridos','pendiente_pago'].includes(s))return 'orange';
+      if (['reservado','en_aprobacion'].includes(s))             return 'purple';
+      return 'blue';
+    }
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function fmtDate(s) {
+      if (!s) return '';
+      try {
+        const d = new Date(s);
+        return d.toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+      } catch (_) { return s; }
+    }
+
+    function show(el) { el.hidden = false; }
+    function hide(el) { el.hidden = true; }
+
+    let appData = null;
+
+    async function loadApplication() {
+      const loading = document.getElementById('loadingState');
+      const errorEl = document.getElementById('errorState');
+      const content = document.getElementById('content');
+
+      if (!TOKEN) {
+        document.getElementById('errorText').textContent = 'Falta el token en la URL. Usa el enlace que recibiste en tu correo.';
+        hide(loading); show(errorEl); return;
+      }
+
+      try {
+        const res = await fetch('/api/applications/track-token?token=' + encodeURIComponent(TOKEN));
+        if (!res.ok) {
+          let msg = 'No pudimos validar el enlace.';
+          try { const j = await res.json(); if (j?.error) msg = j.error; } catch(_) {}
+          document.getElementById('errorText').textContent = msg;
+          hide(loading); show(errorEl); return;
+        }
+        appData = await res.json();
+        render();
+        hide(loading); show(content);
+      } catch (e) {
+        document.getElementById('errorText').textContent = 'Error de red. Inténtalo de nuevo en unos segundos.';
+        hide(loading); show(errorEl);
+      }
+    }
+
+    function render() {
+      const a = appData || {};
+      // Status block
+      const sb = document.getElementById('statusBlock');
+      const status = a.status || 'aplicado';
+      sb.innerHTML = `
+        <div style="display:flex; align-items:center; gap:1rem; flex-wrap: wrap;">
+          <span class="status-pill status-${statusColor(status)}">${esc(STATUS_LABELS[status] || status)}</span>
+          <div>
+            <div style="font-weight:700;">${esc(a.listing_title || 'Aplicación')}</div>
+            <div class="hint">Aplicación #${esc(a.id || '')}</div>
+          </div>
+        </div>
+        ${a.status === 'rechazado' && a.status_reason
+          ? `<div class="alert alert-error" style="margin-top:.8rem;"><strong>Motivo:</strong> ${esc(a.status_reason)}</div>`
+          : ''}
+      `;
+
+      // Timeline
+      const tlEl = document.getElementById('timelineBlock');
+      const events = Array.isArray(a.timeline_events) ? a.timeline_events : [];
+      const statusEvents = events.filter(ev => ev.type === 'status_change' || ev.type === 'application' || ev.type === 'commission_voided');
+      if (statusEvents.length === 0) {
+        tlEl.innerHTML = '<p class="hint">Aún no hay eventos en tu línea de tiempo.</p>';
+      } else {
+        tlEl.innerHTML = statusEvents.map(ev => `
+          <div class="ev-row">
+            <span class="ev-dot"></span>
+            <div class="ev-body">
+              <div class="ev-desc">${esc(ev.description || '')}</div>
+              <div class="ev-meta">${esc(fmtDate(ev.created_at))} · ${esc(ev.actor_name || 'Sistema')}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Documents
+      const docsEl = document.getElementById('docsBlock');
+      const requested = Array.isArray(a.documents_requested) ? a.documents_requested : [];
+      const uploaded  = Array.isArray(a.documents_uploaded)  ? a.documents_uploaded  : [];
+      if (requested.length === 0 && uploaded.length === 0) {
+        docsEl.innerHTML = '<p class="hint">No hay documentos solicitados.</p>';
+      } else {
+        docsEl.innerHTML = requested.map(d => {
+          const u = uploaded.find(x => x.request_id === d.id);
+          const st = (u && u.review_status) || d.status || 'pending';
+          const labelMap = { approved: 'Aprobado', rejected: 'Rechazado', pending: 'En revisión', uploaded: 'Subido' };
+          const lbl = labelMap[st] || 'Pendiente';
+          return `
+            <div class="doc-row">
+              <span style="flex:1; font-size:.9rem;">${esc(d.label || d.type || 'Documento')}</span>
+              <span class="doc-status ${st === 'approved' ? 'approved' : st === 'rejected' ? 'rejected' : st === 'uploaded' ? 'uploaded' : 'pending'}">${esc(lbl)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Conversation
+      const cEl = document.getElementById('conversationBlock');
+      const messages = events.filter(ev => ev.type === 'message');
+      if (messages.length === 0) {
+        cEl.innerHTML = '<p class="hint">Aún no hay mensajes en este hilo.</p>';
+      } else {
+        cEl.innerHTML = messages.slice(-5).map(m => `
+          <div class="msg-row" style="display:block;">
+            <div class="msg-actor">${esc(m.actor_name || 'Mensaje')}</div>
+            <div class="msg-text">${esc(m.description || '')}</div>
+            <div class="ev-meta">${esc(fmtDate(m.created_at))}</div>
+          </div>
+        `).join('');
+      }
+
+      // Withdraw — hidden when terminal
+      const wcard = document.getElementById('withdrawCard');
+      if (status === 'rechazado' || status === 'completado') {
+        hide(wcard);
+      } else {
+        show(wcard);
+      }
+    }
+
+    // ── Withdraw flow ─────────────────────────────────────────────
+    const modal = document.getElementById('withdrawModal');
+    document.getElementById('openWithdraw').addEventListener('click', () => {
+      document.getElementById('withdrawReason').value = '';
+      show(modal);
+    });
+    document.getElementById('cancelWithdraw').addEventListener('click', () => hide(modal));
+    document.getElementById('confirmWithdraw').addEventListener('click', async () => {
+      const btn = document.getElementById('confirmWithdraw');
+      const reason = (document.getElementById('withdrawReason').value || '').trim();
+      const alertEl = document.getElementById('withdrawAlert');
+      const id = appData && appData.id;
+      if (!id) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(id)}/withdraw`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${TOKEN}`,
+          },
+          body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) {
+          let msg = 'No pudimos retirar la aplicación.';
+          try { const j = await res.json(); if (j?.error) msg = j.error; } catch(_) {}
+          alertEl.innerHTML = `<div class="alert alert-error">${esc(msg)}</div>`;
+        } else {
+          alertEl.innerHTML = '<div class="alert alert-success">Aplicación retirada. Te enviamos una confirmación.</div>';
+          appData = await res.json();
+          render();
+        }
+      } catch (_) {
+        alertEl.innerHTML = '<div class="alert alert-error">Error de red. Intenta de nuevo.</div>';
+      } finally {
+        btn.disabled = false;
+        hide(modal);
+      }
+    });
+
+    loadApplication();
+  })();
+  </script>
+</body>
+</html>

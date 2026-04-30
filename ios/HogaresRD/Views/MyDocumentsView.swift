@@ -15,12 +15,19 @@ struct MyDocumentsView: View {
     @State private var pickerContext: PickerContext?
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var successMessage: String?
+    // B6: per-application amount + currency for payment-receipt uploads.
+    // Keyed by application id so each card preserves its draft input.
+    @State private var paymentAmounts:    [String: String] = [:]
+    @State private var paymentCurrencies: [String: String] = [:]
 
     struct PickerContext {
         let applicationId: String
         let requestId: String?
         let type: String
         let label: String
+        // B6: receipt-only — amount as user-entered string + currency code.
+        var amount:   String? = nil
+        var currency: String? = nil
     }
 
     var body: some View {
@@ -208,15 +215,7 @@ struct MyDocumentsView: View {
 
                 let verStatus = pmt["verification_status"] as? String ?? "none"
                 if verStatus == "none" || verStatus == "rejected" {
-                    uploadMenu(ctx: PickerContext(applicationId: appId, requestId: nil, type: "payment_receipt", label: "Comprobante de pago")) {
-                        Label("Subir comprobante", systemImage: "arrow.up.doc.fill")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
-                    }
-                    .disabled(uploadingFor == appId)
+                    paymentReceiptForm(appId: appId, listingCurrency: app["listing_currency"] as? String)
                     if verStatus == "rejected" {
                         Label("Rechazado — sube un nuevo comprobante", systemImage: "exclamationmark.circle")
                             .font(.caption)
@@ -262,6 +261,79 @@ struct MyDocumentsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
+    // MARK: - Payment Receipt Form (B6)
+
+    /// Inline amount + currency picker shown above the receipt upload button.
+    /// `listingCurrency` (USD/DOP) seeds the default when known.
+    @ViewBuilder
+    private func paymentReceiptForm(appId: String, listingCurrency: String?) -> some View {
+        // Seed defaults once per appId
+        let defaultCurrency: String = {
+            let c = listingCurrency?.uppercased() ?? ""
+            return (c == "USD" || c == "DOP") ? c : "DOP"
+        }()
+        let amountString  = paymentAmounts[appId] ?? ""
+        let currencyValue = paymentCurrencies[appId] ?? defaultCurrency
+        let parsed        = Double(amountString.replacingOccurrences(of: ",", with: "."))
+        let isValid       = (parsed ?? 0) > 0
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                // Amount field
+                HStack(spacing: 4) {
+                    Image(systemName: "creditcard.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Monto", text: Binding(
+                        get: { paymentAmounts[appId] ?? "" },
+                        set: { paymentAmounts[appId] = $0 }
+                    ))
+                    .keyboardType(.decimalPad)
+                    .font(.subheadline)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
+                )
+                .frame(maxWidth: .infinity)
+
+                // Currency picker
+                Picker("Moneda", selection: Binding(
+                    get: { paymentCurrencies[appId] ?? defaultCurrency },
+                    set: { paymentCurrencies[appId] = $0 }
+                )) {
+                    Text("DOP").tag("DOP")
+                    Text("USD").tag("USD")
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 130)
+            }
+
+            if !amountString.isEmpty && !isValid {
+                Text("Ingresa un monto mayor a 0.")
+                    .font(.caption)
+                    .foregroundStyle(Color.rdRed)
+            }
+
+            uploadMenu(ctx: PickerContext(
+                applicationId: appId, requestId: nil,
+                type: "payment_receipt", label: "Comprobante de pago",
+                amount: amountString, currency: currencyValue
+            )) {
+                Label("Subir comprobante", systemImage: "arrow.up.doc.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background((isValid ? Color.rdBlue : Color.gray.opacity(0.5)), in: RoundedRectangle(cornerRadius: 10))
+            }
+            .disabled(uploadingFor == appId || !isValid)
+        }
+    }
+
     // MARK: - Document Row
 
     private func documentRow(doc: [String: Any], appId: String, uploadedDocs: [[String: Any]]) -> some View {
@@ -274,54 +346,75 @@ struct MyDocumentsView: View {
         // Check if a matching uploaded document exists
         let uploaded = uploadedDocs.first { ($0["request_id"] as? String) == reqId }
         let reviewStatus = uploaded?["review_status"] as? String
+        // B5: surface the broker's rejection note when the doc was rejected.
+        // The server stores it as `review_note` on the uploaded record.
+        let reviewNote = (uploaded?["review_note"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return HStack(spacing: 12) {
-            Image(systemName: docIcon(type))
-                .font(.system(size: 20))
-                .foregroundStyle(reviewStatus == "approved" ? Color.rdGreen : reviewStatus == "rejected" ? Color.rdRed : Color.rdBlue)
-                .frame(width: 32)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Image(systemName: docIcon(type))
+                    .font(.system(size: 20))
+                    .foregroundStyle(reviewStatus == "approved" ? Color.rdGreen : reviewStatus == "rejected" ? Color.rdRed : Color.rdBlue)
+                    .frame(width: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(label)
-                        .font(.subheadline.bold())
-                    if isRequired {
-                        Text("*")
-                            .font(.caption.bold())
-                            .foregroundStyle(Color.rdRed)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(label)
+                            .font(.subheadline.bold())
+                        if isRequired {
+                            Text("*")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.rdRed)
+                        }
+                    }
+                    if let rs = reviewStatus {
+                        Text(rs == "approved" ? "Aprobado" : rs == "rejected" ? "Rechazado" : rs == "pending" ? "En revision" : "Pendiente")
+                            .font(.caption)
+                            .foregroundStyle(rs == "approved" ? Color.rdGreen : rs == "rejected" ? Color.rdRed : .secondary)
+                    } else if docStatus == "uploaded" {
+                        Text("Subido — en revision")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Pendiente de subir")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                     }
                 }
-                if let rs = reviewStatus {
-                    Text(rs == "approved" ? "Aprobado" : rs == "rejected" ? "Rechazado" : rs == "pending" ? "En revision" : "Pendiente")
-                        .font(.caption)
-                        .foregroundStyle(rs == "approved" ? Color.rdGreen : rs == "rejected" ? Color.rdRed : .secondary)
-                } else if docStatus == "uploaded" {
-                    Text("Subido — en revision")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if reviewStatus == nil || reviewStatus == "rejected" {
+                    uploadMenu(ctx: PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.rdBlue)
+                    }
+                } else if reviewStatus == "approved" {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.rdGreen)
                 } else {
-                    Text("Pendiente de subir")
-                        .font(.caption)
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 24))
                         .foregroundStyle(.orange)
                 }
             }
 
-            Spacer()
-
-            if reviewStatus == nil || reviewStatus == "rejected" {
-                uploadMenu(ctx: PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.rdBlue)
+            // B5: red callout with the broker's rejection note
+            if reviewStatus == "rejected", let note = reviewNote, !note.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.bubble.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.red)
+                    Text("Nota del agente: \(note)")
+                        .font(.caption)
+                        .foregroundStyle(Color.red)
                 }
-            } else if reviewStatus == "approved" {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(Color.rdGreen)
-            } else {
-                Image(systemName: "clock.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(.orange)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         .padding(10)
@@ -372,12 +465,22 @@ struct MyDocumentsView: View {
         uploadingFor = context.applicationId
         do {
             if context.type == "payment_receipt" {
-                try await api.uploadPaymentReceipt(
+                // B6: validate amount > 0 client-side and send currency too.
+                let amountStr = (context.amount ?? "")
+                    .trimmingCharacters(in: .whitespaces)
+                    .replacingOccurrences(of: ",", with: ".")
+                guard let amt = Double(amountStr), amt > 0 else {
+                    withAnimation { successMessage = nil }
+                    uploadingFor = nil
+                    return
+                }
+                try await uploadPaymentReceiptWithCurrency(
                     applicationId: context.applicationId,
-                    amount: "0",
-                    notes: "",
+                    amount: String(amt),
+                    currency: context.currency ?? "DOP",
                     fileData: data,
-                    filename: filename
+                    filename: filename,
+                    mimeType: "image/jpeg"
                 )
             } else if context.type == "installment_proof", let instId = context.requestId {
                 // Use the payment plan upload endpoint
@@ -430,10 +533,22 @@ struct MyDocumentsView: View {
         uploadingFor = context.applicationId
         do {
             if context.type == "payment_receipt" {
-                try await api.uploadPaymentReceipt(
+                // B6: validate amount > 0 client-side and send currency too.
+                let amountStr = (context.amount ?? "")
+                    .trimmingCharacters(in: .whitespaces)
+                    .replacingOccurrences(of: ",", with: ".")
+                guard let amt = Double(amountStr), amt > 0 else {
+                    withAnimation { successMessage = nil }
+                    uploadingFor = nil
+                    return
+                }
+                try await uploadPaymentReceiptWithCurrency(
                     applicationId: context.applicationId,
-                    amount: "0", notes: "",
-                    fileData: data, filename: filename
+                    amount: String(amt),
+                    currency: context.currency ?? "DOP",
+                    fileData: data,
+                    filename: filename,
+                    mimeType: mimeType
                 )
             } else if context.type == "installment_proof", let instId = context.requestId {
                 guard let t = api.token else { throw APIError.server("No autenticado") }
@@ -468,6 +583,41 @@ struct MyDocumentsView: View {
     }
 
     // MARK: - Helpers
+
+    /// B6: Upload a payment receipt with explicit amount + currency.
+    /// We POST directly here (instead of going through APIService.uploadPaymentReceipt)
+    /// because that helper does not accept a currency field.
+    private func uploadPaymentReceiptWithCurrency(
+        applicationId: String,
+        amount: String,
+        currency: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String
+    ) async throws {
+        guard let t = api.token else { throw APIError.server("No autenticado") }
+        let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/payment/upload")!
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let safeFilename = sanitizeMultipartFilename(filename)
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(("Content-Disposition: form-data; name=\"receipt\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(("Content-Disposition: form-data; name=\"amount\"\r\n\r\n\(amount)\r\n").data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(("Content-Disposition: form-data; name=\"currency\"\r\n\r\n\(currency)\r\n").data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            throw APIError.server("Error subiendo comprobante (\(http.statusCode))")
+        }
+    }
 
     /// Strip characters that can break a multipart `filename="…"` header
     /// (quotes, control chars, surrogate-pair fragments). PHPicker filenames

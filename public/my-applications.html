@@ -738,6 +738,71 @@
     let applications = [];
     let expandedAppId = null;
     let appDetails = {};
+    // B7: SSE subscription map { appId → EventSource }. Cleared on
+    // page navigation so we don't leak open streams.
+    let appEventStreams = {};
+
+    /* ── B7: SSE subscriptions ── */
+    function subscribeToApplicationEvents(appId) {
+      // Tear down any previous stream for this app.
+      if (appEventStreams[appId]) {
+        try { appEventStreams[appId].close(); } catch (_) {}
+        delete appEventStreams[appId];
+      }
+      let es;
+      try {
+        // Same-origin EventSource sends the httpOnly JWT cookie automatically.
+        // Browser EventSource honors Last-Event-ID via the standard `event: …`
+        // / `id: …` framing emitted by the server, so reconnects don't replay.
+        es = new EventSource(`/api/applications/${encodeURIComponent(appId)}/events`);
+      } catch (_) {
+        return;
+      }
+      const onEvent = async () => {
+        try {
+          const fresh = await apiGet(`/api/applications/${encodeURIComponent(appId)}`);
+          appDetails[appId] = fresh;
+          // Refresh the row in the list (status badge / stepper) and the
+          // detail panel, if it's currently open.
+          const idx = applications.findIndex(a => a.id === appId);
+          if (idx >= 0) {
+            applications[idx] = { ...applications[idx], ...fresh };
+            updateAppRow(appId);
+          }
+          const detail = document.getElementById(`detail-${appId}`);
+          if (detail && detail.classList.contains('open')) renderDetail(appId);
+        } catch (_) { /* keep stream alive — transient errors are fine */ }
+      };
+      es.addEventListener('state', onEvent);
+      es.addEventListener('message', onEvent);
+      // Browser auto-reconnects on error; we don't manually retry.
+      appEventStreams[appId] = es;
+    }
+
+    function tearDownAllStreams() {
+      Object.values(appEventStreams).forEach(es => { try { es.close(); } catch (_) {} });
+      appEventStreams = {};
+    }
+    window.addEventListener('beforeunload', tearDownAllStreams);
+    window.addEventListener('pagehide', tearDownAllStreams);
+
+    function updateAppRow(appId) {
+      const card = document.getElementById(`app-${appId}`);
+      const app = applications.find(a => a.id === appId);
+      if (!card || !app) return;
+      const badgeEl = card.querySelector('.app-card-right .status-badge');
+      if (badgeEl) {
+        badgeEl.className = `status-badge status-${getStatusColor(app.status)}`;
+        badgeEl.textContent = getStatusLabel(app.status);
+      }
+      const stepperWrap = card.querySelector('.stepper');
+      if (stepperWrap) {
+        const next = document.createElement('div');
+        next.innerHTML = buildStepper(app.status);
+        const replacement = next.firstElementChild;
+        if (replacement) stepperWrap.replaceWith(replacement);
+      }
+    }
 
     /* ── Load applications ── */
     async function loadApplications() {
@@ -829,6 +894,11 @@
         const header = e.target.closest('.app-card-header[data-app-id]');
         if (header) toggleDetail(header.dataset.appId);
       });
+
+      // B7: open one SSE stream per application so status / timeline
+      // changes show up without a manual refresh.
+      tearDownAllStreams();
+      applications.forEach(a => subscribeToApplicationEvents(a.id));
     }
 
     /* ── Toggle detail ── */
@@ -1134,9 +1204,20 @@
     }
 
     function renderLegacyUploadForm(appId) {
+      // B6: default currency from the listing when known, else DOP.
+      const app = appDetails[appId] || {};
+      const listingCurrency = String(app.listing_currency || app.currency || '').toUpperCase();
+      const defaultCurrency = (listingCurrency === 'USD' || listingCurrency === 'DOP') ? listingCurrency : 'DOP';
       return `
         <div class="payment-form" id="paymentForm-${appId}">
           <div id="paymentAlert-${appId}"></div>
+          <details style="margin-bottom:.75rem;background:var(--bg-section,#f8f8f8);border:1px solid var(--border,#e4e4e7);border-radius:8px;padding:.55rem .8rem;">
+            <summary style="cursor:pointer;font-size:.85rem;font-weight:600;">¿Qué comprobantes aceptamos?</summary>
+            <p style="font-size:.82rem;margin-top:.5rem;color:var(--text-muted,#666);line-height:1.5;">
+              Aceptamos PDF, JPG o PNG de transferencia bancaria o volante de depósito (máximo 10 MB).
+              Asegúrate de que el monto, la fecha y los datos del beneficiario sean legibles.
+            </p>
+          </details>
           <div class="form-row">
             <div class="form-group">
               <label>Recibo de pago</label>
@@ -1144,7 +1225,14 @@
             </div>
             <div class="form-group">
               <label>Monto</label>
-              <input type="number" id="paymentAmount-${appId}" placeholder="Ej: 150000" min="0" />
+              <input type="number" id="paymentAmount-${appId}" placeholder="Ej: 150000" min="1" step="0.01" required />
+            </div>
+            <div class="form-group">
+              <label>Moneda</label>
+              <select id="paymentCurrency-${appId}">
+                <option value="DOP" ${defaultCurrency === 'DOP' ? 'selected' : ''}>DOP — Pesos dominicanos</option>
+                <option value="USD" ${defaultCurrency === 'USD' ? 'selected' : ''}>USD — Dólares</option>
+              </select>
             </div>
           </div>
           <div class="form-group">
@@ -1486,6 +1574,7 @@
     async function uploadPayment(appId) {
       const fileInput = document.getElementById(`paymentFile-${appId}`);
       const amountInput = document.getElementById(`paymentAmount-${appId}`);
+      const currencyInput = document.getElementById(`paymentCurrency-${appId}`);
       const notesInput = document.getElementById(`paymentNotes-${appId}`);
       const alertDiv = document.getElementById(`paymentAlert-${appId}`);
 
@@ -1494,9 +1583,18 @@
         return;
       }
 
+      // B6: require amount > 0 client-side.
+      const amountNum = Number((amountInput && amountInput.value) || 0);
+      if (!isFinite(amountNum) || amountNum <= 0) {
+        if (alertDiv) alertDiv.innerHTML = '<div class="alert alert-error">Ingresa un monto válido mayor a 0.</div>';
+        if (amountInput) amountInput.focus();
+        return;
+      }
+
       const formData = new FormData();
       formData.append('receipt', fileInput.files[0]);
-      if (amountInput && amountInput.value) formData.append('amount', amountInput.value);
+      formData.append('amount', String(amountNum));
+      formData.append('currency', (currencyInput && currencyInput.value) || 'DOP');
       if (notesInput && notesInput.value) formData.append('notes', notesInput.value);
 
       try {
