@@ -734,7 +734,9 @@
 
     // Capture ?q= from URL (e.g. from homepage search)
     const _urlQ = new URLSearchParams(window.location.search).get('q') || '';
-    const urlType = new URLSearchParams(window.location.search).get('type');
+    // Accept both ?tipo= (used by /home links) and ?type= (legacy)
+    const _urlParams = new URLSearchParams(window.location.search);
+    const urlType = _urlParams.get('tipo') || _urlParams.get('type');
     let currentListingType = urlType || 'venta';
 
     function getFilters() {

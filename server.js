@@ -906,7 +906,7 @@ function adminKeyAuth(req, res, next) {
 
 // ── Routes ─────────────────────────────────────────────────────
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
 
 app.get('/home', (req, res) => {
@@ -933,7 +933,12 @@ app.get('/terminos-publicacion', (req, res) => res.sendFile(path.join(__dirname,
 app.get('/terminos-inmobiliaria',(req, res) => res.sendFile(path.join(__dirname, 'public', 'terminos-inmobiliaria.html')));
 app.get('/about',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 app.get('/comprar',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'comprar.html')));
-app.get('/alquilar',          (req, res) => res.redirect(301, '/comprar?type=alquiler'));
+app.get('/alquilar',          (req, res) => {
+  // Preserve any tipo/type filter so /alquilar?tipo=apartamento survives the hop
+  const tipo = req.query.tipo || req.query.type;
+  const tipoQs = tipo ? `&tipo=${encodeURIComponent(tipo)}` : '';
+  res.redirect(301, `/comprar?type=alquiler${tipoQs}`);
+});
 app.get('/comparar',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'comparar.html')));
 app.get('/busquedas-guardadas',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'busquedas-guardadas.html')));
 app.get('/mapa',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapa.html')));

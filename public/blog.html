@@ -501,8 +501,9 @@
       let token, user;
       try { token = localStorage.getItem('hogaresrd_token'); user = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null'); } catch(e) {}
       if (token && user) {
-        const initials  = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const firstName = user.name.split(' ')[0];
+        const safeName  = (user.name || 'Mi cuenta');
+        const initials  = safeName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const firstName = safeName.split(' ')[0];
         area.innerHTML = `
           <a href="/submit" style="background:var(--accent);color:#fff;font-size:0.9rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:8px;text-decoration:none;">Publicar</a>
           <div style="position:relative;" id="userMenu">

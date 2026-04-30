@@ -1812,7 +1812,7 @@
           <a class="nav-link active" href="/home">Inicio</a>
           <a class="nav-link" href="/comprar">Comprar</a>
           <a class="nav-link" href="/comprar?type=alquiler">Alquilar</a>
-          <a class="nav-link" href="/favoritos">Favoritos</a>
+          <a class="nav-link" href="/busquedas-guardadas">Favoritos</a>
           <a class="nav-link" href="/comprar?type=proyecto">Proyectos</a>
           <a class="nav-link" href="/blog">Blog</a>
         </div>
@@ -2019,7 +2019,7 @@
               <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
             </span>
           </label>
-          <button class="search-submit" id="heroSearchBtn">
+          <button class="search-submit" id="heroSearchBtn" aria-label="Buscar">
             Buscar ahora
           </button>
         </div>
@@ -2214,7 +2214,7 @@
         </div>
         <div class="journey-label">VENDER?</div>
         <p class="journey-desc">Si eres propietario en zonas como Punta Cana, Santo Domingo o Santiago, estás en uno de los mercados más activos del Caribe. Te ayudamos a moverte con confianza.</p>
-        <a href="/vender" class="journey-cta">Vender con HogaresRD</a>
+        <a href="/submit" class="journey-cta">Vender con HogaresRD</a>
       </div>
 
       <div class="journey-col">
@@ -2404,7 +2404,7 @@
         </div>
         <div class="journey-label">VERIFICADOS</div>
         <p class="journey-desc">Cada agente tiene su licencia MIREX validada por nuestro equipo antes de aparecer en la plataforma. Solo profesionales reales, con historial verificable.</p>
-        <a href="/agentes" class="journey-cta">Ver agentes verificados</a>
+        <a href="/about" class="journey-cta">Ver agentes verificados</a>
       </div>
 
       <div class="journey-col">
@@ -2416,7 +2416,7 @@
         </div>
         <div class="journey-label">TRANSPARENTES</div>
         <p class="journey-desc">Precios claros en pesos y dólares. Sin comisiones ocultas para compradores ni inquilinos, sin sorpresas en el cierre — lo que ves es lo que pagas.</p>
-        <a href="/precios" class="journey-cta">Cómo funciona</a>
+        <a href="/subscribe" class="journey-cta">Cómo funciona</a>
       </div>
 
       <div class="journey-col">
@@ -2428,7 +2428,7 @@
         </div>
         <div class="journey-label">LOCALES</div>
         <p class="journey-desc">Listados activos en las 31 provincias, desde Santo Domingo hasta los pueblos más pequeños del Cibao. Construido en RD, para el mercado dominicano.</p>
-        <a href="/cobertura" class="journey-cta">Explorar cobertura</a>
+        <a href="/ciudades" class="journey-cta">Explorar cobertura</a>
       </div>
     </div>
   </section>
@@ -2720,16 +2720,16 @@
       }
     }
 
-    // The user chip routes to the account page; messages + bell to
-    // their respective routes (if those pages don't exist yet, the
-    // server's catch-all serves home — no broken links).
+    // Map nav chips to real routes. /notificaciones is TBD — the page is
+    // not yet wired up server-side; keep the link so future work can land
+    // the page without touching this file again.
     document.addEventListener('click', (e) => {
       const userBtn = e.target.closest('.nav-user');
-      if (userBtn)  { window.location.href = '/cuenta';        return; }
+      if (userBtn)  { window.location.href = '/broker#perfil';  return; }
       const msg = e.target.closest('.nav-icon[aria-label="Mensajes"]');
-      if (msg)      { window.location.href = '/conversaciones'; return; }
+      if (msg)      { window.location.href = '/mensajes';       return; }
       const bell = e.target.closest('.nav-icon[aria-label="Notificaciones"]');
-      if (bell)     { window.location.href = '/notificaciones'; return; }
+      if (bell)     { window.location.href = '/notificaciones'; return; } // TBD: page not yet implemented
     });
 
     // ── Hero search submit ──────────────────────────────────────

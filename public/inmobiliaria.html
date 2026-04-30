@@ -575,8 +575,10 @@
           document.title = `${data.name} — HogaresRD`;
           const heroEl = document.getElementById('agencyHero');
           heroEl.style.display = '';
-          // Apply cover/banner image if set
-          if (p.coverImage) {
+          // Apply cover/banner image if set — validate URL to prevent CSS injection
+          if (p.coverImage && typeof p.coverImage === 'string'
+              && /^https?:\/\//i.test(p.coverImage)
+              && !/['"]/.test(p.coverImage)) {
             heroEl.style.backgroundImage = `url('${p.coverImage}')`;
             heroEl.classList.add('has-cover');
           }
@@ -601,7 +603,7 @@
           // About section
           // About section — always show as default tab
           if (p.companyDescription) {
-            document.getElementById('aboutContent').innerHTML = p.companyDescription;
+            document.getElementById('aboutContent').textContent = p.companyDescription || '';
           } else {
             document.getElementById('aboutContent').innerHTML = `<p>${esc(data.name)} es una inmobiliaria afiliada a HogaresRD con ${data.total} propiedad${data.total !== 1 ? 'es' : ''} en su portafolio.</p>`;
           }
