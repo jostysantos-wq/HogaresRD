@@ -132,10 +132,12 @@ struct AuthView: View {
                             withAnimation(.easeInOut(duration: 0.22)) { mode = .welcome }
                         }
                         .foregroundStyle(.white)
+                        .accessibilityLabel("Volver")
                     }
                 } else {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("← Volver") { dismiss() }
+                            .accessibilityLabel("Volver")
                     }
                 }
             }
@@ -254,7 +256,12 @@ struct WelcomeLoginScreen: View {
                     .frame(height: 54)
                     .clipShape(Capsule())
 
-                    // Google — visual placeholder; not yet wired to a real provider
+                    // TODO: enable when Google OAuth is wired
+                    // Hidden for App Store Review — a button that only
+                    // shows "Próximamente" is flagged as broken / misleading
+                    // functionality. Restore the block below (and the
+                    // `showGoogleNotice` alert) once the provider is live.
+                    /*
                     Button {
                         showGoogleNotice = true
                     } label: {
@@ -274,6 +281,7 @@ struct WelcomeLoginScreen: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    */
                 }
                 .padding(.bottom, 20)
 
@@ -365,6 +373,9 @@ struct WelcomeLoginScreen: View {
                     name:  fullName.isEmpty ? nil : fullName,
                     email: credential.email
                 )
+                // Persist the Apple userID so the app can later check the
+                // credential state on launch and force-logout if revoked.
+                UserDefaults.standard.set(credential.user, forKey: "apple_user_id")
                 onSuccess()
             } catch {
                 self.error = error.localizedDescription
@@ -643,6 +654,8 @@ struct WelcomeRegisterScreen: View {
                     .foregroundStyle(textMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(showPassword ? "Ocultar contraseña" : "Mostrar contraseña")
+            .accessibilityValue(showPassword ? "Visible" : "Oculta")
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
@@ -692,6 +705,8 @@ struct WelcomeRegisterScreen: View {
                 .padding(.top, 1)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Aceptar términos")
+            .accessibilityValue(termsAccepted ? "Aceptado" : "No aceptado")
 
             (
                 Text("Acepto los ")
@@ -775,8 +790,12 @@ struct WelcomeLoginFormScreen: View {
     @State private var twoFACode = ""
     @State private var twoFALoading = false
     @State private var twoFAError: String?
+    @State private var resendCooldown: Int = 0
 
     @State private var showForgot = false
+
+    // 1-second tick used to drive the resend cooldown countdown.
+    private let resendTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
     private let bio = BiometricService.shared
 
@@ -1018,12 +1037,16 @@ struct WelcomeLoginFormScreen: View {
             }
 
             Button(action: { Task { await resend2FA() } }) {
-                Text("Reenviar código")
+                Text(resendCooldown > 0 ? "Reenviar código (\(resendCooldown)s)" : "Reenviar código")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(blue)
+                    .foregroundStyle(resendCooldown > 0 ? textMuted : blue)
             }
             .buttonStyle(.plain)
+            .disabled(resendCooldown > 0)
             .padding(.top, 2)
+            .onReceive(resendTimer) { _ in
+                if resendCooldown > 0 { resendCooldown -= 1 }
+            }
 
             Button(action: {
                 show2FA = false
@@ -1086,6 +1109,8 @@ struct WelcomeLoginFormScreen: View {
                     .foregroundStyle(textMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(showPassword ? "Ocultar contraseña" : "Mostrar contraseña")
+            .accessibilityValue(showPassword ? "Visible" : "Oculta")
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
@@ -1183,8 +1208,10 @@ struct WelcomeLoginFormScreen: View {
     }
 
     private func resend2FA() async {
+        guard resendCooldown == 0 else { return }
         do {
             try await api.resend2FA(sessionId: twoFASessionId)
+            resendCooldown = 60
         } catch {
             twoFAError = error.localizedDescription
         }

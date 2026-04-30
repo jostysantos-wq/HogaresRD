@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import AuthenticationServices
 
 // MARK: - AppDelegate (Push Notifications)
 
@@ -75,6 +76,8 @@ struct HogaresRDApp: App {
     }
 
     @State private var showSplash = true
+    @State private var verifyBanner: String?
+    @State private var verifyBannerIsError: Bool = false
 
     var body: some Scene {
         WindowGroup {
@@ -101,9 +104,36 @@ struct HogaresRDApp: App {
                         .transition(.opacity)
                         .zIndex(1000)
                 }
+
+                // Verify-email transient banner — auto-dismisses after 3s
+                if let msg = verifyBanner {
+                    VStack {
+                        HStack(spacing: 10) {
+                            Image(systemName: verifyBannerIsError
+                                  ? "exclamationmark.circle.fill"
+                                  : "checkmark.circle.fill")
+                            Text(msg).font(.system(size: 14, weight: .semibold))
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(.white)
+                        .background(verifyBannerIsError ? Color.red : Color.green,
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1001)
+                }
             }
             .animation(.easeInOut(duration: 0.4), value: showSplash)
             .animation(.easeInOut(duration: 0.25), value: lockManager.isLocked)
+            .animation(.easeInOut(duration: 0.25), value: verifyBanner)
+            .onAppear {
+                checkAppleCredentialState()
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 lockManager.handleScenePhase(newPhase, isLoggedIn: api.currentUser != nil)
                 // Clear notification badge when app becomes active
@@ -127,6 +157,31 @@ struct HogaresRDApp: App {
                 // AFTER splash, not during app init (avoids main-thread stall).
                 pushService.deferredInit()
             }
+        }
+    }
+
+    /// Bug #3: if a saved Apple userID exists, check whether the credential
+    /// is still valid. If revoked / not-found we force a logout so the app
+    /// doesn't keep using a dead token.
+    private func checkAppleCredentialState() {
+        guard let savedUserID = UserDefaults.standard.string(forKey: "apple_user_id"),
+              !savedUserID.isEmpty else { return }
+        ASAuthorizationAppleIDProvider().getCredentialState(forUserID: savedUserID) { state, _ in
+            if state == .revoked || state == .notFound {
+                Task { @MainActor in
+                    APIService.shared.logout()
+                }
+            }
+        }
+    }
+
+    /// Show a transient banner for 3 seconds.
+    private func showVerifyBanner(_ message: String, isError: Bool) {
+        verifyBannerIsError = isError
+        verifyBanner = message
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            await MainActor.run { verifyBanner = nil }
         }
     }
 
@@ -155,7 +210,14 @@ struct HogaresRDApp: App {
             if let token = comps?.queryItems?.first(where: { $0.name == "token" })?.value,
                !token.isEmpty {
                 Task {
-                    _ = await APIService.shared.verifyEmail(token: token)
+                    let ok = await APIService.shared.verifyEmail(token: token)
+                    await MainActor.run {
+                        if ok {
+                            showVerifyBanner("Tu correo fue verificado.", isError: false)
+                        } else {
+                            showVerifyBanner("No se pudo verificar tu correo. El enlace puede haber expirado.", isError: true)
+                        }
+                    }
                 }
             }
         } else if segments.first == "listing", let listingId = segments.dropFirst().first {

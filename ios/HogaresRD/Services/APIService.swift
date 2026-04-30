@@ -141,7 +141,9 @@ class APIService: ObservableObject {
         limit: Int = 12,
         page: Int = 1
     ) async throws -> ListingsResponse {
-        var components = URLComponents(string: "\(apiBase)/api/listings")!
+        guard var components = URLComponents(string: "\(apiBase)/api/listings") else {
+            throw APIError.server("URL inválida")
+        }
         var items: [URLQueryItem] = [
             URLQueryItem(name: "limit", value: "\(limit)"),
             URLQueryItem(name: "page",  value: "\(page)")
@@ -151,9 +153,10 @@ class APIService: ObservableObject {
         if let p = province  { items.append(.init(name: "province",  value: p)) }
         if let ci = city     { items.append(.init(name: "city",      value: ci)) }
         components.queryItems = items
-        let cacheKey = "listings:\(components.url!.absoluteString)"
+        guard let url = components.url else { throw APIError.server("URL inválida") }
+        let cacheKey = "listings:\(url.absoluteString)"
         if let cached: ListingsResponse = cache.get(cacheKey) { return cached }
-        let (data, _) = try await session.data(from: components.url!)
+        let (data, _) = try await session.data(from: url)
         let result = try decoder.decode(ListingsResponse.self, from: data)
         cache.set(cacheKey, value: result, ttl: 60) // 1 min cache
         return result
@@ -451,7 +454,7 @@ class APIService: ObservableObject {
         // Auto-login after registration to obtain token
         let result = try await login(email: email, password: password)
         if case .success(let user) = result { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
+        throw APIError.server("Registro exitoso. Inicia sesión para verificar tu identidad.")
     }
 
     func registerAgency(name: String, email: String, password: String,
@@ -473,7 +476,7 @@ class APIService: ObservableObject {
         }
         let result = try await login(email: email, password: password)
         if case .success(let user) = result { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
+        throw APIError.server("Registro exitoso. Inicia sesión para verificar tu identidad.")
     }
 
     func registerBroker(name: String, email: String, password: String,
@@ -497,7 +500,7 @@ class APIService: ObservableObject {
         }
         let result = try await login(email: email, password: password)
         if case .success(let user) = result { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesión.")
+        throw APIError.server("Registro exitoso. Inicia sesión para verificar tu identidad.")
     }
 
     func registerInmobiliaria(name: String, email: String, password: String,
@@ -519,7 +522,7 @@ class APIService: ObservableObject {
         }
         let result = try await login(email: email, password: password)
         if case .success(let user) = result { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesion.")
+        throw APIError.server("Registro exitoso. Inicia sesión para verificar tu identidad.")
     }
 
     func registerConstructora(name: String, email: String, password: String,
@@ -543,7 +546,7 @@ class APIService: ObservableObject {
         }
         let loginResult = try await login(email: email, password: password)
         if case .success(let user) = loginResult { return user }
-        throw APIError.server("Registro exitoso pero requiere 2FA. Inicia sesion.")
+        throw APIError.server("Registro exitoso. Inicia sesión para verificar tu identidad.")
     }
 
     /// Refresh user profile from server — updates emailVerified, subscription status, etc.
@@ -622,6 +625,17 @@ class APIService: ObservableObject {
     }
 
     func logout() {
+        // Wipe biometric credentials FIRST so a logged-out device can't
+        // be used to silently re-auth via Face ID. We capture the email
+        // before clearing because deleteBiometricToken needs it.
+        let bioEmail = BiometricService.shared.savedBiometricEmail()
+        BiometricService.shared.clearBiometricEmail()
+        if let email = bioEmail {
+            BiometricService.shared.deleteBiometricToken(for: email)
+        }
+        // Drop the saved Apple userID — next launch must re-collect it.
+        UserDefaults.standard.removeObject(forKey: "apple_user_id")
+
         currentUser = nil
         token = nil
         UserDefaults.standard.removeObject(forKey: "rd_user")
@@ -634,12 +648,15 @@ class APIService: ObservableObject {
     // MARK: - Agencies
 
     func getAgency(slug: String, page: Int = 1) async throws -> AgencyDetail {
-        var comps = URLComponents(string: "\(apiBase)/api/agencies/\(slug)")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/agencies/\(slug)") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [
             URLQueryItem(name: "page",  value: "\(page)"),
             URLQueryItem(name: "limit", value: "12")
         ]
-        let (data, _) = try await session.data(from: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        let (data, _) = try await session.data(from: url)
         return try decoder.decode(AgencyDetail.self, from: data)
     }
 
@@ -666,13 +683,17 @@ class APIService: ObservableObject {
     // MARK: - Tours
 
     func fetchAvailableSlots(brokerId: String, date: String) async throws -> [AvailableSlot] {
-        let url = URL(string: "\(Self.baseURL)/api/tours/availability/\(brokerId)?date=\(date)")!
+        guard let url = URL(string: "\(Self.baseURL)/api/tours/availability/\(brokerId)?date=\(date)") else {
+            throw APIError.server("URL inválida")
+        }
         let (data, _) = try await session.data(from: url)
         return try JSONDecoder().decode(AvailableSlotsResponse.self, from: data).slots
     }
 
     func fetchSchedule(brokerId: String, month: String) async throws -> [String] {
-        let url = URL(string: "\(Self.baseURL)/api/tours/schedule/\(brokerId)?month=\(month)")!
+        guard let url = URL(string: "\(Self.baseURL)/api/tours/schedule/\(brokerId)?month=\(month)") else {
+            throw APIError.server("URL inválida")
+        }
         let (data, _) = try await session.data(from: url)
         return try JSONDecoder().decode(ScheduleResponse.self, from: data).available_dates
     }
@@ -715,7 +736,10 @@ class APIService: ObservableObject {
 
     func updateTourStatus(tourId: String, status: String, notes: String? = nil) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/status")!)
+        guard let url = URL(string: "\(Self.baseURL)/api/tours/\(tourId)/status") else {
+            throw APIError.server("URL inválida")
+        }
+        var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
@@ -730,7 +754,10 @@ class APIService: ObservableObject {
 
     func cancelTour(tourId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/\(tourId)/cancel")!)
+        guard let url = URL(string: "\(Self.baseURL)/api/tours/\(tourId)/cancel") else {
+            throw APIError.server("URL inválida")
+        }
+        var req = URLRequest(url: url)
         req.httpMethod = "PUT"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (_, resp) = try await session.data(for: req)
@@ -825,7 +852,10 @@ class APIService: ObservableObject {
 
     func deleteBrokerAvailability(slotId: String) async throws {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var req = URLRequest(url: URL(string: "\(Self.baseURL)/api/tours/broker-availability/\(slotId)")!)
+        guard let url = URL(string: "\(Self.baseURL)/api/tours/broker-availability/\(slotId)") else {
+            throw APIError.server("URL inválida")
+        }
+        var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         _ = try await session.data(for: req)
@@ -993,9 +1023,12 @@ class APIService: ObservableObject {
 
     func getListingAnalyticsSummary(range: String = "all") async throws -> ListingAnalyticsSummary {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/summary")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/summary") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [URLQueryItem(name: "range", value: range)]
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsSummary.self, from: data)
@@ -1003,12 +1036,15 @@ class APIService: ObservableObject {
 
     func getListingAnalyticsList(sort: String = "views", range: String = "all") async throws -> [ListingAnalyticsItem] {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/listings")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/listing-analytics/listings") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [
             URLQueryItem(name: "sort", value: sort),
             URLQueryItem(name: "range", value: range),
         ]
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(ListingAnalyticsListResponse.self, from: data).listings
@@ -1049,11 +1085,14 @@ class APIService: ObservableObject {
 
     func getConversation(id: String, since: String? = nil) async throws -> Conversation {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/conversations/\(id)")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/conversations/\(id)") else {
+            throw APIError.server("URL inválida")
+        }
         if let since = since {
             comps.queryItems = [URLQueryItem(name: "since", value: since)]
         }
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, resp) = try await session.data(for: req)
@@ -1207,10 +1246,13 @@ class APIService: ObservableObject {
     /// Pass `unreadOnly: true` to filter to unread.
     func fetchNotifications(limit: Int = 50, unreadOnly: Bool = false) async throws -> (items: [AppNotification], unreadCount: Int) {
         guard token != nil else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/notifications")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/notifications") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
         if unreadOnly { comps.queryItems?.append(URLQueryItem(name: "unreadOnly", value: "1")) }
-        let req = try authedRequest(comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando notificaciones")
         struct Resp: Decodable { let notifications: [AppNotification]; let unreadCount: Int }
@@ -1444,9 +1486,12 @@ class APIService: ObservableObject {
 
     func getDashboardAnalytics(range: String = "30d") async throws -> DashboardAnalytics {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker/analytics")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/broker/analytics") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [URLQueryItem(name: "range", value: range)]
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAnalytics.self, from: data)
@@ -1462,9 +1507,12 @@ class APIService: ObservableObject {
 
     func getDashboardAccounting(commissionRate: Double = 0.03) async throws -> DashboardAccounting {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker/accounting")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/broker/accounting") else {
+            throw APIError.server("URL inválida")
+        }
         comps.queryItems = [URLQueryItem(name: "commission_rate", value: "\(commissionRate)")]
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAccounting.self, from: data)
@@ -1661,7 +1709,9 @@ class APIService: ObservableObject {
 
     func getDashboardDocuments(status: String? = nil, type: String? = nil, search: String? = nil, page: Int = 1) async throws -> DashboardDocuments {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker/documents/archive")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/broker/documents/archive") else {
+            throw APIError.server("URL inválida")
+        }
         var items: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "20")
@@ -1670,7 +1720,8 @@ class APIService: ObservableObject {
         if let t = type   { items.append(.init(name: "type", value: t)) }
         if let s = search { items.append(.init(name: "search", value: s)) }
         comps.queryItems = items
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardDocuments.self, from: data)
@@ -1678,7 +1729,9 @@ class APIService: ObservableObject {
 
     func getDashboardAudit(search: String? = nil, type: String? = nil, page: Int = 1) async throws -> DashboardAudit {
         guard let t = token else { throw APIError.server("No autenticado") }
-        var comps = URLComponents(string: "\(apiBase)/api/broker/audit")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/broker/audit") else {
+            throw APIError.server("URL inválida")
+        }
         var items: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "50")
@@ -1686,7 +1739,8 @@ class APIService: ObservableObject {
         if let s = search { items.append(.init(name: "search", value: s)) }
         if let t = type   { items.append(.init(name: "type", value: t)) }
         comps.queryItems = items
-        var req = URLRequest(url: comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        var req = URLRequest(url: url)
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await session.data(for: req)
         return try decoder.decode(DashboardAudit.self, from: data)
@@ -2003,9 +2057,10 @@ class APIService: ObservableObject {
     // MARK: - Tasks
 
     func listTasks(status: String? = nil) async throws -> [TaskItem] {
-        var url = "\(apiBase)/api/tasks"
-        if let s = status { url += "?status=\(s)" }
-        let req = try authedRequest(URL(string: url)!)
+        var urlString = "\(apiBase)/api/tasks"
+        if let s = status { urlString += "?status=\(s)" }
+        guard let url = URL(string: urlString) else { throw APIError.server("URL inválida") }
+        let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando tareas")
         return try decoder.decode(TasksResponse.self, from: data).tasks
@@ -2403,6 +2458,12 @@ class APIService: ObservableObject {
         self.token = token
         UserDefaults.standard.set(try? JSONEncoder().encode(user), forKey: "rd_user")
         UserDefaults.standard.set(token, forKey: "rd_token")
+        // Re-register the push token whenever a fresh JWT lands. The push
+        // service captured the device token at app launch; the server needs
+        // it associated with the new authenticated user/session.
+        if let deviceToken = PushNotificationService.shared.deviceToken {
+            Task { try? await self.registerPushToken(token: deviceToken) }
+        }
     }
 
     // MARK: - Contact Timeline CRM
@@ -2416,9 +2477,12 @@ class APIService: ObservableObject {
     }
 
     func getContactTimeline(contactId: String, type: String? = nil) async throws -> ContactTimelineResponse {
-        var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/contacts/\(contactId)/timeline") else {
+            throw APIError.server("URL inválida")
+        }
         if let type = type { comps.queryItems = [URLQueryItem(name: "type", value: type)] }
-        let req = try authedRequest(comps.url!)
+        guard let url = comps.url else { throw APIError.server("URL inválida") }
+        let req = try authedRequest(url)
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error cargando timeline")
         return try decoder.decode(ContactTimelineResponse.self, from: data)
@@ -2683,7 +2747,9 @@ class APIService: ObservableObject {
     /// serving the file. Includes the access token as a query param.
     func documentDownloadURL(applicationId: String, documentId: String) -> URL? {
         guard let t = token else { return nil }
-        var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/file")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/documents/\(documentId)/file") else {
+            return nil
+        }
         comps.queryItems = [URLQueryItem(name: "token", value: t)]
         return comps.url
     }
@@ -2738,7 +2804,9 @@ class APIService: ObservableObject {
     /// The server redirects to the S3/local file after validating authorization.
     func paymentReceiptURL(applicationId: String) -> URL? {
         guard let t = token else { return nil }
-        var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/payment/receipt")!
+        guard var comps = URLComponents(string: "\(apiBase)/api/applications/\(applicationId)/payment/receipt") else {
+            return nil
+        }
         comps.queryItems = [URLQueryItem(name: "token", value: t)]
         return comps.url
     }
