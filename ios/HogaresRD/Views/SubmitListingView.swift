@@ -920,12 +920,13 @@ struct SubmitListingView: View {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
+        let safeFilename = sanitizeMultipartFilename("feed.jpg")
         var data = Data()
-        data.append("--\(boundary)\r\n".data(using: .utf8)!)
-        data.append("Content-Disposition: form-data; name=\"photos\"; filename=\"feed.jpg\"\r\n".data(using: .utf8)!)
-        data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        data.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+        data.append(("Content-Disposition: form-data; name=\"photos\"; filename=\"\(safeFilename)\"\r\n").data(using: .utf8) ?? Data())
+        data.append(("Content-Type: image/jpeg\r\n\r\n").data(using: .utf8) ?? Data())
         data.append(jpeg)
-        data.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        data.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
         request.httpBody = data
 
         let (responseData, resp) = try await URLSession.shared.data(for: request)
@@ -972,13 +973,14 @@ struct SubmitListingView: View {
         var data = Data()
         for (i, img) in selectedImages.enumerated() {
             guard let jpeg = img.jpegData(compressionQuality: 0.8) else { continue }
-            data.append("--\(boundary)\r\n".data(using: .utf8)!)
-            data.append("Content-Disposition: form-data; name=\"photos\"; filename=\"photo\(i).jpg\"\r\n".data(using: .utf8)!)
-            data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            let safeFilename = sanitizeMultipartFilename("photo\(i).jpg")
+            data.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+            data.append(("Content-Disposition: form-data; name=\"photos\"; filename=\"\(safeFilename)\"\r\n").data(using: .utf8) ?? Data())
+            data.append(("Content-Type: image/jpeg\r\n\r\n").data(using: .utf8) ?? Data())
             data.append(jpeg)
-            data.append("\r\n".data(using: .utf8)!)
+            data.append(("\r\n").data(using: .utf8) ?? Data())
         }
-        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        data.append(("--\(boundary)--\r\n").data(using: .utf8) ?? Data())
         request.httpBody = data
 
         let (responseData, resp) = try await URLSession.shared.data(for: request)
@@ -1016,13 +1018,14 @@ struct SubmitListingView: View {
         var data = Data()
         for (i, img) in blueprintImages.enumerated() {
             guard let jpeg = img.jpegData(compressionQuality: 0.9) else { continue }
-            data.append("--\(boundary)\r\n".data(using: .utf8)!)
-            data.append("Content-Disposition: form-data; name=\"blueprints\"; filename=\"blueprint\(i).jpg\"\r\n".data(using: .utf8)!)
-            data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            let safeFilename = sanitizeMultipartFilename("blueprint\(i).jpg")
+            data.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+            data.append(("Content-Disposition: form-data; name=\"blueprints\"; filename=\"\(safeFilename)\"\r\n").data(using: .utf8) ?? Data())
+            data.append(("Content-Type: image/jpeg\r\n\r\n").data(using: .utf8) ?? Data())
             data.append(jpeg)
-            data.append("\r\n".data(using: .utf8)!)
+            data.append(("\r\n").data(using: .utf8) ?? Data())
         }
-        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        data.append(("--\(boundary)--\r\n").data(using: .utf8) ?? Data())
         request.httpBody = data
 
         let (responseData, resp) = try await URLSession.shared.data(for: request)
@@ -1145,6 +1148,18 @@ struct SubmitListingView: View {
             await MainActor.run { success = true }
         } catch { self.error = error.localizedDescription }
         loading = false
+    }
+
+    /// Strip characters that can break a multipart `filename="…"` header
+    /// (quotes, control chars, surrogate-pair fragments). PHPicker filenames
+    /// occasionally contain non-UTF-8-encodable bytes — sanitize before
+    /// embedding into a header string.
+    private func sanitizeMultipartFilename(_ filename: String) -> String {
+        let safe = filename
+            .replacingOccurrences(of: "\"", with: "_")
+            .components(separatedBy: .controlCharacters)
+            .joined()
+        return safe.isEmpty ? "upload.bin" : safe
     }
 }
 

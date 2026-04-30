@@ -194,6 +194,14 @@ struct HogaresRDApp: App {
     ///   /r/{token}/{listingId}
     ///   /r/{token}
     private func handleDeepLink(_ url: URL) {
+        // Only honor Universal Links from our verified domains. If a custom
+        // URL scheme is added later, an attacker could craft a URL with a
+        // `/verify-email?token=…` path and trigger a server call — reject
+        // anything that isn't an https://hogaresrd.com link.
+        guard url.scheme == "https",
+              url.host == "hogaresrd.com" || url.host == "www.hogaresrd.com"
+        else { return }
+
         let path = url.path
         let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let refToken = comps?.queryItems?.first(where: { $0.name == "ref" })?.value

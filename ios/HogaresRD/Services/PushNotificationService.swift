@@ -71,7 +71,10 @@ class PushNotificationService: NSObject, ObservableObject {
     func handleDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
             debugLog("[Push] Device token received: \(token.prefix(16))...")
-        DispatchQueue.main.async {
+        // Match the rest of the file's MainActor.run / Task @MainActor style
+        // — this @Published is otherwise mutated inconsistently across
+        // dispatch primitives.
+        Task { @MainActor in
             self.deviceToken = token
         }
         Task {

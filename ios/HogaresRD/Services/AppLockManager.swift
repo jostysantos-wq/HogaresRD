@@ -24,7 +24,11 @@ class AppLockManager: ObservableObject {
 
     private init() {
         // Load existing values, fall back to defaults when the keys are absent.
-        self.lockEnabled = UserDefaults.standard.bool(forKey: "rd_lock_enabled")
+        // New users (no key in UserDefaults) get the lock enabled by default;
+        // existing users who explicitly turned it off keep their `false` value
+        // because `object(forKey:)` returns the stored Bool when present and
+        // only falls back to `true` when the key is absent entirely.
+        self.lockEnabled = UserDefaults.standard.object(forKey: "rd_lock_enabled") as? Bool ?? true
         let storedTimeout = UserDefaults.standard.integer(forKey: "rd_lock_timeout")
         self.idleTimeoutMinutes = storedTimeout > 0 ? storedTimeout : 5
     }

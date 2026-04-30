@@ -1,5 +1,8 @@
 import Foundation
 import StoreKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // ══════════════════════════════════════════════════════════════════════════
 // HogaresRD — StoreKit 2 Subscription Manager
@@ -36,6 +39,14 @@ class StoreManager: ObservableObject {
 
     private var transactionListener: Task<Void, Never>?
 
+    // Transactions whose server sync failed. They are NOT finished — finish()
+    // is only called after the backend has acknowledged the subscription, so
+    // the user keeps Apple's "subscribed" state until the server agrees.
+    // Held in memory plus persisted IDs in UserDefaults to survive relaunch.
+    private var syncFailedTransactions: [StoreKit.Transaction] = []
+    private static let pendingSyncIDsKey = "rd_pending_sync_tx_ids"
+    private var didBecomeActiveObserver: NSObjectProtocol?
+
     // Sorted products for display (broker < inmobiliaria < constructora)
     var sortedProducts: [Product] {
         let order = ["com.hogaresrd.broker.monthly", "com.hogaresrd.inmobiliaria.monthly", "com.hogaresrd.constructora.monthly"]
@@ -55,10 +66,34 @@ class StoreManager: ObservableObject {
 
     init() {
         transactionListener = listenForTransactions()
+
+        // Retry any persisted failed syncs whenever the app comes back to
+        // foreground (the most likely time the network has recovered).
+        #if canImport(UIKit)
+        didBecomeActiveObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.retryPendingSyncs()
+            }
+        }
+        #endif
+
+        // Also retry on cold launch — a queued transaction may already be
+        // visible in `Transaction.currentEntitlements` even if the server
+        // never confirmed it.
+        Task { @MainActor in
+            await retryPendingSyncs()
+        }
     }
 
     deinit {
         transactionListener?.cancel()
+        if let obs = didBecomeActiveObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
     }
 
     // ── Load Products ───────────────────────────────────────────
@@ -88,10 +123,17 @@ class StoreManager: ObservableObject {
             switch result {
             case .success(let verification):
                 let transaction = try Self.verify(verification)
-                await transaction.finish()
                 await updatePurchasedProducts()
-                // Notify server of the purchase
-                await syncWithServer(transaction: transaction)
+                // Notify server of the purchase. ONLY finish the transaction
+                // after the backend confirms — otherwise a 5xx leaves the
+                // user paying with no role on the server.
+                do {
+                    try await syncWithServer(transaction: transaction)
+                    await transaction.finish()
+                } catch {
+                    enqueueFailedSync(transaction)
+                    debugLog("[StoreManager] Sync failed during purchase, queued for retry: \(error)")
+                }
                 isLoading = false
                 return true
 
@@ -137,13 +179,22 @@ class StoreManager: ObservableObject {
             for await result in StoreKit.Transaction.updates {
                 do {
                     let transaction = try StoreManager.verify(result)
-                    await transaction.finish()
                     await self.updatePurchasedProducts()
-                    await self.syncWithServer(transaction: transaction)
+                    // Only finish the transaction after the backend has
+                    // acknowledged it. Failed syncs are queued and retried.
+                    do {
+                        try await self.syncWithServer(transaction: transaction)
+                        await transaction.finish()
+                    } catch {
+                        await self.enqueueFailedSync(transaction)
+                        debugLog("[StoreManager] Sync failed in listener, queued for retry: \(error)")
+                    }
                 } catch {
-            debugLog("[StoreManager] Transaction update error: \(error)")
+                    debugLog("[StoreManager] Transaction update error: \(error)")
                 }
             }
+            // Once the listener spins up, retry any pending syncs from disk.
+            await self.retryPendingSyncs()
         }
     }
 
@@ -182,24 +233,79 @@ class StoreManager: ObservableObject {
     // ── Server Sync ─────────────────────────────────────────────
     // Notify the backend of subscription changes so it can upgrade/downgrade the user role
 
-    private func syncWithServer(transaction: StoreKit.Transaction) async {
+    /// Throws when the backend can't be reached or returns an error so the
+    /// caller can decide whether to finish() the transaction or queue it.
+    private func syncWithServer(transaction: StoreKit.Transaction) async throws {
+        struct NoAPIServiceError: Error {}
         guard let api = _api else {
-            debugLog("[StoreManager] No API service set — skipping server sync")
-            return
+            debugLog("[StoreManager] No API service set — deferring server sync")
+            throw NoAPIServiceError()
         }
         let role = Self.roleMap[transaction.productID] ?? "user"
 
-        do {
-            try await api.syncAppleSubscription(
-                productID: transaction.productID,
-                transactionID: String(transaction.id),
-                originalTransactionID: String(transaction.originalID),
-                role: role,
-                expirationDate: transaction.expirationDate?.ISO8601Format()
-            )
-            debugLog("[StoreManager] Server synced: \(transaction.productID) → \(role)")
-        } catch {
-            debugLog("[StoreManager] Server sync failed: \(error.localizedDescription)")
+        try await api.syncAppleSubscription(
+            productID: transaction.productID,
+            transactionID: String(transaction.id),
+            originalTransactionID: String(transaction.originalID),
+            role: role,
+            expirationDate: transaction.expirationDate?.ISO8601Format()
+        )
+        debugLog("[StoreManager] Server synced: \(transaction.productID) → \(role)")
+    }
+
+    // MARK: - Failed-sync retry queue
+
+    /// Append a transaction to the in-memory queue and persist its ID so the
+    /// queue survives a relaunch. The transaction itself is NOT finish()ed.
+    private func enqueueFailedSync(_ transaction: StoreKit.Transaction) {
+        if !syncFailedTransactions.contains(where: { $0.id == transaction.id }) {
+            syncFailedTransactions.append(transaction)
+        }
+        var ids = UserDefaults.standard.array(forKey: Self.pendingSyncIDsKey) as? [String] ?? []
+        let txID = String(transaction.id)
+        if !ids.contains(txID) {
+            ids.append(txID)
+            UserDefaults.standard.set(ids, forKey: Self.pendingSyncIDsKey)
+        }
+    }
+
+    private func removePendingSync(_ transactionID: UInt64) {
+        syncFailedTransactions.removeAll { $0.id == transactionID }
+        var ids = UserDefaults.standard.array(forKey: Self.pendingSyncIDsKey) as? [String] ?? []
+        ids.removeAll { $0 == String(transactionID) }
+        if ids.isEmpty {
+            UserDefaults.standard.removeObject(forKey: Self.pendingSyncIDsKey)
+        } else {
+            UserDefaults.standard.set(ids, forKey: Self.pendingSyncIDsKey)
+        }
+    }
+
+    /// Walk current entitlements and retry sync for any transaction whose ID
+    /// is in the persisted pending list, plus anything still queued in memory.
+    func retryPendingSyncs() async {
+        let persistedIDs = Set((UserDefaults.standard.array(forKey: Self.pendingSyncIDsKey) as? [String]) ?? [])
+        guard !persistedIDs.isEmpty || !syncFailedTransactions.isEmpty else { return }
+
+        // Rehydrate Transaction objects from current entitlements so we can
+        // call finish() on them after a successful sync.
+        var byID: [UInt64: StoreKit.Transaction] = [:]
+        for tx in syncFailedTransactions { byID[tx.id] = tx }
+
+        for await result in StoreKit.Transaction.currentEntitlements {
+            if let tx = try? Self.verify(result), persistedIDs.contains(String(tx.id)) {
+                byID[tx.id] = tx
+            }
+        }
+
+        for (txID, transaction) in byID {
+            do {
+                try await syncWithServer(transaction: transaction)
+                await transaction.finish()
+                removePendingSync(txID)
+                debugLog("[StoreManager] Retried sync succeeded: \(transaction.productID)")
+            } catch {
+                debugLog("[StoreManager] Retry sync still failing for \(transaction.productID): \(error)")
+            }
         }
     }
 

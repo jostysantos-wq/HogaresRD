@@ -388,11 +388,12 @@ struct MyDocumentsView: View {
                 req.httpMethod = "POST"
                 req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
                 req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                let safeFilename = sanitizeMultipartFilename(filename)
                 var body = Data()
-                body.append("--\(boundary)\r\n".data(using: .utf8)!)
-                body.append("Content-Disposition: form-data; name=\"proof\"; filename=\"\(filename)\"\r\nContent-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+                body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+                body.append(("Content-Disposition: form-data; name=\"proof\"; filename=\"\(safeFilename)\"\r\nContent-Type: image/jpeg\r\n\r\n").data(using: .utf8) ?? Data())
                 body.append(data)
-                body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+                body.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
                 req.httpBody = body
                 let (_, _) = try await URLSession.shared.data(for: req)
             } else {
@@ -442,11 +443,12 @@ struct MyDocumentsView: View {
                 req.httpMethod = "POST"
                 req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
                 req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                let safeFilename = sanitizeMultipartFilename(filename)
                 var body = Data()
-                body.append("--\(boundary)\r\n".data(using: .utf8)!)
-                body.append("Content-Disposition: form-data; name=\"proof\"; filename=\"\(filename)\"\r\nContent-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+                body.append(("--\(boundary)\r\n").data(using: .utf8) ?? Data())
+                body.append(("Content-Disposition: form-data; name=\"proof\"; filename=\"\(safeFilename)\"\r\nContent-Type: \(mimeType)\r\n\r\n").data(using: .utf8) ?? Data())
                 body.append(data)
-                body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+                body.append(("\r\n--\(boundary)--\r\n").data(using: .utf8) ?? Data())
                 req.httpBody = body
                 let (_, _) = try await URLSession.shared.data(for: req)
             } else {
@@ -466,6 +468,18 @@ struct MyDocumentsView: View {
     }
 
     // MARK: - Helpers
+
+    /// Strip characters that can break a multipart `filename="…"` header
+    /// (quotes, control chars, surrogate-pair fragments). PHPicker filenames
+    /// occasionally contain non-UTF-8-encodable bytes — sanitize before
+    /// embedding into a header string.
+    private func sanitizeMultipartFilename(_ filename: String) -> String {
+        let safe = filename
+            .replacingOccurrences(of: "\"", with: "_")
+            .components(separatedBy: .controlCharacters)
+            .joined()
+        return safe.isEmpty ? "upload.bin" : safe
+    }
 
     private func docIcon(_ type: String) -> String {
         switch type {
