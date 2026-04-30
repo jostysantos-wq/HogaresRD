@@ -227,6 +227,90 @@ function isAdmin(req) {
   return req.user?.role === 'admin';
 }
 
+// JWT verify with rotation grace. Tries the current secret first; if
+// that fails and JWT_SECRET_PREV is configured, retries against the
+// previous secret. The standard userAuth flow goes through
+// routes/auth.js which already handles rotation — this helper is for
+// the few endpoints (track-token, withdraw via magic-link) that verify
+// JWTs directly without going through that middleware.
+function verifyJwtAcceptingPrev(token) {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    if (process.env.JWT_SECRET_PREV) {
+      try { return jwt.verify(token, process.env.JWT_SECRET_PREV); } catch (_) { /* fall through */ }
+    }
+    throw err;
+  }
+}
+
+// Strip server-side / broker-internal data from an application before
+// returning it to a buyer. Used for:
+//   • the magic-link tracker (GET /track-token) — recipients can be
+//     forwarded; the link is not equivalent to authenticating as the
+//     applicant, so it should leak strictly less than GET /:id.
+//   • GET /:id when the requester is a "pure client" (the application's
+//     buyer with no broker/owner/admin role on this record).
+//   • GET /my (always — endpoint is buyer-only by design).
+//
+// Returns a deep clone with the following stripped:
+//   • timeline_events with is_internal === true (or data.is_internal === true)
+//     — buyer must not see broker private notes.
+//   • app.commission entirely — broker payout details are not buyer-visible.
+//   • app.payment.receipt_path / processed_receipt_path — server-side
+//     filesystem paths. Amount, currency, status, verified flags stay.
+//   • payment_plan.installments[].proof_path — same reason.
+//   • broker.email / broker.phone — a leaked link should not auto-disclose
+//     the agent's contact info; the rightful applicant has these in their
+//     confirmation email.
+//   • co_applicant.id_number / co_applicant.monthly_income — the
+//     magic-link page doesn't render these and we want to minimize the
+//     decrypted footprint.
+function scrubForBuyer(app) {
+  if (!app || typeof app !== 'object') return app;
+  const copy = JSON.parse(JSON.stringify(app));
+
+  // Timeline events — drop anything flagged internal at the top-level
+  // OR inside data.is_internal.
+  if (Array.isArray(copy.timeline_events)) {
+    copy.timeline_events = copy.timeline_events.filter(ev =>
+      !(ev && (ev.is_internal === true || ev.data?.is_internal === true))
+    );
+  }
+
+  // Commission block — entirely broker/owner internal.
+  delete copy.commission;
+
+  // Payment: keep buyer-visible status/amount fields, drop file paths.
+  if (copy.payment && typeof copy.payment === 'object') {
+    delete copy.payment.receipt_path;
+    delete copy.payment.processed_receipt_path;
+  }
+
+  // Payment plan installments: drop server-side proof paths.
+  if (copy.payment_plan && Array.isArray(copy.payment_plan.installments)) {
+    for (const inst of copy.payment_plan.installments) {
+      if (inst && typeof inst === 'object') {
+        delete inst.proof_path;
+      }
+    }
+  }
+
+  // Broker contact channels — name/agency_name remain visible.
+  if (copy.broker && typeof copy.broker === 'object') {
+    delete copy.broker.email;
+    delete copy.broker.phone;
+  }
+
+  // Co-applicant: keep name + existence flag, drop sensitive PII.
+  if (copy.co_applicant && typeof copy.co_applicant === 'object') {
+    delete copy.co_applicant.id_number;
+    delete copy.co_applicant.monthly_income;
+  }
+
+  return copy;
+}
+
 function addEvent(app, type, description, actor, actorName, data = {}) {
   if (!app.timeline_events) app.timeline_events = [];
   app.timeline_events.push({
@@ -499,7 +583,7 @@ router.get('/track-token', (req, res) => {
 
   let payload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET);
+    payload = verifyJwtAcceptingPrev(token);
   } catch (e) {
     return res.status(401).json({ error: 'Enlace inválido o expirado.' });
   }
@@ -510,7 +594,11 @@ router.get('/track-token', (req, res) => {
   const app = store.getApplicationById(payload.aid);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada.' });
 
-  res.json(decryptAppPII(app));
+  // Magic-link recipients get a buyer-scrubbed view: no internal events,
+  // no commission block, no server-side file paths, no broker contact
+  // channels, no decrypted co-applicant PII. The link can be forwarded
+  // and is indexed in mail provider logs, so we minimize the footprint.
+  res.json(scrubForBuyer(decryptAppPII(app)));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -1344,8 +1432,12 @@ router.get('/my', userAuth, (req, res) => {
 
   // Enrich with listing cover image + city for the card UI.
   // decryptAppPII first so the spread doesn't propagate ciphertext.
+  // scrubForBuyer because /my is buyer-only by design — no internal
+  // events, commission, broker contact channels, etc. should leak into
+  // the client's list view (decryptAppPII handles encrypted PII but
+  // does not strip internal timeline events).
   const enriched = apps.map(a => {
-    const dec = decryptAppPII(a);
+    const dec = scrubForBuyer(decryptAppPII(a));
     const listing = a.listing_id ? store.getListingById(a.listing_id) : null;
     const images = Array.isArray(listing?.images) ? listing.images : [];
     return {
@@ -1413,15 +1505,12 @@ router.get('/:id', userAuth, (req, res) => {
   if (!isBroker && !isInmobiliaria && !isSecretary && !isClient && !admin)
     return res.status(403).json({ error: 'No autorizado' });
 
-  // C1: scrub is_internal === true events when the requester is a pure client.
+  // C1: pure clients get a buyer-scrubbed view (no internal events,
+  // no commission, no server file paths, no broker contact channels,
+  // no decrypted co-applicant PII). Brokers/owners/admins see all.
   const decoded = decryptAppPII(app);
   const isPureClient = isClient && !isBroker && !isInmobiliaria && !isSecretary && !admin;
-  if (isPureClient && Array.isArray(decoded.timeline_events)) {
-    decoded.timeline_events = decoded.timeline_events.filter(ev =>
-      !(ev && (ev.is_internal === true || ev.data?.is_internal === true))
-    );
-  }
-  res.json(decoded);
+  res.json(isPureClient ? scrubForBuyer(decoded) : decoded);
 });
 
 // Helper: decrypt sensitive PII + financial fields before sending to authorized users
@@ -1646,7 +1735,17 @@ router.get('/:id/state', userAuth, (req, res) => {
   // change to the status, last timeline event, uploaded doc count,
   // or payment state bumps the hash, so the client can compare and
   // decide whether to re-fetch the full detail.
-  const lastEvent = (app.timeline_events || []).slice(-1)[0];
+  //
+  // C1: pure clients must not see metadata for is_internal events —
+  // otherwise a polling buyer can detect that the broker just filed
+  // an internal note (last_event_type/at/version would all change)
+  // even though they can't read the body. Filter first, then compute.
+  const isPureClient = isClient && !isBroker && !isInmobiliaria && !isSecretary && !admin;
+  const allEvents = app.timeline_events || [];
+  const visibleEvents = isPureClient
+    ? allEvents.filter(ev => !(ev && (ev.is_internal === true || ev.data?.is_internal === true)))
+    : allEvents;
+  const lastEvent = visibleEvents.slice(-1)[0];
   const lastEventAt = lastEvent?.created_at || app.updated_at || app.created_at || '';
   const docCount    = (app.documents_uploaded || []).length;
   const docPending  = (app.documents_uploaded || []).filter(d => !d.review_status || d.review_status === 'pending').length;
@@ -4059,7 +4158,7 @@ router.post('/:id/withdraw', async (req, res) => {
 
   if (bearer) {
     try {
-      const payload = jwt.verify(bearer, process.env.JWT_SECRET);
+      const payload = verifyJwtAcceptingPrev(bearer);
       if (payload?.kind === 'track') {
         // Track tokens are scoped to a single application id
         if (payload.aid === app.id) {
