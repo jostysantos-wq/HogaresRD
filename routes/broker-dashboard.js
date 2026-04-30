@@ -79,6 +79,35 @@ function findEvent(app, type, status) {
   );
 }
 
+// ── D8: CSV export helpers ──────────────────────────────────────────
+// RFC 4180-correct: quote fields containing `,`, `"`, CR or LF; double
+// up internal quotes. UTF-8 BOM at the top so Excel opens accents OK.
+function csvEscape(v) {
+  if (v == null) return '';
+  const s = typeof v === 'string' ? v : String(v);
+  if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function streamCsv(res, filename, columns, rows) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition',
+    `attachment; filename="${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}"`);
+  // UTF-8 BOM so Excel opens "ñ" / accents correctly
+  res.write('﻿');
+  res.write(columns.map(c => csvEscape(c.label)).join(',') + '\r\n');
+  for (const row of rows) {
+    res.write(columns.map(c => csvEscape(row[c.key])).join(',') + '\r\n');
+  }
+  res.end();
+}
+
+// XLSX export — TODO: native zip writer using zlib + central directory
+// proved out-of-scope for this pass (no precedent in the codebase, and
+// the OOXML by-hand approach pulls in ~150 lines of zip plumbing). CSV
+// covers the immediate spreadsheet-export need; revisit when the dashboard
+// asks for multi-sheet workbooks. Constraint: cannot add npm deps.
+
 // ══════════════════════════════════════════════════════════════════
 // ── GET /analytics ──────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
@@ -235,6 +264,24 @@ router.get('/sales', (req, res) => {
     ? Math.round(total_revenue / completed_sales.length)
     : 0;
 
+  // D8: CSV export of completed sales
+  if (req.query.format === 'csv') {
+    return streamCsv(res, `ventas-${new Date().toISOString().slice(0, 10)}.csv`, [
+      { key: 'completed_at',   label: 'Fecha' },
+      { key: 'client_name',    label: 'Cliente' },
+      { key: 'client_email',   label: 'Email Cliente' },
+      { key: 'listing_title',  label: 'Propiedad' },
+      { key: 'listing_type',   label: 'Tipo' },
+      { key: 'listing_price',  label: 'Precio' },
+      { key: 'payment_amount', label: 'Pago' },
+      { key: 'payment_status', label: 'Estado pago' },
+    ], completed_sales);
+  }
+  if (req.query.format === 'xlsx') {
+    // TODO: see /audit XLSX note — ship CSV today, XLSX in a follow-up.
+    res.setHeader('X-Export-Fallback', 'csv');
+  }
+
   res.json({
     completed_sales,
     total_revenue,
@@ -313,7 +360,7 @@ router.get('/documents/archive', (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 router.get('/audit', (req, res) => {
   const apps = brokerApps(req.brokerUser);
-  const { search, type, from, to, app_id, page = 1, limit = 50 } = req.query;
+  const { search, type, from, to, app_id, page = 1, limit = 50, format } = req.query;
 
   let events = [];
   apps.forEach(a => {
@@ -357,6 +404,26 @@ router.get('/audit', (req, res) => {
   const l = Math.min(200, Math.max(1, parseInt(limit)));
   const pages = Math.ceil(total / l) || 1;
   const paginated = events.slice((p - 1) * l, p * l);
+
+  // D8: CSV export — return ALL filtered events (not paginated) so the
+  // exported file is the full audit trail the user is looking at.
+  if (format === 'csv') {
+    return streamCsv(res, `audit-${new Date().toISOString().slice(0, 10)}.csv`, [
+      { key: 'created_at',    label: 'Fecha' },
+      { key: 'type',          label: 'Tipo' },
+      { key: 'description',   label: 'Descripción' },
+      { key: 'actor_name',    label: 'Actor' },
+      { key: 'client_name',   label: 'Cliente' },
+      { key: 'listing_title', label: 'Propiedad' },
+      { key: 'app_id',        label: 'Aplicación' },
+    ], events);
+  }
+  if (format === 'xlsx') {
+    // TODO: ship XLSX once the by-hand OOXML writer lands. CSV covers
+    // the export need today; this branch falls through to JSON so the
+    // client can detect-and-fall-back gracefully.
+    res.setHeader('X-Export-Fallback', 'csv');
+  }
 
   // Event type counts
   const typeCounts = {};

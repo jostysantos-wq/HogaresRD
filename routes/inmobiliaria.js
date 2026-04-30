@@ -214,11 +214,33 @@ router.get('/my-affiliation', userAuth, brokerAuth, (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 // ── POST /leave ── Broker leaves current inmobiliaria
 // ══════════════════════════════════════════════════════════════════
-router.post('/leave', userAuth, brokerAuth, (req, res) => {
+router.post('/leave', userAuth, brokerAuth, async (req, res) => {
   const broker = req.brokerUser;
 
   if (!broker.inmobiliaria_id)
     return res.status(400).json({ error: 'No estás afiliado a ninguna inmobiliaria' });
+
+  // D1: transfer open applications away from the leaving broker so they
+  // don't dangle on a non-existent team relation.
+  const inmId = broker.inmobiliaria_id;
+  const inm   = store.getUserById(inmId);
+  let transferToUserId = (req.body?.transferToUserId || '').toString() || inmId;
+
+  // Validate target belongs to same team (or is the owner itself)
+  const target = store.getUserById(transferToUserId);
+  if (!target || (target.id !== inmId && target.inmobiliaria_id !== inmId)) {
+    return res.status(400).json({
+      error: 'El usuario destino no pertenece al mismo equipo.',
+      code:  'invalid_transfer_target',
+    });
+  }
+
+  try {
+    await reassignBrokerApplications(broker.id, transferToUserId, 'broker_left');
+  } catch (err) {
+    console.error('[inmobiliaria/leave] reassignment failed:', err.message);
+    // Continue — better to log and let the broker leave than to block.
+  }
 
   broker.inmobiliaria_id          = null;
   broker.inmobiliaria_name        = null;
@@ -228,6 +250,49 @@ router.post('/leave', userAuth, brokerAuth, (req, res) => {
 
   res.json({ success: true });
 });
+
+// ── Helper: rewrite open applications from one broker to another ─────
+// D1 — when a broker leaves or is removed, their open applications
+// would otherwise dangle. Walk every open app for the leaving broker
+// and rewrite the broker block + emit a `broker_reassigned` timeline
+// event. Closed apps (rechazado/completado) are left untouched.
+async function reassignBrokerApplications(fromUserId, toUserId, reason) {
+  const target = store.getUserById(toUserId);
+  if (!target) return;
+
+  const apps = (typeof store.getApplicationsByBroker === 'function'
+    ? store.getApplicationsByBroker(fromUserId)
+    : store.getApplications().filter(a => a.broker?.user_id === fromUserId));
+
+  const TERMINAL = ['rechazado', 'completado'];
+  for (const app of apps) {
+    if (TERMINAL.includes(app.status)) continue;
+    const newBroker = {
+      user_id:     target.id,
+      name:        target.name || '',
+      email:       target.email || '',
+      phone:       target.phone || '',
+      agency_name: target.agency?.name || target.companyName || target.inmobiliaria_name || '',
+    };
+    if (!app.timeline_events) app.timeline_events = [];
+    app.timeline_events.push({
+      id:          'evt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      type:        'broker_reassigned',
+      description: `Aplicación reasignada a ${newBroker.name || 'otro miembro del equipo'} (${reason})`,
+      actor:       'system',
+      actor_name:  'Sistema',
+      data:        { from: fromUserId, to: toUserId, reason },
+      created_at:  new Date().toISOString(),
+    });
+    app.broker     = newBroker;
+    app.broker_id  = target.id;
+    app.updated_at = new Date().toISOString();
+
+    await store.withTransaction(async (client) => {
+      await store.saveApplication(app, client);
+    });
+  }
+}
 
 // ══════════════════════════════════════════════════════════════════
 // ── GET /brokers ── Inmobiliaria: see team + pending requests
@@ -359,11 +424,34 @@ router.post('/brokers/:brokerId/reject', userAuth, teamAuth(LEVEL_DIRECTOR), (re
 // ══════════════════════════════════════════════════════════════════
 // ── POST /brokers/:brokerId/remove ── Inmobiliaria removes broker
 // ══════════════════════════════════════════════════════════════════
-router.post('/brokers/:brokerId/remove', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
+router.post('/brokers/:brokerId/remove', userAuth, teamAuth(LEVEL_DIRECTOR), async (req, res) => {
   const broker = store.getUserById(req.params.brokerId);
 
   if (!broker || broker.inmobiliaria_id !== req.inmobiliariaId)
     return res.status(404).json({ error: 'Agente no encontrado en tu inmobiliaria' });
+
+  // D1: pick a transfer target. Default to the inmobiliaria owner.
+  let transferToUserId = (req.body?.transferToUserId || '').toString() || req.inmobiliariaId;
+  const target = store.getUserById(transferToUserId);
+  if (!target || (target.id !== req.inmobiliariaId && target.inmobiliaria_id !== req.inmobiliariaId)) {
+    return res.status(400).json({
+      error: 'El usuario destino no pertenece al mismo equipo.',
+      code:  'invalid_transfer_target',
+    });
+  }
+  if (target.id === broker.id) {
+    return res.status(400).json({
+      error: 'No se pueden transferir aplicaciones al mismo agente que estás retirando.',
+      code:  'invalid_transfer_target',
+    });
+  }
+
+  try {
+    await reassignBrokerApplications(broker.id, transferToUserId, 'broker_removed');
+  } catch (err) {
+    console.error('[inmobiliaria/remove] reassignment failed:', err.message);
+    // Continue — broker still gets removed.
+  }
 
   broker.inmobiliaria_id          = null;
   broker.inmobiliaria_name        = null;
@@ -378,10 +466,22 @@ router.post('/brokers/:brokerId/remove', userAuth, teamAuth(LEVEL_DIRECTOR), (re
 
 // ══════════════════════════════════════════════════════════════════
 // ── GET /profile ── Inmobiliaria public profile info
+// D7: merged with the second handler that lived at ~594 (added
+// companyDescription + coverImage by parsing the profile JSON blob).
+// Keeping a single handler so `team` members and owners both get the
+// full payload without Express silently dropping the duplicate.
 // ══════════════════════════════════════════════════════════════════
 router.get('/profile', userAuth, teamAuth(LEVEL_ASISTENTE), (req, res) => {
   const inm = OWNER_ROLES.includes(req.teamUser.role) ? req.teamUser : store.getUserById(req.inmobiliariaId);
   const { passwordHash, resetToken, resetTokenExpiry, ...safe } = inm;
+  // Hydrate the company profile JSON blob (companyDescription, tagline,
+  // coverImage, social, etc.) so callers don't need a 2nd request.
+  const profile = typeof inm.profile === 'string'
+    ? (() => { try { return JSON.parse(inm.profile || '{}'); } catch { return {}; } })()
+    : (inm.profile || {});
+  safe.profile             = profile;
+  safe.companyDescription  = profile.companyDescription || '';
+  safe.coverImage          = profile.coverImage || '';
   res.json(safe);
 });
 
@@ -588,19 +688,11 @@ router.put('/team/:userId/role', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) 
 
 // ══════════════════════════════════════════════════════════════════════════
 // COMPANY PROFILE (public + editable)
+// D7: the duplicate GET /profile that used to live here was merged into
+// the canonical handler near line ~382 (Express dispatches the FIRST
+// match, so this one was unreachable). Both companyDescription and
+// coverImage now flow through the single handler.
 // ══════════════════════════════════════════════════════════════════════════
-
-// GET /profile — own company profile
-router.get('/profile', userAuth, (req, res) => {
-  const user = store.getUserById(req.user.sub);
-  if (!user) return res.status(404).json({ error: 'No encontrado' });
-  const inmId = ['inmobiliaria', 'constructora'].includes(user.role) ? user.id : user.inmobiliaria_id;
-  if (!inmId) return res.status(400).json({ error: 'No perteneces a una inmobiliaria' });
-  const owner = store.getUserById(inmId);
-  if (!owner) return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
-  const profile = typeof owner.profile === 'string' ? JSON.parse(owner.profile || '{}') : (owner.profile || {});
-  res.json({ id: inmId, name: owner.name, email: owner.email, phone: owner.phone, profile });
-});
 
 // PATCH /profile — update company profile (Director only)
 router.patch('/profile', userAuth, (req, res) => {
@@ -844,6 +936,39 @@ router.post('/reviews/:id/reject', userAuth, (req, res) => {
   review.status = 'rejected';
   store.saveInmobReview(review);
   res.json({ success: true });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── D2: GET /pending-approvals — owner-only queue ─────────────────
+// Returns the list of pending status-change recommendations submitted
+// by team members (typically secretaries) for the caller's
+// inmobiliaria. Owners see their queue; team members are blocked
+// (the queue is the owner's inbox).
+// ══════════════════════════════════════════════════════════════════
+router.get('/pending-approvals', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+  if (!OWNER_ROLES.includes(user.role)) {
+    return res.status(403).json({ error: 'Solo el propietario puede ver esta cola.' });
+  }
+  const queue = store.getPendingApprovals(user.id) || [];
+  res.json({ pending: queue });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── D9: PATCH /cascade-capacity — toggle capacity-aware cascade ───
+// Owners can opt the team's lead distribution into capacity-aware
+// ordering. Stored on the owner's user record.
+// ══════════════════════════════════════════════════════════════════
+router.patch('/cascade-capacity', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+  if (!OWNER_ROLES.includes(user.role)) {
+    return res.status(403).json({ error: 'Solo el propietario puede cambiar este ajuste.' });
+  }
+  user.cascade_capacity_aware = req.body?.enabled === true;
+  store.saveUser(user);
+  res.json({ success: true, cascade_capacity_aware: user.cascade_capacity_aware });
 });
 
 module.exports = router;
