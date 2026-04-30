@@ -33,6 +33,18 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     console.error('    Create a .env file with these values before starting the server.\n');
     process.exit(1);
   }
+
+  // Loud (but non-fatal) warnings for misconfig that turns webhooks into
+  // unauthenticated endpoints. We don't crash here because dev/test
+  // environments rarely have these set, but production logs will scream.
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.warn('\n⚠️  STRIPE_WEBHOOK_SECRET is not set — /api/stripe/webhook will return 503.');
+    console.warn('    Without this secret the Stripe webhook cannot verify signatures and is unsafe to expose.\n');
+  }
+  if (!process.env.META_APP_SECRET) {
+    console.warn('\n⚠️  META_APP_SECRET is not set — /api/webhooks/meta will return 503.');
+    console.warn('    Without this secret the Meta lead-ad webhook cannot verify X-Hub-Signature-256.\n');
+  }
 })();
 
 // ── Ensure documents directory exists (uploads go to filesystem) ───────────

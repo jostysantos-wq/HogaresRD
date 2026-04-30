@@ -258,15 +258,35 @@ router.post('/cancel-feedback', requireAuth, requireStripe, async (req, res) => 
   }
 });
 
+// ── Idempotency cache for Stripe webhook events ──────────────────────────
+// Stripe can replay webhook events (network retries, manual replay from the
+// dashboard). Without dedup, replays mutate user state repeatedly. We track
+// recently-seen event IDs in a FIFO Map capped at 1000 entries (Map preserves
+// insertion order, so we evict the oldest when we exceed the cap).
+const _processedEventIds = new Map();
+const _MAX_PROCESSED_EVENTS = 1000;
+
+function _markEventProcessed(eventId) {
+  if (!eventId) return;
+  _processedEventIds.set(eventId, Date.now());
+  while (_processedEventIds.size > _MAX_PROCESSED_EVENTS) {
+    const oldest = _processedEventIds.keys().next().value;
+    _processedEventIds.delete(oldest);
+  }
+}
+
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────
 // NOTE: This route needs the RAW request body — mounted in server.js
 // BEFORE express.json() with express.raw({ type: 'application/json' }).
 router.post('/webhook', (req, res) => {
   const sig = req.headers['stripe-signature'];
 
+  // Refuse to accept events when the webhook secret is not configured.
+  // Returning 200 here would silently turn the endpoint into an unauthenticated
+  // mutation surface — any caller could POST a forged event.
   if (!WEBHOOK_SECRET || !stripe) {
-    console.warn('[Stripe] Webhook received but STRIPE_WEBHOOK_SECRET not set — skipping.');
-    return res.json({ received: true });
+    console.error('[Stripe] Webhook received but STRIPE_WEBHOOK_SECRET / stripe client not configured — rejecting.');
+    return res.status(503).json({ error: 'webhook not configured' });
   }
 
   let event;
@@ -276,6 +296,13 @@ router.post('/webhook', (req, res) => {
     console.error('[Stripe] Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
+  // Idempotency: drop replays without re-running side effects.
+  if (event.id && _processedEventIds.has(event.id)) {
+    console.log(`[Stripe] Duplicate webhook event ignored: ${event.id} (${event.type})`);
+    return res.json({ received: true, deduplicated: true });
+  }
+  _markEventProcessed(event.id);
 
   console.log(`[Stripe] Webhook event: ${event.type}`);
 

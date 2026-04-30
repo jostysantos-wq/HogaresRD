@@ -18,7 +18,20 @@
 'use strict';
 
 const store = require('../routes/store');
+// Lazy-required to avoid circular dependency: routes/auth.js requires this file
+// indirectly via server.js bootstrap. We pull verifyJWT only at first call.
+let _verifyJWT = null;
+function getVerifyJWT() {
+  if (_verifyJWT) return _verifyJWT;
+  try {
+    _verifyJWT = require('../routes/auth').verifyJWT;
+  } catch {
+    _verifyJWT = null;
+  }
+  return _verifyJWT;
+}
 
+const COOKIE_NAME = 'hrdt';
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
 
 function isSubscriptionActive(user) {
@@ -45,6 +58,30 @@ function isSubscriptionActive(user) {
 function requireActiveSubscription(req, res, next) {
   // Reads are always allowed — canceled users can view their data
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  // Inline JWT verification: this middleware runs at app-level BEFORE
+  // per-route userAuth has populated req.user. Try to verify any token
+  // present (cookie or Authorization header) so the gate can actually
+  // enforce. On any failure, leave req.user unset and let downstream
+  // auth handle it.
+  if (!req.user?.sub) {
+    const verifyJWT = getVerifyJWT();
+    if (verifyJWT) {
+      const cookieToken = req.cookies?.[COOKIE_NAME];
+      const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+      const token = cookieToken || headerToken;
+      if (token) {
+        try {
+          const payload = verifyJWT(token);
+          if (!payload.jti || !store.isTokenRevoked(payload.jti)) {
+            req.user = payload;
+          }
+        } catch {
+          // verification failed — fall through, downstream auth will reject
+        }
+      }
+    }
+  }
 
   // No auth context yet — let downstream auth handle it
   if (!req.user?.sub) return next();
