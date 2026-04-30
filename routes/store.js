@@ -190,7 +190,7 @@ function hydrateSubmission(row) {
 }
 
 const SUBMISSION_KNOWN_COLS = [
-  'id', 'title', 'type', 'condition', 'description', 'price', 'area_const', 'area_land',
+  'id', 'title', 'type', 'propertyType', 'condition', 'description', 'price', 'area_const', 'area_land',
   'bedrooms', 'bathrooms', 'parking', 'province', 'city', 'sector', 'address', 'lat', 'lng',
   'name', 'email', 'phone', 'role', 'status', 'submittedAt', 'approvedAt', 'rejectedAt',
   'updatedAt', 'views', 'floors', 'units_total', 'units_available', 'unit_inventory', 'project_stage',
@@ -356,6 +356,7 @@ async function _loadCache() {
     // Ensure cascade tables exist (idempotent)
     await exec(`
       ALTER TABLE submissions ADD COLUMN IF NOT EXISTS creator_user_id TEXT;
+      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS "propertyType" TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS "doNotSell" INTEGER DEFAULT 0;
       CREATE TABLE IF NOT EXISTS lead_queue (
         id TEXT PRIMARY KEY, inquiry_type TEXT NOT NULL, inquiry_id TEXT NOT NULL,
@@ -741,6 +742,34 @@ function deleteListing(id) {
   pool.query('DELETE FROM submissions WHERE id = $1', [id]).catch(err => console.error('[store-pg] deleteListing error:', err.message));
   _submissions = _submissions.filter(s => s.id !== id);
   _invalidateCache();
+
+  // Flag any non-terminal applications that point to the deleted listing.
+  // We don't change their status (the snapshot fields like listing_title /
+  // listing_price stay frozen, which is the desired audit behavior); we
+  // just stamp listing_deleted_at and append a timeline event so brokers
+  // can see why the property is gone. addEvent's logic is inlined here
+  // (rather than imported from applications.js) to avoid a circular
+  // require — applications.js already requires store.js.
+  const TERMINAL_STATUSES = new Set(['rechazado', 'completado']);
+  for (const a of _applications) {
+    if (a.listing_id !== id) continue;
+    if (TERMINAL_STATUSES.has(a.status)) continue;
+    const nowIso = new Date().toISOString();
+    a.listing_deleted_at = nowIso;
+    if (!Array.isArray(a.timeline_events)) a.timeline_events = [];
+    a.timeline_events.push({
+      id: require('crypto').randomUUID(),
+      type: 'listing_deleted',
+      description: 'La propiedad asociada fue eliminada',
+      actor: 'system',
+      actor_name: 'Sistema',
+      data: {},
+      created_at: nowIso,
+    });
+    a.updated_at = nowIso;
+    // Persist the flag — fire-and-forget through the regular write path.
+    try { saveApplication(a); } catch (err) { _dbWriteError('deleteListing/saveApplication', err); }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -802,6 +831,13 @@ function _encryptAppFinancials(app) {
 // behavior for the other ~25 saveApplication call sites).
 // TODO(transactional-rewrite): migrate the remaining saveApplication
 // call sites onto awaited tx writes.
+// TODO(transactional-commission): callers in routes/applications.js that
+// mutate `commission` and `payment` together (e.g. status_change paths
+// that void/approve commission alongside payment_plan updates) MUST
+// pass a `client` from `withTransaction(...)` so both writes commit
+// atomically. Today most of those sites still call saveApplication(app)
+// fire-and-forget, leaving a small window where commission state can
+// land in the DB while the paired payment update is still in-flight.
 function saveApplication(app, client) {
   // Deep clone before encrypting so the in-memory object stays usable
   const toSave = JSON.parse(JSON.stringify(app));
@@ -1255,13 +1291,23 @@ function getBlogPostById(id) { return _blogPosts.find(p => p.id === id) || null;
 function getBlogPostBySlug(slug) { return _blogPosts.find(p => p.slug === slug) || null; }
 
 function saveBlogPost(post) {
-  const row = { ...post };
+  // Deep clone so we can dehydrate (_extra → JSON string) into the DB row
+  // without mutating the caller's object. Previously the cache stored the
+  // input reference after we already stringified its _extra in place, which
+  // meant subsequent saves of the same object re-stringified an already-
+  // stringified value and leaked DB-row shape into in-memory data.
+  const cloned = typeof structuredClone === 'function'
+    ? structuredClone(post)
+    : JSON.parse(JSON.stringify(post));
+  const row = { ...cloned };
   if (row._extra && typeof row._extra === 'object') row._extra = JSON.stringify(row._extra);
   const { sql, values } = buildUpsert('blog_posts', row, 'id');
   pool.query(sql, values).catch(() => {});
+  // Cache the un-mutated parsed form so getBlogPostById returns a clean
+  // object (not the row with a stringified _extra).
   const idx = _blogPosts.findIndex(p => p.id === post.id);
-  if (idx >= 0) _blogPosts[idx] = post;
-  else _blogPosts.push(post);
+  if (idx >= 0) _blogPosts[idx] = cloned;
+  else _blogPosts.push(cloned);
 }
 
 function deleteBlogPost(id) {
