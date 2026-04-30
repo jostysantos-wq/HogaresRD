@@ -85,6 +85,17 @@ async function _connectWithTimeout(timeoutMs = 10000) {
   }
 }
 
+// ── Errors ──────────────────────────────────────────────────────────────
+// Thrown by claimXxxAtomic helpers when an optimistic-concurrency check
+// fails (the row's updated_at moved between the read and the write).
+// Routes catch this and surface a 409 to the client so they can refresh.
+class ConflictError extends Error {
+  constructor(msg) {
+    super(msg || 'conflict');
+    this.name = 'ConflictError';
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 const ACTIVITY_CAP = 200;
 
@@ -868,6 +879,73 @@ function saveApplication(app, client) {
   // Fire-and-forget — the bus is in-process and never blocks.
   appEvents.publish(app.id);
   return writePromise; // null when not in a transaction
+}
+
+/**
+ * Optimistic-concurrency wrapper for application mutations.
+ *
+ * Use this to wrap any handler that flips application status / pushes
+ * documents / payment fields, when two agents could be acting on the
+ * same row simultaneously (broker + secretary, dual tabs, etc.). The
+ * caller passes the `updated_at` they observed when they read the app;
+ * if the row moved in between, we throw `ConflictError` so the route
+ * can surface a 409 instead of silently overwriting the other write.
+ *
+ * Production path: SELECT ... FOR UPDATE inside a real transaction so
+ * the row is locked while the mutator runs and saveApplication writes
+ * to the same client.
+ *
+ * Test/dev path (no DATABASE_URL): mutator runs against the in-memory
+ * cache without DB locks — still does the updated_at check so test
+ * coverage of the conflict path is real.
+ *
+ * @param {string}   id                 application id
+ * @param {string}   expectedUpdatedAt  updated_at observed before the claim
+ * @param {function} mutator            async (app, client) => void
+ * @returns {Promise<object>}           the mutated app (post-save)
+ */
+async function claimApplicationAtomic(id, expectedUpdatedAt, mutator) {
+  // ── Test / dev short-circuit ────────────────────────────────────────
+  if (!_rawUrl) {
+    const app = getApplicationById(id);
+    if (!app) throw new ConflictError('application_not_found');
+    if ((app.updated_at || null) !== (expectedUpdatedAt || null)) {
+      throw new ConflictError('updated_at mismatch');
+    }
+    await mutator(app, null);
+    app.updated_at = new Date().toISOString();
+    saveApplication(app);
+    return app;
+  }
+
+  // ── Real Postgres path ──────────────────────────────────────────────
+  const client = await _connectWithTimeout();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT * FROM applications WHERE id = $1 FOR UPDATE',
+      [id]
+    );
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      throw new ConflictError('application_not_found');
+    }
+    const app = hydrateApplication(rows[0]);
+    if ((app.updated_at || null) !== (expectedUpdatedAt || null)) {
+      await client.query('ROLLBACK');
+      throw new ConflictError('updated_at mismatch');
+    }
+    await mutator(app, client);
+    app.updated_at = new Date().toISOString();
+    await saveApplication(app, client);
+    await client.query('COMMIT');
+    return app;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw err;
+  } finally {
+    if (client) client.release();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1815,6 +1893,7 @@ module.exports = {
   getAllSubmissions,
   getApplications, getApplicationById, getApplicationsByBroker,
   getApplicationsByClient, getApplicationsByInmobiliaria, saveApplication,
+  claimApplicationAtomic, ConflictError,
   getConversations, getConversationById, getConversationsByClient,
   getConversationsForBroker, getConversationsByInmobiliaria, saveConversation, saveConversationAsync,
   claimConversationAtomic, addTransferRequestAtomic,
