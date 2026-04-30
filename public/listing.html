@@ -992,7 +992,7 @@
 </div>
 
 <!-- APPLY MODAL -->
-<div class="modal-backdrop" id="applyModal" onclick="closeApplyOnBackdrop(event)">
+<div class="modal-backdrop" id="applyModal" onclick="closeApplyOnBackdrop(event)" role="dialog" aria-modal="true" aria-labelledby="applyStepTitle">
   <div class="modal apply-modal">
     <div id="applyFormWrap">
       <!-- Header with stepper -->
@@ -1013,16 +1013,24 @@
             <div class="pill-price" id="applyListingPrice"></div>
           </div>
         </div>
-        <div class="apply-stepper">
-          <div class="apply-step-dot active" data-step="1"></div>
-          <div class="apply-step-dot" data-step="2"></div>
-          <div class="apply-step-dot" data-step="3"></div>
+        <div class="apply-stepper" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" id="applyStepperBar">
+          <div class="apply-step-dot active" data-step="1" aria-label="Paso 1 de 3"></div>
+          <div class="apply-step-dot" data-step="2" aria-label="Paso 2 de 3"></div>
+          <div class="apply-step-dot" data-step="3" aria-label="Paso 3 de 3"></div>
         </div>
-        <div class="apply-step-label"><span id="applyStepCounter">Paso 1 de 3</span> · <span id="applyStepName">Contacto e intención</span></div>
+        <div class="apply-step-label"><span id="applyStepName">Contacto e intención</span><span id="applyStepCounter" class="visually-hidden" style="position:absolute;left:-9999px;">Paso 1 de 3</span></div>
       </div>
 
       <!-- Body -->
       <div class="apply-body">
+
+        <!-- Honeypot field (#19) — bots that auto-fill every field will set
+             this; humans never see it. The server rejects any submission
+             where `_hp` is non-empty. -->
+        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
+          <label for="apply_hp">No completar</label>
+          <input type="text" id="apply_hp" name="_hp" tabindex="-1" autocomplete="off" />
+        </div>
 
         <!-- ── STEP 1 · Contacto & intención ── -->
         <div class="apply-step active" data-step="1">
@@ -1229,12 +1237,17 @@
         <svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </div>
       <h3 style="margin-bottom:0.5rem;font-weight:800;">¡Aplicación enviada!</h3>
-      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.5;">
+      <p id="applySuccessMsg" style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.5;">
         El broker se pondrá en contacto contigo pronto.
         <span id="applySuccessDeferred" style="display:none;"> Recuerda subir los documentos pendientes desde tu panel para avanzar más rápido.</span>
       </p>
+      <p id="applySuccessAnonNote" style="display:none;color:var(--text-muted);font-size:0.88rem;margin:-0.75rem 0 1.25rem;line-height:1.55;">
+        Te enviamos un enlace de seguimiento al correo <strong id="applySuccessEmail"></strong>.
+        Ábrelo cuando quieras revisar el estado de tu aplicación.
+      </p>
       <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
         <a id="applyTrackLink" href="/my-applications" style="display:none;background:var(--accent);color:#fff;font-weight:700;padding:0.7rem 1.4rem;border-radius:10px;text-decoration:none;font-size:0.9rem;">Rastrear mi aplicación →</a>
+        <a id="applyOpenMail" href="#" style="display:none;background:transparent;color:var(--accent);border:1.5px solid var(--accent);font-weight:700;padding:0.7rem 1.4rem;border-radius:10px;text-decoration:none;font-size:0.9rem;">Abrir mi correo</a>
         <button class="apply-btn-secondary" onclick="closeApplyModal()">Cerrar</button>
       </div>
     </div>
@@ -1792,6 +1805,8 @@
     document.getElementById('applyFormWrap').style.display    = 'block';
     document.getElementById('applySuccessWrap').style.display = 'none';
     document.getElementById('applyError').textContent         = '';
+    // Capture the element that opened the modal so we can restore focus on close.
+    _applyPrevFocus = document.activeElement;
     // Reset to step 1
     applyCurrentStep = 1;
     applyRenderStep();
@@ -1823,15 +1838,84 @@
 
     document.getElementById('applyModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+
+    // Wire the focus trap + Esc-to-close + dynamic emp asterisks once.
+    _applyBindModalA11y();
+    _applyUpdateEmpRequiredAsterisks();
+    // Move focus to the first focusable inside the modal so keyboard
+    // users land in the form, not at the page top.
+    setTimeout(() => {
+      const firstField = document.getElementById('applyName');
+      if (firstField) firstField.focus();
+    }, 50);
   }
 
   function closeApplyModal() {
     document.getElementById('applyModal').classList.remove('open');
     document.body.style.overflow = '';
+    // Restore focus to whatever opened the modal.
+    if (_applyPrevFocus && typeof _applyPrevFocus.focus === 'function') {
+      try { _applyPrevFocus.focus(); } catch (_) {}
+    }
+    _applyPrevFocus = null;
   }
 
   function closeApplyOnBackdrop(e) {
     if (e.target === document.getElementById('applyModal')) closeApplyModal();
+  }
+
+  // ── Apply modal a11y: focus trap, Escape, dynamic asterisks ─────
+  let _applyPrevFocus = null;
+  let _applyA11yBound = false;
+  function _applyBindModalA11y() {
+    if (_applyA11yBound) return;
+    _applyA11yBound = true;
+    const modal = document.getElementById('applyModal');
+    const dialog = modal && modal.querySelector('.apply-modal');
+    if (!modal || !dialog) return;
+
+    const isOpen = () => modal.classList.contains('open');
+    function focusables() {
+      // Skip the honeypot (#apply_hp) — it's offscreen and tabindex=-1
+      // already, but belt-and-braces.
+      return Array.from(dialog.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter(el => el.offsetParent !== null && !el.hidden);
+    }
+    document.addEventListener('keydown', (e) => {
+      if (!isOpen()) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeApplyModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const list = focusables();
+        if (!list.length) return;
+        const first = list[0];
+        const last  = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    });
+
+    // Toggle employer/job-title asterisks on situation change.
+    const empSel = document.getElementById('applyEmpStatus');
+    if (empSel) {
+      empSel.addEventListener('change', _applyUpdateEmpRequiredAsterisks);
+    }
+  }
+
+  function _applyUpdateEmpRequiredAsterisks() {
+    const sel = document.getElementById('applyEmpStatus');
+    if (!sel) return;
+    const required = ['employed', 'self_employed'].includes(sel.value);
+    document.querySelectorAll('.required-if-employed').forEach(el => {
+      el.style.display = required ? '' : 'none';
+    });
   }
 
   function toggleCoapp() {
@@ -1849,7 +1933,11 @@
       el.classList.toggle('active', n === applyCurrentStep);
       el.classList.toggle('done',   n <  applyCurrentStep);
     });
-    document.getElementById('applyStepCounter').textContent = `Paso ${applyCurrentStep} de ${APPLY_STEP_COUNT}`;
+    // Counter is offscreen for screen readers — visible UX uses the dots above.
+    const counterEl = document.getElementById('applyStepCounter');
+    if (counterEl) counterEl.textContent = `Paso ${applyCurrentStep} de ${APPLY_STEP_COUNT}`;
+    const bar = document.getElementById('applyStepperBar');
+    if (bar) bar.setAttribute('aria-valuenow', String(applyCurrentStep));
     document.getElementById('applyStepName').textContent    = APPLY_STEP_NAMES[applyCurrentStep];
     document.getElementById('applyBackBtn').disabled = applyCurrentStep === 1;
     const nextBtn = document.getElementById('applyNextBtn');
@@ -2044,7 +2132,12 @@
   // ── Submit ──────────────────────────────────────────────────────
   let applyInFlight = false;
   async function submitApply() {
+    // Synchronously disable the submit button before any await so a
+    // double-click can't fire two requests.
+    const _nextBtn = document.getElementById('applyNextBtn');
+    if (_nextBtn) _nextBtn.disabled = true;
     if (applyInFlight) return;
+    applyInFlight = true;
     const errEl = document.getElementById('applyError');
     errEl.textContent = '';
 
@@ -2095,12 +2188,16 @@
     const attached_document_types = toUpload.map(d => d.type);
 
     const nextBtn = document.getElementById('applyNextBtn');
-    applyInFlight = true;
-    nextBtn.disabled = true; nextBtn.textContent = 'Enviando…';
+    nextBtn.textContent = 'Enviando…';
+
+    // Honeypot value (#19) — bots will fill this; humans never see it.
+    const hpEl = document.getElementById('apply_hp');
+    const hpValue = hpEl ? (hpEl.value || '') : '';
 
     const listing = window._currentListing || {};
     const token   = localStorage.getItem('hogaresrd_token') || localStorage.getItem('token');
     const me      = JSON.parse(localStorage.getItem('hogaresrd_user') || 'null');
+    const isAnonymous = !me || !me.id;
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -2123,6 +2220,7 @@
           deferred_documents,
           attached_document_types,
           ref_token: _refToken || undefined,
+          _hp: hpValue,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -2160,7 +2258,28 @@
         }, `lead_${appId}`);
       }
       const trackLink = document.getElementById('applyTrackLink');
-      if (trackLink) trackLink.style.display = token ? 'inline-block' : 'none';
+      const anonNote  = document.getElementById('applySuccessAnonNote');
+      const anonEmail = document.getElementById('applySuccessEmail');
+      const openMail  = document.getElementById('applyOpenMail');
+
+      if (isAnonymous) {
+        // #47 — anonymous submitters can't reach /my-applications, so we
+        // tell them about the magic-link email and provide a quick way to
+        // open their inbox. The actual track URL is delivered by email
+        // (server-side signed JWT in the confirmation message).
+        if (anonNote)  anonNote.style.display = 'block';
+        if (anonEmail) anonEmail.textContent = email || 'tu correo';
+        if (openMail) {
+          openMail.style.display = 'inline-block';
+          // mailto: with no recipient just opens the user's mail client.
+          openMail.href = 'mailto:';
+        }
+        if (trackLink) trackLink.style.display = 'none';
+      } else {
+        if (anonNote)  anonNote.style.display = 'none';
+        if (openMail)  openMail.style.display = 'none';
+        if (trackLink) trackLink.style.display = 'inline-block';
+      }
     } catch (err) {
       errEl.textContent = err.message || 'Error al enviar. Inténtalo de nuevo.';
     } finally {

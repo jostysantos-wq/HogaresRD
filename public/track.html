@@ -42,7 +42,7 @@
       padding: .35rem .85rem; border-radius: 999px; color:#fff;
     }
     .status-blue   { background: #0038A8; }
-    .status-orange { background: #c07c1a; }
+    .status-orange { background: #a86a14; } /* darker than #c07c1a for AA contrast at small sizes */
     .status-purple { background: #4a2d9c; }
     .status-green  { background: #0a7c4f; }
     .status-red    { background: #CF142B; }
@@ -61,7 +61,7 @@
       flex-wrap: wrap;
     }
     .doc-status { font-size: .7rem; font-weight: 700; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; color:#fff; }
-    .doc-status.pending  { background: var(--orange,#c07c1a); }
+    .doc-status.pending  { background: var(--orange,#a86a14); }
     .doc-status.uploaded { background: var(--accent,#002D62); }
     .doc-status.approved { background: var(--green,#0a7c4f); }
     .doc-status.rejected { background: var(--red,#CF142B); }
@@ -104,6 +104,19 @@
     }
     .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
     [hidden] { display: none !important; }
+
+    /* Deferred-doc attach button */
+    .btn-attach {
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: .35rem .75rem; font-weight: 700; font-size: .78rem; cursor: pointer;
+      display: inline-flex; align-items: center; gap: .3rem;
+    }
+    .btn-attach:hover { filter: brightness(0.95); }
+    .btn-attach:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-attach svg { width: 12px; height: 12px; fill: #fff; }
+    .doc-row .doc-upload-msg { font-size: .75rem; margin-top: .35rem; flex-basis: 100%; }
+    .doc-row .doc-upload-msg.err { color: var(--red, #CF142B); }
+    .doc-row .doc-upload-msg.ok  { color: var(--green, #0a7c4f); }
   </style>
 </head>
 <body>
@@ -165,10 +178,10 @@
         </h2>
         <div id="docsBlock"></div>
         <p class="hint" style="margin-top:.7rem;">
-          Para subir documentos,
-          <a href="/login">inicia sesión</a> o
-          <a href="/register">crea una cuenta</a> con el correo con el que aplicaste.
-          Tu aplicación se enlazará automáticamente.
+          Puedes adjuntar los documentos pendientes desde aquí, o
+          <a href="/login">iniciar sesión</a> /
+          <a href="/register">crear una cuenta</a> con el correo con el que aplicaste para
+          enlazar tu aplicación a tu panel.
         </p>
       </div>
 
@@ -201,10 +214,10 @@
 
   <!-- Withdraw modal -->
   <div id="withdrawModal" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle">Confirmar retiro</h3>
       <p class="hint" style="margin-bottom:.6rem;">¿Estás seguro de retirar esta aplicación? Cuéntanos brevemente por qué (opcional):</p>
-      <textarea id="withdrawReason" placeholder="Motivo (opcional)…" maxlength="500"></textarea>
+      <textarea id="withdrawReason" placeholder="Motivo (opcional)…" maxlength="500" aria-label="Motivo del retiro"></textarea>
       <div class="modal-actions">
         <button class="btn-ghost" type="button" id="cancelWithdraw">Cancelar</button>
         <button class="btn-danger" type="button" id="confirmWithdraw">Sí, retirar</button>
@@ -326,13 +339,26 @@
           const st = (u && u.review_status) || d.status || 'pending';
           const labelMap = { approved: 'Aprobado', rejected: 'Rechazado', pending: 'En revisión', uploaded: 'Subido' };
           const lbl = labelMap[st] || 'Pendiente';
+          const canAttach = st === 'pending' && (d.deferred === true || !u);
+          const docId = esc(d.id || '');
+          const docType = esc(d.type || '');
+          const docLabel = esc(d.label || d.type || 'Documento');
           return `
-            <div class="doc-row">
-              <span style="flex:1; font-size:.9rem;">${esc(d.label || d.type || 'Documento')}</span>
+            <div class="doc-row" data-doc-id="${docId}">
+              <span style="flex:1; font-size:.9rem;">${docLabel}</span>
               <span class="doc-status ${st === 'approved' ? 'approved' : st === 'rejected' ? 'rejected' : st === 'uploaded' ? 'uploaded' : 'pending'}">${esc(lbl)}</span>
+              ${canAttach && TOKEN ? `<button class="btn-attach" type="button" data-attach data-req-id="${docId}" data-doc-type="${docType}" data-doc-label="${docLabel}">
+                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                Adjuntar
+              </button>` : ''}
+              <div class="doc-upload-msg" data-msg></div>
             </div>
           `;
         }).join('');
+        // Wire attach buttons
+        docsEl.querySelectorAll('button[data-attach]').forEach(btn => {
+          btn.addEventListener('click', () => attachDeferredDoc(btn));
+        });
       }
 
       // Conversation
@@ -359,13 +385,137 @@
       }
     }
 
+    // ── Deferred-doc upload (track magic-link bearer) ────────────
+    const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+    async function attachDeferredDoc(triggerBtn) {
+      if (!TOKEN) return;
+      const id = appData && appData.id;
+      if (!id) return;
+
+      const reqId   = triggerBtn.dataset.reqId || '';
+      const docType = triggerBtn.dataset.docType || '';
+      const docLabel= triggerBtn.dataset.docLabel || 'Documento';
+      const row     = triggerBtn.closest('.doc-row');
+      const msgEl   = row && row.querySelector('[data-msg]');
+
+      const showMsg = (text, kind) => {
+        if (!msgEl) return;
+        msgEl.className = 'doc-upload-msg ' + (kind || '');
+        msgEl.textContent = text;
+      };
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.accept = 'image/*,application/pdf';
+      input.addEventListener('change', async () => {
+        const files = Array.from(input.files || []);
+        if (files.length === 0) return;
+        for (const f of files) {
+          if (f.size > MAX_UPLOAD_BYTES) {
+            showMsg(`"${f.name}" supera el límite de 10 MB.`, 'err');
+            return;
+          }
+        }
+        triggerBtn.disabled = true;
+        const originalHtml = triggerBtn.innerHTML;
+        triggerBtn.innerHTML = 'Subiendo…';
+        showMsg('Enviando archivo(s)…', '');
+        try {
+          const fd = new FormData();
+          for (const f of files) fd.append('files', f);
+          if (reqId)   fd.append('request_id', reqId);
+          if (docType) fd.append('type', docType);
+          if (docLabel)fd.append('label', docLabel);
+          const res = await fetch(`/api/applications/${encodeURIComponent(id)}/track-upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${TOKEN}` },
+            body: fd,
+          });
+          if (!res.ok) {
+            let msg = 'No pudimos subir el documento.';
+            try { const j = await res.json(); if (j?.error) msg = j.error; } catch(_) {}
+            showMsg(msg, 'err');
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalHtml;
+            return;
+          }
+          // Refresh the application detail and re-render
+          try {
+            const fresh = await fetch('/api/applications/track-token?token=' + encodeURIComponent(TOKEN));
+            if (fresh.ok) { appData = await fresh.json(); render(); }
+            else { showMsg('Documento subido. Recarga la página para ver el cambio.', 'ok'); }
+          } catch (_) {
+            showMsg('Documento subido. Recarga la página para ver el cambio.', 'ok');
+          }
+        } catch (_) {
+          showMsg('Error de red. Inténtalo de nuevo.', 'err');
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = originalHtml;
+        }
+      }, { once: true });
+      input.click();
+    }
+    // Expose to render() callback wiring
+    window.__trackAttachDeferredDoc = attachDeferredDoc;
+
     // ── Withdraw flow ─────────────────────────────────────────────
     const modal = document.getElementById('withdrawModal');
-    document.getElementById('openWithdraw').addEventListener('click', () => {
+    const modalDialog = modal.querySelector('.modal');
+    let _modalLastFocus = null;
+
+    function _focusableInModal() {
+      return modalDialog.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+    }
+    function _onModalKeydown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusables = Array.from(_focusableInModal()).filter(el => !el.disabled && el.offsetParent !== null);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last  = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
+    function openModal(triggerEl) {
+      _modalLastFocus = triggerEl || document.activeElement;
       document.getElementById('withdrawReason').value = '';
       show(modal);
+      // Move focus into the dialog
+      const focusables = _focusableInModal();
+      // Prefer the textarea so users can type the reason immediately
+      const textarea = document.getElementById('withdrawReason');
+      (textarea || focusables[0]).focus();
+      document.addEventListener('keydown', _onModalKeydown);
+    }
+    function closeModal() {
+      hide(modal);
+      document.removeEventListener('keydown', _onModalKeydown);
+      // Restore focus to the trigger
+      if (_modalLastFocus && typeof _modalLastFocus.focus === 'function') {
+        try { _modalLastFocus.focus(); } catch (_) {}
+      }
+      _modalLastFocus = null;
+    }
+
+    document.getElementById('openWithdraw').addEventListener('click', (e) => {
+      openModal(e.currentTarget);
     });
-    document.getElementById('cancelWithdraw').addEventListener('click', () => hide(modal));
+    document.getElementById('cancelWithdraw').addEventListener('click', () => closeModal());
+    // Click on the backdrop (outside the dialog) closes
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
     document.getElementById('confirmWithdraw').addEventListener('click', async () => {
       const btn = document.getElementById('confirmWithdraw');
       const reason = (document.getElementById('withdrawReason').value || '').trim();
@@ -395,7 +545,7 @@
         alertEl.innerHTML = '<div class="alert alert-error">Error de red. Intenta de nuevo.</div>';
       } finally {
         btn.disabled = false;
-        hide(modal);
+        closeModal();
       }
     });
 
