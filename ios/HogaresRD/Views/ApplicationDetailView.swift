@@ -35,9 +35,17 @@ struct ApplicationDetailView: View {
     @State private var showMessageSheet  = false
     @State private var showCommissionSheet = false
     @State private var showSkipDocsSheet = false
+    @State private var showReassignSheet = false
+    @State private var showSkipPhaseSheet = false
     @State private var skipDocsNote      = ""
     @State private var skipDocsBusy      = false
     @State private var skipDocsError: String?
+
+    // #61: doc review sheet — present ReviewDocumentSheet (defined in
+    // BrokerDashboardView) for any uploaded document tapped in the
+    // Documentos tab. We adapt the row's data into the ArchiveDocument
+    // shape that sheet already speaks.
+    @State private var reviewingDoc: ArchiveDocument?
 
     // Workflow action bar state
     @State private var workflowBusy      = false
@@ -136,6 +144,107 @@ struct ApplicationDetailView: View {
         }
         .sheet(isPresented: $showSkipDocsSheet) {
             skipDocsSheetBody
+        }
+        .sheet(isPresented: $showReassignSheet) {
+            // #57: same-team broker picker → POST /applications/:id/reassign
+            if let d = detail {
+                ReassignBrokerSheet(applicationId: d.id) {
+                    showReassignSheet = false
+                    Task { await load() }
+                }
+                .environmentObject(api)
+            }
+        }
+        .sheet(isPresented: $showSkipPhaseSheet) {
+            // #60: bypass-the-flow target picker → POST /:id/skip-phase
+            if let d = detail {
+                SkipPhaseSheet(detail: d) { updated in
+                    detail = updated
+                }
+                .environmentObject(api)
+            }
+        }
+        .sheet(item: $reviewingDoc) { doc in
+            NavigationStack {
+                ReviewDocumentSheet(
+                    doc: doc,
+                    onReviewed: {
+                        reviewingDoc = nil
+                        Task { await load() }
+                    },
+                    onPreview: { previewReviewingDocument(doc) }
+                )
+                .environmentObject(api)
+            }
+        }
+        .sheet(item: $pendingPreviewURL) { wrap in
+            ArchiveDocPreview(url: wrap.url)
+                .ignoresSafeArea()
+        }
+    }
+
+    /// Adapt a `AppDocumentUploaded` row into the `ArchiveDocument` shape
+    /// that `ReviewDocumentSheet` already renders. We only need fields
+    /// the sheet displays + the doc/app IDs to call the review endpoint.
+    private func makeArchiveDocument(
+        from up: AppDocumentUploaded,
+        applicationDetail d: ApplicationDetail
+    ) -> ArchiveDocument {
+        let sizeStr: String? = up.size.map { n in
+            let kb = Double(n) / 1024.0
+            return kb >= 1024
+                ? String(format: "%.1f MB", kb / 1024)
+                : String(format: "%.0f KB", kb)
+        }
+        return ArchiveDocument(
+            id:          up.id,
+            appId:       d.id,
+            docId:       up.id,
+            name:        up.original_name ?? up.label,
+            filename:    up.filename,
+            type:        up.type,
+            status:      up.review_status,
+            client:      d.client.name,
+            clientEmail: d.client.email,
+            property:    d.listing_title,
+            listingId:   d.listing_id,
+            uploadDate:  up.uploaded_at,
+            fileSize:    sizeStr,
+            reviewNote:  up.review_note
+        )
+    }
+
+    // #61: shared preview helper — same temp-file + SFSafariView pattern
+    // used by BrokerDashboardView. Documents are auth-only downloads,
+    // so we fetch the bytes and write them to a temp file before
+    // handing them to the preview sheet. The actual sheet is presented
+    // by ReviewDocumentSheet's onPreview callback.
+    @State private var pendingPreviewURL: ArchiveDocURL?
+
+    private func previewReviewingDocument(_ doc: ArchiveDocument) {
+        guard let appId = doc.appId, let docId = doc.docId else { return }
+        Task {
+            do {
+                let (data, mime) = try await api.downloadDocument(
+                    applicationId: appId, documentId: docId
+                )
+                let ext: String = {
+                    if let m = mime?.lowercased() {
+                        if m.contains("pdf") { return "pdf" }
+                        if m.contains("png") { return "png" }
+                        if m.contains("jpeg") || m.contains("jpg") { return "jpg" }
+                        if m.contains("heic") { return "heic" }
+                        if m.contains("webp") { return "webp" }
+                    }
+                    return "bin"
+                }()
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("hrd-doc-\(UUID().uuidString).\(ext)")
+                try data.write(to: tmp, options: .atomic)
+                await MainActor.run { pendingPreviewURL = ArchiveDocURL(url: tmp) }
+            } catch {
+                // Silent — broker can still hit Approve/Reject in the sheet.
+            }
         }
     }
 
@@ -477,28 +586,42 @@ struct ApplicationDetailView: View {
         if !uploaded.isEmpty {
             sectionHeader("Subidos")
             ForEach(uploaded) { up in
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "doc.fill")
-                        .foregroundStyle(Color.rdBlue)
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(up.original_name ?? up.label ?? DocumentCatalog.label(for: up.type ?? ""))
-                            .font(.subheadline.bold())
-                            .lineLimit(1)
-                        if let rs = up.review_status {
-                            Text(reviewStatusLabel(rs))
-                                .font(.caption2.bold())
-                                .padding(.horizontal, 7).padding(.vertical, 2)
-                                .background(reviewStatusColor(rs).opacity(0.15))
-                                .foregroundStyle(reviewStatusColor(rs))
-                                .clipShape(Capsule())
+                Button {
+                    // #61: open ReviewDocumentSheet to approve/reject
+                    // straight from the detail view. We adapt the
+                    // upload row into the ArchiveDocument shape that
+                    // sheet already renders.
+                    reviewingDoc = makeArchiveDocument(from: up, applicationDetail: d)
+                } label: {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "doc.fill")
+                            .foregroundStyle(Color.rdBlue)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(up.original_name ?? up.label ?? DocumentCatalog.label(for: up.type ?? ""))
+                                .font(.subheadline.bold())
+                                .lineLimit(1)
+                                .foregroundStyle(.primary)
+                            if let rs = up.review_status {
+                                Text(reviewStatusLabel(rs))
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 7).padding(.vertical, 2)
+                                    .background(reviewStatusColor(rs).opacity(0.15))
+                                    .foregroundStyle(reviewStatusColor(rs))
+                                    .clipShape(Capsule())
+                            }
                         }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.tertiary)
                     }
-                    Spacer()
+                    .padding(12)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .contentShape(Rectangle())
                 }
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .buttonStyle(.plain)
             }
         }
 
@@ -536,16 +659,28 @@ struct ApplicationDetailView: View {
             .frame(maxWidth: .infinity)
         } else {
             ForEach(events) { ev in
+                let internalNote = ev.is_internal == true
                 HStack(alignment: .top, spacing: 10) {
                     Circle()
                         .fill(timelineEventColor(ev.type))
                         .frame(width: 10, height: 10)
                         .padding(.top, 6)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(ev.description ?? ev.type.capitalized)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            if internalNote {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(ev.description ?? ev.type.capitalized)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
                         HStack(spacing: 6) {
+                            if internalNote {
+                                Text("Nota interna").bold()
+                                    .foregroundStyle(.orange)
+                            }
                             if let actor = ev.actor_name, !actor.isEmpty {
                                 Text(actor)
                             }
@@ -559,7 +694,9 @@ struct ApplicationDetailView: View {
                     Spacer()
                 }
                 .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
+                .background(internalNote
+                            ? Color.orange.opacity(0.10)
+                            : Color(.secondarySystemGroupedBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
@@ -588,6 +725,27 @@ struct ApplicationDetailView: View {
                 showDocsSheet = true
             } label: {
                 Label("Solicitar documentos", systemImage: "doc.badge.plus")
+            }
+
+            // #60: skip-phase — broker overrides the natural status flow.
+            // Only shown when there's at least one valid forward target.
+            if !ApplicationStatus.nextOptions(from: d.status).isEmpty {
+                Button {
+                    showSkipPhaseSheet = true
+                } label: {
+                    Label("Saltar fase", systemImage: "forward.fill")
+                }
+            }
+
+            // #57: Reasignar — broker-only (gated on user role). The
+            // server endpoint also enforces same-inmobiliaria membership.
+            if let role = api.currentUser?.role.lowercased(),
+               ["broker", "agency", "inmobiliaria", "constructora", "admin"].contains(role) {
+                Button {
+                    showReassignSheet = true
+                } label: {
+                    Label("Reasignar", systemImage: "arrow.triangle.swap")
+                }
             }
 
             let commissionStatuses = ["aprobado", "pendiente_pago", "pago_enviado", "pago_aprobado", "completado"]
@@ -1108,12 +1266,14 @@ struct ApplicationDetailView: View {
         return out.string(from: date)
     }
 
-    private func formatCurrencyD(_ value: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = Locale(identifier: "en_US")
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: value)) ?? "$\(Int(value))"
+    private func formatCurrencyD(_ value: Double, code: String = "DOP") -> String {
+        // #50: render with es_DO locale so DOP shows RD$ and USD shows US$.
+        let cleaned = code.uppercased().isEmpty ? "DOP" : code.uppercased()
+        return value.formatted(
+            .currency(code: cleaned)
+            .locale(Locale(identifier: "es_DO"))
+            .precision(.fractionLength(0))
+        )
     }
 
     /// Build a synthetic CommissionRow so we can reuse the existing
@@ -1428,23 +1588,52 @@ struct ContactClientSheet: View {
     @State private var sending = false
     @State private var errorMsg: String?
     @State private var sent = false
+    // #59: broker can flag the message as an internal team note.
+    // Internal notes never sync to conversations or notify the client —
+    // they show in the timeline only, with a lock icon.
+    @State private var mode: MessageMode = .client
+
+    enum MessageMode: String, CaseIterable, Identifiable {
+        case client   = "Cliente"
+        case internalNote = "Nota interna"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Para: \(detail.client.name)").font(.caption.bold())
-                        if let email = detail.client.email { Text(email).font(.caption2).foregroundStyle(.secondary) }
+                    Picker("Destino", selection: $mode) {
+                        Text("Mensaje al cliente").tag(MessageMode.client)
+                        Text("Nota interna").tag(MessageMode.internalNote)
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    if mode == .internalNote {
+                        Text("Las notas internas no se envían al cliente. Quedan visibles solo para el equipo en la línea de tiempo.")
+                            .font(.caption2)
                     }
                 }
-                Section("Mensaje") {
-                    TextField("Hola, soy tu agente…", text: $message, axis: .vertical)
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(mode == .internalNote ? "Visible para el equipo" : "Para: \(detail.client.name)")
+                            .font(.caption.bold())
+                        if mode == .client, let email = detail.client.email {
+                            Text(email).font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Section(mode == .internalNote ? "Nota" : "Mensaje") {
+                    TextField(mode == .internalNote
+                              ? "Anotación visible solo para el equipo…"
+                              : "Hola, soy tu agente…",
+                              text: $message, axis: .vertical)
                         .lineLimit(4...10)
                 }
                 if sent {
                     Section {
-                        Label("Mensaje enviado", systemImage: "checkmark.seal.fill")
+                        Label(mode == .internalNote ? "Nota guardada" : "Mensaje enviado",
+                              systemImage: "checkmark.seal.fill")
                             .foregroundStyle(.green)
                     }
                 } else if let err = errorMsg {
@@ -1453,14 +1642,14 @@ struct ContactClientSheet: View {
                     }
                 }
             }
-            .navigationTitle("Contactar cliente")
+            .navigationTitle(mode == .internalNote ? "Nota interna" : "Contactar cliente")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(sent ? "Cerrar" : "Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(sending ? "…" : "Enviar") {
+                    Button(sending ? "…" : (mode == .internalNote ? "Guardar" : "Enviar")) {
                         Task { await send() }
                     }
                     .disabled(message.trimmingCharacters(in: .whitespaces).isEmpty || sending || sent)
@@ -1474,16 +1663,309 @@ struct ContactClientSheet: View {
         errorMsg = nil
         defer { sending = false }
         do {
-            try await api.contactApplicationClient(
-                applicationId: detail.id,
-                message: message.trimmingCharacters(in: .whitespaces)
-            )
+            if mode == .internalNote {
+                // #59: POST /api/applications/:id/message with is_internal=true
+                // bypasses APIService.contactApplicationClient, which doesn't
+                // expose the internal flag yet.
+                guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(detail.id)/message") else {
+                    throw APIError.server("URL inválida")
+                }
+                var req = try api.authedRequest(url, method: "POST")
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                let body: [String: Any] = [
+                    "message":     message.trimmingCharacters(in: .whitespaces),
+                    "is_internal": true,
+                ]
+                req.httpBody = try JSONSerialization.data(withJSONObject: body)
+                let (data, resp) = try await URLSession.shared.data(for: req)
+                if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                    let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                    throw APIError.server(serverMsg ?? "Error guardando nota (\(http.statusCode))")
+                }
+            } else {
+                try await api.contactApplicationClient(
+                    applicationId: detail.id,
+                    message: message.trimmingCharacters(in: .whitespaces)
+                )
+            }
             sent = true
             try? await Task.sleep(for: .seconds(1.0))
             dismiss()
         } catch {
             if case .server(let s)? = error as? APIError { errorMsg = s }
             else { errorMsg = "Error al enviar el mensaje" }
+        }
+    }
+}
+
+// MARK: - Reassign Broker Sheet (#57)
+//
+// Same-team broker picker. Fetches GET /api/inmobiliaria/brokers
+// (already used by InmobiliariaTeamListView), shows a single-selection
+// list, and POSTs to /api/applications/:id/reassign with a reason. Server
+// enforces same-inmobiliaria membership; the picker excludes the current
+// user so brokers can't reassign to themselves.
+
+struct ReassignBrokerSheet: View {
+    let applicationId: String
+    var onReassigned: () -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var loading = true
+    @State private var loadError: String?
+    @State private var brokers: [TeamBroker] = []
+    @State private var selectedBrokerId: String?
+    @State private var reason: String = ""
+    @State private var submitting = false
+    @State private var submitError: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if loading {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                } else if let err = loadError {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                        Button("Reintentar") { Task { await loadBrokers() } }
+                    }
+                } else if brokers.isEmpty {
+                    Section {
+                        Text("No hay agentes disponibles para reasignar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Section("Nuevo agente") {
+                        Picker("Agente", selection: Binding(
+                            get: { selectedBrokerId ?? "" },
+                            set: { selectedBrokerId = $0.isEmpty ? nil : $0 }
+                        )) {
+                            Text("Selecciona un agente").tag("")
+                            ForEach(brokers) { b in
+                                Text(b.name).tag(b.id)
+                            }
+                        }
+                        .pickerStyle(.navigationLink)
+                    }
+                    Section {
+                        TextField("Motivo de la reasignación", text: $reason, axis: .vertical)
+                            .lineLimit(2...5)
+                    } header: {
+                        Text("Motivo")
+                    } footer: {
+                        Text("Quedará registrado en la línea de tiempo de la aplicación.")
+                            .font(.caption2)
+                    }
+                    if let err = submitError {
+                        Section {
+                            Label(err, systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Reasignar")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(submitting ? "…" : "Reasignar") {
+                        Task { await submit() }
+                    }
+                    .disabled(selectedBrokerId == nil || submitting)
+                }
+            }
+        }
+        .task { await loadBrokers() }
+    }
+
+    private func loadBrokers() async {
+        loading = true
+        loadError = nil
+        defer { loading = false }
+        do {
+            let resp = try await api.getTeamBrokers()
+            // Don't include the current user as a reassign target.
+            let me = api.currentUser?.id
+            brokers = resp.brokers.filter { $0.id != me }
+        } catch {
+            if case .server(let s)? = error as? APIError { loadError = s }
+            else { loadError = "Error cargando equipo" }
+        }
+    }
+
+    private func submit() async {
+        guard let target = selectedBrokerId else { return }
+        submitting = true
+        submitError = nil
+        defer { submitting = false }
+        do {
+            guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(applicationId)/reassign") else {
+                throw APIError.server("URL inválida")
+            }
+            var req = try api.authedRequest(url, method: "POST")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "newBrokerUserId": target,
+                "reason":          reason.trimmingCharacters(in: .whitespacesAndNewlines),
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                throw APIError.server(serverMsg ?? "Error al reasignar (\(http.statusCode))")
+            }
+            onReassigned()
+            dismiss()
+        } catch {
+            if case .server(let s)? = error as? APIError { submitError = s }
+            else { submitError = "Error al reasignar" }
+        }
+    }
+}
+
+// MARK: - Skip-phase Sheet (#60)
+//
+// Mirrors the broker.html skip-phase modal: pick a target status from
+// the current STATUS_FLOW, write a reason, POST /:id/skip-phase. The
+// dictionary below MUST mirror the server's STATUS_FLOW (routes/applications.js
+// top-of-file). When the server adds a transition, update both at once.
+
+struct SkipPhaseSheet: View {
+    let detail: ApplicationDetail
+    var onSkipped: (ApplicationDetail) -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var target: String = ""
+    @State private var reason: String = ""
+    @State private var submitting = false
+    @State private var errorMsg: String?
+
+    /// MUST mirror STATUS_FLOW in routes/applications.js. Used to drive
+    /// the picker; the server is the source of truth and will reject any
+    /// mismatched transition with a clear error.
+    private static let STATUS_FLOW: [String: [String]] = [
+        "aplicado":                ["en_revision", "rechazado"],
+        "en_revision":             ["documentos_requeridos", "en_aprobacion", "rechazado"],
+        "documentos_requeridos":   ["documentos_enviados", "rechazado"],
+        "documentos_enviados":     ["en_aprobacion", "documentos_insuficientes", "rechazado"],
+        "documentos_insuficientes":["documentos_requeridos", "documentos_enviados", "rechazado"],
+        "en_aprobacion":           ["reservado", "aprobado", "rechazado"],
+        "reservado":               ["aprobado", "rechazado"],
+        "aprobado":                ["pendiente_pago", "rechazado"],
+        "pendiente_pago":          ["pago_enviado", "rechazado"],
+        "pago_enviado":            ["pago_aprobado", "pendiente_pago", "rechazado"],
+        "pago_aprobado":           ["completado"],
+        "completado":              [],
+        "rechazado":               ["aplicado"],
+    ]
+
+    private var options: [String] {
+        Self.STATUS_FLOW[detail.status] ?? []
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Estado actual") {
+                    Text(ApplicationStatus.label(for: detail.status))
+                }
+                Section("Saltar a") {
+                    if options.isEmpty {
+                        Text("No hay transiciones disponibles desde este estado.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(options, id: \.self) { opt in
+                            Button {
+                                target = opt
+                            } label: {
+                                HStack {
+                                    Text(ApplicationStatus.label(for: opt))
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    if target == opt {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(.green)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                Section {
+                    TextField("Explica por qué saltas la fase…", text: $reason, axis: .vertical)
+                        .lineLimit(2...5)
+                } header: {
+                    Text("Motivo (obligatorio)")
+                } footer: {
+                    Text("Mínimo 5 caracteres. Quedará registrado en el historial.")
+                        .font(.caption2)
+                }
+                if let err = errorMsg {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Saltar fase")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(submitting ? "…" : "Confirmar") {
+                        Task { await submit() }
+                    }
+                    .disabled(target.isEmpty
+                              || reason.trimmingCharacters(in: .whitespaces).count < 5
+                              || submitting)
+                }
+            }
+        }
+    }
+
+    private func submit() async {
+        submitting = true
+        errorMsg = nil
+        defer { submitting = false }
+        do {
+            guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(detail.id)/skip-phase") else {
+                throw APIError.server("URL inválida")
+            }
+            var req = try api.authedRequest(url, method: "POST")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "status": target,
+                "reason": reason.trimmingCharacters(in: .whitespacesAndNewlines),
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                throw APIError.server(serverMsg ?? "Error al saltar fase (\(http.statusCode))")
+            }
+            // Re-fetch full detail so the parent gets fresh state.
+            let updated = try await api.fetchApplicationDetail(id: detail.id)
+            onSkipped(updated)
+            dismiss()
+        } catch {
+            if case .server(let s)? = error as? APIError { errorMsg = s }
+            else { errorMsg = "Error al saltar fase" }
         }
     }
 }

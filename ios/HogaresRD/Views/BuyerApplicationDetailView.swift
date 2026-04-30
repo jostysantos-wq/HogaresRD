@@ -28,6 +28,7 @@ struct BuyerApplicationDetailView: View {
     @State private var withdrawing: Bool = false
     @State private var withdrawReason: String = ""
     @State private var showWithdrawSheet: Bool = false
+    @State private var withdrawErrorMsg: String? = nil
 
     // MARK: - Body
 
@@ -57,6 +58,14 @@ struct BuyerApplicationDetailView: View {
         .navigationTitle("Mi aplicación")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        .task {
+            // #39: Buyer detail keeps the same live-update guarantees as
+            // the broker side. Subscribe to the SSE stream and trigger a
+            // reload on each emission. Falls through to manual refresh
+            // when the stream errors — same behavior as
+            // ApplicationDetailView.startLiveUpdates.
+            await startLiveUpdates()
+        }
         .refreshable { await load() }
         .sheet(isPresented: $showWithdrawSheet) {
             withdrawSheet
@@ -120,11 +129,41 @@ struct BuyerApplicationDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(desc)
                     .font(.caption)
-                Text(when)
+                Text(Self.formatTimelineDate(when))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    // #55: Render ISO timestamps as "d MMM · HH:mm" in es_DO instead of
+    // dumping the raw ISO string into the UI. The formatter is static
+    // so it isn't allocated per row.
+    private static let eventDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_DO")
+        f.dateFormat = "d MMM · HH:mm"
+        return f
+    }()
+
+    private static let isoDateParser: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static func formatTimelineDate(_ iso: String) -> String {
+        guard !iso.isEmpty else { return "" }
+        if let d = Self.isoDateParser.date(from: iso) {
+            return Self.eventDateFormatter.string(from: d)
+        }
+        // Fall back to the no-fractional variant for older payloads.
+        let alt = ISO8601DateFormatter()
+        alt.formatOptions = [.withInternetDateTime]
+        if let d = alt.date(from: iso) {
+            return Self.eventDateFormatter.string(from: d)
+        }
+        return iso
     }
 
     private func documentsSection(_ app: [String: Any]) -> some View {
@@ -159,6 +198,8 @@ struct BuyerApplicationDetailView: View {
                         Label("Ir a Mis Documentos", systemImage: "arrow.up.forward.app")
                             .font(.subheadline.bold())
                             .foregroundStyle(Color.rdBlue)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .padding(.top, 4)
                 }
@@ -169,6 +210,14 @@ struct BuyerApplicationDetailView: View {
     private func paymentSection(_ app: [String: Any]) -> some View {
         let payment = app["payment"] as? [String: Any]
         let plan    = app["payment_plan"] as? [String: Any]
+        let status  = (app["status"] as? String) ?? ""
+        let receiptStatus = (payment?["verification_status"] as? String) ?? "none"
+        // #62: when the buyer needs to upload (or re-upload) a receipt,
+        // surface a direct shortcut into MyDocumentsView. The full
+        // upload form lives there with its own progress UI.
+        let needsUpload = status == "pendiente_pago" ||
+                          (status == "pago_enviado" && receiptStatus == "rejected") ||
+                          receiptStatus == "rejected"
         return sectionCard(title: "Comprobantes de pago", systemImage: "creditcard.fill") {
             if let plan = plan, let installments = plan["installments"] as? [[String: Any]] {
                 if installments.isEmpty {
@@ -197,7 +246,9 @@ struct BuyerApplicationDetailView: View {
                 } else {
                     HStack {
                         if let amt = amount {
-                            Text("\(cur) \(Int(amt).formatted())").font(.caption.bold())
+                            // #50: format as DOP/USD via es_DO locale so DOP renders RD$ and USD renders US$.
+                            Text(Self.formatCurrency(amt, code: cur))
+                                .font(.caption.bold())
                         }
                         Spacer()
                         Text(receiptStatusLabel(st))
@@ -208,7 +259,36 @@ struct BuyerApplicationDetailView: View {
             } else {
                 Text("Sin información de pago.").font(.caption).foregroundStyle(.secondary)
             }
+
+            // #62: shortcut into the upload form.
+            if needsUpload {
+                NavigationLink {
+                    MyDocumentsView().environmentObject(api)
+                } label: {
+                    Label(receiptStatus == "rejected" ? "Subir nuevo comprobante" : "Subir comprobante",
+                          systemImage: "arrow.up.doc.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.vertical, 6)
+                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 10))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
         }
+    }
+
+    // #50: dominican-locale currency formatter. DOP → "RD$1,234"
+    // and USD → "US$1,234". Used wherever this view shows a money figure.
+    private static func formatCurrency(_ amount: Double, code: String) -> String {
+        let cleaned = code.uppercased().isEmpty ? "DOP" : code.uppercased()
+        return amount.formatted(
+            .currency(code: cleaned)
+            .locale(Locale(identifier: "es_DO"))
+            .precision(.fractionLength(0))
+        )
     }
 
     private func conversationSection(_ app: [String: Any]) -> some View {
@@ -265,6 +345,13 @@ struct BuyerApplicationDetailView: View {
                     TextEditor(text: $withdrawReason)
                         .frame(minHeight: 100)
                 }
+                if let err = withdrawErrorMsg {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
                 Section {
                     Button(role: .destructive) {
                         Task { await performWithdraw() }
@@ -319,6 +406,7 @@ struct BuyerApplicationDetailView: View {
 
     private func performWithdraw() async {
         withdrawing = true
+        withdrawErrorMsg = nil
         defer { withdrawing = false }
         do {
             guard let url = URL(string: "\(APIService.baseURL)/api/applications/\(id)/withdraw") else { return }
@@ -326,14 +414,53 @@ struct BuyerApplicationDetailView: View {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             let body: [String: Any] = ["reason": withdrawReason.trimmingCharacters(in: .whitespacesAndNewlines)]
             req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-            let (_, resp) = try await URLSession.shared.data(for: req)
+            let (data, resp) = try await URLSession.shared.data(for: req)
             if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-                throw APIError.server("HTTP \(http.statusCode)")
+                // #28: surface the server's error message instead of
+                // swallowing it. The server returns { error: "…" } on 4xx.
+                let serverMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                throw APIError.server(serverMsg ?? "Error al retirar la aplicación (\(http.statusCode))")
             }
             showWithdrawSheet = false
             await load()
         } catch {
-            // Errors surface via the load() refetch + status; keep UI simple.
+            // #28: keep the sheet open so the user can read the error
+            // and retry. APIError.server carries the localized backend
+            // message, NSError.localizedDescription covers transport.
+            if case .server(let msg)? = error as? APIError {
+                withdrawErrorMsg = msg
+            } else {
+                withdrawErrorMsg = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Live updates (SSE)
+
+    /// Subscribe to `GET /api/applications/:id/events`. On every state
+    /// emission, refresh the local detail. Mirrors the broker side so a
+    /// buyer immediately sees status changes without manual pull-to-refresh.
+    private func startLiveUpdates() async {
+        var backoff: UInt64 = 1_000_000_000 // 1s
+        var sseFailures = 0
+        while !Task.isCancelled {
+            let stream = ApplicationEventStream(applicationId: id, api: api)
+            do {
+                for try await _ in stream.states() {
+                    if Task.isCancelled { return }
+                    backoff = 1_000_000_000
+                    sseFailures = 0
+                    await load()
+                }
+            } catch {
+                sseFailures += 1
+                if Task.isCancelled { return }
+                // After several failures, give up — the buyer can still
+                // pull-to-refresh. Avoids burning battery on a stuck loop.
+                if sseFailures >= 3 { return }
+                try? await Task.sleep(nanoseconds: backoff)
+                backoff = min(backoff * 2, 30_000_000_000)
+            }
         }
     }
 

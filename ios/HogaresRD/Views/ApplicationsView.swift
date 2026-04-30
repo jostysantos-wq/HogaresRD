@@ -10,6 +10,12 @@ struct ApplicationsView: View {
     @State private var filter = 0  // 0=Activas, 1=Finalizadas, 2=Todas
     @State private var selectedAppId: String?
 
+    // Deep-link target. When a push notification arrives carrying an
+    // application_id, ContentView posts .deepLinkApplication and we
+    // pre-populate the NavigationStack path so the relevant detail view
+    // pushes onto the existing stack on next render.
+    @State private var deepLinkAppId: String? = nil
+
     private static let terminalStatuses: Set<String> = ["rechazado", "completado"]
 
     private var activeApps: [Application] {
@@ -119,6 +125,36 @@ struct ApplicationsView: View {
         .navigationTitle("Mis Aplicaciones")
         .task { await load() }
         .refreshable { await load() }
+        // #34: Push deep-link → fullscreen cover with the detail view.
+        // We use a fullscreen cover (instead of pushing onto the parent
+        // NavigationStack) because we don't own its path binding from
+        // here; the cover lets us reliably surface the detail no matter
+        // how the user reached this screen.
+        .fullScreenCover(item: Binding(
+            get: { deepLinkAppId.map { DeepLinkID(id: $0) } },
+            set: { deepLinkAppId = $0?.id }
+        )) { item in
+            NavigationStack {
+                Group {
+                    if isBuyerRole(api.currentUser?.role) {
+                        BuyerApplicationDetailView(id: item.id).environmentObject(api)
+                    } else {
+                        ApplicationDetailView(id: item.id).environmentObject(api)
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cerrar") { deepLinkAppId = nil }
+                    }
+                }
+            }
+            .environmentObject(api)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkApplication)) { notif in
+            if let id = notif.userInfo?["applicationId"] as? String, !id.isEmpty {
+                deepLinkAppId = id
+            }
+        }
     }
 
     // ── Helpers ──
@@ -126,7 +162,7 @@ struct ApplicationsView: View {
     private func summaryPill(count: Int, label: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption)
@@ -145,7 +181,7 @@ struct ApplicationsView: View {
                 HStack(spacing: 4) {
                     Text(label).font(.caption.bold())
                     Text("\(badge)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.caption2.bold())
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(filter == tag ? Color.rdBlue : Color(.systemGray5))
                         .foregroundStyle(filter == tag ? .white : .secondary)
@@ -157,6 +193,8 @@ struct ApplicationsView: View {
                     .fill(filter == tag ? Color.rdBlue : .clear)
                     .frame(height: 2)
             }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .frame(maxWidth: .infinity)
     }
@@ -198,12 +236,15 @@ private struct ApplicationCard: View {
     }
 
     private var style: StatusStyle {
-        let blue   = Color(red: 0.14, green: 0.39, blue: 0.92)
-        let orange = Color(red: 0.85, green: 0.47, blue: 0.02)
-        let green  = Color(red: 0.09, green: 0.64, blue: 0.29)
-        let red    = Color(red: 0.86, green: 0.15, blue: 0.15)
-        let purple = Color(red: 0.55, green: 0.24, blue: 0.78)
-        let teal   = Color(red: 0.18, green: 0.60, blue: 0.60)
+        // #51: use adaptive Color tokens so badges remain legible in
+        // Dark Mode. The literal RGB values these used to hold rendered
+        // as washed-out smudges on a dark background.
+        let blue   = Color.rdBlue
+        let orange = Color.rdOrange
+        let green  = Color.rdGreen
+        let red    = Color.rdRed
+        let purple = Color.rdPurple
+        let teal   = Color.rdTeal
 
         switch app.status {
         case "aplicado":
@@ -285,7 +326,7 @@ private struct ApplicationCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     // Status pill
                     Label(style.label, systemImage: style.icon)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.caption2.bold())
                         .foregroundStyle(style.fg)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(style.bg)
@@ -300,13 +341,13 @@ private struct ApplicationCard: View {
                     // Price + location
                     HStack(spacing: 8) {
                         Text(app.priceFormatted)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.subheadline.bold())
                             .foregroundStyle(isTerminal ? .secondary : Color.rdBlue)
 
                         if let city = app.listingCity, !city.isEmpty {
                             HStack(spacing: 2) {
                                 Image(systemName: "mappin")
-                                    .font(.system(size: 9))
+                                    .font(.caption2)
                                 Text(city)
                                     .font(.caption2)
                             }
