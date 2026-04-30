@@ -117,10 +117,20 @@ function getApnsJwt() {
   return _apnsJwt;
 }
 
+// Test-only override hook. When non-null, sendApns delegates to this
+// stub instead of opening an HTTP/2 connection. Used by
+// tests/push-apns-fallback.test.js to simulate Unregistered responses
+// without real APNs credentials. Never set in production.
+let _apnsSendOverride = null;
+function _setApnsSendOverride(fn) { _apnsSendOverride = fn; }
+
 /**
  * Send a push notification via APNs HTTP/2
  */
 async function sendApns(deviceToken, payload, opts = {}) {
+  if (_apnsSendOverride) {
+    return _apnsSendOverride(deviceToken, payload, opts);
+  }
   const token = getApnsJwt();
   if (!token) {
     console.warn('[Push] APNs not configured — skipping iOS push');
@@ -585,14 +595,32 @@ async function notify(userId, notification) {
         }
       }
 
-      // Remove invalid tokens (BadDeviceToken, Unregistered)
+      // Remove invalid tokens (BadDeviceToken, Unregistered) and flag the
+      // user for email fallback. Mirrors the web push branch above: once
+      // every active iOS token is invalidated we can no longer trust push
+      // delivery for this user until they explicitly re-subscribe, so we
+      // sticky the pushFallbackToEmail flag.
+      let anyTokenRemoved = false;
       for (let i = results.length - 1; i >= 0; i--) {
         if (results[i].status === 'fulfilled') {
           const res = results[i].value;
           if (res && !res.success && (res.reason === 'BadDeviceToken' || res.reason === 'Unregistered')) {
             console.log(`[Push] Removing invalid iOS token for user ${userId}`);
             store.removePushSubscription(userId, 'ios', userSubs.ios[i]);
+            anyTokenRemoved = true;
           }
+        }
+      }
+      if (anyTokenRemoved) {
+        try {
+          const u = store.getUserById(userId);
+          if (u && u.pushFallbackToEmail !== true) {
+            u.pushFallbackToEmail = true;
+            store.saveUser(u);
+          }
+        } catch (e) {
+          // Never break the push loop on a save error.
+          console.error('[Push] Failed to set pushFallbackToEmail (iOS):', e && e.message);
         }
       }
     }
@@ -685,4 +713,5 @@ module.exports = { router, notify, refreshBadge, computeBadgeCount, broadcastNew
 // captures sendMail calls. Not part of the public API.
 module.exports.__test = {
   _setTransporter,
+  _setApnsSendOverride,
 };
