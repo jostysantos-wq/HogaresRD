@@ -1779,6 +1779,10 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- E7: i18n.js exposes window.i18n.t('application_status.<key>') so the
+       inline STATUS_LABELS table below can be retired. We still keep the
+       constant as a fallback for first paint before locales are loaded. -->
+  <script src="/js/i18n.js"></script>
 </head>
 <body>
 
@@ -4250,13 +4254,33 @@
   let currentUserFull = null;
 
   // ── Constants ──────────────────────────────────────────────
-  const STATUS_LABELS = {
+  // E7: STATUS_LABELS is now a Proxy that looks up
+  // `application_status.<key>` from the i18n module first and falls
+  // back to the Spanish defaults below if i18n hasn't loaded yet (or
+  // if a key is missing in the active locale).
+  const _STATUS_FALLBACK = {
     aplicado:'Aplicado', en_revision:'En Revision', documentos_requeridos:'Documentos Requeridos',
     documentos_enviados:'Documentos Enviados', documentos_insuficientes:'Documentos Insuficientes',
     en_aprobacion:'En Aprobacion', reservado:'Reservado', aprobado:'Aprobado',
     pendiente_pago:'Pendiente de Pago', pago_enviado:'Pago Enviado', pago_aprobado:'Pago Aprobado',
     completado:'Completado', rechazado:'Rechazado'
   };
+  const STATUS_LABELS = new Proxy(_STATUS_FALLBACK, {
+    get(target, key) {
+      if (typeof key !== 'string') return target[key];
+      // Object.keys / for-in / Object.entries should still see the
+      // canonical key set so existing iterators (filter chips, skip
+      // selects) keep working.
+      if (key in target) {
+        if (window.i18n && typeof window.i18n.t === 'function') {
+          const v = window.i18n.t('application_status.' + key);
+          if (v && v !== 'application_status.' + key) return v;
+        }
+        return target[key];
+      }
+      return undefined;
+    },
+  });
 
   // C6: mirror routes/applications.js STATUS_FLOW exactly so the skip
   // select offers every transition the server accepts (incl. the
@@ -5525,7 +5549,7 @@
             ${tours.map(t => `
               <div class="tour-item">
                 <div class="tour-item-header">
-                  <div class="tour-item-date">${fmtDate(t.scheduled_date)} ${t.scheduled_time || ''}</div>
+                  <div class="tour-item-date">${fmtDate(t.scheduled_date)} ${t.scheduled_time || ''}${t.scheduled_at || t.scheduled_time ? ' <span style="color:var(--text-muted);font-weight:500;">(Hora RD)</span>' : ''}</div>
                   <span class="badge badge-${t.status==='completed'?'green':t.status==='cancelled'?'red':'blue'}">${
                     t.status==='scheduled'?'Programado':t.status==='completed'?'Completado':'Cancelado'
                   }</span>

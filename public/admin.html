@@ -766,6 +766,8 @@
       .stats-row { grid-template-columns: 1fr; }
     }
   </style>
+  <!-- E7: i18n module — exposes window.i18n.t('application_status.<key>'). -->
+  <script src="/js/i18n.js"></script>
 </head>
 <body>
 
@@ -3148,13 +3150,31 @@
 
   // ── Applications ─────────────────────────────────────────────
   let allApps = [], currentAppFilter = 'all';
-  const APP_STATUS_LABELS = {
+  // E7: APP_STATUS_LABELS resolves through the i18n module
+  // (window.i18n.t('application_status.<key>')) so admin, broker and
+  // email surfaces all share one translation table. The fallback
+  // below is only used until i18n.js has fetched the locale (and for
+  // Object.keys iteration).
+  const _APP_STATUS_FALLBACK = {
     aplicado: 'Aplicado', en_revision: 'En Revisión', documentos_requeridos: 'Docs Requeridos',
     documentos_enviados: 'Docs Enviados', documentos_insuficientes: 'Docs Insuficientes',
     en_aprobacion: 'En Aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
     pendiente_pago: 'Pendiente Pago', pago_enviado: 'Pago Enviado', pago_aprobado: 'Pago Aprobado',
     completado: 'Completado', rechazado: 'Rechazado',
   };
+  const APP_STATUS_LABELS = new Proxy(_APP_STATUS_FALLBACK, {
+    get(target, key) {
+      if (typeof key !== 'string') return target[key];
+      if (key in target) {
+        if (window.i18n && typeof window.i18n.t === 'function') {
+          const v = window.i18n.t('application_status.' + key);
+          if (v && v !== 'application_status.' + key) return v;
+        }
+        return target[key];
+      }
+      return undefined;
+    },
+  });
   const APP_STATUS_COLORS = {
     aplicado: '#0038A8', en_revision: '#0038A8',
     documentos_requeridos: '#c07c1a', documentos_enviados: '#c07c1a', documentos_insuficientes: '#c07c1a',

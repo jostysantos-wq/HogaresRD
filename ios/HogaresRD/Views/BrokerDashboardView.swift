@@ -1428,9 +1428,32 @@ struct DashboardArchiveTab: View {
                         Task { await load() }
                     },
                     onPreview: {
-                        if let appId = doc.appId, let docId = doc.docId,
-                           let url = api.documentDownloadURL(applicationId: appId, documentId: docId) {
-                            previewURL = ArchiveDocURL(url: url)
+                        // E5: documents are now header-auth only. Download
+                        // the bytes (Authorization: Bearer …), drop them
+                        // into a temp file, and preview from there.
+                        guard let appId = doc.appId, let docId = doc.docId else { return }
+                        Task {
+                            do {
+                                let (data, mime) = try await api.downloadDocument(
+                                    applicationId: appId, documentId: docId
+                                )
+                                let ext: String = {
+                                    if let m = mime?.lowercased() {
+                                        if m.contains("pdf") { return "pdf" }
+                                        if m.contains("png") { return "png" }
+                                        if m.contains("jpeg") || m.contains("jpg") { return "jpg" }
+                                        if m.contains("heic") { return "heic" }
+                                        if m.contains("webp") { return "webp" }
+                                    }
+                                    return "bin"
+                                }()
+                                let tmp = FileManager.default.temporaryDirectory
+                                    .appendingPathComponent("hrd-doc-\(UUID().uuidString).\(ext)")
+                                try data.write(to: tmp, options: .atomic)
+                                await MainActor.run { previewURL = ArchiveDocURL(url: tmp) }
+                            } catch {
+                                // Silent fail — broker can hit Approve/Reject anyway.
+                            }
                         }
                     }
                 )

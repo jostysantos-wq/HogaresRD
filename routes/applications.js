@@ -312,29 +312,71 @@ function sendNotification(to, subject, html, context = {}) {
     });
 }
 
+// E7: status labels are now sourced from public/locales/<lang>.json so
+// the same translation table powers admin, broker, and email surfaces.
+// We cache the parsed JSON per-language; first hit pays the disk read.
+const _localeCache = new Map();
+function loadLocale(lang) {
+  if (_localeCache.has(lang)) return _localeCache.get(lang);
+  try {
+    const file = path.join(__dirname, '..', 'public', 'locales', `${lang}.json`);
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    _localeCache.set(lang, json);
+    return json;
+  } catch {
+    _localeCache.set(lang, null);
+    return null;
+  }
+}
+function appStatusLabel(status, lang) {
+  const want = (lang === 'en') ? 'en' : 'es';
+  const fallback = loadLocale('es')?.application_status || {};
+  const labels = loadLocale(want)?.application_status || fallback;
+  return labels[status] || fallback[status] || status;
+}
+function userLangFor(app) {
+  const uid = app?.client?.user_id;
+  if (!uid) return 'es';
+  try {
+    const u = store.getUserById(uid);
+    return (u && (u.lang === 'en' || u.lang === 'es')) ? u.lang : 'es';
+  } catch { return 'es'; }
+}
+
 function statusEmail(app, oldStatus, newStatus, reason) {
-  const STATUS_NAMES = {
-    aplicado: 'Aplicado', en_revision: 'En Revision', documentos_requeridos: 'Documentos Requeridos',
-    documentos_enviados: 'Documentos Enviados', documentos_insuficientes: 'Documentos Insuficientes',
-    en_aprobacion: 'En Aprobacion', reservado: 'Reservado', aprobado: 'Aprobado',
-    pendiente_pago: 'Pendiente de Pago', pago_enviado: 'Pago Enviado',
-    pago_aprobado: 'Pago Aprobado', completado: 'Completado', rechazado: 'Rechazado',
-  };
-  const statusName = STATUS_NAMES[newStatus] || newStatus;
+  const lang = userLangFor(app);
+  const statusName = appStatusLabel(newStatus, lang);
   const isPositive = ['aprobado', 'pago_aprobado', 'completado', 'reservado'].includes(newStatus);
   const isNegative = ['rechazado', 'documentos_insuficientes'].includes(newStatus);
   const badgeColor = isPositive ? '#16a34a' : isNegative ? '#CE1126' : '#002D62';
 
-  const body = et.p('Tu aplicacion para <strong>' + et.esc(app.listing_title) + '</strong> ha sido actualizada.')
+  const isEs = lang === 'es';
+  const introCopy   = isEs
+    ? 'Tu aplicacion para <strong>' + et.esc(app.listing_title) + '</strong> ha sido actualizada.'
+    : 'Your application for <strong>' + et.esc(app.listing_title) + '</strong> has been updated.';
+  const reasonLabel = isEs ? 'Motivo' : 'Reason';
+  const buttonCopy  = isEs ? 'Ver mi aplicacion' : 'View my application';
+  const footerCopy  = isEs
+    ? 'Si tienes preguntas sobre este cambio, responde a este correo.'
+    : 'If you have questions about this change, reply to this email.';
+  const titleCopy   = isEs ? 'Estado de tu aplicacion' : 'Your application status';
+  const preheader   = isEs
+    ? 'Tu aplicacion para ' + (app.listing_title || '') + ' ahora esta: ' + statusName
+    : 'Your application for ' + (app.listing_title || '') + ' is now: ' + statusName;
+  const subjectCopy = isEs
+    ? 'Tu aplicacion: ' + statusName + ' — HogaresRD'
+    : 'Your application: ' + statusName + ' — HogaresRD';
+
+  const body = et.p(introCopy)
     + '<div style="text-align:center;margin:20px 0;">' + et.statusBadge(statusName, badgeColor) + '</div>'
-    + (reason ? et.alertBox('<strong>Motivo:</strong> ' + et.esc(reason), isNegative ? 'danger' : 'info') : '')
-    + et.button('Ver mi aplicacion', (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications?id=' + app.id)
+    + (reason ? et.alertBox('<strong>' + reasonLabel + ':</strong> ' + et.esc(reason), isNegative ? 'danger' : 'info') : '')
+    + et.button(buttonCopy, (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications?id=' + app.id)
     + et.divider()
-    + et.small('Si tienes preguntas sobre este cambio, responde a este correo.');
+    + et.small(footerCopy);
 
   return {
-    subject: 'Tu aplicacion: ' + statusName + ' — HogaresRD',
-    html: et.layout({ title: 'Estado de tu aplicacion', subtitle: et.esc(app.listing_title), preheader: 'Tu aplicacion para ' + (app.listing_title || '') + ' ahora esta: ' + statusName, body }),
+    subject: subjectCopy,
+    html: et.layout({ title: titleCopy, subtitle: et.esc(app.listing_title), preheader, body }),
   };
 }
 
@@ -2450,7 +2492,20 @@ router.put('/:id/documents/:docId/review', userAuth, (req, res) => {
 });
 
 // ── GET /:id/documents/:docId/file  — Serve uploaded document ───
-router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
+// E5: this endpoint deliberately DOES NOT honor the ?token= query
+// fallback that userAuth permits for other GETs. Document URLs end up
+// in browser history, server logs, and copy-paste contexts where a
+// ?token= leaks the JWT. Callers must use the cookie or an
+// `Authorization: Bearer …` header. Web should fetch as a blob and
+// hand the blob URL to <img>; iOS should send the header and download
+// to a sandbox-only URL.
+function rejectQueryToken(req, res, next) {
+  if (req.query && typeof req.query.token === 'string' && req.query.token.length > 0) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+  next();
+}
+router.get('/:id/documents/:docId/file', rejectQueryToken, userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
   if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
 
@@ -2480,6 +2535,51 @@ router.get('/:id/documents/:docId/file', userAuth, (req, res) => {
 // ── TOURS ────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 
+// ── E4: Tour time helpers ───────────────────────────────────────
+// Tours are stored as a single ISO 8601 string with the Dominican
+// Republic offset baked in (-04:00). DR doesn't observe DST so the
+// offset is constant year-round. Keeping `scheduled_date` and
+// `scheduled_time` populated alongside `scheduled_at` is for
+// backward compat — older clients that read those fields keep
+// working in this same release.
+const RD_OFFSET = '-04:00';
+
+/** Take whatever the client sent and produce a canonical
+ *  { scheduled_at, scheduled_date, scheduled_time } triple — or null
+ *  if the input is unparseable. Accepts either:
+ *    - { scheduled_at: '2026-05-15T14:00:00-04:00' }   (preferred)
+ *    - { scheduled_at: '2026-05-15T14:00:00' }         (assumed RD)
+ *    - { scheduled_date: '2026-05-15', scheduled_time: '14:00' }
+ */
+function normalizeTourTime({ scheduled_at, scheduled_date, scheduled_time }) {
+  let isoLocal; // YYYY-MM-DDTHH:MM[:SS] without offset
+  if (typeof scheduled_at === 'string' && scheduled_at.length > 0) {
+    // Strip any trailing offset/Z so we can re-attach RD offset.
+    const stripped = scheduled_at.replace(/(?:[Zz]|[+-]\d{2}:?\d{2})$/, '');
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(stripped)) return null;
+    isoLocal = stripped.length === 16 ? stripped + ':00' : stripped;
+  } else if (scheduled_date && scheduled_time) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(scheduled_date)) return null;
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(scheduled_time)) return null;
+    const t = scheduled_time.length === 5 ? scheduled_time + ':00' : scheduled_time;
+    isoLocal = `${scheduled_date}T${t}`;
+  } else {
+    return null;
+  }
+  const iso = `${isoLocal}${RD_OFFSET}`;
+  // Sanity-check: Date must parse it.
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  // Split for legacy fields.
+  const [datePart, timePart] = isoLocal.split('T');
+  return {
+    scheduled_at:   iso,
+    scheduled_date: datePart,
+    scheduled_time: timePart.slice(0, 5),
+    asDate:         d,
+  };
+}
+
 // ── POST /:id/tours  — Schedule tour ─────────────────────────────
 router.post('/:id/tours', userAuth, (req, res) => {
   const app = store.getApplicationById(req.params.id);
@@ -2488,21 +2588,19 @@ router.post('/:id/tours', userAuth, (req, res) => {
   if (app.broker.user_id !== req.user.sub && !isAdmin(req))
     return res.status(403).json({ error: 'No autorizado' });
 
-  const { scheduled_date, scheduled_time, location, notes } = req.body;
-  if (!scheduled_date || !scheduled_time)
+  const { location, notes } = req.body;
+  const norm = normalizeTourTime(req.body || {});
+  if (!norm)
     return res.status(400).json({ error: 'Fecha y hora son requeridos' });
-
-  // Validate date format and ensure it's not in the past
-  const tourDate = new Date(`${scheduled_date}T${scheduled_time}`);
-  if (isNaN(tourDate.getTime()))
-    return res.status(400).json({ error: 'Formato de fecha u hora inválido' });
-  if (tourDate < new Date())
+  if (norm.asDate < new Date())
     return res.status(400).json({ error: 'No se puede programar una visita en el pasado' });
 
   const user = store.getUserById(req.user.sub);
   const tour = {
     id:             uuid(),
-    scheduled_date, scheduled_time,
+    scheduled_at:   norm.scheduled_at,
+    scheduled_date: norm.scheduled_date, // legacy; same source as scheduled_at
+    scheduled_time: norm.scheduled_time, // legacy; same source as scheduled_at
     location:       location || app.listing_title,
     notes:          notes || '',
     status:         'scheduled',
@@ -2512,9 +2610,9 @@ router.post('/:id/tours', userAuth, (req, res) => {
 
   app.tours.push(tour);
   addEvent(app, 'tour_scheduled',
-    `Tour programado para ${scheduled_date} a las ${scheduled_time}`,
+    `Tour programado para ${norm.scheduled_date} a las ${norm.scheduled_time} (Hora RD)`,
     req.user.sub, user?.name || 'Broker',
-    { tour_id: tour.id, date: scheduled_date, time: scheduled_time });
+    { tour_id: tour.id, scheduled_at: tour.scheduled_at });
 
   store.saveApplication(app);
 
@@ -2530,8 +2628,8 @@ router.post('/:id/tours', userAuth, (req, res) => {
           <p>Hola <strong>${app.client.name}</strong>,</p>
           <p>Tu tour de la propiedad <strong>${app.listing_title}</strong> ha sido programado:</p>
           <div style="background:#f0f4f9;padding:1rem;border-radius:8px;margin:1rem 0;text-align:center;">
-            <div style="font-size:1.3rem;font-weight:800;color:#0038A8;">${scheduled_date}</div>
-            <div style="font-size:1rem;color:#4d6a8a;">${scheduled_time}</div>
+            <div style="font-size:1.3rem;font-weight:800;color:#0038A8;">${norm.scheduled_date}</div>
+            <div style="font-size:1rem;color:#4d6a8a;">${norm.scheduled_time} (Hora RD)</div>
             <div style="font-size:0.85rem;color:#4d6a8a;margin-top:0.5rem;">${tour.location}</div>
           </div>
           ${tour.notes ? `<p><strong>Notas:</strong> ${tour.notes}</p>` : ''}
@@ -2555,10 +2653,22 @@ router.put('/:id/tours/:tourId', userAuth, (req, res) => {
   if (!tour) return res.status(404).json({ error: 'Tour no encontrado' });
 
   const user = store.getUserById(req.user.sub);
-  const { status, scheduled_date, scheduled_time, notes } = req.body;
+  const { status, scheduled_date, scheduled_time, scheduled_at, notes } = req.body;
 
-  if (scheduled_date) tour.scheduled_date = scheduled_date;
-  if (scheduled_time) tour.scheduled_time = scheduled_time;
+  // E4: any time-related field triggers a re-normalization. Fall back
+  // to existing tour values for the missing half so a partial update
+  // (just date OR just time) still produces a coherent ISO.
+  if (scheduled_at || scheduled_date || scheduled_time) {
+    const norm = normalizeTourTime({
+      scheduled_at,
+      scheduled_date: scheduled_date || tour.scheduled_date,
+      scheduled_time: scheduled_time || tour.scheduled_time,
+    });
+    if (!norm) return res.status(400).json({ error: 'Formato de fecha u hora inválido' });
+    tour.scheduled_at   = norm.scheduled_at;
+    tour.scheduled_date = norm.scheduled_date;
+    tour.scheduled_time = norm.scheduled_time;
+  }
   if (notes !== undefined) tour.notes = notes;
   if (status === 'completed') {
     tour.status = 'completed';
@@ -4226,4 +4336,9 @@ module.exports.__test = {
   recordNotificationFailure,
   recordInventorySyncFailure,
   _setTransporter: (t) => { transporter = t; },
+  // E4 / E7
+  normalizeTourTime,
+  statusEmail,
+  appStatusLabel,
+  userLangFor,
 };
