@@ -1515,6 +1515,105 @@ router.put('/:id/status', userAuth, (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// ── POST /:id/skip-phase  — Broker overrides client_auto stage ──
+// ══════════════════════════════════════════════════════════════════
+//
+// The generic PUT /:id/status only lets the broker advance into
+// 'broker'-owned statuses; client_auto statuses (documentos_enviados,
+// pago_enviado) are normally driven by the CLIENT uploading something.
+// In practice brokers often have the docs/payment receipt off-platform
+// (WhatsApp, in person, agency office), and being unable to advance
+// without forcing a fake upload is a real friction.
+//
+// This endpoint is the audit-trailed escape hatch: target status MUST
+// be in STATUS_FLOW for the current state, AND a non-trivial reason
+// must be provided. Everything else (subscription gate, ownership
+// validation, terminal-state guard, transition validation, status
+// notifications) mirrors the regular PUT /:id/status.
+router.post('/:id/skip-phase', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user           = store.getUserById(req.user.sub);
+  const isBroker       = app.broker.user_id === req.user.sub;
+  const isInmobiliaria = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+  const isSecretary    = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  const admin          = isAdmin(req) || user?.role === 'admin';
+  if (!isBroker && !isInmobiliaria && !isSecretary && !admin)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  // Subscription re-check (same gate as PUT /:id/status).
+  if (!admin && (isBroker || isInmobiliaria) && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripción no está activa. Renueva tu plan para continuar.',
+      needsSubscription: true,
+    });
+  }
+
+  if (['rechazado', 'completado'].includes(app.status))
+    return res.status(400).json({ error: 'No se puede saltar etapas en una aplicación finalizada.' });
+
+  const { status, reason } = req.body || {};
+  if (!status) return res.status(400).json({ error: 'status es requerido' });
+
+  const note = (reason || '').toString().trim();
+  if (note.length < 5)
+    return res.status(400).json({
+      error: 'Se requiere un comentario explicando por qué se salta esta etapa (mínimo 5 caracteres).',
+      code: 'note_required',
+    });
+
+  // No-op if already there.
+  if (app.status === status) return res.json(decryptAppPII(app));
+
+  // Block transitioning to 'rechazado' through this endpoint — that's a
+  // separate gesture with its own UX (rejection zone).
+  if (status === 'rechazado')
+    return res.status(400).json({ error: 'Para rechazar la aplicación usa la zona de rechazo.' });
+
+  const allowed = STATUS_FLOW[app.status];
+  if (!allowed || !allowed.includes(status))
+    return res.status(400).json({ error: `Transición no válida: ${app.status} → ${status}` });
+
+  const oldStatus = app.status;
+  app.status = status;
+  app.status_reason = note;
+
+  // Single audit event so the override is obvious in the timeline.
+  // Includes both the from/to and the broker's stated reason.
+  addEvent(app, 'status_change',
+    `Etapa saltada: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[status]} — ${note.slice(0, 200)}`,
+    req.user.sub, user?.name || 'Agente',
+    {
+      from:        oldStatus,
+      to:          status,
+      reason:      note,
+      manual_skip: true,
+      skipped_by:  req.user.sub,
+      skipped_role: user?.role || null,
+    });
+
+  store.saveApplication(app);
+
+  // Notify the client (same wording as PUT /:id/status — they don't
+  // need to know it was skipped, just that the stage moved).
+  if (app.client.email) {
+    const email = statusEmail(app, oldStatus, status, note);
+    sendNotification(app.client.email, email.subject, email.html);
+  }
+  if (app.client.user_id) {
+    pushNotify(app.client.user_id, {
+      type:  'status_changed',
+      title: 'Estado Actualizado',
+      body:  `Tu aplicación para ${app.listing_title} cambió a: ${STATUS_LABELS[status] || status}`,
+      url:   `/my-applications?id=${app.id}`,
+    });
+  }
+
+  res.json(decryptAppPII(app));
+});
+
+// ══════════════════════════════════════════════════════════════════
 // ── DOCUMENTS ────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 

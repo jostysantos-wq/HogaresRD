@@ -657,33 +657,110 @@
     .badge-lg { font-size: 0.78rem; padding: 0.35rem 0.85rem; }
 
     /* ── DETAIL PANEL ─────────────────────────────────────────── */
-    .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; display: none; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px); }
+    /* ── DETAIL PANEL — Glassmorphism ────────────────────────── */
+    .detail-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.32);
+      z-index: 300; display: none; opacity: 0;
+      transition: opacity 0.2s;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
     .detail-overlay.open { display: block; opacity: 1; }
-    .detail-panel { position: fixed; top: 0; right: 0; width: 680px; max-width: 100vw; height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border); z-index: 301; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), visibility 0s 0.28s; overflow: hidden; visibility: hidden; pointer-events: none; }
-    .detail-panel.open { transform: translateX(0); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), visibility 0s 0s; visibility: visible; pointer-events: auto; }
-    .detail-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
-    .detail-header-info { flex: 1; min-width: 0; }
-    .detail-header-info h2 { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
-    .detail-header-info p { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
-    .detail-close { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; padding: 0.3rem; display: flex; transition: background 0.15s; }
-    .detail-close svg { width: 18px; height: 18px; fill: currentColor; }
-    .detail-close:hover { background: var(--bg-section); color: var(--text); }
+    .detail-panel {
+      position: fixed; top: 0; right: 0;
+      width: 720px; max-width: 100vw; height: 100vh;
+      background: linear-gradient(165deg, rgba(255,255,255,0.78) 0%, rgba(241,243,246,0.72) 60%, rgba(235,243,255,0.78) 100%);
+      backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border-left: 1px solid rgba(255,255,255,0.55);
+      box-shadow: -24px 0 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(255,255,255,0.6);
+      z-index: 301; display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), visibility 0s 0.32s;
+      overflow: hidden; visibility: hidden; pointer-events: none;
+    }
+    .detail-panel.open { transform: translateX(0); transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), visibility 0s 0s; visibility: visible; pointer-events: auto; }
+    [data-theme="dark"] .detail-panel {
+      background: linear-gradient(165deg, rgba(22,30,45,0.85) 0%, rgba(14,21,33,0.80) 60%, rgba(15,30,55,0.85) 100%);
+      border-left-color: rgba(255,255,255,0.10);
+      box-shadow: -24px 0 48px rgba(0,0,0,0.40), inset 1px 0 0 rgba(255,255,255,0.06);
+    }
 
-    /* ── TABS ─────────────────────────────────────────────────── */
-    .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: var(--bg-card); flex-shrink: 0; overflow-x: auto; }
-    .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; padding: 0.7rem 1.1rem; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: color 0.2s, border-color 0.2s; }
+    .detail-header {
+      padding: 1.1rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.55);
+      background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.10) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: flex; align-items: center; gap: 0.85rem; flex-shrink: 0;
+    }
+    [data-theme="dark"] .detail-header {
+      border-bottom-color: rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.0) 100%);
+    }
+    .detail-header-info { flex: 1; min-width: 0; }
+    .detail-header-info h2 {
+      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.025em; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .detail-header-info p { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .detail-close {
+      background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.65);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-radius: 10px; color: var(--text-muted); cursor: pointer;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s; flex-shrink: 0;
+    }
+    .detail-close svg { width: 16px; height: 16px; fill: currentColor; }
+    .detail-close:hover { background: #fff; color: var(--text); }
+    [data-theme="dark"] .detail-close {
+      background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.10);
+    }
+
+    /* ── TABS — translucent under-bar ─────────────────────────── */
+    .tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.55);
+      background: linear-gradient(180deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.10) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      flex-shrink: 0; overflow-x: auto; padding: 0 0.5rem;
+    }
+    [data-theme="dark"] .tabs {
+      border-bottom-color: rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%);
+    }
+    .tab-btn {
+      background: none; border: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      padding: 0.85rem 1.15rem; font-size: 0.84rem; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; white-space: nowrap;
+      transition: color 0.18s, border-color 0.18s; font-family: inherit;
+    }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-content { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
+    .tab-content {
+      flex: 1; overflow-y: auto;
+      padding: 1.5rem 1.5rem 2rem;
+      background: transparent;
+    }
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
 
-    /* ── DETAIL SECTIONS ─────────────────────────────────────── */
-    .info-section { margin-bottom: 1.25rem; }
-    .info-section-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; }
-    .info-item label { font-size: 0.75rem; color: var(--text-muted); display: block; }
-    .info-item span { font-size: 0.9rem; font-weight: 600; }
+    /* ── DETAIL SECTIONS — glass cards ───────────────────────── */
+    .info-section {
+      margin-bottom: 1rem; padding: 1.1rem 1.2rem; border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.30) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.6);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 6px 16px rgba(15,23,42,0.05);
+    }
+    [data-theme="dark"] .info-section {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);
+      border-color: rgba(255,255,255,0.08);
+    }
+    .info-section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.7rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.5); }
+    [data-theme="dark"] .info-section-title { border-bottom-color: rgba(255,255,255,0.08); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 1.5rem; }
+    .info-item label { font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 0.15rem; }
+    .info-item span { font-size: 0.92rem; font-weight: 600; color: var(--text); }
 
     /* ── STATUS CHANGE ───────────────────────────────────────── */
     .status-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
@@ -698,7 +775,17 @@
     .reason-box .btn-send { margin-top: 0.5rem; }
 
     /* ── WORKFLOW STEPPER ─────────────────────────────────────── */
-    .workflow-strip { padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg-section); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+    .workflow-strip {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.55);
+      background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.20) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+    }
+    [data-theme="dark"] .workflow-strip {
+      border-bottom-color: rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%);
+    }
     .workflow-strip::-webkit-scrollbar { display: none; }
     .workflow-steps { display: flex; align-items: flex-start; min-width: max-content; }
     .workflow-step { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 68px; flex: 1; }
@@ -722,9 +809,28 @@
     .checklist-progress-bar { height: 5px; background: var(--border); border-radius: 3px; margin-bottom: 0.85rem; overflow: hidden; }
     .checklist-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
     .checklist-progress-fill.complete { background: var(--green); }
-    .checklist-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.35rem; background: var(--bg-card); cursor: pointer; transition: border-color 0.12s, background 0.12s; user-select: none; }
-    .checklist-item:hover { border-color: var(--accent); background: var(--accent-light); }
-    .checklist-item.checked { background: #F0FDF4; border-color: #86EFAC; }
+    .checklist-item {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      padding: 0.85rem 1rem; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.6);
+      margin-bottom: 0.5rem;
+      background: linear-gradient(180deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.40) 100%);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.18s;
+      user-select: none;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    }
+    .checklist-item:hover {
+      border-color: rgba(0,106,255,0.35);
+      background: linear-gradient(180deg, rgba(235,243,255,0.85) 0%, rgba(235,243,255,0.55) 100%);
+      box-shadow: 0 6px 16px rgba(0,106,255,0.10);
+      transform: translateY(-1px);
+    }
+    .checklist-item.checked {
+      background: linear-gradient(180deg, rgba(220,252,231,0.75) 0%, rgba(220,252,231,0.40) 100%);
+      border-color: rgba(0,168,120,0.35);
+    }
     [data-theme="dark"] .checklist-item.checked { background: rgba(22,163,74,0.1); border-color: rgba(22,163,74,0.3); }
     .checklist-box { width: 17px; height: 17px; border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: background 0.12s, border-color 0.12s; }
     .checklist-item.checked .checklist-box { background: var(--green); border-color: var(--green); }
@@ -733,19 +839,78 @@
     .checklist-item-label { font-size: 0.84rem; line-height: 1.4; color: var(--text); }
     .checklist-item.checked .checklist-item-label { color: var(--text-muted); text-decoration: line-through; }
 
-    /* ── ADVANCE SECTION ─────────────────────────────────────── */
-    .advance-section { margin-top: 1.1rem; padding: 1rem; background: var(--bg-section); border-radius: 10px; border: 1px solid var(--border); }
-    .advance-section.ready { background: #F0FDF4; border-color: #86EFAC; }
-    [data-theme="dark"] .advance-section.ready { background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.25); }
-    .advance-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 0.45rem; }
-    .advance-hint { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
-    .advance-hint.ready { color: var(--green); font-weight: 500; }
-    .advance-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .advance-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .advance-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+    /* ── ADVANCE / NEXT-STAGE GLASS PANEL ────────────────────── */
+    .advance-section {
+      margin-top: 1.25rem; padding: 1.1rem 1.2rem; border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.35) 100%);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.65);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 22px rgba(15,23,42,0.06);
+    }
+    .advance-section.ready {
+      background: linear-gradient(180deg, rgba(220,252,231,0.78) 0%, rgba(220,252,231,0.40) 100%);
+      border-color: rgba(0,168,120,0.40);
+    }
+    [data-theme="dark"] .advance-section {
+      background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+      border-color: rgba(255,255,255,0.10);
+    }
+    [data-theme="dark"] .advance-section.ready {
+      background: linear-gradient(180deg, rgba(22,163,74,0.14) 0%, rgba(22,163,74,0.05) 100%);
+      border-color: rgba(22,163,74,0.30);
+    }
+    .advance-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .advance-hint { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
+    .advance-hint.ready { color: var(--green); font-weight: 600; }
+    .advance-buttons { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+    .advance-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none !important; }
+    .advance-btn { display: inline-flex; align-items: center; gap: 0.45rem; }
     .advance-btn svg { width: 13px; height: 13px; fill: currentColor; }
-    .reject-zone { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-    .reject-zone-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--red); margin-bottom: 0.5rem; opacity: 0.7; }
+
+    /* Skip-stage button on the advance panel */
+    .skip-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.65);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      color: var(--text); padding: 9px 16px; border-radius: 999px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+    }
+    .skip-btn:hover { background: #fff; color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
+    .skip-btn svg { width: 13px; height: 13px; fill: currentColor; }
+    [data-theme="dark"] .skip-btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+    .skip-box { display: none; margin-top: 0.75rem; }
+    .skip-box.show { display: block; }
+    .skip-box label { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 0.35rem; display: block; }
+    .skip-box select, .skip-box textarea {
+      width: 100%; padding: 0.65rem 0.85rem; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.65);
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      font-family: inherit; font-size: 0.88rem; color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .skip-box textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+    .skip-box select:focus, .skip-box textarea:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(0,106,255,0.12);
+    }
+    [data-theme="dark"] .skip-box select, [data-theme="dark"] .skip-box textarea {
+      background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10);
+    }
+    .skip-box-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+
+    .reject-zone {
+      margin-top: 1.25rem; padding: 1rem 1.2rem; border-radius: 18px;
+      background: linear-gradient(180deg, rgba(254,226,226,0.55) 0%, rgba(254,226,226,0.20) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(229,62,62,0.22);
+    }
+    [data-theme="dark"] .reject-zone {
+      background: linear-gradient(180deg, rgba(229,62,62,0.10) 0%, rgba(229,62,62,0.04) 100%);
+      border-color: rgba(229,62,62,0.30);
+    }
+    .reject-zone-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 0.6rem; opacity: 0.85; }
     .completed-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); }
     .completed-state svg { display: block; margin: 0 auto 0.75rem; fill: var(--green); width: 36px; height: 36px; }
     .completed-state strong { font-size: 0.92rem; color: var(--text); display: block; margin-bottom: 0.3rem; }
@@ -4535,7 +4700,7 @@
             ? `<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:var(--green);flex-shrink:0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/></svg>
                Checklist completo — listo para avanzar`
             : `<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:var(--text-muted);flex-shrink:0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-               Completa todos los items del checklist para avanzar`}
+               Completa el checklist o salta esta etapa con un comentario`}
         </div>
         <div class="advance-buttons">
           ${advances.map(t => `
@@ -4544,6 +4709,22 @@
               ${STATUS_LABELS[t]}
             </button>
           `).join('')}
+          <button class="skip-btn" id="openSkipBtn" type="button" title="Saltar esta etapa con un comentario">
+            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            Saltar etapa
+          </button>
+        </div>
+        <div class="skip-box" id="skipBox">
+          <label for="skipTarget">Avanzar a</label>
+          <select id="skipTarget">
+            ${advances.map(t => `<option value="${t}">${STATUS_LABELS[t]}</option>`).join('')}
+          </select>
+          <label for="skipReason" style="margin-top:0.7rem">Motivo (requerido, mínimo 5 caracteres)</label>
+          <textarea id="skipReason" placeholder="Ej: Documentos recibidos por WhatsApp y verificados; cliente confirmó pago por transferencia; etc."></textarea>
+          <div class="skip-box-actions">
+            <button class="btn btn-primary" id="confirmSkipBtn" type="button">Saltar y avanzar</button>
+            <button class="btn btn-outline" id="cancelSkipBtn" type="button">Cancelar</button>
+          </div>
         </div>
       </div>
       ` : `
@@ -4609,6 +4790,37 @@
       btn.onclick = () => changeStatus(btn.dataset.to);
     });
 
+    // Skip phase: opens the comment box, then POSTs /skip-phase with target + reason
+    const openSkipBtn = document.getElementById('openSkipBtn');
+    const skipBox     = document.getElementById('skipBox');
+    if (openSkipBtn && skipBox) {
+      openSkipBtn.onclick = () => {
+        const open = skipBox.classList.toggle('show');
+        if (open) setTimeout(() => document.getElementById('skipReason')?.focus(), 30);
+      };
+    }
+    const cancelSkipBtn = document.getElementById('cancelSkipBtn');
+    if (cancelSkipBtn) cancelSkipBtn.onclick = () => skipBox?.classList.remove('show');
+    const confirmSkipBtn = document.getElementById('confirmSkipBtn');
+    if (confirmSkipBtn) {
+      confirmSkipBtn.onclick = async () => {
+        const target = document.getElementById('skipTarget')?.value;
+        const reason = (document.getElementById('skipReason')?.value || '').trim();
+        if (!target) { toast('Selecciona la etapa a la que quieres avanzar', 'error'); return; }
+        if (reason.length < 5) {
+          toast('Escribe un motivo de al menos 5 caracteres', 'error');
+          return;
+        }
+        confirmSkipBtn.disabled = true;
+        try {
+          await skipPhase(target, reason);
+          skipBox.classList.remove('show');
+        } finally {
+          confirmSkipBtn.disabled = false;
+        }
+      };
+    }
+
     // Reject
     const rejectBtn = document.getElementById('rejectBtn');
     if (rejectBtn) rejectBtn.onclick = () => document.getElementById('reasonBox').classList.add('show');
@@ -4628,6 +4840,23 @@
       if (reason) body.reason = reason;
       await API(`/api/applications/${currentApp._id || currentApp.id}/status`, { method:'PUT', body });
       toast('Estado actualizado');
+      currentApp.status = to;
+      renderDetail();
+      loadApplications();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // Audit-trailed override: lets the broker skip a stage that's
+  // normally driven by the client (e.g. documentos_enviados,
+  // pago_enviado) when the actual artefact arrived off-platform.
+  // The comment is required and recorded in the timeline.
+  async function skipPhase(to, reason) {
+    try {
+      await API(`/api/applications/${currentApp._id || currentApp.id}/skip-phase`, {
+        method: 'POST',
+        body: { status: to, reason },
+      });
+      toast('Etapa saltada — se registró en el historial');
       currentApp.status = to;
       renderDetail();
       loadApplications();
