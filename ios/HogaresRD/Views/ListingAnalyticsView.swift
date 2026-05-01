@@ -71,8 +71,8 @@ struct DashboardListingAnalyticsTab: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                         DashStatCard(icon: "house.fill", label: "Propiedades", value: "\(summary?.totalListings ?? 0)", color: .rdBlue)
                         DashStatCard(icon: "eye.fill", label: "Vistas Totales", value: "\(summary?.totalViews ?? 0)", color: .rdBlue)
-                        DashStatCard(icon: "calendar.badge.clock", label: "Tours", value: "\(summary?.totalTours ?? 0)", color: .green)
-                        DashStatCard(icon: "heart.fill", label: "Favoritos", value: "\(summary?.totalFavorites ?? 0)", color: .red)
+                        DashStatCard(icon: "calendar.badge.clock", label: "Tours", value: "\(summary?.totalTours ?? 0)", color: .rdGreen)
+                        DashStatCard(icon: "heart.fill", label: "Favoritos", value: "\(summary?.totalFavorites ?? 0)", color: .rdRed)
                     }
                     .padding(.horizontal)
 
@@ -170,9 +170,9 @@ struct DashboardListingAnalyticsTab: View {
                                     } label: {
                                         HStack(spacing: 5) {
                                             Image(systemName: "megaphone.fill")
-                                                .font(.system(size: 10))
+                                                .font(.caption2)
                                             Text("Promocionar")
-                                                .font(.system(size: 11, weight: .bold))
+                                                .font(.caption.weight(.bold))
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
@@ -188,9 +188,9 @@ struct DashboardListingAnalyticsTab: View {
                                     } label: {
                                         HStack(spacing: 5) {
                                             Image(systemName: "building.2")
-                                                .font(.system(size: 10))
+                                                .font(.caption2)
                                             Text("Inventario")
-                                                .font(.system(size: 11, weight: .bold))
+                                                .font(.caption.weight(.bold))
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
@@ -219,9 +219,9 @@ struct DashboardListingAnalyticsTab: View {
                                     } label: {
                                         HStack(spacing: 5) {
                                             Image(systemName: "ellipsis.circle")
-                                                .font(.system(size: 10))
+                                                .font(.caption2)
                                             Text("Más")
-                                                .font(.system(size: 11, weight: .bold))
+                                                .font(.caption.weight(.bold))
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
@@ -307,16 +307,11 @@ struct PendingListingsSection: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.rdOrange)
                 Text("Propiedades en Revisión")
                     .font(.subheadline).bold()
                 Spacer()
-                Text("\(listings.count)")
-                    .font(.caption).bold()
-                    .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .foregroundStyle(.orange)
-                    .clipShape(Capsule())
+                DSCountPill(count: listings.count, tint: .rdOrange)
             }
 
             ForEach(listings) { listing in
@@ -347,10 +342,10 @@ struct PendingListingRow: View {
 
     private var statusColor: Color {
         switch (listing.status ?? "").lowercased() {
-        case "pending":         return .blue
-        case "edits_requested": return .orange
-        case "rejected":        return .red
-        default:                return .gray
+        case "pending":         return .rdBlue
+        case "edits_requested": return .rdOrange
+        case "rejected":        return .rdRed
+        default:                return .rdMuted
         }
     }
 
@@ -380,15 +375,10 @@ struct PendingListingRow: View {
                         .font(.caption).bold()
                         .lineLimit(2)
                     HStack(spacing: 6) {
-                        Text(statusLabel)
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(statusColor.opacity(0.15))
-                            .foregroundStyle(statusColor)
-                            .clipShape(Capsule())
+                        DSStatusBadge(label: statusLabel, tint: statusColor)
                         if let city = listing.city {
                             Text(city)
-                                .font(.system(size: 9))
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -400,11 +390,11 @@ struct PendingListingRow: View {
             // Admin feedback banner for edits_requested
             if (listing.status ?? "").lowercased() == "edits_requested" {
                 Text("El administrador pidió ajustes. Abre el editor para ver los detalles.")
-                    .font(.system(size: 10))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
                     .padding(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.orange.opacity(0.08))
+                    .background(Color.rdOrange.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
 
@@ -414,7 +404,7 @@ struct PendingListingRow: View {
                         Image(systemName: "pencil")
                         Text("Editar y Reenviar")
                     }
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .padding(.horizontal, 10).padding(.vertical, 6)
                     .background(Color.rdBlue)
                     .foregroundStyle(.white)
@@ -428,9 +418,9 @@ struct PendingListingRow: View {
                             Image(systemName: "eye")
                             Text("Vista Previa")
                         }
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.caption2.weight(.bold))
                         .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(Color(.tertiarySystemGroupedBackground))
+                        .background(Color.rdSurfaceMuted)
                         .foregroundStyle(.primary)
                         .clipShape(Capsule())
                     }
@@ -481,7 +471,7 @@ struct ListingPromoSheet: View {
         ("facebook",  "Facebook",  "f.square.fill",         .blue),
         ("instagram", "Instagram", "camera.circle.fill",    .purple),
         ("whatsapp",  "WhatsApp",  "message.fill",          .green),
-        ("linkedin",  "LinkedIn",  "briefcase.fill",        Color(red: 0.0, green: 0.47, blue: 0.71)),
+        ("linkedin",  "LinkedIn",  "briefcase.fill",        Color.rdBlue),
         ("google",    "Google",    "globe",                 .orange),
     ]
 
@@ -504,15 +494,11 @@ struct ListingPromoSheet: View {
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let err = errorMsg {
-                    VStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundStyle(.orange)
-                        Text(err)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
+                    EmptyStateView.calm(
+                        systemImage: "exclamationmark.triangle",
+                        title: "Algo salió mal",
+                        description: err
+                    )
                     .padding(.top, 60)
                 } else if content != nil {
                     // Platform picker
@@ -544,7 +530,7 @@ struct ListingPromoSheet: View {
                             .font(.caption).bold()
                             .foregroundStyle(.secondary)
                         Text(activeText)
-                            .font(.system(size: 13))
+                            .font(.footnote)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -688,16 +674,16 @@ struct ListingAnalyticsCard: View {
                 // Stats row
                 HStack(spacing: 0) {
                     StatPill(value: "\(listing.views)", label: "Vistas", color: .rdBlue)
-                    StatPill(value: "\(listing.tours)", label: "Tours", color: .green)
-                    StatPill(value: "\(listing.favorites)", label: "Favs", color: .red)
-                    StatPill(value: "\(listing.conversion)%", label: "Conv.", color: .purple)
+                    StatPill(value: "\(listing.tours)", label: "Tours", color: .rdGreen)
+                    StatPill(value: "\(listing.favorites)", label: "Favs", color: .rdRed)
+                    StatPill(value: "\(listing.conversion)%", label: "Conv.", color: .rdPurple)
                 }
 
                 // Footer
                 HStack {
                     Text(listing.priceFormatted)
                         .font(.subheadline).bold()
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.rdGreen)
                     Spacer()
                     Text("\(listing.daysOnMarket)d en mercado")
                         .font(.caption2)
@@ -719,10 +705,10 @@ struct StatPill: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.headline.weight(.bold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 9))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
         }
@@ -772,7 +758,7 @@ struct ListingAnalyticsDetailView: View {
                                 HStack(spacing: 4) {
                                     Text("$\(Int(Double(d.price) ?? 0).formatted())")
                                         .font(.caption).bold()
-                                        .foregroundStyle(.green)
+                                        .foregroundStyle(Color.rdGreen)
                                     Text("·")
                                     Text("\(d.daysOnMarket)d en mercado")
                                         .font(.caption2)
@@ -786,9 +772,9 @@ struct ListingAnalyticsDetailView: View {
                         // Stats
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                             DetailStatBox(value: "\(d.views)", label: "Vistas", color: .rdBlue)
-                            DetailStatBox(value: "\(d.toursCount)", label: "Tours", color: .green)
-                            DetailStatBox(value: "\(d.favorites)", label: "Favoritos", color: .red)
-                            DetailStatBox(value: "\(d.conversion)%", label: "Conversión", color: .purple)
+                            DetailStatBox(value: "\(d.toursCount)", label: "Tours", color: .rdGreen)
+                            DetailStatBox(value: "\(d.favorites)", label: "Favoritos", color: .rdRed)
+                            DetailStatBox(value: "\(d.conversion)%", label: "Conversión", color: .rdPurple)
                         }
                         .padding(.horizontal)
 
@@ -905,7 +891,7 @@ struct DetailStatBox: View {
                 .font(.title3).bold()
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 9))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
         }

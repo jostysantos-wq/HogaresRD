@@ -29,7 +29,7 @@ struct CitiesView: View {
                     // Hero strip
                     ZStack {
                         LinearGradient(colors: [
-                            Color(red: 0, green: 0.07, blue: 0.19), Color.rdBlue
+                            Color.rdInk, Color.rdBlue
                         ], startPoint: .topLeading, endPoint: .bottomTrailing)
                         .frame(height: 130)
 
@@ -81,7 +81,7 @@ struct CityCard: View {
                 )
                 VStack {
                     Text(String(city.name.prefix(1)))
-                        .font(.system(size: 36, weight: .black))
+                        .font(.largeTitle.weight(.black))
                         .foregroundStyle(.white.opacity(0.3))
                     Spacer()
                 }
@@ -91,7 +91,7 @@ struct CityCard: View {
                     Spacer()
                     HStack {
                         Text(city.category)
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .padding(.horizontal, 7).padding(.vertical, 3)
                             .background(.white.opacity(0.25))
                             .foregroundStyle(.white)

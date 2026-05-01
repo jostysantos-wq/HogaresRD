@@ -323,7 +323,10 @@ struct BrowseView: View {
             await load(reset: true)
         }
         .onChange(of: selectedType) { Task { await load(reset: true) } }
-        .sheet(isPresented: $showFilters) { filterSheet }
+        .sheet(isPresented: $showFilters) {
+            filterSheet
+                .presentationDragIndicator(.visible)
+        }
         .fullScreenCover(isPresented: $showSearchPage) {
             SearchPageView(
                 searchText: $searchText,
@@ -348,10 +351,12 @@ struct BrowseView: View {
         )) {
             if let id = detailListingID {
                 NavigationStack { ListingDetailView(id: id) }
+                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showCompare) {
             ComparisonView(selectedIds: $compareManager.selectedIds)
+                .presentationDragIndicator(.visible)
         }
         .overlay(alignment: .bottom) {
             if !compareManager.selectedIds.isEmpty {
@@ -509,7 +514,7 @@ struct BrowseView: View {
                                 withAnimation(.easeInOut(duration: 0.25)) { selectedListing = nil }
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 22))
+                                    .font(.title2)
                                     .foregroundStyle(.white.opacity(0.9))
                                     .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
                             }
@@ -632,12 +637,13 @@ struct BrowseView: View {
             }
         } label: {
             Image(systemName: "location.fill")
-                .font(.system(size: 16, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.rdBlue)
                 .frame(width: 44, height: 44)
                 .background(Color(.systemBackground).opacity(0.95), in: Circle())
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
         }
+        .accessibilityLabel("Centrar en mi ubicación")
     }
 
     // MARK: - Search bar (tappable — opens search page)
@@ -729,12 +735,12 @@ struct BrowseView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption.weight(.semibold))
                         Text("Más")
                             .font(.caption.weight(.medium))
                         if secondaryFilterCount > 0 {
                             Text("\(secondaryFilterCount)")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.caption2.weight(.bold))
                                 .foregroundStyle(.white)
                                 .frame(width: 16, height: 16)
                                 .background(Color.rdRed, in: Circle())
@@ -777,7 +783,7 @@ struct BrowseView: View {
                     .font(.caption.weight(isActive ? .bold : .medium))
                     .lineLimit(1)
                 Image(systemName: activeDropdown == dropdown ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.caption2.weight(.bold))
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
             .foregroundStyle(isActive ? .white : .primary)
@@ -1079,6 +1085,7 @@ struct BrowseView: View {
             }
         }
         .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     // (Location sheet removed — replaced by inline search suggestions)
@@ -1204,12 +1211,12 @@ struct CarouselCard: View {
                         Label("\(area) m²", systemImage: "ruler.fill")
                     }
                 }
-                .font(.system(size: 10))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
 
                 if let city = listing.city {
                     Text(city)
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -1256,7 +1263,7 @@ struct ListingRow: View {
                     HStack {
                         // Type badge
                         Text(listing.typeLabel)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(
                                 listing.type == "venta"    ? Color.rdGreen :
@@ -1274,9 +1281,9 @@ struct ListingRow: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "square.split.2x1")
-                                    .font(.system(size: 10))
+                                    .font(.caption2)
                                 Text(CompareManager.shared.isSelected(listing.id) ? "Comparando" : "Comparar")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.caption2.weight(.semibold))
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
@@ -1383,14 +1390,14 @@ struct PeekCard: View {
                     .foregroundStyle(.primary)
                 if let city = listing.city {
                     Label(city, systemImage: "mappin.circle")
-                        .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 }
                 HStack(spacing: 8) {
                     if let b = listing.bedrooms, !b.isEmpty {
-                        Label(b, systemImage: "bed.double").font(.system(size: 9))
+                        Label(b, systemImage: "bed.double").font(.caption2)
                     }
                     if let b = listing.bathrooms, !b.isEmpty {
-                        Label(b, systemImage: "shower").font(.system(size: 9))
+                        Label(b, systemImage: "shower").font(.caption2)
                     }
                 }
                 .foregroundStyle(.secondary)
@@ -1420,7 +1427,7 @@ struct MapPinLabel: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(listing.shortPrice)
-                .font(.system(size: 12, weight: .bold))
+                .font(.caption.weight(.bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(isSelected ? Color.rdRed : Color.rdBlue, in: Capsule())
@@ -1493,7 +1500,7 @@ private struct AmenityChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.caption)
                 Text(name)
                     .font(.caption.weight(isActive ? .bold : .regular))
                     .lineLimit(1).minimumScaleFactor(0.7)
@@ -1516,7 +1523,7 @@ private struct MortgageField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.caption)
                 .foregroundStyle(Color.rdBlue)
                 .frame(width: 18)
             TextField(label, text: $text)
@@ -1558,7 +1565,7 @@ private struct AreaField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "ruler")
-                .font(.system(size: 12))
+                .font(.caption)
                 .foregroundStyle(Color.rdBlue)
                 .frame(width: 18)
             TextField(label, text: $text)
@@ -1602,7 +1609,7 @@ struct GridCard: View {
                 .clipped()
 
                 Text(listing.typeLabel)
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .padding(.horizontal, 6).padding(.vertical, 3)
                     .background(
                         listing.type == "venta"    ? Color.rdGreen :
@@ -1622,16 +1629,16 @@ struct GridCard: View {
                     .foregroundStyle(.primary)
                 if let city = listing.city {
                     Label(city, systemImage: "mappin.circle")
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 HStack(spacing: 6) {
                     if let b = listing.bedrooms, !b.isEmpty {
-                        Label(b, systemImage: "bed.double").font(.system(size: 9))
+                        Label(b, systemImage: "bed.double").font(.caption2)
                     }
                     if let b = listing.bathrooms, !b.isEmpty {
-                        Label(b, systemImage: "shower").font(.system(size: 9))
+                        Label(b, systemImage: "shower").font(.caption2)
                     }
                 }
                 .foregroundStyle(.secondary)
@@ -1910,7 +1917,7 @@ struct SearchPageView: View {
                 ZStack {
                     Circle().fill(Color.rdGreen.opacity(0.1)).frame(width: 40, height: 40)
                     Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 16))
+                        .font(.body)
                         .foregroundStyle(Color.rdGreen)
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -1948,7 +1955,7 @@ struct SearchPageView: View {
                 ZStack {
                     Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 40, height: 40)
                     Image(systemName: suggestion.icon)
-                        .font(.system(size: 14))
+                        .font(.subheadline)
                         .foregroundStyle(Color.rdBlue)
                 }
                 VStack(alignment: .leading, spacing: 2) {

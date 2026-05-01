@@ -10,39 +10,14 @@ struct SecretaryDashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    if i == 0 {
-                                        Image(systemName: "house.fill").font(.system(size: 10))
-                                    }
-                                    Text(title)
-                                }
-                                .font(.caption).bold()
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? Color(red: 0.18, green: 0.55, blue: 0.34) : Color(.secondarySystemFill))
-                                .foregroundStyle(selectedTab == i ? .white : .primary)
-                                .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .id(i)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: selectedTab) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(selectedTab, anchor: .center)
-                    }
-                }
-            }
+            // Tab bar — design-system ChipRow
+            ChipRow(
+                items: tabs.enumerated().map { idx, title in
+                    ChipRow<Int>.Chip(id: idx, label: title)
+                },
+                selection: $selectedTab
+            )
+            .padding(.vertical, Spacing.s8)
             .background(Color(.systemBackground))
 
             Divider()
@@ -93,6 +68,7 @@ struct SecretaryDashboardView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
+                        .accessibilityLabel("Más opciones")
                 }
             }
         }
