@@ -49,12 +49,17 @@
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
   /* ── LAYOUT SHELL ──────────────────────────────────────── */
+  /* Desktop: lock shell to viewport so the message thread scrolls
+     INSIDE its column instead of growing the whole page. The mobile
+     breakpoint below relaxes this so single-column scrolls naturally. */
   .app {
     display: grid;
     grid-template-columns: 248px 1fr;
     gap: 18px;
     padding: 18px;
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
   }
 
   /* ── SIDEBAR (matches broker-dashboard) ────────────────── */
@@ -125,7 +130,15 @@
   .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
 
   /* ── MAIN ─────────────────────────────────────────────── */
-  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .main {
+    display: flex; flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    /* Allow inbox below to claim the remaining height after topbar +
+       page-head, and let its inner thread-msgs scroll inside. */
+    min-height: 0;
+    overflow: hidden;
+  }
 
   /* TOPBAR */
   .topbar {
@@ -196,7 +209,11 @@
     grid-template-columns: 240px 1fr 1.5fr;
     gap: 14px;
     background: transparent;
-    min-height: calc(100vh - 200px);
+    /* Fill remaining vertical space inside .main and let columns
+       (each with overflow:hidden + flex column) scroll their own
+       contents. */
+    flex: 1;
+    min-height: 0;
   }
   .col {
     background: var(--bg-card);
@@ -526,7 +543,11 @@
     .col { min-height: 320px; }
   }
   @media (max-width: 860px) {
-    .app { grid-template-columns: 1fr; }
+    /* Single-column on mobile — let the page scroll naturally instead
+       of locking to viewport height. */
+    .app { grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow: visible; }
+    .main { min-height: 0; overflow: visible; }
+    .inbox { flex: none; min-height: calc(100vh - 200px); }
     .sidebar { position: relative; height: auto; top: 0; }
     .topbar { grid-template-columns: 1fr; }
     .topbar-right { justify-content: flex-end; }
