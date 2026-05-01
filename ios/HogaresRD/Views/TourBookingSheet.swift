@@ -17,9 +17,9 @@ private enum TimePeriod: String, CaseIterable {
 
     var color: Color {
         switch self {
-        case .morning:   return .orange
-        case .afternoon: return Color.rdBlue
-        case .evening:   return .indigo
+        case .morning:   return .rdOrange
+        case .afternoon: return .rdBlue
+        case .evening:   return .rdPurple
         }
     }
 
@@ -71,6 +71,31 @@ struct TourBookingSheet: View {
     @State private var showContactFields = false
     @State private var calendarAdded = false
 
+    // Inline expand-on-tap (Pattern 6) — tracks which field is currently
+    // expanded inline. Only one field expands at a time so the form stays
+    // compact.
+    private enum FieldID: Hashable { case date, time, contact, notes }
+    @State private var expanded: FieldID? = nil
+
+    // Field-level validation (replaces alert-based flow). Returns nil if
+    // the value is acceptable, otherwise a short Spanish message.
+    private var nameError: String? {
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return "Indica tu nombre completo." }
+        return nil
+    }
+    private var phoneError: String? {
+        let trimmed = phone.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return "Indica un teléfono de contacto." }
+        if trimmed.filter({ $0.isNumber }).count < 7 { return "Teléfono incompleto." }
+        return nil
+    }
+    private var dateError: String? {
+        selectedDate == nil ? "Elige una fecha disponible." : nil
+    }
+    private var timeError: String? {
+        selectedTime == nil ? "Selecciona un horario." : nil
+    }
+
     private let dayNames = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"]
     private let monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                               "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -100,7 +125,7 @@ struct TourBookingSheet: View {
                 successView
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: Spacing.s16) {
                         // ── Listing context card ────────────────────
                         listingCard
 
@@ -129,49 +154,32 @@ struct TourBookingSheet: View {
 
                         if let err = errorMsg {
                             Text(err)
-                                .font(.caption).foregroundStyle(Color.rdRed)
-                                .padding(.horizontal, 4)
+                                .font(.caption).foregroundStyle(Color.rdRed.opacity(0.85))
+                                .padding(.horizontal, Spacing.s4)
                         }
 
                         Color.clear.frame(height: 80)
                     }
-                    .padding(16)
+                    .padding(Spacing.s16)
                 }
+                .background(Color.rdBg.ignoresSafeArea())
                 .scrollDismissesKeyboard(.interactively)
-                .navigationTitle("Agendar Visita")
+                .navigationTitle("Agendar visita")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cerrar") { dismiss() }
                     }
                 }
-                .safeAreaInset(edge: .bottom) {
-                    // Sticky submit button
-                    Button {
-                        Task { await submitTour() }
-                    } label: {
-                        HStack {
-                            if sending {
-                                ProgressView().tint(.white)
-                            } else {
-                                Image(systemName: "calendar.badge.plus")
-                            }
-                            Text(submitLabel)
-                                .font(.subheadline.bold())
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(.white)
-                        .background(canSubmit ? Color.rdBlue : Color(.systemGray4),
-                                    in: RoundedRectangle(cornerRadius: 14))
-                    }
-                    .disabled(!canSubmit)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .background(.regularMaterial)
-                }
+                .bottomCTA(
+                    title: canSubmit ? "Confirmar visita" : submitLabel,
+                    isLoading: sending,
+                    action: { Task { await submitTour() } }
+                )
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         .onAppear {
             if let user = api.currentUser {
                 name  = user.name
@@ -186,48 +194,54 @@ struct TourBookingSheet: View {
     // MARK: - Listing Context Card
 
     private var listingCard: some View {
-        HStack(spacing: 12) {
-            CachedAsyncImage(url: listing.firstImageURL) { phase in
-                switch phase {
-                case .success(let img): img.resizable().scaledToFill()
-                default:
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.rdBlue.opacity(0.08))
-                        .overlay(Image(systemName: "house.fill").foregroundStyle(Color.rdBlue.opacity(0.3)))
+        FormCard {
+            HStack(spacing: Spacing.s12) {
+                CachedAsyncImage(url: listing.firstImageURL) { phase in
+                    switch phase {
+                    case .success(let img): img.resizable().scaledToFill()
+                    default:
+                        RoundedRectangle(cornerRadius: Radius.small)
+                            .fill(Color.rdSurfaceMuted)
+                            .overlay(Image(systemName: "house.fill").foregroundStyle(Color.rdInkSoft))
+                    }
                 }
-            }
-            .frame(width: 64, height: 64)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.small))
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(listing.title)
-                    .font(.subheadline.bold())
-                    .lineLimit(2)
-                Text(listing.priceFormatted)
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.rdBlue)
-                if let city = listing.city {
-                    Label(city, systemImage: "mappin.circle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(listing.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdInk)
+                        .lineLimit(2)
+                    Text(listing.priceFormatted)
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.rdInk)
+                    if let city = listing.city {
+                        Label(city, systemImage: "mappin.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Color.rdInkSoft)
+                    }
                 }
+                Spacer()
             }
-            Spacer()
+            .padding(.vertical, Spacing.s4)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Date Section
 
     private var dateSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Selecciona una fecha", systemImage: "calendar")
-                .font(.headline)
+        FormCard("Selecciona una fecha") {
+            dateSectionBody
+        }
+    }
 
+    @ViewBuilder
+    private var dateSectionBody: some View {
+        VStack(alignment: .leading, spacing: Spacing.s12) {
             if loadingDates && dateStrip.isEmpty {
                 ProgressView("Cargando disponibilidad...")
-                    .frame(maxWidth: .infinity).padding(.vertical, 20)
+                    .frame(maxWidth: .infinity).padding(.vertical, Spacing.s16)
             } else {
                 // Horizontal date strip — next 14 days
                 ScrollViewReader { proxy in
@@ -245,28 +259,28 @@ struct TourBookingSheet: View {
                                 } label: {
                                     VStack(spacing: 4) {
                                         Text(day.dayName)
-                                            .font(.system(size: 11, weight: .medium))
+                                            .font(.caption2.weight(.medium))
                                         Text("\(day.dayNum)")
-                                            .font(.system(size: 18, weight: .bold))
+                                            .font(.title3.weight(.bold))
                                         Circle()
-                                            .fill(day.isAvailable ? Color.rdGreen : Color(.systemGray5))
+                                            .fill(day.isAvailable ? Color.rdGreen : Color.rdMuted.opacity(0.4))
                                             .frame(width: 6, height: 6)
                                     }
                                     .frame(width: 52, height: 70)
                                     .foregroundStyle(
-                                        selectedDate == day.id ? .white :
-                                        day.isAvailable ? .primary :
-                                        Color(.systemGray4)
+                                        selectedDate == day.id ? Color.white :
+                                        day.isAvailable ? Color.rdInk :
+                                        Color.rdInkSoft.opacity(0.5)
                                     )
                                     .background(
-                                        selectedDate == day.id ? Color.rdBlue :
-                                        day.isToday ? Color.rdBlue.opacity(0.08) :
-                                        Color(.secondarySystemFill),
-                                        in: RoundedRectangle(cornerRadius: 12)
+                                        selectedDate == day.id ? Color.rdInk :
+                                        day.isToday ? Color.rdSurfaceMuted :
+                                        Color.rdSurfaceMuted.opacity(0.5),
+                                        in: RoundedRectangle(cornerRadius: Radius.medium)
                                     )
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(day.isToday && selectedDate != day.id ? Color.rdBlue.opacity(0.3) : .clear, lineWidth: 1)
+                                        RoundedRectangle(cornerRadius: Radius.medium)
+                                            .stroke(day.isToday && selectedDate != day.id ? Color.rdInk.opacity(0.3) : .clear, lineWidth: 1)
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -282,23 +296,37 @@ struct TourBookingSheet: View {
                     }
                 }
 
-                // Expand to full calendar
+                // Expand to full calendar inline (Pattern 6 — only one
+                // field expanded at a time).
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showFullCalendar.toggle()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                        if expanded == .date {
+                            expanded = nil
+                            showFullCalendar = false
+                        } else {
+                            expanded = .date
+                            showFullCalendar = true
+                        }
                     }
                 } label: {
                     Label(
-                        showFullCalendar ? "Ocultar calendario" : "Ver calendario completo",
-                        systemImage: showFullCalendar ? "chevron.up" : "calendar"
+                        expanded == .date ? "Ocultar calendario" : "Ver calendario completo",
+                        systemImage: expanded == .date ? "chevron.up" : "calendar"
                     )
                     .font(.caption.bold())
-                    .foregroundStyle(Color.rdBlue)
+                    .foregroundStyle(Color.rdInk)
+                    .frame(minHeight: 44, alignment: .leading)
                 }
 
-                if showFullCalendar {
+                if expanded == .date {
                     fullCalendarView
                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                }
+
+                if let msg = dateError, selectedDate == nil {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdRed.opacity(0.85))
                 }
             }
         }
@@ -307,26 +335,28 @@ struct TourBookingSheet: View {
     // MARK: - Full Calendar (expandable)
 
     private var fullCalendarView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.s12) {
             // Month navigation
             HStack {
                 Button { prevMonth() } label: {
                     Image(systemName: "chevron.left").font(.caption.bold())
-                        .padding(8).background(Color(.systemGray6), in: Circle())
+                        .padding(8).background(Color.rdSurfaceMuted, in: Circle())
                 }
+                .accessibilityLabel("Mes anterior")
                 Spacer()
-                Text(monthLabel).font(.subheadline.bold())
+                Text(monthLabel).font(.subheadline.bold()).foregroundStyle(Color.rdInk)
                 Spacer()
                 Button { nextMonth() } label: {
                     Image(systemName: "chevron.right").font(.caption.bold())
-                        .padding(8).background(Color(.systemGray6), in: Circle())
+                        .padding(8).background(Color.rdSurfaceMuted, in: Circle())
                 }
+                .accessibilityLabel("Mes siguiente")
             }
 
             calendarGrid
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .padding(Spacing.s12)
+        .background(Color.rdSurfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
     }
 
     private var calendarGrid: some View {
@@ -341,7 +371,7 @@ struct TourBookingSheet: View {
 
         return LazyVGrid(columns: columns, spacing: 4) {
             ForEach(dayNames, id: \.self) { day in
-                Text(day).font(.caption2.bold()).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Text(day).font(.caption2.bold()).foregroundStyle(Color.rdInkSoft).frame(maxWidth: .infinity)
             }
             ForEach(0..<firstWeekday, id: \.self) { _ in Color.clear.frame(height: 36) }
             ForEach(1...daysInMonth, id: \.self) { day in
@@ -354,16 +384,20 @@ struct TourBookingSheet: View {
                     if isAvail {
                         selectedDate = dateStr; selectedTime = nil
                         loadSlots(dateStr)
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                            expanded = .time
+                        }
                     }
                 } label: {
                     Text("\(day)")
                         .font(.caption.bold())
                         .frame(maxWidth: .infinity).frame(height: 36)
-                        .background(isSelected ? Color.rdBlue : isAvail ? Color.rdGreen.opacity(0.15) : Color.clear)
-                        .foregroundStyle(isSelected ? .white : isPast || !isAvail ? Color(.systemGray4) : .primary)
+                        .background(isSelected ? Color.rdInk : isAvail ? Color.rdGreen.opacity(0.15) : Color.clear)
+                        .foregroundStyle(isSelected ? Color.white : isPast || !isAvail ? Color.rdInkSoft.opacity(0.5) : Color.rdInk)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .disabled(!isAvail || isPast)
+                .accessibilityLabel("Día \(day)\(isAvail ? "" : ", no disponible")")
             }
         }
     }
@@ -371,63 +405,78 @@ struct TourBookingSheet: View {
     // MARK: - Time Slots Section (Grouped by Period)
 
     private var timeSlotsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Horarios disponibles", systemImage: "clock")
-                    .font(.headline)
-                Spacer()
-                if let d = selectedDate {
+        FormCard("Horarios disponibles") {
+            timeSlotsSectionBody
+        }
+    }
+
+    @ViewBuilder
+    private var timeSlotsSectionBody: some View {
+        VStack(alignment: .leading, spacing: Spacing.s12) {
+            if let d = selectedDate {
+                HStack {
+                    Spacer()
                     Text(formatDateShort(d))
                         .font(.caption.bold())
-                        .foregroundStyle(Color.rdBlue)
+                        .foregroundStyle(Color.rdInk)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.rdBlue.opacity(0.08), in: Capsule())
+                        .background(Color.rdSurfaceMuted, in: Capsule())
                 }
             }
 
             if loadingSlots {
                 ProgressView("Cargando horarios...")
-                    .frame(maxWidth: .infinity).padding(.vertical, 24)
+                    .frame(maxWidth: .infinity).padding(.vertical, Spacing.s24)
             } else if availableSlots.isEmpty {
-                VStack(spacing: 10) {
+                VStack(spacing: Spacing.s8) {
                     Image(systemName: "clock.badge.xmark")
-                        .font(.system(size: 32)).foregroundStyle(.secondary)
+                        .font(.title)
+                        .foregroundStyle(Color.rdInkSoft)
                     Text("No hay horarios disponibles para esta fecha.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdInkSoft)
                         .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity).padding(.vertical, 20)
+                .frame(maxWidth: .infinity).padding(.vertical, Spacing.s16)
             } else {
                 ForEach(groupedSlots, id: \.0) { period, slots in
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Spacing.s8) {
                         // Period header
                         Label(period.rawValue, systemImage: period.icon)
                             .font(.caption.bold())
                             .foregroundStyle(period.color)
 
                         // Slot chips (wrapping flow)
-                        FlowLayout(spacing: 8) {
+                        FlowLayout(spacing: Spacing.s8) {
                             ForEach(slots, id: \.time) { slot in
                                 Button {
-                                    withAnimation(.easeOut(duration: 0.1)) {
+                                    withAnimation(.easeOut(duration: 0.12)) {
                                         selectedTime = slot.time
                                     }
                                 } label: {
                                     Text(formatTime(slot.time))
                                         .font(.caption.bold())
                                         .padding(.horizontal, 14).padding(.vertical, 10)
-                                        .foregroundStyle(selectedTime == slot.time ? .white : .primary)
+                                        .frame(minHeight: 44)
+                                        .foregroundStyle(selectedTime == slot.time ? Color.white : Color.rdInk)
                                         .background(
-                                            selectedTime == slot.time ? Color.rdBlue : Color(.secondarySystemFill),
+                                            selectedTime == slot.time ? Color.rdInk : Color.rdSurfaceMuted,
                                             in: Capsule()
                                         )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("Horario \(formatTime(slot.time))")
                             }
                         }
                     }
-                    .padding(12)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .padding(Spacing.s12)
+                    .background(Color.rdSurfaceMuted.opacity(0.5), in: RoundedRectangle(cornerRadius: Radius.medium))
+                }
+
+                if let msg = timeError, selectedTime == nil {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdRed.opacity(0.85))
                 }
             }
         }
@@ -436,11 +485,8 @@ struct TourBookingSheet: View {
     // MARK: - Tour Type Section
 
     private var tourTypeSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Tipo de visita", systemImage: "person.wave.2")
-                .font(.headline)
-
-            HStack(spacing: 10) {
+        FormCard("Tipo de visita") {
+            HStack(spacing: Spacing.s8) {
                 tourTypeCard(
                     type: "presencial",
                     icon: "house.fill",
@@ -463,44 +509,43 @@ struct TourBookingSheet: View {
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 22))
-                    .foregroundStyle(tourType == type ? .white : Color.rdBlue)
+                    .font(.title3)
+                    .foregroundStyle(tourType == type ? Color.white : Color.rdInk)
                 Text(title)
                     .font(.caption.bold())
-                    .foregroundStyle(tourType == type ? .white : .primary)
+                    .foregroundStyle(tourType == type ? Color.white : Color.rdInk)
                 Text(subtitle)
-                    .font(.system(size: 9))
-                    .foregroundStyle(tourType == type ? .white.opacity(0.8) : .secondary)
+                    .font(.caption2)
+                    .foregroundStyle(tourType == type ? Color.white.opacity(0.8) : Color.rdInkSoft)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, minHeight: 80)
+            .padding(.vertical, Spacing.s12)
             .background(
-                tourType == type ? Color.rdBlue : Color(.secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: 14)
+                tourType == type ? Color.rdInk : Color.rdSurfaceMuted,
+                in: RoundedRectangle(cornerRadius: Radius.medium)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(tourType == type ? Color.rdBlue : Color(.systemGray4).opacity(0.5), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Radius.medium)
+                    .stroke(tourType == type ? Color.rdInk : Color.rdLine, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Tipo de visita \(title)")
+        .accessibilityAddTraits(tourType == type ? .isSelected : [])
     }
 
     // MARK: - Contact Section
 
     private var contactSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Tus datos", systemImage: "person.text.rectangle")
-                .font(.headline)
-
+        FormCard("Tus datos") {
             if !name.isEmpty && !phone.isEmpty && !showContactFields {
                 // Compact summary for logged-in users
-                HStack(spacing: 12) {
+                HStack(spacing: Spacing.s12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(name).font(.subheadline.bold())
-                        Text(phone).font(.caption).foregroundStyle(.secondary)
+                        Text(name).font(.subheadline.bold()).foregroundStyle(Color.rdInk)
+                        Text(phone).font(.caption).foregroundStyle(Color.rdInkSoft)
                         if !email.isEmpty {
-                            Text(email).font(.caption).foregroundStyle(.secondary)
+                            Text(email).font(.caption).foregroundStyle(Color.rdInkSoft)
                         }
                     }
                     Spacer()
@@ -509,17 +554,29 @@ struct TourBookingSheet: View {
                     } label: {
                         Text("Editar")
                             .font(.caption.bold())
-                            .foregroundStyle(Color.rdBlue)
+                            .foregroundStyle(Color.rdInk)
+                            .frame(minHeight: 44)
                     }
+                    .accessibilityLabel("Editar datos de contacto")
                 }
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, Spacing.s4)
             } else {
-                VStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: Spacing.s8) {
                     formField("Nombre completo", text: $name, icon: "person.fill")
+                    if let msg = nameError {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(Color.rdRed.opacity(0.85))
+                    }
                     formField("Teléfono", text: $phone, icon: "phone.fill", keyboard: .phonePad)
+                    if let msg = phoneError {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(Color.rdRed.opacity(0.85))
+                    }
                     formField("Correo electrónico", text: $email, icon: "envelope.fill", keyboard: .emailAddress)
                 }
+                .padding(.vertical, Spacing.s4)
             }
         }
     }
@@ -527,25 +584,27 @@ struct TourBookingSheet: View {
     // MARK: - Notes Section
 
     private var notesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Notas (opcional)", systemImage: "note.text")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            TextField("Algo que el agente deba saber...", text: $notes, axis: .vertical)
-                .lineLimit(2...4)
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+        FormCard("Notas (opcional)") {
+            VStack(alignment: .leading, spacing: Spacing.s8) {
+                TextField("Algo que el agente deba saber...", text: $notes, axis: .vertical)
+                    .lineLimit(2...4)
+                    .padding(Spacing.s12)
+                    .background(Color.rdSurfaceMuted)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                    .foregroundStyle(Color.rdInk)
 
-            Text("El agente deberá confirmar tu solicitud. Recibirás una notificación cuando sea aprobada.")
-                .font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("El agente deberá confirmar tu solicitud. Recibirás una notificación cuando sea aprobada.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.rdInkSoft)
+            }
+            .padding(.vertical, Spacing.s4)
         }
     }
 
     // MARK: - Success View
 
     private var successView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.s16) {
             Spacer()
 
             ZStack {
@@ -555,81 +614,78 @@ struct TourBookingSheet: View {
                     .font(.system(size: 56)).foregroundStyle(Color.rdGreen)
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: Spacing.s8) {
                 Text("¡Visita solicitada!")
                     .font(.title2).bold()
+                    .foregroundStyle(Color.rdInk)
                 Text("Tu solicitud ha sido enviada al agente. Recibirás una confirmación cuando sea aprobada.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center).padding(.horizontal, 24)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rdInkSoft)
+                    .multilineTextAlignment(.center).padding(.horizontal, Spacing.s24)
             }
 
             if let date = selectedDate, let time = selectedTime {
-                HStack(spacing: 14) {
+                HStack(spacing: Spacing.s12) {
                     Image(systemName: tourType == "virtual" ? "video.fill" : "house.fill")
-                        .font(.title3).foregroundStyle(Color.rdBlue)
+                        .font(.title3)
+                        .foregroundStyle(Color.rdInk)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(formatDateLabel(date)).font(.subheadline.bold())
-                        Text(formatTime(time)).font(.caption).foregroundStyle(.secondary)
+                        Text(formatDateLabel(date)).font(.subheadline.bold()).foregroundStyle(Color.rdInk)
+                        Text(formatTime(time)).font(.caption).foregroundStyle(Color.rdInkSoft)
                         Text(tourType == "virtual" ? "Videollamada" : "Presencial")
-                            .font(.caption2).foregroundStyle(Color.rdBlue)
+                            .font(.caption2).foregroundStyle(Color.rdInk)
                     }
                 }
-                .padding(16)
+                .padding(Spacing.s16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-                .padding(.horizontal, 24)
+                .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: Radius.medium))
+                .padding(.horizontal, Spacing.s24)
             }
 
             Spacer()
 
-            VStack(spacing: 10) {
+            VStack(spacing: Spacing.s8) {
                 // Add to Calendar button
                 if let date = selectedDate, let time = selectedTime {
                     Button {
                         addToCalendar(date: date, time: time)
                     } label: {
-                        Label(calendarAdded ? "Agregado al Calendario" : "Agregar al Calendario",
+                        Label(calendarAdded ? "Agregado al calendario" : "Agregar al calendario",
                               systemImage: calendarAdded ? "checkmark" : "calendar.badge.plus")
                             .font(.subheadline.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(calendarAdded ? Color.rdGreen : Color.rdBlue)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .padding(.vertical, Spacing.s8)
+                            .foregroundStyle(calendarAdded ? Color.rdGreen : Color.rdInk)
                             .background(
-                                calendarAdded ? Color.rdGreen.opacity(0.08) : Color.rdBlue.opacity(0.08),
-                                in: RoundedRectangle(cornerRadius: 14)
+                                calendarAdded ? Color.rdGreen.opacity(0.08) : Color.rdSurfaceMuted,
+                                in: RoundedRectangle(cornerRadius: Radius.medium)
                             )
                     }
                     .disabled(calendarAdded)
                 }
 
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Cerrar")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(.white)
-                        .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 14))
-                }
+                PrimaryButton(title: "Cerrar") { dismiss() }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
+            .padding(.horizontal, Spacing.s24)
+            .padding(.bottom, Spacing.s32)
         }
+        .background(Color.rdBg.ignoresSafeArea())
     }
 
     // MARK: - Helpers
 
     private func formField(_ placeholder: String, text: Binding<String>, icon: String, keyboard: UIKeyboardType = .default) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: icon).font(.caption).foregroundStyle(.secondary).frame(width: 20)
+            Image(systemName: icon).font(.caption).foregroundStyle(Color.rdInkSoft).frame(width: 20)
             TextField(placeholder, text: text)
                 .keyboardType(keyboard)
                 .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
+                .foregroundStyle(Color.rdInk)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(Spacing.s12)
+        .frame(minHeight: 44)
+        .background(Color.rdSurfaceMuted)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
     }
 
     private func buildDateStrip() {
@@ -894,8 +950,8 @@ struct BrokerToursView: View {
                     Text("Virtual")
                         .font(.caption2).bold()
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.purple.opacity(0.15))
-                        .foregroundStyle(.purple)
+                        .background(Color.rdPurple.opacity(0.15))
+                        .foregroundStyle(Color.rdPurple)
                         .clipShape(Capsule())
                 }
                 Spacer()
@@ -937,7 +993,7 @@ struct BrokerToursView: View {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: i <= rating ? "star.fill" : "star")
                             .font(.caption2)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.rdOrange)
                     }
                     if let comment = tour.feedback_comment, !comment.isEmpty {
                         Text(comment).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
@@ -988,8 +1044,8 @@ struct BrokerToursView: View {
                             .font(.caption).bold()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                            .background(Color.purple.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
-                            .foregroundStyle(.purple)
+                            .background(Color.rdPurple.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(Color.rdPurple)
                     }
                 }
             }
@@ -1001,12 +1057,12 @@ struct BrokerToursView: View {
     private func statusBadge(_ status: String) -> some View {
         let (text, color): (String, Color) = {
             switch status {
-            case "pending":    return ("Pendiente", .orange)
+            case "pending":    return ("Pendiente", .rdOrange)
             case "confirmed":  return ("Confirmada", .rdGreen)
             case "rejected":   return ("Rechazada", .rdRed)
-            case "cancelled":  return ("Cancelada", .gray)
+            case "cancelled":  return ("Cancelada", .rdInkSoft)
             case "completed":  return ("Completada", .rdBlue)
-            default:           return (status.capitalized, .gray)
+            default:           return (status.capitalized, .rdInkSoft)
             }
         }()
         Text(text)
@@ -1861,7 +1917,7 @@ struct RescheduleSheet: View {
             }
 
             if let err = errorMsg {
-                Text(err).font(.caption).foregroundStyle(.red)
+                Text(err).font(.caption).foregroundStyle(Color.rdRed)
             }
 
             if selectedTime != nil {
@@ -1989,8 +2045,8 @@ struct MyToursView: View {
                     Text("Virtual")
                         .font(.caption2).bold()
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.purple.opacity(0.15))
-                        .foregroundStyle(.purple)
+                        .background(Color.rdPurple.opacity(0.15))
+                        .foregroundStyle(Color.rdPurple)
                         .clipShape(Capsule())
                 }
                 Spacer()
@@ -2024,7 +2080,7 @@ struct MyToursView: View {
                 HStack(spacing: 2) {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: i <= rating ? "star.fill" : "star")
-                            .font(.caption2).foregroundStyle(.orange)
+                            .font(.caption2).foregroundStyle(Color.rdOrange)
                     }
                     if let c = tour.feedback_comment, !c.isEmpty {
                         Text(c).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
@@ -2040,7 +2096,7 @@ struct MyToursView: View {
                     } label: {
                         Label("Reprogramar", systemImage: "calendar.badge.clock")
                             .font(.caption).bold()
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Color.rdPurple)
                     }
                     Button {
                         Task { await cancel(tour.id) }
@@ -2056,7 +2112,7 @@ struct MyToursView: View {
                     } label: {
                         Label("Calificar", systemImage: "star.fill")
                             .font(.caption).bold()
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.rdOrange)
                     }
                 }
             }
@@ -2074,7 +2130,7 @@ struct MyToursView: View {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: i <= feedbackRating ? "star.fill" : "star")
                             .font(.title2)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.rdOrange)
                             .onTapGesture { feedbackRating = i }
                     }
                 }
@@ -2116,12 +2172,12 @@ struct MyToursView: View {
 
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "pending":    return .orange
+        case "pending":    return .rdOrange
         case "confirmed":  return .rdGreen
         case "rejected":   return .rdRed
-        case "cancelled":  return .gray
+        case "cancelled":  return .rdInkSoft
         case "completed":  return .rdBlue
-        default:           return .gray
+        default:           return .rdInkSoft
         }
     }
 

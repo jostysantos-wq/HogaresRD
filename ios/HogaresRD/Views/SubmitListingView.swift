@@ -250,42 +250,37 @@ struct SubmitListingView: View {
     }
 
     private var paywallView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.s16) {
             Spacer()
             Image(systemName: "lock.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(Color.rdBlue)
+                .foregroundStyle(Color.rdInk)
             Text("Completa tu pago para publicar")
                 .font(.title2).bold()
+                .foregroundStyle(Color.rdInk)
                 .multilineTextAlignment(.center)
             Text("Para publicar propiedades necesitas activar tu suscripción con un método de pago. Tu prueba de 14 días empieza al agregar la tarjeta y no se cobra nada hasta el día 15.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rdInkSoft)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 28)
+                .padding(.horizontal, Spacing.s24)
 
-            Button {
+            PrimaryButton(title: "Activar mi suscripción") {
                 if let url = URL(string: "\(apiBase)/subscribe") { openURL(url) }
-            } label: {
-                Text("Activar mi suscripción")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.rdBlue)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 8)
+            .padding(.horizontal, Spacing.s24)
+            .padding(.top, Spacing.s8)
 
             Button("Cerrar") { dismiss() }
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rdInkSoft)
                 .padding(.top, 4)
+                .frame(minHeight: 44)
 
             Spacer()
         }
         .padding()
+        .background(Color.rdBg.ignoresSafeArea())
     }
 
     // MARK: - Form
@@ -323,13 +318,20 @@ struct SubmitListingView: View {
                             FormPicker(label: "Condición *", selection: $condition, options: conditions)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("DESCRIPCIÓN *")
-                                    .font(.system(size:10,weight:.bold))
-                                    .foregroundStyle(Color(.tertiaryLabel)).kerning(0.5)
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(Color.rdInkSoft)
+                                    .kerning(0.5)
                                 TextEditor(text: $description)
                                     .frame(minHeight: 110)
                                     .padding(10)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .background(Color.rdSurfaceMuted)
+                                    .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                                    .foregroundStyle(Color.rdInk)
+                                if description.isEmpty {
+                                    Text("Describe la propiedad para publicarla.")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.rdRed.opacity(0.85))
+                                }
                             }
                         }
                     }
@@ -384,11 +386,13 @@ struct SubmitListingView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("FECHA DE ENTREGA")
-                                        .font(.system(size:10,weight:.bold))
-                                        .foregroundStyle(Color(.tertiaryLabel)).kerning(0.5)
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(Color.rdInkSoft)
+                                        .kerning(0.5)
                                     DatePicker("", selection: $deliveryDate, displayedComponents: .date)
                                         .datePickerStyle(.compact)
                                         .labelsHidden()
+                                        .tint(Color.rdInk)
                                 }
                                 FormPicker(label: "Etapa del Proyecto", selection: $projectStage, options: projectStages)
                             }
@@ -410,22 +414,28 @@ struct SubmitListingView: View {
                                 .pickerStyle(.segmented)
                                 .frame(width: 160)
                                 FloatingField(label: priceRangeEnabled ? "Precio desde *" : "Precio *", text: $price)
-                                    .keyboardType(.numberPad)
+                                    .keyboardType(.decimalPad)
                             }
                             Toggle(isOn: $priceRangeEnabled) {
                                 Text("Rango de precio (desde — hasta)")
                                     .font(.caption)
+                                    .foregroundStyle(Color.rdInk)
                             }
-                            .tint(Color.rdBlue)
+                            .tint(Color.rdInk)
                             if priceRangeEnabled {
                                 FloatingField(label: "Precio hasta *", text: $priceMax)
-                                    .keyboardType(.numberPad)
+                                    .keyboardType(.decimalPad)
                             }
-                            HStack(spacing: 12) {
+                            HStack(spacing: Spacing.s12) {
                                 FloatingField(label: "Área Construida (m²)", text: $areaConst)
-                                    .keyboardType(.numberPad)
+                                    .keyboardType(.decimalPad)
                                 FloatingField(label: "Área Terreno (m²)", text: $areaLand)
-                                    .keyboardType(.numberPad)
+                                    .keyboardType(.decimalPad)
+                            }
+                            if price.isEmpty {
+                                Text("Indica el precio para publicar.")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.rdRed.opacity(0.85))
                             }
                         }
                     }
@@ -521,17 +531,21 @@ struct SubmitListingView: View {
 
                     // ── Contacto ────────────────────────────────────────
                     // ── Photos ──
-                    FormSection(title: "Fotos de la propiedad", icon: "camera.fill", color: .orange) {
+                    FormSection(title: "Fotos de la propiedad", icon: "camera.fill", color: .rdOrange) {
                         PhotosPicker(selection: $selectedPhotoItems,
                                      maxSelectionCount: 30,
                                      matching: .images) {
                             HStack {
                                 Image(systemName: "photo.on.rectangle.angled")
+                                    .foregroundStyle(Color.rdInk)
                                 Text(selectedImages.isEmpty ? "Seleccionar fotos (máx. 30)" : "\(selectedImages.count) foto(s) seleccionada(s)")
+                                    .foregroundStyle(Color.rdInk)
                                 Spacer()
-                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right").foregroundStyle(Color.rdInkSoft)
                             }
+                            .frame(minHeight: 44)
                         }
+                        .accessibilityLabel("Seleccionar fotos de la propiedad")
                         .onChange(of: selectedPhotoItems) { _, items in
                             Task { await loadPhotos(items) }
                         }
@@ -572,7 +586,7 @@ struct SubmitListingView: View {
                     }
 
                     // ── Feed image (mandatory) ──────────────────────
-                    FormSection(title: "Imagen del Feed *", icon: "play.rectangle.fill", color: .purple) {
+                    FormSection(title: "Imagen del Feed *", icon: "play.rectangle.fill", color: .rdPurple) {
                         feedImageSection
                     }
 
@@ -583,11 +597,15 @@ struct SubmitListingView: View {
                                      matching: .images) {
                             HStack {
                                 Image(systemName: "doc.badge.plus")
+                                    .foregroundStyle(Color.rdInk)
                                 Text(blueprintImages.isEmpty ? "Seleccionar planos (máx. 5)" : "\(blueprintImages.count) plano(s)")
+                                    .foregroundStyle(Color.rdInk)
                                 Spacer()
-                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right").foregroundStyle(Color.rdInkSoft)
                             }
+                            .frame(minHeight: 44)
                         }
+                        .accessibilityLabel("Seleccionar planos")
                         .onChange(of: blueprintItems) { _, items in
                             Task { await loadBlueprints(items) }
                         }
@@ -646,54 +664,50 @@ struct SubmitListingView: View {
                     Toggle(isOn: $acceptedTerms) {
                         Text("Acepto los términos y condiciones de publicación")
                             .font(.subheadline)
+                            .foregroundStyle(Color.rdInk)
                     }
-                    .tint(Color.rdBlue)
-                    .padding(.horizontal, 4)
+                    .tint(Color.rdInk)
+                    .padding(.horizontal, Spacing.s4)
+                    if !acceptedTerms {
+                        Text("Debes aceptar los términos para publicar.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rdRed.opacity(0.85))
+                            .padding(.horizontal, Spacing.s4)
+                    }
 
-                    // ── Submit ───────────────────────────────────────────
-                    Button { Task { await submit() } } label: {
-                        Group {
-                            if loading { ProgressView().tint(.white) }
-                            else {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "paperplane.fill")
-                                    Text("Publicar Propiedad").fontWeight(.bold)
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity).padding()
-                        .background(canSubmit && !loading ? Color.rdRed : Color(.systemGray4))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                    .disabled(!canSubmit || loading)
-                    .padding(.bottom, 40)
+                    Color.clear.frame(height: 80)
                 }
                 .padding(.horizontal)
-                .padding(.top, 20)
+                .padding(.top, Spacing.s16)
             }
+        }
+        .background(Color.rdBg.ignoresSafeArea())
+        .bottomCTA(title: "Publicar", isLoading: loading) {
+            Task { await submit() }
         }
     }
 
     // MARK: - Success
 
     private var successView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.s24) {
             Spacer()
             ZStack {
                 Circle().fill(Color.rdGreen.opacity(0.12)).frame(width: 100, height: 100)
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 56)).foregroundStyle(Color.rdGreen)
             }
-            Text("¡Propiedad Enviada!").font(.title2).bold()
+            Text("¡Propiedad enviada!")
+                .font(.title2).bold()
+                .foregroundStyle(Color.rdInk)
             Text("Tu propiedad está pendiente de aprobación. Nos pondremos en contacto contigo pronto.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center).padding(.horizontal, 32)
-            Button("Cerrar") { dismiss() }
-                .font(.headline).frame(maxWidth: .infinity).padding()
-                .background(Color.rdBlue).foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).padding(.horizontal, 32)
+                .font(.subheadline)
+                .foregroundStyle(Color.rdInkSoft)
+                .multilineTextAlignment(.center).padding(.horizontal, Spacing.s32)
+            PrimaryButton(title: "Cerrar") { dismiss() }
+                .padding(.horizontal, Spacing.s32)
             Spacer()
         }
+        .background(Color.rdBg.ignoresSafeArea())
     }
 
     // MARK: - Validation
@@ -741,10 +755,10 @@ struct SubmitListingView: View {
 
             HStack(spacing: 6) {
                 Image(systemName: feedImageReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                    .foregroundStyle(feedImageReady ? Color.rdGreen : .orange)
+                    .foregroundStyle(feedImageReady ? Color.rdGreen : Color.rdOrange)
                 Text(feedImageReady ? "Imagen del feed lista" : "Imagen del feed obligatoria")
                     .font(.caption2)
-                    .foregroundStyle(feedImageReady ? Color.rdGreen : .secondary)
+                    .foregroundStyle(feedImageReady ? Color.rdGreen : Color.rdInkSoft)
             }
         }
     }
@@ -773,10 +787,13 @@ struct SubmitListingView: View {
             PhotosPicker(selection: $feedPhotoItem, matching: .images) {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right.fill")
+                        .foregroundStyle(Color.rdInk)
                     Text(feedImage == nil ? "Seleccionar imagen vertical (9:16)" : "Cambiar imagen")
+                        .foregroundStyle(Color.rdInk)
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right").foregroundStyle(Color.rdInkSoft)
                 }
+                .frame(minHeight: 44)
             }
             .onChange(of: feedPhotoItem) { _, item in
                 Task { await loadFeedImage(item) }
@@ -1200,16 +1217,16 @@ struct UnitTypeRow: View {
             if let count = Int(unit.available), count > 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("IDs de las unidades (uno por línea)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color(.label))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rdInk)
                     Text("Ej: Apt 1A, Apt 2A… Dejar vacío para generar automáticamente.")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rdInkSoft)
                     TextEditor(text: $unit.unitIds)
-                        .font(.system(size: 14))
+                        .font(.subheadline)
                         .frame(minHeight: 60)
                         .padding(6)
-                        .background(Color(.secondarySystemBackground))
+                        .background(Color.rdSurfaceMuted)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
@@ -1361,6 +1378,10 @@ struct LocationPickerView: View {
 }
 
 // MARK: - Form Section wrapper
+//
+// Thin wrapper around `FormCard` from the design system so the existing
+// (icon, color)-tinted section header semantics survive while gaining
+// the editorial cream surface, divider rhythm, and Dynamic Type support.
 
 struct FormSection<Content: View>: View {
     let title: String
@@ -1369,17 +1390,24 @@ struct FormSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.s8) {
+            HStack(spacing: Spacing.s8) {
                 Image(systemName: icon).font(.callout).foregroundStyle(color)
-                Text(title).font(.subheadline).bold()
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rdInk)
             }
-            content()
+            .padding(.horizontal, Spacing.s4)
+
+            VStack(alignment: .leading) {
+                content()
+            }
+            .padding(Spacing.s16)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .fill(Color.rdSurface)
+            )
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: Color.rdBlue.opacity(0.06), radius: 6, y: 2)
     }
 }
 
@@ -1393,21 +1421,28 @@ struct FormPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(.system(size:10,weight:.bold)).foregroundStyle(Color(.tertiaryLabel)).kerning(0.5)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.rdInkSoft)
+                .kerning(0.5)
             Menu {
                 Button("— Seleccionar —") { selection = "" }
                 ForEach(options, id: \.self) { opt in Button(opt) { selection = opt } }
             } label: {
                 HStack {
                     Text(selection.isEmpty ? "Seleccionar" : selection)
-                        .foregroundStyle(selection.isEmpty ? Color(.placeholderText) : Color(.label))
+                        .foregroundStyle(selection.isEmpty ? Color.rdInkSoft : Color.rdInk)
                     Spacer()
-                    Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(Color(.tertiaryLabel))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(Color.rdInkSoft)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 12)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, Spacing.s12)
+                .padding(.vertical, Spacing.s12)
+                .frame(minHeight: 44)
+                .background(Color.rdSurfaceMuted)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
             }
+            .accessibilityLabel(label)
         }
     }
 }
