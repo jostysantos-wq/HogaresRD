@@ -77,6 +77,8 @@ struct LockScreenView: View {
                     }
                 }
                 .disabled(loading)
+                .accessibilityLabel("Desbloquear con \(bio.biometricLabel)")
+                .accessibilityHint("Autentica con biometría para entrar a la app")
 
                 Text(bio.isAvailable
                      ? "Usa \(bio.biometricLabel) para continuar"
@@ -88,8 +90,9 @@ struct LockScreenView: View {
                 if let err = error {
                     Text(err)
                         .font(.caption)
-                        .foregroundStyle(Color(red: 1, green: 0.4, blue: 0.4))
+                        .foregroundStyle(Color.rdRed)
                         .padding(.top, 8)
+                        .accessibilityLabel("Error: \(err)")
                 }
 
                 Spacer()

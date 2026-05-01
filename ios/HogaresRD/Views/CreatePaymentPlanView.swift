@@ -41,6 +41,15 @@ struct CreatePaymentPlanView: View {
         totalAmount > 0
     }
 
+    // Inline validation messages per installment row
+    private func validationMessage(for inst: InstallmentRow) -> String? {
+        if inst.amount.isEmpty { return "Indica un monto." }
+        guard let value = Double(inst.amount), value > 0 else {
+            return "Monto debe ser mayor a 0."
+        }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
             if showSuccess {
@@ -55,211 +64,32 @@ struct CreatePaymentPlanView: View {
 
     private var formView: some View {
         ScrollView {
-            VStack(spacing: 20) {
-
-                // Application picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Aplicacion", systemImage: "doc.text.fill")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.rdBlue)
-
-                    if loadingApps {
-                        HStack {
-                            ProgressView().scaleEffect(0.8)
-                            Text("Cargando aplicaciones...")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(12)
-                    } else if applications.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.circle")
-                                .foregroundStyle(.orange)
-                            Text("No hay aplicaciones en estado 'pendiente de pago'.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(12)
-                        .background(Color.orange.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else {
-                        Picker("Seleccionar aplicacion", selection: $selectedAppId) {
-                            Text("Seleccionar...").tag("")
-                            ForEach(applications) { app in
-                                VStack(alignment: .leading) {
-                                    Text(app.listingTitle)
-                                        .font(.subheadline)
-                                }
-                                .tag(app.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                }
-
-                // Selected app info
+            VStack(spacing: Spacing.s16) {
+                applicationCard
                 if let app = applications.first(where: { $0.id == selectedAppId }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.fill")
-                            .foregroundStyle(Color.rdBlue)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(app.listingTitle)
-                                .font(.subheadline.bold())
-                                .lineLimit(1)
-                            Text("Cliente aplicando")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if let price = app.priceValue, price > 0 {
-                            Text("$\(Int(price).formatted())")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.rdBlue)
-                        }
-                    }
-                    .padding(12)
-                    .background(Color.rdBlue.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    selectedAppCard(app: app)
                 }
+                paymentMethodCard
+                installmentsCard
+                notesCard
 
-                Divider()
-
-                // Payment method
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Metodo de Pago", systemImage: "creditcard.fill")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.rdBlue)
-
-                    Picker("Metodo", selection: $paymentMethod) {
-                        ForEach(paymentMethods, id: \.self) { Text($0).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                    .padding(12)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                    TextField("Detalles (cuenta, banco, etc.)", text: $methodDetails)
-                        .font(.subheadline)
-                        .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-
-                // Currency
-                HStack {
-                    Label("Moneda", systemImage: "dollarsign.circle")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.rdBlue)
-                    Spacer()
-                    Picker("", selection: $currency) {
-                        ForEach(currencies, id: \.self) { Text($0).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 150)
-                }
-
-                Divider()
-
-                // Installments
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("Cuotas", systemImage: "list.number")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(Color.rdBlue)
-                        Spacer()
-                        Text("\(installments.count) cuota\(installments.count == 1 ? "" : "s")")
-                            .font(.caption.bold())
-                            .foregroundStyle(.secondary)
-                    }
-
-                    ForEach(Array(installments.enumerated()), id: \.element.id) { index, inst in
-                        installmentRow(index: index, inst: inst)
-                    }
-
-                    if installments.count < 24 {
-                        Button {
-                            let nextDate = (installments.last?.dueDate ?? Date()).addingTimeInterval(30 * 86400)
-                            installments.append(InstallmentRow(
-                                label: "Cuota \(installments.count + 1)",
-                                amount: installments.last?.amount ?? "",
-                                dueDate: nextDate
-                            ))
-                        } label: {
-                            Label("Agregar cuota", systemImage: "plus.circle.fill")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.rdBlue)
-                                .frame(maxWidth: .infinity)
-                                .padding(12)
-                                .background(Color.rdBlue.opacity(0.06))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Total
-                    HStack {
-                        Text("Total")
-                            .font(.headline)
-                        Spacer()
-                        Text("\(currency) $\(totalAmount.formatted(.number.grouping(.automatic)))")
-                            .font(.title3.bold())
-                            .foregroundStyle(Color.rdBlue)
-                    }
-                    .padding(14)
-                    .background(Color.rdBlue.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-
-                // Notes
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Notas (opcional)")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                    TextField("Instrucciones adicionales...", text: $notes, axis: .vertical)
-                        .lineLimit(3...5)
-                        .font(.subheadline)
-                        .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-
-                // Error
                 if let err = error {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.circle.fill")
                             .foregroundStyle(Color.rdRed)
                         Text(err)
                             .font(.caption)
                             .foregroundStyle(Color.rdRed)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.s4)
                 }
-
-                // Submit
-                Button {
-                    Task { await submit() }
-                } label: {
-                    HStack {
-                        if submitting { ProgressView().tint(.white) }
-                        Text("Crear Plan de Pago")
-                            .font(.subheadline.bold())
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(canSubmit ? Color.rdBlue : Color.gray, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSubmit || submitting)
-
-                Spacer().frame(height: 20)
             }
             .padding(.horizontal)
-            .padding(.top, 12)
+            .padding(.top, Spacing.s12)
         }
-        .navigationTitle("Crear Plan de Pago")
+        .background(Color.rdBg.ignoresSafeArea())
+        .navigationTitle("Crear plan de pago")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -267,21 +97,162 @@ struct CreatePaymentPlanView: View {
             }
         }
         .task { await loadApplications() }
+        .bottomCTA(title: "Crear plan", isLoading: submitting) {
+            Task { await submit() }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var applicationCard: some View {
+        FormCard("Aplicación") {
+            if loadingApps {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Cargando aplicaciones...")
+                        .font(.caption)
+                        .foregroundStyle(Color.rdInkSoft)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Spacing.s8)
+            } else if applications.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(Color.rdOrange)
+                    Text("No hay aplicaciones en estado 'pendiente de pago'.")
+                        .font(.caption)
+                        .foregroundStyle(Color.rdInkSoft)
+                }
+                .padding(.vertical, Spacing.s8)
+            } else {
+                LabeledRow("Seleccionar") {
+                    Picker("", selection: $selectedAppId) {
+                        Text("Seleccionar...").tag("")
+                        ForEach(applications) { app in
+                            Text(app.listingTitle).tag(app.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Color.rdInk)
+                }
+            }
+        }
+    }
+
+    private func selectedAppCard(app: Application) -> some View {
+        FormCard {
+            HStack(spacing: Spacing.s12) {
+                Image(systemName: "person.fill")
+                    .foregroundStyle(Color.rdInk)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(app.listingTitle)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdInk)
+                        .lineLimit(1)
+                    Text("Cliente aplicando")
+                        .font(.caption)
+                        .foregroundStyle(Color.rdInkSoft)
+                }
+                Spacer()
+                if let price = app.priceValue, price > 0 {
+                    Text("$\(Int(price).formatted())")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdInk)
+                }
+            }
+            .padding(.vertical, Spacing.s8)
+        }
+    }
+
+    private var paymentMethodCard: some View {
+        FormCard("Método de pago") {
+            LabeledRow("Método") {
+                Picker("", selection: $paymentMethod) {
+                    ForEach(paymentMethods, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.menu)
+                .tint(Color.rdInk)
+            }
+            LabeledRow("Detalles") {
+                TextField("Cuenta, banco, etc.", text: $methodDetails)
+                    .multilineTextAlignment(.trailing)
+                    .font(.body)
+                    .foregroundStyle(Color.rdInk)
+            }
+            LabeledRow("Moneda") {
+                Picker("", selection: $currency) {
+                    ForEach(currencies, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+            }
+        }
+    }
+
+    private var installmentsCard: some View {
+        FormCard("Cuotas (\(installments.count))") {
+            ForEach(Array(installments.enumerated()), id: \.element.id) { index, inst in
+                installmentRow(index: index, inst: inst)
+            }
+
+            if installments.count < 24 {
+                Button {
+                    let nextDate = (installments.last?.dueDate ?? Date()).addingTimeInterval(30 * 86400)
+                    installments.append(InstallmentRow(
+                        label: "Cuota \(installments.count + 1)",
+                        amount: installments.last?.amount ?? "",
+                        dueDate: nextDate
+                    ))
+                } label: {
+                    Label("Agregar cuota", systemImage: "plus.circle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.rdInk)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.vertical, Spacing.s4)
+                        .background(Color.rdSurfaceMuted)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack {
+                Text("Total")
+                    .font(.headline)
+                    .foregroundStyle(Color.rdInk)
+                Spacer()
+                Text("\(currency) $\(totalAmount.formatted(.number.grouping(.automatic)))")
+                    .font(.title3.bold())
+                    .foregroundStyle(Color.rdInk)
+                    .monospacedDigit()
+            }
+            .padding(.vertical, Spacing.s8)
+        }
+    }
+
+    private var notesCard: some View {
+        FormCard("Notas (opcional)") {
+            TextField("Instrucciones adicionales...", text: $notes, axis: .vertical)
+                .lineLimit(3...5)
+                .font(.body)
+                .foregroundStyle(Color.rdInk)
+                .padding(.vertical, Spacing.s8)
+        }
     }
 
     // MARK: - Installment Row
 
     private func installmentRow(index: Int, inst: InstallmentRow) -> some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.s8) {
             HStack {
                 Text("#\(index + 1)")
                     .font(.caption.bold())
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
-                    .background(Color.rdBlue, in: Circle())
+                    .background(Color.rdInk, in: Circle())
 
                 TextField("Etiqueta", text: $installments[index].label)
                     .font(.subheadline.bold())
+                    .foregroundStyle(Color.rdInk)
 
                 Spacer()
 
@@ -290,10 +261,12 @@ struct CreatePaymentPlanView: View {
                         installments.remove(at: index)
                     } label: {
                         Image(systemName: "trash")
-                            .font(.caption)
+                            .font(.body)
                             .foregroundStyle(Color.rdRed)
+                            .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Eliminar cuota \(index + 1)")
                 }
             }
 
@@ -301,55 +274,53 @@ struct CreatePaymentPlanView: View {
                 HStack {
                     Text(currency)
                         .font(.caption.bold())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rdInkSoft)
                     TextField("Monto", text: $installments[index].amount)
                         .keyboardType(.decimalPad)
-                        .font(.subheadline)
+                        .font(.body)
+                        .foregroundStyle(Color.rdInk)
                 }
                 .padding(10)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(Color.rdSurfaceMuted)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.small))
 
                 DatePicker("", selection: $installments[index].dueDate, displayedComponents: .date)
                     .labelsHidden()
                     .datePickerStyle(.compact)
+                    .tint(Color.rdInk)
+            }
+
+            if let msg = validationMessage(for: inst) {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(Color.rdRed.opacity(0.85))
             }
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.vertical, Spacing.s8)
     }
 
     // MARK: - Success
 
     private var successView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Spacing.s24) {
             Spacer()
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Color.rdGreen)
-            Text("Plan de Pago Creado")
+            Text("Plan de pago creado")
                 .font(.title2.bold())
-            Text("El cliente recibira un correo con los detalles del plan y las fechas de cada cuota.")
+                .foregroundStyle(Color.rdInk)
+            Text("El cliente recibirá un correo con los detalles del plan y las fechas de cada cuota.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rdInkSoft)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            Button {
-                dismiss()
-            } label: {
-                Text("Cerrar")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.rdBlue, in: RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal)
+            PrimaryButton(title: "Cerrar") { dismiss() }
+                .padding(.horizontal)
             Spacer()
         }
-        .navigationTitle("Plan Creado")
+        .background(Color.rdBg.ignoresSafeArea())
+        .navigationTitle("Plan creado")
     }
 
     // MARK: - API
