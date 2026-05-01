@@ -14,6 +14,7 @@
   <meta property="og:image" content="https://hogaresrd.com/img/og-default.jpg">
   <meta property="og:url" content="https://hogaresrd.com/home">
   <link rel="stylesheet" href="/css/core.css">
+  <link rel="stylesheet" href="/css/topnav.css?v=2">
   <style>
     /* ════════════════════════════════════════════════════════════
        Redesign — editorial / luxury aesthetic.
@@ -1794,54 +1795,7 @@
 
   <!-- ╭─ HERO STAGE (nav + hero + search) ───────────────────╮ -->
   <div class="hero-stage">
-  <nav class="topnav">
-    <div class="nav-inner">
-      <a class="logo" href="/home" aria-label="HogaresRD">
-        <div class="logo-icon">
-          <svg viewBox="120 70 280 290" fill="none">
-            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/>
-            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/>
-            <line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/>
-            <line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/>
-          </svg>
-        </div>
-        <span class="logo-text">Hogares<em>RD</em></span>
-      </a>
-      <div class="nav-center">
-        <div class="nav-links">
-          <a class="nav-link active" href="/home">Inicio</a>
-          <a class="nav-link" href="/comprar">Comprar</a>
-          <a class="nav-link" href="/comprar?type=alquiler">Alquilar</a>
-          <a class="nav-link" href="/busquedas-guardadas">Favoritos</a>
-          <a class="nav-link" href="/comprar?type=proyecto">Proyectos</a>
-          <a class="nav-link" href="/blog">Blog</a>
-        </div>
-      </div>
-      <div class="nav-actions">
-        <button class="nav-icon nav-when-user" aria-label="Mensajes">
-          <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-        </button>
-        <button class="nav-icon nav-when-user" aria-label="Notificaciones">
-          <svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11a6 6 0 00-5-5.91V4a1 1 0 10-2 0v1.09A6 6 0 006 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-          <span class="nav-icon-dot" aria-hidden="true"></span>
-        </button>
-
-        <!-- Authenticated user chip -->
-        <button class="nav-user nav-when-user" type="button" aria-label="Cuenta">
-          <span class="nav-user-avatar">AT</span>
-          <span class="nav-user-meta">
-            <span class="nav-user-name">Andrés Tavárez</span>
-            <span class="nav-user-mail">andres@hogaresrd.do</span>
-          </span>
-          <svg class="nav-user-caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-        </button>
-
-        <!-- Guest buttons -->
-        <a href="/submit" class="btn btn-ghost nav-when-guest">Publicar</a>
-        <a href="/login" class="btn btn-dark nav-when-guest">Iniciar sesión</a>
-      </div>
-    </div>
-  </nav>
+  <div id="topnav-mount"></div>
 
   <!-- ╭─ HERO ───────────────────────────────────────────────╮ -->
   <section class="hero">
@@ -2647,17 +2601,8 @@
       }
     }
 
-    // Map nav chips to real routes. /notificaciones is TBD — the page is
-    // not yet wired up server-side; keep the link so future work can land
-    // the page without touching this file again.
-    document.addEventListener('click', (e) => {
-      const userBtn = e.target.closest('.nav-user');
-      if (userBtn)  { window.location.href = '/broker#perfil';  return; }
-      const msg = e.target.closest('.nav-icon[aria-label="Mensajes"]');
-      if (msg)      { window.location.href = '/mensajes';       return; }
-      const bell = e.target.closest('.nav-icon[aria-label="Notificaciones"]');
-      if (bell)     { window.location.href = '/notificaciones'; return; } // TBD: page not yet implemented
-    });
+    // Nav clicks are now handled by /js/topnav.js (user menu + bell open
+    // dropdowns; messages icon links to /mensajes natively).
 
     // ── Hero search submit ──────────────────────────────────────
     (function () {
@@ -2689,6 +2634,7 @@
     loadNearby();
   </script>
 
+  <script src="/js/topnav.js?v=2" defer></script>
   <script src="/js/i18n.js" defer></script>
   <script src="/js/pixel.js" defer></script>
   <script src="/js/error-reporter.js"></script>
