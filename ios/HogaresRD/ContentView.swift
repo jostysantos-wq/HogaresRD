@@ -2,52 +2,11 @@ import SwiftUI
 
 // MARK: - Brand Colors
 //
-// Brand tokens adapt to light + dark mode via UITraitCollection. Avoid
-// hard-coded `Color(red:…)` literals in views — they ignore Dark Mode and
-// produce invisible text on dark backgrounds. If you need a new tonal
-// step, add it here so it updates everywhere at once.
-extension Color {
-    static let rdBlue  = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.36, green: 0.56, blue: 0.96, alpha: 1)
-            : UIColor(red: 0.0,  green: 0.22, blue: 0.66, alpha: 1)
-    })
-    static let rdRed   = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.97, green: 0.36, blue: 0.40, alpha: 1)
-            : UIColor(red: 0.81, green: 0.08, blue: 0.17, alpha: 1)
-    })
-    static let rdGreen = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.36, green: 0.78, blue: 0.55, alpha: 1)
-            : UIColor(red: 0.11, green: 0.48, blue: 0.24, alpha: 1)
-    })
-    static let rdBg    = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.07, green: 0.10, blue: 0.16, alpha: 1)
-            : UIColor(red: 0.95, green: 0.96, blue: 1.00, alpha: 1)
-    })
-
-    // ── Status palette tokens (adaptive) ──
-    // Used by application/status pills throughout the app. Shipping
-    // dark-mode variants here keeps the badges legible on dark
-    // backgrounds. Names mirror the semantic meaning, not the hue.
-    static let rdOrange = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.99, green: 0.62, blue: 0.18, alpha: 1)
-            : UIColor(red: 0.85, green: 0.47, blue: 0.02, alpha: 1)
-    })
-    static let rdPurple = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.74, green: 0.46, blue: 0.95, alpha: 1)
-            : UIColor(red: 0.55, green: 0.24, blue: 0.78, alpha: 1)
-    })
-    static let rdTeal = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.36, green: 0.80, blue: 0.80, alpha: 1)
-            : UIColor(red: 0.18, green: 0.60, blue: 0.60, alpha: 1)
-    })
-}
+// The `Color.rdBlue/Red/Green/Bg/Orange/Purple/Teal` palette plus the
+// new ink/surface/line/muted neutrals live in
+// `DesignSystem/Tokens.swift`. Don't add `Color(red:…)` literals
+// inline — extend the token file instead so dark mode + Dynamic Type
+// keep working everywhere.
 
 // MARK: - Lazy Tab Helper
 
@@ -1012,7 +971,10 @@ struct FloatingTabBar: View {
     var unreadMessages: Int = 0
     var unreadTasks: Int = 0
 
-    private let forest = Color(red: 31/255, green: 61/255, blue: 51/255)
+    // Use the design-system ink token for the active pill so it tracks
+    // dark-mode changes. Previously this was a hard-coded forest-green
+    // RGB (31, 61, 51) that ignored Dark Mode.
+    private var tabActive: Color { .rdInk }
 
     private struct Item {
         let tag: Int
@@ -1043,6 +1005,8 @@ struct FloatingTabBar: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.label)
+                .accessibilityAddTraits(selection == item.tag ? .isSelected : [])
+                .accessibilityValue(item.badge > 0 ? "\(item.badge) sin leer" : "")
             }
         }
         .padding(.horizontal, 8)
@@ -1052,7 +1016,7 @@ struct FloatingTabBar: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                        .strokeBorder(Color.rdLine, lineWidth: 1)
                 )
         )
         .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 10)
@@ -1068,7 +1032,7 @@ struct FloatingTabBar: View {
         ZStack {
             if active {
                 Circle()
-                    .fill(forest)
+                    .fill(tabActive)
                     .frame(width: 46, height: 46)
                     .transition(.scale.combined(with: .opacity))
             }
@@ -1076,7 +1040,7 @@ struct FloatingTabBar: View {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: item.icon)
                     .font(.system(size: 18, weight: active ? .semibold : .regular))
-                    .foregroundStyle(active ? .white : Color.black.opacity(0.62))
+                    .foregroundStyle(active ? .white : Color.rdInkSoft)
                     .frame(width: 44, height: 44)
 
                 if item.badge > 0 {
@@ -1085,7 +1049,7 @@ struct FloatingTabBar: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.red, in: Capsule())
+                        .background(Color.rdRed, in: Capsule())
                         .offset(x: 4, y: -2)
                 }
             }
