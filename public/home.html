@@ -1423,19 +1423,19 @@
       border-radius: 999px;
     }
 
-    /* Photo placeholders for cities — generate distinct gradients */
-    .city-bg.sd  { background: linear-gradient(135deg, #1a4d7a 0%, #0a2540 60%, #061829 100%); }
-    .city-bg.sd::before { content: ''; position: absolute; inset: 0; background:
-      radial-gradient(circle at 30% 70%, rgba(255,180,80,0.35) 0%, transparent 50%),
-      radial-gradient(circle at 70% 30%, rgba(80,180,255,0.25) 0%, transparent 50%); }
-    .city-bg.pc  { background: linear-gradient(135deg, #2dabd5 0%, #0e6e95 60%, #052336 100%); }
-    .city-bg.pc::before { content: ''; position: absolute; inset: 0; background:
-      radial-gradient(circle at 30% 30%, rgba(255,235,180,0.45) 0%, transparent 45%),
-      linear-gradient(180deg, transparent 60%, rgba(20,90,150,0.6) 100%); }
-    .city-bg.stg { background: linear-gradient(135deg, #c47b1e 0%, #7a4912 60%, #2c1907 100%); }
-    .city-bg.pp  { background: linear-gradient(135deg, #4eae6f 0%, #1c5c3c 60%, #0a2818 100%); }
-    .city-bg.lr  { background: linear-gradient(135deg, #b56a8a 0%, #6e3658 60%, #2b1325 100%); }
-    .city-bg.sam { background: linear-gradient(135deg, #1a6b7a 0%, #084048 60%, #021419 100%); }
+    /* City backdrops — Unsplash editorial photography (free license, no attribution required) */
+    .city-bg {
+      background-color: #0a0e14;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .city-bg.sd  { background-image: url('https://images.unsplash.com/photo-1750691434503-e916deb91a4b?w=1200&q=70&auto=format&fit=crop'); }
+    .city-bg.pc  { background-image: url('https://images.unsplash.com/photo-1692017827893-f97d95397b49?w=1200&q=70&auto=format&fit=crop'); }
+    .city-bg.stg { background-image: url('https://images.unsplash.com/photo-1718818790790-21cf8f5da8c2?w=1200&q=70&auto=format&fit=crop'); }
+    .city-bg.pp  { background-image: url('https://images.unsplash.com/photo-1722715635165-613a3eb5f525?w=1200&q=70&auto=format&fit=crop'); }
+    .city-bg.lr  { background-image: url('https://images.unsplash.com/photo-1683481920223-20f4813683a4?w=1200&q=70&auto=format&fit=crop'); }
+    .city-bg.sam { background-image: url('https://images.unsplash.com/photo-1705416798811-e68991af8557?w=1200&q=70&auto=format&fit=crop'); }
 
     /* ── HOW IT WORKS ────────────────────────────────────────── */
     /* ── JOURNEY (Buying / Selling / Renting) ───────────────── */
@@ -1854,100 +1854,19 @@
 
         <div class="hero-photocard" aria-hidden="true">
           <div class="hero-photocard-inner">
-            <svg class="hero-photocard-svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
-              <!-- Distant horizon / hills -->
-              <rect x="0" y="0" width="800" height="500" fill="url(#sky-grad)"/>
-              <defs>
-                <linearGradient id="sky-grad" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#cad6dd"/>
-                  <stop offset="0.55" stop-color="#9aaab5"/>
-                  <stop offset="1" stop-color="#6f808c"/>
-                </linearGradient>
-                <linearGradient id="house-light" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#efece4"/>
-                  <stop offset="1" stop-color="#d6d1c4"/>
-                </linearGradient>
-                <linearGradient id="house-dark" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#2c2925"/>
-                  <stop offset="1" stop-color="#181612"/>
-                </linearGradient>
-                <linearGradient id="window-glow" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#3a3530"/>
-                  <stop offset="0.7" stop-color="#a07045"/>
-                  <stop offset="1" stop-color="#5a3a22"/>
-                </linearGradient>
-              </defs>
-              <!-- Treeline silhouette behind house -->
-              <path d="M0 320 Q 60 290 120 305 T 240 295 T 360 310 T 480 290 T 600 305 T 720 295 L 800 305 L 800 360 L 0 360 Z" fill="#3d4a3a" opacity="0.85"/>
-              <path d="M0 340 Q 80 320 160 332 T 320 326 T 480 334 T 640 322 T 800 332 L 800 380 L 0 380 Z" fill="#2a3528" opacity="0.9"/>
-              <!-- Foreground lawn -->
-              <rect x="0" y="380" width="800" height="120" fill="#3a4838"/>
-              <rect x="0" y="380" width="800" height="120" fill="url(#sky-grad)" opacity="0.0"/>
-              <!-- Main house: cantilevered modern volume -->
-              <!-- Lower box (concrete/light) -->
-              <rect x="180" y="240" width="440" height="160" fill="url(#house-light)"/>
-              <!-- Upper cantilever (dark) extends right -->
-              <rect x="220" y="180" width="440" height="80" fill="url(#house-dark)"/>
-              <!-- Upper window band -->
-              <rect x="240" y="200" width="400" height="42" fill="url(#window-glow)"/>
-              <line x1="340" y1="200" x2="340" y2="242" stroke="#0d0b09" stroke-width="2"/>
-              <line x1="440" y1="200" x2="440" y2="242" stroke="#0d0b09" stroke-width="2"/>
-              <line x1="540" y1="200" x2="540" y2="242" stroke="#0d0b09" stroke-width="2"/>
-              <!-- Lower glass facade -->
-              <rect x="220" y="270" width="360" height="110" fill="url(#window-glow)"/>
-              <line x1="310" y1="270" x2="310" y2="380" stroke="#1a1612" stroke-width="2"/>
-              <line x1="400" y1="270" x2="400" y2="380" stroke="#1a1612" stroke-width="2"/>
-              <line x1="490" y1="270" x2="490" y2="380" stroke="#1a1612" stroke-width="2"/>
-              <!-- Concrete pillar / right side wall -->
-              <rect x="580" y="270" width="40" height="130" fill="#cdc7b8"/>
-              <!-- Roof line shadow -->
-              <rect x="220" y="178" width="440" height="4" fill="#0a0907"/>
-              <!-- Tree foreground left -->
-              <ellipse cx="60" cy="280" rx="80" ry="160" fill="#2a3528" opacity="0.92"/>
-              <ellipse cx="100" cy="320" rx="50" ry="130" fill="#1f2a1d" opacity="0.85"/>
-              <!-- Tree foreground right -->
-              <ellipse cx="760" cy="290" rx="70" ry="170" fill="#2a3528" opacity="0.9"/>
-              <ellipse cx="720" cy="340" rx="40" ry="120" fill="#1f2a1d" opacity="0.85"/>
-            </svg>
+            <img class="hero-photocard-img"
+                 src="https://images.unsplash.com/photo-1612302035035-be4cb07db5f3?w=1600&q=75&auto=format&fit=crop"
+                 alt="" loading="eager" decoding="async"
+                 style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
           </div>
         </div>
 
         <div class="hero-photocard-secondary" aria-hidden="true">
           <div class="hero-photocard-secondary-inner">
-            <svg class="hero-photocard-secondary-svg" viewBox="0 0 600 280" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id="sky-grad-2" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#bccad3"/>
-                  <stop offset="1" stop-color="#7e8e98"/>
-                </linearGradient>
-                <linearGradient id="warm-2" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#3d3530"/>
-                  <stop offset="0.6" stop-color="#a87548"/>
-                  <stop offset="1" stop-color="#3d2818"/>
-                </linearGradient>
-              </defs>
-              <rect x="0" y="0" width="600" height="280" fill="url(#sky-grad-2)"/>
-              <!-- Treeline -->
-              <path d="M0 170 Q 80 150 160 162 T 320 158 T 480 168 T 600 160 L 600 220 L 0 220 Z" fill="#2a3528" opacity="0.9"/>
-              <!-- Lawn -->
-              <rect x="0" y="218" width="600" height="62" fill="#3a4838"/>
-              <!-- Modern flat house, two floors -->
-              <rect x="120" y="120" width="380" height="100" fill="#3a342c"/>
-              <rect x="120" y="80" width="240" height="40" fill="#2a2520"/>
-              <!-- Window grid -->
-              <rect x="140" y="90" width="50" height="22" fill="url(#warm-2)"/>
-              <rect x="200" y="90" width="50" height="22" fill="url(#warm-2)"/>
-              <rect x="260" y="90" width="50" height="22" fill="url(#warm-2)"/>
-              <rect x="140" y="135" width="80" height="70" fill="url(#warm-2)"/>
-              <rect x="240" y="135" width="80" height="70" fill="url(#warm-2)"/>
-              <rect x="340" y="135" width="80" height="70" fill="url(#warm-2)"/>
-              <rect x="440" y="135" width="44" height="70" fill="url(#warm-2)"/>
-              <!-- Ground stripes (pool / patio) -->
-              <rect x="60" y="240" width="180" height="22" fill="#5a7a8e" opacity="0.85"/>
-              <!-- Foreground palm-like accent -->
-              <ellipse cx="40" cy="180" rx="36" ry="80" fill="#1f2a1d" opacity="0.9"/>
-              <ellipse cx="560" cy="190" rx="34" ry="70" fill="#1f2a1d" opacity="0.85"/>
-            </svg>
+            <img class="hero-photocard-secondary-img"
+                 src="https://images.unsplash.com/photo-1651108066220-f61c22fc281f?w=1200&q=75&auto=format&fit=crop"
+                 alt="" loading="eager" decoding="async"
+                 style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
           </div>
         </div>
 
