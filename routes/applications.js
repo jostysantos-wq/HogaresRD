@@ -1675,6 +1675,32 @@ router.get('/', userAuth, (req, res) => {
     // Also include applications where this pro user applied as a client
     const asClient = store.getApplicationsByClient(user.id);
     for (const a of asClient) { if (!apps.some(x => x.id === a.id)) apps.push(a); }
+    // ALSO include applications submitted to listings this user owns, even
+    // when broker.user_id wasn't auto-assigned at intake time (no affiliate
+    // link, no agency cascade hit). Those apps live in the DB with
+    // broker.user_id=null but are conceptually theirs — without this leg,
+    // a broker can post a listing, receive an application via the public
+    // listing page, and never see it in their inbox.
+    const userEmail = user.email?.toLowerCase() || null;
+    const userInmIds = new Set([user.id, user.inmobiliaria_id].filter(Boolean));
+    const ownedListingIds = new Set(
+      store.getAllSubmissions().filter(s =>
+        (s.creator_user_id && s.creator_user_id === user.id) ||
+        (s.inmobiliaria_id && userInmIds.has(s.inmobiliaria_id)) ||
+        (Array.isArray(s.agencies) && s.agencies.some(a => a && a.user_id === user.id)) ||
+        (userEmail && s.email && s.email.toLowerCase() === userEmail)
+      ).map(s => s.id)
+    );
+    if (ownedListingIds.size > 0) {
+      const seen = new Set(apps.map(a => a.id));
+      for (const a of store.getApplications()) {
+        if (seen.has(a.id)) continue;
+        if (ownedListingIds.has(a.listing_id)) {
+          apps.push(a);
+          seen.add(a.id);
+        }
+      }
+    }
   } else {
     return res.status(403).json({ error: 'No autorizado' });
   }
