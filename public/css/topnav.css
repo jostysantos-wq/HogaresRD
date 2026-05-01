@@ -218,28 +218,37 @@
 .topnav-v2 .btn-tn-ghost:hover { transform: translateY(-1px); }
 .topnav-v2 .btn-tn-dark:hover { transform: translateY(-1px); }
 
-/* Account dropdown menu */
-.topnav-v2 .nav-user-menu {
+/* ── Dropdown panels (account / notifications / messages) ────────────────
+ * Hard-coded colors (not CSS vars) so the panel reads correctly even when
+ * the parent context inverts colors (e.g. inside .hero-stage). */
+.topnav-v2 .nav-pop {
   position: absolute;
   right: 1.25rem;
   top: 70px;
-  min-width: 240px;
   background: #fff;
-  color: var(--ink, #131318);
+  color: #131318;
   border-radius: 14px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.06);
-  padding: 0.5rem;
   z-index: 1000;
   font-family: var(--sans, system-ui, -apple-system, sans-serif);
+  overflow: hidden;
 }
-.topnav-v2 .nav-user-menu[hidden] { display: none; }
+.topnav-v2 .nav-pop[hidden] { display: none; }
+
+/* Account menu (compact list) */
+.topnav-v2 .nav-user-menu {
+  min-width: 240px;
+  padding: 0.5rem;
+  display: block;
+}
 .topnav-v2 .nav-user-menu a,
 .topnav-v2 .nav-user-menu button {
   display: flex; align-items: center; gap: 0.6rem;
   width: 100%;
   padding: 0.55rem 0.75rem;
   border: none; background: transparent;
-  font-family: inherit; font-size: 0.86rem; color: inherit;
+  font-family: inherit; font-size: 0.86rem;
+  color: #131318;
   text-decoration: none;
   border-radius: 8px;
   cursor: pointer;
@@ -253,95 +262,107 @@
   border: none; border-top: 1px solid rgba(19,19,24,0.08); margin: 0.35rem 0;
 }
 
-/* Notification dropdown */
-.topnav-v2 .nav-notif-menu {
-  position: absolute;
-  right: 1.25rem;
-  top: 70px;
+/* Notification + messages dropdowns share the panel chrome */
+.topnav-v2 .nav-notif-menu,
+.topnav-v2 .nav-msg-menu {
   width: 360px;
   max-width: calc(100vw - 2rem);
-  background: #fff;
-  color: var(--ink, #131318);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.06);
-  z-index: 1000;
-  font-family: var(--sans, system-ui, -apple-system, sans-serif);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   max-height: 480px;
 }
-.topnav-v2 .nav-notif-menu[hidden] { display: none; }
-.topnav-v2 .nav-notif-head {
+.topnav-v2 .nav-pop-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0.85rem 1rem 0.65rem;
   border-bottom: 1px solid rgba(19,19,24,0.06);
+  color: #131318;
 }
-.topnav-v2 .nav-notif-title { font-size: 0.95rem; font-weight: 700; }
-.topnav-v2 .nav-notif-mark {
+.topnav-v2 .nav-pop-title { font-size: 0.95rem; font-weight: 700; color: #131318; }
+.topnav-v2 .nav-pop-mark {
   background: none; border: none; cursor: pointer;
   font-family: inherit; font-size: 0.78rem;
-  color: var(--ink-muted, #6c6a72);
+  color: #6c6a72;
   padding: 0.25rem 0.4rem; border-radius: 6px;
 }
-.topnav-v2 .nav-notif-mark:hover { background: rgba(19,19,24,0.06); color: var(--ink, #131318); }
-.topnav-v2 .nav-notif-mark[disabled] { opacity: 0.4; cursor: default; }
-.topnav-v2 .nav-notif-list {
+.topnav-v2 .nav-pop-mark:hover { background: rgba(19,19,24,0.06); color: #131318; }
+.topnav-v2 .nav-pop-mark[disabled] { opacity: 0.4; cursor: default; }
+.topnav-v2 .nav-pop-list {
   flex: 1;
   overflow-y: auto;
   padding: 0.35rem 0;
 }
-.topnav-v2 .nav-notif-empty {
+.topnav-v2 .nav-pop-empty {
   padding: 2rem 1rem;
   text-align: center;
-  color: var(--ink-muted, #6c6a72);
+  color: #6c6a72;
   font-size: 0.86rem;
 }
-.topnav-v2 .nav-notif-item {
+.topnav-v2 .nav-pop-item {
   display: flex; align-items: flex-start; gap: 0.7rem;
   padding: 0.65rem 1rem;
   text-decoration: none;
-  color: inherit;
+  color: #131318;
   border-left: 3px solid transparent;
   transition: background 0.12s;
 }
-.topnav-v2 .nav-notif-item:hover { background: rgba(19,19,24,0.04); }
-.topnav-v2 .nav-notif-item.unread { border-left-color: #E2483A; background: rgba(226,72,58,0.04); }
-.topnav-v2 .nav-notif-icon {
+.topnav-v2 .nav-pop-item:hover { background: rgba(19,19,24,0.04); }
+.topnav-v2 .nav-pop-item.unread { border-left-color: #E2483A; background: rgba(226,72,58,0.04); }
+.topnav-v2 .nav-pop-icon {
   flex-shrink: 0;
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: rgba(19,19,24,0.06);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #B8A07E, #6E5847);
+  color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
+  font-size: 13px; font-weight: 600;
+  overflow: hidden;
 }
-.topnav-v2 .nav-notif-body { flex: 1; min-width: 0; }
-.topnav-v2 .nav-notif-text {
-  font-size: 0.85rem; line-height: 1.35;
-  color: var(--ink, #131318);
+.topnav-v2 .nav-pop-icon img { width: 100%; height: 100%; object-fit: cover; }
+.topnav-v2 .nav-pop-icon.emoji { background: rgba(19,19,24,0.06); color: inherit; font-size: 16px; }
+.topnav-v2 .nav-pop-body { flex: 1; min-width: 0; }
+.topnav-v2 .nav-pop-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+.topnav-v2 .nav-pop-name {
+  font-size: 0.86rem; font-weight: 600; color: #131318;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.topnav-v2 .nav-pop-time {
+  font-size: 0.72rem;
+  color: #6c6a72;
+  flex-shrink: 0;
+}
+.topnav-v2 .nav-pop-text {
+  font-size: 0.83rem; line-height: 1.35;
+  color: #4a4a52;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.topnav-v2 .nav-notif-time {
-  margin-top: 0.2rem;
-  font-size: 0.72rem;
-  color: var(--ink-muted, #6c6a72);
+.topnav-v2 .nav-pop-badge {
+  flex-shrink: 0;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: #E2483A;
+  color: #fff;
+  border-radius: 9px;
+  font-size: 0.68rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-.topnav-v2 .nav-notif-foot {
+.topnav-v2 .nav-pop-foot {
   border-top: 1px solid rgba(19,19,24,0.06);
   padding: 0.5rem;
 }
-.topnav-v2 .nav-notif-foot a {
+.topnav-v2 .nav-pop-foot a {
   display: block;
   text-align: center;
   padding: 0.55rem;
   border-radius: 8px;
   text-decoration: none;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ink, #131318);
+  font-size: 0.84rem; font-weight: 600;
+  color: #131318;
 }
-.topnav-v2 .nav-notif-foot a:hover { background: rgba(19,19,24,0.06); }
+.topnav-v2 .nav-pop-foot a:hover { background: rgba(19,19,24,0.06); }
 
 /* Mobile collapse — keep links pill, drop email line + lang toggle */
 @media (max-width: 880px) {

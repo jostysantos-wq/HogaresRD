@@ -123,18 +123,30 @@
     const dashHref = isPro ? '/broker-dashboard.html' : '/my-applications';
 
     actions.insertAdjacentHTML('beforeend',
-      `<a class="nav-icon" href="/mensajes" aria-label="Mensajes">${ICONS.msg}</a>` +
-      `<button class="nav-icon" type="button" id="tnv-bell-btn" aria-label="Notificaciones" aria-haspopup="menu" aria-expanded="false">${ICONS.bell}<span class="nav-icon-dot" id="tnv-bell-dot" hidden></span></button>` +
-      `<div class="nav-notif-menu" id="tnv-notif-menu" role="menu" hidden>` +
-        `<div class="nav-notif-head">` +
-          `<span class="nav-notif-title">Notificaciones</span>` +
-          `<button class="nav-notif-mark" type="button" id="tnv-notif-mark" disabled>Marcar todas leídas</button>` +
+      // Messages icon + dropdown
+      `<button class="nav-icon" type="button" id="tnv-msg-btn" aria-label="Mensajes" aria-haspopup="menu" aria-expanded="false">${ICONS.msg}<span class="nav-icon-dot" id="tnv-msg-dot" hidden></span></button>` +
+      `<div class="nav-pop nav-msg-menu" id="tnv-msg-menu" role="menu" hidden>` +
+        `<div class="nav-pop-head">` +
+          `<span class="nav-pop-title">Mensajes</span>` +
         `</div>` +
-        `<div class="nav-notif-list" id="tnv-notif-list">` +
-          `<div class="nav-notif-empty">Cargando…</div>` +
+        `<div class="nav-pop-list" id="tnv-msg-list">` +
+          `<div class="nav-pop-empty">Cargando…</div>` +
         `</div>` +
-        `<div class="nav-notif-foot"><a href="/notificaciones">Ver todas</a></div>` +
+        `<div class="nav-pop-foot"><a href="/mensajes">Abrir bandeja de mensajes</a></div>` +
       `</div>` +
+      // Bell icon + dropdown
+      `<button class="nav-icon" type="button" id="tnv-bell-btn" aria-label="Notificaciones" aria-haspopup="menu" aria-expanded="false">${ICONS.bell}<span class="nav-icon-dot" id="tnv-bell-dot" hidden></span></button>` +
+      `<div class="nav-pop nav-notif-menu" id="tnv-notif-menu" role="menu" hidden>` +
+        `<div class="nav-pop-head">` +
+          `<span class="nav-pop-title">Notificaciones</span>` +
+          `<button class="nav-pop-mark" type="button" id="tnv-notif-mark" disabled>Marcar todas leídas</button>` +
+        `</div>` +
+        `<div class="nav-pop-list" id="tnv-notif-list">` +
+          `<div class="nav-pop-empty">Cargando…</div>` +
+        `</div>` +
+        `<div class="nav-pop-foot"><a href="/notificaciones">Ver todas</a></div>` +
+      `</div>` +
+      // User chip + account dropdown
       `<button class="nav-user" type="button" aria-label="Cuenta" aria-haspopup="menu" aria-expanded="false" id="tnv-user-btn">` +
         `<span class="nav-user-avatar">${escapeHtml(initials)}</span>` +
         `<span class="nav-user-meta">` +
@@ -143,7 +155,7 @@
         `</span>` +
         `<svg class="nav-user-caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>` +
       `</button>` +
-      `<div class="nav-user-menu" id="tnv-user-menu" role="menu" hidden>` +
+      `<div class="nav-pop nav-user-menu" id="tnv-user-menu" role="menu" hidden>` +
         `<a href="${dashHref}" role="menuitem">Mi panel</a>` +
         (isPro ? '<a href="/mis-propiedades" role="menuitem">Mis propiedades</a>' : '<a href="/my-applications" role="menuitem">Mis aplicaciones</a>') +
         `<a href="/busquedas-guardadas" role="menuitem">Favoritos y búsquedas</a>` +
@@ -157,33 +169,32 @@
     const userMenu = document.getElementById('tnv-user-menu');
     const bellBtn  = document.getElementById('tnv-bell-btn');
     const bellMenu = document.getElementById('tnv-notif-menu');
+    const msgBtn   = document.getElementById('tnv-msg-btn');
+    const msgMenu  = document.getElementById('tnv-msg-menu');
 
     function closeAll() {
       if (userMenu) { userMenu.hidden = true; userBtn?.setAttribute('aria-expanded', 'false'); }
       if (bellMenu) { bellMenu.hidden = true; bellBtn?.setAttribute('aria-expanded', 'false'); }
+      if (msgMenu)  { msgMenu.hidden  = true; msgBtn?.setAttribute('aria-expanded', 'false');  }
     }
 
-    if (userBtn && userMenu) {
-      userBtn.addEventListener('click', (e) => {
+    function wireToggle(btn, menu, onOpen) {
+      if (!btn || !menu) return;
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const willOpen = userMenu.hidden;
-        closeAll();
-        if (willOpen) { userMenu.hidden = false; userBtn.setAttribute('aria-expanded', 'true'); }
-      });
-    }
-
-    if (bellBtn && bellMenu) {
-      bellBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const willOpen = bellMenu.hidden;
+        const willOpen = menu.hidden;
         closeAll();
         if (willOpen) {
-          bellMenu.hidden = false;
-          bellBtn.setAttribute('aria-expanded', 'true');
-          loadNotifications();
+          menu.hidden = false;
+          btn.setAttribute('aria-expanded', 'true');
+          if (typeof onOpen === 'function') onOpen();
         }
       });
     }
+
+    wireToggle(userBtn, userMenu);
+    wireToggle(bellBtn, bellMenu, loadNotifications);
+    wireToggle(msgBtn,  msgMenu,  loadMessages);
 
     document.addEventListener('click', (e) => {
       if (userMenu && !userMenu.hidden && !userMenu.contains(e.target) && !userBtn.contains(e.target)) {
@@ -191,6 +202,9 @@
       }
       if (bellMenu && !bellMenu.hidden && !bellMenu.contains(e.target) && !bellBtn.contains(e.target)) {
         bellMenu.hidden = true; bellBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (msgMenu && !msgMenu.hidden && !msgMenu.contains(e.target) && !msgBtn.contains(e.target)) {
+        msgMenu.hidden = true; msgBtn.setAttribute('aria-expanded', 'false');
       }
     });
     document.addEventListener('keydown', (e) => {
@@ -208,7 +222,7 @@
       });
     }
 
-    // Notification panel content + mark-all-read
+    // ── Notification panel ───────────────────────────────────────
     let notifCache = null;
     async function loadNotifications() {
       const list = document.getElementById('tnv-notif-list');
@@ -220,18 +234,18 @@
         const items = Array.isArray(data) ? data : (data?.notifications || []);
         notifCache = items;
         if (!items.length) {
-          list.innerHTML = '<div class="nav-notif-empty">Estás al día. No hay notificaciones nuevas.</div>';
+          list.innerHTML = '<div class="nav-pop-empty">Estás al día. No hay notificaciones nuevas.</div>';
         } else {
           list.innerHTML = items.map(n => {
             const text  = escapeHtml(n.message || n.title || n.body || '');
             const time  = escapeHtml(relTime(n.created_at || n.createdAt || n.timestamp));
             const href  = n.link || n.url || '/notificaciones';
-            const cls   = n.read ? 'nav-notif-item' : 'nav-notif-item unread';
+            const cls   = n.read ? 'nav-pop-item' : 'nav-pop-item unread';
             return `<a class="${cls}" href="${escapeHtml(href)}">` +
-                     `<span class="nav-notif-icon">${notifIcon(n)}</span>` +
-                     `<span class="nav-notif-body">` +
-                       `<span class="nav-notif-text">${text}</span>` +
-                       `<span class="nav-notif-time">${time}</span>` +
+                     `<span class="nav-pop-icon emoji">${notifIcon(n)}</span>` +
+                     `<span class="nav-pop-body">` +
+                       `<span class="nav-pop-text">${text}</span>` +
+                       `<span class="nav-pop-time">${time}</span>` +
                      `</span>` +
                    `</a>`;
           }).join('');
@@ -240,7 +254,7 @@
         const anyUnread = items.some(n => !n.read);
         if (mark) mark.disabled = !anyUnread;
       } catch (_) {
-        list.innerHTML = '<div class="nav-notif-empty">No se pudieron cargar las notificaciones.</div>';
+        list.innerHTML = '<div class="nav-pop-empty">No se pudieron cargar las notificaciones.</div>';
       }
     }
 
@@ -253,7 +267,6 @@
         const dot = document.getElementById('tnv-bell-dot');
         if (dot) dot.hidden = true;
         markBtn.disabled = true;
-        // Re-render existing cache as read
         if (Array.isArray(notifCache)) {
           notifCache.forEach(n => { n.read = true; });
           loadNotifications();
@@ -261,12 +274,78 @@
       });
     }
 
-    // Unread dot — best-effort, fail silent
+    // ── Messages panel ───────────────────────────────────────────
+    async function loadMessages() {
+      const list = document.getElementById('tnv-msg-list');
+      if (!list) return;
+      try {
+        const r = await fetch('/api/conversations', { credentials: 'include' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const data = await r.json();
+        const all = Array.isArray(data) ? data : (data?.conversations || []);
+        // Show conversations where THIS user has unread messages, OR the most
+        // recent few if none are unread (so the panel always has content).
+        const enriched = all.filter(c => !c.archived).map(c => {
+          const meIsBroker = c.brokerId && c.brokerId === user.id;
+          const unread = meIsBroker ? (c.unreadBroker || 0) : (c.unreadClient || 0);
+          const otherName = meIsBroker
+            ? (c.clientName || 'Cliente')
+            : (c.brokerName || c.inmobiliariaName || 'HogaresRD');
+          const otherAvatar = meIsBroker ? c.clientAvatar : c.brokerAvatar;
+          return { ...c, _unread: unread, _otherName: otherName, _otherAvatar: otherAvatar };
+        });
+        const unreadFirst = enriched
+          .sort((a, b) => {
+            if ((b._unread > 0) - (a._unread > 0) !== 0) return (b._unread > 0) - (a._unread > 0);
+            return new Date(b.updatedAt || b.lastMessageAt || 0) - new Date(a.updatedAt || a.lastMessageAt || 0);
+          })
+          .slice(0, 6);
+
+        if (!unreadFirst.length) {
+          list.innerHTML = '<div class="nav-pop-empty">Aún no tienes conversaciones.</div>';
+          return;
+        }
+        list.innerHTML = unreadFirst.map(c => {
+          const initials = (c._otherName || 'U').split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+          const avatar = c._otherAvatar
+            ? `<img src="${escapeHtml(c._otherAvatar)}" alt="">`
+            : escapeHtml(initials);
+          const time = escapeHtml(relTime(c.lastMessageAt || c.updatedAt || c.createdAt));
+          const text = escapeHtml(c.lastMessage || 'Nueva conversación');
+          const cls  = c._unread > 0 ? 'nav-pop-item unread' : 'nav-pop-item';
+          const badge = c._unread > 0
+            ? `<span class="nav-pop-badge">${c._unread > 9 ? '9+' : c._unread}</span>`
+            : '';
+          return `<a class="${cls}" href="/mensajes?conv=${encodeURIComponent(c.id)}">` +
+                   `<span class="nav-pop-icon">${avatar}</span>` +
+                   `<span class="nav-pop-body">` +
+                     `<span class="nav-pop-row">` +
+                       `<span class="nav-pop-name">${escapeHtml(c._otherName)}</span>` +
+                       `<span class="nav-pop-time">${time}</span>` +
+                     `</span>` +
+                     `<span class="nav-pop-text">${text}</span>` +
+                   `</span>` +
+                   badge +
+                 `</a>`;
+        }).join('');
+      } catch (_) {
+        list.innerHTML = '<div class="nav-pop-empty">No se pudieron cargar los mensajes.</div>';
+      }
+    }
+
+    // Unread dots — best-effort, fail silent
     fetch('/api/notifications/unread-count', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const dot = document.getElementById('tnv-bell-dot');
         if (dot && d && Number(d.count || d.unread || 0) > 0) dot.hidden = false;
+      })
+      .catch(() => {});
+    fetch('/api/conversations/unread', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const dot = document.getElementById('tnv-msg-dot');
+        if (dot && d && Number(d.count || 0) > 0) dot.hidden = false;
       })
       .catch(() => {});
   }
