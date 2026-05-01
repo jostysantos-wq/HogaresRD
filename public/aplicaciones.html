@@ -192,7 +192,7 @@
   /* TABLE — recent-table pattern from referrals, 7 cols (checkbox + 6 data) */
   .recent-table {
     display: grid;
-    grid-template-columns: 36px 1.6fr 1.4fr 1fr 1fr 1fr 0.9fr;
+    grid-template-columns: 1.6fr 1.4fr 1fr 1fr 1fr 0.9fr;
     gap: 0;
   }
   .recent-table .h {
@@ -211,11 +211,7 @@
   }
   .recent-row { display: contents; cursor: pointer; }
   .recent-row:hover .c { background: var(--bg-soft); }
-  .recent-row.selected .c { background: var(--gold-soft); }
-  .recent-row.selected:hover .c { background: var(--gold-soft); }
 
-  .recent-cb { padding: 14px 8px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--line-soft); }
-  .recent-cb input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--ink); }
 
   .c-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .recent-av { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
@@ -293,40 +289,6 @@
     100% { background-position: -200% 0; }
   }
 
-  /* STICKY BULK BAR */
-  .bulk-bar {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%) translateY(120%);
-    background: var(--ink);
-    color: #fff;
-    border-radius: var(--r-pill);
-    padding: 10px 14px 10px 22px;
-    display: flex; align-items: center; gap: 8px;
-    box-shadow: 0 12px 28px rgba(20,17,15,0.28);
-    transition: transform .25s ease;
-    z-index: 50;
-    max-width: calc(100vw - 32px);
-    flex-wrap: wrap;
-  }
-  .bulk-bar.show { transform: translateX(-50%) translateY(0); }
-  .bulk-count { font-size: 12.5px; font-weight: 600; margin-right: 8px; opacity: 0.9; }
-  .bulk-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: var(--r-pill);
-    background: rgba(255,255,255,0.12); color: #fff;
-    font-size: 12px; font-weight: 500;
-    border: 1px solid rgba(255,255,255,0.16);
-    cursor: pointer;
-  }
-  .bulk-btn:hover { background: rgba(255,255,255,0.22); }
-  .bulk-btn.danger { background: var(--accent); border-color: var(--accent); }
-  .bulk-btn.danger:hover { background: #9b3e25; }
-  .bulk-btn svg { width: 12px; height: 12px; }
-  .bulk-clear { color: rgba(255,255,255,0.7); font-size: 12px; padding: 6px 10px; cursor: pointer; }
-  .bulk-clear:hover { color: #fff; }
-
   /* TOAST */
   .toast {
     position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
@@ -343,7 +305,7 @@
 
   @media (max-width: 1240px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
-    .recent-table { grid-template-columns: 36px 1.6fr 1.2fr 0.9fr 0.9fr 1fr 0.9fr; font-size: 12.5px; }
+    .recent-table { grid-template-columns: 1.6fr 1.2fr 0.9fr 0.9fr 1fr 0.9fr; font-size: 12.5px; }
   }
   @media (max-width: 860px) {
     .app { grid-template-columns: 1fr; }
@@ -352,7 +314,7 @@
     .topbar-right { justify-content: flex-end; }
     .kpi-row { grid-template-columns: 1fr 1fr; }
     .page-head { flex-direction: column; align-items: flex-start; }
-    .recent-table { grid-template-columns: 28px 1.4fr 1fr 0.9fr 0.9fr; font-size: 12px; }
+    .recent-table { grid-template-columns: 1.4fr 1fr 0.9fr 0.9fr; font-size: 12px; }
     .recent-table .col-stage, .recent-table .col-credit { display: none; }
     .panel-tools { width: 100%; }
     .pt-search { min-width: 0; flex: 1; }
@@ -1165,28 +1127,6 @@
   </main>
 </div>
 
-<!-- BULK ACTION BAR -->
-<div class="bulk-bar" id="bulkBar" role="region" aria-label="Acciones en lote">
-  <span class="bulk-count" id="bulkCount">0 seleccionadas</span>
-  <button class="bulk-btn" data-bulk="review">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-    Marcar revisado
-  </button>
-  <button class="bulk-btn" data-bulk="documents">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    Solicitar documentos
-  </button>
-  <button class="bulk-btn" data-bulk="reassign">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M8 21H3v-5"/><path d="M3 21l7-7"/></svg>
-    Reasignar
-  </button>
-  <button class="bulk-btn danger" data-bulk="reject">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-    Rechazar
-  </button>
-  <span class="bulk-clear" id="bulkClear">Cancelar</span>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1299,7 +1239,6 @@ const STATE = {
   pageSize: 25,
   sortBy: 'updated',   // 'updated' | 'credit'
   sortDir: 'desc',
-  selected: new Set(),
   analytics: null,
 };
 
@@ -1404,10 +1343,8 @@ function renderChips() {
     b.onclick = () => {
       STATE.filter = b.dataset.chip;
       STATE.page = 1;
-      STATE.selected.clear();
       renderChips();
       renderTable();
-      renderBulkBar();
     };
   });
 }
@@ -1466,12 +1403,7 @@ function renderTable() {
   };
   const sortClass = (col) => STATE.sortBy === col ? 'sort-active' : '';
 
-  const headerCb = total > 0
-    ? `<input type="checkbox" id="cbAll" aria-label="Seleccionar todas">`
-    : '';
-
   const head = `
-    <div class="h" style="justify-content:center;">${headerCb}</div>
     <div class="h">Cliente</div>
     <div class="h">Propiedad</div>
     <div class="h">Estado</div>
@@ -1507,15 +1439,10 @@ function renderTable() {
       const credit = appCredit(a);
       const updated = relTime(a.updated_at || a.created_at);
       const av = `a${((start + i) % 5) + 1}`;
-      const isSel = STATE.selected.has(a.id);
       // Row click opens the inline detail panel (window.openApplicationDetail)
       // — defined in the panel controller IIFE near the bottom of this page.
-      const href = `#app-${encodeURIComponent(a.id)}`;
       return `
-        <div class="recent-row ${isSel ? 'selected' : ''}" data-id="${escapeHtml(a.id)}" data-href="${escapeHtml(href)}">
-          <div class="recent-cb">
-            <input type="checkbox" class="cb-row" data-id="${escapeHtml(a.id)}" ${isSel ? 'checked' : ''} aria-label="Seleccionar aplicación">
-          </div>
+        <div class="recent-row" data-id="${escapeHtml(a.id)}">
           <div class="c c-name">
             <span class="recent-av ${av}">${escapeHtml(initials(name))}</span>
             <span class="c-name-text">
@@ -1541,44 +1468,15 @@ function renderTable() {
 
   document.getElementById('appsTable').innerHTML = head + body;
 
-  // Wire row click → open inline detail panel (ignore clicks on checkbox).
+  // Wire row click → open inline detail panel.
   document.querySelectorAll('#appsTable .recent-row').forEach(row => {
-    row.addEventListener('click', (e) => {
-      if (e.target.closest('.recent-cb') || e.target.closest('input')) return;
+    row.addEventListener('click', () => {
       const id = row.dataset.id;
       if (id && typeof window.openApplicationDetail === 'function') {
         window.openApplicationDetail(id);
       }
     });
   });
-
-  // Wire row checkboxes.
-  document.querySelectorAll('#appsTable .cb-row').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      const id = e.target.dataset.id;
-      if (e.target.checked) STATE.selected.add(id);
-      else STATE.selected.delete(id);
-      const row = e.target.closest('.recent-row');
-      if (row) row.classList.toggle('selected', e.target.checked);
-      syncHeaderCb(pageItems);
-      renderBulkBar();
-    });
-  });
-
-  // Header checkbox: select/deselect all on this page.
-  const cbAll = document.getElementById('cbAll');
-  if (cbAll) {
-    syncHeaderCb(pageItems);
-    cbAll.addEventListener('change', (e) => {
-      const want = e.target.checked;
-      pageItems.forEach(a => {
-        if (want) STATE.selected.add(a.id);
-        else STATE.selected.delete(a.id);
-      });
-      renderTable();
-      renderBulkBar();
-    });
-  }
 
   // Sort headers.
   document.querySelectorAll('#appsTable .h.sortable').forEach(h => {
@@ -1604,121 +1502,6 @@ function renderTable() {
   }
 }
 
-function syncHeaderCb(pageItems) {
-  const cbAll = document.getElementById('cbAll');
-  if (!cbAll) return;
-  const ids = pageItems.map(a => a.id);
-  const allSel = ids.length > 0 && ids.every(id => STATE.selected.has(id));
-  const someSel = ids.some(id => STATE.selected.has(id));
-  cbAll.checked = allSel;
-  cbAll.indeterminate = !allSel && someSel;
-}
-
-function renderBulkBar() {
-  const bar = document.getElementById('bulkBar');
-  const count = STATE.selected.size;
-  if (count > 0) {
-    bar.classList.add('show');
-    document.getElementById('bulkCount').textContent =
-      `${count} ${count === 1 ? 'seleccionada' : 'seleccionadas'}`;
-  } else {
-    bar.classList.remove('show');
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════
-// BULK ACTIONS
-// ════════════════════════════════════════════════════════════════════
-async function runBulk(kind) {
-  const ids = Array.from(STATE.selected);
-  if (!ids.length) return;
-
-  if (kind === 'reject') {
-    const reason = prompt(`Motivo del rechazo (≥ 5 caracteres) para ${ids.length} aplicaciones:`, '');
-    if (reason == null) return;
-    if (reason.trim().length < 5) {
-      toast('El motivo debe tener al menos 5 caracteres.', true);
-      return;
-    }
-    try {
-      const r = await api('/api/applications/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, action: 'reject', reason: reason.trim() }),
-      });
-      const okCount = (r?.results || []).filter(x => x.ok).length;
-      toast(`${okCount} de ${ids.length} aplicación(es) rechazada(s).`);
-      STATE.selected.clear();
-      await loadApplications();
-    } catch (e) {
-      toast(`Error al rechazar: ${e.message}`, true);
-    }
-    return;
-  }
-
-  if (kind === 'review') {
-    // PUT /:id/status individually for each. Only valid from `aplicado` per
-    // STATUS_FLOW; the server returns 409 for invalid transitions, which we
-    // surface at the end. We don't pre-filter so the user gets a clear count
-    // of what actually moved.
-    let ok = 0, skip = 0;
-    for (const id of ids) {
-      try {
-        await api(`/api/applications/${encodeURIComponent(id)}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'en_revision' }),
-        });
-        ok++;
-      } catch (_) { skip++; }
-    }
-    toast(`${ok} marcada(s) como en revisión${skip ? ` · ${skip} omitida(s)` : ''}.`);
-    STATE.selected.clear();
-    await loadApplications();
-    return;
-  }
-
-  if (kind === 'documents') {
-    const note = prompt(`Mensaje al cliente sobre documentos requeridos para ${ids.length} aplicación(es):`, 'Necesitamos algunos documentos para continuar con tu aplicación.');
-    if (note == null) return;
-    let ok = 0, skip = 0;
-    for (const id of ids) {
-      try {
-        await api(`/api/applications/${encodeURIComponent(id)}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'documentos_requeridos', reason: note }),
-        });
-        ok++;
-      } catch (_) { skip++; }
-    }
-    toast(`Documentos solicitados a ${ok}${skip ? ` · ${skip} omitida(s)` : ''}.`);
-    STATE.selected.clear();
-    await loadApplications();
-    return;
-  }
-
-  if (kind === 'reassign') {
-    const target = prompt(`Email del nuevo corredor (debe estar en tu equipo) para reasignar ${ids.length} aplicación(es):`, '');
-    if (target == null || !target.trim()) return;
-    let ok = 0, skip = 0;
-    for (const id of ids) {
-      try {
-        await api(`/api/applications/${encodeURIComponent(id)}/reassign`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: target.trim() }),
-        });
-        ok++;
-      } catch (_) { skip++; }
-    }
-    toast(`${ok} reasignada(s)${skip ? ` · ${skip} omitida(s)` : ''}.`);
-    STATE.selected.clear();
-    await loadApplications();
-    return;
-  }
-}
-
 // ════════════════════════════════════════════════════════════════════
 // LOAD
 // ════════════════════════════════════════════════════════════════════
@@ -1740,7 +1523,6 @@ async function loadApplications() {
   renderChips();
   renderKpis();
   renderTable();
-  renderBulkBar();
 }
 
 async function bootstrap() {
@@ -1775,15 +1557,6 @@ async function bootstrap() {
 
   document.getElementById('filterBtn').addEventListener('click', () => {
     toast('Filtros avanzados llegan pronto. Usa los chips de estado por ahora.');
-  });
-
-  document.querySelectorAll('#bulkBar [data-bulk]').forEach(b => {
-    b.addEventListener('click', () => runBulk(b.dataset.bulk));
-  });
-  document.getElementById('bulkClear').addEventListener('click', () => {
-    STATE.selected.clear();
-    renderTable();
-    renderBulkBar();
   });
 
   await loadApplications();
@@ -1888,6 +1661,10 @@ bootstrap().catch(err => {
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         Contactar
       </a>
+      <button class="ap-btn ap-btn-outline" id="apReassignBtn" type="button" title="Reasignar a otro agente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M8 21H3v-5"/><path d="M3 21l7-7"/></svg>
+        Reasignar
+      </button>
       <button class="ap-close" id="apClose" aria-label="Cerrar">
         <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
       </button>
@@ -1927,6 +1704,31 @@ bootstrap().catch(err => {
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           Enviar mensaje
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reasignar modal -->
+  <div class="ap-modal-bg" id="apReassignModal">
+    <div class="ap-modal" role="dialog" aria-modal="true" aria-labelledby="apReassignTitle">
+      <h3 id="apReassignTitle">Reasignar aplicación</h3>
+      <p id="apReassignSub">Pasa esta aplicación a otro agente de tu equipo. El nuevo agente recibirá una notificación y la aplicación dejará tu bandeja.</p>
+      <div class="ap-field">
+        <label for="apReassignSelect">Agente destino</label>
+        <select id="apReassignSelect"><option value="">— Cargando equipo… —</option></select>
+      </div>
+      <div class="ap-field" id="apReassignEmailField" style="display:none;">
+        <label for="apReassignEmail">Email del agente</label>
+        <input type="email" id="apReassignEmail" placeholder="agente@ejemplo.com">
+      </div>
+      <div class="ap-field">
+        <label for="apReassignReason">Motivo (opcional)</label>
+        <input type="text" id="apReassignReason" maxlength="300" placeholder="Ej: cliente prefiere otro agente, vacaciones…">
+      </div>
+      <div class="ap-modal-error" id="apReassignError"></div>
+      <div class="ap-modal-actions">
+        <button class="ap-btn ap-btn-outline" id="apReassignCancel" type="button">Cancelar</button>
+        <button class="ap-btn" id="apReassignConfirm" type="button">Reasignar</button>
       </div>
     </div>
   </div>
@@ -2936,6 +2738,90 @@ bootstrap().catch(err => {
         }
       });
     }
+
+    // ─── Reasignar modal ───────────────────────────────────────────
+    const reassignBtn      = document.getElementById('apReassignBtn');
+    const reassignModalBg  = document.getElementById('apReassignModal');
+    const reassignSelect   = document.getElementById('apReassignSelect');
+    const reassignEmailFld = document.getElementById('apReassignEmailField');
+    const reassignEmailEl  = document.getElementById('apReassignEmail');
+    const reassignReasonEl = document.getElementById('apReassignReason');
+    const reassignErrorEl  = document.getElementById('apReassignError');
+    const reassignCancel   = document.getElementById('apReassignCancel');
+    const reassignConfirm  = document.getElementById('apReassignConfirm');
+    let _reassignTeam = null;
+
+    async function loadReassignTeam(currentBrokerId) {
+      if (_reassignTeam !== null) return _reassignTeam;
+      try {
+        const r = await fetch('/api/inmobiliaria/brokers', { credentials: 'include' });
+        if (!r.ok) { _reassignTeam = []; return _reassignTeam; }
+        const data = await r.json();
+        const list = (data && (data.brokers || data)) || [];
+        _reassignTeam = (Array.isArray(list) ? list : [])
+          .filter(b => b.id !== currentBrokerId);
+        return _reassignTeam;
+      } catch {
+        _reassignTeam = [];
+        return _reassignTeam;
+      }
+    }
+
+    reassignBtn.addEventListener('click', async () => {
+      if (!currentApp) return;
+      reassignErrorEl.textContent = '';
+      reassignReasonEl.value = '';
+      reassignEmailEl.value = '';
+      reassignSelect.innerHTML = '<option value="">— Cargando equipo… —</option>';
+      reassignModalBg.classList.add('open');
+
+      const candidates = await loadReassignTeam(currentApp.broker?.user_id);
+      if (!candidates.length) {
+        // No team listing available (broker not on a team or no permission).
+        // Fall back to free-text email entry — same shape /:id/reassign accepts.
+        reassignSelect.innerHTML = '<option value="">— Sin equipo registrado —</option>';
+        reassignSelect.disabled = true;
+        reassignEmailFld.style.display = '';
+      } else {
+        reassignSelect.disabled = false;
+        reassignEmailFld.style.display = 'none';
+        reassignSelect.innerHTML =
+          '<option value="">— Selecciona un agente —</option>' +
+          candidates.map(b => `<option value="${escapeHtml(b.email || '')}">${escapeHtml(b.name || b.email || b.id)}${b.email && b.name ? ' · ' + escapeHtml(b.email) : ''}</option>`).join('');
+      }
+    });
+
+    function closeReassignModal() { reassignModalBg.classList.remove('open'); }
+    reassignCancel.addEventListener('click', closeReassignModal);
+    reassignModalBg.addEventListener('click', (e) => { if (e.target === reassignModalBg) closeReassignModal(); });
+
+    reassignConfirm.addEventListener('click', async () => {
+      reassignErrorEl.textContent = '';
+      const dropdownVal = reassignSelect.value;
+      const typedEmail  = reassignEmailEl.value.trim();
+      const email = (dropdownVal || typedEmail).toLowerCase();
+      if (!email) { reassignErrorEl.textContent = 'Selecciona un agente o escribe su email.'; return; }
+      reassignConfirm.disabled = true;
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/reassign`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, reason: reassignReasonEl.value.trim() }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        closeReassignModal();
+        currentApp = await fetchApp(currentApp.id);
+        renderAll();
+        if (typeof window.loadApplications === 'function') window.loadApplications();
+      } catch (e) {
+        reassignErrorEl.textContent = e.message || 'Error al reasignar.';
+      } finally {
+        reassignConfirm.disabled = false;
+      }
+    });
 
     // ─── Contactar al Cliente modal ────────────────────────────────
     const contactModalBg = document.getElementById('apContactModal');
