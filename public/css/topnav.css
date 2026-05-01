@@ -108,42 +108,9 @@
 
 .topnav-v2 .nav-actions { display: flex; align-items: center; gap: 0.55rem; flex-shrink: 0; }
 
-/* Lang toggle (injected by /js/i18n.js — also styled here for guaranteed look) */
-.topnav-v2 #langToggle {
-  display: inline-flex;
-  background: var(--tn-pill-bg);
-  border: 1px solid var(--tn-pill-border);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 0.78rem;
-  font-weight: 700;
-  height: 32px;
-  flex-shrink: 0;
-}
-.topnav-v2 #langToggle button {
-  padding: 0 0.6rem;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  color: var(--tn-ink);
-  opacity: 0.7;
-  transition: all 0.15s;
-}
-.topnav-v2 #langToggle button.active {
-  background: var(--tn-ink);
-  color: var(--tn-bg);
-  opacity: 1;
-}
-.hero-stage .topnav-v2 #langToggle button.active {
-  background: #fff;
-  color: #111;
-}
-.topnav-v2 #langToggle button:hover:not(.active) { opacity: 1; }
+/* Defensive: if any older copy of i18n.js still injects #langToggle,
+   suppress it. The toggle was retired — browsers translate natively. */
+.topnav-v2 #langToggle { display: none !important; }
 
 /* Glass icon buttons */
 .topnav-v2 .nav-icon {
@@ -427,12 +394,11 @@
 }
 .topnav-v2 .nav-pop-foot a:hover { background: rgba(19,19,24,0.06); }
 
-/* Mobile collapse — keep links pill, drop email line + lang toggle */
+/* Mobile collapse — drop center pill + email line + ghost CTA */
 @media (max-width: 880px) {
   .topnav-v2 .nav-inner { grid-template-columns: auto 1fr auto; gap: 0.5rem; }
   .topnav-v2 .nav-center { display: none; }
   .topnav-v2 .nav-user-meta { display: none; }
-  .topnav-v2 #langToggle { display: none; }
   .topnav-v2 .btn-tn-ghost { display: none; }
 }
 

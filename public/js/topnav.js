@@ -454,12 +454,6 @@
     if (user) renderUser(actions, user);
     else renderGuest(actions);
 
-    // i18n.js auto-injects #langToggle into .nav-actions on its own init.
-    // If i18n.js loaded BEFORE us, re-trigger injection now that the mount
-    // exists.
-    if (window.i18n && typeof window.i18n.injectToggle === 'function') {
-      try { window.i18n.injectToggle(); } catch (_) {}
-    }
   }
 
   if (document.readyState === 'loading') {

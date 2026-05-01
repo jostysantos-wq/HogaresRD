@@ -153,11 +153,9 @@
   async function init() {
     currentLang = getLang();
 
-    // Preload both locales
-    await Promise.all([loadLocale('es'), loadLocale('en')]);
-
-    // Inject toggle into nav
-    injectToggle();
+    // Preload current locale only — the in-nav ES/EN toggle was removed
+    // (browsers handle translation natively); we no longer need both.
+    await loadLocale(currentLang);
 
     // Apply current language
     applyToDOM();
