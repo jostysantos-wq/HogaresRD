@@ -399,8 +399,9 @@
     background: var(--ink); color: #fff;
     display: grid; place-items: center;
     font-size: 9.5px; font-weight: 700;
-    flex-shrink: 0;
+    flex-shrink: 0; overflow: hidden;
   }
+  .prop-broker-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .prop-broker-name { color: var(--ink); font-weight: 500; }
   .prop-broker-verif {
     display: inline-flex; align-items: center; gap: 4px;
@@ -1062,12 +1063,18 @@ function renderBars({ months, totals, completed }) {
 }
 
 // ── Properties grid ──────────────────────────────────────────
-function renderProps(listings) {
+function renderProps(listings, currentUser) {
   const grid = document.getElementById('propsGrid');
   if (!listings || listings.length === 0) {
     grid.innerHTML = `<div class="empty-msg">Aún no tienes propiedades publicadas. <a href="/post.html" style="color:var(--ink);font-weight:600;">Publica la primera</a>.</div>`;
     return;
   }
+  // These are the signed-in user's own listings, so any row whose owner
+  // resolves to them gets the user's avatarUrl. Older listings pre-date
+  // the per-listing brokerAvatarUrl field, so we fall back to the
+  // session user when the listing's creator matches.
+  const myAvatar = currentUser?.avatarUrl || null;
+  const myId = currentUser?.id || null;
   grid.innerHTML = listings.slice(0, 4).map((l, i) => {
     const ph = PH_CLASSES[i % PH_CLASSES.length];
     const isRent = (l.listingType === 'alquiler' || l.listing_type === 'alquiler');
@@ -1077,6 +1084,12 @@ function renderProps(listings) {
       : fmtUSD(price);
     const broker = l.brokerName || l.agentName || l.creator_name || 'Tú';
     const ini = initials(broker);
+    const ownedByMe = !l.creator_user_id || l.creator_user_id === myId;
+    const brokerAvatar = l.brokerAvatarUrl || l.agentAvatarUrl || l.creator_avatarUrl
+      || (ownedByMe ? myAvatar : null);
+    const avInner = brokerAvatar
+      ? `<img src="${escapeHtml(brokerAvatar)}" alt="" onerror="this.parentNode.textContent=this.parentNode.dataset.initials">`
+      : escapeHtml(ini);
     const loc = [l.location, l.city, l.province].filter(Boolean).join(', ') || 'República Dominicana';
     const beds = l.bedrooms || l.beds || '—';
     const baths = l.bathrooms || l.baths || '—';
@@ -1101,7 +1114,7 @@ function renderProps(listings) {
             <span class="prop-spec">${ICON.sqm} ${area}</span>
           </div>
           <div class="prop-broker">
-            <span class="prop-broker-av">${ini}</span>
+            <span class="prop-broker-av" data-initials="${escapeHtml(ini)}">${avInner}</span>
             <span class="prop-broker-name">${escapeHtml(broker)}</span>
             <span class="prop-broker-verif">${ICON.verif} HogaresRD</span>
           </div>
@@ -1206,7 +1219,7 @@ async function load() {
   renderKpiRow({ activeListings: active.length, byType, portfolioUSD, closedThisMonth, leadsLast30, trends });
   renderDonut({ vistas, contactos, visitas, ofertas });
   renderBars({ months: monthsAxis, totals: totalsByMonth, completed: completedByMonth });
-  renderProps(active);
+  renderProps(active, user);
 
   // Hand off the broker's listings to the topbar search.
   window.__brokerSearchData = window.__brokerSearchData || {};
