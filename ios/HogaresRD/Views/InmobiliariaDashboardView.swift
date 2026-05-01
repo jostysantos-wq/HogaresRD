@@ -32,46 +32,14 @@ struct InmobiliariaDashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    if i == 0 {
-                                        Image(systemName: "house.fill").font(.system(size: 10))
-                                    } else if title == "Contactos" {
-                                        Image(systemName: "person.crop.rectangle.stack").font(.system(size: 10))
-                                    } else if title == "Pagos" {
-                                        Image(systemName: "creditcard").font(.system(size: 10))
-                                    } else if i >= 10 {
-                                        Image(systemName: title == "Agentes" ? "person.2.fill" : title == "Rendimiento" ? "chart.bar.fill" : title == "Solicitudes" ? "person.badge.plus" : "person.crop.circle.badge.checkmark")
-                                            .font(.system(size: 10))
-                                    }
-                                    Text(title)
-                                }
-                                .font(.caption).bold()
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedTab == i ? (i >= 10 ? Color(red: 0.55, green: 0.27, blue: 0.68) : Color.rdBlue) : Color(.secondarySystemFill))
-                                .foregroundStyle(selectedTab == i ? .white : .primary)
-                                .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .id(i)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: selectedTab) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(selectedTab, anchor: .center)
-                    }
-                }
-            }
+            // Tab bar — design-system ChipRow
+            ChipRow(
+                items: tabs.enumerated().map { idx, title in
+                    ChipRow<Int>.Chip(id: idx, label: title)
+                },
+                selection: $selectedTab
+            )
+            .padding(.vertical, Spacing.s8)
             .background(Color(.systemBackground))
 
             Divider()
@@ -164,7 +132,7 @@ struct TeamMembersTab: View {
     @State private var removingId: String?
     @State private var removeSuccess: String?
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     private var filteredBrokers: [TeamBroker] {
         guard let brokers = team?.brokers else { return [] }
@@ -182,8 +150,8 @@ struct TeamMembersTab: View {
                 if let t = team {
                     HStack(spacing: 10) {
                         TeamStatCard(label: "Total Agentes", value: "\(t.brokers.count)", color: purpleColor)
-                        TeamStatCard(label: "Apps Totales", value: "\(t.brokers.reduce(0) { $0 + $1.appCount })", color: .blue)
-                        TeamStatCard(label: "Solicitudes", value: "\(t.pendingRequests.filter { $0.status == "pending" }.count)", color: .orange)
+                        TeamStatCard(label: "Apps Totales", value: "\(t.brokers.reduce(0) { $0 + $1.appCount })", color: .rdBlue)
+                        TeamStatCard(label: "Solicitudes", value: "\(t.pendingRequests.filter { $0.status == "pending" }.count)", color: .rdOrange)
                     }
                     .padding(.horizontal)
                 }
@@ -192,13 +160,13 @@ struct TeamMembersTab: View {
                 if let msg = removeSuccess {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.rdGreen)
                         Text(msg)
                             .font(.caption).bold()
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.green.opacity(0.1))
+                    .background(Color.rdGreen.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -359,7 +327,7 @@ struct BrokerCard: View {
     let onTap: () -> Void
     var onRemove: (() -> Void)? = nil
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     var body: some View {
         Button(action: onTap) {
@@ -381,17 +349,12 @@ struct BrokerCard: View {
                                 .font(.caption).bold()
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
-                            Text(broker.accessLabel)
-                                .font(.system(size: 8, weight: .bold))
-                                .padding(.horizontal, 5).padding(.vertical, 2)
-                                .background(levelColor(broker.accessLevel).opacity(0.15))
-                                .foregroundStyle(levelColor(broker.accessLevel))
-                                .clipShape(Capsule())
+                            DSStatusBadge(label: broker.accessLabel, tint: levelColor(broker.accessLevel))
                         }
                         let title = broker.displayTitle
                         if !title.isEmpty {
                             Text(title)
-                                .font(.system(size: 10))
+                                .font(.caption2)
                                 .foregroundStyle(purpleColor)
                                 .lineLimit(1)
                         }
@@ -407,50 +370,46 @@ struct BrokerCard: View {
                             if isRemoving {
                                 ProgressView()
                                     .scaleEffect(0.6)
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 44, height: 44)
                             } else {
                                 Image(systemName: "person.badge.minus")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.red.opacity(0.7))
-                                    .frame(width: 24, height: 24)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.rdRed.opacity(0.7))
+                                    .frame(width: 44, height: 44)
                             }
                         }
                         .buttonStyle(.plain)
                         .disabled(isRemoving)
+                        .accessibilityLabel("Desvincular agente")
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Label(broker.email, systemImage: "envelope")
-                        .font(.system(size: 9))
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                     if let phone = broker.phone, !phone.isEmpty {
                         Label(phone, systemImage: "phone")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                     if let lic = broker.licenseNumber, !lic.isEmpty {
                         Label("Lic. \(lic)", systemImage: "creditcard")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 HStack {
-                    Text("\(broker.appCount) app\(broker.appCount == 1 ? "" : "s")")
-                        .font(.system(size: 10, weight: .bold))
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(purpleColor.opacity(0.1))
-                        .foregroundStyle(purpleColor)
-                        .clipShape(Capsule())
+                    DSPill(label: "\(broker.appCount) app\(broker.appCount == 1 ? "" : "s")", tint: purpleColor)
                     Spacer()
                     HStack(spacing: 3) {
                         Text("Ver detalles")
-                            .font(.system(size: 10))
+                            .font(.caption2)
                             .foregroundStyle(purpleColor)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(purpleColor)
                     }
                 }
@@ -498,7 +457,7 @@ struct BrokerDetailSheet: View {
     @State private var savingRole = false
     @State private var roleSaved = false
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     var body: some View {
         NavigationStack {
@@ -512,18 +471,13 @@ struct BrokerDetailSheet: View {
                     }
                     .padding(.top, 60)
                 } else if let err = errorMsg {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.secondary)
-                        Text(err)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                        Button("Reintentar") { Task { await loadDetail() } }
-                            .buttonStyle(.borderedProminent)
-                            .tint(purpleColor)
-                    }
+                    EmptyStateView.calm(
+                        systemImage: "exclamationmark.triangle",
+                        title: "Algo salió mal",
+                        description: err,
+                        actionTitle: "Reintentar",
+                        action: { Task { await loadDetail() } }
+                    )
                     .padding(.top, 40)
                     .padding(.horizontal, 32)
                 } else {
@@ -598,7 +552,7 @@ struct BrokerDetailSheet: View {
                                     HStack {
                                         if roleSaved {
                                             Label("Guardado", systemImage: "checkmark.circle.fill")
-                                                .font(.caption).foregroundStyle(.green)
+                                                .font(.caption).foregroundStyle(Color.rdGreen)
                                         }
                                         Spacer()
                                         Button {
@@ -612,15 +566,15 @@ struct BrokerDetailSheet: View {
                                             }
                                         }
                                         .padding(.horizontal, 16).padding(.vertical, 8)
-                                        .background(Color.purple, in: RoundedRectangle(cornerRadius: 8))
+                                        .background(Color.rdPurple, in: RoundedRectangle(cornerRadius: 8))
                                         .foregroundStyle(.white)
                                         .disabled(savingRole)
                                     }
                                 }
                                 .padding(14)
-                                .background(Color.purple.opacity(0.04))
+                                .background(Color.rdPurple.opacity(0.04))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.15)))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdPurple.opacity(0.15)))
                                 .padding(.horizontal)
                             }
                         }
@@ -675,7 +629,7 @@ struct BrokerDetailSheet: View {
                             HStack {
                                 if notesSaved {
                                     Label("Guardado", systemImage: "checkmark.circle.fill")
-                                        .font(.caption).foregroundStyle(.green)
+                                        .font(.caption).foregroundStyle(Color.rdGreen)
                                 }
                                 Spacer()
                                 Button {
@@ -700,7 +654,7 @@ struct BrokerDetailSheet: View {
                         if let msg = actionMessage {
                             Text(msg)
                                 .font(.caption)
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.rdGreen)
                                 .padding(.horizontal)
                         }
 
@@ -729,10 +683,10 @@ struct BrokerDetailSheet: View {
                                     Text("Desvincular Agente")
                                 }
                                 .font(.subheadline).bold()
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color.rdRed)
                                 .frame(maxWidth: .infinity)
                                 .padding(12)
-                                .background(Color.red.opacity(0.08))
+                                .background(Color.rdRed.opacity(0.08))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                             .buttonStyle(.plain)
@@ -773,7 +727,7 @@ struct BrokerDetailSheet: View {
     private func infoItem(_ label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 10, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .foregroundStyle(.tertiary)
             Text(value)
                 .font(.caption)
@@ -959,7 +913,7 @@ struct JoinRequestCard: View {
                             }
                             .font(.caption).bold()
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(Color.green)
+                            .background(Color.rdGreen)
                             .foregroundStyle(.white)
                             .clipShape(Capsule())
                         }
@@ -974,7 +928,7 @@ struct JoinRequestCard: View {
                             }
                             .font(.caption).bold()
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(Color.red)
+                            .background(Color.rdRed)
                             .foregroundStyle(.white)
                             .clipShape(Capsule())
                         }
@@ -1010,7 +964,7 @@ struct TeamPerformanceTab: View {
     @State private var brokers: [TeamBroker] = []
     @State private var loading = true
 
-    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
+    private let purpleColor = Color.rdPurple
 
     private var ranked: [TeamBroker] {
         brokers.sorted { $0.appCount > $1.appCount }
@@ -1131,7 +1085,7 @@ struct PerformanceRow: View {
                     .font(.title3).bold()
                     .foregroundStyle(color)
                 Text("apps")
-                    .font(.system(size: 9))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
@@ -1176,20 +1130,9 @@ struct InmobiliariaPerformanceListView: View {
 // MARK: - Helper
 
 private func emptyTeamState(icon: String, title: String, subtitle: String) -> some View {
-    VStack(spacing: 14) {
-        Image(systemName: icon)
-            .font(.system(size: 44))
-            .foregroundStyle(Color(.tertiaryLabel))
-        Text(title)
-            .font(.headline)
-            .foregroundStyle(.secondary)
-        Text(subtitle)
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 40)
+    EmptyStateView.calm(systemImage: icon, title: title, description: subtitle)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -1207,7 +1150,7 @@ struct TeamSecretariesTab: View {
     @State private var secToRemove: APIService.SecretaryItem?
     @State private var showRemoveAlert = false
 
-    private let greenAccent = Color(red: 0.09, green: 0.63, blue: 0.21)
+    private let greenAccent = Color.rdGreen
 
     var body: some View {
         ScrollView {
@@ -1215,7 +1158,7 @@ struct TeamSecretariesTab: View {
                 // Invite card
                 VStack(alignment: .leading, spacing: 10) {
                     Text("INVITAR SECRETARIA")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
                         .tracking(0.5)
 
@@ -1252,7 +1195,7 @@ struct TeamSecretariesTab: View {
                     }
 
                     Text("Se enviará un correo con un enlace de registro. La secretaria podrá gestionar aplicaciones y pagos, pero no tendrá acceso a ventas, contabilidad ni gestión de equipo.")
-                        .font(.system(size: 11))
+                        .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
                 .padding(16)
@@ -1263,12 +1206,12 @@ struct TeamSecretariesTab: View {
                 // Messages
                 if let msg = successMsg {
                     HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rdGreen)
                         Text(msg).font(.caption).bold()
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.green.opacity(0.1))
+                    .background(Color.rdGreen.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -1276,12 +1219,12 @@ struct TeamSecretariesTab: View {
 
                 if let msg = errorMsg {
                     HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Color.rdRed)
                         Text(msg).font(.caption).bold()
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.red.opacity(0.1))
+                    .background(Color.rdRed.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -1299,7 +1242,7 @@ struct TeamSecretariesTab: View {
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("SECRETARIAS ACTIVAS (\(secretaries.count))")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.caption.weight(.bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.5)
                             .padding(.horizontal)
@@ -1396,10 +1339,10 @@ struct SecretaryCard: View {
             let initials = secretary.name.split(separator: " ").prefix(2).map { String($0.prefix(1)) }.joined().uppercased()
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.09, green: 0.63, blue: 0.21))
+                    .fill(Color.rdGreen)
                     .frame(width: 40, height: 40)
                 Text(initials)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
             }
 
@@ -1423,12 +1366,13 @@ struct SecretaryCard: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.red.opacity(0.6))
+                    .foregroundStyle(Color.rdRed.opacity(0.6))
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Remover secretaria")
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(Spacing.s12)
+        .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: Radius.medium))
     }
 }

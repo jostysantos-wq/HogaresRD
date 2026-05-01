@@ -78,14 +78,16 @@ struct ChatIAView: View {
                     send()
                 } label: {
                     Image(systemName: sending ? "hourglass" : "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(canSend ? Color.rdBlue : Color(.tertiaryLabel))
+                        .font(.title)
+                        .foregroundStyle(canSend ? Color.rdInk : Color.rdMuted)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .disabled(!canSend)
+                .accessibilityLabel("Enviar mensaje")
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color(.secondarySystemGroupedBackground))
+            .padding(.horizontal, Spacing.s16)
+            .padding(.vertical, Spacing.s8)
+            .background(Color.rdSurfaceMuted)
         }
         .navigationTitle("Chat IA")
         .navigationBarTitleDisplayMode(.inline)
@@ -110,16 +112,13 @@ struct ChatIAView: View {
         VStack(spacing: 20) {
             Spacer().frame(height: 20)
 
-            // Claude avatar
+            // Claude avatar — rdOrange identity for the AI assistant
             ZStack {
                 Circle()
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.85, green: 0.55, blue: 0.25), Color(red: 0.75, green: 0.40, blue: 0.15)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
+                    .fill(Color.rdOrange)
                     .frame(width: 64, height: 64)
                 Image(systemName: "brain.head.profile.fill")
-                    .font(.system(size: 28))
+                    .font(.title)
                     .foregroundStyle(.white)
             }
 
@@ -247,13 +246,13 @@ struct ChatBubble: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             if message.role == .assistant {
-                // Claude avatar
+                // Claude avatar — rdOrange identity for the AI assistant
                 ZStack {
                     Circle()
-                        .fill(Color(red: 0.85, green: 0.55, blue: 0.25))
+                        .fill(Color.rdOrange)
                         .frame(width: 30, height: 30)
                     Image(systemName: "brain.head.profile.fill")
-                        .font(.system(size: 14))
+                        .font(.caption)
                         .foregroundStyle(.white)
                 }
                 .padding(.top, 2)
@@ -264,13 +263,13 @@ struct ChatBubble: View {
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                 Text(message.content)
                     .font(.subheadline)
-                    .padding(12)
-                    .background(message.role == .user ? Color.rdBlue : Color(.secondarySystemGroupedBackground))
-                    .foregroundStyle(message.role == .user ? .white : .primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(Spacing.s12)
+                    .background(message.role == .user ? Color.rdInk : Color.rdSurfaceMuted)
+                    .foregroundStyle(message.role == .user ? Color.rdSurface : Color.rdInk)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
 
                 Text(timeString)
-                    .font(.system(size: 9))
+                    .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
@@ -295,22 +294,22 @@ struct TypingIndicator: View {
         HStack(spacing: 4) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.85, green: 0.55, blue: 0.25))
+                    .fill(Color.rdOrange)
                     .frame(width: 30, height: 30)
                 Image(systemName: "brain.head.profile.fill")
-                    .font(.system(size: 14))
+                    .font(.caption)
                     .foregroundStyle(.white)
             }
             HStack(spacing: 5) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(Color(.tertiaryLabel))
+                        .fill(Color.rdMuted)
                         .frame(width: 7, height: 7)
                         .opacity(phase == i ? 1.0 : 0.3)
                 }
             }
-            .padding(.horizontal, 12).padding(.vertical, 10)
-            .background(Color(.secondarySystemGroupedBackground))
+            .padding(.horizontal, Spacing.s12).padding(.vertical, Spacing.s8)
+            .background(Color.rdSurfaceMuted)
             .clipShape(Capsule())
         }
         .onAppear {

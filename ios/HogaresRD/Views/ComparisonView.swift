@@ -17,28 +17,20 @@ struct ComparisonView: View {
                     ProgressView("Cargando propiedades...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 40))
-                            .foregroundColor(.orange)
-                        Text(error)
-                            .foregroundColor(.secondary)
-                        Button("Reintentar") { Task { await load() } }
-                            .buttonStyle(.borderedProminent)
-                    }
+                    EmptyStateView.calm(
+                        systemImage: "exclamationmark.triangle",
+                        title: "Algo salió mal",
+                        description: error,
+                        actionTitle: "Reintentar",
+                        action: { Task { await load() } }
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if listings.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "square.split.2x1")
-                            .font(.system(size: 50))
-                            .foregroundColor(.secondary)
-                        Text("Sin propiedades para comparar")
-                            .font(.headline)
-                        Text("Selecciona 2 o 3 propiedades desde la vista de explorar.")
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
+                    EmptyStateView.calm(
+                        systemImage: "square.split.2x1",
+                        title: "Sin propiedades para comparar",
+                        description: "Selecciona 2 o 3 propiedades desde la vista de explorar."
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     comparisonContent
@@ -56,7 +48,7 @@ struct ComparisonView: View {
                             selectedIds.removeAll()
                             dismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(Color.rdRed)
                     }
                 }
             }
@@ -130,8 +122,8 @@ struct ComparisonView: View {
                     // Price & title
                     VStack(alignment: .leading, spacing: 4) {
                         Text(listing.priceFormatted)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.accentColor)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(Color.rdBlue)
 
                         if listing.type == "alquiler" {
                             Text("/mes")
@@ -140,15 +132,15 @@ struct ComparisonView: View {
                         }
 
                         Text(listing.title)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold))
                             .lineLimit(2)
 
                         if let city = listing.city ?? listing.sector {
                             HStack(spacing: 3) {
                                 Image(systemName: "mappin.circle.fill")
-                                    .font(.system(size: 10))
+                                    .font(.caption2)
                                 Text(city + (listing.province.map { ", \($0)" } ?? ""))
-                                    .font(.system(size: 11))
+                                    .font(.caption)
                             }
                             .foregroundColor(.secondary)
                         }
@@ -159,8 +151,8 @@ struct ComparisonView: View {
                             listings.removeAll { $0.id == listing.id }
                         } label: {
                             Label("Quitar", systemImage: "xmark.circle")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.red)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Color.rdRed)
                         }
                         .padding(.top, 4)
                     }
@@ -178,12 +170,12 @@ struct ComparisonView: View {
 
     private var placeholderImage: some View {
         Rectangle()
-            .fill(LinearGradient(colors: [.blue.opacity(0.3), .blue.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .fill(LinearGradient(colors: [Color.rdBlue.opacity(0.3), Color.rdBlue.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
             .frame(height: 160)
             .overlay(
                 Image(systemName: "house.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.largeTitle)
+                    .foregroundStyle(.white.opacity(0.5))
             )
     }
 
@@ -287,18 +279,18 @@ struct ComparisonView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     if idx == 0 {
                         Text(row.label)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundColor(.secondary)
                             .textCase(.uppercase)
                     } else {
                         Text(row.label)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundColor(.clear) // invisible label for alignment
                             .textCase(.uppercase)
                     }
                     Text(val)
-                        .font(.system(size: 14, weight: row.highlight == idx ? .bold : .medium))
-                        .foregroundColor(row.highlight == idx ? .green : (val == "—" ? .secondary : .primary))
+                        .font(.subheadline.weight(row.highlight == idx ? .bold : .medium))
+                        .foregroundStyle(row.highlight == idx ? Color.rdGreen : (val == "—" ? Color.secondary : Color.primary))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -319,7 +311,7 @@ struct ComparisonView: View {
         return AnyView(
             VStack(alignment: .leading, spacing: 8) {
                 Text("AMENIDADES")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.caption.weight(.bold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -331,10 +323,10 @@ struct ComparisonView: View {
                             ForEach(allAmenities, id: \.self) { amenity in
                                 HStack(spacing: 4) {
                                     Image(systemName: has.contains(amenity) ? "checkmark.circle.fill" : "xmark.circle")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(has.contains(amenity) ? .green : .secondary.opacity(0.4))
+                                        .font(.caption)
+                                        .foregroundStyle(has.contains(amenity) ? Color.rdGreen : Color.secondary.opacity(0.4))
                                     Text(amenity)
-                                        .font(.system(size: 11))
+                                        .font(.caption)
                                         .foregroundColor(has.contains(amenity) ? .primary : .secondary.opacity(0.5))
                                         .strikethrough(!has.contains(amenity))
                                 }
@@ -360,13 +352,13 @@ struct ComparisonView: View {
             ForEach(listings) { listing in
                 NavigationLink(destination: ListingDetailView(id: listing.id)) {
                     Text("Ver \(listing.title)")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .background(Color.rdInk)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
                 }
             }
         }

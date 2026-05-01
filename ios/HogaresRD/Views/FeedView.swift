@@ -40,15 +40,20 @@ struct FeedView: View {
         }
     }
 
-    // ── Color palette (locked to the editorial mock) ─────────
-    private static let bgTop   = Color(red: 245/255, green: 237/255, blue: 224/255) // warm cream
-    private static let bgMid   = Color(red: 239/255, green: 229/255, blue: 210/255)
-    private static let bgEnd   = Color(red: 232/255, green: 218/255, blue: 193/255) // peach
-    private static let ink     = Color(red:  19/255, green:  19/255, blue:  24/255)
-    private static let inkSoft = Color(red:  60/255, green:  60/255, blue:  68/255)
-    private static let inkMute = Color(red: 138/255, green: 143/255, blue: 152/255)
-    private static let forest  = Color(red:  31/255, green:  61/255, blue:  51/255) // dark forest green
-    private static let yellow  = Color(red: 247/255, green: 197/255, blue:  78/255)
+    // ── Color palette (aliased to design-system tokens) ───────
+    //
+    // All chrome routes through `Color.rd*` so dark-mode + accent
+    // re-skinning happen globally. Keep these aliases as `static let`
+    // so the rest of the file (and `FeaturedListingCard` /
+    // `TopPropertyCard`) keeps reading naturally.
+    private static let bgTop   = Color.rdSurface
+    private static let bgMid   = Color.rdSurfaceMuted
+    private static let bgEnd   = Color.rdSurfaceMuted
+    private static let ink     = Color.rdInk
+    private static let inkSoft = Color.rdInkSoft
+    private static let inkMute = Color.rdMuted
+    private static let forest  = Color.rdInk        // primary accent — see ContentView's FloatingTabBar
+    private static let yellow  = Color.rdOrange     // featured chip / star fill
 
     private var greetingName: String {
         // First name from currentUser.name, falling back gracefully.
@@ -102,7 +107,7 @@ struct FeedView: View {
                     .refreshable { await refresh() }
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 if listings.isEmpty { await refresh() }
             }
@@ -138,7 +143,7 @@ struct FeedView: View {
                             .fill(Self.forest)
                             .frame(width: 44, height: 44)
                         Image(systemName: "person.fill")
-                            .font(.system(size: 18))
+                            .font(.body)
                             .foregroundStyle(.white)
                     }
                 }
@@ -146,15 +151,15 @@ struct FeedView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Hola, \(greetingName)")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(Self.ink)
 
                 HStack(spacing: 4) {
                     Text(locationLine)
-                        .font(.system(size: 13))
+                        .font(.footnote)
                         .foregroundStyle(Self.inkMute)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(Self.inkMute)
                 }
             }
@@ -166,10 +171,10 @@ struct FeedView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.white)
+                        .fill(Color.rdSurface)
                         .frame(width: 44, height: 44)
                     Image(systemName: "bell")
-                        .font(.system(size: 18, weight: .regular))
+                        .font(.body)
                         .foregroundStyle(Self.ink)
                 }
             }
@@ -184,26 +189,26 @@ struct FeedView: View {
         HStack(spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15))
+                    .font(.subheadline)
                     .foregroundStyle(Self.inkMute)
                 TextField("Buscar destino", text: $searchQuery)
-                    .font(.system(size: 14))
+                    .font(.subheadline)
                     .foregroundStyle(Self.ink)
                     .submitLabel(.search)
                     .onSubmit { /* no-op for now */ }
             }
             .padding(.horizontal, 20)
             .frame(height: 50)
-            .background(Color.white, in: Capsule())
+            .background(Color.rdSurface, in: Capsule())
 
             Button {
                 /* filter sheet placeholder */
             } label: {
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 18, weight: .regular))
+                    .font(.body)
                     .foregroundStyle(Self.ink)
                     .frame(width: 50, height: 50)
-                    .background(Color.white, in: Circle())
+                    .background(Color.rdSurface, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Filtros")
@@ -223,12 +228,12 @@ struct FeedView: View {
                         }
                     } label: {
                         Text(cat.rawValue)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(active ? .white : Self.ink)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(active ? Color.rdSurface : Self.ink)
                             .padding(.horizontal, 22)
                             .padding(.vertical, 10)
                             .background(
-                                active ? Self.forest : Color.white,
+                                active ? Self.forest : Color.rdSurface,
                                 in: Capsule()
                             )
                     }
@@ -282,36 +287,33 @@ struct FeedView: View {
     private func sectionHeader(title: String, action: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 18, weight: .bold))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(Self.ink)
             Spacer()
             Button(action) { /* placeholder */ }
-                .font(.system(size: 13, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Self.inkSoft)
         }
     }
 
     private func emptyState(_ msg: String) -> some View {
-        Text(msg)
-            .font(.system(size: 14))
-            .foregroundStyle(Self.inkMute)
-            .frame(maxWidth: .infinity, minHeight: 100)
-            .background(Color.white.opacity(0.4), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        EmptyStateView.calm(
+            systemImage: "tray",
+            title: msg,
+            description: ""
+        )
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color.rdSurface.opacity(0.4), in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private func errorState(_ err: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "wifi.slash")
-                .font(.system(size: 32))
-                .foregroundStyle(Self.inkMute)
-            Text(err)
-                .font(.subheadline)
-                .foregroundStyle(Self.inkSoft)
-                .multilineTextAlignment(.center)
-            Button("Reintentar") { Task { await refresh() } }
-                .buttonStyle(.borderedProminent)
-                .tint(Self.forest)
-        }
+        EmptyStateView.calm(
+            systemImage: "wifi.slash",
+            title: "Sin conexión",
+            description: err,
+            actionTitle: "Reintentar",
+            action: { Task { await refresh() } }
+        )
         .padding(40)
     }
 
@@ -357,9 +359,9 @@ struct FeaturedListingCard: View {
 
     private var statusDotColor: Color {
         switch listing.type {
-        case "alquiler": return Color(red: 0.18, green: 0.78, blue: 0.55)
-        case "venta":    return Color(red: 0.95, green: 0.62, blue: 0.18)
-        case "proyecto": return Color(red: 0.36, green: 0.54, blue: 0.95)
+        case "alquiler": return .rdGreen
+        case "venta":    return .rdOrange
+        case "proyecto": return .rdBlue
         default:         return .white
         }
     }
@@ -389,16 +391,12 @@ struct FeaturedListingCard: View {
                 }
                 .frame(height: 220)
                 .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
 
                 HStack {
-                    StatusPill(label: statusLabel, dot: statusDotColor)
+                    FeedStatusPill(label: statusLabel, dot: statusDotColor)
                     Spacer()
-                    if let v = listing.views, v > 0 {
-                        RatingPill(rating: 4.5, yellow: yellow) // placeholder rating
-                    } else {
-                        RatingPill(rating: 4.5, yellow: yellow)
-                    }
+                    DSRatingPill(value: 4.5, tint: yellow)
                 }
                 .padding(14)
             }
@@ -407,32 +405,32 @@ struct FeaturedListingCard: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(listing.title)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Color(red: 0.07, green: 0.07, blue: 0.10))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Color.rdInk)
                         .lineLimit(2)
                     Text(locationLine)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color(red: 0.54, green: 0.56, blue: 0.60))
+                        .font(.footnote)
+                        .foregroundStyle(Color.rdMuted)
                 }
                 Spacer(minLength: 12)
                 Text(listing.shortPrice)
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(.title2.weight(.heavy))
                     .foregroundStyle(forest)
                     .lineLimit(1)
             }
 
             // ── Stats row ──
             HStack(spacing: 10) {
-                StatChip(icon: "bed.double.fill",
-                         label: "\(listing.bedrooms ?? "—") Hab.")
-                StatChip(icon: "drop.fill",
-                         label: "\(listing.bathrooms ?? "—") Baños")
-                StatChip(icon: "square.dashed",
-                         label: "\(listing.area_const ?? listing.area_land ?? "—") m²")
+                FeedStatChip(icon: "bed.double.fill",
+                             label: "\(listing.bedrooms ?? "—") Hab.")
+                FeedStatChip(icon: "drop.fill",
+                             label: "\(listing.bathrooms ?? "—") Baños")
+                FeedStatChip(icon: "square.dashed",
+                             label: "\(listing.area_const ?? listing.area_land ?? "—") m²")
             }
         }
-        .padding(16)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .padding(Spacing.s16)
+        .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: Radius.xlarge, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
     }
 }
@@ -455,9 +453,9 @@ struct TopPropertyCard: View {
 
     private var statusDotColor: Color {
         switch listing.type {
-        case "alquiler": return Color(red: 0.18, green: 0.78, blue: 0.55)
-        case "venta":    return Color(red: 0.95, green: 0.62, blue: 0.18)
-        case "proyecto": return Color(red: 0.36, green: 0.54, blue: 0.95)
+        case "alquiler": return .rdGreen
+        case "venta":    return .rdOrange
+        case "proyecto": return .rdBlue
         default:         return .white
         }
     }
@@ -475,23 +473,23 @@ struct TopPropertyCard: View {
                     }
                 }
                 .frame(width: 200, height: 130)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
 
                 HStack {
-                    StatusPill(label: statusLabel, dot: statusDotColor, compact: true)
+                    FeedStatusPill(label: statusLabel, dot: statusDotColor, compact: true)
                     Spacer()
-                    RatingPill(rating: 4.5, yellow: yellow, compact: true)
+                    DSRatingPill(value: 4.5, tint: yellow)
                 }
-                .padding(8)
+                .padding(Spacing.s8)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(listing.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.07, green: 0.07, blue: 0.10))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rdInk)
                     .lineLimit(1)
                 Text(listing.shortPrice)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(forest)
             }
         }
@@ -500,8 +498,14 @@ struct TopPropertyCard: View {
 }
 
 // MARK: - Reusable chips
+//
+// Photo-overlay variants: these sit on top of cropped property
+// imagery and need a translucent dark backing for legibility — the
+// design-system DSPill (cream tint) wouldn't read on a photo.
+// The standalone status / rating call sites elsewhere should use
+// `DSStatusBadge` / `DSRatingPill` directly.
 
-private struct StatusPill: View {
+private struct FeedStatusPill: View {
     let label: String
     let dot: Color
     var compact: Bool = false
@@ -512,7 +516,7 @@ private struct StatusPill: View {
                 .fill(dot)
                 .frame(width: compact ? 6 : 7, height: compact ? 6 : 7)
             Text(label)
-                .font(.system(size: compact ? 11 : 12, weight: .semibold))
+                .font(compact ? .caption2.weight(.semibold) : .caption.weight(.semibold))
                 .foregroundStyle(.white)
         }
         .padding(.horizontal, compact ? 10 : 12)
@@ -522,44 +526,23 @@ private struct StatusPill: View {
     }
 }
 
-private struct RatingPill: View {
-    let rating: Double
-    let yellow: Color
-    var compact: Bool = false
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "star.fill")
-                .font(.system(size: compact ? 9 : 10))
-                .foregroundStyle(yellow)
-            Text(String(format: "%.1f", rating))
-                .font(.system(size: compact ? 11 : 12, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, compact ? 9 : 10)
-        .padding(.vertical, compact ? 5 : 6)
-        .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
-        .background(Color.black.opacity(0.45), in: Capsule())
-    }
-}
-
-private struct StatChip: View {
+private struct FeedStatChip: View {
     let icon: String
     let label: String
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.caption)
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.caption.weight(.medium))
                 .lineLimit(1)
         }
-        .foregroundStyle(Color(red: 0.20, green: 0.21, blue: 0.24))
-        .padding(.horizontal, 12)
+        .foregroundStyle(Color.rdInk)
+        .padding(.horizontal, Spacing.s12)
         .padding(.vertical, 9)
         .frame(maxWidth: .infinity)
-        .background(Color(red: 0.96, green: 0.96, blue: 0.97), in: Capsule())
+        .background(Color.rdSurfaceMuted, in: Capsule())
     }
 }
 

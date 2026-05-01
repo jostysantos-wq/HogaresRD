@@ -125,7 +125,7 @@ struct ReportView: View {
                 Section {
                     Label(err, systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.rdRed)
                 }
             }
 
@@ -171,6 +171,7 @@ struct ReportView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
                     .foregroundStyle(Color.rdGreen)
+                    .accessibilityHidden(true)
             }
 
             VStack(spacing: 8) {
