@@ -18,10 +18,25 @@ struct SavedListingsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if listings.isEmpty {
-                ContentUnavailableView(
-                    "Sin favoritos",
-                    systemImage: "heart.slash",
-                    description: Text("Guarda propiedades tocando el corazón en el feed.")
+                EmptyStateView.calm(
+                    systemImage: "heart",
+                    title: "Aún no tienes propiedades guardadas",
+                    description: "Toca el corazón en cualquier propiedad para guardarla aquí.",
+                    actionTitle: "Explorar",
+                    action: {
+                        // Deep-link to the Explorar tab via the same
+                        // notification ProfileTabView's quick-action chips
+                        // use. ContentView routes only the Mensajes chip
+                        // today; we extend the contract here so "Explorar"
+                        // sends the user to tab 1 without needing more
+                        // plumbing. Reuses an existing channel rather than
+                        // adding a new Notification.Name.
+                        NotificationCenter.default.post(
+                            name: .profileQuickAction,
+                            object: nil,
+                            userInfo: ["destination": "explorar"]
+                        )
+                    }
                 )
             } else {
                 ScrollView {
@@ -42,9 +57,14 @@ struct SavedListingsView: View {
                                             .padding(6)
                                             .background(.ultraThinMaterial)
                                             .clipShape(Circle())
+                                            .frame(minWidth: 44, minHeight: 44)
+                                            .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
-                                    .padding(7)
+                                    .accessibilityLabel("Quitar de favoritos")
+                                    .accessibilityHint("Elimina esta propiedad de tu lista de guardados")
+                                    .padding(.top, 2)
+                                    .padding(.trailing, 2)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -54,7 +74,7 @@ struct SavedListingsView: View {
                 }
             }
         }
-        .navigationTitle("Mis Favoritos")
+        .navigationTitle("Mis favoritos")
         .task { await fetchSaved() }
         .onChange(of: saved.savedIDs) { _, _ in Task { await fetchSaved() } }
     }

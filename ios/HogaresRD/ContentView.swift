@@ -133,6 +133,24 @@ struct ContentView: View {
                 deepLinkListingID = id
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .profileQuickAction)) { notif in
+            // Quick-action chip in ProfileTabView (and the SavedListings
+            // empty-state CTA) routes deep links to the appropriate tab.
+            // Only Messages and Explorar currently have dedicated tabs;
+            // the rest stay inside the Profile stack via NavigationLink.
+            guard let dest = notif.userInfo?["destination"] as? String else { return }
+            switch dest {
+            case ProfileTabView.tabMessages:
+                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = 2 }
+            case "explorar":
+                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = 1 }
+            default:
+                // Other destinations are handled inside the Profile tab —
+                // staying on tab 4 keeps NavigationStack-driven drill-downs
+                // working without breaking other agents' work.
+                break
+            }
+        }
         .fullScreenCover(item: Binding(
             get: { deepLinkListingID.map { DeepLinkID(id: $0) } },
             set: { deepLinkListingID = $0?.id }
@@ -614,6 +632,11 @@ struct ProfileTabView: View {
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @State private var showPost = false
+    @State private var showSubscription = false
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
 
     var body: some View {
         NavigationStack {
@@ -621,31 +644,57 @@ struct ProfileTabView: View {
                 // ── Profile Header ──
                 Section {
                     if let user = api.currentUser {
-                        loggedInHeader(user)
+                        IdentityCard(user: user)
+                            .listRowInsets(EdgeInsets(top: Spacing.s8, leading: Spacing.s16, bottom: Spacing.s8, trailing: Spacing.s16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     } else {
                         guestHeader
                     }
                 }
 
                 if let user = api.currentUser {
+                    // ── Subscription banner (pro users only) ──
+                    if let banner = subscriptionBannerStatus(user) {
+                        Section {
+                            SubscriptionStatusBanner(status: banner) {
+                                showSubscription = true
+                            }
+                            .listRowInsets(EdgeInsets(top: Spacing.s4, leading: Spacing.s16, bottom: Spacing.s8, trailing: Spacing.s16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+
+                    // ── Quick actions ──
+                    Section {
+                        quickActionsRow(for: user)
+                            .listRowInsets(EdgeInsets(top: Spacing.s4, leading: 0, bottom: Spacing.s8, trailing: 0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+
                     // ── Account & Settings ──
                     Section {
                         NavigationLink {
                             ProfileView()
                         } label: {
-                            Label("Cuenta y seguridad", systemImage: "person.fill")
+                            IconTileRow(systemImage: "person.fill", label: "Cuenta y seguridad")
                         }
                         NavigationLink {
                             NotificationSettingsView()
                         } label: {
-                            Label("Notificaciones", systemImage: "bell.fill")
+                            IconTileRow(systemImage: "bell.fill", label: "Notificaciones")
                         }
                         NavigationLink {
                             AppSettingsView()
                         } label: {
-                            Label("Apariencia", systemImage: "gearshape.fill")
+                            IconTileRow(systemImage: "gearshape.fill", label: "Apariencia")
                         }
+                    } header: {
+                        Text("Ajustes").sectionHeader()
                     }
+                    .headerProminence(.increased)
 
                     // ── Client: Saved Homes + Saved Searches ──
                     if !user.isAgency {
@@ -653,25 +702,25 @@ struct ProfileTabView: View {
                             NavigationLink {
                                 SavedListingsView()
                             } label: {
-                                HStack {
-                                    Label("Propiedades guardadas", systemImage: "heart.fill")
-                                    Spacer()
-                                    if !saved.savedIDs.isEmpty {
-                                        Text("\(saved.savedIDs.count)")
-                                            .font(.caption2).bold()
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 7).padding(.vertical, 3)
-                                            .background(Color.rdRed)
-                                            .clipShape(Capsule())
-                                    }
+                                if !saved.savedIDs.isEmpty {
+                                    IconTileRow(
+                                        systemImage: "heart.fill",
+                                        label: "Propiedades guardadas",
+                                        accessory: { DSCountPill(count: saved.savedIDs.count, tint: .rdRed) }
+                                    )
+                                } else {
+                                    IconTileRow(systemImage: "heart.fill", label: "Propiedades guardadas")
                                 }
                             }
                             NavigationLink {
                                 SavedSearchesView().environmentObject(api)
                             } label: {
-                                Label("Búsquedas guardadas", systemImage: "bell.badge.fill")
+                                IconTileRow(systemImage: "bell.badge.fill", label: "Búsquedas guardadas")
                             }
+                        } header: {
+                            Text("Tu actividad").sectionHeader()
                         }
+                        .headerProminence(.increased)
                     }
 
                     // ── Role-specific tools ──
@@ -687,49 +736,139 @@ struct ProfileTabView: View {
                     // ── Support ──
                     supportSection
 
-                    // ── Logout ──
+                    // ── Logout (detached, centered, destructive) ──
                     Section {
                         Button(role: .destructive) {
                             api.logout()
                         } label: {
-                            Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
+                            Text("Cerrar sesión")
+                                .font(.body.weight(.semibold))
                                 .foregroundStyle(Color.rdRed)
+                                .frame(maxWidth: .infinity)
                         }
+                    }
+
+                    // ── Version footer ──
+                    Section {
+                        EmptyView()
+                    } footer: {
+                        Text("HogaresRD v\(appVersion)")
+                            .font(.caption2)
+                            .foregroundStyle(Color.rdInkSoft)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, Spacing.s8)
                     }
                 } else {
                     // ── Guest Support ──
                     supportSection
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color.rdSurface)
             .navigationTitle("Perfil")
             .sheet(item: $authSheet) { mode in
                 AuthView(initialMode: mode)
                     .environmentObject(api)
                     .id(mode)
+                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showPost) {
-                SubmitListingView().environmentObject(api)
+                SubmitListingView()
+                    .environmentObject(api)
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showSubscription) {
+                PlansView()
+                    .environmentObject(api)
+                    .presentationDragIndicator(.visible)
             }
         }
     }
 
-    // MARK: - Headers
+    // MARK: - Subscription banner mapping
 
-    private func loggedInHeader(_ user: User) -> some View {
-        HStack(spacing: 14) {
-            AvatarView(user: user, size: 56, editable: true, color: avatarColor(user))
-                .environmentObject(api)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(user.name)
-                    .font(.headline)
-                Text(user.email)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                roleBadge(user)
-            }
+    private func subscriptionBannerStatus(_ user: User) -> SubscriptionStatusBanner.Status? {
+        guard let raw = user.subscriptionStatus?.lowercased(), !raw.isEmpty else { return nil }
+        switch raw {
+        case "active":
+            return .active
+        case "trial", "trialing":
+            return .trialing(daysRemaining: user.trialDaysRemaining)
+        case "past_due", "canceled", "cancelled", "unpaid":
+            return .pastDue
+        default:
+            return nil
         }
-        .padding(.vertical, 4)
     }
+
+    // MARK: - Quick actions chip row
+
+    @ViewBuilder
+    private func quickActionsRow(for user: User) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.s8) {
+                quickActionChip(
+                    icon: "doc.text.fill",
+                    label: user.isAgency ? "Aplicaciones" : "Mis aplicaciones",
+                    tab: ProfileTabView.tabApplications
+                )
+                quickActionChip(
+                    icon: "folder.fill",
+                    label: "Mis documentos",
+                    tab: ProfileTabView.tabDocuments
+                )
+                if !user.isAgency {
+                    quickActionChip(
+                        icon: "heart.fill",
+                        label: "Guardados",
+                        tab: ProfileTabView.tabSaved
+                    )
+                }
+                quickActionChip(
+                    icon: "bubble.left.and.bubble.right.fill",
+                    label: "Mensajes",
+                    tab: ProfileTabView.tabMessages
+                )
+            }
+            .padding(.horizontal, Spacing.s16)
+            .padding(.vertical, Spacing.s4)
+        }
+    }
+
+    private func quickActionChip(icon: String, label: String, tab: String) -> some View {
+        Button {
+            NotificationCenter.default.post(
+                name: .profileQuickAction,
+                object: nil,
+                userInfo: ["destination": tab]
+            )
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                Text(label)
+                    .font(.subheadline.weight(.medium))
+            }
+            .foregroundStyle(Color.rdInk)
+            .padding(.horizontal, Spacing.s12)
+            .padding(.vertical, Spacing.s8)
+            .background(
+                Capsule().fill(Color.rdSurfaceMuted)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityHint("Abre la pestaña de \(label.lowercased())")
+    }
+
+    // Quick-action destination identifiers — consumed by ContentView.
+    static let tabApplications = "applications"
+    static let tabDocuments    = "documents"
+    static let tabSaved        = "saved"
+    static let tabMessages     = "messages"
+
+    // MARK: - Guest Header
 
     private var guestHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -737,7 +876,7 @@ struct ProfileTabView: View {
                 ZStack {
                     Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 56, height: 56)
                     Image(systemName: "person.circle")
-                        .font(.system(size: 28))
+                        .font(.title)
                         .foregroundStyle(Color.rdBlue)
                 }
                 VStack(alignment: .leading, spacing: 3) {
@@ -778,44 +917,10 @@ struct ProfileTabView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Role Badge
-
-    @ViewBuilder
-    private func roleBadge(_ user: User) -> some View {
-        if user.isConstructora {
-            Label("Constructora", systemImage: "hammer.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
-        } else if user.isInmobiliaria {
-            Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
-        } else if user.isSecretary {
-            Label("Secretaria", systemImage: "person.text.rectangle.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color(red: 0.18, green: 0.55, blue: 0.34))
-        } else if user.isAgency {
-            Label("Agente / Broker", systemImage: "person.badge.key.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color.rdBlue)
-        } else {
-            Label("Cliente", systemImage: "person.fill")
-                .font(.caption2).bold()
-                .foregroundStyle(Color.rdGreen)
-        }
-    }
-
-    private func avatarColor(_ user: User) -> Color {
-        if user.isConstructora { return Color(red: 0.7, green: 0.35, blue: 0.04) }
-        if user.isInmobiliaria { return Color(red: 0.4, green: 0.1, blue: 0.6) }
-        if user.isAgency { return Color.rdBlue }
-        return Color.rdGreen
-    }
-
     // MARK: - Agent Tools
 
     private func agentToolsSection(_ user: User) -> some View {
-        Section("Herramientas de Agente") {
+        Section {
             NavigationLink {
                 // Team leads (inmobiliaria + constructora) ALWAYS get the
                 // full team dashboard. Secretaries get the limited secretary
@@ -828,134 +933,158 @@ struct ProfileTabView: View {
                     BrokerDashboardView().environmentObject(api)
                 }
             } label: {
-                Label("Dashboard", systemImage: "chart.bar.fill")
+                IconTileRow(systemImage: "chart.bar.fill", label: "Dashboard")
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)
             } label: {
-                Label("Chat IA", systemImage: "brain.head.profile.fill")
+                IconTileRow(systemImage: "brain.head.profile.fill", label: "Chat IA")
             }
             Button {
                 showPost = true
             } label: {
-                Label("Publicar propiedad", systemImage: "plus.circle.fill")
-                    .foregroundStyle(Color.rdRed)
+                IconTileRow(systemImage: "plus.circle.fill", label: "Publicar propiedad")
             }
+            .buttonStyle(.plain)
             NavigationLink {
                 AgencyDashboardView().environmentObject(api)
             } label: {
-                Label("Mi portafolio", systemImage: "briefcase.fill")
+                IconTileRow(systemImage: "briefcase.fill", label: "Mi portafolio")
             }
             NavigationLink {
                 ApplicationsView()
             } label: {
-                Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
+                IconTileRow(systemImage: "doc.text.fill", label: "Aplicaciones recibidas")
             }
             NavigationLink {
                 BrokerToursView().environmentObject(api)
             } label: {
-                Label("Visitas agendadas", systemImage: "calendar.badge.clock")
+                IconTileRow(systemImage: "calendar.badge.clock", label: "Visitas agendadas")
             }
             NavigationLink {
                 AdCampaignsView().environmentObject(api)
             } label: {
-                Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
+                IconTileRow(systemImage: "megaphone.fill", label: "Publicidad (Meta Ads)")
             }
             NavigationLink {
                 BrokerAvailabilityView().environmentObject(api)
             } label: {
-                Label("Disponibilidad", systemImage: "clock.badge.checkmark")
+                IconTileRow(systemImage: "clock.badge.checkmark", label: "Disponibilidad")
             }
+        } header: {
+            Text("Herramientas de agente").sectionHeader()
         }
+        .headerProminence(.increased)
     }
 
     // MARK: - Team Management (Inmobiliaria only)
 
     private var teamManagementSection: some View {
         let level = api.currentUser?.effectiveAccessLevel ?? 1
-        return Section("Gestión de Equipo") {
+        return Section {
             if level >= 2 {
                 NavigationLink {
                     InmobiliariaTeamListView().environmentObject(api)
                 } label: {
-                    Label("Mis agentes", systemImage: "person.2.fill")
+                    IconTileRow(systemImage: "person.2.fill", label: "Mis agentes")
                 }
                 NavigationLink {
                     InmobiliariaPerformanceListView().environmentObject(api)
                 } label: {
-                    Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+                    IconTileRow(systemImage: "chart.line.uptrend.xyaxis", label: "Rendimiento del equipo")
                 }
             }
             if level >= 3 {
                 NavigationLink {
                     InmobiliariaRequestsListView().environmentObject(api)
                 } label: {
-                    Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
+                    IconTileRow(systemImage: "person.badge.plus", label: "Solicitudes de afiliación")
                 }
             }
+        } header: {
+            Text("Gestión de equipo").sectionHeader()
         }
+        .headerProminence(.increased)
     }
 
     // MARK: - Client Tools
 
     private var clientToolsSection: some View {
-        Section("Herramientas") {
+        Section {
             NavigationLink {
                 MyToursView().environmentObject(api)
             } label: {
-                Label("Mis visitas", systemImage: "calendar.badge.clock")
+                IconTileRow(systemImage: "calendar.badge.clock", label: "Mis visitas")
             }
             NavigationLink {
                 ApplicationsView()
             } label: {
-                Label("Mis aplicaciones", systemImage: "doc.text.fill")
+                IconTileRow(systemImage: "doc.text.fill", label: "Mis aplicaciones")
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)
             } label: {
-                Label("Asistente IA", systemImage: "brain.head.profile.fill")
+                IconTileRow(systemImage: "brain.head.profile.fill", label: "Asistente IA")
             }
-            NavigationLink {
-                ConnectorsView()
-            } label: {
-                Label("Conectores", systemImage: "link")
-            }
+        } header: {
+            Text("Herramientas").sectionHeader()
         }
+        .headerProminence(.increased)
     }
 
     // MARK: - Support
 
     private var supportSection: some View {
-        Section("Soporte") {
+        Section {
             Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
-                HStack {
-                    Label("Ayuda", systemImage: "questionmark.circle.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+                IconTileRow(
+                    systemImage: "questionmark.circle.fill",
+                    label: "Ayuda",
+                    accessory: {
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.rdInkSoft)
+                            .accessibilityHidden(true)
+                    }
+                )
             }
             Link(destination: URL(string: "https://hogaresrd.com/terminos")!) {
-                HStack {
-                    Label("Términos de uso", systemImage: "doc.text.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+                IconTileRow(
+                    systemImage: "doc.text.fill",
+                    label: "Términos de uso",
+                    accessory: {
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.rdInkSoft)
+                            .accessibilityHidden(true)
+                    }
+                )
             }
             Link(destination: URL(string: "https://hogaresrd.com/privacidad")!) {
-                HStack {
-                    Label("Privacidad", systemImage: "lock.shield.fill")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+                IconTileRow(
+                    systemImage: "lock.shield.fill",
+                    label: "Privacidad",
+                    accessory: {
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.rdInkSoft)
+                            .accessibilityHidden(true)
+                    }
+                )
             }
+        } header: {
+            Text("Soporte").sectionHeader()
         }
+        .headerProminence(.increased)
     }
+}
+
+// MARK: - Profile quick-action notification
+//
+// ProfileTabView posts this when the user taps a chip in the "Quick
+// actions" row. ContentView observes it and switches tabs accordingly.
+extension Notification.Name {
+    static let profileQuickAction = Notification.Name("rd.profileQuickAction")
 }
 
 // MARK: - FloatingTabBar

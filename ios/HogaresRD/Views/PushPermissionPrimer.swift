@@ -29,10 +29,12 @@ struct PushPermissionPrimer: View {
                     Spacer()
                     Button { dismissNotNow() } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.title2)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Cerrar")
+                    .accessibilityHint("Descartar el aviso de notificaciones")
                 }
                 .padding(.bottom, 4)
 
@@ -62,7 +64,7 @@ struct PushPermissionPrimer: View {
                     .fill(Color.rdBlue.opacity(0.12))
                     .frame(width: 72, height: 72)
                 Image(systemName: "bell.badge.fill")
-                    .font(.system(size: 34))
+                    .font(.title)
                     .foregroundStyle(Color.rdBlue)
             }
 
@@ -72,7 +74,7 @@ struct PushPermissionPrimer: View {
                 .multilineTextAlignment(.center)
 
             // Body copy
-            Text("Activa las notificaciones para recibir alertas sobre tus propiedades favoritas, mensajes de agentes y mas.")
+            Text("Activa las notificaciones para recibir alertas sobre tus propiedades favoritas, mensajes de agentes y más.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -83,10 +85,10 @@ struct PushPermissionPrimer: View {
                 featureRow(icon: "arrow.down.circle.fill", color: .rdGreen,
                            text: "Bajadas de precio en tus favoritos")
                 featureRow(icon: "house.fill", color: .rdBlue,
-                           text: "Nuevos listados que coinciden con tu busqueda")
-                featureRow(icon: "bubble.left.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6),
+                           text: "Nuevos listados que coinciden con tu búsqueda")
+                featureRow(icon: "bubble.left.fill", color: .rdPurple,
                            text: "Mensajes de agentes")
-                featureRow(icon: "doc.text.fill", color: .orange,
+                featureRow(icon: "doc.text.fill", color: .rdOrange,
                            text: "Actualizaciones de tus aplicaciones")
             }
             .padding(14)
@@ -103,7 +105,7 @@ struct PushPermissionPrimer: View {
                         ProgressView().tint(.white)
                     } else {
                         Image(systemName: "bell.fill")
-                            .font(.system(size: 14))
+                            .font(.caption)
                     }
                     Text(requesting ? "Solicitando..." : "Activar notificaciones")
                         .font(.subheadline.bold())
@@ -137,14 +139,14 @@ struct PushPermissionPrimer: View {
                     .fill(Color.rdGreen.opacity(0.12))
                     .frame(width: 72, height: 72)
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 42))
+                    .font(.largeTitle)
                     .foregroundStyle(Color.rdGreen)
             }
 
-            Text("Listo!")
+            Text("¡Listo!")
                 .font(.title3.bold())
 
-            Text("Las notificaciones estan activadas. Te avisaremos cuando haya novedades importantes para ti.")
+            Text("Las notificaciones están activadas. Te avisaremos cuando haya novedades importantes para ti.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -169,7 +171,7 @@ struct PushPermissionPrimer: View {
     private func featureRow(icon: String, color: Color, text: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(color)
                 .frame(width: 22)
             Text(text)
