@@ -1,0 +1,129 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard topbar — shared search + notifications dropdowns.
+   Applied to every page that has #topbarSearch or a bell icon
+   (aria-label="Notificaciones") inside .topbar.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* The search wrap needs to anchor an absolute dropdown. */
+.tb-search { position: relative; }
+
+/* — Search clear button — */
+.tb-search-clear {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: none; place-items: center; cursor: pointer;
+  color: var(--ink-mute); background: transparent; border: none; padding: 0;
+}
+.tb-search-clear svg { width: 12px; height: 12px; }
+.tb-search-clear:hover { color: var(--ink); }
+.tb-search.has-text .tb-search-clear { display: grid; }
+
+/* — Search results dropdown — */
+.tb-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg-card); border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(20, 17, 15, .10);
+  max-height: 460px; overflow-y: auto;
+  z-index: 80; padding: 6px 0;
+}
+.tb-results[hidden] { display: none; }
+.tb-res-section-h {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-mute);
+  padding: 8px 14px 4px;
+}
+.tb-res-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; cursor: pointer; color: inherit; text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.tb-res-item:hover, .tb-res-item.active {
+  background: var(--bg-soft); border-left-color: var(--accent);
+}
+.tb-res-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--bg-soft); display: grid; place-items: center;
+  color: var(--ink-soft); flex-shrink: 0;
+}
+.tb-res-item.active .tb-res-icon, .tb-res-item:hover .tb-res-icon {
+  background: var(--bg-card);
+}
+.tb-res-icon svg { width: 14px; height: 14px; }
+.tb-res-body { min-width: 0; flex: 1; }
+.tb-res-title {
+  font-size: 13px; color: var(--ink); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tb-res-sub {
+  font-size: 11.5px; color: var(--ink-mute);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tb-res-empty { padding: 18px 14px; font-size: 12.5px; color: var(--ink-mute); text-align: center; }
+.tb-res-hint  { padding: 10px 14px; font-size: 11.5px; color: var(--ink-mute); border-top: 1px solid var(--line-soft); }
+.tb-res-mark  { background: rgba(181, 76, 48, .14); color: var(--ink); border-radius: 3px; padding: 0 1px; }
+
+/* — Notifications dropdown — */
+.tb-notif-wrap { position: relative; display: inline-flex; }
+.tb-notif-btn {
+  background: var(--bg-soft); border: none; cursor: pointer;
+  /* Match .tb-icon dimensions in case the page uses a slightly different base. */
+  width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center; color: var(--ink-soft); position: relative;
+}
+.tb-notif-btn svg { width: 16px; height: 16px; }
+.tb-notif-menu {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  width: 360px; max-width: calc(100vw - 32px);
+  background: var(--bg-card); border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px -8px rgba(20, 17, 15, .18), 0 2px 8px rgba(20, 17, 15, .06);
+  padding: 0; z-index: 100; overflow: hidden;
+}
+.tb-notif-menu[hidden] { display: none; }
+.tb-notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line-soft);
+}
+.tb-notif-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.tb-notif-mark {
+  background: none; border: none; cursor: pointer;
+  color: var(--accent); font-size: 12px; font-weight: 500; padding: 0;
+}
+.tb-notif-mark:disabled { color: var(--ink-mute); cursor: default; }
+.tb-notif-list { max-height: 360px; overflow-y: auto; }
+.tb-notif-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; color: inherit; text-decoration: none;
+  border-bottom: 1px solid var(--line-soft);
+}
+.tb-notif-item:last-child { border-bottom: none; }
+.tb-notif-item:hover { background: var(--bg-soft); }
+.tb-notif-item.unread { background: rgba(181, 76, 48, .04); }
+.tb-notif-item.unread:hover { background: rgba(181, 76, 48, .08); }
+.tb-notif-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--bg-soft); display: grid; place-items: center;
+  flex-shrink: 0; font-size: 14px; line-height: 1;
+}
+.tb-notif-item.unread .tb-notif-icon { background: var(--bg-card); }
+.tb-notif-body { flex: 1; min-width: 0; }
+.tb-notif-text {
+  font-size: 13px; color: var(--ink); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tb-notif-time { font-size: 11px; color: var(--ink-mute); margin-top: 2px; display: block; }
+.tb-notif-unread-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  margin-top: 11px; flex-shrink: 0;
+}
+.tb-notif-empty {
+  padding: 28px 14px; text-align: center;
+  color: var(--ink-mute); font-size: 13px;
+}
+.tb-notif-foot {
+  padding: 10px 14px; border-top: 1px solid var(--line-soft);
+  text-align: center;
+}
+.tb-notif-foot a { color: var(--ink); font-size: 12.5px; font-weight: 500; }
+.tb-notif-foot a:hover { color: var(--accent); }
