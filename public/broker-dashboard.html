@@ -149,6 +149,7 @@
     display: flex; align-items: center; gap: 8px;
     background: var(--bg-soft); border-radius: var(--r-pill);
     padding: 8px 14px; flex: 1; max-width: 380px;
+    position: relative;
   }
   .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
   .tb-search input {
@@ -156,6 +157,57 @@
     color: var(--ink); font-size: 13px; flex: 1;
   }
   .tb-search input::placeholder { color: var(--ink-mute); }
+  .tb-search-clear {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: none; place-items: center; cursor: pointer;
+    color: var(--ink-mute); background: transparent; border: none; padding: 0;
+  }
+  .tb-search-clear svg { width: 12px; height: 12px; }
+  .tb-search-clear:hover { color: var(--ink); }
+  .tb-search.has-text .tb-search-clear { display: grid; }
+
+  .tb-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 12px 32px rgba(20,17,15,.10);
+    max-height: 460px; overflow-y: auto;
+    z-index: 80; padding: 6px 0;
+  }
+  .tb-results[hidden] { display: none; }
+  .tb-res-section-h {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-mute);
+    padding: 8px 14px 4px;
+  }
+  .tb-res-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; cursor: pointer; color: inherit; text-decoration: none;
+    border-left: 2px solid transparent;
+  }
+  .tb-res-item:hover, .tb-res-item.active {
+    background: var(--bg-soft); border-left-color: var(--accent);
+  }
+  .tb-res-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-soft); flex-shrink: 0;
+  }
+  .tb-res-item.active .tb-res-icon, .tb-res-item:hover .tb-res-icon {
+    background: var(--bg-card);
+  }
+  .tb-res-icon svg { width: 14px; height: 14px; }
+  .tb-res-body { min-width: 0; flex: 1; }
+  .tb-res-title {
+    font-size: 13px; color: var(--ink); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tb-res-sub {
+    font-size: 11.5px; color: var(--ink-mute);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tb-res-empty { padding: 18px 14px; font-size: 12.5px; color: var(--ink-mute); text-align: center; }
+  .tb-res-hint  { padding: 10px 14px; font-size: 11.5px; color: var(--ink-mute); border-top: 1px solid var(--line-soft); }
+  .tb-res-mark { background: rgba(181,76,48,.14); color: var(--ink); border-radius: 3px; padding: 0 1px; }
   .tb-divider { width: 1px; height: 22px; background: var(--line); }
   .tb-ai {
     display: flex; align-items: center; gap: 8px;
@@ -576,6 +628,63 @@
   .tb-menu-logout:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
   .tb-menu-logout:hover svg { color: var(--accent); }
 
+  /* — topbar notifications dropdown — */
+  .tb-notif-wrap { position: relative; display: inline-flex; }
+  .tb-notif-btn { background: var(--bg-soft); border: none; }
+  .tb-notif-menu {
+    position: absolute; top: calc(100% + 10px); right: 0;
+    width: 360px; max-width: calc(100vw - 32px);
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px -8px rgba(20,17,15,.18), 0 2px 8px rgba(20,17,15,.06);
+    padding: 0; z-index: 100; overflow: hidden;
+  }
+  .tb-notif-menu[hidden] { display: none; }
+  .tb-notif-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-bottom: 1px solid var(--line-soft);
+  }
+  .tb-notif-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .tb-notif-mark {
+    background: none; border: none; cursor: pointer;
+    color: var(--accent); font-size: 12px; font-weight: 500; padding: 0;
+  }
+  .tb-notif-mark:disabled { color: var(--ink-mute); cursor: default; }
+  .tb-notif-list { max-height: 360px; overflow-y: auto; }
+  .tb-notif-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 14px; color: inherit; text-decoration: none;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .tb-notif-item:last-child { border-bottom: none; }
+  .tb-notif-item:hover { background: var(--bg-soft); }
+  .tb-notif-item.unread { background: rgba(181,76,48,.04); }
+  .tb-notif-item.unread:hover { background: rgba(181,76,48,.08); }
+  .tb-notif-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    flex-shrink: 0; font-size: 14px; line-height: 1;
+  }
+  .tb-notif-item.unread .tb-notif-icon { background: var(--bg-card); }
+  .tb-notif-body { flex: 1; min-width: 0; }
+  .tb-notif-text {
+    font-size: 13px; color: var(--ink); line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .tb-notif-time { font-size: 11px; color: var(--ink-mute); margin-top: 2px; display: block; }
+  .tb-notif-unread-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    margin-top: 11px; flex-shrink: 0;
+  }
+  .tb-notif-empty { padding: 28px 14px; text-align: center; color: var(--ink-mute); font-size: 13px; }
+  .tb-notif-foot {
+    padding: 10px 14px; border-top: 1px solid var(--line-soft);
+    text-align: center;
+  }
+  .tb-notif-foot a { color: var(--ink); font-size: 12.5px; font-weight: 500; }
+  .tb-notif-foot a:hover { color: var(--accent); }
+
 </style>
   <link rel="stylesheet" href="/css/ai-chat.css?v=2">
 </head>
@@ -680,9 +789,13 @@
     <!-- TOP BAR -->
     <div class="topbar">
       <div class="topbar-left">
-        <div class="tb-search">
+        <div class="tb-search" id="tbSearchWrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar propiedades, clientes, transacciones…" id="topbarSearch">
+          <input type="text" placeholder="Buscar propiedades, clientes, transacciones…" id="topbarSearch" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="tbResults" aria-autocomplete="list">
+          <button type="button" class="tb-search-clear" id="tbSearchClear" aria-label="Limpiar búsqueda" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div class="tb-results" id="tbResults" role="listbox" hidden></div>
         </div>
         <div class="tb-divider"></div>
         <a class="tb-ai" href="/asistente">
@@ -693,10 +806,22 @@
         </a>
       </div>
             <div class="topbar-right">
-        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-          <span class="tb-icon-dot" id="notifDot" hidden></span>
-        </a>
+        <div class="tb-notif-wrap" id="tbNotifWrap">
+          <button type="button" class="tb-icon tb-notif-btn" id="tbNotifBtn" aria-label="Notificaciones" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="tb-icon-dot" id="notifDot" hidden></span>
+          </button>
+          <div class="tb-notif-menu" id="tbNotifMenu" role="menu" hidden>
+            <div class="tb-notif-head">
+              <span class="tb-notif-title">Notificaciones</span>
+              <button type="button" class="tb-notif-mark" id="tbNotifMark" disabled>Marcar todas leídas</button>
+            </div>
+            <div class="tb-notif-list" id="tbNotifList">
+              <div class="tb-notif-empty">Cargando…</div>
+            </div>
+            <div class="tb-notif-foot"><a href="/notificaciones">Ver todas</a></div>
+          </div>
+        </div>
         <div class="tb-account-wrap" id="tbAccountWrap">
           <button class="tb-icon" id="tbSettingsBtn" aria-label="Configuración" aria-haspopup="menu" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -1197,6 +1322,11 @@ async function load() {
   renderDonut({ vistas, contactos, visitas, ofertas });
   renderBars({ months: monthsAxis, totals: totalsByMonth, completed: completedByMonth });
   renderProps(active);
+
+  // Hand off the broker's listings to the topbar search.
+  window.__brokerSearchData = window.__brokerSearchData || {};
+  window.__brokerSearchData.listings = listings;
+  window.dispatchEvent(new CustomEvent('brokerSearch:listings'));
 }
 
 load().catch(err => {
@@ -1284,6 +1414,414 @@ load().catch(err => {
     .catch(() => {});
 })();
 </script>
+
+  <script>
+  // ── Topbar notifications dropdown ─────────────────────────────
+  (function () {
+    'use strict';
+    const wrap    = document.getElementById('tbNotifWrap');
+    const btn     = document.getElementById('tbNotifBtn');
+    const menu    = document.getElementById('tbNotifMenu');
+    const list    = document.getElementById('tbNotifList');
+    const markBtn = document.getElementById('tbNotifMark');
+    const dot     = document.getElementById('notifDot');
+    if (!wrap || !btn || !menu || !list) return;
+
+    const NOTIF_EMOJI = {
+      application: '📄', applications: '📄',
+      tour: '📅', tours: '📅', visit: '📅', visita: '📅',
+      payment: '💳', payments: '💳',
+      message: '💬', messages: '💬', conversation: '💬',
+      commission: '💰', comision: '💰',
+      listing: '🏠', listings: '🏠',
+      document: '📋', documents: '📋',
+      system: '🔔', default: '🔔',
+    };
+    function notifIcon(n) {
+      const k = String(n.category || n.type || 'default').toLowerCase();
+      return NOTIF_EMOJI[k] || NOTIF_EMOJI.default;
+    }
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function relTime(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const diff = (Date.now() - d.getTime()) / 1000;
+      if (diff < 60)     return 'ahora';
+      if (diff < 3600)   return Math.floor(diff / 60)    + ' min';
+      if (diff < 86400)  return Math.floor(diff / 3600)  + ' h';
+      if (diff < 604800) return Math.floor(diff / 86400) + ' d';
+      return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+    }
+    function isRead(n) {
+      return n.read === true || n.is_read === true || !!n.read_at || !!n.readAt;
+    }
+
+    let cache = null;
+
+    async function load() {
+      try {
+        const r = await fetch('/api/notifications?limit=8', { credentials: 'include' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const data = await r.json();
+        const items = Array.isArray(data) ? data : (data?.notifications || []);
+        cache = items;
+        if (!items.length) {
+          list.innerHTML = '<div class="tb-notif-empty">Estás al día. No hay notificaciones.</div>';
+        } else {
+          list.innerHTML = items.map(n => {
+            const text = escapeHtml(n.title || n.message || n.body || 'Notificación');
+            const time = escapeHtml(relTime(n.created_at || n.createdAt || n.timestamp));
+            const href = n.url || n.link || '/notificaciones';
+            const unread = !isRead(n);
+            return `<a class="tb-notif-item ${unread ? 'unread' : ''}" href="${escapeHtml(href)}" data-id="${escapeHtml(n.id || '')}">
+              <span class="tb-notif-icon">${notifIcon(n)}</span>
+              <span class="tb-notif-body">
+                <span class="tb-notif-text">${text}</span>
+                ${time ? `<span class="tb-notif-time">${time}</span>` : ''}
+              </span>
+              ${unread ? '<span class="tb-notif-unread-dot" aria-hidden="true"></span>' : ''}
+            </a>`;
+          }).join('');
+        }
+        const anyUnread = items.some(n => !isRead(n));
+        markBtn.disabled = !anyUnread;
+        if (dot) dot.hidden = !anyUnread;
+      } catch (_) {
+        list.innerHTML = '<div class="tb-notif-empty">No se pudieron cargar las notificaciones.</div>';
+      }
+    }
+
+    function setOpen(open) {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        // Close the account menu if it happens to be open.
+        const acctMenu = document.getElementById('tbMenu');
+        if (acctMenu && !acctMenu.hidden) {
+          acctMenu.hidden = true;
+          document.getElementById('tbSettingsBtn')?.setAttribute('aria-expanded', 'false');
+          document.getElementById('tbAvatarBtn')?.setAttribute('aria-expanded', 'false');
+        }
+        load();
+      }
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(menu.hidden);
+    });
+
+    markBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        await fetch('/api/notifications/mark-all-read', { method: 'POST', credentials: 'include' });
+      } catch (_) {}
+      if (Array.isArray(cache)) {
+        cache.forEach(n => { n.read = true; n.read_at = n.read_at || new Date().toISOString(); });
+        // Re-render from cache without refetching.
+        list.innerHTML = cache.map(n => {
+          const text = escapeHtml(n.title || n.message || n.body || 'Notificación');
+          const time = escapeHtml(relTime(n.created_at || n.createdAt || n.timestamp));
+          const href = n.url || n.link || '/notificaciones';
+          return `<a class="tb-notif-item" href="${escapeHtml(href)}">
+            <span class="tb-notif-icon">${notifIcon(n)}</span>
+            <span class="tb-notif-body">
+              <span class="tb-notif-text">${text}</span>
+              ${time ? `<span class="tb-notif-time">${time}</span>` : ''}
+            </span>
+          </a>`;
+        }).join('') || '<div class="tb-notif-empty">Estás al día. No hay notificaciones.</div>';
+      }
+      markBtn.disabled = true;
+      if (dot) dot.hidden = true;
+    });
+
+    document.addEventListener('click', (e) => {
+      if (menu.hidden) return;
+      if (!wrap.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) setOpen(false);
+    });
+
+    // Initial unread-dot state — fail silent.
+    fetch('/api/notifications/unread-count', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!dot || !d) return;
+        const n = Number(d.count ?? d.unread ?? 0);
+        if (n > 0) dot.hidden = false;
+      })
+      .catch(() => {});
+  })();
+  </script>
+
+  <script>
+  // ── Topbar search ──────────────────────────────────────────────
+  (function () {
+    'use strict';
+    const wrap     = document.getElementById('tbSearchWrap');
+    const input    = document.getElementById('topbarSearch');
+    const clearBtn = document.getElementById('tbSearchClear');
+    const panel    = document.getElementById('tbResults');
+    if (!wrap || !input || !panel) return;
+
+    const ICONS = {
+      property: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
+      person:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/></svg>',
+      tx:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
+      chat:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+    };
+
+    const data = { listings: [], applications: null, conversations: null };
+    let loadingExtras = false;
+    let activeIndex = -1;
+    let flatItems = [];
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function highlight(text, q) {
+      if (!q) return escapeHtml(text);
+      const safe = escapeHtml(text);
+      const re = new RegExp(escapeRegex(escapeHtml(q)), 'ig');
+      return safe.replace(re, m => `<span class="tb-res-mark">${m}</span>`);
+    }
+    function norm(s) {
+      return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    }
+    const fmtUSDshort = (n) => {
+      if (!Number.isFinite(n)) return '';
+      if (n >= 1e6) return `US$ ${(n / 1e6).toFixed(1)}M`;
+      if (n >= 1e3) return `US$ ${(n / 1e3).toFixed(0)}K`;
+      return `US$ ${n.toLocaleString()}`;
+    };
+
+    // Pull whatever load() already fetched.
+    if (window.__brokerSearchData?.listings) {
+      data.listings = window.__brokerSearchData.listings;
+    }
+    window.addEventListener('brokerSearch:listings', () => {
+      data.listings = window.__brokerSearchData?.listings || [];
+      if (!panel.hidden) render(input.value);
+    });
+
+    async function loadExtras() {
+      if (data.applications && data.conversations) return;
+      if (loadingExtras) return;
+      loadingExtras = true;
+      try {
+        const [apps, convs] = await Promise.all([
+          fetch('/api/applications', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : []).catch(() => []),
+          fetch('/api/conversations', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : []).catch(() => []),
+        ]);
+        data.applications  = Array.isArray(apps)  ? apps  : [];
+        data.conversations = Array.isArray(convs) ? convs : [];
+      } finally {
+        loadingExtras = false;
+      }
+    }
+
+    function searchListings(qn) {
+      if (!data.listings?.length) return [];
+      return data.listings
+        .map(l => {
+          const hay = norm([l.title, l.location, l.city, l.province, l.id, l.propertyType, l.property_type].filter(Boolean).join(' '));
+          return hay.includes(qn) ? l : null;
+        })
+        .filter(Boolean)
+        .slice(0, 5);
+    }
+
+    function searchApplications(qn) {
+      if (!data.applications?.length) return [];
+      const hits = [];
+      for (const a of data.applications) {
+        const c = a.client || {};
+        const hay = norm([c.name, c.full_name, c.email, c.phone, a.id, a.status, a.listingTitle, a.listing_title].filter(Boolean).join(' '));
+        if (hay.includes(qn)) hits.push(a);
+        if (hits.length >= 5) break;
+      }
+      return hits;
+    }
+
+    function searchConversations(qn) {
+      if (!data.conversations?.length) return [];
+      const hits = [];
+      for (const c of data.conversations) {
+        const hay = norm([c.clientName, c.clientEmail, c.propertyTitle, c.lastMessage, c.id].filter(Boolean).join(' '));
+        if (hay.includes(qn)) hits.push(c);
+        if (hits.length >= 5) break;
+      }
+      return hits;
+    }
+
+    function buildSection(title, items, q) {
+      if (!items.length) return '';
+      const rows = items.map(it => `
+        <a class="tb-res-item" href="${it.href}" data-href="${escapeHtml(it.href)}">
+          <span class="tb-res-icon">${it.icon}</span>
+          <span class="tb-res-body">
+            <div class="tb-res-title">${highlight(it.title, q)}</div>
+            <div class="tb-res-sub">${highlight(it.sub, q)}</div>
+          </span>
+        </a>`).join('');
+      return `<div class="tb-res-section-h">${title}</div>${rows}`;
+    }
+
+    function buildItems(q) {
+      const qn = norm(q);
+      const out = { listings: [], clients: [], conversations: [] };
+      if (!qn) return out;
+
+      out.listings = searchListings(qn).map(l => {
+        const isRent = (l.listingType === 'alquiler' || l.listing_type === 'alquiler');
+        const loc = [l.location, l.city, l.province].filter(Boolean).join(', ') || 'República Dominicana';
+        const price = Number(l.price) || 0;
+        const priceText = price ? (isRent ? `${fmtUSDshort(price)}/mes` : fmtUSDshort(price)) : (isRent ? 'Alquiler' : 'Venta');
+        return {
+          icon: ICONS.property,
+          title: l.title || 'Sin título',
+          sub: `${priceText} · ${loc}`,
+          href: `/listing.html?id=${encodeURIComponent(l.id)}`,
+        };
+      });
+
+      out.clients = searchApplications(qn).map(a => {
+        const c = a.client || {};
+        const name = c.name || c.full_name || c.email || 'Cliente';
+        const status = a.status ? a.status.replace(/_/g, ' ') : 'aplicación';
+        const lt = a.listingTitle || a.listing_title || '';
+        const sub = lt ? `${status} · ${lt}` : status;
+        return {
+          icon: ICONS.person,
+          title: name,
+          sub,
+          href: `/aplicaciones.html?app=${encodeURIComponent(a.id)}`,
+        };
+      });
+
+      out.conversations = searchConversations(qn).map(c => ({
+        icon: ICONS.chat,
+        title: c.clientName || 'Conversación',
+        sub: c.lastMessage || c.propertyTitle || 'Mensajes',
+        href: `/mensajes.html?conv=${encodeURIComponent(c.id)}`,
+      }));
+
+      return out;
+    }
+
+    function render(q) {
+      const trimmed = (q || '').trim();
+      wrap.classList.toggle('has-text', trimmed.length > 0);
+
+      if (!trimmed) {
+        panel.innerHTML = `<div class="tb-res-empty">Escribe para buscar propiedades, clientes o conversaciones</div>`;
+        flatItems = [];
+        activeIndex = -1;
+        return;
+      }
+
+      const groups = buildItems(trimmed);
+      const total = groups.listings.length + groups.clients.length + groups.conversations.length;
+
+      if (total === 0) {
+        const loadingMsg = (data.applications == null || data.conversations == null)
+          ? 'Cargando…'
+          : `Sin resultados para “${escapeHtml(trimmed)}”`;
+        panel.innerHTML = `<div class="tb-res-empty">${loadingMsg}</div>`;
+        flatItems = [];
+        activeIndex = -1;
+        return;
+      }
+
+      panel.innerHTML =
+        buildSection('Propiedades',   groups.listings,      trimmed) +
+        buildSection('Clientes',      groups.clients,       trimmed) +
+        buildSection('Conversaciones',groups.conversations, trimmed) +
+        `<div class="tb-res-hint">↑ ↓ para navegar · Enter para abrir</div>`;
+
+      flatItems = Array.from(panel.querySelectorAll('.tb-res-item'));
+      activeIndex = flatItems.length ? 0 : -1;
+      updateActive();
+    }
+
+    function updateActive() {
+      flatItems.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+      if (activeIndex >= 0 && flatItems[activeIndex]) {
+        flatItems[activeIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function open() {
+      panel.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+      panel.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+    }
+
+    let debounceTimer = 0;
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      open();
+      // Render immediately with whatever we have, then re-render once extras arrive.
+      render(input.value);
+      debounceTimer = window.setTimeout(async () => {
+        await loadExtras();
+        if (!panel.hidden) render(input.value);
+      }, 120);
+    });
+    input.addEventListener('focus', () => {
+      open();
+      render(input.value);
+      loadExtras().then(() => { if (!panel.hidden) render(input.value); });
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        if (panel.hidden) { open(); render(input.value); return; }
+        if (!flatItems.length) return;
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % flatItems.length;
+        updateActive();
+      } else if (e.key === 'ArrowUp') {
+        if (!flatItems.length) return;
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + flatItems.length) % flatItems.length;
+        updateActive();
+      } else if (e.key === 'Enter') {
+        if (activeIndex >= 0 && flatItems[activeIndex]) {
+          e.preventDefault();
+          location.href = flatItems[activeIndex].dataset.href;
+        }
+      } else if (e.key === 'Escape') {
+        if (input.value) { input.value = ''; render(''); return; }
+        close();
+        input.blur();
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      render('');
+      input.focus();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) close();
+    });
+  })();
+  </script>
 
   <script src="/js/ai-chat.js?v=2" defer></script>
 </body>
