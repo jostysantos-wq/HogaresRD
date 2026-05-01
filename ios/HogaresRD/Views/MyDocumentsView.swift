@@ -3,6 +3,11 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 // MARK: - My Documents (Buyer document submission)
+//
+// Wave 8-C refactor: Things-style checklist rows (leading checkmark
+// circle, title + caption, no in-section dividers), groups inside
+// `FormCard`s, rejected docs callout in `Color.rdRed.opacity(0.12)`,
+// empty state via `EmptyStateView.calm`.
 
 struct MyDocumentsView: View {
     @EnvironmentObject var api: APIService
@@ -36,25 +41,32 @@ struct MyDocumentsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: Spacing.s16) {
                 if loading {
-                    VStack(spacing: 16) {
+                    VStack(spacing: Spacing.s16) {
                         Spacer().frame(height: 40)
                         ProgressView()
                         Text("Cargando documentos...")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.rdInkSoft)
                     }
                 } else if applications.isEmpty {
-                    emptyState
+                    EmptyStateView.calm(
+                        systemImage: "doc.text",
+                        title: "Sin documentos pendientes",
+                        description: "Cuando apliques a una propiedad y el agente solicite documentos, aparecerán aquí."
+                    )
+                    .padding(.top, Spacing.s32)
                 } else {
                     ForEach(Array(applications.enumerated()), id: \.offset) { _, app in
                         applicationCard(app)
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, Spacing.s16)
+            .padding(.vertical, Spacing.s16)
         }
+        .background(Color.rdBg)
         .navigationTitle("Mis Documentos")
         .navigationBarTitleDisplayMode(.large)
         .task { await load() }
@@ -63,17 +75,17 @@ struct MyDocumentsView: View {
             if let msg = successMessage {
                 VStack {
                     Spacer()
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.s8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.white)
                         Text(msg)
-                            .font(.subheadline.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                     }
-                    .padding(.horizontal, 20).padding(.vertical, 12)
+                    .padding(.horizontal, 20).padding(.vertical, Spacing.s12)
                     .background(Color.rdGreen, in: Capsule())
                     .shadow(radius: 8)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, Spacing.s32)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .task {
@@ -87,19 +99,19 @@ struct MyDocumentsView: View {
             if let err = errorMessage {
                 VStack {
                     Spacer()
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .top, spacing: Spacing.s8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.white)
                         Text(err)
-                            .font(.caption.bold())
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.leading)
                     }
-                    .padding(.horizontal, 20).padding(.vertical, 12)
-                    .background(Color.rdRed, in: RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 20).padding(.vertical, Spacing.s12)
+                    .background(Color.rdRed, in: RoundedRectangle(cornerRadius: Radius.medium))
                     .shadow(radius: 8)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, Spacing.s24)
+                    .padding(.bottom, Spacing.s32)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .task {
@@ -181,23 +193,6 @@ struct MyDocumentsView: View {
         loading = false
     }
 
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer().frame(height: 40)
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("Sin documentos pendientes")
-                .font(.headline)
-            Text("Cuando apliques a una propiedad y el agente solicite documentos, aparecerán aquí.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-    }
-
     // MARK: - Application Card
 
     private func applicationCard(_ app: [String: Any]) -> some View {
@@ -209,54 +204,52 @@ struct MyDocumentsView: View {
         let payment = app["payment"] as? [String: Any]
         let paymentPlan = app["payment_plan"] as? [String: Any]
 
-        return VStack(alignment: .leading, spacing: 14) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.subheadline.bold())
-                        .lineLimit(2)
-                    Text("Estado: \(statusLabel(status))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        return VStack(alignment: .leading, spacing: Spacing.s16) {
+            // Header card with status
+            FormCard {
+                LabeledRow(title) {
+                    statusBadge(status)
                 }
-                Spacer()
-                statusBadge(status)
+                LabeledRow("Estado") {
+                    Text(statusLabel(status))
+                }
             }
 
             // Requested Documents
             if !docsRequested.isEmpty {
-                Divider()
-                Text("Documentos Solicitados")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.rdBlue)
-
-                ForEach(Array(docsRequested.enumerated()), id: \.offset) { _, doc in
-                    documentRow(doc: doc, appId: appId, uploadedDocs: docsUploaded)
+                FormCard("Documentos solicitados") {
+                    ForEach(Array(docsRequested.enumerated()), id: \.offset) { _, doc in
+                        documentRow(doc: doc, appId: appId, uploadedDocs: docsUploaded)
+                    }
                 }
             }
 
             // Payment receipt section
             if let pmt = payment, status == "pendiente_pago" || status == "pago_enviado" {
-                Divider()
-                Text("Comprobante de Pago")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.rdBlue)
-
-                let verStatus = pmt["verification_status"] as? String ?? "none"
-                if verStatus == "none" || verStatus == "rejected" {
-                    paymentReceiptForm(appId: appId, listingCurrency: app["listing_currency"] as? String)
-                    if verStatus == "rejected" {
-                        Label("Rechazado — sube un nuevo comprobante", systemImage: "exclamationmark.circle")
-                            .font(.caption)
-                            .foregroundStyle(Color.rdRed)
-                    }
-                } else {
-                    HStack {
-                        Label(verStatus == "approved" ? "Pago aprobado" : "En revision",
+                FormCard("Comprobante de pago") {
+                    let verStatus = pmt["verification_status"] as? String ?? "none"
+                    if verStatus == "none" || verStatus == "rejected" {
+                        paymentReceiptForm(appId: appId, listingCurrency: app["listing_currency"] as? String)
+                        if verStatus == "rejected" {
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "exclamationmark.circle")
+                                    .foregroundStyle(Color.rdRed)
+                                Text("Rechazado — sube un nuevo comprobante")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.rdRed)
+                            }
+                            .padding(Spacing.s8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.rdRed.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.small))
+                        }
+                    } else {
+                        Label(verStatus == "approved" ? "Pago aprobado" : "En revisión",
                               systemImage: verStatus == "approved" ? "checkmark.circle.fill" : "clock.fill")
-                            .font(.caption.bold())
-                            .foregroundStyle(verStatus == "approved" ? Color.rdGreen : Color.orange)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(verStatus == "approved" ? Color.rdGreen : Color.rdOrange)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, Spacing.s4)
                     }
                 }
             }
@@ -265,13 +258,10 @@ struct MyDocumentsView: View {
             if let plan = paymentPlan, let installments = plan["installments"] as? [[String: Any]] {
                 let pending = installments.filter { ($0["status"] as? String) == "pending" || ($0["status"] as? String) == "rejected" }
                 if !pending.isEmpty {
-                    Divider()
-                    Text("Cuotas Pendientes")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color.rdBlue)
-
-                    ForEach(Array(pending.enumerated()), id: \.offset) { _, inst in
-                        installmentRow(inst: inst, appId: appId)
+                    FormCard("Cuotas pendientes") {
+                        ForEach(Array(pending.enumerated()), id: \.offset) { _, inst in
+                            installmentRow(inst: inst, appId: appId)
+                        }
                     }
                 }
             }
@@ -285,24 +275,22 @@ struct MyDocumentsView: View {
                         if uploadProgress > 0 && uploadProgress < 1 {
                             Text("Subiendo \(Int(uploadProgress * 100))%")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.rdInkSoft)
                         } else {
                             ProgressView().scaleEffect(0.8)
                             Text("Subiendo...")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.rdInkSoft)
                         }
                     }
                     if uploadProgress > 0 {
                         ProgressView(value: min(max(uploadProgress, 0), 1))
-                            .tint(Color.rdBlue)
+                            .tint(Color.rdAccent)
                     }
                 }
+                .padding(.horizontal, Spacing.s4)
             }
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Payment Receipt Form (B6)
@@ -321,13 +309,13 @@ struct MyDocumentsView: View {
         let parsed        = Double(amountString.replacingOccurrences(of: ",", with: "."))
         let isValid       = (parsed ?? 0) > 0
 
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.s8) {
+            HStack(spacing: Spacing.s8) {
                 // Amount field
                 HStack(spacing: 4) {
                     Image(systemName: "creditcard.fill")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rdInkSoft)
                     TextField("Monto", text: Binding(
                         get: { paymentAmounts[appId] ?? "" },
                         set: { paymentAmounts[appId] = $0 }
@@ -335,13 +323,9 @@ struct MyDocumentsView: View {
                     .keyboardType(.decimalPad)
                     .font(.subheadline)
                 }
-                .padding(.horizontal, 10).padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
-                )
+                .padding(.horizontal, Spacing.s8).padding(.vertical, Spacing.s8)
+                .background(Color.rdSurfaceMuted)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.small))
                 .frame(maxWidth: .infinity)
 
                 // Currency picker
@@ -368,22 +352,23 @@ struct MyDocumentsView: View {
                 amount: amountString, currency: currencyValue
             )) {
                 Label("Subir comprobante", systemImage: "arrow.up.doc.fill")
-                    .font(.subheadline.bold())
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background((isValid ? Color.rdBlue : Color.gray.opacity(0.5)), in: RoundedRectangle(cornerRadius: 10))
+                    .background((isValid ? Color.rdAccent : Color.rdMuted), in: RoundedRectangle(cornerRadius: Radius.medium))
             }
             .disabled(uploadingFor == appId || !isValid)
+            .accessibilityLabel("Subir comprobante de pago")
         }
     }
 
-    // MARK: - Document Row
+    // MARK: - Document Row (Things-style checklist)
 
     private func documentRow(doc: [String: Any], appId: String, uploadedDocs: [[String: Any]]) -> some View {
         let reqId = doc["id"] as? String ?? ""
         let label = doc["label"] as? String ?? doc["type"] as? String ?? "Documento"
-        let type = doc["type"] as? String ?? "other"
+        let _    = doc["type"] as? String ?? "other"
         let isRequired = doc["required"] as? Bool ?? true
         let docStatus = doc["status"] as? String ?? "pending"
 
@@ -393,77 +378,82 @@ struct MyDocumentsView: View {
         // B5: surface the broker's rejection note when the doc was rejected.
         // The server stores it as `review_note` on the uploaded record.
         let reviewNote = (uploaded?["review_note"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isUploaded = (reviewStatus == "approved" || reviewStatus == "pending" || docStatus == "uploaded")
 
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                Image(systemName: docIcon(type))
-                    .font(.system(size: 20))
-                    .foregroundStyle(reviewStatus == "approved" ? Color.rdGreen : reviewStatus == "rejected" ? Color.rdRed : Color.rdBlue)
-                    .frame(width: 32)
+            HStack(spacing: Spacing.s12) {
+                Image(systemName: isUploaded ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(reviewStatus == "rejected" ? Color.rdRed : (isUploaded ? Color.rdGreen : Color.rdMuted))
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
                         Text(label)
-                            .font(.subheadline.bold())
+                            .font(.body)
+                            .foregroundStyle(Color.rdInk)
                         if isRequired {
                             Text("*")
-                                .font(.caption.bold())
+                                .font(.caption.weight(.bold))
                                 .foregroundStyle(Color.rdRed)
                         }
                     }
                     if let rs = reviewStatus {
-                        Text(rs == "approved" ? "Aprobado" : rs == "rejected" ? "Rechazado" : rs == "pending" ? "En revision" : "Pendiente")
+                        Text(rs == "approved" ? "Aprobado" : rs == "rejected" ? "Rechazado" : rs == "pending" ? "En revisión" : "Pendiente")
                             .font(.caption)
-                            .foregroundStyle(rs == "approved" ? Color.rdGreen : rs == "rejected" ? Color.rdRed : .secondary)
+                            .foregroundStyle(rs == "approved" ? Color.rdGreen : rs == "rejected" ? Color.rdRed : Color.rdInkSoft)
                     } else if docStatus == "uploaded" {
-                        Text("Subido — en revision")
+                        Text("Subido — en revisión")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.rdInkSoft)
                     } else {
                         Text("Pendiente de subir")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.rdOrange)
                     }
                 }
 
                 Spacer()
 
                 if reviewStatus == nil || reviewStatus == "rejected" {
-                    uploadMenu(ctx: PickerContext(applicationId: appId, requestId: reqId, type: type, label: label)) {
+                    uploadMenu(ctx: PickerContext(applicationId: appId, requestId: reqId, type: doc["type"] as? String ?? "other", label: label)) {
                         Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(Color.rdBlue)
+                            .font(.title2)
+                            .foregroundStyle(Color.rdAccent)
                     }
+                    .accessibilityLabel("Subir \(label)")
                 } else if reviewStatus == "approved" {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
+                        .font(.title3)
                         .foregroundStyle(Color.rdGreen)
+                        .accessibilityLabel("\(label) aprobado")
                 } else {
                     Image(systemName: "clock.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.orange)
+                        .font(.title3)
+                        .foregroundStyle(Color.rdOrange)
+                        .accessibilityLabel("\(label) en revisión")
                 }
             }
+            .padding(.vertical, Spacing.s4)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
 
             // B5: red callout with the broker's rejection note
             if reviewStatus == "rejected", let note = reviewNote, !note.isEmpty {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.bubble.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(Color.rdRed)
                     Text("Nota del agente: \(note)")
                         .font(.caption)
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(Color.rdRed)
                 }
-                .padding(8)
+                .padding(Spacing.s8)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.red.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(Color.rdRed.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.small))
             }
         }
-        .padding(10)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Installment Row
@@ -474,13 +464,14 @@ struct MyDocumentsView: View {
         let amount = inst["amount"] as? Double ?? 0
         let status = inst["status"] as? String ?? "pending"
 
-        return HStack(spacing: 12) {
+        return HStack(spacing: Spacing.s12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.subheadline.bold())
+                    .font(.body)
+                    .foregroundStyle(Color.rdInk)
                 Text("$\(Int(amount).formatted())")
                     .font(.caption)
-                    .foregroundStyle(Color.rdBlue)
+                    .foregroundStyle(Color.rdAccent)
             }
 
             Spacer()
@@ -488,16 +479,16 @@ struct MyDocumentsView: View {
             if status == "pending" || status == "rejected" {
                 uploadMenu(ctx: PickerContext(applicationId: appId, requestId: instId, type: "installment_proof", label: label)) {
                     Text("Subir prueba")
-                        .font(.caption.bold())
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(Color.rdBlue, in: Capsule())
+                        .padding(.horizontal, Spacing.s12).padding(.vertical, 7)
+                        .background(Color.rdAccent, in: Capsule())
                 }
+                .accessibilityLabel("Subir prueba de \(label)")
             }
         }
-        .padding(10)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.vertical, Spacing.s4)
+        .frame(minHeight: 56)
     }
 
     // MARK: - Photo Handling
@@ -736,7 +727,7 @@ struct MyDocumentsView: View {
     private func statusLabel(_ status: String) -> String {
         let labels: [String: String] = [
             "aplicado": "Aplicado",
-            "en_revision": "En revision",
+            "en_revision": "En revisión",
             "documentos_requeridos": "Documentos requeridos",
             "documentos_enviados": "Documentos enviados",
             "documentos_insuficientes": "Documentos insuficientes",
@@ -754,17 +745,11 @@ struct MyDocumentsView: View {
             switch status {
             case "completado", "pago_aprobado": return .rdGreen
             case "rechazado", "documentos_insuficientes": return .rdRed
-            case "documentos_requeridos", "pendiente_pago": return .orange
+            case "documentos_requeridos", "pendiente_pago": return .rdOrange
             default: return .rdBlue
             }
         }()
-
-        return Text(statusLabel(status))
-            .font(.caption2.bold())
-            .foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(color.opacity(0.1))
-            .clipShape(Capsule())
+        return DSStatusBadge(label: statusLabel(status), tint: color)
     }
 }
 

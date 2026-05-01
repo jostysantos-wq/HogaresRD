@@ -1,6 +1,11 @@
 import SwiftUI
 
 // MARK: - Saved Searches list
+//
+// Wave 8-C refactor: rows render via `IconTileRow` against the editorial
+// design system; empty state uses `EmptyStateView.calm` with a CTA; the
+// "Nueva búsqueda" footer becomes a `bottomCTA(...)` modifier; the
+// editor + detail forms are grouped into `FormCard`s.
 
 struct SavedSearchesView: View {
     @EnvironmentObject var api: APIService
@@ -16,42 +21,24 @@ struct SavedSearchesView: View {
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = errorMsg, searches.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40)).foregroundStyle(.secondary)
-                    Text(err).multilineTextAlignment(.center).foregroundStyle(.secondary)
-                    Button("Reintentar") { Task { await load() } }
-                        .buttonStyle(.borderedProminent).tint(Color.rdBlue)
-                }
-                .padding()
+                EmptyStateView.calm(
+                    systemImage: "exclamationmark.triangle",
+                    title: "No pudimos cargar tus búsquedas",
+                    description: err,
+                    actionTitle: "Reintentar",
+                    action: { Task { await load() } }
+                )
             } else if searches.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "bell.badge")
-                        .font(.system(size: 60))
-                        .foregroundStyle(Color.rdBlue.opacity(0.35))
-                    Text("Sin búsquedas guardadas")
-                        .font(.title3).bold()
-                    Text("Crea una búsqueda guardada para recibir alertas cuando aparezcan nuevas propiedades que coincidan con tus criterios.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                    Button {
-                        showCreate = true
-                    } label: {
-                        Label("Crear búsqueda", systemImage: "plus.circle.fill")
-                            .font(.subheadline).bold()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.rdBlue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .padding(.horizontal, 32)
-                }
+                EmptyStateView.calm(
+                    systemImage: "magnifyingglass.circle",
+                    title: "Aún no tienes búsquedas guardadas",
+                    description: "Crea una búsqueda guardada para recibir alertas cuando aparezcan nuevas propiedades que coincidan con tus criterios.",
+                    actionTitle: "Crear búsqueda",
+                    action: { showCreate = true }
+                )
             } else {
-                List {
-                    Section {
+                ScrollView {
+                    VStack(spacing: Spacing.s8) {
                         ForEach(searches) { s in
                             NavigationLink {
                                 SavedSearchDetailView(search: s, onChange: { updated in
@@ -65,21 +52,25 @@ struct SavedSearchesView: View {
                             } label: {
                                 savedSearchRow(s)
                             }
+                            .buttonStyle(.plain)
                         }
-                    }
 
-                    Section {
-                        Button {
-                            showCreate = true
-                        } label: {
-                            Label("Nueva búsqueda guardada", systemImage: "plus.circle.fill")
-                                .foregroundStyle(Color.rdBlue)
-                        }
-                    } footer: {
                         Text("Máximo 10 búsquedas guardadas. Recibirás notificaciones push y correos cuando aparezcan nuevas propiedades que coincidan.")
                             .font(.caption)
+                            .foregroundStyle(Color.rdInkSoft)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Spacing.s16)
+                            .padding(.top, Spacing.s8)
                     }
+                    .padding(.top, Spacing.s8)
+                    .padding(.bottom, 120) // leave room for bottom CTA
                 }
+                .bottomCTA(
+                    title: "Nueva búsqueda guardada",
+                    isLoading: false,
+                    action: { showCreate = true }
+                )
             }
         }
         .navigationTitle("Búsquedas guardadas")
@@ -91,34 +82,44 @@ struct SavedSearchesView: View {
                 searches.insert(newSearch, at: 0)
             })
             .environmentObject(api)
+            .presentationDragIndicator(.visible)
         }
     }
 
     @ViewBuilder
     private func savedSearchRow(_ s: SavedSearch) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(s.name)
-                    .font(.subheadline).bold()
-                    .lineLimit(1)
-                Spacer()
-                if s.notify {
-                    Image(systemName: "bell.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdBlue)
+        VStack(alignment: .leading, spacing: 0) {
+            IconTileRow(
+                systemImage: "magnifyingglass",
+                label: s.name,
+                accessory: {
+                    HStack(spacing: 6) {
+                        if s.notify {
+                            Image(systemName: "bell.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Color.rdAccent)
+                                .accessibilityLabel("Alertas activas")
+                        }
+                        if let n = s.matchCount {
+                            DSCountPill(count: n, tint: .rdGreen)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rdInkSoft)
+                            .accessibilityHidden(true)
+                    }
                 }
-            }
+            )
             Text(s.filters.summary)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rdInkSoft)
                 .lineLimit(2)
-            if let n = s.matchCount {
-                Text("\(n) \(n == 1 ? "propiedad" : "propiedades") coinciden")
-                    .font(.caption2)
-                    .foregroundStyle(Color.rdGreen)
-            }
+                .padding(.leading, 28 + Spacing.s12)
+                .padding(.bottom, Spacing.s8)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, Spacing.s16)
+        .background(Color.clear)
+        .contentShape(Rectangle())
     }
 
     private func load() async {
@@ -160,64 +161,95 @@ struct SavedSearchEditorView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Nombre") {
-                    TextField("Ej. Apartamentos Piantini 2BR", text: $name)
-                }
-
-                Section("Tipo") {
-                    Picker("Transacción", selection: $selType) {
-                        Text("Cualquiera").tag("")
-                        Text("En Venta").tag("venta")
-                        Text("Alquiler").tag("alquiler")
-                        Text("Proyectos").tag("proyecto")
+            ScrollView {
+                VStack(spacing: Spacing.s16) {
+                    FormCard("Nombre") {
+                        TextField("Ej. Apartamentos Piantini 2BR", text: $name)
+                            .textFieldStyle(.plain)
+                            .padding(.vertical, Spacing.s8)
                     }
-                    Picker("Condición", selection: $selCondition) {
-                        Text("Cualquiera").tag("")
-                        Text("Nueva construcción").tag("nueva_construccion")
-                        Text("Usada").tag("usada")
-                        Text("En planos").tag("planos")
-                    }
-                }
 
-                Section("Ubicación") {
-                    TextField("Provincia", text: $province)
-                    TextField("Ciudad", text: $city)
-                }
-
-                Section("Precio (USD)") {
-                    TextField("Mínimo", text: $priceMin).keyboardType(.numberPad)
-                    TextField("Máximo", text: $priceMax).keyboardType(.numberPad)
-                }
-
-                Section("Habitaciones") {
-                    Stepper(value: $bedroomsMin, in: 0...10) {
-                        Text(bedroomsMin == 0 ? "Cualquiera" : "\(bedroomsMin)+")
-                    }
-                }
-
-                Section {
-                    Toggle(isOn: $notifyOn) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Recibir alertas")
-                            Text("Notificación push + correo cuando aparezcan nuevas propiedades")
-                                .font(.caption).foregroundStyle(.secondary)
+                    FormCard("Tipo") {
+                        LabeledRow("Transacción") {
+                            Picker("Transacción", selection: $selType) {
+                                Text("Cualquiera").tag("")
+                                Text("En Venta").tag("venta")
+                                Text("Alquiler").tag("alquiler")
+                                Text("Proyectos").tag("proyecto")
+                            }
+                            .labelsHidden()
+                        }
+                        LabeledRow("Condición") {
+                            Picker("Condición", selection: $selCondition) {
+                                Text("Cualquiera").tag("")
+                                Text("Nueva construcción").tag("nueva_construccion")
+                                Text("Usada").tag("usada")
+                                Text("En planos").tag("planos")
+                            }
+                            .labelsHidden()
                         }
                     }
-                }
 
-                if let err = errorMsg {
-                    Section {
+                    FormCard("Ubicación") {
+                        LabeledRow("Provincia") {
+                            TextField("Provincia", text: $province)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        LabeledRow("Ciudad") {
+                            TextField("Ciudad", text: $city)
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+
+                    FormCard("Precio (USD)") {
+                        LabeledRow("Mínimo") {
+                            TextField("Mínimo", text: $priceMin)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        LabeledRow("Máximo") {
+                            TextField("Máximo", text: $priceMax)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+
+                    FormCard("Habitaciones") {
+                        LabeledRow(bedroomsMin == 0 ? "Cualquiera" : "\(bedroomsMin)+") {
+                            Stepper("", value: $bedroomsMin, in: 0...10)
+                                .labelsHidden()
+                        }
+                    }
+
+                    FormCard("Alertas") {
+                        LabeledRow("Recibir alertas") {
+                            Toggle("", isOn: $notifyOn).labelsHidden()
+                        }
+                        Text("Notificación push + correo cuando aparezcan nuevas propiedades.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rdInkSoft)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, Spacing.s4)
+                    }
+
+                    if let err = errorMsg {
                         Label(err, systemImage: "exclamationmark.triangle")
-                            .font(.caption).foregroundStyle(.red)
+                            .font(.caption)
+                            .foregroundStyle(Color.rdRed)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Spacing.s4)
                     }
                 }
+                .padding(.horizontal, Spacing.s16)
+                .padding(.vertical, Spacing.s16)
             }
+            .background(Color.rdBg)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }
+                        .accessibilityLabel("Cancelar")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(saving ? "Guardando…" : "Guardar") {
@@ -304,54 +336,61 @@ struct SavedSearchDetailView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(current.name).font(.headline)
-                    Text(current.filters.summary)
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-
-                Toggle(isOn: Binding(
-                    get: { current.notify },
-                    set: { newVal in
-                        if !togglingNotify { Task { await toggleNotify(newVal) } }
+        ScrollView {
+            VStack(spacing: Spacing.s16) {
+                FormCard("Búsqueda") {
+                    LabeledRow("Nombre") {
+                        Text(current.name)
                     }
-                )) {
-                    Label("Alertas activas", systemImage: "bell.fill")
+                    LabeledRow("Filtros") {
+                        Text(current.filters.summary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    LabeledRow("Alertas") {
+                        Toggle("", isOn: Binding(
+                            get: { current.notify },
+                            set: { newVal in
+                                if !togglingNotify { Task { await toggleNotify(newVal) } }
+                            }
+                        ))
+                        .labelsHidden()
+                        .disabled(togglingNotify)
+                    }
                 }
-                .disabled(togglingNotify)
-            }
 
-            if loading {
-                Section { ProgressView() }
-            } else if listings.isEmpty {
-                Section {
-                    Text("Ninguna propiedad coincide actualmente.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 12)
-                }
-            } else {
-                Section(total == 1 ? "1 propiedad" : "\(total) propiedades") {
-                    ForEach(listings) { l in
-                        NavigationLink {
-                            ListingDetailView(id: l.id).environmentObject(api)
-                        } label: {
-                            ListingRow(listing: l, isSelected: false)
+                if loading {
+                    ProgressView().padding()
+                } else if listings.isEmpty {
+                    EmptyStateView.calm(
+                        systemImage: "magnifyingglass",
+                        title: "Sin resultados ahora",
+                        description: "Ninguna propiedad coincide con esta búsqueda en este momento."
+                    )
+                } else {
+                    FormCard(total == 1 ? "1 propiedad" : "\(total) propiedades") {
+                        ForEach(listings) { l in
+                            NavigationLink {
+                                ListingDetailView(id: l.id).environmentObject(api)
+                            } label: {
+                                ListingRow(listing: l, isSelected: false)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
-            }
 
-            if let err = errorMsg {
-                Section {
+                if let err = errorMsg {
                     Label(err, systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(.red)
+                        .font(.caption)
+                        .foregroundStyle(Color.rdRed)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.s4)
                 }
             }
+            .padding(.horizontal, Spacing.s16)
+            .padding(.vertical, Spacing.s16)
         }
+        .background(Color.rdBg)
         .navigationTitle("Búsqueda")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -368,6 +407,7 @@ struct SavedSearchDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("Más opciones")
             }
         }
         .task { await load() }
@@ -379,6 +419,7 @@ struct SavedSearchDetailView: View {
                 Task { await load() }
             })
             .environmentObject(api)
+            .presentationDragIndicator(.visible)
         }
         .alert("¿Eliminar búsqueda?", isPresented: $showDeleteAlert) {
             Button("Cancelar", role: .cancel) {}

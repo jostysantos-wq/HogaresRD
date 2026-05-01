@@ -1,6 +1,9 @@
 import SwiftUI
 
 // MARK: - Inventory Management View
+//
+// Wave 8-C refactor: 56pt thumbnail row pattern (Airbnb-style), status
+// pills via `DSStatusBadge`, empty state via `EmptyStateView.calm`.
 
 struct InventoryManagementView: View {
     let listingId: String
@@ -23,21 +26,22 @@ struct InventoryManagementView: View {
         List {
             // Summary header
             Section {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.s8) {
                     Text(listingTitle)
-                        .font(.subheadline).bold()
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rdInk)
                         .lineLimit(2)
 
                     if !units.isEmpty {
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.s12) {
                             summaryPill(count: units.count, label: "Total", color: .rdBlue)
                             summaryPill(count: units.filter { $0.status == "available" }.count, label: "Disponibles", color: .rdGreen)
-                            summaryPill(count: units.filter { $0.status == "reserved" }.count, label: "Reservadas", color: .orange)
+                            summaryPill(count: units.filter { $0.status == "reserved" }.count, label: "Reservadas", color: .rdOrange)
                             summaryPill(count: units.filter { $0.status == "sold" }.count, label: "Vendidas", color: .rdRed)
                         }
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, Spacing.s4)
             }
 
             // Add unit section
@@ -46,11 +50,11 @@ struct InventoryManagementView: View {
                     showAdd.toggle()
                 } label: {
                     Label(showAdd ? "Cancelar" : "Agregar unidad", systemImage: showAdd ? "xmark" : "plus.circle.fill")
-                        .foregroundStyle(showAdd ? .secondary : Color.rdBlue)
+                        .foregroundStyle(showAdd ? Color.rdInkSoft : Color.rdAccent)
                 }
 
                 if showAdd {
-                    VStack(spacing: 10) {
+                    VStack(spacing: Spacing.s8) {
                         TextField("Etiqueta (ej: Edif. 3 - Apt 2B)", text: $newLabel)
                             .textFieldStyle(.roundedBorder)
 
@@ -84,10 +88,10 @@ struct InventoryManagementView: View {
                                 }
                                 Spacer()
                             }
-                            .padding(.vertical, 10)
-                            .background(newLabel.isEmpty ? Color(.systemGray4) : Color.rdBlue)
+                            .padding(.vertical, Spacing.s8)
+                            .background(newLabel.isEmpty ? Color.rdMuted : Color.rdAccent)
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
                         }
                         .disabled(newLabel.isEmpty || adding)
                         .buttonStyle(.plain)
@@ -100,7 +104,7 @@ struct InventoryManagementView: View {
                 Section {
                     Label(err, systemImage: "exclamationmark.triangle")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.rdRed)
                 }
             }
 
@@ -109,18 +113,13 @@ struct InventoryManagementView: View {
                 Section { ProgressView() }
             } else if units.isEmpty {
                 Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "building.2")
-                            .font(.system(size: 36))
-                            .foregroundStyle(Color(.tertiaryLabel))
-                        Text("Sin unidades registradas")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Text("Agrega las unidades individuales de esta propiedad para rastrear su disponibilidad.")
-                            .font(.caption).foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
-                    }
+                    EmptyStateView.calm(
+                        systemImage: "building.2",
+                        title: "Sin unidades registradas",
+                        description: "Agrega las unidades individuales de esta propiedad para rastrear su disponibilidad."
+                    )
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
+                    .padding(.vertical, Spacing.s24)
                 }
             } else {
                 // Available
@@ -151,7 +150,7 @@ struct InventoryManagementView: View {
                                     } label: {
                                         Label("Liberar", systemImage: "arrow.uturn.backward")
                                     }
-                                    .tint(.orange)
+                                    .tint(Color.rdOrange)
                                 }
                         }
                     }
@@ -179,11 +178,11 @@ struct InventoryManagementView: View {
     private func summaryPill(count: Int, label: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
-                .font(.title3).bold()
+                .font(.title3.weight(.bold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
+                .font(.caption2)
+                .foregroundStyle(Color.rdInkSoft)
         }
         .frame(maxWidth: .infinity)
     }
@@ -249,51 +248,62 @@ struct InventoryManagementView: View {
 }
 
 // MARK: - Unit Row
+//
+// Airbnb-style 56pt leading thumbnail (a tinted tile with a building
+// glyph since units don't have individual photos), title + caption
+// stacked, trailing `DSStatusBadge` for unit status.
 
 struct UnitRow: View {
     let unit: UnitInventoryItem
 
-    private var statusColor: Color {
+    private var statusTint: Color {
         switch unit.status {
         case "available": return .rdGreen
-        case "reserved":  return .orange
+        case "reserved":  return .rdOrange
         case "sold":      return .rdRed
-        default:          return .secondary
+        default:          return .rdMuted
         }
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Status dot
-            Circle()
-                .fill(statusColor)
-                .frame(width: 10, height: 10)
+        HStack(spacing: Spacing.s12) {
+            // 56pt thumbnail tile
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                    .fill(statusTint.opacity(0.12))
+                Image(systemName: "building.2.fill")
+                    .font(.title3)
+                    .foregroundStyle(statusTint)
+            }
+            .frame(width: 56, height: 56)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(unit.label)
-                    .font(.subheadline).bold()
+                    .font(.body)
+                    .foregroundStyle(Color.rdInk)
+                    .lineLimit(1)
                 if let type = unit.type, !type.isEmpty {
                     Text(type)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rdInkSoft)
+                        .lineLimit(1)
                 }
                 if let client = unit.clientName, !client.isEmpty {
                     Label(client, systemImage: "person.fill")
                         .font(.caption2)
-                        .foregroundStyle(statusColor)
+                        .foregroundStyle(statusTint)
+                        .lineLimit(1)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: Spacing.s8)
 
-            Text(unit.statusLabel)
-                .font(.caption2).bold()
-                .foregroundStyle(statusColor)
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(statusColor.opacity(0.12))
-                .clipShape(Capsule())
+            DSStatusBadge(label: unit.statusLabel, tint: statusTint)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Spacing.s4)
+        .frame(minHeight: 56)
+        .contentShape(Rectangle())
     }
 }
 
@@ -307,25 +317,13 @@ struct InventoryBadgeView: View {
         let reserved  = units.filter { $0.status == "reserved" }.count
         let sold      = units.filter { $0.status == "sold" }.count
 
-        HStack(spacing: 10) {
-            inventoryDot(count: available, label: "Disponibles", color: .rdGreen)
-            inventoryDot(count: reserved, label: "Reservadas", color: .orange)
-            inventoryDot(count: sold, label: "Vendidas", color: .rdRed)
+        HStack(spacing: Spacing.s8) {
+            DSPill(label: "Disponibles \(available)", tint: .rdGreen)
+            DSPill(label: "Reservadas \(reserved)", tint: .rdOrange)
+            DSPill(label: "Vendidas \(sold)", tint: .rdRed)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func inventoryDot(count: Int, label: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text("\(count)")
-                .font(.subheadline).bold()
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
+        .padding(Spacing.s12)
+        .background(Color.rdSurface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
     }
 }
