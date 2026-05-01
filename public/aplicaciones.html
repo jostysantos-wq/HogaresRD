@@ -1245,7 +1245,7 @@ async function loadApplications() {
   try {
     const [apps, analytics] = await Promise.all([
       api('/api/applications').catch(() => []),
-      api('/api/broker-dashboard/analytics').catch(() => null),
+      api('/api/broker/analytics').catch(() => null),
     ]);
     STATE.apps = Array.isArray(apps) ? apps : (apps?.applications || []);
     STATE.analytics = analytics;

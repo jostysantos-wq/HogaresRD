@@ -1142,7 +1142,7 @@ async function load() {
   // Load listings owned by the broker, dashboard analytics, and referral stats in parallel
   const [listingsResp, analytics, refStats] = await Promise.all([
     api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}`).catch(() => ({ listings: [] })),
-    api('/api/broker-dashboard/analytics').catch(() => null),
+    api('/api/broker/analytics').catch(() => null),
     api('/api/referrals/my-stats').catch(() => null),
   ]);
 

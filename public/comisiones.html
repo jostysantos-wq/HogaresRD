@@ -1684,7 +1684,7 @@ async function reload() {
 
   // Sales monthly (for the bars chart) — non-fatal if 403/missing
   try {
-    const sales = await api('/api/broker-dashboard/sales');
+    const sales = await api('/api/broker/sales');
     STATE.monthlySales = (sales && sales.monthly_revenue) || [];
   } catch {
     STATE.monthlySales = [];
