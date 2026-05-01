@@ -1,0 +1,1414 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Visitas</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:        #F4F1EA;
+    --bg-card:   #FFFFFF;
+    --bg-soft:   #FBF6EE;
+    --ink:       #14110F;
+    --ink-soft:  #4a4540;
+    --ink-mute:  #8a857f;
+    --line:      #E6E0D3;
+    --line-soft: #EFEAE0;
+    --sans:      'Inter', -apple-system, sans-serif;
+    --serif:     'Cormorant Garamond', Georgia, serif;
+
+    --accent:    #b54c30;
+    --accent-soft:#f2d9d0;
+    --teal:      #2e8b8b;
+    --teal-soft: #cfe7e3;
+    --gold:      #d4a64a;
+    --gold-soft: #f3e3c1;
+    --plum:      #6c4f8a;
+    --plum-soft: #ddd2eb;
+
+    --r-card:    18px;
+    --r-pill:    999px;
+    --r-mini:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  /* ── LAYOUT SHELL ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    gap: 18px;
+    padding: 18px;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ───────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 22px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: sticky;
+    top: 18px;
+    height: calc(100vh - 36px);
+  }
+  .sb-brand {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 6px;
+  }
+  .sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .sb-logo-mark {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--ink);
+    display: grid; place-items: center;
+  }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--ink-soft); font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-link.active:hover { background: var(--ink); }
+
+  .sb-section-label {
+    padding: 18px 12px 6px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .sb-cta {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 14px; padding: 16px;
+  }
+  .sb-cta-title {
+    font-family: var(--serif); font-size: 18px; font-weight: 600;
+    line-height: 1.15; margin-bottom: 8px;
+  }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn {
+    flex: 1; padding: 7px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    background: #fff; border: 1px solid var(--line);
+    color: var(--ink); cursor: pointer; text-align: center;
+  }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ── MAIN ─────────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 14px 18px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 16px; align-items: center;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-soft); border-radius: var(--r-pill);
+    padding: 8px 14px; flex: 1; max-width: 380px;
+  }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input {
+    border: none; background: transparent; outline: none;
+    color: var(--ink); font-size: 13px; flex: 1;
+  }
+  .tb-search input::placeholder { color: var(--ink-mute); }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+  }
+  .tb-ai-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    display: grid; place-items: center;
+  }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-soft); position: relative;
+  }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    border: 2px solid var(--bg-card); cursor: pointer;
+  }
+
+  /* PAGE HEAD */
+  .page-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .page-head-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .page-eyebrow {
+    font-size: 11px; font-weight: 600; color: var(--ink-mute);
+    letter-spacing: 0.07em; text-transform: uppercase;
+  }
+  .page-title {
+    font-family: var(--serif); font-size: 28px; font-weight: 600;
+    margin: 0; letter-spacing: -0.01em;
+  }
+  .page-actions { display: flex; align-items: center; gap: 8px; }
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500;
+    cursor: pointer;
+  }
+  .ph-pill:hover { background: var(--bg-soft); }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+  }
+  .ph-cta svg { width: 13px; height: 13px; }
+
+  /* KPI ROW (3 compact) */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .kpi {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 18px;
+  }
+  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .kpi-num {
+    font-family: var(--serif); font-size: 36px; font-weight: 600;
+    color: var(--ink); line-height: 1; letter-spacing: -0.02em;
+  }
+  .kpi-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-mute);
+  }
+  .kpi-icon svg { width: 16px; height: 16px; }
+  .kpi-label {
+    color: var(--ink-mute); font-size: 12px; margin-top: 12px;
+    line-height: 1.35;
+  }
+
+  /* MAIN GRID */
+  .visit-grid {
+    display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 18px;
+  }
+  .panel {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 20px; display: flex; flex-direction: column; min-width: 0;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    gap: 10px; flex-wrap: wrap;
+  }
+  .panel-title {
+    font-family: var(--serif); font-size: 19px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .panel-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 500;
+  }
+  .panel-pill svg { width: 11px; height: 11px; }
+
+  /* WEEK CALENDAR */
+  .week-nav { display: inline-flex; align-items: center; gap: 6px; }
+  .week-nav button {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--bg-soft); color: var(--ink-soft);
+    display: grid; place-items: center;
+  }
+  .week-nav button:hover { background: var(--line-soft); }
+  .week-nav button svg { width: 12px; height: 12px; }
+  .week-nav .week-label {
+    font-size: 12.5px; font-weight: 500; padding: 0 8px; color: var(--ink);
+  }
+
+  .week-cal {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px;
+  }
+  .day-cell {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 12px; padding: 10px; min-height: 240px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .day-cell.today { border-color: var(--ink); background: #fff; }
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .day-name {
+    font-size: 10.5px; font-weight: 600; color: var(--ink-mute);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .day-num {
+    font-family: var(--serif); font-size: 18px; font-weight: 600;
+    color: var(--ink); line-height: 1;
+  }
+  .day-cell.today .day-num { color: var(--accent); }
+  .day-tours { display: flex; flex-direction: column; gap: 6px; }
+  .tour-pill {
+    background: #fff; border: 1px solid var(--line-soft);
+    border-radius: 9px; padding: 7px 9px;
+    display: flex; flex-direction: column; gap: 2px;
+    cursor: pointer; text-align: left; width: 100%;
+    transition: border-color .15s, transform .1s;
+    border-left-width: 3px;
+  }
+  .tour-pill:hover { border-color: var(--ink); transform: translateY(-1px); }
+  .tour-pill.s-pending     { border-left-color: var(--gold); }
+  .tour-pill.s-confirmed   { border-left-color: var(--teal); }
+  .tour-pill.s-completed   { border-left-color: var(--ink); }
+  .tour-pill.s-cancelled,
+  .tour-pill.s-rejected    { border-left-color: var(--accent); opacity: .85; }
+  .tour-pill.s-rescheduled { border-left-color: var(--plum); }
+  .tour-time {
+    font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--ink);
+  }
+  .tour-name {
+    font-size: 11.5px; font-weight: 500; color: var(--ink-soft);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tour-list-meta {
+    font-size: 10.5px; color: var(--ink-mute);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .day-empty {
+    color: var(--ink-mute); font-size: 11px; padding: 4px 2px;
+  }
+
+  .week-empty {
+    grid-column: 1 / -1;
+    text-align: center; padding: 30px 20px;
+    color: var(--ink-mute); font-size: 13px;
+    background: var(--bg-soft); border-radius: 12px;
+    border: 1px dashed var(--line);
+  }
+  .week-empty strong { display: block; color: var(--ink); margin-bottom: 4px; font-family: var(--serif); font-size: 16px; }
+
+  /* AVAILABILITY PANEL */
+  .av-list { display: flex; flex-direction: column; gap: 8px; }
+  .av-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 10px; padding: 10px 12px; gap: 8px;
+  }
+  .av-day {
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .av-day-chip {
+    display: inline-grid; place-items: center;
+    width: 32px; height: 24px; border-radius: 6px;
+    background: var(--ink); color: #fff;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .av-time {
+    font-size: 11.5px; color: var(--ink-mute); margin-top: 2px;
+  }
+  .av-del {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: transparent; color: var(--ink-mute);
+    display: grid; place-items: center;
+    transition: background .15s, color .15s;
+  }
+  .av-del:hover { background: var(--accent-soft); color: var(--accent); }
+  .av-del svg { width: 13px; height: 13px; }
+
+  .av-add {
+    margin-top: 10px; padding: 10px 12px;
+    border: 1px dashed var(--line); border-radius: 10px;
+    background: transparent; color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 600; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background .15s, border-color .15s;
+  }
+  .av-add:hover { background: var(--bg-soft); border-color: var(--ink-mute); }
+  .av-add svg { width: 12px; height: 12px; }
+
+  .av-empty {
+    text-align: center; padding: 22px 16px;
+    color: var(--ink-mute); font-size: 12.5px;
+    background: var(--bg-soft); border-radius: 10px; border: 1px dashed var(--line);
+  }
+
+  /* AV ADD FORM (inline) */
+  .av-form {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 10px; padding: 12px; margin-top: 10px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .av-form label {
+    font-size: 10.5px; font-weight: 600; color: var(--ink-mute);
+    letter-spacing: 0.05em; text-transform: uppercase; display: block;
+    margin-bottom: 4px;
+  }
+  .av-form select, .av-form input {
+    width: 100%; padding: 8px 10px;
+    border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--ink);
+    font-family: inherit; font-size: 12.5px; outline: none;
+  }
+  .av-form select:focus, .av-form input:focus { border-color: var(--ink); }
+  .av-form-row { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+  .av-form-btn {
+    padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    background: var(--ink); color: #fff;
+  }
+  .av-form-btn.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+
+  /* SIDE SHEET */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(20, 17, 15, 0.45);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+    z-index: 50;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100vw;
+    background: var(--bg-card); z-index: 60;
+    transform: translateX(100%); transition: transform .25s ease;
+    display: flex; flex-direction: column;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+  }
+  .sheet.open { transform: translateX(0); }
+  .sheet-head {
+    padding: 18px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .sheet-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    margin: 0;
+  }
+  .sheet-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--bg-soft); color: var(--ink-soft);
+    display: grid; place-items: center;
+  }
+  .sheet-close svg { width: 14px; height: 14px; }
+  .sheet-body {
+    flex: 1; overflow-y: auto; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .sheet-status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .sheet-status-pill.s-pending     { background: var(--gold-soft); color: #7a5a18; }
+  .sheet-status-pill.s-confirmed   { background: var(--teal-soft); color: #1c5757; }
+  .sheet-status-pill.s-completed   { background: #e8e3d4; color: var(--ink); }
+  .sheet-status-pill.s-cancelled,
+  .sheet-status-pill.s-rejected    { background: var(--accent-soft); color: #6f2918; }
+  .sheet-status-pill.s-rescheduled { background: var(--plum-soft); color: #3f2c5a; }
+  .sheet-section { display: flex; flex-direction: column; gap: 6px; }
+  .sheet-label {
+    font-size: 10.5px; font-weight: 600; color: var(--ink-mute);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .sheet-value { font-size: 13.5px; color: var(--ink); }
+  .sheet-value strong { font-weight: 600; }
+  .sheet-foot {
+    padding: 14px 20px; border-top: 1px solid var(--line-soft);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .sheet-btn {
+    padding: 10px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--bg-card); color: var(--ink);
+    text-align: center; cursor: pointer;
+  }
+  .sheet-btn:hover { background: var(--bg-soft); }
+  .sheet-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .sheet-btn.danger { color: var(--accent); border-color: var(--accent-soft); }
+  .sheet-btn.danger:hover { background: var(--accent-soft); }
+  .sheet-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff;
+    padding: 10px 18px; border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 500;
+    opacity: 0; transition: opacity .2s, transform .2s;
+    z-index: 80; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast.error { background: var(--accent); }
+
+  /* SKEL */
+  .skel {
+    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1240px) {
+    .visit-grid { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; top: 0; }
+    .topbar { grid-template-columns: 1fr; }
+    .topbar-right { justify-content: flex-end; }
+    .kpi-row { grid-template-columns: 1fr; }
+    .week-cal { grid-template-columns: 1fr; }
+    .day-cell { min-height: auto; }
+    .sheet { width: 100vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ╭─ SIDEBAR ──────────────────────────────────────────╮ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="/broker-dashboard.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Panel
+      </a>
+      <a href="/broker.html#tab-listings" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        Mis Propiedades
+      </a>
+      <a href="/broker.html#tab-applications" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Aplicaciones
+      </a>
+      <a href="/visitas.html" class="sb-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Visitas
+      </a>
+      <a href="/broker.html#tab-commissions" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Comisiones
+      </a>
+      <a href="/broker.html#tab-conversations" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        Mensajes
+      </a>
+
+      <div class="sb-section-label">Marketing</div>
+
+      <a href="/enlaces-de-referido.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Enlaces de Referido
+      </a>
+      <a href="/broker.html#tab-ads" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/></svg>
+        Campañas
+      </a>
+
+      <div class="sb-section-label">Soporte</div>
+
+      <a href="/contacto" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Centro de Ayuda
+      </a>
+    </nav>
+
+    <div class="sb-cta">
+      <div class="sb-cta-title">Comparte tu <em style="font-style:italic;">enlace</em></div>
+      <div class="sb-cta-desc">Permite que prospectos reserven visitas en tus horarios disponibles.</div>
+      <div class="sb-cta-row">
+        <a class="sb-cta-btn" href="/enlaces-de-referido.html">Más info</a>
+        <a class="sb-cta-btn primary" href="/broker.html#tab-listings">Mis listados</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ╭─ MAIN ─────────────────────────────────────────────╮ -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar visitas, prospectos…" id="topbarSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot">
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg>
+          </span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </a>
+        <a class="tb-icon" href="/account.html" aria-label="Configuración">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </a>
+        <a class="tb-avatar" href="/account.html" id="tbAvatar" aria-label="Mi cuenta"></a>
+      </div>
+    </div>
+
+    <!-- PAGE HEADER -->
+    <div class="page-head">
+      <div class="page-head-text">
+        <div class="page-eyebrow" id="pageEyebrow">Agenda · cargando…</div>
+        <h1 class="page-title">Visitas</h1>
+      </div>
+      <div class="page-actions">
+        <button class="ph-pill" id="viewToggle" title="Cambiar vista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="viewLabel">Hoy</span>
+        </button>
+        <button class="ph-pill" id="todayBtn" title="Ir a hoy">Hoy</button>
+        <button class="ph-cta" id="newVisitBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva visita
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:36px;width:60px;">&nbsp;</div><div class="kpi-icon"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:36px;width:60px;">&nbsp;</div><div class="kpi-icon"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:36px;width:60px;">&nbsp;</div><div class="kpi-icon"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+    </div>
+
+    <!-- VISIT GRID -->
+    <div class="visit-grid">
+
+      <!-- Calendar -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Calendario</div>
+          <div class="week-nav">
+            <button id="prevWeek" aria-label="Semana anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <span class="week-label" id="weekLabel">—</span>
+            <button id="nextWeek" aria-label="Semana siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+          </div>
+        </div>
+        <div class="week-cal" id="weekCal"></div>
+      </section>
+
+      <!-- Availability -->
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Mi disponibilidad</div>
+          <span class="panel-pill" id="avTotal">— bloques</span>
+        </div>
+        <div id="avList" class="av-list"></div>
+        <button class="av-add" id="avAddBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Añadir bloque
+        </button>
+        <div id="avForm" style="display:none;"></div>
+      </aside>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- SIDE SHEET (tour detail) -->
+<div class="overlay" id="overlay"></div>
+<aside class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-head">
+    <h2 class="sheet-title" id="sheetTitle">Visita</h2>
+    <button class="sheet-close" id="sheetClose" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-foot" id="sheetFoot"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── STATE ─────────────────────────────────────────────────────
+const STATE = {
+  tours: [],
+  availability: { weekly: [], overrides: [] },
+  weekStart: null,        // Monday of current shown week
+  view: 'semana',         // 'hoy' | 'semana' | 'mes'
+  currentTourId: null,
+  user: null,
+};
+
+const TZ = 'America/Santo_Domingo';
+const DAY_FULL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DAY_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DAY_CHIPS = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+const MONTHS_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// ── HELPERS ───────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', type === 'error');
+  t.classList.add('show');
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+async function api(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (opts.body && typeof opts.body !== 'string') {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(path, { credentials: 'include', ...opts, headers });
+  if (res.status === 401) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+    return null;
+  }
+  if (!res.ok) {
+    let body = null; try { body = await res.json(); } catch {}
+    const err = new Error(body?.error || `${path} ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// Date helpers — DR timezone-aware
+function ymdInDR(d) {
+  // returns YYYY-MM-DD as visible in America/Santo_Domingo
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+function todayDR() { return ymdInDR(new Date()); }
+
+// Build a Date object representing a given YYYY-MM-DD at noon DR (UTC-4 → 16:00 UTC)
+function drDateAtNoon(ymd) {
+  return new Date(`${ymd}T16:00:00Z`);
+}
+
+// Get day-of-week (0=Sun…6=Sat) of YYYY-MM-DD as observed in DR
+function dowDR(ymd) {
+  return drDateAtNoon(ymd).getUTCDay();
+}
+
+// Add days to a YYYY-MM-DD string
+function addDaysYMD(ymd, days) {
+  const d = drDateAtNoon(ymd);
+  d.setUTCDate(d.getUTCDate() + days);
+  return ymdInDR(d);
+}
+
+// Get Monday of the week containing the given YYYY-MM-DD
+function mondayOf(ymd) {
+  const dow = dowDR(ymd); // 0=Sun
+  const offset = dow === 0 ? -6 : 1 - dow;
+  return addDaysYMD(ymd, offset);
+}
+
+function fmtDateLong(ymd) {
+  const d = drDateAtNoon(ymd);
+  return new Intl.DateTimeFormat('es-DO', {
+    timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  }).format(d);
+}
+
+function fmtTime12(t) {
+  if (!t) return '';
+  const [hStr, m] = t.split(':');
+  const h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
+// ── ICONS ─────────────────────────────────────────────────────
+const ICON = {
+  pending: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  check:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  pct:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+  trash:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>',
+};
+
+const STATUS_LABEL = {
+  pending:     'Pendiente',
+  confirmed:   'Confirmada',
+  completed:   'Completada',
+  cancelled:   'Cancelada',
+  rejected:    'Rechazada',
+  rescheduled: 'Reprogramada',
+};
+
+// ── DATA LOAD ────────────────────────────────────────────────
+async function loadAll() {
+  let me;
+  try {
+    me = await api('/api/auth/me');
+  } catch (err) {
+    console.error('[visitas] auth check failed', err);
+    return;
+  }
+  if (!me) return;
+  STATE.user = me?.user || me;
+
+  // Independent fetches — a 403/404 on one shouldn't blank the page.
+  const [toursRes, avRes] = await Promise.allSettled([
+    api('/api/tours/broker-requests'),
+    api('/api/tours/broker-availability'),
+  ]);
+
+  if (toursRes.status === 'fulfilled' && Array.isArray(toursRes.value)) {
+    STATE.tours = toursRes.value;
+  } else if (toursRes.status === 'rejected') {
+    console.warn('[visitas] tours load failed', toursRes.reason?.message);
+    if (toursRes.reason?.status === 403) {
+      toast('Solo agentes pueden ver visitas', 'error');
+    }
+  }
+
+  if (avRes.status === 'fulfilled' && avRes.value) {
+    STATE.availability = avRes.value;
+  } else if (avRes.status === 'rejected') {
+    console.warn('[visitas] availability load failed', avRes.reason?.message);
+  }
+
+  renderAll();
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderAll() {
+  renderEyebrowAndKpis();
+  renderWeek();
+  renderAvailability();
+}
+
+function isThisWeek(ymd) {
+  const start = STATE.weekStart;
+  const end   = addDaysYMD(start, 6);
+  return ymd >= start && ymd <= end;
+}
+
+function renderEyebrowAndKpis() {
+  const tours = STATE.tours;
+  const confirmedThisWeek = tours.filter(t => t.status === 'confirmed' && isThisWeek(t.requested_date)).length;
+  const pendingCount = tours.filter(t => t.status === 'pending').length;
+
+  // Attendance rate: of past confirmed (date <= today), what % are completed?
+  const today = todayDR();
+  const pastConfirmed = tours.filter(t =>
+    (t.status === 'confirmed' || t.status === 'completed') && t.requested_date <= today
+  );
+  const completedCount = pastConfirmed.filter(t => t.status === 'completed').length;
+  const attendance = pastConfirmed.length > 0
+    ? Math.round((completedCount / pastConfirmed.length) * 100)
+    : null;
+
+  document.getElementById('pageEyebrow').textContent =
+    `Agenda · ${confirmedThisWeek} confirmada${confirmedThisWeek === 1 ? '' : 's'} esta semana`;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${pendingCount}</div>
+        <div class="kpi-icon">${ICON.pending}</div>
+      </div>
+      <div class="kpi-label">Solicitudes pendientes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${confirmedThisWeek}</div>
+        <div class="kpi-icon">${ICON.check}</div>
+      </div>
+      <div class="kpi-label">Confirmadas esta semana</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${attendance == null ? '—' : attendance + '%'}</div>
+        <div class="kpi-icon">${ICON.pct}</div>
+      </div>
+      <div class="kpi-label">Tasa de asistencia<br><span style="color:var(--ink);font-weight:600;font-size:11.5px;">${pastConfirmed.length} visita${pastConfirmed.length === 1 ? '' : 's'} pasada${pastConfirmed.length === 1 ? '' : 's'}</span></div>
+    </div>
+  `;
+}
+
+function renderWeek() {
+  const cal = document.getElementById('weekCal');
+  const start = STATE.weekStart;
+  const end = addDaysYMD(start, 6);
+  const today = todayDR();
+
+  // week label
+  const sd = drDateAtNoon(start);
+  const ed = drDateAtNoon(end);
+  const sM = MONTHS_ES[sd.getUTCMonth()];
+  const eM = MONTHS_ES[ed.getUTCMonth()];
+  const sDay = sd.getUTCDate();
+  const eDay = ed.getUTCDate();
+  const yr = ed.getUTCFullYear();
+  document.getElementById('weekLabel').textContent =
+    sM === eM ? `${sDay}–${eDay} ${sM} ${yr}` : `${sDay} ${sM} – ${eDay} ${eM} ${yr}`;
+
+  // group tours by date
+  const byDate = new Map();
+  for (const t of STATE.tours) {
+    if (!t.requested_date) continue;
+    if (t.requested_date < start || t.requested_date > end) continue;
+    if (!byDate.has(t.requested_date)) byDate.set(t.requested_date, []);
+    byDate.get(t.requested_date).push(t);
+  }
+
+  // sort each day's tours by time
+  for (const arr of byDate.values()) {
+    arr.sort((a, b) => (a.requested_time || '').localeCompare(b.requested_time || ''));
+  }
+
+  const weekTotal = Array.from(byDate.values()).reduce((n, arr) => n + arr.length, 0);
+
+  if (weekTotal === 0) {
+    // build days but show empty banner
+    let html = '';
+    // Mon-Sun grid: Monday is start
+    for (let i = 0; i < 7; i++) {
+      const ymd = addDaysYMD(start, i);
+      const dow = dowDR(ymd);
+      const dayLabel = DAY_CHIPS[dow];
+      const isToday = ymd === today;
+      const dnum = drDateAtNoon(ymd).getUTCDate();
+      html += `
+        <div class="day-cell${isToday ? ' today' : ''}">
+          <div class="day-head">
+            <span class="day-name">${dayLabel}</span>
+            <span class="day-num">${dnum}</span>
+          </div>
+        </div>
+      `;
+    }
+    cal.innerHTML = html + `
+      <div class="week-empty">
+        <strong>Sin visitas esta semana</strong>
+        Comparte tu enlace para captar tours.
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const ymd = addDaysYMD(start, i);
+    const dow = dowDR(ymd);
+    const dayLabel = DAY_CHIPS[dow];
+    const isToday = ymd === today;
+    const dnum = drDateAtNoon(ymd).getUTCDate();
+    const tours = byDate.get(ymd) || [];
+
+    const pillsHtml = tours.length
+      ? tours.map(t => {
+          const sCls = `s-${t.status || 'pending'}`;
+          const time = fmtTime12(t.requested_time);
+          return `
+            <button class="tour-pill ${sCls}" data-tour-id="${escapeHtml(t.id)}">
+              <span class="tour-time">${escapeHtml(time)}</span>
+              <span class="tour-name">${escapeHtml(t.client_name || 'Prospecto')}</span>
+              <span class="tour-list-meta">${escapeHtml(t.listing_title || '')}</span>
+            </button>
+          `;
+        }).join('')
+      : `<div class="day-empty">—</div>`;
+
+    html += `
+      <div class="day-cell${isToday ? ' today' : ''}">
+        <div class="day-head">
+          <span class="day-name">${dayLabel}</span>
+          <span class="day-num">${dnum}</span>
+        </div>
+        <div class="day-tours">${pillsHtml}</div>
+      </div>
+    `;
+  }
+  cal.innerHTML = html;
+
+  // bind pills
+  cal.querySelectorAll('.tour-pill').forEach(p => {
+    p.addEventListener('click', () => openSheet(p.dataset.tourId));
+  });
+}
+
+function renderAvailability() {
+  const list = document.getElementById('avList');
+  const total = document.getElementById('avTotal');
+  const weekly = (STATE.availability.weekly || [])
+    .filter(s => s.active !== false)
+    .sort((a, b) => {
+      // Order Monday-first: Mon=1...Sun=0 → put Sun last
+      const ka = a.day_of_week === 0 ? 7 : a.day_of_week;
+      const kb = b.day_of_week === 0 ? 7 : b.day_of_week;
+      if (ka !== kb) return ka - kb;
+      return (a.start_time || '').localeCompare(b.start_time || '');
+    });
+
+  total.textContent = `${weekly.length} bloque${weekly.length === 1 ? '' : 's'}`;
+
+  if (weekly.length === 0) {
+    list.innerHTML = `<div class="av-empty">Aún no tienes bloques de disponibilidad. Añade uno para que tus prospectos puedan agendar visitas.</div>`;
+    return;
+  }
+
+  list.innerHTML = weekly.map(s => {
+    const day = DAY_FULL[s.day_of_week] || '?';
+    const chip = DAY_CHIPS[s.day_of_week] || '?';
+    const start = fmtTime12(s.start_time);
+    const end   = fmtTime12(s.end_time);
+    return `
+      <div class="av-row">
+        <div>
+          <div class="av-day"><span class="av-day-chip">${chip}</span>${escapeHtml(day)}</div>
+          <div class="av-time">${escapeHtml(start)} – ${escapeHtml(end)} · cada ${s.slot_duration_min || 30} min</div>
+        </div>
+        <button class="av-del" data-slot-id="${escapeHtml(s.id)}" aria-label="Eliminar bloque">${ICON.trash}</button>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.av-del').forEach(b => {
+    b.addEventListener('click', () => deleteAvailability(b.dataset.slotId));
+  });
+}
+
+// ── AVAILABILITY ACTIONS ──────────────────────────────────────
+async function deleteAvailability(id) {
+  if (!confirm('¿Eliminar este bloque de disponibilidad?')) return;
+  try {
+    await api(`/api/tours/broker-availability/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    STATE.availability.weekly = STATE.availability.weekly.filter(s => s.id !== id);
+    renderAvailability();
+    toast('Bloque eliminado');
+  } catch (err) {
+    toast(err.message || 'Error al eliminar', 'error');
+  }
+}
+
+function showAvForm() {
+  const formEl = document.getElementById('avForm');
+  formEl.style.display = '';
+  formEl.innerHTML = `
+    <div class="av-form">
+      <div>
+        <label>Día</label>
+        <select id="avDay">
+          <option value="1">Lunes</option>
+          <option value="2">Martes</option>
+          <option value="3">Miércoles</option>
+          <option value="4">Jueves</option>
+          <option value="5">Viernes</option>
+          <option value="6">Sábado</option>
+          <option value="0">Domingo</option>
+        </select>
+      </div>
+      <div>
+        <label>Duración (min)</label>
+        <select id="avDuration">
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="45">45</option>
+          <option value="60">60</option>
+          <option value="90">90</option>
+        </select>
+      </div>
+      <div>
+        <label>Inicio</label>
+        <input type="time" id="avStart" value="09:00">
+      </div>
+      <div>
+        <label>Fin</label>
+        <input type="time" id="avEnd" value="12:00">
+      </div>
+      <div class="av-form-row">
+        <button class="av-form-btn ghost" id="avCancel">Cancelar</button>
+        <button class="av-form-btn" id="avSave">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('avCancel').onclick = () => {
+    formEl.style.display = 'none';
+    formEl.innerHTML = '';
+  };
+  document.getElementById('avSave').onclick = saveAvailability;
+}
+
+async function saveAvailability() {
+  const day = parseInt(document.getElementById('avDay').value, 10);
+  const start_time = document.getElementById('avStart').value;
+  const end_time   = document.getElementById('avEnd').value;
+  const slot_duration_min = parseInt(document.getElementById('avDuration').value, 10);
+
+  if (!start_time || !end_time) {
+    toast('Indica hora de inicio y fin', 'error');
+    return;
+  }
+  if (start_time >= end_time) {
+    toast('La hora de fin debe ser posterior al inicio', 'error');
+    return;
+  }
+
+  try {
+    const slot = await api('/api/tours/broker-availability', {
+      method: 'POST',
+      body: { day_of_week: day, start_time, end_time, slot_duration_min, max_concurrent: 1 },
+    });
+    STATE.availability.weekly = STATE.availability.weekly.filter(s => s.id !== slot.id);
+    STATE.availability.weekly.push(slot);
+    document.getElementById('avForm').style.display = 'none';
+    document.getElementById('avForm').innerHTML = '';
+    renderAvailability();
+    toast('Bloque guardado');
+  } catch (err) {
+    toast(err.message || 'Error al guardar', 'error');
+  }
+}
+
+// ── SIDE SHEET ────────────────────────────────────────────────
+function openSheet(tourId) {
+  const t = STATE.tours.find(x => x.id === tourId);
+  if (!t) return;
+  STATE.currentTourId = tourId;
+
+  document.getElementById('sheetTitle').textContent = t.listing_title || 'Visita';
+
+  const dateLong = fmtDateLong(t.requested_date);
+  const time = fmtTime12(t.requested_time);
+  const status = t.status || 'pending';
+  const sLabel = STATUS_LABEL[status] || status;
+  const tourTypeBadge = t.tour_type === 'virtual'
+    ? '<span style="display:inline-block;padding:2px 8px;border-radius:6px;background:var(--plum-soft);color:#3f2c5a;font-size:10.5px;font-weight:700;">Virtual</span>'
+    : '<span style="display:inline-block;padding:2px 8px;border-radius:6px;background:var(--bg-soft);color:var(--ink-soft);font-size:10.5px;font-weight:700;">Presencial</span>';
+
+  document.getElementById('sheetBody').innerHTML = `
+    <span class="sheet-status-pill s-${status}">${escapeHtml(sLabel)}</span>
+
+    <div class="sheet-section">
+      <span class="sheet-label">Cuándo</span>
+      <span class="sheet-value"><strong>${escapeHtml(dateLong)}</strong> · ${escapeHtml(time)} (hora RD)</span>
+    </div>
+
+    <div class="sheet-section">
+      <span class="sheet-label">Modalidad</span>
+      <span class="sheet-value">${tourTypeBadge}</span>
+    </div>
+
+    <div class="sheet-section">
+      <span class="sheet-label">Prospecto</span>
+      <span class="sheet-value"><strong>${escapeHtml(t.client_name || '—')}</strong></span>
+      <span class="sheet-value">${escapeHtml(t.client_phone || '')}${t.client_email ? ' · ' + escapeHtml(t.client_email) : ''}</span>
+    </div>
+
+    ${t.client_notes ? `
+    <div class="sheet-section">
+      <span class="sheet-label">Notas del prospecto</span>
+      <span class="sheet-value">${escapeHtml(t.client_notes)}</span>
+    </div>` : ''}
+
+    ${t.broker_notes ? `
+    <div class="sheet-section">
+      <span class="sheet-label">Tus notas</span>
+      <span class="sheet-value">${escapeHtml(t.broker_notes)}</span>
+    </div>` : ''}
+
+    ${t.virtual_link ? `
+    <div class="sheet-section">
+      <span class="sheet-label">Enlace virtual</span>
+      <span class="sheet-value"><a href="${escapeHtml(t.virtual_link)}" target="_blank" rel="noopener" style="color:var(--plum);font-weight:600;">${escapeHtml(t.virtual_link)}</a></span>
+    </div>` : ''}
+
+    ${t.feedback_rating ? `
+    <div class="sheet-section">
+      <span class="sheet-label">Calificación</span>
+      <span class="sheet-value">${'★'.repeat(t.feedback_rating)}${'☆'.repeat(5 - t.feedback_rating)} ${t.feedback_comment ? '<br><em style="color:var(--ink-mute);">' + escapeHtml(t.feedback_comment) + '</em>' : ''}</span>
+    </div>` : ''}
+  `;
+
+  // Build action buttons by status
+  const foot = document.getElementById('sheetFoot');
+  let buttons = '';
+  if (status === 'pending') {
+    buttons = `
+      <button class="sheet-btn primary" data-act="confirm">Confirmar</button>
+      <button class="sheet-btn" data-act="reschedule">Reprogramar</button>
+      <button class="sheet-btn danger" data-act="reject">Rechazar</button>
+      <button class="sheet-btn danger" data-act="cancel">Cancelar</button>
+    `;
+  } else if (status === 'confirmed') {
+    buttons = `
+      <button class="sheet-btn primary" data-act="complete">Marcar realizada</button>
+      <button class="sheet-btn" data-act="reschedule">Reprogramar</button>
+      <button class="sheet-btn danger" data-act="cancel">Cancelar</button>
+    `;
+  } else {
+    buttons = `<button class="sheet-btn" data-act="close" style="grid-column:1/-1;">Cerrar</button>`;
+  }
+  foot.innerHTML = buttons;
+  foot.querySelectorAll('button[data-act]').forEach(b => {
+    b.addEventListener('click', () => onSheetAction(b.dataset.act));
+  });
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheet').setAttribute('aria-hidden', 'false');
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheet').setAttribute('aria-hidden', 'true');
+  STATE.currentTourId = null;
+}
+
+async function onSheetAction(act) {
+  const id = STATE.currentTourId;
+  if (!id) return;
+  if (act === 'close') return closeSheet();
+
+  try {
+    if (act === 'confirm') {
+      const updated = await api(`/api/tours/${encodeURIComponent(id)}/status`, {
+        method: 'PUT', body: { status: 'confirmed' },
+      });
+      mergeTour(updated);
+      toast('Visita confirmada');
+    } else if (act === 'reject') {
+      const reason = prompt('Motivo del rechazo (opcional):');
+      if (reason === null) return;
+      const updated = await api(`/api/tours/${encodeURIComponent(id)}/status`, {
+        method: 'PUT', body: { status: 'rejected', notes: reason || '' },
+      });
+      mergeTour(updated);
+      toast('Visita rechazada');
+    } else if (act === 'cancel') {
+      if (!confirm('¿Cancelar esta visita?')) return;
+      const updated = await api(`/api/tours/${encodeURIComponent(id)}/cancel`, { method: 'PUT' });
+      mergeTour(updated);
+      toast('Visita cancelada');
+    } else if (act === 'complete') {
+      if (!confirm('¿Marcar esta visita como realizada?')) return;
+      const updated = await api(`/api/tours/${encodeURIComponent(id)}/complete`, { method: 'PUT' });
+      mergeTour(updated);
+      toast('Visita marcada como realizada');
+    } else if (act === 'reschedule') {
+      const tour = STATE.tours.find(x => x.id === id);
+      const newDate = prompt('Nueva fecha (YYYY-MM-DD):', tour?.requested_date || '');
+      if (!newDate) return;
+      const newTime = prompt('Nueva hora (HH:MM, formato 24h):', tour?.requested_time || '');
+      if (!newTime) return;
+      const updated = await api(`/api/tours/${encodeURIComponent(id)}/reschedule`, {
+        method: 'PUT', body: { date: newDate, time: newTime },
+      });
+      mergeTour(updated);
+      toast('Visita reprogramada');
+    }
+    closeSheet();
+    renderAll();
+  } catch (err) {
+    toast(err.message || 'Error al actualizar', 'error');
+  }
+}
+
+function mergeTour(updated) {
+  if (!updated || !updated.id) return;
+  const idx = STATE.tours.findIndex(t => t.id === updated.id);
+  if (idx >= 0) STATE.tours[idx] = updated;
+  else STATE.tours.unshift(updated);
+}
+
+// ── NEW VISIT (inline scheduling sheet) ───────────────────────
+function openNewVisit() {
+  STATE.currentTourId = null;
+  document.getElementById('sheetTitle').textContent = 'Nueva visita';
+  document.getElementById('sheetBody').innerHTML = `
+    <p style="color:var(--ink-mute);font-size:13px;margin:0;">Crea una visita rápida para un prospecto. Las visitas se enviarán como pendientes hasta que tú las confirmes.</p>
+
+    <div class="sheet-section">
+      <span class="sheet-label">Propiedad (ID del listado)</span>
+      <input type="text" id="nvListing" placeholder="ID o slug" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+    </div>
+    <div class="sheet-section">
+      <span class="sheet-label">Nombre del prospecto</span>
+      <input type="text" id="nvName" placeholder="Nombre completo" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+    </div>
+    <div class="sheet-section">
+      <span class="sheet-label">Teléfono</span>
+      <input type="tel" id="nvPhone" placeholder="809 555 0000" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+    </div>
+    <div class="sheet-section">
+      <span class="sheet-label">Email (opcional)</span>
+      <input type="email" id="nvEmail" placeholder="prospecto@email.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+    </div>
+    <div class="sheet-section" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <span class="sheet-label">Fecha</span>
+        <input type="date" id="nvDate" min="${todayDR()}" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+      </div>
+      <div>
+        <span class="sheet-label">Hora</span>
+        <input type="time" id="nvTime" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;">
+      </div>
+    </div>
+    <div class="sheet-section">
+      <span class="sheet-label">Notas</span>
+      <textarea id="nvNotes" rows="2" placeholder="Notas adicionales…" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    </div>
+  `;
+  document.getElementById('sheetFoot').innerHTML = `
+    <button class="sheet-btn" data-act="cancel-new">Cancelar</button>
+    <button class="sheet-btn primary" data-act="save-new">Crear visita</button>
+  `;
+  document.getElementById('sheetFoot').querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.dataset.act === 'cancel-new') closeSheet();
+      if (b.dataset.act === 'save-new') saveNewVisit();
+    });
+  });
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+async function saveNewVisit() {
+  const listing_id = document.getElementById('nvListing').value.trim();
+  const name = document.getElementById('nvName').value.trim();
+  const phone = document.getElementById('nvPhone').value.trim();
+  const email = document.getElementById('nvEmail').value.trim();
+  const date = document.getElementById('nvDate').value;
+  const time = document.getElementById('nvTime').value;
+  const notes = document.getElementById('nvNotes').value.trim();
+
+  if (!listing_id || !name || !phone || !date || !time) {
+    toast('Completa los campos requeridos', 'error');
+    return;
+  }
+  if (!STATE.user?.id) {
+    toast('Usuario no identificado', 'error');
+    return;
+  }
+
+  try {
+    const tour = await api('/api/tours/request', {
+      method: 'POST',
+      body: {
+        listing_id,
+        broker_id: STATE.user.id,
+        date, time, name, phone, email, notes,
+        tour_type: 'presencial',
+      },
+    });
+    mergeTour(tour);
+    closeSheet();
+    renderAll();
+    toast('Visita creada');
+  } catch (err) {
+    toast(err.message || 'Error al crear visita', 'error');
+  }
+}
+
+// ── VIEW TOGGLE ───────────────────────────────────────────────
+function cycleView() {
+  const order = ['hoy', 'semana', 'mes'];
+  const idx = order.indexOf(STATE.view);
+  STATE.view = order[(idx + 1) % order.length];
+  document.getElementById('viewLabel').textContent = STATE.view[0].toUpperCase() + STATE.view.slice(1);
+  // For now, all views share the week grid; "hoy" jumps to today's week, "mes" shows broader label.
+  if (STATE.view === 'hoy') {
+    STATE.weekStart = mondayOf(todayDR());
+  }
+  renderAll();
+}
+
+// ── BIND EVENTS ───────────────────────────────────────────────
+document.getElementById('prevWeek').addEventListener('click', () => {
+  STATE.weekStart = addDaysYMD(STATE.weekStart, -7);
+  renderAll();
+});
+document.getElementById('nextWeek').addEventListener('click', () => {
+  STATE.weekStart = addDaysYMD(STATE.weekStart, 7);
+  renderAll();
+});
+document.getElementById('todayBtn').addEventListener('click', () => {
+  STATE.weekStart = mondayOf(todayDR());
+  renderAll();
+});
+document.getElementById('viewToggle').addEventListener('click', cycleView);
+document.getElementById('newVisitBtn').addEventListener('click', openNewVisit);
+document.getElementById('avAddBtn').addEventListener('click', showAvForm);
+document.getElementById('sheetClose').addEventListener('click', closeSheet);
+document.getElementById('overlay').addEventListener('click', closeSheet);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSheet();
+});
+
+// ── BOOT ──────────────────────────────────────────────────────
+STATE.weekStart = mondayOf(todayDR());
+loadAll();
+</script>
+
+</body>
+</html>

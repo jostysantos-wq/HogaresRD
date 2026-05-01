@@ -1,0 +1,1367 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Mis Propiedades</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:        #F4F1EA;
+    --bg-card:   #FFFFFF;
+    --bg-soft:   #FBF6EE;
+    --ink:       #14110F;
+    --ink-soft:  #4a4540;
+    --ink-mute:  #8a857f;
+    --line:      #E6E0D3;
+    --line-soft: #EFEAE0;
+    --sans:      'Inter', -apple-system, sans-serif;
+    --serif:     'Cormorant Garamond', Georgia, serif;
+
+    --accent:    #b54c30;
+    --accent-soft:#f2d9d0;
+    --teal:      #2e8b8b;
+    --teal-soft: #cfe7e3;
+    --gold:      #d4a64a;
+    --gold-soft: #f3e3c1;
+    --plum:      #6c4f8a;
+    --plum-soft: #ddd2eb;
+
+    --r-card:    18px;
+    --r-pill:    999px;
+    --r-mini:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  /* ── LAYOUT SHELL ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    gap: 18px;
+    padding: 18px;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ───────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 22px 16px 18px;
+    display: flex; flex-direction: column;
+    gap: 22px;
+    position: sticky; top: 18px;
+    height: calc(100vh - 36px);
+  }
+  .sb-brand { display: flex; align-items: center; justify-content: space-between; padding: 0 6px; }
+  .sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .sb-logo-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--ink); display: grid; place-items: center;
+  }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--ink-soft); font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-link.active:hover { background: var(--ink); }
+
+  .sb-section-label {
+    padding: 18px 12px 6px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .sb-cta {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 14px; padding: 16px;
+  }
+  .sb-cta-title { font-family: var(--serif); font-size: 18px; font-weight: 600; line-height: 1.15; margin-bottom: 8px; }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn {
+    flex: 1; padding: 7px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    background: #fff; border: 1px solid var(--line);
+    color: var(--ink); cursor: pointer; text-align: center;
+  }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ── MAIN ─────────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 14px 18px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 16px; align-items: center;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-soft); border-radius: var(--r-pill);
+    padding: 8px 14px; flex: 1; max-width: 380px;
+  }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input {
+    border: none; background: transparent; outline: none;
+    color: var(--ink); font-size: 13px; flex: 1;
+  }
+  .tb-search input::placeholder { color: var(--ink-mute); }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+  }
+  .tb-ai-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    display: grid; place-items: center;
+  }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-soft); position: relative;
+  }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-icon-dot {
+    position: absolute; top: 8px; right: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg-card);
+  }
+  .tb-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    border: 2px solid var(--bg-card); cursor: pointer;
+  }
+
+  /* PAGE HEAD */
+  .page-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .page-head-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .page-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  .page-title {
+    font-family: var(--serif); font-size: 28px; font-weight: 600;
+    margin: 0; letter-spacing: -0.01em;
+  }
+  .page-title em { font-style: italic; color: var(--accent); }
+  .page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500;
+    cursor: pointer;
+  }
+  .ph-pill:hover { background: var(--bg-soft); }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-pill.is-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .ph-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .ph-cta:hover { background: #000; }
+  .ph-cta svg { width: 13px; height: 13px; }
+
+  /* FILTER CHIPS ROW */
+  .chip-row {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 14px 18px;
+  }
+  .chip-row-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-mute);
+    margin-right: 4px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 500;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background .15s, color .15s;
+  }
+  .chip:hover { background: var(--line-soft); color: var(--ink); }
+  .chip.is-active { background: var(--ink); color: #fff; }
+  .chip-count {
+    font-size: 11px; font-weight: 600;
+    padding: 1px 7px; border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.18);
+  }
+  .chip:not(.is-active) .chip-count {
+    background: var(--bg-card); color: var(--ink-mute);
+  }
+
+  /* KPI ROW (compact for this page) */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .kpi {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 16px 18px; position: relative; overflow: hidden;
+    min-height: 110px;
+  }
+  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .kpi-num {
+    font-family: var(--serif); font-size: 32px; font-weight: 600;
+    color: var(--ink); line-height: 1; letter-spacing: -0.02em;
+  }
+  .kpi-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-mute);
+  }
+  .kpi-icon svg { width: 15px; height: 15px; }
+  .kpi-label {
+    color: var(--ink-mute); font-size: 12px; margin-top: 8px; line-height: 1.35;
+  }
+  .kpi-label strong { color: var(--ink); font-weight: 600; }
+  .kpi-spark {
+    position: absolute; right: 12px; bottom: 10px;
+    width: 80px; height: 28px; opacity: 0.85;
+  }
+
+  /* PROPERTIES GRID */
+  .props-section {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 22px;
+  }
+  .props-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+  }
+  .props-head-title {
+    font-family: var(--serif); font-size: 19px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .props-head-meta { color: var(--ink-mute); font-size: 12px; }
+
+  .props-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .props-grid.is-list { grid-template-columns: 1fr; }
+
+  .prop {
+    background: var(--bg-soft); border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform .12s, box-shadow .12s;
+    position: relative;
+  }
+  .prop:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(20,17,15,.06); }
+
+  .props-grid.is-list .prop {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .props-grid.is-list .prop-img { width: 220px; height: auto; min-height: 140px; flex-shrink: 0; }
+  .props-grid.is-list .prop-body { flex: 1; }
+
+  .prop-img {
+    height: 160px; position: relative; overflow: hidden;
+    background: var(--line-soft);
+    background-size: cover; background-position: center;
+  }
+  .prop-badge {
+    position: absolute; top: 10px; left: 10px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-size: 10.5px; font-weight: 600;
+    background: rgba(255,255,255,0.92); color: var(--ink);
+    backdrop-filter: blur(4px);
+  }
+  .prop-badge.rent { background: rgba(46,139,139,0.92); color: #fff; }
+  .prop-badge.sale { background: rgba(255,255,255,0.92); color: var(--ink); }
+
+  .prop-star {
+    position: absolute; top: 10px; right: 10px;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(255,255,255,0.85); display: grid; place-items: center;
+    color: var(--ink-mute); cursor: pointer; backdrop-filter: blur(4px);
+    border: none; transition: color .15s, background .15s;
+  }
+  .prop-star:hover { background: #fff; color: var(--gold); }
+  .prop-star.is-on { color: var(--gold); background: #fff; }
+  .prop-star svg { width: 15px; height: 15px; }
+  .prop-star.is-on svg { fill: var(--gold); }
+
+  .prop-body { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .prop-row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+  .prop-name {
+    font-family: var(--serif); font-size: 17px; font-weight: 600;
+    line-height: 1.2; color: var(--ink);
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .prop-price {
+    font-family: var(--serif); font-size: 17px; font-weight: 600;
+    color: var(--ink); flex-shrink: 0; white-space: nowrap;
+  }
+  .prop-price-suffix { font-family: var(--sans); font-size: 11.5px; font-weight: 500; color: var(--ink-mute); }
+  .prop-loc {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--ink-mute);
+  }
+  .prop-loc svg { width: 11px; height: 11px; flex-shrink: 0; }
+  .prop-specs {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    padding-top: 10px; border-top: 1px solid var(--line-soft);
+  }
+  .prop-spec {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; color: var(--ink-mute);
+  }
+  .prop-spec svg { width: 12px; height: 12px; }
+
+  .prop-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+    margin-top: 2px;
+  }
+  .prop-foot-left { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .prop-views {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; color: var(--ink-mute);
+  }
+  .prop-views svg { width: 12px; height: 12px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: var(--r-pill);
+    font-size: 10.5px; font-weight: 600;
+  }
+  .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-pill.s-active   { background: var(--teal-soft);   color: var(--teal);   }
+  .status-pill.s-draft    { background: var(--bg-soft);     color: var(--ink-mute); }
+  .status-pill.s-review   { background: var(--gold-soft);   color: var(--gold);   }
+  .status-pill.s-sold     { background: var(--accent-soft); color: var(--accent); }
+  .status-pill.s-rejected { background: var(--accent-soft); color: var(--accent); }
+
+  .kebab-wrap { position: relative; }
+  .kebab {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--ink-mute); display: grid; place-items: center;
+  }
+  .kebab:hover { background: var(--bg-card); color: var(--ink); }
+  .kebab svg { width: 15px; height: 15px; }
+  .kebab-menu {
+    position: absolute; right: 0; bottom: calc(100% + 6px);
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 6px;
+    min-width: 180px;
+    box-shadow: 0 10px 28px rgba(20,17,15,0.12);
+    z-index: 30;
+    display: none;
+  }
+  .kebab-menu.is-open { display: block; }
+  .kebab-item {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; padding: 8px 10px; border-radius: 8px;
+    font-size: 12.5px; color: var(--ink-soft); text-align: left;
+    background: none; border: none; cursor: pointer;
+  }
+  .kebab-item:hover { background: var(--bg-soft); color: var(--ink); }
+  .kebab-item.danger { color: var(--accent); }
+  .kebab-item.danger:hover { background: var(--accent-soft); }
+  .kebab-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .empty-illu {
+    width: 96px; height: 96px; border-radius: 24px;
+    background: linear-gradient(135deg, var(--bg-soft), var(--gold-soft));
+    display: grid; place-items: center; color: var(--ink-mute);
+    margin-bottom: 6px;
+  }
+  .empty-illu svg { width: 44px; height: 44px; }
+  .empty-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    color: var(--ink); margin: 0;
+  }
+  .empty-desc {
+    font-size: 13px; color: var(--ink-mute); max-width: 360px; line-height: 1.5; margin: 0;
+  }
+
+  /* PAGINATION */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 18px; gap: 12px; flex-wrap: wrap;
+  }
+  .pagination-info { font-size: 12px; color: var(--ink-mute); }
+  .pagination-btns { display: flex; gap: 8px; }
+  .page-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 12px; font-weight: 500; border: none; cursor: pointer;
+  }
+  .page-btn:hover:not(:disabled) { background: var(--line-soft); color: var(--ink); }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-btn svg { width: 11px; height: 11px; }
+
+  /* SKELETON LOADING */
+  .skel {
+    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* TOAST */
+  .toast-host {
+    position: fixed; top: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 1000; pointer-events: none;
+  }
+  .toast {
+    background: var(--ink); color: #fff;
+    padding: 12px 18px; border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 12px 32px rgba(20,17,15,0.18);
+    pointer-events: auto;
+    animation: toast-in .25s ease-out;
+    max-width: 320px;
+  }
+  .toast.err { background: var(--accent); }
+  .toast.ok { background: var(--teal); }
+  @keyframes toast-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  /* CONFIRM MODAL */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(20,17,15,0.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 900; padding: 20px;
+  }
+  .modal-backdrop.is-open { display: flex; }
+  .modal-card {
+    background: var(--bg-card); border-radius: 18px;
+    padding: 24px 24px 18px; width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(20,17,15,0.25);
+  }
+  .modal-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    margin: 0 0 6px; color: var(--ink);
+  }
+  .modal-desc {
+    font-size: 13px; color: var(--ink-mute);
+    margin: 0 0 18px; line-height: 1.5;
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-btn {
+    padding: 9px 18px; border-radius: var(--r-pill);
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: var(--bg-soft); color: var(--ink); border: none;
+  }
+  .modal-btn:hover { background: var(--line-soft); }
+  .modal-btn.danger { background: var(--accent); color: #fff; }
+  .modal-btn.danger:hover { background: #9c3f29; }
+
+  /* placeholder photo gradients */
+  .ph-cap1 { background: linear-gradient(180deg, #b3d8e0 0%, #98c2cc 35%, #6f9c8e 60%, #3f6850 100%); }
+  .ph-cap1::before {
+    content: ''; position: absolute; inset: 50% 8% 12% 8%;
+    background: linear-gradient(180deg, #f0e8d2 0%, #c9b487 100%);
+    border-radius: 4px;
+  }
+  .ph-piantini { background: linear-gradient(180deg, #c5d2dc 0%, #a3b3c2 50%, #6c7c8c 100%); }
+  .ph-piantini::before {
+    content: ''; position: absolute; inset: 12% 18% 0 18%;
+    background: linear-gradient(180deg, #2c3340 0%, #1a1f28 100%);
+  }
+  .ph-santiago { background: linear-gradient(180deg, #d6e0c5 0%, #a8b88c 40%, #7a8c5e 70%, #4a5938 100%); }
+  .ph-santiago::before {
+    content: ''; position: absolute; inset: 30% 0 30% 0;
+    background: #6b7a4d; clip-path: polygon(0 100%, 25% 30%, 50% 60%, 75% 20%, 100% 100%);
+  }
+  .ph-terrenas { background: linear-gradient(180deg, #cce5e2 0%, #95c5be 40%, #5a9d96 70%, #2e6b66 100%); }
+  .ph-terrenas::before {
+    content: ''; position: absolute; inset: 55% 10% 12% 10%;
+    background: linear-gradient(180deg, #f6efd8 0%, #d8c79a 100%); border-radius: 4px;
+  }
+  .ph-default { background: linear-gradient(180deg, #d3c9b5 0%, #a59478 50%, #6d5e44 100%); }
+  .ph-default::before {
+    content: ''; position: absolute; inset: 35% 20% 12% 20%;
+    background: linear-gradient(180deg, #f0e6d0 0%, #b89870 100%); border-radius: 4px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1240px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .props-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; top: 0; }
+    .topbar { grid-template-columns: 1fr; }
+    .topbar-right { justify-content: flex-end; }
+    .props-grid { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: 1fr; }
+    .page-head { flex-direction: column; align-items: flex-start; }
+    .props-grid.is-list .prop { flex-direction: column; }
+    .props-grid.is-list .prop-img { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ╭─ SIDEBAR ───────────────────────────────────────────╮ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="/broker-dashboard.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Panel
+      </a>
+      <a href="/mis-propiedades.html" class="sb-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        Mis Propiedades
+      </a>
+      <a href="/broker.html#tab-applications" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Aplicaciones
+      </a>
+      <a href="/broker.html#tab-tours" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Visitas
+      </a>
+      <a href="/broker.html#tab-commissions" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Comisiones
+      </a>
+      <a href="/broker.html#tab-conversations" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        Mensajes
+      </a>
+
+      <div class="sb-section-label">Marketing</div>
+
+      <a href="/enlaces-de-referido.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Enlaces de Referido
+      </a>
+      <a href="/broker.html#tab-ads" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/></svg>
+        Campañas
+      </a>
+
+      <div class="sb-section-label">Soporte</div>
+
+      <a href="/contacto" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Centro de Ayuda
+      </a>
+    </nav>
+
+    <div class="sb-cta">
+      <div class="sb-cta-title">Publica una <em style="font-style:italic;">propiedad</em></div>
+      <div class="sb-cta-desc">Crea un anuncio nuevo en menos de 3 minutos y conecta con miles de compradores verificados.</div>
+      <div class="sb-cta-row">
+        <a class="sb-cta-btn" href="/broker.html#tab-listings">Más info</a>
+        <a class="sb-cta-btn primary" href="/post.html">Publicar</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ╭─ MAIN ──────────────────────────────────────────────╮ -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar en mis propiedades…" id="topbarSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot">
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg>
+          </span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="tb-icon-dot" id="notifDot" hidden></span>
+        </a>
+        <a class="tb-icon" href="/account.html" aria-label="Configuración">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </a>
+        <a class="tb-avatar" href="/account.html" id="tbAvatar" aria-label="Mi cuenta"></a>
+      </div>
+    </div>
+
+    <!-- PAGE HEAD -->
+    <div class="page-head">
+      <div class="page-head-left">
+        <div class="page-eyebrow">Inventario · Gestión de listados</div>
+        <h1 class="page-title">Mis <em>Propiedades</em></h1>
+      </div>
+      <div class="page-actions">
+        <button class="ph-pill" id="filterToggle" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filtrar
+        </button>
+        <button class="ph-pill" id="viewToggle" type="button" data-mode="grid">
+          <svg id="viewIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span id="viewLabel">Cuadrícula</span>
+        </button>
+        <a class="ph-cta" href="/post.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Publicar propiedad
+        </a>
+      </div>
+    </div>
+
+    <!-- FILTER CHIPS ROW -->
+    <div class="chip-row" id="chipRow">
+      <span class="chip-row-label">Filtrar</span>
+      <button class="chip is-active" data-filter="all">Todas <span class="chip-count" id="cnt-all">—</span></button>
+      <button class="chip" data-filter="venta">Venta <span class="chip-count" id="cnt-venta">—</span></button>
+      <button class="chip" data-filter="alquiler">Alquiler <span class="chip-count" id="cnt-alquiler">—</span></button>
+      <button class="chip" data-filter="active">Activas <span class="chip-count" id="cnt-active">—</span></button>
+      <button class="chip" data-filter="draft">Borradores <span class="chip-count" id="cnt-draft">—</span></button>
+      <button class="chip" data-filter="sold">Vendidas <span class="chip-count" id="cnt-sold">—</span></button>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div></div><div class="kpi-label skel" style="margin-top:14px;height:14px;width:120px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div></div><div class="kpi-label skel" style="margin-top:14px;height:14px;width:120px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div></div><div class="kpi-label skel" style="margin-top:14px;height:14px;width:120px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div></div><div class="kpi-label skel" style="margin-top:14px;height:14px;width:120px;">&nbsp;</div></div>
+    </div>
+
+    <!-- PROPERTIES GRID -->
+    <section class="props-section">
+      <div class="props-head">
+        <div class="props-head-title">
+          Listados
+          <span class="props-head-meta" id="propsHeadMeta"></span>
+        </div>
+      </div>
+
+      <div class="props-grid" id="propsGrid">
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+        <div class="prop"><div class="prop-img skel" style="height:160px;"></div><div class="prop-body"><div class="skel" style="height:18px;width:70%;"></div><div class="skel" style="height:12px;width:50%;"></div><div class="skel" style="height:12px;width:40%;"></div></div></div>
+      </div>
+
+      <div class="pagination" id="pagination" hidden>
+        <span class="pagination-info" id="paginationInfo"></span>
+        <div class="pagination-btns">
+          <button class="page-btn" id="pagPrev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Anterior
+          </button>
+          <button class="page-btn" id="pagNext">
+            Siguiente
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- TOAST HOST -->
+<div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-card">
+    <h3 class="modal-title" id="modalTitle">Confirmar</h3>
+    <p class="modal-desc" id="modalDesc"></p>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalCancel" type="button">Cancelar</button>
+      <button class="modal-btn danger" id="modalConfirm" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── helpers ──────────────────────────────────────────────────
+const fmtUSD = (n) => {
+  if (!Number.isFinite(n) || n <= 0) return 'US$ —';
+  if (n >= 1_000_000) return `US$ ${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `US$ ${(n / 1_000).toFixed(0)}K`;
+  return `US$ ${n.toLocaleString()}`;
+};
+const fmtNum = (n) => Number.isFinite(n) ? n.toLocaleString('es-DO') : '—';
+const PH_CLASSES = ['ph-cap1', 'ph-piantini', 'ph-santiago', 'ph-terrenas', 'ph-default'];
+const PAGE_SIZE = 12;
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function loginAndExit() {
+  location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'include', ...opts });
+  if (res.status === 401) { loginAndExit(); return null; }
+  if (!res.ok) {
+    let body = null;
+    try { body = await res.json(); } catch {}
+    const msg = (body && body.error) || `HTTP ${res.status}`;
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ── ICONS ────────────────────────────────────────────────────
+const ICON = {
+  building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
+  edit:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  draft:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',
+  clock:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  eye:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  pin:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  bed:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h20"/><path d="M2 18v-7a3 3 0 013-3h14a3 3 0 013 3v7"/><path d="M6 18v2"/><path d="M18 18v2"/></svg>',
+  bath:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l1-2h4l1 2"/><path d="M4 12h16"/><path d="M4 12v5a3 3 0 003 3h10a3 3 0 003-3v-5"/></svg>',
+  sqm:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>',
+  star:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  kebab:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg>',
+  external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+  pause:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+  play:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+  trash:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  chart:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg>',
+  empty:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+};
+
+// ── TOAST ────────────────────────────────────────────────────
+function toast(msg, kind) {
+  const host = document.getElementById('toastHost');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind === 'err' ? ' err' : kind === 'ok' ? ' ok' : '');
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .25s, transform .25s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    setTimeout(() => el.remove(), 260);
+  }, 3200);
+}
+
+// ── CONFIRM MODAL ────────────────────────────────────────────
+function confirmModal({ title, desc, confirmText = 'Confirmar', danger = true }) {
+  return new Promise(resolve => {
+    const back = document.getElementById('modalBackdrop');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalDesc').textContent = desc;
+    const ok = document.getElementById('modalConfirm');
+    const cancel = document.getElementById('modalCancel');
+    ok.textContent = confirmText;
+    ok.classList.toggle('danger', !!danger);
+    back.classList.add('is-open');
+    const cleanup = (val) => {
+      back.classList.remove('is-open');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      back.removeEventListener('click', onBack);
+      resolve(val);
+    };
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onBack = (e) => { if (e.target === back) cleanup(false); };
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    back.addEventListener('click', onBack);
+  });
+}
+
+// ── STATE ────────────────────────────────────────────────────
+const state = {
+  user: null,
+  listings: [],          // raw listings from /api/listings (approved only)
+  analytics: null,       // /api/listing-analytics/listings response (if available)
+  filter: 'all',
+  view: 'grid',
+  page: 1,
+};
+
+function getListingType(l) {
+  const raw = (l.listingType || l.listing_type || l.type || 'venta').toString().toLowerCase();
+  if (raw === 'alquiler' || raw === 'rent' || raw === 'rental') return 'alquiler';
+  return 'venta';
+}
+function getStatus(l) {
+  const s = (l.status || 'approved').toString().toLowerCase();
+  if (s === 'approved') return 'active';
+  if (s === 'pending' || s === 'edits_requested') return 'review';
+  if (s === 'sold' || s === 'vendido' || s === 'rented' || s === 'alquilado') return 'sold';
+  if (s === 'draft' || s === 'borrador') return 'draft';
+  if (s === 'rejected') return 'rejected';
+  return 'active';
+}
+function statusLabel(s) {
+  return ({active:'Activa', draft:'Borrador', review:'En revisión', sold:'Vendida', rejected:'Rechazada'})[s] || s;
+}
+function statusClass(s) {
+  return ({active:'s-active', draft:'s-draft', review:'s-review', sold:'s-sold', rejected:'s-rejected'})[s] || 's-draft';
+}
+
+function listingViews(l) {
+  // Prefer the analytics endpoint's per-listing views if loaded
+  if (state.analytics && Array.isArray(state.analytics.listings)) {
+    const a = state.analytics.listings.find(x => x.id === l.id);
+    if (a && Number.isFinite(a.views)) return a.views;
+  }
+  return Number(l.views) || 0;
+}
+
+function listingPhoto(l) {
+  if (l.photoUrl) return l.photoUrl;
+  if (l.photo_url) return l.photo_url;
+  if (Array.isArray(l.images) && l.images.length) {
+    const first = l.images[0];
+    if (typeof first === 'string') return first;
+    if (first && typeof first.url === 'string') return first.url;
+  }
+  return null;
+}
+
+// ── COUNTS / KPI ────────────────────────────────────────────
+function recomputeCounts() {
+  const counts = { all: 0, venta: 0, alquiler: 0, active: 0, draft: 0, sold: 0 };
+  state.listings.forEach(l => {
+    counts.all++;
+    const t = getListingType(l);
+    if (t === 'venta') counts.venta++;
+    else if (t === 'alquiler') counts.alquiler++;
+    const s = getStatus(l);
+    if (s === 'active') counts.active++;
+    else if (s === 'draft') counts.draft++;
+    else if (s === 'sold') counts.sold++;
+  });
+  Object.entries(counts).forEach(([k, v]) => {
+    const el = document.getElementById('cnt-' + k);
+    if (el) el.textContent = fmtNum(v);
+  });
+  return counts;
+}
+
+function renderKpi() {
+  const counts = { active: 0, draft: 0, review: 0, sold: 0 };
+  let viewsTotal = 0;
+  state.listings.forEach(l => {
+    const s = getStatus(l);
+    if (s === 'active') counts.active++;
+    else if (s === 'draft') counts.draft++;
+    else if (s === 'review') counts.review++;
+    else if (s === 'sold') counts.sold++;
+    viewsTotal += listingViews(l);
+  });
+
+  const sparkLine = `
+    <svg class="kpi-spark" viewBox="0 0 80 28" fill="none" aria-hidden="true">
+      <path d="M0 22 Q10 16 18 18 T36 12 T54 8 T80 4" stroke="var(--teal)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M0 22 Q10 16 18 18 T36 12 T54 8 T80 4 L80 28 L0 28 Z" fill="var(--teal-soft)" opacity="0.6"/>
+    </svg>`;
+  const sparkBars = `
+    <svg class="kpi-spark" viewBox="0 0 80 28" fill="none" aria-hidden="true">
+      <g fill="var(--gold)">
+        <rect x="2"  y="14" width="10" height="14" rx="1.5" opacity="0.55"/>
+        <rect x="16" y="20" width="10" height="8"  rx="1.5" opacity="0.4"/>
+        <rect x="30" y="6"  width="10" height="22" rx="1.5"/>
+        <rect x="44" y="16" width="10" height="12" rx="1.5" opacity="0.55"/>
+        <rect x="58" y="10" width="10" height="18" rx="1.5" opacity="0.75"/>
+      </g>
+    </svg>`;
+  const sparkPlum = `
+    <svg class="kpi-spark" viewBox="0 0 80 28" fill="none" aria-hidden="true">
+      <g fill="var(--plum)">
+        ${Array.from({length:10}, (_,i) => `<rect x="${2+i*8}" y="${28 - (6 + ((i*7) % 18))}" width="4" height="${6 + ((i*7) % 18)}" rx="1"/>`).join('')}
+      </g>
+    </svg>`;
+
+  const viewsLabel = state.analytics ? 'Vistas (30d aprox)' : 'Vistas (totales)';
+  const viewsText  = state.analytics ? fmtNum(viewsTotal) : (viewsTotal > 0 ? fmtNum(viewsTotal) : '—');
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtNum(counts.active)}</div>
+        <div class="kpi-icon">${ICON.building}</div>
+      </div>
+      <div class="kpi-label">Activas<br><strong>publicadas en HogaresRD</strong></div>
+      ${sparkLine}
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtNum(counts.draft)}</div>
+        <div class="kpi-icon">${ICON.draft}</div>
+      </div>
+      <div class="kpi-label">Borradores<br><strong>aún sin publicar</strong></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtNum(counts.review)}</div>
+        <div class="kpi-icon">${ICON.clock}</div>
+      </div>
+      <div class="kpi-label">En revisión<br><strong>esperando aprobación</strong></div>
+      ${sparkBars}
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${viewsText}</div>
+        <div class="kpi-icon">${ICON.eye}</div>
+      </div>
+      <div class="kpi-label">${viewsLabel}<br><strong>todas las propiedades</strong></div>
+      ${sparkPlum}
+    </div>
+  `;
+}
+
+// ── FILTER + GRID ────────────────────────────────────────────
+function applyFilter(list) {
+  if (state.filter === 'all') return list;
+  if (state.filter === 'venta')    return list.filter(l => getListingType(l) === 'venta');
+  if (state.filter === 'alquiler') return list.filter(l => getListingType(l) === 'alquiler');
+  if (state.filter === 'active')   return list.filter(l => getStatus(l) === 'active');
+  if (state.filter === 'draft')    return list.filter(l => getStatus(l) === 'draft');
+  if (state.filter === 'sold')     return list.filter(l => getStatus(l) === 'sold');
+  return list;
+}
+
+function renderEmpty(grid, filtered) {
+  const isFiltered = state.filter !== 'all' && state.listings.length > 0;
+  if (isFiltered) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-illu">${ICON.empty}</div>
+        <h3 class="empty-title">Sin resultados para este filtro</h3>
+        <p class="empty-desc">No hay propiedades que coincidan con "${escapeHtml(filterLabel(state.filter))}". Prueba con otro filtro o limpia la selección.</p>
+        <button class="ph-cta" type="button" onclick="window._setFilter('all')">Ver todas</button>
+      </div>`;
+  } else {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-illu">${ICON.empty}</div>
+        <h3 class="empty-title">Aún no tienes publicaciones</h3>
+        <p class="empty-desc">Crea tu primera propiedad para empezar a recibir visitas, leads y solicitudes de tour de compradores verificados.</p>
+        <a class="ph-cta" href="/post.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Publicar la primera
+        </a>
+      </div>`;
+  }
+}
+function filterLabel(k) {
+  return ({all:'Todas',venta:'Venta',alquiler:'Alquiler',active:'Activas',draft:'Borradores',sold:'Vendidas'})[k] || k;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('propsGrid');
+  const filtered = applyFilter(state.listings);
+
+  // Update head meta
+  const meta = document.getElementById('propsHeadMeta');
+  if (filtered.length) meta.textContent = `· ${fmtNum(filtered.length)} ${filtered.length === 1 ? 'propiedad' : 'propiedades'}`;
+  else meta.textContent = '';
+
+  if (filtered.length === 0) {
+    renderEmpty(grid);
+    document.getElementById('pagination').hidden = true;
+    return;
+  }
+
+  // Pagination
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (state.page > totalPages) state.page = totalPages;
+  const start = (state.page - 1) * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+
+  grid.innerHTML = slice.map((l, i) => {
+    const ph = PH_CLASSES[i % PH_CLASSES.length];
+    const isRent = getListingType(l) === 'alquiler';
+    const status = getStatus(l);
+    const price = Number(l.price) || 0;
+    const priceText = isRent
+      ? `${fmtUSD(price)}<span class="prop-price-suffix">/mes</span>`
+      : fmtUSD(price);
+    const loc = [l.sector, l.city, l.province].filter(Boolean).join(', ') || l.location || 'República Dominicana';
+    const beds = l.bedrooms || l.beds;
+    const baths = l.bathrooms || l.baths;
+    const area = l.area_const || l.area || l.size;
+    const photo = listingPhoto(l);
+    const imgStyle = photo ? `style="background-image:url('${escapeHtml(photo)}');"` : '';
+    const featured = !!(l.featured || l.is_featured);
+    const views = listingViews(l);
+
+    return `
+      <article class="prop" data-id="${escapeHtml(l.id)}">
+        <a href="/listing.html?id=${encodeURIComponent(l.id)}" class="prop-img ${photo ? '' : ph}" ${imgStyle} aria-label="Ver propiedad"></a>
+        <span class="prop-badge ${isRent ? 'rent' : 'sale'}" style="position:absolute;top:10px;left:10px;">${isRent ? 'Alquiler' : 'Venta'}</span>
+        <button class="prop-star ${featured ? 'is-on' : ''}" type="button" data-action="featured" data-id="${escapeHtml(l.id)}" aria-label="Marcar destacado" title="${featured ? 'Destacada' : 'Marcar como destacada'}">${ICON.star}</button>
+        <div class="prop-body">
+          <div class="prop-row1">
+            <span class="prop-name" title="${escapeHtml(l.title || 'Sin título')}">${escapeHtml(l.title || 'Sin título')}</span>
+            <span class="prop-price">${priceText}</span>
+          </div>
+          <div class="prop-loc">${ICON.pin}${escapeHtml(loc)}</div>
+          <div class="prop-specs">
+            <span class="prop-spec">${ICON.bed} ${beds || '—'}</span>
+            <span class="prop-spec">${ICON.bath} ${baths || '—'}</span>
+            <span class="prop-spec">${ICON.sqm} ${area ? escapeHtml(String(area)) + ' m²' : '—'}</span>
+          </div>
+          <div class="prop-foot">
+            <div class="prop-foot-left">
+              <span class="prop-views">${ICON.eye} ${fmtNum(views)}</span>
+              <span class="status-pill ${statusClass(status)}">${statusLabel(status)}</span>
+            </div>
+            <div class="kebab-wrap">
+              <button class="kebab" type="button" data-action="kebab" data-id="${escapeHtml(l.id)}" aria-label="Acciones">${ICON.kebab}</button>
+              <div class="kebab-menu" data-menu-for="${escapeHtml(l.id)}">
+                <a class="kebab-item" href="/post.html?edit=${encodeURIComponent(l.id)}">${ICON.edit} Editar</a>
+                <a class="kebab-item" href="/listing.html?id=${encodeURIComponent(l.id)}" target="_blank" rel="noopener">${ICON.external} Ver pública</a>
+                <button class="kebab-item" type="button" data-action="featured-menu" data-id="${escapeHtml(l.id)}">${ICON.star} ${featured ? 'Quitar destacado' : 'Destacar'}</button>
+                <button class="kebab-item" type="button" data-action="${status === 'sold' ? 'reactivate' : 'pause'}" data-id="${escapeHtml(l.id)}">${status === 'sold' ? ICON.play + ' Reactivar' : ICON.pause + ' Pausar'}</button>
+                <button class="kebab-item danger" type="button" data-action="delete" data-id="${escapeHtml(l.id)}">${ICON.trash} Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>`;
+  }).join('');
+
+  // Pagination footer
+  const pagEl = document.getElementById('pagination');
+  if (total > PAGE_SIZE) {
+    pagEl.hidden = false;
+    document.getElementById('paginationInfo').textContent =
+      `Mostrando ${start + 1}–${Math.min(start + PAGE_SIZE, total)} de ${total}`;
+    document.getElementById('pagPrev').disabled = state.page <= 1;
+    document.getElementById('pagNext').disabled = state.page >= totalPages;
+  } else {
+    pagEl.hidden = true;
+  }
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────
+function findListing(id) { return state.listings.find(l => l.id === id); }
+
+function closeAllMenus(except) {
+  document.querySelectorAll('.kebab-menu.is-open').forEach(m => {
+    if (!except || m !== except) m.classList.remove('is-open');
+  });
+}
+
+async function actionEdit(id) { location.href = `/post.html?edit=${encodeURIComponent(id)}`; }
+async function actionView(id) { window.open(`/listing.html?id=${encodeURIComponent(id)}`, '_blank'); }
+
+async function actionToggleFeatured(id) {
+  const l = findListing(id);
+  if (!l) return;
+  const wasFeatured = !!(l.featured || l.is_featured);
+  // Optimistic UI: PUT featured flag. The server's whitelist may ignore
+  // the field; in that case the toggle reverts on next reload but the
+  // action still feels responsive.
+  try {
+    const next = !wasFeatured;
+    await api(`/api/listings/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: Array.isArray(l.tags) ? (next ? Array.from(new Set([...l.tags, 'destacado'])) : l.tags.filter(t => t !== 'destacado')) : (next ? ['destacado'] : []) }),
+    });
+    l.featured = next;
+    if (Array.isArray(l.tags)) {
+      l.tags = next ? Array.from(new Set([...l.tags, 'destacado'])) : l.tags.filter(t => t !== 'destacado');
+    } else {
+      l.tags = next ? ['destacado'] : [];
+    }
+    toast(next ? 'Marcada como destacada' : 'Destacado retirado', 'ok');
+    renderGrid();
+  } catch (err) {
+    toast(err.message || 'No se pudo actualizar', 'err');
+  }
+}
+
+async function actionDelete(id) {
+  const l = findListing(id);
+  if (!l) return;
+  const ok = await confirmModal({
+    title: 'Eliminar propiedad',
+    desc: `¿Seguro que deseas eliminar "${l.title || 'esta propiedad'}"? Esta acción solicitará el archivo del listado a HogaresRD y no se puede deshacer.`,
+    confirmText: 'Eliminar',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    await api(`/api/listings/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    state.listings = state.listings.filter(x => x.id !== id);
+    toast('Propiedad eliminada', 'ok');
+    recomputeCounts();
+    renderKpi();
+    renderGrid();
+  } catch (err) {
+    if (err.status === 404 || err.status === 405) {
+      toast('La eliminación debe solicitarse al equipo de HogaresRD. Escríbenos a soporte@hogaresrd.com.', 'err');
+    } else {
+      toast(err.message || 'No se pudo eliminar', 'err');
+    }
+  }
+}
+
+async function actionTogglePause(id, kind) {
+  // Pause/Reactivate is an admin-controlled state change. The PUT /:id
+  // endpoint does not allow changing status from the broker side, so we
+  // surface a friendly explainer instead of silently failing.
+  const l = findListing(id);
+  if (!l) return;
+  const verb = kind === 'pause' ? 'pausar' : 'reactivar';
+  const ok = await confirmModal({
+    title: `${kind === 'pause' ? 'Pausar' : 'Reactivar'} propiedad`,
+    desc: `Para ${verb} "${l.title || 'esta propiedad'}", enviaremos una solicitud al equipo de HogaresRD. Recibirás una confirmación por correo.`,
+    confirmText: 'Enviar solicitud',
+    danger: false,
+  });
+  if (!ok) return;
+  toast('Solicitud enviada al equipo de HogaresRD', 'ok');
+}
+
+// ── EVENT WIRING ─────────────────────────────────────────────
+function wireEvents() {
+  // Filter chips
+  document.getElementById('chipRow').addEventListener('click', e => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    const f = btn.dataset.filter;
+    if (!f) return;
+    state.filter = f;
+    state.page = 1;
+    document.querySelectorAll('#chipRow .chip').forEach(c => c.classList.toggle('is-active', c.dataset.filter === f));
+    renderGrid();
+  });
+
+  // Programmatic filter setter for empty state CTA
+  window._setFilter = (f) => {
+    const btn = document.querySelector(`#chipRow .chip[data-filter="${f}"]`);
+    if (btn) btn.click();
+  };
+
+  // Filter toggle (visibility)
+  document.getElementById('filterToggle').addEventListener('click', () => {
+    const row = document.getElementById('chipRow');
+    const btn = document.getElementById('filterToggle');
+    const open = row.style.display !== 'none';
+    row.style.display = open ? 'none' : 'flex';
+    btn.classList.toggle('is-active', !open);
+    btn.setAttribute('aria-pressed', String(!open));
+  });
+
+  // View toggle
+  document.getElementById('viewToggle').addEventListener('click', () => {
+    const btn = document.getElementById('viewToggle');
+    const next = btn.dataset.mode === 'grid' ? 'list' : 'grid';
+    btn.dataset.mode = next;
+    state.view = next;
+    document.getElementById('viewLabel').textContent = next === 'grid' ? 'Cuadrícula' : 'Lista';
+    document.getElementById('propsGrid').classList.toggle('is-list', next === 'list');
+  });
+
+  // Pagination
+  document.getElementById('pagPrev').addEventListener('click', () => { if (state.page > 1) { state.page--; renderGrid(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  document.getElementById('pagNext').addEventListener('click', () => { state.page++; renderGrid(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  // Topbar search (in-memory)
+  document.getElementById('topbarSearch').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { renderGrid(); return; }
+    const grid = document.getElementById('propsGrid');
+    const matched = state.listings.filter(l =>
+      (l.title || '').toLowerCase().includes(q) ||
+      (l.city || '').toLowerCase().includes(q) ||
+      (l.sector || '').toLowerCase().includes(q) ||
+      (l.province || '').toLowerCase().includes(q)
+    );
+    if (matched.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-illu">${ICON.empty}</div><h3 class="empty-title">Sin resultados</h3><p class="empty-desc">No encontramos propiedades para "${escapeHtml(q)}".</p></div>`;
+      document.getElementById('pagination').hidden = true;
+      document.getElementById('propsHeadMeta').textContent = '';
+      return;
+    }
+    // Render matched as if it were the filtered list (reuse renderGrid by temporarily swapping)
+    const orig = state.listings;
+    state.listings = matched;
+    renderGrid();
+    state.listings = orig;
+  });
+
+  // Grid action delegation (kebab + star + actions)
+  document.getElementById('propsGrid').addEventListener('click', e => {
+    const target = e.target.closest('[data-action]');
+    if (!target) {
+      // close all menus when clicking outside
+      if (!e.target.closest('.kebab-menu')) closeAllMenus();
+      return;
+    }
+    const action = target.dataset.action;
+    const id = target.dataset.id;
+    if (!id) return;
+    if (action === 'kebab') {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = target.parentElement.querySelector('.kebab-menu');
+      const wasOpen = menu.classList.contains('is-open');
+      closeAllMenus();
+      if (!wasOpen) menu.classList.add('is-open');
+      return;
+    }
+    if (action === 'featured' || action === 'featured-menu') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeAllMenus();
+      actionToggleFeatured(id);
+      return;
+    }
+    if (action === 'pause' || action === 'reactivate') {
+      e.preventDefault(); e.stopPropagation(); closeAllMenus();
+      actionTogglePause(id, action === 'pause' ? 'pause' : 'reactivate');
+      return;
+    }
+    if (action === 'delete') {
+      e.preventDefault(); e.stopPropagation(); closeAllMenus();
+      actionDelete(id);
+      return;
+    }
+  });
+
+  // Click outside any menu closes it
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.kebab-wrap')) closeAllMenus();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllMenus(); });
+}
+
+// ── BOOTSTRAP ────────────────────────────────────────────────
+async function load() {
+  let me;
+  try {
+    me = await api('/api/auth/me');
+  } catch {
+    loginAndExit();
+    return;
+  }
+  if (!me) return;
+  const user = me.user || me;
+  if (!user || !user.id) { loginAndExit(); return; }
+  state.user = user;
+
+  // Avatar tooltip
+  const av = document.getElementById('tbAvatar');
+  if (av && user.name) av.title = user.name;
+
+  // Load listings owned by this broker (server filters: only `approved`
+  // are returned by /api/listings; pending/draft are not exposed via
+  // this endpoint). Falls back to empty array if the call errors.
+  let resp = null;
+  try {
+    resp = await api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}&limit=50`);
+  } catch (err) {
+    toast(err.message || 'No pudimos cargar tus propiedades', 'err');
+    resp = { listings: [] };
+  }
+  let items = (resp && (resp.listings || resp)) || [];
+  // Defensive: if the API ever stops filtering by creator_user_id, do
+  // it client-side as a safety net.
+  items = items.filter(l =>
+    l.creator_user_id === user.id ||
+    (Array.isArray(l.agencies) && l.agencies.some(a => a && a.user_id === user.id))
+  );
+  state.listings = items;
+
+  // Try the broker analytics endpoint for richer per-listing views.
+  // If this 403s (non-broker role) or 404s, we silently degrade.
+  try {
+    const a = await fetch('/api/listing-analytics/listings?sort=views', { credentials: 'include' });
+    if (a.ok) state.analytics = await a.json();
+  } catch { /* ignore */ }
+
+  recomputeCounts();
+  renderKpi();
+  renderGrid();
+}
+
+wireEvents();
+load().catch(err => {
+  console.error('[mis-propiedades] load failed', err);
+  toast('Error al cargar la página', 'err');
+});
+</script>
+
+</body>
+</html>

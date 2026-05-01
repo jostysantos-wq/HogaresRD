@@ -1,0 +1,1573 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Comisiones</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:        #F4F1EA;
+    --bg-card:   #FFFFFF;
+    --bg-soft:   #FBF6EE;
+    --ink:       #14110F;
+    --ink-soft:  #4a4540;
+    --ink-mute:  #8a857f;
+    --line:      #E6E0D3;
+    --line-soft: #EFEAE0;
+    --sans:      'Inter', -apple-system, sans-serif;
+    --serif:     'Cormorant Garamond', Georgia, serif;
+
+    --accent:    #b54c30;
+    --accent-soft:#f2d9d0;
+    --teal:      #2e8b8b;
+    --teal-soft: #cfe7e3;
+    --gold:      #d4a64a;
+    --gold-soft: #f3e3c1;
+    --plum:      #6c4f8a;
+    --plum-soft: #ddd2eb;
+
+    --r-card:    18px;
+    --r-pill:    999px;
+    --r-mini:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  /* ── LAYOUT SHELL ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    gap: 18px;
+    padding: 18px;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ───────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 22px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: sticky;
+    top: 18px;
+    height: calc(100vh - 36px);
+  }
+  .sb-brand {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 6px;
+  }
+  .sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .sb-logo-mark {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--ink);
+    display: grid; place-items: center;
+  }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--ink-soft); font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-link.active:hover { background: var(--ink); }
+
+  .sb-section-label {
+    padding: 18px 12px 6px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .sb-cta {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 14px; padding: 16px;
+  }
+  .sb-cta-title {
+    font-family: var(--serif); font-size: 18px; font-weight: 600;
+    line-height: 1.15; margin-bottom: 8px;
+  }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn {
+    flex: 1; padding: 7px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    background: #fff; border: 1px solid var(--line);
+    color: var(--ink); cursor: pointer;
+    text-align: center;
+  }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ── MAIN ─────────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 14px 18px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 16px; align-items: center;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-soft); border-radius: var(--r-pill);
+    padding: 8px 14px; flex: 1; max-width: 380px;
+  }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input {
+    border: none; background: transparent; outline: none;
+    color: var(--ink); font-size: 13px; flex: 1;
+  }
+  .tb-search input::placeholder { color: var(--ink-mute); }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+  }
+  .tb-ai-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    display: grid; place-items: center;
+  }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-soft); position: relative;
+  }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    border: 2px solid var(--bg-card); cursor: pointer;
+  }
+
+  /* PAGE HEAD */
+  .page-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .page-head-l { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .page-eyebrow {
+    font-size: 11px; color: var(--ink-mute); letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .page-title {
+    font-family: var(--serif); font-size: 32px; font-weight: 600;
+    margin: 0; letter-spacing: -0.01em; line-height: 1;
+  }
+  .page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500;
+    cursor: pointer;
+  }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-pill .caret { color: var(--ink-mute); font-size: 10px; }
+  .ph-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+  }
+  .ph-cta svg { width: 13px; height: 13px; }
+
+  /* Range dropdown menu */
+  .range-wrap { position: relative; }
+  .range-menu {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 6px; min-width: 180px;
+    box-shadow: 0 12px 30px rgba(20, 17, 15, 0.10);
+    z-index: 25; display: none;
+  }
+  .range-menu.open { display: block; }
+  .range-opt {
+    display: block; width: 100%; padding: 8px 12px; border-radius: 8px;
+    text-align: left; font-size: 12.5px; color: var(--ink);
+    background: transparent;
+  }
+  .range-opt:hover { background: var(--bg-soft); }
+  .range-opt.active { background: var(--ink); color: #fff; }
+
+  /* KPI ROW (compact) */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  .kpi {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 16px 18px; min-height: 110px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .kpi-num {
+    font-family: var(--serif); font-size: 30px; font-weight: 600;
+    color: var(--ink); line-height: 1; letter-spacing: -0.02em;
+  }
+  .kpi-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-mute); flex-shrink: 0;
+  }
+  .kpi-icon svg { width: 14px; height: 14px; }
+  .kpi-icon.t-teal { background: var(--teal-soft); color: var(--teal); }
+  .kpi-icon.t-gold { background: var(--gold-soft); color: #8a6720; }
+  .kpi-icon.t-plum { background: var(--plum-soft); color: var(--plum); }
+  .kpi-icon.t-accent { background: var(--accent-soft); color: var(--accent); }
+  .kpi-label {
+    color: var(--ink-mute); font-size: 11.5px;
+    line-height: 1.4;
+  }
+  .kpi-sub {
+    color: var(--ink); font-weight: 600; font-size: 11.5px;
+  }
+
+  /* CHART ROW */
+  .chart-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; }
+  .panel {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 18px; display: flex; flex-direction: column;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  }
+  .panel-title {
+    font-family: var(--serif); font-size: 19px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .info {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--bg-soft); color: var(--ink-mute);
+    display: inline-grid; place-items: center; font-size: 9px; font-style: italic; font-weight: 700;
+  }
+  .panel-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 500;
+  }
+
+  .donut-wrap {
+    display: grid; grid-template-columns: auto 1fr;
+    align-items: center; gap: 18px; flex: 1;
+  }
+  .donut-svg { width: 200px; height: 200px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 10px; }
+  .legend-row {
+    display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 9px;
+    padding: 8px 12px; border-radius: 10px;
+    background: var(--bg-soft);
+  }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .legend-name { font-size: 12.5px; color: var(--ink); }
+  .legend-num { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+
+  .revenue-grid { display: grid; grid-template-columns: 60px 1fr; gap: 8px; flex: 1; }
+  .revenue-axis {
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 10px; color: var(--ink-mute); padding: 6px 0 22px;
+    text-align: right;
+  }
+  .revenue-plot { position: relative; padding-bottom: 22px; }
+  .gridline {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: var(--line-soft); pointer-events: none;
+  }
+  .gridline.g25 { top: 25%; }
+  .gridline.g50 { top: 50%; }
+  .gridline.g75 { top: 75%; }
+  .bars-row {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px;
+    height: 200px; align-items: flex-end; position: relative;
+  }
+  .bar-pair {
+    position: relative; height: 100%;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; }
+  .bar.bg { background: var(--teal-soft); }
+  .bar.fg {
+    background: var(--teal); width: 30%;
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  }
+  .month-row {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(12, 1fr);
+    text-align: center; font-size: 10px; color: var(--ink-mute);
+  }
+  .revenue-legend { display: inline-flex; align-items: center; gap: 14px; font-size: 11.5px; color: var(--ink-mute); }
+  .lg { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* TABLE */
+  .table-card {
+    background: var(--bg-card); border-radius: var(--r-card); padding: 20px;
+  }
+  .table-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+  }
+  .table-tools {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .filter-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 12px; font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .filter-pill:hover { background: var(--line-soft); }
+  .filter-pill.active { background: var(--ink); color: #fff; }
+
+  .table-wrap { overflow-x: auto; }
+  table.commissions {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    min-width: 940px;
+  }
+  table.commissions thead th {
+    text-align: left;
+    font-size: 11px; font-weight: 600;
+    color: var(--ink-mute);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  table.commissions thead th.sortable { cursor: pointer; user-select: none; }
+  table.commissions thead th.sortable:hover { color: var(--ink); }
+  table.commissions thead th .sort-arrow {
+    display: inline-block; margin-left: 4px; font-size: 9px; color: var(--ink-mute);
+  }
+  table.commissions tbody td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: middle;
+  }
+  table.commissions tbody tr:last-child td { border-bottom: none; }
+  table.commissions tbody tr:hover { background: var(--bg-soft); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .row-link { color: var(--ink); font-weight: 600; }
+  .row-link:hover { text-decoration: underline; }
+  .row-sub { color: var(--ink-mute); font-size: 11.5px; margin-top: 2px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .status-pill svg { width: 11px; height: 11px; }
+  .status-pending  { background: var(--gold-soft); color: #8a6720; }
+  .status-approved { background: var(--teal-soft); color: var(--teal); }
+  .status-paid     { background: var(--ink); color: #fff; }
+  .status-voided   { background: var(--accent-soft); color: var(--accent); }
+
+  /* Kebab menu */
+  .kebab-wrap { position: relative; display: inline-block; }
+  .kebab-btn {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: transparent; color: var(--ink-mute);
+    display: grid; place-items: center;
+  }
+  .kebab-btn:hover { background: var(--bg-soft); color: var(--ink); }
+  .kebab-btn svg { width: 14px; height: 14px; }
+  .kebab-menu {
+    position: absolute; right: 0; top: calc(100% + 4px);
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 5px; min-width: 180px;
+    box-shadow: 0 12px 28px rgba(20, 17, 15, 0.10);
+    z-index: 12; display: none;
+  }
+  .kebab-menu.open { display: block; }
+  .kebab-opt {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 12px; border-radius: 7px;
+    font-size: 12.5px; color: var(--ink); background: transparent;
+  }
+  .kebab-opt:hover { background: var(--bg-soft); }
+  .kebab-opt.danger { color: var(--accent); }
+
+  /* Empty / loading */
+  .skel {
+    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .empty-state {
+    text-align: center; padding: 48px 20px;
+    color: var(--ink-mute); font-size: 13px;
+  }
+  .empty-state-title {
+    font-family: var(--serif); font-size: 22px; color: var(--ink);
+    margin: 0 0 8px;
+  }
+
+  /* MODAL */
+  .modal-back {
+    position: fixed; inset: 0;
+    background: rgba(20, 17, 15, 0.45);
+    display: none; place-items: center;
+    z-index: 50; padding: 20px;
+  }
+  .modal-back.open { display: grid; }
+  .modal {
+    background: var(--bg-card); border-radius: 16px;
+    width: 100%; max-width: 520px; padding: 24px;
+    box-shadow: 0 24px 60px rgba(20, 17, 15, 0.18);
+  }
+  .modal h3 {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .modal p.sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 16px; line-height: 1.45; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .field label { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); }
+  .field input, .field select {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px;
+    font-family: inherit; font-size: 13px; color: var(--ink); background: var(--bg-card);
+    outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--ink); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .preview-card {
+    background: var(--bg-soft); border-radius: 10px; padding: 12px 14px;
+    margin: 8px 0 14px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+  }
+  .preview-card .pc-cell { display: flex; flex-direction: column; gap: 2px; }
+  .preview-card .pc-label { font-size: 10.5px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.05em; }
+  .preview-card .pc-val { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+
+  .modal-footer {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;
+  }
+  .btn-ghost {
+    padding: 9px 14px; border-radius: 9px;
+    background: transparent; color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 600;
+  }
+  .btn-ghost:hover { background: var(--bg-soft); }
+  .btn-primary {
+    padding: 9px 16px; border-radius: 9px;
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .modal-error { color: var(--accent); font-size: 12px; min-height: 16px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 24px; right: 24px;
+    background: var(--ink); color: #fff;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 10px 24px rgba(20, 17, 15, 0.20);
+    z-index: 60;
+    transform: translateX(120%);
+    transition: transform .25s ease;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.error { background: var(--accent); }
+
+  /* ── RESPONSIVE ────────────────────────────────────────── */
+  @media (max-width: 1240px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; top: 0; }
+    .topbar { grid-template-columns: 1fr; }
+    .topbar-right { justify-content: flex-end; }
+    .kpi-row { grid-template-columns: 1fr; }
+    .page-head { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ╭─ SIDEBAR ───────────────────────────────────────────╮ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="/broker-dashboard.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Panel
+      </a>
+      <a href="/broker.html#tab-listings" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        Mis Propiedades
+      </a>
+      <a href="/broker.html#tab-applications" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Aplicaciones
+      </a>
+      <a href="/broker.html#tab-tours" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Visitas
+      </a>
+      <a href="/comisiones.html" class="sb-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Comisiones
+      </a>
+      <a href="/broker.html#tab-conversations" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        Mensajes
+      </a>
+
+      <div class="sb-section-label">Marketing</div>
+
+      <a href="/enlaces-de-referido.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Enlaces de Referido
+      </a>
+      <a href="/broker.html#tab-ads" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/></svg>
+        Campañas
+      </a>
+
+      <div class="sb-section-label">Soporte</div>
+
+      <a href="/contacto" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Centro de Ayuda
+      </a>
+    </nav>
+
+    <div class="sb-cta">
+      <div class="sb-cta-title">Cierra una <em style="font-style:italic;">venta</em></div>
+      <div class="sb-cta-desc">Cuando una aplicación se complete, registra aquí la comisión para iniciar el cobro.</div>
+      <div class="sb-cta-row">
+        <a class="sb-cta-btn" href="/broker.html#tab-applications">Ver aplicaciones</a>
+        <a class="sb-cta-btn primary" href="#" id="sbCtaCreate">Registrar</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ╭─ MAIN ──────────────────────────────────────────────╮ -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar por propiedad, cliente o ID…" id="tableSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot">
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg>
+          </span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </a>
+        <a class="tb-icon" href="/account.html" aria-label="Configuración">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </a>
+        <a class="tb-avatar" href="/account.html" id="tbAvatar" aria-label="Mi cuenta"></a>
+      </div>
+    </div>
+
+    <!-- PAGE HEADER -->
+    <div class="page-head">
+      <div class="page-head-l">
+        <span class="page-eyebrow" id="pageEyebrow">Ingresos · año en curso</span>
+        <h1 class="page-title">Comisiones</h1>
+      </div>
+      <div class="page-actions">
+        <div class="range-wrap">
+          <button class="ph-pill" id="rangeBtn" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="rangeLabel">Últ. 12 meses</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="range-menu" id="rangeMenu" role="menu">
+            <button class="range-opt" data-range="30d">Últ. 30 días</button>
+            <button class="range-opt" data-range="90d">Últ. 90 días</button>
+            <button class="range-opt active" data-range="12m">Últ. 12 meses</button>
+            <button class="range-opt" data-range="ytd">Año en curso (YTD)</button>
+          </div>
+        </div>
+        <button class="ph-pill" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+        <button class="ph-cta" id="createBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Crear comisión
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:30px;width:120px;">&nbsp;</div><div class="kpi-icon skel" style="height:32px;width:32px;"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:30px;width:120px;">&nbsp;</div><div class="kpi-icon skel" style="height:32px;width:32px;"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:30px;width:120px;">&nbsp;</div><div class="kpi-icon skel" style="height:32px;width:32px;"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-num skel" style="height:30px;width:120px;">&nbsp;</div><div class="kpi-icon skel" style="height:32px;width:32px;"></div></div><div class="kpi-label skel" style="height:14px;width:140px;">&nbsp;</div></div>
+    </div>
+
+    <!-- CHART ROW -->
+    <div class="chart-row">
+
+      <!-- Donut: comisiones YTD por estado -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            Comisiones por estado
+            <span class="info" title="Distribución del año en curso por estado de la comisión">i</span>
+          </div>
+          <span class="panel-pill">YTD</span>
+        </div>
+        <div class="donut-wrap">
+          <div style="position:relative;">
+            <svg class="donut-svg" id="donutSvg" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="68" fill="none" stroke="#f0ece2" stroke-width="22"/>
+              <g id="donutSegs"></g>
+              <g transform="translate(100 100)">
+                <text x="0" y="-2" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif"
+                      font-size="20" font-weight="600" fill="var(--ink)" id="donutTotal">—</text>
+                <text x="0" y="16" text-anchor="middle" font-family="Inter, sans-serif"
+                      font-size="9" fill="var(--ink-mute)" letter-spacing="1">YTD COMISIÓN</text>
+              </g>
+            </svg>
+          </div>
+          <div class="donut-legend" id="donutLegend">
+            <div class="legend-row"><span class="legend-dot skel"></span><span class="legend-name skel" style="height:10px;">&nbsp;</span><span class="legend-num skel" style="height:14px;width:40px;">&nbsp;</span></div>
+            <div class="legend-row"><span class="legend-dot skel"></span><span class="legend-name skel" style="height:10px;">&nbsp;</span><span class="legend-num skel" style="height:14px;width:40px;">&nbsp;</span></div>
+            <div class="legend-row"><span class="legend-dot skel"></span><span class="legend-name skel" style="height:10px;">&nbsp;</span><span class="legend-num skel" style="height:14px;width:40px;">&nbsp;</span></div>
+            <div class="legend-row"><span class="legend-dot skel"></span><span class="legend-name skel" style="height:10px;">&nbsp;</span><span class="legend-num skel" style="height:14px;width:40px;">&nbsp;</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bars: ventas mensuales -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            Ventas mensuales
+            <span class="info" title="Total facturado en ventas cerradas, USD por mes">i</span>
+          </div>
+          <span class="revenue-legend">
+            <span class="lg"><span class="lg-dot" style="background: var(--teal-soft);"></span>Facturado</span>
+            <span class="lg"><span class="lg-dot" style="background: var(--teal);"></span>Comisión neta</span>
+          </span>
+        </div>
+        <div class="revenue-grid">
+          <div class="revenue-axis" id="revAxis">
+            <span>—</span><span>—</span><span>—</span><span>—</span><span>0</span>
+          </div>
+          <div class="revenue-plot">
+            <div class="gridline g25"></div>
+            <div class="gridline g50"></div>
+            <div class="gridline g75"></div>
+            <div class="bars-row" id="bars"></div>
+            <div class="month-row" id="monthRow"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COMMISSIONS TABLE -->
+    <section class="table-card">
+      <div class="table-head">
+        <div class="panel-title">
+          Movimiento de comisiones
+          <span class="info" title="Comisiones registradas, ordenadas por fecha más reciente">i</span>
+        </div>
+        <div class="table-tools" id="filterTools">
+          <button class="filter-pill active" data-filter="all">Todas <span id="cnt-all" style="color:var(--ink-mute);">·0</span></button>
+          <button class="filter-pill" data-filter="pending">Pendientes <span id="cnt-pending" style="color:var(--ink-mute);">·0</span></button>
+          <button class="filter-pill" data-filter="approved">Aprobadas <span id="cnt-approved" style="color:var(--ink-mute);">·0</span></button>
+          <button class="filter-pill" data-filter="paid">Pagadas <span id="cnt-paid" style="color:var(--ink-mute);">·0</span></button>
+          <button class="filter-pill" data-filter="voided">Anuladas <span id="cnt-voided" style="color:var(--ink-mute);">·0</span></button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="commissions">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="application_id">Aplicación <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="listing_title">Propiedad <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="client_name">Cliente <span class="sort-arrow"></span></th>
+              <th class="num sortable" data-sort="sale_amount">Monto venta <span class="sort-arrow"></span></th>
+              <th class="num sortable" data-sort="agent_amount">Com. bruta <span class="sort-arrow"></span></th>
+              <th class="num sortable" data-sort="agent_net">Com. neta <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="status">Estado <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="updated_at">Fecha <span class="sort-arrow">▼</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="9" style="padding:0;"><div class="skel" style="height:48px;border-radius:0;"></div></td></tr>
+            <tr><td colspan="9" style="padding:0;"><div class="skel" style="height:48px;border-radius:0;"></div></td></tr>
+            <tr><td colspan="9" style="padding:0;"><div class="skel" style="height:48px;border-radius:0;"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ╭─ MODAL: create / edit commission ───────────────────────╮ -->
+<div class="modal-back" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Crear comisión</h3>
+    <p class="sub" id="modalSub">Selecciona la aplicación cerrada e ingresa los porcentajes.</p>
+
+    <div class="field" id="appPickerWrap">
+      <label for="appPicker">Aplicación</label>
+      <select id="appPicker">
+        <option value="">— Selecciona una aplicación —</option>
+      </select>
+      <div style="font-size:11px;color:var(--ink-mute);margin-top:4px;">
+        Solo se listan aplicaciones aprobadas o cerradas, sin comisión registrada todavía.
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="fSale">Monto de venta (USD)</label>
+      <input type="number" id="fSale" min="0" step="0.01" placeholder="0">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="fAgentP">% del agente</label>
+        <input type="number" id="fAgentP" min="0" max="100" step="0.1" value="3">
+      </div>
+      <div class="field">
+        <label for="fInmP">% para inmobiliaria</label>
+        <input type="number" id="fInmP" min="0" max="100" step="0.1" value="0">
+      </div>
+    </div>
+
+    <div class="preview-card">
+      <div class="pc-cell"><span class="pc-label">Com. bruta</span><span class="pc-val" id="prAgent">US$ —</span></div>
+      <div class="pc-cell"><span class="pc-label">Inmobiliaria</span><span class="pc-val" id="prInm">US$ —</span></div>
+      <div class="pc-cell"><span class="pc-label">Neto al agente</span><span class="pc-val" id="prNet">US$ —</span></div>
+    </div>
+
+    <div class="field">
+      <label for="fNote">Nota (opcional)</label>
+      <input type="text" id="fNote" maxlength="300" placeholder="Detalle interno">
+    </div>
+
+    <div class="modal-error" id="modalErr"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="modalCancel">Cancelar</button>
+      <button class="btn-primary" id="modalSave">Registrar comisión</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── helpers ──────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtUSD(n, allowDecimals = false) {
+  if (!Number.isFinite(Number(n))) return 'US$ —';
+  const num = Number(n);
+  if (allowDecimals && Math.abs(num - Math.round(num)) > 0.005) {
+    return 'US$ ' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return 'US$ ' + Math.round(num).toLocaleString('en-US');
+}
+function fmtNum(n) {
+  return Number.isFinite(n) ? n.toLocaleString('es-DO') : '—';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  });
+  if (res.status === 401) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+    return null;
+  }
+  if (!res.ok) {
+    let msg = `${path} ${res.status}`;
+    try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+function toast(msg, kind = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (kind === 'error' ? ' error' : '') + ' show';
+  setTimeout(() => { el.classList.remove('show'); }, 2800);
+}
+
+// ── State ────────────────────────────────────────────────────
+const STATE = {
+  user: null,
+  role: '',
+  rows: [],          // raw commission rows
+  applications: [],  // for the create modal picker
+  range: '12m',
+  filter: 'all',
+  sortKey: 'updated_at',
+  sortDir: 'desc',   // 'asc' | 'desc'
+  search: '',
+  monthlySales: [],  // [{month: 'YYYY-MM', revenue, count}]
+  editingAppId: null,
+};
+
+// Status normalisation. Backend uses pending_review / approved / rejected;
+// we extend with 'paid' (commission with payout_id) and 'voided' (voided_at).
+function normStatus(c, app) {
+  if (!c) return 'unknown';
+  if (c.status === 'voided' || c.voided_at) return 'voided';
+  if (c.payout_id || c.status === 'paid')   return 'paid';
+  if (c.status === 'approved')              return 'approved';
+  if (c.status === 'rejected')              return 'voided';
+  if (c.status === 'pending_review' || c.status === 'pending') return 'pending';
+  return c.status || 'unknown';
+}
+
+const STATUS_META = {
+  pending:  { label: 'Pendiente',  cls: 'status-pending' },
+  approved: { label: 'Aprobada',   cls: 'status-approved' },
+  paid:     { label: 'Pagada',     cls: 'status-paid' },
+  voided:   { label: 'Anulada',    cls: 'status-voided' },
+  unknown:  { label: 'Desconocido',cls: 'status-pending' },
+};
+
+// ── Range cutoff (client-side filter on rows by updated_at) ──
+function rangeCutoff(range) {
+  const now = new Date();
+  if (range === '30d') return new Date(now - 30 * 86400000);
+  if (range === '90d') return new Date(now - 90 * 86400000);
+  if (range === '12m') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  if (range === 'ytd') return new Date(now.getFullYear(), 0, 1);
+  return null;
+}
+function inRange(iso, range) {
+  const cutoff = rangeCutoff(range);
+  if (!cutoff) return true;
+  const d = new Date(iso || 0);
+  return d >= cutoff;
+}
+
+// ── KPI render ───────────────────────────────────────────────
+function computeKpis(rows, range) {
+  const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  let paidYTD = 0;
+  let approvedNotPaid = 0;
+  let pending = 0;
+  let approvedInRange = 0;
+  let submittedInRange = 0;
+
+  rows.forEach(r => {
+    const c = r.commission || {};
+    const st = normStatus(c, r);
+    const updated = new Date(r.updated_at || c.submitted_at || 0);
+
+    if (st === 'paid' && updated >= yearStart) paidYTD += Number(c.agent_net) || 0;
+    if (st === 'approved') approvedNotPaid += Number(c.agent_net) || 0;
+    if (st === 'pending')  pending += Number(c.agent_net) || 0;
+
+    // Approval rate over the active range window (pending + approved + voided counted as "submitted")
+    if (inRange(r.updated_at || c.submitted_at, range)) {
+      submittedInRange++;
+      if (st === 'approved' || st === 'paid') approvedInRange++;
+    }
+  });
+
+  const approvalRate = submittedInRange > 0 ? Math.round((approvedInRange / submittedInRange) * 100) : null;
+  return { paidYTD, approvedNotPaid, pending, approvalRate, submittedInRange };
+}
+
+const ICON = {
+  check:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
+  clock:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  hourglass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 00-.59-1.42L12 12l-4.41 4.41A2 2 0 007 17.83V22"/><path d="M7 2v4.17a2 2 0 00.59 1.42L12 12l4.41-4.41A2 2 0 0017 6.17V2"/></svg>',
+  pct:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+  more:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg>',
+};
+
+function renderKpiRow() {
+  const k = computeKpis(STATE.rows, STATE.range);
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtUSD(k.paidYTD)}</div>
+        <div class="kpi-icon t-teal">${ICON.check}</div>
+      </div>
+      <div class="kpi-label">Pagadas YTD<br><span class="kpi-sub">${new Date().getFullYear()} · neto al agente</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtUSD(k.approvedNotPaid)}</div>
+        <div class="kpi-icon t-gold">${ICON.clock}</div>
+      </div>
+      <div class="kpi-label">Por cobrar<br><span class="kpi-sub">aprobadas, sin pago aún</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${fmtUSD(k.pending)}</div>
+        <div class="kpi-icon t-accent">${ICON.hourglass}</div>
+      </div>
+      <div class="kpi-label">Pendientes<br><span class="kpi-sub">esperan aprobación</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-num">${k.approvalRate == null ? '—' : k.approvalRate + '%'}</div>
+        <div class="kpi-icon t-plum">${ICON.pct}</div>
+      </div>
+      <div class="kpi-label">Tasa de aprobación<br><span class="kpi-sub">${k.submittedInRange} en el rango</span></div>
+    </div>
+  `;
+}
+
+// ── Donut: YTD by status ─────────────────────────────────────
+function renderDonut() {
+  const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  const buckets = { paid: 0, approved: 0, pending: 0, voided: 0 };
+  STATE.rows.forEach(r => {
+    const c = r.commission || {};
+    const updated = new Date(r.updated_at || c.submitted_at || 0);
+    if (updated < yearStart) return;
+    const st = normStatus(c, r);
+    if (buckets[st] != null) buckets[st] += Number(c.agent_net) || 0;
+  });
+
+  const data = [
+    { key: 'paid',     name: 'Pagadas',   val: buckets.paid,     color: 'var(--ink)' },
+    { key: 'approved', name: 'Por cobrar',val: buckets.approved, color: 'var(--teal)' },
+    { key: 'pending',  name: 'Pendientes',val: buckets.pending,  color: 'var(--gold)' },
+    { key: 'voided',   name: 'Anuladas',  val: buckets.voided,   color: 'var(--accent)' },
+  ];
+  const total = data.reduce((s, d) => s + d.val, 0);
+  const segs   = document.getElementById('donutSegs');
+  const legend = document.getElementById('donutLegend');
+  document.getElementById('donutTotal').textContent =
+    total > 0 ? fmtUSD(total).replace('US$ ', '$') : '—';
+
+  if (total === 0) {
+    segs.innerHTML = '';
+    legend.innerHTML = data.map(d => `
+      <div class="legend-row">
+        <span class="legend-dot" style="background:${d.color};"></span>
+        <span class="legend-name">${d.name}</span>
+        <span class="legend-num">US$ 0</span>
+      </div>`).join('');
+    return;
+  }
+
+  const C = 2 * Math.PI * 68;
+  let offset = 0;
+  segs.innerHTML = data.map(d => {
+    const len = (d.val / total) * C;
+    const seg = `<circle cx="100" cy="100" r="68" fill="none" stroke="${d.color}" stroke-width="22"
+            stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}"
+            stroke-dashoffset="${(-offset).toFixed(2)}"
+            transform="rotate(-90 100 100)"/>`;
+    offset += len;
+    return seg;
+  }).join('');
+
+  legend.innerHTML = data.map(d => `
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${d.color};"></span>
+      <span class="legend-name">${d.name}</span>
+      <span class="legend-num">${fmtUSD(d.val)}</span>
+    </div>
+  `).join('');
+}
+
+// ── Bars: monthly sales (12 months) ──────────────────────────
+function renderBars() {
+  const monthly = STATE.monthlySales || [];
+  // Build 12-month axis ending at current month
+  const now = new Date();
+  const buckets = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`;
+    const m = monthly.find(x => x.month === k);
+    buckets.push({
+      key: k,
+      label: MONTHS_ES[d.getMonth()],
+      revenue: m ? Number(m.revenue) || 0 : 0,
+    });
+  }
+
+  // Approximate commission overlay: 3% of revenue (visual only)
+  const COMM_RATE = 0.03;
+  const totals = buckets.map(b => b.revenue);
+  const comms  = buckets.map(b => b.revenue * COMM_RATE);
+  const max    = Math.max(...totals, 1);
+
+  // Nice axis (4 ticks, USD-friendly)
+  function niceAxis(maxVal) {
+    if (maxVal <= 0) return ['0', '0', '0', '0', '0'];
+    const fmt = (v) => {
+      if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (v >= 1_000)     return '$' + Math.round(v / 1_000) + 'K';
+      return '$' + Math.round(v);
+    };
+    return [fmt(maxVal), fmt(maxVal*0.75), fmt(maxVal*0.5), fmt(maxVal*0.25), '0'];
+  }
+  document.getElementById('revAxis').innerHTML = niceAxis(max).map(v => `<span>${v}</span>`).join('');
+  document.getElementById('monthRow').innerHTML = buckets.map(b => `<span>${b.label}</span>`).join('');
+  document.getElementById('bars').innerHTML = buckets.map((b, i) => {
+    const bgPct = max ? Math.max(2, (totals[i] / max) * 100) : 2;
+    const fgPct = max ? Math.max(0, (comms[i]  / max) * 100) : 0;
+    const tip = `${b.label}: ${fmtUSD(totals[i])} · com ${fmtUSD(comms[i])}`;
+    return `
+      <div class="bar-pair" title="${tip}">
+        <div class="bar bg" style="height:${bgPct}%"></div>
+        <div class="bar fg" style="height:${fgPct}%"></div>
+      </div>`;
+  }).join('');
+}
+
+// ── Table render ─────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const isInmView = ['inmobiliaria', 'constructora', 'admin'].includes(STATE.role);
+
+  // counts (per filter pill)
+  const counts = { all: 0, pending: 0, approved: 0, paid: 0, voided: 0 };
+  STATE.rows.forEach(r => {
+    counts.all++;
+    const st = normStatus(r.commission || {}, r);
+    if (counts[st] != null) counts[st]++;
+  });
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('cnt-' + k);
+    if (el) el.textContent = '·' + counts[k];
+  });
+
+  // filter
+  let rows = STATE.rows.filter(r => {
+    if (!inRange(r.updated_at || r.commission?.submitted_at, STATE.range)) return false;
+    if (STATE.filter !== 'all') {
+      if (normStatus(r.commission || {}, r) !== STATE.filter) return false;
+    }
+    if (STATE.search) {
+      const q = STATE.search.toLowerCase();
+      const hay = [
+        r.application_id, r.listing_title, r.client_name, r.agent_name,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // sort
+  const dir = STATE.sortDir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    let av, bv;
+    switch (STATE.sortKey) {
+      case 'sale_amount':   av = Number(a.commission?.sale_amount)  || 0; bv = Number(b.commission?.sale_amount)  || 0; break;
+      case 'agent_amount':  av = Number(a.commission?.agent_amount) || 0; bv = Number(b.commission?.agent_amount) || 0; break;
+      case 'agent_net':     av = Number(a.commission?.agent_net)    || 0; bv = Number(b.commission?.agent_net)    || 0; break;
+      case 'status':        av = normStatus(a.commission || {}, a);       bv = normStatus(b.commission || {}, b);       break;
+      case 'updated_at':    av = new Date(a.updated_at || 0).getTime();   bv = new Date(b.updated_at || 0).getTime();   break;
+      default:              av = String(a[STATE.sortKey] ?? '');          bv = String(b[STATE.sortKey] ?? '');
+    }
+    return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = `
+      <tr><td colspan="9">
+        <div class="empty-state">
+          <div class="empty-state-title">${STATE.rows.length === 0 ? 'Aún no hay comisiones' : 'Sin resultados'}</div>
+          <div>${STATE.rows.length === 0
+            ? 'Aún no has registrado comisiones. Cuando una aplicación se cierre, podrás añadirla aquí.'
+            : 'Ajusta el rango o quita el filtro para ver otras comisiones.'}</div>
+        </div>
+      </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const c = r.commission || {};
+    const st = normStatus(c, r);
+    const meta = STATUS_META[st] || STATUS_META.unknown;
+    const iAmAgent = STATE.user && r.agent_user_id === STATE.user.id;
+    const opts = [];
+    opts.push(`<button class="kebab-opt" data-act="view" data-id="${escapeHtml(r.application_id)}">Ver detalle</button>`);
+    if (st === 'approved' && isInmView) {
+      opts.push(`<button class="kebab-opt" data-act="paid" data-id="${escapeHtml(r.application_id)}">Marcar pagada</button>`);
+    }
+    if ((st === 'pending' || st === 'approved') && (isInmView || iAmAgent)) {
+      opts.push(`<button class="kebab-opt danger" data-act="void" data-id="${escapeHtml(r.application_id)}">Anular</button>`);
+    }
+    if ((st === 'pending' || st === 'voided') && iAmAgent) {
+      opts.push(`<button class="kebab-opt" data-act="edit" data-id="${escapeHtml(r.application_id)}">Editar</button>`);
+    }
+
+    const checkIcon = st === 'paid'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '';
+
+    const sale = Number(c.sale_amount) || 0;
+    const gross = Number(c.agent_amount) || 0;
+    const net = Number(c.agent_net) || 0;
+    const dateRef = r.updated_at || c.reviewed_at || c.submitted_at || r.created_at;
+    const shortId = String(r.application_id || '').slice(0, 8);
+
+    return `
+      <tr>
+        <td>
+          <a class="row-link" href="/broker.html#tab-applications">#${escapeHtml(shortId)}</a>
+          ${isInmView && r.agent_name ? `<div class="row-sub">${escapeHtml(r.agent_name)}</div>` : ''}
+        </td>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(r.listing_title || '—')}</div>
+          ${r.listing_price ? `<div class="row-sub">Listado: ${fmtUSD(Number(r.listing_price))}</div>` : ''}
+        </td>
+        <td>${escapeHtml(r.client_name || '—')}</td>
+        <td class="num">${fmtUSD(sale, true)}</td>
+        <td class="num">${c.agent_percent ? c.agent_percent + '% · ' : ''}${fmtUSD(gross, true)}</td>
+        <td class="num" style="font-weight:600;">${fmtUSD(net, true)}</td>
+        <td><span class="status-pill ${meta.cls}">${checkIcon}${meta.label}</span></td>
+        <td>${fmtDate(dateRef)}</td>
+        <td style="text-align:right;">
+          <div class="kebab-wrap">
+            <button class="kebab-btn" aria-haspopup="true" aria-label="Acciones">${ICON.more}</button>
+            <div class="kebab-menu">${opts.join('')}</div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // Wire kebab menus
+  tbody.querySelectorAll('.kebab-wrap').forEach(wrap => {
+    const btn = wrap.querySelector('.kebab-btn');
+    const menu = wrap.querySelector('.kebab-menu');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.kebab-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
+      menu.classList.toggle('open');
+    });
+    menu.querySelectorAll('.kebab-opt').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.remove('open');
+        handleRowAction(opt.dataset.act, opt.dataset.id);
+      });
+    });
+  });
+
+  // Update sort arrow indicators
+  document.querySelectorAll('th.sortable .sort-arrow').forEach(s => s.textContent = '');
+  const activeTh = document.querySelector(`th.sortable[data-sort="${STATE.sortKey}"] .sort-arrow`);
+  if (activeTh) activeTh.textContent = STATE.sortDir === 'asc' ? '▲' : '▼';
+}
+
+// ── Row actions ──────────────────────────────────────────────
+async function handleRowAction(act, appId) {
+  if (act === 'view') {
+    location.href = `/broker.html#tab-applications`;
+    return;
+  }
+  if (act === 'edit') {
+    openModal(appId);
+    return;
+  }
+  if (act === 'paid') {
+    // No dedicated paid endpoint — leave as a graceful TODO.
+    toast('El pago se registra desde la sección de cobros (próximamente).', 'info');
+    return;
+  }
+  if (act === 'void') {
+    if (!confirm('¿Anular esta comisión? Esta acción quedará registrada en el historial.')) return;
+    try {
+      await api(`/api/applications/${encodeURIComponent(appId)}/commission/review`, {
+        method: 'PUT',
+        body: JSON.stringify({ action: 'reject', note: 'Anulada desde la vista de comisiones' }),
+      });
+      toast('Comisión anulada.');
+      await reload();
+    } catch (e) {
+      toast(e.message || 'No se pudo anular.', 'error');
+    }
+  }
+}
+
+// ── Modal: create / edit commission ──────────────────────────
+function openModal(appId = null) {
+  STATE.editingAppId = appId;
+  document.getElementById('modalErr').textContent = '';
+
+  const picker = document.getElementById('appPicker');
+  const pickerWrap = document.getElementById('appPickerWrap');
+  const titleEl = document.getElementById('modalTitle');
+  const subEl   = document.getElementById('modalSub');
+  const saveEl  = document.getElementById('modalSave');
+
+  if (appId) {
+    // editing — hide picker, prefill from existing row
+    pickerWrap.style.display = 'none';
+    const row = STATE.rows.find(r => r.application_id === appId);
+    const c = row?.commission || {};
+    titleEl.textContent = 'Editar comisión';
+    subEl.textContent   = (row?.listing_title || '') +
+      (row?.listing_price ? ` — listado: ${fmtUSD(Number(row.listing_price))}` : '');
+    document.getElementById('fSale').value   = c.sale_amount   || row?.listing_price || '';
+    document.getElementById('fAgentP').value = c.agent_percent || 3;
+    document.getElementById('fInmP').value   = c.inmobiliaria_percent || 0;
+    saveEl.textContent = 'Actualizar';
+  } else {
+    pickerWrap.style.display = '';
+    titleEl.textContent = 'Crear comisión';
+    subEl.textContent   = 'Selecciona la aplicación cerrada e ingresa los porcentajes.';
+    saveEl.textContent  = 'Registrar comisión';
+
+    // Populate eligible apps: those with status that allows commission entry
+    const allowed = ['aprobado', 'pendiente_pago', 'pago_enviado', 'pago_aprobado', 'completado'];
+    const eligibleApps = STATE.applications.filter(a => allowed.includes(a.status));
+    picker.innerHTML = '<option value="">— Selecciona una aplicación —</option>' +
+      eligibleApps.map(a => {
+        const lbl = `${a.listing_title || 'Sin título'} — ${a.client?.name || a.client_name || 'Cliente'}`;
+        return `<option value="${escapeHtml(a.id)}" data-price="${Number(a.listing_price) || 0}">${escapeHtml(lbl)}</option>`;
+      }).join('');
+    document.getElementById('fSale').value = '';
+    document.getElementById('fAgentP').value = 3;
+    document.getElementById('fInmP').value = 0;
+
+    if (!eligibleApps.length) {
+      document.getElementById('modalErr').textContent =
+        'No hay aplicaciones aprobadas o cerradas todavía. Avanza una aplicación a "aprobado" para registrar la comisión.';
+    }
+  }
+
+  document.getElementById('fNote').value = '';
+  recalcPreview();
+  document.getElementById('modalBack').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalBack').classList.remove('open');
+  STATE.editingAppId = null;
+}
+
+function recalcPreview() {
+  const sale  = Number(String(document.getElementById('fSale').value).replace(/[^\d.]/g, '')) || 0;
+  const agentP = Number(document.getElementById('fAgentP').value) || 0;
+  const inmP   = Number(document.getElementById('fInmP').value) || 0;
+  const gross = Math.round(sale * agentP / 100 * 100) / 100;
+  const inm   = Math.round(sale * inmP / 100 * 100) / 100;
+  const net   = Math.max(0, gross - inm);
+  document.getElementById('prAgent').textContent = fmtUSD(gross, true);
+  document.getElementById('prInm').textContent   = fmtUSD(inm, true);
+  document.getElementById('prNet').textContent   = fmtUSD(net, true);
+}
+
+async function saveModal() {
+  const errEl = document.getElementById('modalErr');
+  errEl.textContent = '';
+
+  let appId = STATE.editingAppId;
+  if (!appId) {
+    appId = document.getElementById('appPicker').value;
+    if (!appId) { errEl.textContent = 'Selecciona una aplicación.'; return; }
+  }
+  const sale = Number(String(document.getElementById('fSale').value).replace(/[^\d.]/g, '')) || 0;
+  const agentP = Number(document.getElementById('fAgentP').value) || 0;
+  const inmP   = Number(document.getElementById('fInmP').value) || 0;
+  const note = document.getElementById('fNote').value || '';
+  if (sale <= 0)   { errEl.textContent = 'Monto de venta debe ser mayor a 0.'; return; }
+  if (agentP <= 0) { errEl.textContent = '% del agente debe ser mayor a 0.'; return; }
+
+  try {
+    await api(`/api/applications/${encodeURIComponent(appId)}/commission`, {
+      method: 'POST',
+      body: JSON.stringify({
+        sale_amount:          sale,
+        agent_percent:        agentP,
+        inmobiliaria_percent: inmP,
+        note,
+      }),
+    });
+    closeModal();
+    toast('Comisión registrada.');
+    await reload();
+  } catch (e) {
+    errEl.textContent = e.message || 'No se pudo registrar la comisión.';
+  }
+}
+
+// ── Export CSV (client-side) ─────────────────────────────────
+function exportCsv() {
+  const rows = STATE.rows.filter(r =>
+    inRange(r.updated_at || r.commission?.submitted_at, STATE.range)
+  );
+  const header = [
+    'aplicacion','propiedad','cliente','agente',
+    'monto_venta_usd','comision_porcentaje','comision_bruta_usd','inmobiliaria_usd','comision_neta_usd',
+    'estado','fecha',
+  ];
+  const esc = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = ['﻿' + header.join(',')];
+  rows.forEach(r => {
+    const c = r.commission || {};
+    const st = normStatus(c, r);
+    lines.push([
+      r.application_id, r.listing_title, r.client_name, r.agent_name || '',
+      Number(c.sale_amount) || 0,
+      c.agent_percent || 0,
+      Number(c.agent_amount) || 0,
+      Number(c.inmobiliaria_amount) || 0,
+      Number(c.agent_net) || 0,
+      STATUS_META[st]?.label || st,
+      r.updated_at || c.submitted_at || '',
+    ].map(esc).join(','));
+  });
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `comisiones-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Wire UI ──────────────────────────────────────────────────
+function wireUi() {
+  // Range dropdown
+  const rangeBtn = document.getElementById('rangeBtn');
+  const rangeMenu = document.getElementById('rangeMenu');
+  const rangeLabel = document.getElementById('rangeLabel');
+  const rangeLabels = { '30d': 'Últ. 30 días', '90d': 'Últ. 90 días', '12m': 'Últ. 12 meses', 'ytd': 'Año en curso' };
+  rangeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = rangeMenu.classList.toggle('open');
+    rangeBtn.setAttribute('aria-expanded', String(open));
+  });
+  rangeMenu.querySelectorAll('.range-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      STATE.range = opt.dataset.range;
+      rangeMenu.querySelectorAll('.range-opt').forEach(o => o.classList.toggle('active', o === opt));
+      rangeLabel.textContent = rangeLabels[STATE.range] || STATE.range;
+      rangeMenu.classList.remove('open');
+      const eyebrow = STATE.range === 'ytd' ? 'Ingresos · año en curso' :
+                      STATE.range === '12m' ? 'Ingresos · últimos 12 meses' :
+                      STATE.range === '90d' ? 'Ingresos · últimos 90 días' :
+                                              'Ingresos · últimos 30 días';
+      document.getElementById('pageEyebrow').textContent = eyebrow;
+      renderKpiRow();
+      renderTable();
+    });
+  });
+
+  // Filter pills
+  document.getElementById('filterTools').addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-pill');
+    if (!btn) return;
+    STATE.filter = btn.dataset.filter;
+    document.querySelectorAll('#filterTools .filter-pill').forEach(b => b.classList.toggle('active', b === btn));
+    renderTable();
+  });
+
+  // Search
+  const searchInput = document.getElementById('tableSearch');
+  let searchT;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => {
+      STATE.search = searchInput.value.trim();
+      renderTable();
+    }, 180);
+  });
+
+  // Sort headers
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (STATE.sortKey === k) {
+        STATE.sortDir = STATE.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        STATE.sortKey = k;
+        STATE.sortDir = (k === 'updated_at' || k.endsWith('_amount') || k === 'agent_net' || k === 'sale_amount') ? 'desc' : 'asc';
+      }
+      renderTable();
+    });
+  });
+
+  // Modal events
+  document.getElementById('createBtn').addEventListener('click', () => openModal());
+  document.getElementById('sbCtaCreate').addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalSave').addEventListener('click', saveModal);
+  document.getElementById('modalBack').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalBack')) closeModal();
+  });
+  ['fSale', 'fAgentP', 'fInmP'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalcPreview);
+  });
+  document.getElementById('appPicker').addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions[0];
+    const price = opt ? Number(opt.dataset.price) || 0 : 0;
+    if (price > 0 && !document.getElementById('fSale').value) {
+      document.getElementById('fSale').value = price;
+      recalcPreview();
+    }
+  });
+
+  // Export
+  document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+  // Close menus on outside click
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+    rangeMenu.classList.remove('open');
+    rangeBtn.setAttribute('aria-expanded', 'false');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+      rangeMenu.classList.remove('open');
+    }
+  });
+}
+
+// ── Bootstrapping data load ──────────────────────────────────
+async function reload() {
+  try {
+    const summary = await api('/api/applications/commissions/summary');
+    if (!summary) return;
+    STATE.role = summary.role || '';
+    STATE.rows = Array.isArray(summary.commissions) ? summary.commissions : [];
+  } catch (e) {
+    if (e.status !== 401) {
+      console.error('[comisiones] summary failed', e);
+      STATE.rows = [];
+      toast('No se pudieron cargar las comisiones.', 'error');
+    }
+  }
+
+  // Sales monthly (for the bars chart) — non-fatal if 403/missing
+  try {
+    const sales = await api('/api/broker-dashboard/sales');
+    STATE.monthlySales = (sales && sales.monthly_revenue) || [];
+  } catch {
+    STATE.monthlySales = [];
+  }
+
+  // Apps for the create-modal picker — only fetch on demand. We pre-load
+  // a light list so the picker is responsive when the user opens the modal.
+  try {
+    const apps = await api('/api/applications');
+    STATE.applications = Array.isArray(apps) ? apps :
+                         Array.isArray(apps?.applications) ? apps.applications : [];
+  } catch {
+    STATE.applications = [];
+  }
+
+  renderKpiRow();
+  renderDonut();
+  renderBars();
+  renderTable();
+}
+
+async function boot() {
+  let me;
+  try { me = await api('/api/auth/me'); }
+  catch {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+    return;
+  }
+  STATE.user = me?.user || me;
+  if (!STATE.user || !STATE.user.id) return;
+  if (STATE.user.name) document.getElementById('tbAvatar').title = STATE.user.name;
+
+  wireUi();
+  await reload();
+}
+
+boot().catch(err => console.error('[comisiones] boot failed', err));
+</script>
+
+</body>
+</html>
