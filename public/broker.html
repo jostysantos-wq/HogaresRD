@@ -4227,7 +4227,13 @@
     if (statusRes.ok) {
       const subStatus = await statusRes.json();
       if (subStatus.required && !subStatus.canAccessDashboard) {
-        location.href = '/subscribe';
+        // Use replace so /broker.html doesn't stay in history. Otherwise
+        // the user lands on /subscribe with /broker.html as the back
+        // target, and pressing Back ping-pongs them right back to
+        // /subscribe (since this same paywall runs again). With replace,
+        // back returns to whatever page actually linked here — typically
+        // /broker-dashboard.html when they clicked a team-management tab.
+        location.replace('/subscribe');
         return;
       }
       // C5: classify subscription state into none / warning / blocked.
