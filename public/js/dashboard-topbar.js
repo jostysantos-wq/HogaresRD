@@ -323,9 +323,13 @@
       render('');
       input.focus();
     });
+    // Capture phase so we still fire even if a sibling toggle (the account
+    // menu's settings/avatar buttons) calls e.stopPropagation() during
+    // bubble — otherwise opening the account menu wouldn't close us.
     document.addEventListener('click', (e) => {
+      if (panel.hidden) return;
       if (!wrap.contains(e.target)) close();
-    });
+    }, true);
   }
 
   // ───────────────────────────────────────────────────────────────────
@@ -476,10 +480,13 @@
       if (dot) dot.hidden = true;
     });
 
+    // Capture phase so the account menu's stopPropagation in its toggle
+    // doesn't keep us open when the user clicks the settings/avatar
+    // buttons.
     document.addEventListener('click', (e) => {
       if (menu.hidden) return;
       if (!wrap.contains(e.target)) setOpen(false);
-    });
+    }, true);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !menu.hidden) setOpen(false);
     });
