@@ -256,12 +256,22 @@ router.patch('/profile', userAuth, (req, res) => {
 // the owner can see and manage listings that haven't been published yet.
 router.get('/listings', userAuth, (req, res) => {
   const userId = req.user.sub;
+  const user = store.getUserById(userId);
+  const userEmail = user?.email?.toLowerCase() || null;
+  // For inmobiliaria/constructora accounts the user.id IS the inmobiliaria_id
+  // on listings. For brokers affiliated to one, user.inmobiliaria_id holds
+  // the parent org id. Match either.
+  const userInmIds = new Set([userId, user?.inmobiliaria_id].filter(Boolean));
+
   const all = store.getAllSubmissions();
   const mine = all.filter(s => {
     if (s.creator_user_id && s.creator_user_id === userId) return true;
-    // Fallback: some legacy listings only record the contact email
-    const user = store.getUserById(userId);
-    if (user && s.email && s.email.toLowerCase() === user.email.toLowerCase()) return true;
+    if (s.inmobiliaria_id && userInmIds.has(s.inmobiliaria_id)) return true;
+    // Some submissions store the broker on the agencies array instead of
+    // creator_user_id (older agency-claim flow).
+    if (Array.isArray(s.agencies) && s.agencies.some(a => a && a.user_id === userId)) return true;
+    // Fallback: legacy listings whose only owner signal is the contact email.
+    if (userEmail && s.email && s.email.toLowerCase() === userEmail) return true;
     return false;
   });
   // Strip nothing; sort by most recent first so pending/edits_requested
