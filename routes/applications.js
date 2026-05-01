@@ -16,8 +16,13 @@ const appEvents  = require('./app-events');
 const { encrypt, decrypt } = require('../utils/encryption');
 const { isSubscriptionActive } = require('../utils/subscription-gate');
 const et         = require('../utils/email-templates');
-// file-type v16 is the last CJS-compatible release (v17+ is ESM-only)
-const { fileTypeFromFile } = require('file-type');
+// file-type v16 is the last CJS-compatible release (v17+ is ESM-only).
+// v16 exports `fromFile(path) → Promise<{ ext, mime } | undefined>` —
+// previously this destructured `fileTypeFromFile` (the v17+ name) which
+// resolved to undefined and made `validateMime` throw on every call,
+// silently rejecting EVERY upload in production. Tests stub `validateMime`
+// directly via __test._setValidateMime so the breakage was invisible.
+const { fromFile: fileTypeFromFile } = require('file-type');
 
 // Sanitize filenames for Content-Disposition headers to prevent header injection
 function safeFilename(name) {
@@ -212,12 +217,21 @@ const ALLOWED_MIME_TYPES = new Set([
 // Routed through the indirection `validateMime` (let-binding) so tests
 // can swap in a stub via __test._setValidateMime — the file-type
 // package doesn't ship a usable test fixture-mode.
-async function _validateMimeImpl(filePath) {
+//
+// Optional `expectedMime` lets callers (and regression tests) assert
+// that the sniffed mime matches what the upload claimed — when omitted,
+// we keep the original "any allowed mime is fine" behavior so existing
+// route handlers don't change shape.
+async function _validateMimeImpl(filePath, expectedMime) {
   try {
     const result = await fileTypeFromFile(filePath);
     // result is undefined for plain-text or unknown formats — block them
     if (!result || !ALLOWED_MIME_TYPES.has(result.mime)) {
       fs.unlink(filePath, () => {}); // async delete, ignore errors
+      return false;
+    }
+    if (expectedMime && result.mime !== expectedMime) {
+      fs.unlink(filePath, () => {});
       return false;
     }
     return true;
@@ -565,10 +579,20 @@ function statusEmail(app, oldStatus, newStatus, reason) {
     ? 'Tu aplicacion: ' + statusName + ' — HogaresRD'
     : 'Your application: ' + statusName + ' — HogaresRD';
 
+  // Anonymous applicants don't have an account, so /my-applications?id=
+  // bounces them to /login and they can't reach their tracking page.
+  // Mint a fresh magic-link `/track.html?token=...` URL instead — same
+  // signTrackToken helper used by the post-submit confirmation email.
+  // Logged-in buyers (client.user_id set) keep the in-app deep link.
+  const baseUrl = process.env.BASE_URL || 'https://hogaresrd.com';
+  const trackUrl = app?.client?.user_id
+    ? `${baseUrl}/my-applications?id=${app.id}`
+    : `${baseUrl}/track.html?token=${signTrackToken(app.id)}`;
+
   const body = et.p(introCopy)
     + '<div style="text-align:center;margin:20px 0;">' + et.statusBadge(statusName, badgeColor) + '</div>'
     + (reason ? et.alertBox('<strong>' + reasonLabel + ':</strong> ' + et.esc(reason), isNegative ? 'danger' : 'info') : '')
-    + et.button(buttonCopy, (process.env.BASE_URL || 'https://hogaresrd.com') + '/my-applications?id=' + app.id)
+    + et.button(buttonCopy, trackUrl)
     + et.divider()
     + et.small(footerCopy);
 
@@ -5194,6 +5218,9 @@ module.exports.__test = {
   // can drive the route without committing real binary fixtures.
   // Pass `null` to restore the real implementation.
   _setValidateMime: (fn) => { validateMime = fn || _validateMimeImpl; },
+  // Real impl (no stub layer) — Wave 9-D regression tests call this
+  // directly to verify the fix to the file-type@16 import.
+  _validateMimeImpl,
   // E4 / E7
   normalizeTourTime,
   statusEmail,
