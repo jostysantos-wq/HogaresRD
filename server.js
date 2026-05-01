@@ -296,6 +296,57 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', '.well-known', 'apple-app-site-association'));
 });
 
+// ── Subscription gate for legacy dashboard pages ──────────────
+// /broker.html runs its own client-side paywall check, but the page
+// briefly renders before the JS redirects, producing a "flash of old
+// dashboard" when a non-subscribed user is forwarded here from
+// /broker-dashboard.html (e.g. clicking a team-management tab).
+// Intercepting at the server avoids that paint entirely.
+{
+  const { isSubscriptionActive } = require('./utils/subscription-gate');
+  const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
+  const COOKIE_NAME = 'hrdt';
+  let _verifyJWT = null;
+
+  app.get(['/broker.html', '/broker'], (req, res, next) => {
+    try {
+      if (!_verifyJWT) {
+        try { _verifyJWT = require('./routes/auth').verifyJWT; } catch { _verifyJWT = null; }
+      }
+      const cookieToken = req.cookies?.[COOKIE_NAME];
+      const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+      const token = cookieToken || headerToken;
+      if (!token || !_verifyJWT) return next();
+      let payload;
+      try { payload = _verifyJWT(token); } catch { return next(); }
+      if (!payload?.sub) return next();
+      if (payload.jti && store.isTokenRevoked(payload.jti)) return next();
+      const user = store.getUserById(payload.sub);
+      if (!user) return next();
+      if (user.role === 'user' || user.role === 'admin') return next();
+      // Secretaries inherit from their inmobiliaria
+      if (user.role === 'secretary') {
+        if (user.inmobiliaria_id) {
+          const inm = store.getUserById(user.inmobiliaria_id);
+          if (inm && isSubscriptionActive(inm)) return next();
+        }
+        return res.redirect(302, '/subscribe');
+      }
+      if (!PRO_ROLES.includes(user.role)) return next();
+      if (isSubscriptionActive(user)) return next();
+      // Affiliated to an inmobiliaria → inherit from parent
+      if (['broker', 'agency', 'constructora'].includes(user.role) && user.inmobiliaria_id) {
+        const parent = store.getUserById(user.inmobiliaria_id);
+        if (parent && isSubscriptionActive(parent)) return next();
+      }
+      // Skip the paywalled render entirely — no flash, no extra history entry.
+      return res.redirect(302, '/subscribe');
+    } catch {
+      return next();
+    }
+  });
+}
+
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'deny',
   index: false,
