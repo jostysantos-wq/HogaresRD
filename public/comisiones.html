@@ -1628,7 +1628,8 @@ function wireUi() {
 
   // Modal events
   document.getElementById('createBtn').addEventListener('click', () => openModal());
-  document.getElementById('sbCtaCreate').addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+  const sbCta = document.getElementById('sbCtaCreate');
+  if (sbCta) sbCta.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
   document.getElementById('modalCancel').addEventListener('click', closeModal);
   document.getElementById('modalSave').addEventListener('click', saveModal);
   document.getElementById('modalBack').addEventListener('click', (e) => {
@@ -1712,7 +1713,10 @@ async function boot() {
   }
   STATE.user = me?.user || me;
   if (!STATE.user || !STATE.user.id) return;
-  if (STATE.user.name) document.getElementById('tbAvatar').title = STATE.user.name;
+  if (STATE.user.name) {
+    const avatar = document.getElementById('tbAvatarBtn');
+    if (avatar) avatar.title = STATE.user.name;
+  }
 
   wireUi();
   await reload();

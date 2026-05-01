@@ -64,6 +64,17 @@ router.get('/', (req, res) => {
 
   let listings = store.getListings(filters);
 
+  // Owner filter — broker dashboard pages pass creator_user_id to scope
+  // the response to the logged-in agent's portfolio. Backed by the same
+  // /api/listings endpoint so we don't need a separate route.
+  if (req.query.creator_user_id) {
+    const ownerId = String(req.query.creator_user_id);
+    listings = listings.filter(l =>
+      String(l.creator_user_id || '') === ownerId ||
+      String(l.inmobiliaria_id || '') === ownerId
+    );
+  }
+
   // Tag filter (comma-separated, match ANY)
   if (req.query.tags) {
     const wanted = req.query.tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -653,6 +664,26 @@ router.put('/:id', userAuth, (req, res) => {
     requeued: wasInReview,
     changes,
   });
+});
+
+// ── DELETE /api/listings/:id  — Owner deletes their own listing ─────────
+router.delete('/:id', userAuth, (req, res) => {
+  const listing = store.getListingById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  const isAdmin    = user.role === 'admin';
+  const isOwner    = listing.creator_user_id === user.id;
+  const isOrgOwner = ['inmobiliaria', 'constructora'].includes(user.role) && listing.inmobiliaria_id === user.id;
+
+  if (!isOwner && !isOrgOwner && !isAdmin) {
+    return res.status(403).json({ error: 'No autorizado para eliminar esta propiedad' });
+  }
+
+  store.deleteListing(req.params.id);
+  res.json({ success: true });
 });
 
 // ── POST /:id/request-affiliation — Agent requests to affiliate with a listing

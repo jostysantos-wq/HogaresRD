@@ -4223,13 +4223,8 @@ router.get('/commissions/summary', userAuth, (req, res) => {
     apps = store.getApplicationsByBroker(user.id);
   }
 
-  // TODO(transactional-rewrite): commission amounts come back encrypted
-  // from the store list helpers — the math below treats sale_amount /
-  // agent_amount / agent_net as numbers, which silently produces 0 when
-  // they're still ciphertext. Map through decryptAppPII before the
-  // filter+reduce in a follow-up; the GET / and GET /my list endpoints
-  // are already fixed.
-  const withCommission = apps.filter(a => a.commission && a.commission.sale_amount > 0);
+  apps = apps.map(decryptAppPII);
+  const withCommission = apps.filter(a => a.commission && Number(a.commission.sale_amount) > 0);
 
   let agent_pending = 0;
   let agent_approved = 0;
@@ -4625,6 +4620,121 @@ router.get('/:id/payment-plan/:iid/proof', userAuth, (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(inst.proof_original || 'proof')}"`)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(safeProof);
+});
+
+// POST /bulk — bulk action across multiple applications
+// Body: { ids: string[], action: 'reject', reason: string }
+// Returns: { results: [{ id, ok: boolean, error?: string }] }
+router.post('/bulk', userAuth, (req, res) => {
+  const { ids, action, reason } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ error: 'ids es requerido' });
+  }
+  if (action !== 'reject') {
+    return res.status(400).json({ error: 'action no soportada (solo reject)' });
+  }
+  if (!reason || String(reason).trim().length < 5) {
+    return res.status(400).json({ error: 'reason (≥ 5 caracteres) es requerido' });
+  }
+
+  const user = store.getUserById(req.user.sub);
+  const admin = isAdmin(req) || user?.role === 'admin';
+
+  if (!admin && user && !isSubscriptionActive(user)) {
+    return res.status(402).json({
+      error: 'Tu suscripción no está activa. Renueva tu plan para continuar.',
+      needsSubscription: true,
+    });
+  }
+
+  const results = [];
+  for (const id of ids) {
+    const app = store.getApplicationById(id);
+    if (!app) { results.push({ id, ok: false, error: 'No encontrada' }); continue; }
+
+    const isBroker = app.broker?.user_id === req.user.sub;
+    const isInm = ['inmobiliaria', 'constructora'].includes(user?.role) && app.inmobiliaria_id === user.id;
+    const isSec = user?.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+    if (!isBroker && !isInm && !isSec && !admin) {
+      results.push({ id, ok: false, error: 'No autorizado' });
+      continue;
+    }
+
+    if (app.status === 'rechazado') { results.push({ id, ok: true }); continue; }
+
+    const allowed = STATUS_FLOW[app.status];
+    if (!allowed || !allowed.includes('rechazado')) {
+      results.push({ id, ok: false, error: `Transición no válida: ${app.status} → rechazado` });
+      continue;
+    }
+
+    const oldStatus = app.status;
+    app.status = 'rechazado';
+    app.status_reason = String(reason).trim();
+    addEvent(app, 'status_change',
+      `Estado cambiado a ${STATUS_LABELS.rechazado}: ${app.status_reason}`,
+      req.user.sub, user?.name || 'Broker',
+      { from: oldStatus, to: 'rechazado', reason: app.status_reason, bulk: true });
+    store.saveApplication(app);
+    results.push({ id, ok: true });
+  }
+
+  res.json({ results });
+});
+
+// POST /:id/reassign — reassign a single application to a teammate by email
+// Body: { email: string }
+// Allowed actor: admin, the inmobiliaria/constructora that owns the app,
+// a secretary in the same inmobiliaria, or the currently-assigned broker
+// (who can hand it off to a teammate in their inmobiliaria).
+router.post('/:id/reassign', userAuth, (req, res) => {
+  const app = store.getApplicationById(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Aplicación no encontrada' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  const admin = isAdmin(req) || user.role === 'admin';
+  const isBroker = app.broker?.user_id === user.id;
+  const isInm = ['inmobiliaria', 'constructora'].includes(user.role) && app.inmobiliaria_id === user.id;
+  const isSec = user.role === 'secretary' && app.inmobiliaria_id === user.inmobiliaria_id;
+  if (!admin && !isBroker && !isInm && !isSec) {
+    return res.status(403).json({ error: 'No autorizado' });
+  }
+
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'email es requerido' });
+
+  const target = store.getUserByEmail(email);
+  if (!target) return res.status(404).json({ error: 'No se encontró un usuario con ese email' });
+  if (!['broker', 'agency', 'inmobiliaria', 'constructora', 'secretary'].includes(target.role)) {
+    return res.status(400).json({ error: 'El usuario destino no es agente.' });
+  }
+
+  // Team scope: target must belong to the same inmobiliaria (or be admin path).
+  if (!admin && app.inmobiliaria_id) {
+    const targetInm = target.inmobiliaria_id || (['inmobiliaria','constructora'].includes(target.role) ? target.id : null);
+    if (targetInm !== app.inmobiliaria_id) {
+      return res.status(403).json({ error: 'El destino no pertenece a tu equipo.' });
+    }
+  }
+
+  const prev = app.broker || {};
+  app.broker = {
+    user_id:     target.id,
+    name:        target.name || prev.name || '',
+    agency_name: target.agency_name || prev.agency_name || '',
+    email:       target.email || '',
+    phone:       target.phone || prev.phone || '',
+  };
+
+  addEvent(app, 'broker_reassigned',
+    `Reasignada a ${app.broker.name || app.broker.email}`,
+    user.id, user.name || 'Sistema',
+    { from: prev.user_id || null, to: target.id });
+
+  store.saveApplication(app);
+  res.json(decryptAppPII(app));
 });
 
 // ── PUT /:id/assign  — Admin reassigns broker ────────────────────
