@@ -317,6 +317,111 @@
   .pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .pg-btn svg { width: 11px; height: 11px; }
 
+  /* EXPORT MODAL */
+  .export-mb {
+    position: fixed; inset: 0; background: rgba(20,18,14,0.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px;
+  }
+  .export-mb.open { display: flex; }
+  .export-modal {
+    background: var(--bg-card); border-radius: var(--r-card);
+    width: 100%; max-width: 640px; max-height: calc(100vh - 40px);
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(20,18,14,0.18);
+  }
+  .export-modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .export-modal-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 2px; }
+  .export-modal-subtitle { font-size: 12.5px; color: var(--ink-mute); margin: 0; }
+  .export-modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-mute); padding: 4px; border-radius: 8px;
+  }
+  .export-modal-close:hover { background: var(--bg-soft); color: var(--ink); }
+  .export-modal-close svg { width: 18px; height: 18px; }
+  .export-modal-body { padding: 18px 22px; overflow-y: auto; }
+  .export-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 14px 22px 18px; border-top: 1px solid var(--line-soft);
+  }
+  .export-field-group { margin-bottom: 18px; }
+  .export-label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-mute); margin-bottom: 8px;
+  }
+  .export-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .export-date-input {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg-soft); padding: 0 10px;
+  }
+  .export-date-icon { font-size: 11px; font-weight: 600; color: var(--ink-mute); }
+  .export-date-input input {
+    border: none; background: transparent; padding: 9px 0;
+    font: inherit; font-size: 13px; color: var(--ink); width: 100%;
+  }
+  .export-date-input input:focus { outline: none; }
+  .export-quick-dates { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .export-quick-btn {
+    padding: 5px 11px; border-radius: var(--r-pill);
+    background: var(--bg-soft); border: 1px solid var(--line);
+    font-size: 11.5px; color: var(--ink-soft); cursor: pointer;
+  }
+  .export-quick-btn:hover { background: var(--line-soft); }
+  .export-quick-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .export-type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  @media (max-width: 540px) { .export-type-grid { grid-template-columns: 1fr; } }
+  .export-type-card {
+    border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 12px; cursor: pointer; transition: border-color .12s, background .12s;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .export-type-card input { margin-top: 2px; }
+  .export-type-card:has(input:checked) { border-color: var(--ink); background: var(--bg-soft); }
+  .export-type-content strong {
+    display: block; font-size: 13px; color: var(--ink); margin-bottom: 2px; font-weight: 600;
+  }
+  .export-type-content span { font-size: 11.5px; color: var(--ink-mute); line-height: 1.4; }
+  .export-format-row { display: flex; gap: 8px; }
+  .export-format-btn {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 10px;
+    cursor: pointer; font-size: 13px; color: var(--ink-soft);
+  }
+  .export-format-btn input { margin: 0; }
+  .export-format-btn:has(input:checked) { border-color: var(--ink); background: var(--bg-soft); color: var(--ink); }
+  .export-preview {
+    background: var(--bg-soft); border-radius: 12px;
+    padding: 14px; margin-top: 4px;
+  }
+  .export-preview-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 10px;
+  }
+  .export-preview-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .preview-stat {
+    background: var(--bg-card); border-radius: 8px; padding: 10px;
+    text-align: center;
+  }
+  .preview-stat-label { font-size: 10.5px; color: var(--ink-mute); margin-bottom: 3px; }
+  .preview-stat-value { font-family: var(--serif); font-size: 20px; font-weight: 600; line-height: 1; }
+  .preview-loading { grid-column: 1 / -1; text-align: center; color: var(--ink-mute); font-size: 12.5px; padding: 8px; }
+  .ph-cta-ink {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; border: none;
+  }
+  .ph-cta-ink:hover { background: #000; }
+  .ph-cta-ink svg { width: 13px; height: 13px; }
+
   /* SKELETON */
   .skel {
     background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
@@ -1171,10 +1276,10 @@
             </div>
           </div>
         </div>
-        <a class="ph-pill" id="exportBtn" href="/api/broker-dashboard/applications?format=csv">
+        <button class="ph-pill" id="exportBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Exportar
-        </a>
+        </button>
       </div>
     </div>
 
@@ -1232,6 +1337,99 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ═══ EXPORT MODAL ══════════════════════════════════════ -->
+<div class="export-mb" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+  <div class="export-modal">
+    <div class="export-modal-header">
+      <div>
+        <h2 class="export-modal-title" id="exportModalTitle">Exportar datos</h2>
+        <p class="export-modal-subtitle">Selecciona el rango de fechas y el tipo de reporte</p>
+      </div>
+      <button class="export-modal-close" type="button" id="closeExportBtn" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="export-modal-body">
+      <div class="export-field-group">
+        <label class="export-label">Rango de fechas</label>
+        <div class="export-date-row">
+          <div class="export-date-input">
+            <span class="export-date-icon">Desde</span>
+            <input type="date" id="exportDateFrom">
+          </div>
+          <div class="export-date-input">
+            <span class="export-date-icon">Hasta</span>
+            <input type="date" id="exportDateTo">
+          </div>
+        </div>
+        <div class="export-quick-dates">
+          <button type="button" class="export-quick-btn" data-days="7">Últ. 7 días</button>
+          <button type="button" class="export-quick-btn" data-days="30">Últ. 30 días</button>
+          <button type="button" class="export-quick-btn" data-days="90">Últ. 90 días</button>
+          <button type="button" class="export-quick-btn" data-days="0">Todo</button>
+        </div>
+      </div>
+
+      <div class="export-field-group">
+        <label class="export-label">Tipo de reporte</label>
+        <div class="export-type-grid">
+          <label class="export-type-card">
+            <input type="radio" name="exportType" value="summary" checked>
+            <div class="export-type-content">
+              <strong>Resumen</strong>
+              <span>Totales por estado y métricas clave</span>
+            </div>
+          </label>
+          <label class="export-type-card">
+            <input type="radio" name="exportType" value="detailed">
+            <div class="export-type-content">
+              <strong>Detallado</strong>
+              <span>Una fila por aplicación con todos los datos</span>
+            </div>
+          </label>
+          <label class="export-type-card">
+            <input type="radio" name="exportType" value="full">
+            <div class="export-type-content">
+              <strong>Completo</strong>
+              <span>Resumen + detalle + actividad por fecha</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="export-field-group">
+        <label class="export-label">Formato</label>
+        <div class="export-format-row">
+          <label class="export-format-btn">
+            <input type="radio" name="exportFormat" value="xlsx" checked>
+            Excel (.xlsx)
+          </label>
+          <label class="export-format-btn">
+            <input type="radio" name="exportFormat" value="csv">
+            CSV (.csv)
+          </label>
+        </div>
+      </div>
+
+      <div class="export-preview">
+        <div class="export-preview-title">Vista previa del periodo</div>
+        <div class="export-preview-grid" id="exportPreviewGrid">
+          <div class="preview-loading">Selecciona un rango de fechas</div>
+        </div>
+      </div>
+    </div>
+    <div class="export-modal-footer">
+      <button class="ph-pill" type="button" id="cancelExportBtn">Cancelar</button>
+      <button class="ph-cta-ink" type="button" id="doExportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
 'use strict';
@@ -1707,8 +1905,233 @@ async function bootstrap() {
   });
 
   wireFilterPopover();
+  wireExportModal();
 
   await loadApplications();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// EXPORT MODAL — date range / type / format → CSV or XLSX
+// ════════════════════════════════════════════════════════════════════
+function wireExportModal() {
+  const modal     = document.getElementById('exportModal');
+  const openBtn   = document.getElementById('exportBtn');
+  const closeBtn  = document.getElementById('closeExportBtn');
+  const cancelBtn = document.getElementById('cancelExportBtn');
+  const doBtn     = document.getElementById('doExportBtn');
+  const fromIn    = document.getElementById('exportDateFrom');
+  const toIn      = document.getElementById('exportDateTo');
+  const previewG  = document.getElementById('exportPreviewGrid');
+  if (!modal || !openBtn) return;
+
+  const open  = () => { modal.classList.add('open'); updatePreview(); };
+  const close = () => modal.classList.remove('open');
+
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) close(); });
+
+  // Quick date buttons
+  document.querySelectorAll('.export-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.export-quick-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const days = parseInt(btn.dataset.days, 10);
+      const today = new Date();
+      toIn.value = today.toISOString().slice(0, 10);
+      if (days === 0) {
+        fromIn.value = '';
+      } else {
+        const from = new Date(today);
+        from.setDate(from.getDate() - days + 1);
+        fromIn.value = from.toISOString().slice(0, 10);
+      }
+      updatePreview();
+    });
+  });
+
+  fromIn.addEventListener('change', () => {
+    document.querySelectorAll('.export-quick-btn').forEach(b => b.classList.remove('active'));
+    updatePreview();
+  });
+  toIn.addEventListener('change', () => {
+    document.querySelectorAll('.export-quick-btn').forEach(b => b.classList.remove('active'));
+    updatePreview();
+  });
+
+  function filteredApps() {
+    const from = fromIn.value ? new Date(fromIn.value + 'T00:00:00') : null;
+    const to   = toIn.value   ? new Date(toIn.value   + 'T23:59:59.999') : null;
+    return STATE.apps.filter(a => {
+      const d = new Date(a.created_at || a.updated_at || 0);
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+      return true;
+    });
+  }
+
+  function countByStatus(apps) {
+    const c = {};
+    apps.forEach(a => { c[a.status] = (c[a.status] || 0) + 1; });
+    return c;
+  }
+  const pct = (v, t) => t ? Math.round((v / t) * 100) + '%' : '0%';
+  const fmtDate = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    return Number.isFinite(dt.getTime()) ? dt.toISOString().slice(0, 10) : '';
+  };
+
+  function updatePreview() {
+    const apps = filteredApps();
+    if (!apps.length) {
+      previewG.innerHTML = '<div class="preview-loading">Sin datos para este periodo</div>';
+      return;
+    }
+    const c = countByStatus(apps);
+    const approved = c['aprobado'] || 0;
+    const inReview = (c['en_revision'] || 0) + (c['en_aprobacion'] || 0);
+    const docs = (c['documentos_requeridos'] || 0) + (c['documentos_enviados'] || 0) + (c['documentos_insuficientes'] || 0);
+    const rejected = c['rechazado'] || 0;
+    const stats = [
+      { label: 'Total',       value: apps.length },
+      { label: 'Aprobadas',   value: approved },
+      { label: 'En revisión', value: inReview },
+      { label: 'Documentos',  value: docs },
+      { label: 'Rechazadas',  value: rejected },
+      { label: 'Conversión',  value: pct(approved, apps.length) },
+    ];
+    previewG.innerHTML = stats.map(s =>
+      `<div class="preview-stat"><div class="preview-stat-label">${escapeHtml(s.label)}</div><div class="preview-stat-value">${escapeHtml(String(s.value))}</div></div>`
+    ).join('');
+  }
+
+  function buildSummaryRows(apps) {
+    const c = countByStatus(apps);
+    const total = apps.length;
+    const approved = c['aprobado'] || 0;
+    const rows = [
+      ['Reporte de aplicaciones — HogaresRD'],
+      ['Generado el', new Date().toLocaleString('es-DO')],
+      ['Periodo desde', fromIn.value || 'Inicio'],
+      ['Periodo hasta', toIn.value || 'Hoy'],
+      [],
+      ['Estado', 'Cantidad', 'Porcentaje'],
+      ['Total aplicaciones', total, '100%'],
+    ];
+    for (const [code, info] of Object.entries(STATUS_MAP)) {
+      const n = c[code] || 0;
+      if (n > 0 || code === 'aplicado') rows.push([info.label, n, pct(n, total)]);
+    }
+    rows.push([]);
+    rows.push(['Tasa de conversión', pct(approved, total)]);
+    return rows;
+  }
+
+  function buildDetailedRows(apps) {
+    const header = ['ID','Cliente','Email','Teléfono','Propiedad','Ciudad','Estado','Etapa','Crédito (US$)','Fecha aplicación','Última actualización'];
+    const rows = apps.map(a => {
+      const credit = appCredit(a);
+      return [
+        a.id || '',
+        appClientName(a),
+        appClientEmail(a),
+        a.client?.phone || '',
+        appPropertyTitle(a),
+        appPropertyCity(a),
+        STATUS_MAP[a.status]?.label || a.status || '',
+        STAGE_LABEL[a.status] || '',
+        credit != null ? Math.round(Number(credit)) : '',
+        fmtDate(a.created_at),
+        fmtDate(a.updated_at || a.created_at),
+      ];
+    });
+    return [header, ...rows];
+  }
+
+  function buildByDateRows(apps) {
+    const byDate = {};
+    apps.forEach(a => {
+      const d = fmtDate(a.created_at || a.updated_at);
+      if (!byDate[d]) byDate[d] = { total: 0, aprobado: 0, rechazado: 0, en_revision: 0, documentos: 0, pago: 0 };
+      const b = byDate[d];
+      b.total++;
+      const g = STATUS_MAP[a.status]?.group;
+      if (a.status === 'aprobado' || a.status === 'reservado') b.aprobado++;
+      else if (a.status === 'rechazado') b.rechazado++;
+      else if (g === 'en_revision') b.en_revision++;
+      else if (g === 'documentos') b.documentos++;
+      else if (g === 'pago' || g === 'completado') b.pago++;
+    });
+    const header = ['Fecha','Total','En revisión','Documentos','Pago/Cierre','Aprobadas','Rechazadas'];
+    const rows = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0])).map(([date, c]) => [
+      date, c.total, c.en_revision, c.documentos, c.pago, c.aprobado, c.rechazado
+    ]);
+    return [header, ...rows];
+  }
+
+  function downloadCSV(rows, filename) {
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+
+  function exportCSV(apps, type) {
+    let rows;
+    if (type === 'detailed')   rows = buildDetailedRows(apps);
+    else if (type === 'full')  rows = [...buildSummaryRows(apps), [], ['DETALLE'], ...buildDetailedRows(apps), [], ['POR FECHA'], ...buildByDateRows(apps)];
+    else                       rows = buildSummaryRows(apps);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCSV(rows, `aplicaciones_hogaresrd_${stamp}.csv`);
+    toast('CSV descargado');
+  }
+
+  function exportXLSX(apps, type) {
+    if (!window.XLSX) { toast('Librería de Excel no cargada', true); return; }
+    const XLSX = window.XLSX;
+    const wb = XLSX.utils.book_new();
+    if (type === 'summary') {
+      const ws = XLSX.utils.aoa_to_sheet(buildSummaryRows(apps));
+      ws['!cols'] = [{wch:28},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
+    } else if (type === 'detailed') {
+      const ws = XLSX.utils.aoa_to_sheet(buildDetailedRows(apps));
+      ws['!cols'] = [{wch:14},{wch:24},{wch:28},{wch:14},{wch:32},{wch:18},{wch:18},{wch:14},{wch:14},{wch:14},{wch:14}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Aplicaciones');
+    } else {
+      const wsS = XLSX.utils.aoa_to_sheet(buildSummaryRows(apps));
+      wsS['!cols'] = [{wch:28},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, wsS, 'Resumen');
+      const wsD = XLSX.utils.aoa_to_sheet(buildDetailedRows(apps));
+      wsD['!cols'] = [{wch:14},{wch:24},{wch:28},{wch:14},{wch:32},{wch:18},{wch:18},{wch:14},{wch:14},{wch:14},{wch:14}];
+      XLSX.utils.book_append_sheet(wb, wsD, 'Aplicaciones');
+      const wsBD = XLSX.utils.aoa_to_sheet(buildByDateRows(apps));
+      wsBD['!cols'] = [{wch:14},{wch:8},{wch:14},{wch:14},{wch:14},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, wsBD, 'Por fecha');
+    }
+    const from = (fromIn.value || 'inicio').replace(/-/g, '');
+    const to   = (toIn.value || 'hoy').replace(/-/g, '');
+    XLSX.writeFile(wb, `aplicaciones_hogaresrd_${from}_${to}.xlsx`);
+    toast('Reporte Excel descargado');
+  }
+
+  doBtn.addEventListener('click', () => {
+    const apps = filteredApps();
+    if (!apps.length) { toast('No hay datos para el rango seleccionado', true); return; }
+    const type   = document.querySelector('input[name="exportType"]:checked')?.value   || 'summary';
+    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'xlsx';
+    if (format === 'csv') exportCSV(apps, type);
+    else                  exportXLSX(apps, type);
+    close();
+  });
 }
 
 function wireFilterPopover() {
