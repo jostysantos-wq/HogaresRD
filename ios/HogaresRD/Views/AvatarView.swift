@@ -49,10 +49,14 @@ struct AvatarView: View {
                     avatarContent
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Avatar de \(user.name)")
 
                 ZStack {
+                    // Inherit the avatar's tint so the badge matches the
+                    // user's role (broker=blue, cliente=green, etc.) instead
+                    // of always being rdBlue.
                     Circle()
-                        .fill(Color.rdBlue)
+                        .fill(color)
                         .frame(width: size * 0.32, height: size * 0.32)
                     if uploading {
                         ProgressView().scaleEffect(0.5).tint(.white)
@@ -63,8 +67,11 @@ struct AvatarView: View {
                     }
                 }
                 .offset(x: 2, y: 2)
+                .accessibilityLabel("Cambiar foto")
+                .accessibilityAddTraits(.isButton)
             } else {
                 avatarContent
+                    .accessibilityLabel("Avatar de \(user.name)")
             }
         }
         .sheet(isPresented: $showPicker) {

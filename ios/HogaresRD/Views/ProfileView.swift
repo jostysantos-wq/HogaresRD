@@ -5,7 +5,6 @@ struct ProfileView: View {
     @EnvironmentObject var api:   APIService
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
-    @AppStorage("appColorScheme") private var schemePref: String = "system"
     @State private var showSubscription = false
 
     var body: some View {
@@ -21,103 +20,91 @@ struct ProfileView: View {
     // MARK: - Logged In
     private func loggedInView(_ user: User) -> some View {
         List {
-            // Avatar header
+            // ── Identity ──
             Section {
-                HStack(spacing: 16) {
-                    AvatarView(user: user, size: 64, editable: true)
-                        .environmentObject(api)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(user.name)
-                            .font(.title3).bold()
-                        Text(user.email)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if user.isConstructora {
-                            Label("Constructora", systemImage: "hammer.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
-                        } else if user.isInmobiliaria {
-                            Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
-                        } else if user.isAgency {
-                            Label("Agente / Broker", systemImage: "person.badge.key.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color.rdBlue)
-                        } else {
-                            Label("Cliente", systemImage: "person.fill")
-                                .font(.caption2).bold()
-                                .foregroundStyle(Color.rdGreen)
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
+                IdentityCard(user: user, avatarSize: 64)
+                    .listRowInsets(EdgeInsets(top: Spacing.s8, leading: Spacing.s16, bottom: Spacing.s8, trailing: Spacing.s16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
-            // ── Subscription ──
-            Section("Plan") {
-                Button {
-                    showSubscription = true
-                } label: {
-                    HStack {
-                        Label("Suscripción", systemImage: "crown.fill")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if user.isAgency {
-                            Text(subscriptionLabel(user))
-                                .font(.caption).bold()
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(subscriptionColor(user))
-                                .clipShape(Capsule())
-                        } else {
-                            Text("Gratis")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+            // ── Subscription (pro users only — clients don't get a "Gratis"
+            //   row that funnels them to PlansView, which is misleading.) ──
+            if user.isAgency {
+                Section {
+                    Button {
+                        showSubscription = true
+                    } label: {
+                        IconTileRow(
+                            systemImage: "crown.fill",
+                            label: "Suscripción",
+                            accessory: {
+                                HStack(spacing: 6) {
+                                    DSRoleBadge(role: user.role, size: .compact)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Color.rdInkSoft)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        )
                     }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showSubscription) {
+                        PlansView()
+                            .environmentObject(api)
+                            .presentationDragIndicator(.visible)
+                    }
+                } header: {
+                    Text("Plan").sectionHeader()
                 }
-                .sheet(isPresented: $showSubscription) {
-                    PlansView().environmentObject(api)
-                }
+                .headerProminence(.increased)
             }
 
             // ── Security & Account ──
-            Section("Seguridad") {
+            Section {
                 NavigationLink {
                     ChangePasswordView().environmentObject(api)
                 } label: {
-                    Label("Cambiar contraseña", systemImage: "lock.fill")
+                    IconTileRow(systemImage: "lock.fill", label: "Cambiar contraseña")
                 }
                 NavigationLink {
                     TwoFactorSettingsView().environmentObject(api)
                 } label: {
-                    HStack {
-                        Label("Verificación en dos pasos", systemImage: "shield.lefthalf.filled.badge.checkmark")
-                        Spacer()
-                        Text(api.currentUser?.twoFAEnabled == true ? "Activado" : "Desactivado")
-                            .font(.caption)
-                            .foregroundStyle(api.currentUser?.twoFAEnabled == true ? .green : .secondary)
-                    }
+                    IconTileRow(
+                        systemImage: "shield.lefthalf.filled.badge.checkmark",
+                        label: "Verificación en dos pasos",
+                        accessory: {
+                            Text(api.currentUser?.twoFAEnabled == true ? "Activado" : "Desactivado")
+                                .font(.caption)
+                                .foregroundStyle(api.currentUser?.twoFAEnabled == true ? Color.rdGreen : Color.rdInkSoft)
+                        }
+                    )
                 }
+            } header: {
+                Text("Seguridad").sectionHeader()
             }
+            .headerProminence(.increased)
 
-            Section("Privacidad") {
+            Section {
                 NavigationLink {
                     PrivacySettingsView()
                 } label: {
-                    Label("Privacidad y datos", systemImage: "hand.raised.fill")
+                    IconTileRow(systemImage: "hand.raised.fill", label: "Privacidad y datos")
                 }
+            } header: {
+                Text("Privacidad").sectionHeader()
             }
+            .headerProminence(.increased)
 
             // Note: Favorites, Messages, Applications, Appearance, Support, and Logout
             // are all accessible from ProfileTabView (the parent). This view focuses
             // on security and privacy settings only.
         }
-        .navigationTitle("Mi Perfil")
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.rdSurface)
+        .navigationTitle("Mi perfil")
     }
 
     // MARK: - Guest
@@ -128,7 +115,7 @@ struct ProfileView: View {
             ZStack {
                 Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 120, height: 120)
                 Image(systemName: "person.circle")
-                    .font(.system(size: 56))
+                    .font(.largeTitle)
                     .foregroundStyle(Color.rdBlue)
             }
 
@@ -178,26 +165,9 @@ struct ProfileView: View {
             AuthView(initialMode: mode)
                 .environmentObject(api)
                 .id(mode) // Force SwiftUI to recreate the view (not reuse stale @State)
+                .presentationDragIndicator(.visible)
         }
         .navigationTitle("Perfil")
-    }
-
-    private func subscriptionLabel(_ user: User) -> String {
-        switch user.role {
-        case "broker", "agency": return "Broker"
-        case "inmobiliaria": return "Inmobiliaria"
-        case "constructora": return "Constructora"
-        default: return "Activo"
-        }
-    }
-
-    private func subscriptionColor(_ user: User) -> Color {
-        switch user.role {
-        case "broker", "agency": return Color(red: 0.16, green: 0.65, blue: 0.45)
-        case "inmobiliaria": return Color(red: 0.55, green: 0.27, blue: 0.68)
-        case "constructora": return Color(red: 0.7, green: 0.35, blue: 0.04)
-        default: return .blue
-        }
     }
 }
 
@@ -249,12 +219,12 @@ struct ChangePasswordView: View {
                 if let err = errorMsg {
                     Label(err, systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.rdRed)
                 }
                 if let msg = successMsg {
                     Label(msg, systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.rdGreen)
                 }
 
                 Button {
@@ -328,7 +298,7 @@ struct PasswordRequirementsView: View {
     private func requirement(_ text: String, met: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: met ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(met ? .green : Color(.tertiaryLabel))
+                .foregroundStyle(met ? Color.rdGreen : Color(.tertiaryLabel))
                 .font(.caption2)
             Text(text)
                 .foregroundStyle(met ? .primary : .secondary)
@@ -391,7 +361,7 @@ struct TwoFactorSettingsView: View {
                               systemImage: twoFAEnabled ? "checkmark.shield.fill" : "shield.slash.fill")
                         Spacer()
                         Circle()
-                            .fill(twoFAEnabled ? Color.green : Color.orange)
+                            .fill(twoFAEnabled ? Color.rdGreen : Color.rdOrange)
                             .frame(width: 10, height: 10)
                     }
 
@@ -409,7 +379,7 @@ struct TwoFactorSettingsView: View {
                             Spacer()
                         }
                     }
-                    .listRowBackground(twoFAEnabled ? Color.red : Color.rdBlue)
+                    .listRowBackground(twoFAEnabled ? Color.rdRed : Color.rdBlue)
                     .foregroundStyle(.white)
                 }
 
@@ -420,9 +390,9 @@ struct TwoFactorSettingsView: View {
                                 .font(.title2)
                                 .foregroundStyle(Color.rdBlue)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Iniciar sesion con \(bio.biometricLabel)")
+                                Text("Iniciar sesión con \(bio.biometricLabel)")
                                     .font(.subheadline)
-                                Text("Usa tu rostro o huella para acceder rapidamente")
+                                Text("Usa tu rostro o huella para acceder rápidamente")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -439,7 +409,7 @@ struct TwoFactorSettingsView: View {
                         }
                     }
 
-                    Section("Bloqueo automatico") {
+                    Section("Bloqueo automático") {
                         Toggle(isOn: $lockManager.lockEnabled) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Bloquear al salir")
@@ -462,14 +432,14 @@ struct TwoFactorSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Seguridad")
+        .navigationTitle("Verificación en dos pasos")
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadStatus() }
         .sheet(isPresented: $showEnableSheet) {
             NavigationStack {
                 VStack(spacing: 20) {
                     Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 44))
+                        .font(.largeTitle)
                         .foregroundStyle(Color.rdBlue)
                     Text("Ingresa el código enviado a tu correo")
                         .font(.subheadline)
@@ -479,17 +449,18 @@ struct TwoFactorSettingsView: View {
                     TextField("000000", text: $verifyCode)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 32, weight: .bold, design: .monospaced))
-                        .frame(maxWidth: 200)
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.secondarySystemFill))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, Spacing.s24)
                         .onChange(of: verifyCode) { _, val in
                             verifyCode = String(val.filter(\.isNumber).prefix(6))
                         }
 
                     if let err = verifyError {
-                        Text(err).font(.caption).foregroundStyle(.red)
+                        Text(err).font(.caption).foregroundStyle(Color.rdRed)
                     }
 
                     Button {
@@ -520,6 +491,7 @@ struct TwoFactorSettingsView: View {
                 }
             }
             .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .alert("Desactivar 2FA", isPresented: $showDisableAlert) {
             SecureField("Contraseña", text: $disablePassword)
@@ -636,9 +608,9 @@ struct PrivacySettingsView: View {
             Section {
                 HStack(spacing: 14) {
                     ZStack {
-                        Circle().fill(Color(red: 0.4, green: 0.1, blue: 0.6).opacity(0.1)).frame(width: 44, height: 44)
+                        Circle().fill(Color.rdPurple.opacity(0.12)).frame(width: 44, height: 44)
                         Image(systemName: "hand.raised.fill")
-                            .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+                            .foregroundStyle(Color.rdPurple)
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Privacidad y datos")
@@ -747,12 +719,12 @@ struct PrivacySettingsView: View {
                 }
             }
         } message: {
-            Text("Esta accion es permanente e irreversible. Se eliminaran todos tus datos, propiedades guardadas, conversaciones y documentos.")
+            Text("Esta acción es permanente e irreversible. Se eliminarán todos tus datos, propiedades guardadas, conversaciones y documentos.")
         }
         .alert("Error al eliminar cuenta", isPresented: .constant(deleteError != nil)) {
             Button("OK") { deleteError = nil }
         } message: {
-            Text(deleteError ?? "Intenta de nuevo mas tarde o contacta soporte.")
+            Text(deleteError ?? "Intenta de nuevo más tarde o contacta soporte.")
         }
     }
 
@@ -786,7 +758,7 @@ struct DataDownloadRequestView: View {
         VStack(spacing: 20) {
             Spacer()
             Image(systemName: "arrow.down.doc.fill")
-                .font(.system(size: 48))
+                .font(.largeTitle)
                 .foregroundStyle(Color.rdBlue)
             Text("Solicitar descarga de datos")
                 .font(.headline)
@@ -798,11 +770,11 @@ struct DataDownloadRequestView: View {
             if requested {
                 Label("Solicitud enviada. Revisa tu correo.", systemImage: "checkmark.circle.fill")
                     .font(.subheadline.bold())
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.rdGreen)
             } else if let error {
                 Text(error)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.rdRed)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -848,231 +820,6 @@ struct DataDownloadRequestView: View {
         .navigationTitle("Descargar datos")
         .navigationBarTitleDisplayMode(.inline)
     }
-}
-
-// MARK: - Connected Apps (hidden — coming soon)
-
-struct ConnectedAppsView: View {
-    @State private var connectedApps: [ConnectedApp] = ConnectedApp.samples
-
-    var body: some View {
-        List {
-            Section {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(Color.rdBlue.opacity(0.1)).frame(width: 44, height: 44)
-                        Image(systemName: "app.badge.checkmark.fill")
-                            .foregroundStyle(Color.rdBlue)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Apps con acceso a tu cuenta")
-                            .font(.subheadline).bold()
-                        Text("Estas aplicaciones tienen permiso para acceder a ciertos datos de tu cuenta HogaresRD.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-
-            if connectedApps.filter(\.isConnected).isEmpty {
-                Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "app.dashed")
-                            .font(.system(size: 36))
-                            .foregroundStyle(Color(.tertiaryLabel))
-                        Text("Sin aplicaciones conectadas")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Text("No has autorizado ninguna aplicación externa a acceder a tu cuenta.")
-                            .font(.caption).foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                }
-            } else {
-                Section("Conectadas") {
-                    ForEach(connectedApps.filter(\.isConnected)) { app in
-                        connectedAppRow(app)
-                    }
-                }
-            }
-
-            Section("Disponibles") {
-                ForEach(connectedApps.filter { !$0.isConnected }) { app in
-                    connectedAppRow(app)
-                }
-            }
-        }
-        .navigationTitle("Apps Conectadas")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func connectedAppRow(_ app: ConnectedApp) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(app.color.opacity(0.1))
-                    .frame(width: 40, height: 40)
-                Image(systemName: app.icon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(app.color)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.name).font(.subheadline).bold()
-                Text(app.description).font(.caption).foregroundStyle(.secondary)
-                if app.isConnected, let date = app.connectedDate {
-                    Text("Conectado \(date, style: .relative) atrás")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            Spacer()
-            if app.isConnected {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else {
-                Text("Conectar")
-                    .font(.caption).bold()
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Color.rdBlue.opacity(0.1))
-                    .foregroundStyle(Color.rdBlue)
-                    .clipShape(Capsule())
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct ConnectedApp: Identifiable {
-    let id = UUID()
-    let name: String
-    let description: String
-    let icon: String
-    let color: Color
-    var isConnected: Bool
-    var connectedDate: Date?
-
-    static let samples: [ConnectedApp] = [
-        ConnectedApp(name: "WhatsApp Business", description: "Comunicación con clientes", icon: "message.fill", color: .green, isConnected: false),
-        ConnectedApp(name: "Google Calendar", description: "Sincroniza citas y visitas", icon: "calendar", color: .blue, isConnected: false),
-        ConnectedApp(name: "DocuSign", description: "Firma digital de contratos", icon: "signature", color: .orange, isConnected: false),
-        ConnectedApp(name: "Stripe", description: "Pagos y facturación", icon: "creditcard.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6), isConnected: false),
-        ConnectedApp(name: "Google Drive", description: "Almacenamiento de documentos", icon: "externaldrive.fill", color: .yellow, isConnected: false)
-    ]
-}
-
-// MARK: - Active Sessions
-
-struct ActiveSessionsView: View {
-    @State private var sessions: [DeviceSession] = DeviceSession.samples
-
-    var body: some View {
-        List {
-            Section {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(Color.orange.opacity(0.1)).frame(width: 44, height: 44)
-                        Image(systemName: "iphone.and.arrow.forward")
-                            .foregroundStyle(.orange)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Sesiones activas")
-                            .font(.subheadline).bold()
-                        Text("Estos dispositivos tienen sesión abierta con tu cuenta. Cierra sesión en los que no reconozcas.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-
-            Section("Sesión actual") {
-                if let current = sessions.first(where: \.isCurrent) {
-                    sessionRow(current, isCurrent: true)
-                }
-            }
-
-            Section("Otras sesiones") {
-                ForEach(sessions.filter { !$0.isCurrent }) { session in
-                    sessionRow(session, isCurrent: false)
-                }
-            }
-
-            if sessions.filter({ !$0.isCurrent }).count > 0 {
-                Section {
-                    Button(role: .destructive) {
-                        sessions.removeAll { !$0.isCurrent }
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Label("Cerrar todas las otras sesiones", systemImage: "xmark.circle.fill")
-                                .bold()
-                            Spacer()
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle("Sesiones Activas")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func sessionRow(_ session: DeviceSession, isCurrent: Bool) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.tertiarySystemFill))
-                    .frame(width: 40, height: 40)
-                Image(systemName: session.icon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(isCurrent ? Color.rdGreen : .secondary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(session.deviceName).font(.subheadline).bold()
-                    if isCurrent {
-                        Text("Actual")
-                            .font(.system(size: 9)).bold()
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.rdGreen.opacity(0.15))
-                            .foregroundStyle(Color.rdGreen)
-                            .clipShape(Capsule())
-                    }
-                }
-                Text(session.location).font(.caption).foregroundStyle(.secondary)
-                Text(session.lastActive, style: .relative)
-                    .font(.system(size: 10)).foregroundStyle(.tertiary)
-                + Text(" atrás").font(.system(size: 10)).foregroundStyle(.tertiary)
-            }
-            Spacer()
-            if !isCurrent {
-                Button {
-                    sessions.removeAll { $0.id == session.id }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Color(.tertiaryLabel))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct DeviceSession: Identifiable {
-    let id = UUID()
-    let deviceName: String
-    let icon: String
-    let location: String
-    let lastActive: Date
-    let isCurrent: Bool
-
-    static let samples: [DeviceSession] = [
-        DeviceSession(deviceName: "iPhone 16 Pro", icon: "iphone.gen3", location: "Santo Domingo, RD", lastActive: Date(), isCurrent: true),
-        DeviceSession(deviceName: "MacBook Pro", icon: "laptopcomputer", location: "Santo Domingo, RD", lastActive: Date().addingTimeInterval(-3600 * 2), isCurrent: false),
-        DeviceSession(deviceName: "Safari — Web", icon: "safari.fill", location: "Santiago, RD", lastActive: Date().addingTimeInterval(-3600 * 24), isCurrent: false)
-    ]
 }
 
 // MARK: - Agency Dashboard (My Portfolio with analytics)
