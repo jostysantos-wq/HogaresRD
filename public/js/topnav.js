@@ -87,6 +87,34 @@
     );
   }
 
+  // Map notification types/categories to a small visual icon for the dropdown.
+  const NOTIF_EMOJI = {
+    application: '📄', applications: '📄',
+    tour: '📅', tours: '📅', visit: '📅', visita: '📅',
+    payment: '💳', payments: '💳',
+    message: '💬', messages: '💬', conversation: '💬',
+    commission: '💰', comision: '💰',
+    listing: '🏠', listings: '🏠',
+    document: '📋', documents: '📋',
+    system: '🔔', default: '🔔',
+  };
+
+  function notifIcon(n) {
+    const k = String(n.category || n.type || 'default').toLowerCase();
+    return NOTIF_EMOJI[k] || NOTIF_EMOJI.default;
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return 'ahora';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' d';
+    return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+  }
+
   function renderUser(actions, user) {
     const name = user.name || 'Usuario';
     const email = user.email || '';
@@ -96,8 +124,18 @@
 
     actions.insertAdjacentHTML('beforeend',
       `<a class="nav-icon" href="/mensajes" aria-label="Mensajes">${ICONS.msg}</a>` +
-      `<a class="nav-icon" href="/notificaciones" aria-label="Notificaciones">${ICONS.bell}<span class="nav-icon-dot" id="tnv-bell-dot" hidden></span></a>` +
-      `<button class="nav-user" type="button" aria-label="Cuenta" id="tnv-user-btn">` +
+      `<button class="nav-icon" type="button" id="tnv-bell-btn" aria-label="Notificaciones" aria-haspopup="menu" aria-expanded="false">${ICONS.bell}<span class="nav-icon-dot" id="tnv-bell-dot" hidden></span></button>` +
+      `<div class="nav-notif-menu" id="tnv-notif-menu" role="menu" hidden>` +
+        `<div class="nav-notif-head">` +
+          `<span class="nav-notif-title">Notificaciones</span>` +
+          `<button class="nav-notif-mark" type="button" id="tnv-notif-mark" disabled>Marcar todas leídas</button>` +
+        `</div>` +
+        `<div class="nav-notif-list" id="tnv-notif-list">` +
+          `<div class="nav-notif-empty">Cargando…</div>` +
+        `</div>` +
+        `<div class="nav-notif-foot"><a href="/notificaciones">Ver todas</a></div>` +
+      `</div>` +
+      `<button class="nav-user" type="button" aria-label="Cuenta" aria-haspopup="menu" aria-expanded="false" id="tnv-user-btn">` +
         `<span class="nav-user-avatar">${escapeHtml(initials)}</span>` +
         `<span class="nav-user-meta">` +
           `<span class="nav-user-name">${escapeHtml(name.split(' ')[0])}</span>` +
@@ -115,18 +153,49 @@
       `</div>`
     );
 
-    // Toggle dropdown
-    const btn  = document.getElementById('tnv-user-btn');
-    const menu = document.getElementById('tnv-user-menu');
-    if (btn && menu) {
-      btn.addEventListener('click', (e) => {
+    const userBtn  = document.getElementById('tnv-user-btn');
+    const userMenu = document.getElementById('tnv-user-menu');
+    const bellBtn  = document.getElementById('tnv-bell-btn');
+    const bellMenu = document.getElementById('tnv-notif-menu');
+
+    function closeAll() {
+      if (userMenu) { userMenu.hidden = true; userBtn?.setAttribute('aria-expanded', 'false'); }
+      if (bellMenu) { bellMenu.hidden = true; bellBtn?.setAttribute('aria-expanded', 'false'); }
+    }
+
+    if (userBtn && userMenu) {
+      userBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        menu.hidden = !menu.hidden;
-      });
-      document.addEventListener('click', (e) => {
-        if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) menu.hidden = true;
+        const willOpen = userMenu.hidden;
+        closeAll();
+        if (willOpen) { userMenu.hidden = false; userBtn.setAttribute('aria-expanded', 'true'); }
       });
     }
+
+    if (bellBtn && bellMenu) {
+      bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = bellMenu.hidden;
+        closeAll();
+        if (willOpen) {
+          bellMenu.hidden = false;
+          bellBtn.setAttribute('aria-expanded', 'true');
+          loadNotifications();
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (userMenu && !userMenu.hidden && !userMenu.contains(e.target) && !userBtn.contains(e.target)) {
+        userMenu.hidden = true; userBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (bellMenu && !bellMenu.hidden && !bellMenu.contains(e.target) && !bellBtn.contains(e.target)) {
+        bellMenu.hidden = true; bellBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAll();
+    });
 
     // Logout
     const logout = document.getElementById('tnv-logout');
@@ -139,7 +208,60 @@
       });
     }
 
-    // Unread notification dot — best-effort, fail silent
+    // Notification panel content + mark-all-read
+    let notifCache = null;
+    async function loadNotifications() {
+      const list = document.getElementById('tnv-notif-list');
+      if (!list) return;
+      try {
+        const r = await fetch('/api/notifications?limit=8', { credentials: 'include' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const data = await r.json();
+        const items = Array.isArray(data) ? data : (data?.notifications || []);
+        notifCache = items;
+        if (!items.length) {
+          list.innerHTML = '<div class="nav-notif-empty">Estás al día. No hay notificaciones nuevas.</div>';
+        } else {
+          list.innerHTML = items.map(n => {
+            const text  = escapeHtml(n.message || n.title || n.body || '');
+            const time  = escapeHtml(relTime(n.created_at || n.createdAt || n.timestamp));
+            const href  = n.link || n.url || '/notificaciones';
+            const cls   = n.read ? 'nav-notif-item' : 'nav-notif-item unread';
+            return `<a class="${cls}" href="${escapeHtml(href)}">` +
+                     `<span class="nav-notif-icon">${notifIcon(n)}</span>` +
+                     `<span class="nav-notif-body">` +
+                       `<span class="nav-notif-text">${text}</span>` +
+                       `<span class="nav-notif-time">${time}</span>` +
+                     `</span>` +
+                   `</a>`;
+          }).join('');
+        }
+        const mark = document.getElementById('tnv-notif-mark');
+        const anyUnread = items.some(n => !n.read);
+        if (mark) mark.disabled = !anyUnread;
+      } catch (_) {
+        list.innerHTML = '<div class="nav-notif-empty">No se pudieron cargar las notificaciones.</div>';
+      }
+    }
+
+    const markBtn = document.getElementById('tnv-notif-mark');
+    if (markBtn) {
+      markBtn.addEventListener('click', async () => {
+        try {
+          await fetch('/api/notifications/mark-all-read', { method: 'POST', credentials: 'include' });
+        } catch (_) {}
+        const dot = document.getElementById('tnv-bell-dot');
+        if (dot) dot.hidden = true;
+        markBtn.disabled = true;
+        // Re-render existing cache as read
+        if (Array.isArray(notifCache)) {
+          notifCache.forEach(n => { n.read = true; });
+          loadNotifications();
+        }
+      });
+    }
+
+    // Unread dot — best-effort, fail silent
     fetch('/api/notifications/unread-count', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
