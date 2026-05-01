@@ -2555,7 +2555,15 @@
       return Math.abs(h) % 6 + 1;
     }
     function listingPhoto(l) {
-      const p = (l.photos && l.photos[0]) || l.photo || l.cover || '';
+      // API returns images as [{url, label}, ...]; legacy callers may pass
+      // string entries or alt field names. Walk the candidates and pull
+      // the first usable URL.
+      const first = Array.isArray(l.images) ? l.images[0] : null;
+      const fromImages = first && (typeof first === 'string' ? first : first.url);
+      const p = fromImages
+        || (l.photos && l.photos[0])
+        || l.photoUrl || l.photo_url
+        || l.photo || l.cover || '';
       return p ? String(p) : '';
     }
     function locShort(l) {
