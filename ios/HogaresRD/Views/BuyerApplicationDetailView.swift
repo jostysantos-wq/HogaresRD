@@ -57,6 +57,14 @@ struct BuyerApplicationDetailView: View {
         }
         .navigationTitle("Mi aplicación")
         .navigationBarTitleDisplayMode(.inline)
+        // Wave 8-D: thin sticky banner under the nav with a buyer-friendly
+        // SLA hint. Hidden for terminal states (rechazado / completado).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let d = detail, let s = d["status"] as? String,
+               s != "rechazado", s != "completado" {
+                statusBanner(s)
+            }
+        }
         .task { await load() }
         .task {
             // #39: Buyer detail keeps the same live-update guarantees as
@@ -69,6 +77,47 @@ struct BuyerApplicationDetailView: View {
         .refreshable { await load() }
         .sheet(isPresented: $showWithdrawSheet) {
             withdrawSheet
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Sticky status banner (Wave 8-D)
+    //
+    // Friendlier copy than the broker side — speaks in second person and
+    // surfaces an SLA hint so the buyer knows what to expect next.
+    @ViewBuilder
+    private func statusBanner(_ status: String) -> some View {
+        HStack(spacing: Spacing.s8) {
+            DSStatusBadge(label: statusLabel(status), tint: statusColor(status))
+            Text(buyerSlaHint(for: status))
+                .font(.caption)
+                .foregroundStyle(Color.rdInkSoft)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Spacing.s16)
+        .padding(.vertical, Spacing.s8)
+        .frame(maxWidth: .infinity)
+        .background(Color.rdSurfaceMuted)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Color.rdLine).frame(height: 0.5)
+        }
+    }
+
+    private func buyerSlaHint(for status: String) -> String {
+        switch status {
+        case "aplicado":              return "Tu agente revisará pronto · 24 h"
+        case "en_revision":           return "Tu agente está revisando tu aplicación"
+        case "documentos_requeridos": return "Sube los documentos solicitados"
+        case "documentos_enviados":   return "Tus documentos están en revisión"
+        case "documentos_insuficientes": return "Faltan documentos por completar"
+        case "en_aprobacion":         return "En aprobación final"
+        case "reservado":             return "Unidad reservada para ti"
+        case "aprobado":              return "¡Aplicación aprobada!"
+        case "pendiente_pago":        return "Sube tu comprobante de pago"
+        case "pago_enviado":          return "Tu comprobante está en revisión"
+        case "pago_aprobado":         return "Pago aprobado · cierre próximo"
+        default:                      return ""
         }
     }
 
@@ -80,17 +129,13 @@ struct BuyerApplicationDetailView: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.title3.bold())
+                .foregroundStyle(Color.rdInk)
                 .lineLimit(3)
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.s8) {
                 Image(systemName: statusIcon(status))
                     .foregroundStyle(statusColor(status))
-                Text(statusLabel(status))
-                    .font(.subheadline.bold())
-                    .foregroundStyle(statusColor(status))
+                DSStatusBadge(label: statusLabel(status), tint: statusColor(status))
             }
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(statusColor(status).opacity(0.12))
-            .clipShape(Capsule())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -103,36 +148,86 @@ struct BuyerApplicationDetailView: View {
             systemImage: "clock.badge.checkmark"
         ) {
             if statusEvents.isEmpty {
-                Text("Sin eventos por el momento.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                EmptyStateView.calm(
+                    systemImage: "clock",
+                    title: "Tu aplicación aún no tiene actividad",
+                    description: "Cuando tu agente avance esta aplicación, los eventos aparecerán aquí."
+                )
+                .padding(.vertical, Spacing.s16)
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(Array(statusEvents.enumerated()), id: \.offset) { _, ev in
-                        timelineRow(ev)
+                VStack(spacing: 0) {
+                    ForEach(Array(statusEvents.enumerated()), id: \.offset) { idx, ev in
+                        buyerTimelineRow(
+                            ev,
+                            isFirst: idx == 0,
+                            isLast: idx == statusEvents.count - 1
+                        )
                     }
                 }
             }
         }
     }
 
-    private func timelineRow(_ ev: [String: Any]) -> some View {
+    /// Wave 8-D: vertical-rail timeline row matching the broker view so
+    /// buyer/broker stay visually consistent. Current event (idx 0) gets
+    /// a subtle card outline; historical events render compact.
+    @ViewBuilder
+    private func buyerTimelineRow(_ ev: [String: Any], isFirst: Bool, isLast: Bool) -> some View {
         let desc = (ev["description"] as? String) ?? ""
         let when = (ev["created_at"] as? String) ?? ""
         let data = ev["data"] as? [String: Any]
         let toStatus = data?["to"] as? String ?? ""
-        return HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(statusColor(toStatus))
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+
+        HStack(alignment: .top, spacing: Spacing.s12) {
+            VStack(spacing: 0) {
+                if isFirst {
+                    Circle()
+                        .strokeBorder(Color.rdInk, lineWidth: 2)
+                        .frame(width: 12, height: 12)
+                } else {
+                    Circle()
+                        .fill(Color.rdInk)
+                        .frame(width: 12, height: 12)
+                }
+                if !isLast {
+                    BuyerDottedRail()
+                        .stroke(Color.rdInk.opacity(0.4),
+                                style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 4]))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                        .padding(.vertical, 2)
+                }
+            }
+            .frame(width: 12)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(desc)
-                    .font(.caption)
-                Text(Self.formatTimelineDate(when))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.body)
+                    .foregroundStyle(Color.rdInk)
+                HStack(spacing: 6) {
+                    if !toStatus.isEmpty {
+                        DSStatusBadge(label: statusLabel(toStatus), tint: statusColor(toStatus))
+                    }
+                    Text(Self.formatTimelineDate(when))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .padding(Spacing.s12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                isFirst
+                    ? AnyShapeStyle(Color.rdSurface)
+                    : AnyShapeStyle(Color.clear)
+            )
+            .overlay {
+                if isFirst {
+                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                        .strokeBorder(statusColor(toStatus).opacity(0.25), lineWidth: 1)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+            .padding(.bottom, Spacing.s8)
         }
     }
 
@@ -186,10 +281,9 @@ struct BuyerApplicationDetailView: View {
                                 .foregroundStyle(.secondary)
                             Text(label)
                                 .font(.caption)
+                                .foregroundStyle(Color.rdInk)
                             Spacer()
-                            Text(docStatusLabel(st))
-                                .font(.caption2.bold())
-                                .foregroundStyle(docStatusColor(st))
+                            DSStatusBadge(label: docStatusLabel(st), tint: docStatusColor(st))
                         }
                     }
                     NavigationLink {
@@ -228,11 +322,9 @@ struct BuyerApplicationDetailView: View {
                             let label = (inst["label"] as? String) ?? "Cuota"
                             let st    = (inst["status"] as? String) ?? "pending"
                             HStack {
-                                Text(label).font(.caption)
+                                Text(label).font(.caption).foregroundStyle(Color.rdInk)
                                 Spacer()
-                                Text(installmentStatusLabel(st))
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(installmentStatusColor(st))
+                                DSStatusBadge(label: installmentStatusLabel(st), tint: installmentStatusColor(st))
                             }
                         }
                     }
@@ -249,11 +341,10 @@ struct BuyerApplicationDetailView: View {
                             // #50: format as DOP/USD via es_DO locale so DOP renders RD$ and USD renders US$.
                             Text(Self.formatCurrency(amt, code: cur))
                                 .font(.caption.bold())
+                                .foregroundStyle(Color.rdInk)
                         }
                         Spacer()
-                        Text(receiptStatusLabel(st))
-                            .font(.caption2.bold())
-                            .foregroundStyle(receiptStatusColor(st))
+                        DSStatusBadge(label: receiptStatusLabel(st), tint: receiptStatusColor(st))
                     }
                 }
             } else {
@@ -298,18 +389,32 @@ struct BuyerApplicationDetailView: View {
             if messages.isEmpty {
                 Text("Aún no hay mensajes en este hilo.").font(.caption).foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.s8) {
                     ForEach(Array(messages.suffix(5).enumerated()), id: \.offset) { _, ev in
                         let actorName = (ev["actor_name"] as? String) ?? "Mensaje"
                         let desc      = (ev["description"] as? String) ?? ""
                         VStack(alignment: .leading, spacing: 2) {
                             Text(actorName).font(.caption2.bold()).foregroundStyle(Color.rdBlue)
-                            Text(desc).font(.caption).foregroundStyle(.primary)
+                            Text(desc).font(.caption).foregroundStyle(Color.rdInk)
                         }
                     }
-                    Text("Para responder, abre el hilo desde Conversaciones.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    // Wave 8-D: explicit "see full conversation" tile —
+                    // mirrors the IconTileRow style without dragging in
+                    // the broker conversations route which lives in 8-F.
+                    Divider().opacity(0.4).padding(.vertical, 2)
+                    HStack(spacing: Spacing.s8) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .foregroundStyle(Color.rdBlue)
+                        Text("Ver conversación completa")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rdInk)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rdInkSoft)
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityHint("Abre el hilo desde Conversaciones")
                 }
             }
         }
@@ -318,20 +423,26 @@ struct BuyerApplicationDetailView: View {
     private func withdrawSection(_ app: [String: Any]) -> some View {
         let status = (app["status"] as? String) ?? ""
         let isTerminal = (status == "rechazado" || status == "completado")
+        // Wave 8-D: spec calls for a muted, text-only destructive action
+        // at the very bottom — no tile, no destructive bar — so the user
+        // has to scroll past the whole detail to reach it.
         return Group {
             if !isTerminal {
-                Button(role: .destructive) {
-                    showWithdrawSheet = true
-                } label: {
-                    Label("Retirar aplicación", systemImage: "xmark.circle.fill")
-                        .font(.subheadline.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.red.opacity(0.10))
-                        .foregroundStyle(Color.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) {
+                        showWithdrawSheet = true
+                    } label: {
+                        Text("Retirar aplicación")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rdRed)
+                    }
+                    .disabled(withdrawing)
+                    .accessibilityHint("Cancela permanentemente esta solicitud")
+                    Spacer()
                 }
-                .disabled(withdrawing)
+                .padding(.top, Spacing.s24)
+                .padding(.bottom, Spacing.s16)
             }
         }
     }
@@ -349,7 +460,7 @@ struct BuyerApplicationDetailView: View {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.rdRed)
                     }
                 }
                 Section {
@@ -469,8 +580,8 @@ struct BuyerApplicationDetailView: View {
     private func errorState(_ msg: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
+                .font(.largeTitle)
+                .foregroundStyle(Color.rdMuted)
             Text(msg).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button("Reintentar") { Task { await load() } }
                 .buttonStyle(.borderedProminent)
@@ -481,19 +592,26 @@ struct BuyerApplicationDetailView: View {
 
     @ViewBuilder
     private func sectionCard<Content: View>(title: String, systemImage: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // Wave 8-D: rebuilt as a `FormCard`-styled wrapper so this view
+        // matches the editorial cream surface used everywhere else. The
+        // helper keeps the SF Symbol header so existing call sites don't
+        // have to change.
+        VStack(alignment: .leading, spacing: Spacing.s12) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .foregroundStyle(Color.rdBlue)
+                    .foregroundStyle(Color.rdInk)
                 Text(title)
-                    .font(.subheadline.bold())
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rdInk)
             }
             content()
         }
-        .padding(14)
+        .padding(Spacing.s16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(
+            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                .fill(Color.rdSurface)
+        )
     }
 
     private func statusLabel(_ s: String) -> String {
@@ -529,7 +647,7 @@ struct BuyerApplicationDetailView: View {
         switch s {
         case "completado", "pago_aprobado", "aprobado": return Color.rdGreen
         case "rechazado", "documentos_insuficientes":   return Color.rdRed
-        case "pendiente_pago", "documentos_requeridos": return .orange
+        case "pendiente_pago", "documentos_requeridos": return Color.rdOrange
         default:                                        return Color.rdBlue
         }
     }
@@ -549,7 +667,7 @@ struct BuyerApplicationDetailView: View {
         case "approved": return Color.rdGreen
         case "rejected": return Color.rdRed
         case "pending", "uploaded": return Color.rdBlue
-        default: return .secondary
+        default: return Color.rdMuted
         }
     }
 
@@ -566,8 +684,8 @@ struct BuyerApplicationDetailView: View {
         switch s {
         case "approved": return Color.rdGreen
         case "rejected": return Color.rdRed
-        case "pending":  return .orange
-        default:         return .secondary
+        case "pending":  return Color.rdOrange
+        default:         return Color.rdMuted
         }
     }
 
@@ -584,8 +702,23 @@ struct BuyerApplicationDetailView: View {
         switch s {
         case "approved": return Color.rdGreen
         case "rejected": return Color.rdRed
-        case "proof_uploaded": return .orange
-        default: return .secondary
+        case "proof_uploaded": return Color.rdOrange
+        default: return Color.rdMuted
         }
+    }
+}
+
+// MARK: - BuyerDottedRail
+//
+// Vertical 2pt dashed line connecting timeline circles. Lives at file
+// scope (not nested) so the BuyerApplicationDetailView body can reuse
+// it without leaking through to the broker view.
+private struct BuyerDottedRail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let x = rect.midX
+        p.move(to: CGPoint(x: x, y: rect.minY))
+        p.addLine(to: CGPoint(x: x, y: rect.maxY))
+        return p
     }
 }
