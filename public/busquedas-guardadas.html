@@ -168,93 +168,12 @@
 
     @media (max-width: 768px) { .nav-links { display: none; } .page { padding: 1.5rem 1rem; } }
   </style>
+  <link rel="stylesheet" href="/css/topnav.css">
 </head>
 <body>
 
   <!-- NAV -->
-  <nav>
-    <div class="nav-inner">
-      <a class="logo" href="/home">
-        <div class="logo-icon"><svg viewBox="120 70 280 290" fill="none"><line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="182" y1="238" x2="256" y2="188" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="256" y1="188" x2="330" y2="238" stroke="#fff" stroke-width="22" stroke-linecap="square"/><line x1="134" y1="88" x2="174" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="134" y1="340" x2="174" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="88" x2="378" y2="88" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="338" y1="340" x2="378" y2="340" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="256" y1="188" x2="256" y2="146" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/><line x1="238" y1="146" x2="274" y2="146" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.85"/><circle cx="256" cy="100" r="10" fill="#fff" opacity="0.95"/></svg></div><span class="logo-text">Hogares<span>RD</span></span>
-      </a>
-      <div class="nav-links">
-        <a class="nav-link" href="/home">Inicio</a>
-
-        <!-- Comprar -->
-        <div class="nav-item">
-          <a class="nav-link" href="/mapa">Comprar</a>
-          <div class="nav-dropdown">
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Propiedades en Venta</div>
-              <a href="/comprar">Casas en venta</a>
-              <a href="/comprar?tipo=apartamento">Apartamentos</a>
-              <a href="/comprar?tipo=villa">Villas y Penthouses</a>
-              <a href="/nuevos-proyectos">Proyectos nuevos</a>
-              <a href="/comprar?tipo=terreno">Terrenos</a>
-              <a href="/comprar?tipo=comercial">Locales comerciales</a>
-              <a href="/comprar" class="nav-see-all">Ver todas las propiedades →</a>
-            </div>
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Recursos</div>
-              <a href="/mapa">Explorar en el mapa</a>
-              <a href="/comparar">Comparar propiedades</a>
-              <a href="/blog">Guía del comprador</a>
-              <a href="/register-agency">Encontrar un agente</a>
-              <a href="/nuevos-proyectos">Proyectos en pre-venta</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Alquilar -->
-        <div class="nav-item">
-          <a class="nav-link" href="/alquilar">Alquilar</a>
-          <div class="nav-dropdown">
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Propiedades en Alquiler</div>
-              <a href="/alquilar">Apartamentos en alquiler</a>
-              <a href="/alquilar?tipo=casa">Casas en alquiler</a>
-              <a href="/alquilar?tipo=cuarto">Cuartos</a>
-              <a href="/alquilar?tipo=comercial">Locales comerciales</a>
-              <a href="/alquilar" class="nav-see-all">Ver todas las propiedades →</a>
-            </div>
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Recursos</div>
-              <a href="/mapa?type=alquiler">Explorar en el mapa</a>
-              <a href="/blog">Guía del inquilino</a>
-              <a href="/register-agency">Encontrar un agente</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vender -->
-        <div class="nav-item">
-          <a class="nav-link" href="/submit">Vender</a>
-          <div class="nav-dropdown">
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Publicar Propiedad</div>
-              <a href="/submit">Poner en venta</a>
-              <a href="/submit?tipo=alquiler">Poner en alquiler</a>
-              <a href="/register-inmobiliaria">Registrar inmobiliaria</a>
-              <a href="/register-agency">Trabajar como agente</a>
-              <a href="/submit" class="nav-see-all">Publicar ahora →</a>
-            </div>
-            <div class="nav-mega-col">
-              <div class="nav-mega-heading">Herramientas</div>
-              <a href="/blog">Guía del vendedor</a>
-              <a href="/mapa">Ver mercado actual</a>
-              <a href="/register-agency">Conectar con agentes</a>
-            </div>
-          </div>
-        </div>
-
-        <a class="nav-link" href="/blog">Blog</a>
-        <a class="nav-link" href="/about">Nosotros</a>
-      </div>
-      <div class="nav-actions">
-        <div id="navAuthArea"></div>
-      </div>
-    </div>
-  </nav>
+  <div id="topnav-mount"></div>
 
   <div class="page">
     <div id="content">
@@ -464,6 +383,7 @@
 
     init();
   </script>
+  <script src="/js/topnav.js" defer></script>
   <script src="/js/i18n.js" defer></script>
   <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>
