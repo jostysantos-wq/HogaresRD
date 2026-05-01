@@ -1478,24 +1478,20 @@ async function load() {
   const av = document.getElementById('tbAvatar');
   if (av && user.name) av.title = user.name;
 
-  // Load listings owned by this broker (server filters: only `approved`
-  // are returned by /api/listings; pending/draft are not exposed via
-  // this endpoint). Falls back to empty array if the call errors.
+  // Load listings owned by this broker. Use /api/user/listings, which
+  // returns submissions across ALL statuses (so drafts and pending-review
+  // appear in the "Borradores"/"En revisión" buckets) and matches owner
+  // by creator_user_id, inmobiliaria_id, agencies[].user_id, or contact
+  // email — the public /api/listings feed only sees status='approved'
+  // and only matches creator_user_id, missing legacy submissions.
   let resp = null;
   try {
-    resp = await api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}&limit=50`);
+    resp = await api('/api/user/listings');
   } catch (err) {
     toast(err.message || 'No pudimos cargar tus propiedades', 'err');
     resp = { listings: [] };
   }
-  let items = (resp && (resp.listings || resp)) || [];
-  // Defensive: if the API ever stops filtering by creator_user_id, do
-  // it client-side as a safety net.
-  items = items.filter(l =>
-    l.creator_user_id === user.id ||
-    (Array.isArray(l.agencies) && l.agencies.some(a => a && a.user_id === user.id))
-  );
-  state.listings = items;
+  state.listings = (resp && (resp.listings || resp)) || [];
 
   // Try the broker analytics endpoint for richer per-listing views.
   // If this 403s (non-broker role) or 404s, we silently degrade.
