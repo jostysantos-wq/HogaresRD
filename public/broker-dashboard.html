@@ -1094,7 +1094,11 @@ function renderProps(listings, currentUser) {
     const beds = l.bedrooms || l.beds || '—';
     const baths = l.bathrooms || l.baths || '—';
     const area = l.area ? `${l.area} m²` : (l.size ? `${l.size} m²` : '—');
-    const photo = l.photoUrl || l.photo_url;
+    let photo = l.photoUrl || l.photo_url;
+    if (!photo && Array.isArray(l.images) && l.images.length) {
+      const first = l.images[0];
+      photo = typeof first === 'string' ? first : (first?.url || null);
+    }
     const imgStyle = photo ? `background: url('${photo}') center/cover no-repeat;` : '';
     return `
       <a class="prop" href="/listing.html?id=${encodeURIComponent(l.id)}" style="color:inherit;">
