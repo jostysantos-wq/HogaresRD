@@ -1031,8 +1031,11 @@ function renderTable() {
       const updated = relTime(a.updated_at || a.created_at);
       const av = `a${((start + i) % 5) + 1}`;
       const isSel = STATE.selected.has(a.id);
-      // TODO: extract /aplicacion/:id/ detail page later
-      const href = `/aplicaciones.html&app=${encodeURIComponent(a.id)}`;
+      // Open the legacy /broker.html detail panel — it has the workflow
+      // strip, status badges, and the six-tab application view (Resumen,
+      // Flujo, Documentos, Tours, Pago, Timeline). /broker.html reads
+      // ?app=<id> on boot and auto-opens the panel for that application.
+      const href = `/broker.html?app=${encodeURIComponent(a.id)}`;
       return `
         <div class="recent-row ${isSel ? 'selected' : ''}" data-id="${escapeHtml(a.id)}" data-href="${escapeHtml(href)}">
           <div class="recent-cb">

@@ -7799,6 +7799,29 @@
     }
   })();
 
+  // Deep-link: /broker.html?app=<id> auto-opens the application detail
+  // panel. Used by /aplicaciones.html row-click so users land on the
+  // existing six-tab workflow view (Resumen, Flujo, Documentos, Tours,
+  // Pago, Timeline) without a duplicate port. Mirrors what the topbar
+  // search 'app' action does internally — switch to the dashboard, jump
+  // to the Aplicaciones section, then call openDetail.
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const appId = urlParams.get('app');
+    if (!appId) return;
+    function tryOpen(attempt) {
+      if (typeof window.openDetail !== 'function') {
+        if (attempt < 20) return setTimeout(() => tryOpen(attempt + 1), 100);
+        return;
+      }
+      if (typeof window.showPage === 'function') window.showPage('dashboard');
+      const sNav = document.querySelector('.section-nav-btn[data-section="aplicaciones"]');
+      if (sNav) sNav.click();
+      window.openDetail(appId);
+    }
+    setTimeout(() => tryOpen(0), 200);
+  })();
+
   // ── Sidebar collapse & mobile ───────────────────────────────
   document.getElementById('sidebarCollapseBtn').onclick = () => {
     document.getElementById('sidebar').classList.toggle('collapsed');
