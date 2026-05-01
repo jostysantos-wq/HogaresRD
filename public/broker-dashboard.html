@@ -1139,14 +1139,23 @@ async function load() {
   const av = document.getElementById('tbAvatar');
   if (av && user.name) av.title = user.name;
 
-  // Load listings owned by the broker, dashboard analytics, and referral stats in parallel
+  // Load listings owned by the broker, dashboard analytics, and referral stats in parallel.
+  // Use /api/user/listings instead of /api/listings?creator_user_id=… because the
+  // public endpoint (a) only returns approved submissions, hiding pending/draft
+  // ones the owner still needs to see, and (b) exact-matches creator_user_id —
+  // which is unset on a large fraction of legacy submissions, so those rows go
+  // missing from the dashboard even when they belong to the user. The
+  // /api/user/listings endpoint walks ALL statuses and falls back to an email
+  // match, so the KPIs reflect the full portfolio.
   const [listingsResp, analytics, refStats] = await Promise.all([
-    api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}`).catch(() => ({ listings: [] })),
+    api('/api/user/listings').catch(() => ({ listings: [] })),
     api('/api/broker/analytics').catch(() => null),
     api('/api/referrals/my-stats').catch(() => null),
   ]);
 
   const listings = (listingsResp && (listingsResp.listings || listingsResp)) || [];
+  // "Listados activos" KPI = approved + still on the market. Drafts, pending
+  // review, and rejected listings exist on the wire but don't count as active.
   const active = listings.filter(l => (l.status || 'approved') === 'approved');
   const byType = active.reduce((acc, l) => {
     const t = (l.listingType || l.listing_type || 'venta').toLowerCase();
