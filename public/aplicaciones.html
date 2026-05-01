@@ -657,6 +657,207 @@
   .ap-loading { padding: 60px 14px; text-align: center; color: var(--ink-mute); font-size: 13px; }
   .ap-error { padding: 14px; background: #FEF2F2; color: #B91C1C; border-radius: 10px; font-size: 12.5px; }
 
+  /* Forms inside the panel (Tours, Plan de Pagos, etc.) */
+  .ap-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ap-form-grid .full { grid-column: 1 / -1; }
+  .ap-field { display: flex; flex-direction: column; gap: 5px; }
+  .ap-field label {
+    font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    text-transform: none; letter-spacing: 0;
+  }
+  .ap-field input, .ap-field select, .ap-field textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--bg-soft);
+    color: var(--ink); font-size: 13.5px; font-family: inherit;
+    transition: border-color .15s, background .15s;
+  }
+  .ap-field input:focus, .ap-field select:focus, .ap-field textarea:focus {
+    outline: none; border-color: var(--accent); background: var(--bg-card);
+  }
+  .ap-field textarea { resize: vertical; min-height: 60px; }
+
+  /* Action button — primary fill */
+  .ap-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; font-size: 13px; font-weight: 600;
+    background: var(--ink); color: #fff; border: none; border-radius: 999px;
+    cursor: pointer; font-family: inherit; transition: opacity .15s;
+  }
+  .ap-btn:hover { opacity: .88; }
+  .ap-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .ap-btn svg { width: 13px; height: 13px; fill: currentColor; }
+  .ap-btn-outline {
+    background: var(--bg-card); color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .ap-btn-outline:hover { background: var(--bg-soft); border-color: var(--ink-mute); opacity: 1; }
+  .ap-btn-danger {
+    background: var(--bg-card); color: #B91C1C;
+    border: 1px solid #B91C1C;
+  }
+  .ap-btn-danger:hover { background: #B91C1C; color: #fff; opacity: 1; }
+  .ap-btn-success {
+    background: #047857; color: #fff;
+  }
+
+  /* Tour list */
+  .ap-tour-list { display: flex; flex-direction: column; gap: 10px; }
+  .ap-tour-item {
+    padding: 12px 14px; background: var(--bg-soft);
+    border: 1px solid var(--line-soft); border-radius: 12px;
+  }
+  .ap-tour-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 4px;
+  }
+  .ap-tour-date { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .ap-tour-detail { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+  .ap-tour-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .ap-tour-actions .ap-btn { padding: 5px 11px; font-size: 11.5px; }
+
+  /* Document upload zone + list */
+  .ap-doc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ap-drop {
+    margin-bottom: 14px; padding: 14px;
+    border: 2px dashed var(--line); border-radius: 12px;
+    background: var(--bg-soft); text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .ap-drop:hover, .ap-drop.dragover { border-color: var(--accent); background: var(--bg-card); }
+  .ap-drop-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .ap-drop-sub   { font-size: 11.5px; color: var(--ink-mute); margin-top: 2px; }
+  .ap-drop-status { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; min-height: 1em; }
+
+  /* Payment plan */
+  .ap-pp-empty {
+    padding: 36px 14px; text-align: center; color: var(--ink-mute); font-size: 13.5px;
+  }
+  .ap-pp-empty svg { width: 38px; height: 38px; fill: var(--ink-mute); display: block; margin: 0 auto 10px; }
+  .ap-pp-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px; padding: 14px 16px;
+    border-radius: 12px; background: var(--bg-card); border: 1px solid var(--line-soft);
+  }
+  .ap-pp-method { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .ap-pp-total  { font-size: 13.5px; color: var(--ink); margin-top: 4px; }
+  .ap-pp-details {
+    margin-top: 8px; padding: 8px 10px; background: var(--bg-soft);
+    border-radius: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .ap-pp-calc {
+    margin-top: 14px; padding: 14px; border-radius: 12px;
+    background: var(--gold-soft); border: 1px solid var(--gold);
+  }
+  .ap-pp-calc-title {
+    font-size: 12px; font-weight: 700; color: #6b4f12;
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .ap-pp-calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ap-pp-calc-preview {
+    margin-top: 10px; padding: 10px; background: rgba(255,255,255,.5);
+    border-radius: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.5;
+    text-align: center;
+  }
+  .ap-pp-divider {
+    text-align: center; margin: 14px 0; position: relative;
+    font-size: 11.5px; color: var(--ink-mute);
+  }
+  .ap-pp-divider::before, .ap-pp-divider::after {
+    content: ''; position: absolute; top: 50%;
+    width: calc(50% - 70px); height: 1px; background: var(--line);
+  }
+  .ap-pp-divider::before { left: 0; }
+  .ap-pp-divider::after  { right: 0; }
+
+  .ap-pp-builder-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ap-pp-inst-headers {
+    display: grid; grid-template-columns: 1fr 130px 130px 28px;
+    gap: 6px; margin-bottom: 6px;
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--ink-mute);
+  }
+  .ap-pp-inst-row {
+    display: grid; grid-template-columns: 1fr 130px 130px 28px;
+    gap: 6px; margin-bottom: 6px;
+  }
+  .ap-pp-inst-row input {
+    padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg-soft); font-size: 12.5px; font-family: inherit;
+  }
+  .ap-pp-inst-row input:focus { outline: none; border-color: var(--accent); background: var(--bg-card); }
+  .ap-pp-remove {
+    width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg-soft); cursor: pointer; color: var(--ink-mute);
+    display: grid; place-items: center; align-self: center;
+  }
+  .ap-pp-remove:hover { background: #FEF2F2; color: #B91C1C; border-color: #B91C1C; }
+  .ap-pp-remove svg { width: 12px; height: 12px; fill: currentColor; }
+  .ap-pp-total-row {
+    text-align: right; padding: 10px 0; font-size: 13px; color: var(--ink-soft);
+  }
+  .ap-pp-total-row strong { color: var(--ink); font-size: 14px; }
+  .ap-pp-form-footer {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft);
+  }
+
+  .ap-pp-installments { display: flex; flex-direction: column; gap: 10px; }
+  .ap-pp-card {
+    padding: 12px 14px; background: var(--bg-card);
+    border: 1px solid var(--line-soft); border-radius: 12px;
+  }
+  .ap-pp-card-row {
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .ap-pp-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg-soft); color: var(--ink); font-weight: 700;
+    display: grid; place-items: center; font-size: 12px; flex-shrink: 0;
+  }
+  .ap-pp-info { flex: 1; min-width: 0; }
+  .ap-pp-label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .ap-pp-meta { font-size: 11.5px; color: var(--ink-mute); margin-top: 2px; }
+  .ap-pp-amount { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  /* Modal */
+  .ap-modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(20,17,15,.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 320; padding: 20px;
+  }
+  .ap-modal-bg.open { display: flex; }
+  .ap-modal {
+    background: var(--bg-card); border-radius: 18px;
+    padding: 22px 22px 18px; max-width: 540px; width: 100%;
+    box-shadow: 0 24px 64px rgba(20,17,15,.30);
+  }
+  .ap-modal h3 {
+    margin: 0 0 6px; font-family: var(--serif); font-size: 19px;
+    font-weight: 600; color: var(--ink);
+  }
+  .ap-modal p { font-size: 13px; color: var(--ink-mute); line-height: 1.5; margin-bottom: 14px; }
+  .ap-modal-error { color: #B91C1C; font-size: 12px; min-height: 1em; margin-top: 6px; }
+  .ap-modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 12px;
+  }
+  .ap-doc-check-list { max-height: 320px; overflow-y: auto; margin: 8px 0 12px; }
+  .ap-doc-check-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 8px;
+    transition: background .12s;
+  }
+  .ap-doc-check-item:hover { background: var(--bg-soft); }
+  .ap-doc-check-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+  .ap-doc-check-item label { font-size: 13px; color: var(--ink); cursor: pointer; flex: 1; }
+
 </style>
   <link rel="stylesheet" href="/css/dashboard-topbar.css?v=2">
   <link rel="stylesheet" href="/css/ai-chat.css?v=2">
@@ -1648,6 +1849,40 @@ bootstrap().catch(err => {
     </div>
   </div>
 
+  <!-- Contactar al Cliente modal — sends an in-app message via /contact-client -->
+  <div class="ap-modal-bg" id="apContactModal">
+    <div class="ap-modal" role="dialog" aria-modal="true" aria-labelledby="apContactTitle">
+      <h3 id="apContactTitle">Contactar al Cliente</h3>
+      <p id="apContactSub"></p>
+      <div class="ap-field">
+        <label for="apContactText">Mensaje</label>
+        <textarea id="apContactText" rows="5" placeholder="Hola, soy tu agente. Quisiera hablar contigo sobre…"></textarea>
+      </div>
+      <div class="ap-modal-error" id="apContactError"></div>
+      <div class="ap-modal-actions">
+        <button class="ap-btn ap-btn-outline" id="apContactCancel">Cancelar</button>
+        <button class="ap-btn" id="apContactSend">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Enviar mensaje
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solicitar Documentos modal -->
+  <div class="ap-modal-bg" id="apDocModal">
+    <div class="ap-modal" role="dialog" aria-modal="true" aria-labelledby="apDocTitle">
+      <h3 id="apDocTitle">Solicitar Documentos</h3>
+      <p>Selecciona los documentos que el cliente necesita subir.</p>
+      <div class="ap-doc-check-list" id="apDocCheckList"></div>
+      <div class="ap-modal-error" id="apDocError"></div>
+      <div class="ap-modal-actions">
+        <button class="ap-btn ap-btn-outline" id="apDocCancel">Cancelar</button>
+        <button class="ap-btn" id="apDocSend">Enviar Solicitud</button>
+      </div>
+    </div>
+  </div>
+
   <script>
   // ── Application detail panel controller ─────────────────────────────
   (function () {
@@ -1706,6 +1941,27 @@ bootstrap().catch(err => {
     const SKIP_HINT = {
       documentos_enviados: 'el cliente envió los documentos fuera de la plataforma',
       pago_enviado:        'el comprobante de pago se recibió por otro medio',
+    };
+    const DOC_TYPES = [
+      { type: 'cedula',           label: 'Cédula de Identidad' },
+      { type: 'passport',         label: 'Pasaporte' },
+      { type: 'income_proof',     label: 'Comprobante de Ingresos' },
+      { type: 'bank_statement',   label: 'Estado de Cuenta Bancario' },
+      { type: 'employment_letter',label: 'Carta de Trabajo' },
+      { type: 'tax_return',       label: 'Declaración de Impuestos' },
+      { type: 'pre_approval',     label: 'Carta de Pre-Aprobación Bancaria' },
+      { type: 'proof_of_funds',   label: 'Prueba de Fondos' },
+      { type: 'other',            label: 'Otro Documento' },
+    ];
+    const PP_METHODS = [
+      'Transferencia Bancaria', 'Depósito Bancario', 'Cheque',
+      'Efectivo', 'Tarjeta de Crédito', 'Otro',
+    ];
+    const PP_STATUS_LABELS = {
+      pending:        'Pendiente',
+      proof_uploaded: 'Comprobante Subido',
+      approved:       'Aprobado',
+      rejected:       'Rechazado',
     };
     function statusColor(s) {
       if (['aprobado','pago_aprobado','completado'].includes(s)) return 'green';
@@ -1805,7 +2061,11 @@ bootstrap().catch(err => {
       badgeEl.innerHTML   = badgeHTML(a.status);
       const canContact = !!(client.user_id || client.email);
       contactBtn.style.display = canContact ? 'inline-flex' : 'none';
-      contactBtn.href = client.email ? `mailto:${client.email}` : '#';
+      contactBtn.href = '#';
+      contactBtn.onclick = (e) => {
+        e.preventDefault();
+        openContactModal();
+      };
 
       renderWorkflow(a.status);
       renderResumen(a, client, listing);
@@ -1962,76 +2222,519 @@ bootstrap().catch(err => {
       }
     }
 
+    // ─── Documentos tab ─────────────────────────────────────────────
     function renderDocumentos(a) {
+      const appId = a.id;
       const pane = document.getElementById('ap-pane-documentos');
       const requested = a.documents_requested || [];
       const uploaded  = a.documents_uploaded  || [];
-      if (!requested.length && !uploaded.length) {
-        pane.innerHTML = `<div class="ap-empty">Aún no se han solicitado o subido documentos.</div>`;
-        return;
-      }
-      const reqRows = requested.map(d => `
-        <div class="ap-doc-item">
-          <span class="ap-doc-name">${escapeHtml(d.label || d.type || 'Documento')}</span>
-          <span class="ap-doc-status ap-badge-${d.status === 'approved' ? 'green' : d.status === 'rejected' ? 'red' : 'gold'}">${escapeHtml(d.status || 'pendiente')}</span>
-        </div>`).join('');
-      const upRows = uploaded.map(d => `
-        <div class="ap-doc-item">
-          <span class="ap-doc-name">${escapeHtml(d.original_name || d.label || d.type || 'Archivo')}</span>
-          <span class="ap-doc-status ap-badge-${d.review_status === 'approved' ? 'green' : d.review_status === 'rejected' ? 'red' : 'orange'}">${escapeHtml(d.review_status || 'en revisión')}</span>
-        </div>`).join('');
+
       pane.innerHTML = `
-        ${requested.length ? `<div class="ap-section"><div class="ap-section-title">Solicitados</div><div class="ap-doc-list">${reqRows}</div></div>` : ''}
-        ${uploaded.length  ? `<div class="ap-section"><div class="ap-section-title">Subidos por el cliente</div><div class="ap-doc-list">${upRows}</div></div>` : ''}
+        <div class="ap-doc-actions">
+          <button class="ap-btn" id="apOpenDocModal">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM16 18H8v-2h8v2zm0-4H8v-2h8v2zm-2-6V3.5L19.5 9H14z"/></svg>
+            Solicitar Documentos
+          </button>
+        </div>
+        <div class="ap-drop" id="apDocDrop" tabindex="0" role="button" aria-label="Arrastra archivos aquí o haz clic para subir">
+          <input type="file" id="apDocFileInput" multiple
+                 accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
+                 style="display:none;">
+          <div class="ap-drop-title">Subir documento por el cliente</div>
+          <div class="ap-drop-sub">Arrastra archivos aquí, pega una imagen (Cmd/Ctrl + V) o haz clic para elegir.</div>
+          <div class="ap-drop-status" id="apDocDropStatus"></div>
+        </div>
+        ${requested.length ? `
+          <div class="ap-section">
+            <div class="ap-section-title">Solicitados</div>
+            <div class="ap-doc-list">
+              ${requested.map(d => `
+                <div class="ap-doc-item">
+                  <span class="ap-doc-name">${escapeHtml(d.label || (DOC_TYPES.find(t => t.type === d.type)?.label) || d.type || 'Documento')}</span>
+                  <span class="ap-doc-status ap-badge-${d.status === 'approved' ? 'green' : d.status === 'rejected' ? 'red' : 'gold'}">${escapeHtml(d.status || 'pendiente')}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        ${uploaded.length ? `
+          <div class="ap-section">
+            <div class="ap-section-title">Subidos</div>
+            <div class="ap-doc-list">
+              ${uploaded.map(d => `
+                <div class="ap-doc-item">
+                  <span class="ap-doc-name">${escapeHtml(d.original_name || d.label || d.type || 'Archivo')}</span>
+                  <span class="ap-doc-status ap-badge-${d.review_status === 'approved' ? 'green' : d.review_status === 'rejected' ? 'red' : 'orange'}">${escapeHtml(d.review_status || 'en revisión')}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        ` : '<div class="ap-empty">No hay documentos todavía.</div>'}
       `;
+
+      pane.querySelector('#apOpenDocModal').addEventListener('click', openDocModal);
+
+      // Drop zone wiring (click to open file picker, drag/drop, paste)
+      const dropZone = pane.querySelector('#apDocDrop');
+      const fileInput = pane.querySelector('#apDocFileInput');
+      const statusEl = pane.querySelector('#apDocDropStatus');
+      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+      });
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault(); dropZone.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault(); dropZone.classList.remove('dragover');
+        if (e.dataTransfer?.files?.length) await uploadBrokerDocs(appId, Array.from(e.dataTransfer.files), statusEl);
+      });
+      fileInput.addEventListener('change', async () => {
+        if (fileInput.files.length) await uploadBrokerDocs(appId, Array.from(fileInput.files), statusEl);
+      });
     }
 
-    function renderTours(a) {
-      const pane = document.getElementById('ap-pane-tours');
-      const tours = a.tours || [];
-      if (!tours.length) {
-        pane.innerHTML = `<div class="ap-empty">Aún no hay visitas programadas.</div>`;
-        return;
+    async function uploadBrokerDocs(appId, files, statusEl) {
+      statusEl.textContent = `Subiendo ${files.length} archivo(s)…`;
+      try {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        const res = await fetch(`/api/applications/${encodeURIComponent(appId)}/documents/upload`, {
+          method: 'POST', credentials: 'include', body: fd,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        statusEl.textContent = `Subido(s) correctamente.`;
+        currentApp = await fetchApp(currentApp.id);
+        renderDocumentos(currentApp);
+        renderTimeline(currentApp);
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
       }
-      pane.innerHTML = `<div class="ap-section">
-        <div class="ap-section-title">Visitas</div>
-        <div class="ap-doc-list">
-          ${tours.map(t => `
-            <div class="ap-doc-item">
-              <span class="ap-doc-name">${escapeHtml(fmtDateTime(t.scheduled_at || t.scheduledAt || t.date))}</span>
-              <span class="ap-doc-status ap-badge-${t.status === 'completed' ? 'green' : t.status === 'canceled' ? 'red' : 'orange'}">${escapeHtml(t.status || 'programada')}</span>
-            </div>`).join('')}
+    }
+
+    // ─── Solicitar Documentos modal ─────────────────────────────────
+    const docModalBg     = document.getElementById('apDocModal');
+    const docCheckListEl = document.getElementById('apDocCheckList');
+    const docErrorEl     = document.getElementById('apDocError');
+    const docCancelBtn   = document.getElementById('apDocCancel');
+    const docSendBtn     = document.getElementById('apDocSend');
+
+    function openDocModal() {
+      docCheckListEl.innerHTML = DOC_TYPES.map(d => `
+        <div class="ap-doc-check-item">
+          <input type="checkbox" id="ap_doc_${d.type}" value="${escapeHtml(d.type)}">
+          <label for="ap_doc_${d.type}">${escapeHtml(d.label)}</label>
+        </div>`).join('');
+      docErrorEl.textContent = '';
+      docModalBg.classList.add('open');
+    }
+    function closeDocModal() { docModalBg.classList.remove('open'); }
+    docCancelBtn.addEventListener('click', closeDocModal);
+    docModalBg.addEventListener('click', (e) => { if (e.target === docModalBg) closeDocModal(); });
+    docSendBtn.addEventListener('click', async () => {
+      const checked = Array.from(docCheckListEl.querySelectorAll('input:checked'));
+      if (!checked.length) { docErrorEl.textContent = 'Selecciona al menos un documento.'; return; }
+      const documents = checked.map(c => {
+        const dt = DOC_TYPES.find(d => d.type === c.value);
+        return { type: c.value, label: dt?.label || c.value, required: true };
+      });
+      docSendBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/documents/request`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        closeDocModal();
+        currentApp = await fetchApp(currentApp.id);
+        renderAll();
+      } catch (e) {
+        docErrorEl.textContent = e.message || 'Error al enviar.';
+      } finally {
+        docSendBtn.disabled = false;
+      }
+    });
+
+    // ─── Tours tab ──────────────────────────────────────────────────
+    function renderTours(a) {
+      const tours = a.tours || [];
+      const pane = document.getElementById('ap-pane-tours');
+      pane.innerHTML = `
+        <div class="ap-section">
+          <div class="ap-section-title">Agendar Tour</div>
+          <div class="ap-form-grid">
+            <div class="ap-field"><label>Fecha</label><input type="date" id="apTourDate"></div>
+            <div class="ap-field"><label>Hora</label><input type="time" id="apTourTime"></div>
+            <div class="ap-field full"><label>Ubicación</label><input type="text" id="apTourLocation" placeholder="Dirección o punto de encuentro"></div>
+            <div class="ap-field full"><label>Notas</label><textarea id="apTourNotes" rows="2" placeholder="Notas adicionales…"></textarea></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+            <button class="ap-btn" id="apTourSave">
+              <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+              Agendar Tour
+            </button>
+          </div>
         </div>
-      </div>`;
+        ${tours.length ? `
+          <div class="ap-section">
+            <div class="ap-section-title">Tours Programados</div>
+            <div class="ap-tour-list">
+              ${tours.map(t => {
+                const sched = t.scheduled_at || (t.scheduled_date && t.scheduled_time
+                  ? `${t.scheduled_date}T${t.scheduled_time}` : null);
+                const dateLabel = sched ? fmtDateTime(sched) : (t.scheduled_date || '—');
+                const status = t.status || 'scheduled';
+                const badgeCls = status === 'completed' ? 'green' : status === 'cancelled' ? 'red' : 'blue';
+                const statusText = status === 'completed' ? 'Completado'
+                                 : status === 'cancelled' ? 'Cancelado' : 'Programado';
+                return `
+                  <div class="ap-tour-item">
+                    <div class="ap-tour-row">
+                      <span class="ap-tour-date">${escapeHtml(dateLabel)}</span>
+                      <span class="ap-badge ap-badge-${badgeCls}">${statusText}</span>
+                    </div>
+                    ${t.location ? `<div class="ap-tour-detail">Lugar: ${escapeHtml(t.location)}</div>` : ''}
+                    ${t.notes    ? `<div class="ap-tour-detail">${escapeHtml(t.notes)}</div>`         : ''}
+                    ${status === 'scheduled' ? `
+                      <div class="ap-tour-actions">
+                        <button class="ap-btn ap-btn-success" data-tour-id="${escapeHtml(t.id || t._id)}" data-tour-action="completed">Completado</button>
+                        <button class="ap-btn ap-btn-danger"  data-tour-id="${escapeHtml(t.id || t._id)}" data-tour-action="cancelled">Cancelar</button>
+                      </div>` : ''}
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>` : ''}`;
+
+      pane.querySelector('#apTourSave').addEventListener('click', scheduleTour);
+      pane.querySelectorAll('[data-tour-action]').forEach(btn => {
+        btn.addEventListener('click', () => updateTour(btn.dataset.tourId, btn.dataset.tourAction));
+      });
+    }
+
+    async function scheduleTour() {
+      const scheduled_date = document.getElementById('apTourDate').value;
+      const scheduled_time = document.getElementById('apTourTime').value;
+      const location       = document.getElementById('apTourLocation').value.trim();
+      const notes          = document.getElementById('apTourNotes').value.trim();
+      if (!scheduled_date || !scheduled_time) { alert('Fecha y hora son requeridas.'); return; }
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/tours`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scheduled_date, scheduled_time, location, notes }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        currentApp = await fetchApp(currentApp.id);
+        renderTours(currentApp);
+        renderTimeline(currentApp);
+      } catch (e) { alert('No se pudo agendar el tour: ' + e.message); }
+    }
+
+    async function updateTour(tourId, status) {
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/tours/${encodeURIComponent(tourId)}`, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        currentApp = await fetchApp(currentApp.id);
+        renderTours(currentApp);
+        renderTimeline(currentApp);
+      } catch (e) { alert('No se pudo actualizar el tour: ' + e.message); }
+    }
+
+    // ─── Pago tab ───────────────────────────────────────────────────
+    function fmtCur(n, cur) {
+      return `${cur || 'DOP'} ${Number(n || 0).toLocaleString('es-DO')}`;
     }
 
     function renderPago(a) {
-      const pane = document.getElementById('ap-pane-pago');
-      const p = a.payment || {};
       const plan = a.payment_plan;
-      if (!p.amount && !plan) {
-        pane.innerHTML = `<div class="ap-empty">Sin información de pago aún.</div>`;
+      const pane = document.getElementById('ap-pane-pago');
+
+      if (!plan) {
+        pane.innerHTML = `
+          <div class="ap-pp-empty">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+            <p style="margin-bottom:14px;">No hay plan de pagos creado para esta aplicación.</p>
+            <button class="ap-btn" id="apCreatePlanBtn">
+              <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+              Crear Plan de Pagos
+            </button>
+          </div>`;
+        pane.querySelector('#apCreatePlanBtn').addEventListener('click', () => renderPlanForm(a, false));
         return;
       }
+
+      const cur = plan.currency || 'DOP';
+      const insts = plan.installments || [];
+      const totalPaid = insts.filter(i => i.status === 'approved').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+      const totalAmt  = Number(plan.total_amount) || insts.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+      const pendingReview = insts.filter(i => i.status === 'proof_uploaded').length;
+
+      pane.innerHTML = `
+        <div class="ap-pp-header">
+          <div style="flex:1;min-width:0;">
+            <div class="ap-pp-method">${escapeHtml(plan.payment_method || 'Sin método')}</div>
+            <div class="ap-pp-total">
+              ${fmtCur(totalPaid, cur)} de ${fmtCur(totalAmt, cur)} verificado · ${insts.length} cuota(s)
+              ${pendingReview ? ` · <span style="color:#B45309;font-weight:600;">${pendingReview} pendiente(s) de revisión</span>` : ''}
+            </div>
+            ${plan.method_details ? `<div class="ap-pp-details">${escapeHtml(plan.method_details)}</div>` : ''}
+          </div>
+          <button class="ap-btn ap-btn-outline" id="apEditPlanBtn">Editar Plan</button>
+        </div>
+        <div class="ap-pp-installments">
+          ${insts.map(inst => `
+            <div class="ap-pp-card">
+              <div class="ap-pp-card-row">
+                <div class="ap-pp-num">${escapeHtml(String(inst.number || ''))}</div>
+                <div class="ap-pp-info">
+                  <div class="ap-pp-label">${escapeHtml(inst.label || 'Cuota')}</div>
+                  <div class="ap-pp-meta">${inst.due_date ? 'Vence ' + escapeHtml(fmtDate(inst.due_date)) : ''}</div>
+                </div>
+                <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                  <div class="ap-pp-amount">${fmtCur(inst.amount, cur)}</div>
+                  <span class="ap-badge ap-badge-${inst.status === 'approved' ? 'green' : inst.status === 'rejected' ? 'red' : inst.status === 'proof_uploaded' ? 'orange' : 'gold'}">${escapeHtml(PP_STATUS_LABELS[inst.status] || inst.status || 'pendiente')}</span>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+      pane.querySelector('#apEditPlanBtn').addEventListener('click', () => renderPlanForm(a, true));
+    }
+
+    function ppInstRow(label, amount, dueDate, id) {
+      return `<div class="ap-pp-inst-row" data-iid="${escapeHtml(id || '')}">
+        <input class="ap-pp-inst-label"  type="text"   placeholder="Ej: Pago Inicial" value="${escapeHtml(label || '')}">
+        <input class="ap-pp-inst-amount" type="number" min="0" placeholder="Monto" value="${amount != null ? amount : ''}">
+        <input class="ap-pp-inst-due"    type="date"   value="${escapeHtml(dueDate || '')}">
+        <button class="ap-pp-remove" title="Eliminar" type="button">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>`;
+    }
+
+    function updatePPTotal() {
+      const rows = document.querySelectorAll('#apPpInstBuilder .ap-pp-inst-row');
+      let sum = 0;
+      rows.forEach(r => { sum += Number(r.querySelector('.ap-pp-inst-amount').value) || 0; });
+      const totalEl = document.getElementById('apPpTotalDisplay');
+      const curEl   = document.getElementById('apPpCurrency');
+      if (totalEl) totalEl.textContent = sum > 0 ? fmtCur(sum, curEl?.value || 'DOP') : '—';
+    }
+
+    function renderPlanForm(a, editMode) {
+      const plan  = editMode ? (a.payment_plan || {}) : {};
+      const insts = plan.installments || [];
+      const pane  = document.getElementById('ap-pane-pago');
+
       pane.innerHTML = `
         <div class="ap-section">
-          <div class="ap-section-title">Pago</div>
-          <div class="ap-info-grid">
-            <div class="ap-info-item"><label>Monto</label><span>${escapeHtml(fmtPriceLocal(p.amount))}</span></div>
-            <div class="ap-info-item"><label>Moneda</label><span>${escapeHtml(p.currency || '—')}</span></div>
-            <div class="ap-info-item"><label>Estado de verificación</label><span>${escapeHtml(p.verification_status || '—')}</span></div>
-            <div class="ap-info-item"><label>Método</label><span>${escapeHtml(p.method || '—')}</span></div>
+          <div class="ap-section-title">${editMode ? 'Editar Plan de Pagos' : 'Crear Plan de Pagos'}</div>
+          <div class="ap-form-grid">
+            <div class="ap-field">
+              <label>Método de Pago</label>
+              <select id="apPpMethod">
+                ${PP_METHODS.map(m => `<option${plan.payment_method === m ? ' selected' : ''}>${escapeHtml(m)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="ap-field">
+              <label>Moneda</label>
+              <select id="apPpCurrency">
+                <option${(plan.currency || 'DOP') === 'DOP' ? ' selected' : ''}>DOP</option>
+                <option${plan.currency === 'USD' ? ' selected' : ''}>USD</option>
+              </select>
+            </div>
+            <div class="ap-field full">
+              <label>Detalles de Pago (banco, cuenta, instrucciones)</label>
+              <textarea id="apPpDetails" rows="3" placeholder="Ej: Banco Popular — Cta. Corriente #123-456789 — A nombre de: HogaresRD S.R.L.">${escapeHtml(plan.method_details || '')}</textarea>
+            </div>
+            <div class="ap-field full">
+              <label>Notas generales</label>
+              <input type="text" id="apPpNotes" value="${escapeHtml(plan.notes || '')}" placeholder="Opcional…">
+            </div>
           </div>
-        </div>
-        ${plan ? `<div class="ap-section">
-          <div class="ap-section-title">Plan de pago</div>
-          <div class="ap-info-grid">
-            <div class="ap-info-item"><label>Total</label><span>${escapeHtml(fmtPriceLocal(plan.total_amount))}</span></div>
-            <div class="ap-info-item"><label>Cuotas</label><span>${(plan.installments || []).length}</span></div>
+
+          <div class="ap-pp-calc">
+            <div class="ap-pp-calc-title">Calculadora de Cuotas</div>
+            <div class="ap-pp-calc-grid">
+              <div class="ap-field"><label>Monto Total</label><input type="number" id="apPpCalcTotal" min="0" placeholder="Ej: 500000"></div>
+              <div class="ap-field">
+                <label>Plazo</label>
+                <select id="apPpCalcMonths">
+                  <option value="">-- meses --</option>
+                  ${[1,2,3,4,6,8,10,12,18,24,36,48,60].map(m => `<option value="${m}">${m} ${m === 1 ? 'mes' : 'meses'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="ap-field"><label>Primera Cuota</label><input type="date" id="apPpCalcStart"></div>
+              <div class="ap-field"><label>Enganche (opcional)</label><input type="number" id="apPpCalcDown" min="0" placeholder="0"></div>
+            </div>
+            <button class="ap-btn" id="apPpCalcGenerate" type="button" style="width:100%;justify-content:center;margin-top:10px;">Generar Cuotas</button>
           </div>
-        </div>` : ''}
-      `;
+
+          <div class="ap-pp-divider"><span>— o ingresa manualmente —</span></div>
+
+          <div class="ap-pp-builder-header">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-mute);">Cuotas</span>
+            <button class="ap-btn ap-btn-outline" id="apPpAddInst" type="button" style="padding:6px 12px;font-size:12px;">+ Agregar cuota</button>
+          </div>
+          <div class="ap-pp-inst-headers">
+            <span>Descripción</span><span>Monto</span><span>Vencimiento</span><span></span>
+          </div>
+          <div id="apPpInstBuilder">
+            ${insts.length
+              ? insts.map(i => ppInstRow(i.label, i.amount, i.due_date, i.id)).join('')
+              : ppInstRow('Pago Inicial', '', '') + ppInstRow('Pago Final', '', '')}
+          </div>
+          <div class="ap-pp-total-row">Total: <strong id="apPpTotalDisplay">—</strong></div>
+
+          <div class="ap-pp-form-footer">
+            <button class="ap-btn ap-btn-outline" id="apPpCancel" type="button">Cancelar</button>
+            <button class="ap-btn" id="apPpSave" type="button">${editMode ? 'Guardar Cambios' : 'Crear Plan'}</button>
+          </div>
+        </div>`;
+
+      const builder = pane.querySelector('#apPpInstBuilder');
+      pane.querySelector('#apPpCancel').addEventListener('click', () => renderPago(currentApp));
+      pane.querySelector('#apPpAddInst').addEventListener('click', () => {
+        builder.insertAdjacentHTML('beforeend', ppInstRow('', '', ''));
+        updatePPTotal();
+      });
+      builder.addEventListener('click', (e) => {
+        if (e.target.closest('.ap-pp-remove')) {
+          const rows = builder.querySelectorAll('.ap-pp-inst-row');
+          if (rows.length <= 1) { alert('Debe haber al menos una cuota.'); return; }
+          e.target.closest('.ap-pp-inst-row').remove();
+          updatePPTotal();
+        }
+      });
+      builder.addEventListener('input', updatePPTotal);
+      pane.querySelector('#apPpCurrency').addEventListener('change', updatePPTotal);
+      updatePPTotal();
+
+      pane.querySelector('#apPpCalcGenerate').addEventListener('click', () => {
+        const total  = parseFloat(pane.querySelector('#apPpCalcTotal').value) || 0;
+        const months = parseInt(pane.querySelector('#apPpCalcMonths').value) || 0;
+        const down   = parseFloat(pane.querySelector('#apPpCalcDown').value) || 0;
+        const startVal = pane.querySelector('#apPpCalcStart').value || '';
+        if (!total || !months) { alert('Ingresa el monto total y el plazo.'); return; }
+        const remaining = Math.max(0, total - down);
+        const baseAmt   = Math.floor(remaining / months);
+        const lastExtra = remaining - baseAmt * months;
+        builder.innerHTML = '';
+        const start = startVal ? new Date(startVal + 'T12:00:00') : new Date();
+        if (down > 0) {
+          const dueStr = startVal || start.toISOString().slice(0, 10);
+          builder.insertAdjacentHTML('beforeend', ppInstRow('Enganche Inicial', down, dueStr));
+        }
+        const monthOffset = down > 0 ? 1 : 0;
+        for (let i = 0; i < months; i++) {
+          const d = new Date(start.getFullYear(), start.getMonth() + i + monthOffset, start.getDate());
+          const dueStr = d.toISOString().slice(0, 10);
+          const rawLabel = d.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+          const label = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+          const amount = (i === months - 1) ? baseAmt + lastExtra : baseAmt;
+          builder.insertAdjacentHTML('beforeend', ppInstRow(label, amount, dueStr));
+        }
+        updatePPTotal();
+      });
+
+      pane.querySelector('#apPpSave').addEventListener('click', async () => {
+        const method  = pane.querySelector('#apPpMethod').value;
+        const cur     = pane.querySelector('#apPpCurrency').value;
+        const details = pane.querySelector('#apPpDetails').value.trim();
+        const notes   = pane.querySelector('#apPpNotes').value.trim();
+        const rows    = Array.from(pane.querySelectorAll('#apPpInstBuilder .ap-pp-inst-row'));
+        const installments = rows.map(row => ({
+          id:       row.dataset.iid || undefined,
+          label:    row.querySelector('.ap-pp-inst-label').value.trim() || 'Pago',
+          amount:   parseFloat(row.querySelector('.ap-pp-inst-amount').value) || 0,
+          due_date: row.querySelector('.ap-pp-inst-due').value || null,
+        }));
+        if (installments.some(i => !i.amount)) { alert('Todos los montos son requeridos.'); return; }
+        const total = installments.reduce((s, i) => s + i.amount, 0);
+        try {
+          const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/payment-plan`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              payment_method: method, method_details: details, currency: cur,
+              total_amount: total, notes, installments,
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+          currentApp = await fetchApp(currentApp.id);
+          renderPago(currentApp);
+          renderTimeline(currentApp);
+        } catch (e) {
+          alert('No se pudo guardar el plan: ' + e.message);
+        }
+      });
     }
+
+    // ─── Contactar al Cliente modal ────────────────────────────────
+    const contactModalBg = document.getElementById('apContactModal');
+    const contactSubEl   = document.getElementById('apContactSub');
+    const contactTextEl  = document.getElementById('apContactText');
+    const contactErrorEl = document.getElementById('apContactError');
+    const contactCancel  = document.getElementById('apContactCancel');
+    const contactSendBtn = document.getElementById('apContactSend');
+
+    function openContactModal() {
+      if (!currentApp) return;
+      const client = currentApp.client || {};
+      const propertyTitle = currentApp.listing_title || (currentApp.listing && currentApp.listing.title) || 'la propiedad';
+      contactSubEl.textContent =
+        `Enviarás un mensaje a ${client.name || 'el cliente'} sobre "${propertyTitle}".`;
+      contactTextEl.value = '';
+      contactErrorEl.textContent = '';
+      contactSendBtn.disabled = false;
+      contactModalBg.classList.add('open');
+      setTimeout(() => contactTextEl.focus(), 80);
+    }
+    function closeContactModal() { contactModalBg.classList.remove('open'); }
+    contactCancel.addEventListener('click', closeContactModal);
+    contactModalBg.addEventListener('click', (e) => { if (e.target === contactModalBg) closeContactModal(); });
+    contactSendBtn.addEventListener('click', async () => {
+      const text = contactTextEl.value.trim();
+      contactErrorEl.textContent = '';
+      if (!text) { contactErrorEl.textContent = 'Escribe un mensaje.'; return; }
+      if (text.length > 2000) { contactErrorEl.textContent = 'Máximo 2000 caracteres.'; return; }
+      contactSendBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/contact-client`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        closeContactModal();
+        currentApp = await fetchApp(currentApp.id);
+        renderTimeline(currentApp);
+      } catch (e) {
+        contactErrorEl.textContent = e.message || 'Error al enviar.';
+        contactSendBtn.disabled = false;
+      }
+    });
 
     function renderTimeline(a) {
       const pane = document.getElementById('ap-pane-timeline');
