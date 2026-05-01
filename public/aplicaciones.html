@@ -614,6 +614,16 @@
   .ap-status-btn:hover { border-color: var(--accent); color: var(--accent); }
   .ap-status-btn.reject { border-color: #B91C1C; color: #B91C1C; }
   .ap-status-btn.reject:hover { background: #B91C1C; color: #fff; }
+  .ap-status-btn.skip {
+    border-style: dashed; border-color: var(--gold);
+    background: var(--gold-soft); color: #6b4f12;
+  }
+  .ap-status-btn.skip::before {
+    content: '↷'; font-weight: 800; margin-right: 1px; line-height: 1;
+  }
+  .ap-status-btn.skip:hover {
+    border-color: #b48a2a; background: #f6dfae; color: #4a3909;
+  }
   .ap-status-btn:disabled { opacity: .5; cursor: not-allowed; }
 
   /* Timeline */
@@ -1687,6 +1697,16 @@ bootstrap().catch(err => {
       { keys: ['pendiente_pago','pago_enviado','pago_aprobado'],                  label: 'Pago' },
       { keys: ['completado'],                                                     label: 'Completado' },
     ];
+    // Targets that PUT /:id/status refuses — the server expects them to
+    // be set automatically when the client uploads documents or a payment
+    // receipt. The broker can still drive them via POST /:id/skip-phase
+    // with a written justification (e.g. "received the receipt by email").
+    // Mirrors STATUS_OWNERSHIP['client_auto'] in routes/applications.js.
+    const SKIP_ONLY = new Set(['documentos_enviados', 'pago_enviado']);
+    const SKIP_HINT = {
+      documentos_enviados: 'el cliente envió los documentos fuera de la plataforma',
+      pago_enviado:        'el comprobante de pago se recibió por otro medio',
+    };
     function statusColor(s) {
       if (['aprobado','pago_aprobado','completado'].includes(s)) return 'green';
       if (['en_revision','documentos_enviados','pago_enviado'].includes(s)) return 'orange';
@@ -1854,6 +1874,17 @@ bootstrap().catch(err => {
       const advances = transitions.filter(t => t !== 'rechazado');
       const canReject = transitions.includes('rechazado');
       const pane = document.getElementById('ap-pane-flujo');
+      const advanceBtns = advances.map(t => {
+        const isSkip = SKIP_ONLY.has(t);
+        const cls = isSkip ? 'ap-status-btn skip' : 'ap-status-btn';
+        const label = isSkip
+          ? `Saltar a ${escapeHtml(STATUS_LABELS[t] || t)}`
+          : escapeHtml(STATUS_LABELS[t] || t);
+        const title = isSkip
+          ? ` title="${escapeHtml(SKIP_HINT[t] || '')} (requiere justificación)"`
+          : '';
+        return `<button class="${cls}" data-target="${escapeHtml(t)}" data-skip="${isSkip ? '1' : ''}"${title}>${label}</button>`;
+      }).join('');
       pane.innerHTML = `
         <div class="ap-section">
           <div class="ap-section-title">Estado actual</div>
@@ -1868,38 +1899,67 @@ bootstrap().catch(err => {
             ? `Transiciones disponibles desde <strong>${escapeHtml(STATUS_LABELS[a.status] || a.status)}</strong>:`
             : 'No hay transiciones disponibles desde este estado.'}</div>
           <div class="ap-advance-buttons">
-            ${advances.map(t => `<button class="ap-status-btn" data-target="${escapeHtml(t)}">${escapeHtml(STATUS_LABELS[t] || t)}</button>`).join('')}
+            ${advanceBtns}
             ${canReject ? `<button class="ap-status-btn reject" data-target="rechazado">Rechazar</button>` : ''}
           </div>
+          ${advances.some(t => SKIP_ONLY.has(t)) ? `
+            <p style="font-size:11.5px;color:var(--ink-mute);margin-top:10px;line-height:1.5;">
+              Las opciones marcadas como <strong>“Saltar a…”</strong> normalmente las activa el cliente al subir documentos o el comprobante.
+              Si recibiste lo que falta por otro medio (email, WhatsApp, en persona), puedes saltar la etapa con una justificación que se registra en la línea de tiempo.
+            </p>
+          ` : ''}
         </div>
       `;
       pane.querySelectorAll('.ap-status-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const to = btn.dataset.target;
-          if (!to || !currentApp) return;
-          if (to === 'rechazado' && !confirm('¿Marcar esta aplicación como rechazada?')) return;
-          btn.disabled = true;
-          try {
-            const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/status`, {
-              method: 'PUT',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: to }),
-            });
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.error || `HTTP ${res.status}`);
-            }
-            // Refresh the app and the list behind us so chip counts stay in sync.
-            currentApp = await fetchApp(currentApp.id);
-            renderAll();
-            if (typeof window.loadApplications === 'function') window.loadApplications();
-          } catch (e) {
-            alert('No se pudo cambiar el estado: ' + e.message);
-            btn.disabled = false;
-          }
-        });
+        btn.addEventListener('click', () => handleStatusBtn(btn));
       });
+    }
+
+    async function handleStatusBtn(btn) {
+      const to = btn.dataset.target;
+      const isSkip = btn.dataset.skip === '1';
+      if (!to || !currentApp) return;
+
+      let reason = null;
+      if (isSkip) {
+        reason = window.prompt(
+          `Saltar a “${STATUS_LABELS[to] || to}”\n\nExplica por qué saltas esta etapa (mínimo 5 caracteres). Esto se registra en la línea de tiempo.`,
+          ''
+        );
+        if (reason == null) return;                   // cancelled
+        reason = reason.trim();
+        if (reason.length < 5) {
+          alert('La justificación debe tener al menos 5 caracteres.');
+          return;
+        }
+      } else if (to === 'rechazado') {
+        if (!confirm('¿Marcar esta aplicación como rechazada?')) return;
+      }
+
+      btn.disabled = true;
+      const url = isSkip
+        ? `/api/applications/${encodeURIComponent(currentApp.id)}/skip-phase`
+        : `/api/applications/${encodeURIComponent(currentApp.id)}/status`;
+      const body = isSkip ? { status: to, reason } : { status: to };
+
+      try {
+        const res = await fetch(url, {
+          method: isSkip ? 'POST' : 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        currentApp = await fetchApp(currentApp.id);
+        renderAll();
+        if (typeof window.loadApplications === 'function') window.loadApplications();
+      } catch (e) {
+        alert('No se pudo cambiar el estado: ' + e.message);
+        btn.disabled = false;
+      }
     }
 
     function renderDocumentos(a) {
