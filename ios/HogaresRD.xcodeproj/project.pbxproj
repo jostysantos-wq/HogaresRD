@@ -80,6 +80,23 @@
 		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
 		TASKMOD000000000000000B2 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKMOD000000000000000B1 /* Task.swift */; };
 		TASKVIEW00000000000000B2 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKVIEW00000000000000B1 /* TasksView.swift */; };
+		DS01000000000000000002 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS01000000000000000001 /* Tokens.swift */; };
+		DS02000000000000000002 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS02000000000000000001 /* Typography.swift */; };
+		DS03000000000000000002 /* IdentityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS03000000000000000001 /* IdentityCard.swift */; };
+		DS04000000000000000002 /* IconTileRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS04000000000000000001 /* IconTileRow.swift */; };
+		DS05000000000000000002 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS05000000000000000001 /* StatusBadge.swift */; };
+		DS06000000000000000002 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS06000000000000000001 /* EmptyStateView.swift */; };
+		DS07000000000000000002 /* Shimmer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS07000000000000000001 /* Shimmer.swift */; };
+		DS08000000000000000002 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS08000000000000000001 /* SkeletonRow.swift */; };
+		DS09000000000000000002 /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS09000000000000000001 /* Toast.swift */; };
+		DS10000000000000000002 /* BottomCTABar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS10000000000000000001 /* BottomCTABar.swift */; };
+		DS11000000000000000002 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS11000000000000000001 /* PrimaryButton.swift */; };
+		DS12000000000000000002 /* FormCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS12000000000000000001 /* FormCard.swift */; };
+		DS13000000000000000002 /* LabeledRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS13000000000000000001 /* LabeledRow.swift */; };
+		DS14000000000000000002 /* ChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS14000000000000000001 /* ChipRow.swift */; };
+		DS15000000000000000002 /* SubscriptionStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS15000000000000000001 /* SubscriptionStatusBanner.swift */; };
+		DS16000000000000000002 /* RoleBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS16000000000000000001 /* RoleBadge.swift */; };
+		DS17000000000000000002 /* Pills.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS17000000000000000001 /* Pills.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -158,6 +175,23 @@
 		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
 		TASKMOD000000000000000B1 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		TASKVIEW00000000000000B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
+		DS01000000000000000001 /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
+		DS02000000000000000001 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		DS03000000000000000001 /* IdentityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityCard.swift; sourceTree = "<group>"; };
+		DS04000000000000000001 /* IconTileRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconTileRow.swift; sourceTree = "<group>"; };
+		DS05000000000000000001 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		DS06000000000000000001 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		DS07000000000000000001 /* Shimmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shimmer.swift; sourceTree = "<group>"; };
+		DS08000000000000000001 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
+		DS09000000000000000001 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
+		DS10000000000000000001 /* BottomCTABar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomCTABar.swift; sourceTree = "<group>"; };
+		DS11000000000000000001 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		DS12000000000000000001 /* FormCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormCard.swift; sourceTree = "<group>"; };
+		DS13000000000000000001 /* LabeledRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabeledRow.swift; sourceTree = "<group>"; };
+		DS14000000000000000001 /* ChipRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipRow.swift; sourceTree = "<group>"; };
+		DS15000000000000000001 /* SubscriptionStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStatusBanner.swift; sourceTree = "<group>"; };
+		DS16000000000000000001 /* RoleBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleBadge.swift; sourceTree = "<group>"; };
+		DS17000000000000000001 /* Pills.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pills.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +219,7 @@
 				B8BE113C2F87AE28000BB5F0 /* Configuration.storekit */,
 				AA11000000000000000000B1 /* HogaresRDApp.swift */,
 				AA11000000000000000000B2 /* ContentView.swift */,
+				DS00000000000000000000A6 /* DesignSystem */,
 				AA11000000000000000000A3 /* Models */,
 				AA11000000000000000000A4 /* Services */,
 				AA11000000000000000000A5 /* Views */,
@@ -193,6 +228,30 @@
 				ENTITLE0000000000000001 /* HogaresRD.entitlements */,
 			);
 			path = HogaresRD;
+			sourceTree = "<group>";
+		};
+		DS00000000000000000000A6 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				DS01000000000000000001 /* Tokens.swift */,
+				DS02000000000000000001 /* Typography.swift */,
+				DS03000000000000000001 /* IdentityCard.swift */,
+				DS04000000000000000001 /* IconTileRow.swift */,
+				DS05000000000000000001 /* StatusBadge.swift */,
+				DS06000000000000000001 /* EmptyStateView.swift */,
+				DS07000000000000000001 /* Shimmer.swift */,
+				DS08000000000000000001 /* SkeletonRow.swift */,
+				DS09000000000000000001 /* Toast.swift */,
+				DS10000000000000000001 /* BottomCTABar.swift */,
+				DS11000000000000000001 /* PrimaryButton.swift */,
+				DS12000000000000000001 /* FormCard.swift */,
+				DS13000000000000000001 /* LabeledRow.swift */,
+				DS14000000000000000001 /* ChipRow.swift */,
+				DS15000000000000000001 /* SubscriptionStatusBanner.swift */,
+				DS16000000000000000001 /* RoleBadge.swift */,
+				DS17000000000000000001 /* Pills.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		AA11000000000000000000A2 /* Products */ = {
@@ -434,6 +493,23 @@
 				F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */,
 				COMPARE0000000000000002 /* ComparisonView.swift in Sources */,
+				DS01000000000000000002 /* Tokens.swift in Sources */,
+				DS02000000000000000002 /* Typography.swift in Sources */,
+				DS03000000000000000002 /* IdentityCard.swift in Sources */,
+				DS04000000000000000002 /* IconTileRow.swift in Sources */,
+				DS05000000000000000002 /* StatusBadge.swift in Sources */,
+				DS06000000000000000002 /* EmptyStateView.swift in Sources */,
+				DS07000000000000000002 /* Shimmer.swift in Sources */,
+				DS08000000000000000002 /* SkeletonRow.swift in Sources */,
+				DS09000000000000000002 /* Toast.swift in Sources */,
+				DS10000000000000000002 /* BottomCTABar.swift in Sources */,
+				DS11000000000000000002 /* PrimaryButton.swift in Sources */,
+				DS12000000000000000002 /* FormCard.swift in Sources */,
+				DS13000000000000000002 /* LabeledRow.swift in Sources */,
+				DS14000000000000000002 /* ChipRow.swift in Sources */,
+				DS15000000000000000002 /* SubscriptionStatusBanner.swift in Sources */,
+				DS16000000000000000002 /* RoleBadge.swift in Sources */,
+				DS17000000000000000002 /* Pills.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
