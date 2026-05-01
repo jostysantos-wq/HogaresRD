@@ -27,6 +27,15 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
 // ── Startup: fail fast if required secrets are missing ────────────
 (function checkEnv() {
   const required = ['JWT_SECRET', 'ADMIN_KEY'];
+  // ENCRYPTION_KEY is required in production. utils/encryption.js falls
+  // back to JWT_SECRET when ENCRYPTION_KEY is unset, which is fine for
+  // dev/test but a footgun in prod: rotating JWT_SECRET would orphan all
+  // encrypted PII (cedulas, monthly_income, employer_name) — they become
+  // permanently undecipherable. So in NODE_ENV=production we refuse to
+  // boot without an explicit ENCRYPTION_KEY.
+  if (process.env.NODE_ENV === 'production') {
+    required.push('ENCRYPTION_KEY');
+  }
   const missing  = required.filter(k => !process.env[k]);
   if (missing.length) {
     console.error(`\n❌  Missing required environment variables: ${missing.join(', ')}`);

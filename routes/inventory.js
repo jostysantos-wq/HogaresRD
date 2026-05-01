@@ -1,14 +1,12 @@
 const express    = require('express');
 const crypto     = require('crypto');
-const jwt        = require('jsonwebtoken');
 const store      = require('./store');
 const { userAuth } = require('./auth');
+const { verifyJwtAcceptingPrev } = require('../utils/jwt');
 
 const router = express.Router();
 
 const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
-const JWT_SECRET      = process.env.JWT_SECRET;
-const JWT_SECRET_PREV = process.env.JWT_SECRET_PREV || null;
 const COOKIE_NAME = 'hrdt';
 
 function uid() { return 'unit_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -44,13 +42,12 @@ function getOptionalUser(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
   const headerToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
   const token = cookieToken || headerToken;
-  if (!token || !JWT_SECRET) return null;
+  if (!token || !process.env.JWT_SECRET) return null;
   let payload;
   try {
-    payload = jwt.verify(token, JWT_SECRET);
+    payload = verifyJwtAcceptingPrev(token);
   } catch {
-    if (!JWT_SECRET_PREV) return null;
-    try { payload = jwt.verify(token, JWT_SECRET_PREV); } catch { return null; }
+    return null;
   }
   if (payload.jti && store.isTokenRevoked(payload.jti)) return null;
   return store.getUserById(payload.sub);

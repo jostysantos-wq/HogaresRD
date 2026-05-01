@@ -283,22 +283,11 @@ function isAdmin(req) {
   return req.user?.role === 'admin';
 }
 
-// JWT verify with rotation grace. Tries the current secret first; if
-// that fails and JWT_SECRET_PREV is configured, retries against the
-// previous secret. The standard userAuth flow goes through
-// routes/auth.js which already handles rotation — this helper is for
-// the few endpoints (track-token, withdraw via magic-link) that verify
-// JWTs directly without going through that middleware.
-function verifyJwtAcceptingPrev(token) {
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET);
-  } catch (err) {
-    if (process.env.JWT_SECRET_PREV) {
-      try { return jwt.verify(token, process.env.JWT_SECRET_PREV); } catch (_) { /* fall through */ }
-    }
-    throw err;
-  }
-}
+// JWT verify with rotation grace. Hoisted to utils/jwt.js so the same
+// rotation logic is shared with routes/inventory.js (and any future
+// direct-verify call site). routes/auth.js's `userAuth`/`verifyJWT`
+// remain the standard middleware path.
+const { verifyJwtAcceptingPrev } = require('../utils/jwt');
 
 // Strip server-side / broker-internal data from an application before
 // returning it to a buyer. Used for:
@@ -4358,6 +4347,12 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
   if (!Array.isArray(installments) || !installments.length)
     return res.status(400).json({ error: 'Se requiere al menos una cuota' });
 
+  // Currency whitelist (parity with /:id/payment/upload + per-installment
+  // upload). Default falls back to 'DOP' when the field is omitted.
+  if (currency && !VALID_CURRENCIES.includes(String(currency).trim().toUpperCase())) {
+    return res.status(400).json({ error: 'Moneda inválida (DOP o USD).' });
+  }
+
   // Validate installment amounts are positive
   for (const inst of installments) {
     if (!inst.amount || Number(inst.amount) <= 0)
@@ -4376,7 +4371,7 @@ router.post('/:id/payment-plan', userAuth, (req, res) => {
     id:             app.payment_plan?.id || uuid(),
     payment_method: payment_method || '',
     method_details: method_details || '',
-    currency:       currency || 'DOP',
+    currency:       (currency && String(currency).trim().toUpperCase()) || 'DOP',
     total_amount:   total_amount || null,
     notes:          notes || '',
     created_at:     app.payment_plan?.created_at || new Date().toISOString(),

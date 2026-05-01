@@ -370,16 +370,16 @@ router.post('/webhook', (req, res) => {
             const firstName = (user.name || '').split(' ')[0] || 'Agente';
             await mailer.sendMail({
               to: user.email,
-              subject: 'Tu suscripcion fue cancelada — HogaresRD',
+              subject: 'Tu suscripción fue cancelada — HogaresRD',
               department: 'ventas',
               html: et.layout({
                 title: `Hola ${et.esc(firstName)}, lamentamos verte ir`,
-                preheader: 'Lamentamos que te vayas. Tu suscripcion ha sido cancelada.',
+                preheader: 'Lamentamos que te vayas. Tu suscripción ha sido cancelada.',
                 body:
-                  et.p('Tu suscripcion ha sido cancelada. Tus propiedades y datos se mantendran en nuestra plataforma por 90 dias.')
-                  + et.p('Si cambias de opinion, puedes reactivar tu cuenta en cualquier momento con un <strong>30% de descuento por 3 meses</strong>.')
+                  et.p('Tu suscripción ha sido cancelada. Tus propiedades y datos se mantendrán en nuestra plataforma por 90 días.')
+                  + et.p('Si cambias de opinión, puedes reactivar tu cuenta en cualquier momento con un <strong>30% de descuento por 3 meses</strong>.')
                   + et.button('Reactivar mi cuenta', `${BASE_URL}/subscribe`)
-                  + et.small('Esta oferta es valida por 14 dias.'),
+                  + et.small('Esta oferta es válida por 14 días.'),
               }),
             });
           } catch (e) {
