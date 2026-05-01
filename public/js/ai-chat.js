@@ -13,15 +13,19 @@
 (function () {
   'use strict';
 
-  const ICON_BOT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.4L18 8l-4.4 1.6L12 14l-1.6-4.4L6 8l4.4-1.6L12 2zm6 10l1 2.5 2.5 1-2.5 1L18 19l-1-2.5L14.5 15.5l2.5-1L18 12zm-12 0l1 2.5L9.5 15.5 7 16.5 6 19l-1-2.5L2.5 15.5l2.5-1L6 12z"/></svg>';
+  // Sparkle icon — matches the legacy broker.html chat avatar
+  const ICON_BOT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.43H21l-5.47 3.97 2.09 6.43L12 14.87l-5.62 3.96 2.09-6.43L3 8.43h6.91z"/></svg>';
   const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
-  const ICON_SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>';
+  const ICON_SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+  // Anthropic "A" mark — for the Powered by Claude badge
+  const ICON_ANTHROPIC = '<svg viewBox="0 0 32 32" fill="currentColor"><path d="M22.41 6H18.4L16 12.33 13.6 6H9.59L14.77 19.5H17.23L22.41 6Z"/><path d="M9 21.5H23V24H9Z"/></svg>';
 
+  // Original suggestion chips from broker.html chat
   const SUGGESTIONS = [
-    '¿Cómo aumento mis cierres este mes?',
-    'Resumen de mi pipeline',
-    '¿Qué documentos pido en una venta?',
-    'Estrategia de seguimiento de leads',
+    '¿Qué hacer si el cliente no envía documentos?',
+    'Consejos para cerrar más ventas',
+    '¿Cómo manejar objeciones de precio?',
+    'Explícame el proceso de aprobación bancaria',
   ];
 
   const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'];
@@ -57,9 +61,10 @@
       <div class="ai-chat-head">
         <div class="ai-chat-avatar">${ICON_BOT}</div>
         <div class="ai-chat-id">
-          <span class="ai-chat-title">Asistente IA</span>
-          <span class="ai-chat-sub">Pregúntale sobre tus aplicaciones, ventas o el mercado</span>
+          <span class="ai-chat-title">Asistente HogaresRD</span>
+          <span class="ai-chat-status"><span class="ai-chat-status-dot"></span>En línea</span>
         </div>
+        <span class="ai-chat-powered" aria-label="Powered by Claude">${ICON_ANTHROPIC}Powered by Claude</span>
         <button class="ai-chat-close" type="button" aria-label="Cerrar">${ICON_CLOSE}</button>
       </div>
       <div class="ai-chat-msgs" id="aiChatMsgs"></div>
@@ -70,6 +75,9 @@
         <textarea id="aiChatInput" rows="1" placeholder="Escribe tu pregunta…" maxlength="2000"></textarea>
         <button class="ai-chat-send" type="submit" aria-label="Enviar">${ICON_SEND}</button>
       </form>
+      <div class="ai-chat-attrib">
+        ${ICON_ANTHROPIC} Powered by Claude · Las respuestas son generadas por IA, verifica información importante
+      </div>
     `;
 
     document.body.appendChild(overlay);
@@ -158,9 +166,10 @@
     if (state.seedSent) return;
     state.seedSent = true;
     const name = state.user?.name?.split(' ')[0] || '';
-    const greeting = name
-      ? `¡Hola, ${name}! 👋 Soy tu asistente IA de HogaresRD. ¿En qué te puedo ayudar hoy?`
-      : '¡Hola! 👋 Soy tu asistente IA de HogaresRD. Pregúntame sobre tus aplicaciones, estrategias de venta o el mercado dominicano.';
+    // Match the legacy broker.html greeting (line 3004), with a
+    // personalized salutation when we know the user's first name.
+    const salutation = name ? `¡Hola, ${name}! 👋` : '¡Hola! 👋';
+    const greeting = `${salutation} Soy tu asistente IA de HogaresRD. Puedo ayudarte con tus aplicaciones, estrategias de venta, manejo de documentos y el mercado inmobiliario dominicano.\n\n¿En qué te puedo ayudar hoy?`;
     appendBot(greeting);
   }
 
