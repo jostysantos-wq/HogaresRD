@@ -1,12 +1,5 @@
 import SwiftUI
 
-// TODO(deprecated): delete once /api/notifications inbox surface is
-// replaced by per-screen badges. The struct below is no longer reachable
-// from the tab bar (the dedicated Alertas tab was removed in Wave 6-C),
-// but `NotificationSettingsView` and `APIService.AppNotification` still
-// power the push-preferences screen and live push handling — those have
-// to be migrated before the inbox UI here can go.
-
 struct NotificationsView: View {
     @EnvironmentObject var api:   APIService
     @EnvironmentObject var saved: SavedStore
@@ -54,10 +47,24 @@ struct NotificationsView: View {
                 .disabled(markingAll)
             }
         }
-        // ProfileMenuView was deleted in Wave 8-B (it duplicated
-        // ProfileTabView with a stale English/Spanish mix). The avatar
-        // shortcut is no longer needed because this whole NotificationsView
-        // surface is queued for replacement by per-screen badges.
+        ToolbarItem(placement: .navigationBarTrailing) {
+            NavigationLink {
+                ProfileMenuView()
+            } label: {
+                if let user = api.currentUser {
+                    ZStack {
+                        Circle().fill(Color.rdBlue).frame(width: 32, height: 32)
+                        Text(user.initials)
+                            .font(.caption2).bold()
+                            .foregroundStyle(.white)
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.rdBlue)
+                }
+            }
+        }
     }
 
     // MARK: - Content
@@ -82,7 +89,7 @@ struct NotificationsView: View {
                 Section {
                     Label(err, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                 }
             }
             ForEach(items) { item in
@@ -111,7 +118,7 @@ struct NotificationsView: View {
             ZStack {
                 Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 110, height: 110)
                 Image(systemName: "bell.circle")
-                    .font(.largeTitle)
+                    .font(.system(size: 52))
                     .foregroundStyle(Color.rdBlue)
             }
             VStack(spacing: 8) {
@@ -127,11 +134,25 @@ struct NotificationsView: View {
     }
 
     private var emptyInboxPlaceholder: some View {
-        EmptyStateView.calm(
-            systemImage: "bell.slash.fill",
-            title: "Sin notificaciones",
-            description: "Cuando recibas mensajes, asignaciones de leads u otras alertas, aparecerán aquí."
-        )
+        VStack(spacing: 18) {
+            Spacer()
+            ZStack {
+                Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 96, height: 96)
+                Image(systemName: "bell.slash.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Color.rdBlue.opacity(0.6))
+            }
+            VStack(spacing: 6) {
+                Text("Sin notificaciones")
+                    .font(.headline)
+                Text("Cuando recibas mensajes, asignaciones de leads u otras alertas, aparecerán aquí.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            Spacer()
+        }
     }
 
     // MARK: - Actions
@@ -268,8 +289,8 @@ private struct NotificationRow: View {
         switch notification.type {
         case "payment_approved", "task_approved":   return .rdGreen
         case "task_rejected", "lead_cascade":       return .rdRed
-        case "task_pending_review":                 return .rdOrange
-        case "new_listing", "saved_search_match":   return .rdPurple
+        case "task_pending_review":                 return .orange
+        case "new_listing", "saved_search_match":   return .purple
         default:                                    return .rdBlue
         }
     }
@@ -294,6 +315,247 @@ private struct NotificationRow: View {
         fmt.dateStyle = .medium
         fmt.timeStyle = .none
         return fmt.string(from: date)
+    }
+}
+
+// MARK: - Profile Menu (full page, pushes from right)
+
+struct ProfileMenuView: View {
+    @EnvironmentObject var api:   APIService
+    @EnvironmentObject var saved: SavedStore
+    @State private var authSheet: AuthView.Mode? = nil
+
+    var body: some View {
+        List {
+            // ── Small profile header ──
+            Section {
+                if let user = api.currentUser {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(colors: [Color.rdBlue, Color.rdBlue.opacity(0.7)],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(width: 52, height: 52)
+                            Text(user.initials)
+                                .font(.title3).bold()
+                                .foregroundStyle(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(user.name)
+                                .font(.headline)
+                            Text(user.email)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if user.isInmobiliaria {
+                                Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+                            } else if user.isAgency {
+                                Label("Agente / Broker", systemImage: "person.badge.key.fill")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(Color.rdBlue)
+                            } else {
+                                Label("Cliente", systemImage: "person.fill")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(Color.rdGreen)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("HogaresRD")
+                            .font(.headline)
+                        Text("Inicia sesión para acceder a todas las funciones")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 10) {
+                            Button {
+                                authSheet = .welcome
+                            } label: {
+                                Text("Iniciar sesión")
+                                    .font(.caption).bold()
+                                    .padding(.horizontal, 16).padding(.vertical, 8)
+                                    .background(Color.rdBlue)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                            }
+                            Button {
+                                authSheet = .pickRole
+                            } label: {
+                                Text("Crear cuenta")
+                                    .font(.caption).bold()
+                                    .padding(.horizontal, 16).padding(.vertical, 8)
+                                    .background(Color.rdRed.opacity(0.1))
+                                    .foregroundStyle(Color.rdRed)
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(Color.rdRed.opacity(0.3), lineWidth: 1))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            // ── Account / Notifications / App ──
+            Section {
+                NavigationLink {
+                    ProfileView()
+                } label: {
+                    Label("Account", systemImage: "person.fill")
+                }
+                NavigationLink {
+                    NotificationSettingsView()
+                } label: {
+                    Label("Notifications", systemImage: "bell.fill")
+                }
+                NavigationLink {
+                    AppSettingsView()
+                } label: {
+                    Label("App", systemImage: "gearshape.fill")
+                }
+                // Saved Homes — only for clients (not brokers/inmobiliarias)
+                if !(api.currentUser?.isAgency ?? false) {
+                    NavigationLink {
+                        SavedListingsView()
+                    } label: {
+                        HStack {
+                            Label("Saved Homes", systemImage: "heart.fill")
+                            Spacer()
+                            if !saved.savedIDs.isEmpty {
+                                Text("\(saved.savedIDs.count)")
+                                    .font(.caption2).bold()
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 7).padding(.vertical, 3)
+                                    .background(Color.rdRed)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Role-specific tools ──
+            if let user = api.currentUser, user.isAgency {
+                // Broker / Inmobiliaria tools
+                Section("Herramientas de Agente") {
+                    NavigationLink {
+                        if user.isTeamLead {
+                            InmobiliariaDashboardView().environmentObject(api)
+                        } else {
+                            BrokerDashboardView().environmentObject(api)
+                        }
+                    } label: {
+                        Label("Dashboard", systemImage: "chart.bar.fill")
+                    }
+                    NavigationLink {
+                        ChatIAView().environmentObject(api)
+                    } label: {
+                        Label("Chat IA", systemImage: "brain.head.profile.fill")
+                    }
+                    NavigationLink {
+                        ConversationsView().environmentObject(api)
+                    } label: {
+                        Label("Mensajes", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    NavigationLink {
+                        AgencyDashboardView().environmentObject(api)
+                    } label: {
+                        Label("Mi portafolio", systemImage: "briefcase.fill")
+                    }
+                    NavigationLink {
+                        ApplicationsView()
+                    } label: {
+                        Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
+                    }
+                }
+
+                // Inmobiliaria-only team management
+                if user.isInmobiliaria {
+                    Section("Gestión de Equipo") {
+                        NavigationLink {
+                            InmobiliariaTeamListView().environmentObject(api)
+                        } label: {
+                            Label("Mis agentes", systemImage: "person.2.fill")
+                        }
+                        NavigationLink {
+                            InmobiliariaRequestsListView().environmentObject(api)
+                        } label: {
+                            Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
+                        }
+                        NavigationLink {
+                            InmobiliariaPerformanceListView().environmentObject(api)
+                        } label: {
+                            Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                    }
+                }
+            } else {
+                // Client / Renter tools
+                Section("Herramientas de Cliente") {
+                    NavigationLink {
+                        ApplicationsView()
+                    } label: {
+                        Label("Mis aplicaciones", systemImage: "doc.text.fill")
+                    }
+                    NavigationLink {
+                        ConnectorsView()
+                    } label: {
+                        Label("Conectores", systemImage: "link")
+                    }
+                }
+            }
+
+            // ── Support ──
+            Section("Support") {
+                Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
+                    HStack {
+                        Label("Help", systemImage: "questionmark.circle.fill")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Link(destination: URL(string: "https://hogaresrd.com/terminos")!) {
+                    HStack {
+                        Label("Terms of Use", systemImage: "doc.text.fill")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Link(destination: URL(string: "https://hogaresrd.com/privacidad")!) {
+                    HStack {
+                        Label("Privacy Notice", systemImage: "lock.shield.fill")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
+            // ── Logout ──
+            if api.currentUser != nil {
+                Section {
+                    Button(role: .destructive) {
+                        api.logout()
+                    } label: {
+                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(Color.rdRed)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $authSheet) { mode in
+            AuthView(initialMode: mode)
+                .environmentObject(api)
+                .id(mode)
+        }
     }
 }
 
@@ -404,7 +666,7 @@ struct NotificationSettingsView: View {
 
             if let err = errorMsg {
                 Label(err, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption).foregroundStyle(Color.rdRed)
+                    .font(.caption).foregroundStyle(.red)
             }
         }
     }
@@ -413,8 +675,8 @@ struct NotificationSettingsView: View {
     private var pushDeniedHint: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill").foregroundStyle(Color.rdOrange).font(.caption)
-                Text("Las notificaciones push no están habilitadas en los ajustes del sistema.")
+                Image(systemName: "info.circle.fill").foregroundStyle(.orange).font(.caption)
+                Text("Las notificaciones push no estan habilitadas en los ajustes del sistema.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Button {
@@ -599,6 +861,31 @@ struct AppSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Apariencia")
+        .navigationTitle("App")
+    }
+}
+
+struct ConnectorsView: View {
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(Color.rdGreen.opacity(0.1)).frame(width: 44, height: 44)
+                        Image(systemName: "link.badge.plus")
+                            .foregroundStyle(Color.rdGreen)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Conecta tus servicios")
+                            .font(.subheadline).bold()
+                        Text("Vincula cuentas bancarias, verificación de identidad y más para agilizar tus aplicaciones.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Connectors")
     }
 }

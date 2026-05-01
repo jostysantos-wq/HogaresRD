@@ -10,13 +10,79 @@ private struct ScrollOffsetKey: PreferenceKey {
     }
 }
 
-// MARK: - Design Tokens (Wave 8-A)
-//
-// This file used to declare its own private `LD` token enum. Wave 8-A
-// shipped a global editorial palette (`Color.rdInk`, `Color.rdSurface`,
-// `Color.rdLine`, `Color.rdGreen`, …) and the body of the view now
-// reaches for those tokens directly. The legacy enum has been retired
-// — keep all new references on the `Color.rd*` API.
+// MARK: - Design Tokens (light + dark)
+
+/// Listing-detail palette. Mirrors the editorial dark prototype but adapts
+/// to light mode via UITraitCollection-aware UIColor closures.
+private enum LD {
+    static let bg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x0E/255, green: 0x12/255, blue: 0x19/255, alpha: 1)
+            : UIColor.systemBackground
+    })
+    static let surface = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x16/255, green: 0x1B/255, blue: 0x25/255, alpha: 1)
+            : UIColor.secondarySystemBackground
+    })
+    static let surfaceDeep = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x1E/255, green: 0x25/255, blue: 0x31/255, alpha: 1)
+            : UIColor.tertiarySystemBackground
+    })
+    static let line = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.14)
+            : UIColor(white: 0, alpha: 0.10)
+    })
+    static let lineSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.08)
+            : UIColor(white: 0, alpha: 0.06)
+    })
+    static let trayBg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.04)
+            : UIColor(white: 0, alpha: 0.025)
+    })
+    static let chipBg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.06)
+            : UIColor(white: 0, alpha: 0.04)
+    })
+    static let textSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0xC2/255, green: 0xC8/255, blue: 0xD2/255, alpha: 1)
+            : UIColor.label.withAlphaComponent(0.75)
+    })
+    static let textMute = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x97/255, green: 0xA0/255, blue: 0xAF/255, alpha: 1)
+            : UIColor.secondaryLabel
+    })
+    /// Vivid accent used by the design (matches #006AFF). Keeps the same
+    /// rendered weight against both light and dark surfaces.
+    static let brand = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x4D/255, green: 0x9E/255, blue: 0xFF/255, alpha: 1)
+            : UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 1)
+    })
+    static let brandSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 0.16)
+            : UIColor(red: 0x00/255, green: 0x6A/255, blue: 0xFF/255, alpha: 0.10)
+    })
+    static let green = Color(red: 0x2B/255, green: 0xD2/255, blue: 0x7A/255)
+    static let red   = Color(red: 0xF2/255, green: 0x51/255, blue: 0x51/255)
+    static let amber = Color(red: 0xF5/255, green: 0xB5/255, blue: 0x47/255)
+    /// Card sits inverted vs page bg — white in dark, black in light.
+    static let primaryCTABg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? .white : UIColor(white: 0.06, alpha: 1)
+    })
+    static let primaryCTAFg = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(red: 0x0E/255, green: 0x12/255, blue: 0x19/255, alpha: 1) : .white
+    })
+}
 
 struct ListingDetailView: View {
     let id: String
@@ -86,16 +152,11 @@ struct ListingDetailView: View {
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showApply) {
-            if let l = listing {
-                LeadApplicationView(listing: l)
-                    .presentationDragIndicator(.visible)
-            }
+            if let l = listing { LeadApplicationView(listing: l) }
         }
         .sheet(isPresented: $showContactAgent) {
             if let l = listing {
-                ContactAgentSheet(listing: l)
-                    .environmentObject(APIService.shared)
-                    .presentationDragIndicator(.visible)
+                ContactAgentSheet(listing: l).environmentObject(APIService.shared)
             }
         }
         .fullScreenCover(isPresented: $showFullGallery) {
@@ -105,14 +166,12 @@ struct ListingDetailView: View {
             if let l = listing, let brokerId = l.agencies?.first(where: { $0.userId != nil })?.userId {
                 TourBookingSheet(listing: l, brokerId: brokerId)
                     .environmentObject(APIService.shared)
-                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showReport) {
             if let l = listing {
                 ReportView(reportType: .listing, targetId: l.id, targetName: l.title)
                     .environmentObject(APIService.shared)
-                    .presentationDragIndicator(.visible)
             }
         }
         .task {
@@ -132,7 +191,7 @@ struct ListingDetailView: View {
         ZStack(alignment: .top) {
             // Page background — adapts to dark/light. The hero image still
             // covers the top portion; this bg only shows once you scroll past.
-            Color.rdSurface.ignoresSafeArea()
+            LD.bg.ignoresSafeArea()
 
             // Main scroll with images INSIDE (not behind)
             ScrollView(.vertical, showsIndicators: false) {
@@ -238,13 +297,9 @@ struct ListingDetailView: View {
                             cornerRadii: .init(topLeading: 22, bottomLeading: 0, bottomTrailing: 0, topTrailing: 22),
                             style: .continuous
                         )
-                        .fill(Color.rdSurface)
+                        .fill(LD.bg)
                     )
-                    // Wave 8-D Pattern 4: cream summary card overlaps the
-                    // hero by 24pt (the design-system spec). The body uses
-                    // `Color.rdSurface` (cream in light, charcoal in dark)
-                    // which makes the lifted strip read as a card.
-                    .offset(y: -24)
+                    .offset(y: -22) // lift the body over the hero
                 }
             }
             .coordinateSpace(name: "listingScroll")
@@ -278,23 +333,8 @@ struct ListingDetailView: View {
     /// Horizontal swipeable image gallery — tap to open full-screen.
     /// Uses TabView with page style for smooth horizontal swiping
     /// without conflicting with the main vertical ScrollView.
-    ///
-    /// Wave 8-D adds a stretchy-parallax effect: when the user pulls the
-    /// scroll view DOWN past the top, the hero scales up and the image
-    /// stretches to fill the new space. When the user scrolls UP past the
-    /// hero, the image parallaxes at ~70% of the scroll rate so the body
-    /// content visually overtakes it. The math runs off `scrollOffset`
-    /// (already wired via `ScrollOffsetKey`) so we don't allocate a fresh
-    /// GeometryReader per re-render.
     @ViewBuilder
     private func heroImages(_ l: Listing) -> some View {
-        // Pull-down stretch (positive scroll offset) → grow the hero.
-        let stretch: CGFloat = max(0, scrollOffset)
-        // Scroll-up parallax (negative offset) → push the hero up at 30%
-        // of the scroll rate so it lags behind the body.
-        let parallax: CGFloat = scrollOffset < 0 ? -scrollOffset * 0.3 : 0
-        let scale: CGFloat = stretch > 0 ? 1 + (stretch / heroHeight) : 1
-
         ZStack(alignment: .bottom) {
             Group {
                 if !l.images.isEmpty {
@@ -302,7 +342,7 @@ struct ListingDetailView: View {
                         ForEach(Array(l.images.enumerated()), id: \.offset) { i, img in
                             let url: URL? = img.hasPrefix("http") ? URL(string: img) : URL(string: APIService.baseURL + img)
                             ZStack {
-                                Color.rdInk.opacity(0.85)
+                                Color(red: 0x2a/255, green: 0x2f/255, blue: 0x3a/255)
                                 CachedAsyncImage(url: url) { phase in
                                     switch phase {
                                     case .success(let image):
@@ -311,7 +351,7 @@ struct ListingDetailView: View {
                                             .scaledToFill()
                                     default:
                                         Image(systemName: "photo")
-                                            .font(.title)
+                                            .font(.system(size: 36))
                                             .foregroundStyle(.white.opacity(0.4))
                                     }
                                 }
@@ -329,10 +369,10 @@ struct ListingDetailView: View {
                     .tabViewStyle(.page(indexDisplayMode: .never))
                 } else {
                     Rectangle()
-                        .fill(Color.rdInk.opacity(0.85))
+                        .fill(Color(red: 0x2a/255, green: 0x2f/255, blue: 0x3a/255))
                         .overlay(
                             Image(systemName: "house.fill")
-                                .font(.largeTitle)
+                                .font(.system(size: 50))
                                 .foregroundStyle(.white.opacity(0.35))
                         )
                 }
@@ -344,19 +384,17 @@ struct ListingDetailView: View {
                     .init(color: .black.opacity(0.45), location: 0.00),
                     .init(color: .black.opacity(0.00), location: 0.28),
                     .init(color: .black.opacity(0.15), location: 0.60),
-                    .init(color: Color.rdSurface.opacity(0.85),  location: 0.88),
-                    .init(color: Color.rdSurface,                location: 1.00),
+                    .init(color: LD.bg.opacity(0.85),  location: 0.88),
+                    .init(color: LD.bg,                location: 1.00),
                 ],
                 startPoint: .top, endPoint: .bottom
             )
             .allowsHitTesting(false)
 
-            // Hero bottom: 3D-tour play button (left) + page-indicator pill (right)
+            // Hero bottom: 3D-tour play button (left) + photo counter (right)
             heroBottomBar(l)
         }
-        .frame(height: heroHeight + stretch)
-        .scaleEffect(scale, anchor: .top)
-        .offset(y: -parallax)
+        .frame(height: heroHeight)
         .clipped()
     }
 
@@ -370,7 +408,7 @@ struct ListingDetailView: View {
                 showFullGallery = true
             } label: {
                 Image(systemName: "play.fill")
-                    .font(.subheadline.weight(.bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 46, height: 46)
                     .background(.ultraThinMaterial.opacity(0.6), in: Circle())
@@ -379,25 +417,23 @@ struct ListingDetailView: View {
                     )
                     .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
             }
-            .accessibilityLabel("Ver galería en pantalla completa")
 
             Spacer()
 
-            // Page-indicator pill (Wave 8-D, Pattern 3): replaces the
-            // legacy dot-row with a monospaced "3 / 18" inside an
-            // ultra-thin material capsule. Driven by the same TabView
-            // selection, so the count tracks swipes 1-for-1.
+            // Photo counter
             if !l.images.isEmpty {
-                Text("\(imageIndex + 1) / \(l.images.count)")
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(height: 32)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
-                    .lineLimit(1).fixedSize()
-                    .accessibilityLabel("Foto \(imageIndex + 1) de \(l.images.count)")
+                HStack(spacing: 6) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("\(imageIndex + 1) / \(l.images.count)")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(height: 36)
+                .background(.ultraThinMaterial.opacity(0.65), in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .lineLimit(1).fixedSize()
             }
         }
         .padding(.horizontal, 16)
@@ -409,7 +445,7 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func heroOverlayBar(_ l: Listing) -> some View {
         HStack {
-            glassButton(systemImage: "chevron.left", a11yLabel: "Volver") { dismiss() }
+            glassButton(systemImage: "chevron.left") { dismiss() }
 
             Spacer()
 
@@ -417,8 +453,8 @@ struct ListingDetailView: View {
                 // Save / heart — flips to a solid white pill with red heart when saved
                 Button { saved.toggle(l.id) } label: {
                     Image(systemName: saved.isSaved(l.id) ? "heart.fill" : "heart")
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(saved.isSaved(l.id) ? Color.rdRed : .white)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(saved.isSaved(l.id) ? LD.red : .white)
                         .frame(width: 42, height: 42)
                         .background(
                             saved.isSaved(l.id)
@@ -429,10 +465,9 @@ struct ListingDetailView: View {
                         .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
                         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                 }
-                .accessibilityLabel(saved.isSaved(l.id) ? "Quitar de favoritos" : "Guardar en favoritos")
 
-                glassButton(systemImage: "square.and.arrow.up", a11yLabel: "Compartir") { shareListing(l) }
-                glassButton(systemImage: "ellipsis", a11yLabel: "Más opciones") { showReport = true }
+                glassButton(systemImage: "square.and.arrow.up") { shareListing(l) }
+                glassButton(systemImage: "ellipsis") { showReport = true }
             }
         }
         .padding(.horizontal, 16)
@@ -441,17 +476,16 @@ struct ListingDetailView: View {
 
     /// Translucent round button used in the hero overlay.
     @ViewBuilder
-    private func glassButton(systemImage: String, a11yLabel: String, action: @escaping () -> Void) -> some View {
+    private func glassButton(systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 42, height: 42)
                 .background(.ultraThinMaterial.opacity(0.55), in: Circle())
                 .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
         }
-        .accessibilityLabel(a11yLabel)
     }
 
     // MARK: - Quick Stats — outlined pill row + expand button
@@ -473,27 +507,26 @@ struct ListingDetailView: View {
                 showFullGallery = true
             } label: {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rdInk)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .frame(width: 40, height: 40)
-                    .overlay(Circle().strokeBorder(Color.rdLine, lineWidth: 1))
+                    .overlay(Circle().strokeBorder(LD.line, lineWidth: 1))
             }
-            .accessibilityLabel("Ver todas las fotos")
         }
     }
 
     private func statPill(systemImage: String, text: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.footnote)
-                .foregroundStyle(Color.rdInkSoft)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(LD.textSoft)
             Text(text)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.rdInk)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
         }
         .lineLimit(1)
         .frame(maxWidth: .infinity, minHeight: 40)
-        .overlay(Capsule().strokeBorder(Color.rdLine, lineWidth: 1))
+        .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
     }
 
     // MARK: - Sticky CTA dock
@@ -505,18 +538,18 @@ struct ListingDetailView: View {
 
         ZStack(alignment: .bottom) {
             // Backdrop — a tiny top-fade (so the bar doesn't have a
-            // hard horizontal line) followed by a solid surface slab
+            // hard horizontal line) followed by a solid page-bg slab
             // that extends THROUGH the home-indicator safe area so
             // scroll content can't peek out below the buttons.
             // Earlier versions stopped at the safe-area top, leaving
             // a sliver of meta-grid chips visible underneath.
             VStack(spacing: 0) {
                 LinearGradient(
-                    colors: [Color.rdSurface.opacity(0.0), Color.rdSurface],
+                    colors: [LD.bg.opacity(0.0), LD.bg.opacity(1.0)],
                     startPoint: .top, endPoint: .bottom
                 )
                 .frame(height: 22)
-                Rectangle().fill(Color.rdSurface)
+                Rectangle().fill(LD.bg)
             }
             .frame(height: 130)
             .ignoresSafeArea(edges: .bottom)
@@ -526,24 +559,24 @@ struct ListingDetailView: View {
                 if isOwner {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.seal.fill")
-                            .foregroundStyle(Color.rdGreen)
+                            .foregroundStyle(LD.green)
                         Text("Tu propiedad")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.rdGreen)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(LD.green)
                     }
                     .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(Color.rdGreen.opacity(0.10), in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.rdGreen.opacity(0.25), lineWidth: 1))
+                    .background(LD.green.opacity(0.10), in: Capsule())
+                    .overlay(Capsule().strokeBorder(LD.green.opacity(0.25), lineWidth: 1))
                 } else {
                     Button {
                         showContactAgent = true
                     } label: {
                         Text("Consultar")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(Color.rdInk)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(Color.rdSurfaceMuted, in: Capsule())
-                            .overlay(Capsule().strokeBorder(Color.rdLine, lineWidth: 1))
+                            .background(LD.chipBg, in: Capsule())
+                            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
                     }
 
                     Button {
@@ -551,10 +584,10 @@ struct ListingDetailView: View {
                         else { showApply = true }
                     } label: {
                         Text(hasBroker ? "Agendar visita" : "Aplicar")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(Color.rdSurface)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(LD.primaryCTAFg)
                             .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(Color.rdInk, in: Capsule())
+                            .background(LD.primaryCTABg, in: Capsule())
                             .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                     }
                 }
@@ -586,14 +619,14 @@ struct ListingDetailView: View {
                                 case .success(let img):
                                     img.resizable().scaledToFill()
                                 default:
-                                    Color.rdSurfaceMuted
+                                    LD.surfaceDeep
                                 }
                             }
                             if isLast {
                                 ZStack {
                                     Color.black.opacity(0.55)
                                     Text("+\(extra)")
-                                        .font(.callout.bold())
+                                        .font(.system(size: 16, weight: .bold))
                                         .foregroundStyle(.white)
                                 }
                             }
@@ -614,10 +647,10 @@ struct ListingDetailView: View {
     private func statusRow(_ l: Listing) -> some View {
         let dotColor: Color = {
             switch l.type {
-            case "venta":    return Color.rdGreen
-            case "alquiler": return Color.rdInk
-            case "proyecto": return Color.rdOrange
-            default:         return Color.rdGreen
+            case "venta":    return LD.green
+            case "alquiler": return LD.brand
+            case "proyecto": return LD.amber
+            default:         return LD.green
             }
         }()
         HStack {
@@ -627,19 +660,29 @@ struct ListingDetailView: View {
                     .frame(width: 7, height: 7)
                     .overlay(Circle().fill(dotColor.opacity(0.18)).frame(width: 13, height: 13))
                 Text(l.typeLabel)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rdInk)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
             }
             .padding(.horizontal, 12)
             .frame(height: 30)
-            .overlay(Capsule().strokeBorder(Color.rdLine, lineWidth: 1))
+            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
 
             Spacer()
 
             if let stage = l.project_stage, !stage.isEmpty {
-                DSStatusBadge(label: stage, tint: .rdInk)
+                Text(stage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.brand)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .overlay(Capsule().strokeBorder(LD.brand.opacity(0.4), lineWidth: 1))
             } else if let cond = l.condition, !cond.isEmpty {
-                DSStatusBadge(label: cond, tint: .rdInkSoft)
+                Text(cond)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.textSoft)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
             }
         }
     }
@@ -670,27 +713,25 @@ struct ListingDetailView: View {
         HStack(alignment: .lastTextBaseline, spacing: 12) {
             HStack(alignment: .lastTextBaseline, spacing: 4) {
                 Text("US$")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.rdMuted)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(LD.textMute)
                     .baselineOffset(2)
-                // Hero price keeps a hand-tuned size — design tokens
-                // intentionally allow this exception for the headline.
                 Text(amount.isEmpty ? formatted : String(amount))
                     .font(.system(size: 36, weight: .bold))
                     .kerning(-0.5)
-                    .foregroundStyle(Color.rdInk)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
 
             if let m = monthlyEst {
                 (Text("Est. ")
-                    .foregroundStyle(Color.rdMuted)
+                    .foregroundStyle(LD.textMute)
                  + Text(formatCurrency(m))
-                    .foregroundStyle(Color.rdInkSoft).fontWeight(.semibold)
+                    .foregroundStyle(LD.textSoft).fontWeight(.semibold)
                  + Text("/mes")
-                    .foregroundStyle(Color.rdMuted))
-                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(LD.textMute))
+                    .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -725,11 +766,11 @@ struct ListingDetailView: View {
         if let line {
             HStack(spacing: 8) {
                 Image(systemName: "mappin.and.ellipse")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rdMuted)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(LD.textMute)
                 Text(line)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.rdInkSoft)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(LD.textSoft)
                     .lineLimit(2)
                 Spacer(minLength: 0)
             }
@@ -782,17 +823,17 @@ struct ListingDetailView: View {
     private func metaCard(icon: String, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.footnote)
-                .foregroundStyle(Color.rdInkSoft)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(LD.textSoft)
                 .frame(width: 36, height: 36)
-                .overlay(Circle().strokeBorder(Color.rdLine, lineWidth: 1))
+                .overlay(Circle().strokeBorder(LD.line, lineWidth: 1))
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.rdMuted)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(LD.textMute)
                 Text(value)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rdInk)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -800,7 +841,7 @@ struct ListingDetailView: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 78)
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.rdLine, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(LD.line, lineWidth: 1))
     }
 
     // MARK: - Description section
@@ -811,16 +852,16 @@ struct ListingDetailView: View {
             sectionHeader("Descripción")
             VStack(alignment: .leading, spacing: 8) {
                 Text(desc)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.rdInkSoft)
+                    .font(.system(size: 14.5))
+                    .foregroundStyle(LD.textSoft)
                     .lineSpacing(2.5)
                     .lineLimit(descriptionExpanded ? nil : 4)
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) { descriptionExpanded.toggle() }
                 } label: {
                     Text(descriptionExpanded ? "Leer menos" : "Leer más")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.rdInk)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LD.brand)
                 }
             }
         }
@@ -837,19 +878,19 @@ struct ListingDetailView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(visible, id: \.self) { a in
                         Text(a)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.rdInk)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, minHeight: 42)
-                            .background(Color.rdSurfaceMuted, in: Capsule())
-                            .overlay(Capsule().strokeBorder(Color.rdLine, lineWidth: 1))
+                            .background(LD.chipBg, in: Capsule())
+                            .overlay(Capsule().strokeBorder(LD.line, lineWidth: 1))
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                     }
                 }
             }
             .padding(14)
-            .background(Color.rdSurfaceMuted.opacity(0.5), in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.rdLine.opacity(0.6), lineWidth: 1))
+            .background(LD.trayBg, in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(LD.lineSoft, lineWidth: 1))
         }
     }
 
@@ -866,30 +907,30 @@ struct ListingDetailView: View {
             VStack(spacing: 6) {
                 ForEach(availableUnits) { unit in
                     HStack(spacing: 8) {
-                        Circle().fill(Color.rdGreen).frame(width: 8, height: 8)
+                        Circle().fill(LD.green).frame(width: 8, height: 8)
                         Text(unit.label).font(.caption).bold()
                         if let type = unit.type, !type.isEmpty {
                             Text(type)
                                 .font(.caption2)
-                                .foregroundStyle(Color.rdMuted)
+                                .foregroundStyle(LD.textMute)
                         }
                         Spacer()
                         Text("Disponible")
                             .font(.caption2)
-                            .foregroundStyle(Color.rdGreen)
+                            .foregroundStyle(LD.green)
                     }
                 }
                 if totalAvailable > 6 {
                     Text("+ \(totalAvailable - 6) unidades más disponibles")
                         .font(.caption2)
-                        .foregroundStyle(Color.rdMuted)
+                        .foregroundStyle(LD.textMute)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 4)
                 }
             }
             .padding(12)
-            .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.rdLine.opacity(0.6), lineWidth: 1))
+            .background(LD.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(LD.lineSoft, lineWidth: 1))
         }
     }
 
@@ -899,14 +940,14 @@ struct ListingDetailView: View {
     private func sectionHeader(_ title: String, trailing: String? = nil) -> some View {
         HStack {
             Text(title)
-                .font(.headline)
+                .font(.system(size: 17, weight: .bold))
                 .kerning(-0.2)
-                .foregroundStyle(Color.rdInk)
+                .foregroundStyle(.primary)
             Spacer()
             if let t = trailing {
                 Text(t)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rdInk)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(LD.brand)
             }
         }
     }
@@ -947,7 +988,7 @@ struct ListingDetailView: View {
                             // Available count
                             VStack(spacing: 4) {
                                 Text("\(avail)")
-                                    .font(.title.bold())
+                                    .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(Color.rdGreen)
                                 Text("Disponibles")
                                     .font(.caption2).foregroundStyle(.secondary)
@@ -956,14 +997,14 @@ struct ListingDetailView: View {
 
                             // Divider
                             Rectangle()
-                                .fill(Color.rdLine)
+                                .fill(Color(.systemGray4))
                                 .frame(width: 1, height: 40)
 
                             // Total count
                             VStack(spacing: 4) {
                                 Text("\(total)")
-                                    .font(.title.bold())
-                                    .foregroundStyle(Color.rdInk)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.primary)
                                 Text("Total")
                                     .font(.caption2).foregroundStyle(.secondary)
                             }
@@ -971,13 +1012,13 @@ struct ListingDetailView: View {
 
                             // Divider
                             Rectangle()
-                                .fill(Color.rdLine)
+                                .fill(Color(.systemGray4))
                                 .frame(width: 1, height: 40)
 
                             // Sold/reserved
                             VStack(spacing: 4) {
                                 Text("\(total - avail)")
-                                    .font(.title.bold())
+                                    .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(Color.rdRed)
                                 Text("Vendidas")
                                     .font(.caption2).foregroundStyle(.secondary)
@@ -1031,27 +1072,27 @@ struct ListingDetailView: View {
                         if let stage = l.project_stage, !stage.isEmpty {
                             HStack(spacing: 6) {
                                 Image(systemName: "hammer.fill")
-                                    .font(.caption).foregroundStyle(Color.rdInk)
+                                    .font(.caption).foregroundStyle(Color.rdBlue)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text("Etapa").font(.caption2).foregroundStyle(.secondary)
+                                    Text("Etapa").font(.system(size: 10)).foregroundStyle(.secondary)
                                     Text(stage).font(.caption).bold()
                                 }
                             }
                             .padding(.horizontal, 12).padding(.vertical, 8)
-                            .background(Color.rdSurfaceMuted)
+                            .background(Color.rdBlue.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         if let date = l.delivery_date, !date.isEmpty {
                             HStack(spacing: 6) {
                                 Image(systemName: "calendar")
-                                    .font(.caption).foregroundStyle(Color.rdInk)
+                                    .font(.caption).foregroundStyle(Color.rdBlue)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text("Entrega").font(.caption2).foregroundStyle(.secondary)
+                                    Text("Entrega").font(.system(size: 10)).foregroundStyle(.secondary)
                                     Text(date).font(.caption).bold()
                                 }
                             }
                             .padding(.horizontal, 12).padding(.vertical, 8)
-                            .background(Color.rdSurfaceMuted)
+                            .background(Color.rdBlue.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         Spacer()
@@ -1084,7 +1125,7 @@ struct ListingDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(monthly) + "/mes")
-                        .font(.title.bold())
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(Color.rdBlue)
                     HStack(spacing: 24) {
                         VStack(spacing: 2) {
@@ -1164,7 +1205,7 @@ struct ListingDetailView: View {
                 }
 
                 Text("* Cálculo estimado. Tasas típicas en RD: 10-14% (RD$) o 7-9% (USD). Consulte su banco para tasas actuales.")
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
         }
@@ -1247,7 +1288,7 @@ struct ListingDetailView: View {
                                 .frame(height: 6)
                                 HStack {
                                     Text("\(Int(Double(avail) / Double(total) * 100))% disponible")
-                                        .font(.caption2).foregroundStyle(.secondary)
+                                        .font(.system(size: 10)).foregroundStyle(.secondary)
                                     Spacer()
                                 }
                             }
@@ -1364,7 +1405,7 @@ struct ListingDetailView: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
                 ))) {
                     Marker(title, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng))
-                        .tint(Color.rdInk)
+                        .tint(LD.brand)
                 }
                 .frame(height: 180)
                 .disabled(false)
@@ -1372,9 +1413,9 @@ struct ListingDetailView: View {
                 if !areaLabel.isEmpty {
                     HStack(spacing: 6) {
                         Image(systemName: "mappin.and.ellipse")
-                            .font(.caption2.weight(.semibold))
+                            .font(.system(size: 11, weight: .semibold))
                         Text(areaLabel)
-                            .font(.caption.weight(.semibold))
+                            .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10).padding(.vertical, 6)
@@ -1384,7 +1425,7 @@ struct ListingDetailView: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.rdLine, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LD.line, lineWidth: 1))
         }
     }
 
@@ -1399,20 +1440,16 @@ struct ListingDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Agentes")
-                    .font(.headline)
+                    .font(.system(size: 17, weight: .bold))
                     .kerning(-0.2)
-                    .foregroundStyle(Color.rdInk)
                 Spacer()
                 if let t = trailing {
                     Text(t)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.rdMuted)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LD.textMute)
                 }
             }
-            // Wave 8-D: agent list lives inside a `FormCard` so the
-            // editorial palette wraps the rows the same way it does on
-            // every other detail surface.
-            FormCard {
+            VStack(spacing: 8) {
                 ForEach(Array(agencies.enumerated()), id: \.offset) { idx, agency in
                     agentRow(agency, accentIndex: idx)
                 }
@@ -1448,7 +1485,7 @@ struct ListingDetailView: View {
                             LinearGradient(colors: [pair.0, pair.1], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 .overlay(
                                     Text(initials)
-                                        .font(.subheadline.bold())
+                                        .font(.system(size: 15, weight: .bold))
                                         .foregroundStyle(.white)
                                 )
                         }
@@ -1457,7 +1494,7 @@ struct ListingDetailView: View {
                     LinearGradient(colors: [pair.0, pair.1], startPoint: .topLeading, endPoint: .bottomTrailing)
                         .overlay(
                             Text(initials)
-                                .font(.subheadline.bold())
+                                .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(.white)
                         )
                 }
@@ -1468,27 +1505,28 @@ struct ListingDetailView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(agency.name ?? "Agente")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.rdInk)
+                        .font(.system(size: 14.5, weight: .bold))
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
-                    // Verified badge — every agency on the platform is verified.
-                    // Uses the shared design-system `DSStatusBadge` so the
-                    // pill matches sibling status indicators across the app.
-                    DSStatusBadge(label: "Verificada", tint: .rdGreen)
+                    // Verified badge — every agency on the platform is verified
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(LD.brand)
                 }
                 Text("Agente verificado")
-                    .font(.caption)
-                    .foregroundStyle(Color.rdMuted)
+                    .font(.system(size: 12))
+                    .foregroundStyle(LD.textMute)
             }
 
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.rdMuted)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(LD.textMute)
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
+        .padding(14)
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LD.line, lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
 
         if let slug = agency.slug {
             NavigationLink { AgencyPortfolioView(slug: slug) } label: { row }
@@ -1608,7 +1646,7 @@ struct ContactSheet: View {
                             .fill(Color.rdGreen.opacity(0.1))
                             .frame(width: 88, height: 88)
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.largeTitle)
+                            .font(.system(size: 48))
                             .foregroundStyle(Color.rdGreen)
                     }
                     VStack(spacing: 8) {
@@ -1840,12 +1878,11 @@ struct FullGalleryView: View {
                 HStack {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
-                            .font(.callout.bold())
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .background(.ultraThinMaterial.opacity(0.5), in: Circle())
                     }
-                    .accessibilityLabel("Cerrar galería")
                     Spacer()
                     Text("\(current + 1) / \(images.count)")
                         .font(.subheadline.bold())

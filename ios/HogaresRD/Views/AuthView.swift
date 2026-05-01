@@ -234,14 +234,14 @@ struct WelcomeLoginScreen: View {
                     Button(action: onEmail) {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 15, weight: .semibold))
                             Text("Iniciar sesión con Email")
-                                .font(.body.weight(.semibold))
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(Color.rdBlue)
+                        .background(Color(red: 0/255, green: 106/255, blue: 255/255))
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -271,7 +271,7 @@ struct WelcomeLoginScreen: View {
                             googleGlyph
                                 .frame(width: 18, height: 18)
                             Text("Continuar con Google")
-                                .font(.body.weight(.semibold))
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -302,7 +302,7 @@ struct WelcomeLoginScreen: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Color.rdRed.opacity(0.20))
+                        .background(Color.red.opacity(0.20))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .padding(.bottom, 12)
                 }
@@ -319,13 +319,13 @@ struct WelcomeLoginScreen: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .font(.subheadline)
+                .font(.system(size: 13.5))
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 16)
 
                 // Legal
                 Text(legalText)
-                    .font(.caption2)
+                    .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.38))
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
@@ -470,18 +470,12 @@ struct WelcomeRegisterScreen: View {
         "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80"
     )!
 
-    // Auth-chrome palette. This screen renders a fixed navy hero behind
-    // a fixed cream bottom sheet, so the panel + body palette stays
-    // light-mode-only by design (an adaptive fill would clash with the
-    // white sheet underneath). Brand tokens replace what we can: `blue`
-    // routes to the adaptive `Color.rdBlue` so accent fills track the
-    // global brand blue.
-    private let blue      = Color.rdBlue
-    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255) // brand-fixed bottom sheet
-    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255) // brand-fixed ink on cream
-    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255) // brand-fixed soft text
-    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255) // brand-fixed body text
-    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255) // brand-fixed navy hero
+    private let blue      = Color(red:   0/255, green: 106/255, blue: 255/255)
+    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255)
+    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255)
+    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255)
+    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255)
+    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255)
 
     var body: some View {
         GeometryReader { geo in
@@ -533,7 +527,7 @@ struct WelcomeRegisterScreen: View {
                             .padding(.bottom, 10)
 
                         Text("Accede a miles de propiedades en República Dominicana y gestiona todo desde un solo lugar.")
-                            .font(.subheadline)
+                            .font(.system(size: 13.5))
                             .foregroundStyle(.white.opacity(0.65))
                             .multilineTextAlignment(.center)
                             .lineSpacing(3)
@@ -567,10 +561,10 @@ struct WelcomeRegisterScreen: View {
                         if let err = error {
                             HStack(spacing: 6) {
                                 Image(systemName: "exclamationmark.circle.fill")
-                                    .foregroundStyle(Color.rdRed)
+                                    .foregroundStyle(.red)
                                 Text(err)
                                     .font(.caption)
-                                    .foregroundStyle(Color.rdRed)
+                                    .foregroundStyle(.red)
                                 Spacer(minLength: 0)
                             }
                             .padding(.vertical, 2)
@@ -582,7 +576,7 @@ struct WelcomeRegisterScreen: View {
                                     ProgressView().tint(.white)
                                 } else {
                                     Text("Crear cuenta")
-                                        .font(.body.weight(.bold))
+                                        .font(.system(size: 16, weight: .bold))
                                         .foregroundStyle(.white)
                                 }
                             }
@@ -605,7 +599,7 @@ struct WelcomeRegisterScreen: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        .font(.subheadline)
+                        .font(.system(size: 13.5))
                         .frame(maxWidth: .infinity)
                         .padding(.top, 2)
                     }
@@ -643,7 +637,7 @@ struct WelcomeRegisterScreen: View {
             .keyboardType(keyboardType)
             .textInputAutocapitalization(autocaps)
             .autocorrectionDisabled(!autocorrect)
-            .font(.body)
+            .font(.system(size: 15))
             .foregroundStyle(textInk)
             .padding(.horizontal, 16)
             .frame(height: 52)
@@ -662,12 +656,12 @@ struct WelcomeRegisterScreen: View {
                     SecureField("Contraseña", text: $password)
                 }
             }
-            .font(.body)
+            .font(.system(size: 15))
             .foregroundStyle(textInk)
 
             Button(action: { showPassword.toggle() }) {
                 Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
-                    .font(.body)
+                    .font(.system(size: 16))
                     .foregroundStyle(textMuted)
             }
             .buttonStyle(.plain)
@@ -688,11 +682,11 @@ struct WelcomeRegisterScreen: View {
         } label: {
             HStack(spacing: 10) {
                 Text(role?.label ?? "Tipo de usuario")
-                    .font(.body)
+                    .font(.system(size: 15))
                     .foregroundStyle(role == nil ? textMuted : textInk)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.down")
-                    .font(.subheadline.weight(.heavy))
+                    .font(.system(size: 13, weight: .heavy))
                     .foregroundStyle(textMuted)
             }
             .padding(.horizontal, 16)
@@ -711,7 +705,7 @@ struct WelcomeRegisterScreen: View {
                             .fill(blue)
                             .frame(width: 20, height: 20)
                         Image(systemName: "checkmark")
-                            .font(.caption.weight(.heavy))
+                            .font(.system(size: 12, weight: .heavy))
                             .foregroundStyle(.white)
                     } else {
                         RoundedRectangle(cornerRadius: 5, style: .continuous)
@@ -737,7 +731,7 @@ struct WelcomeRegisterScreen: View {
                 + Text(" de HogaresRD.")
                     .foregroundStyle(textBody)
             )
-            .font(.subheadline)
+            .font(.system(size: 13))
             .lineSpacing(3)
         }
         .padding(.top, 4)
@@ -821,18 +815,12 @@ struct WelcomeLoginFormScreen: View {
         "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80"
     )!
 
-    // Auth-chrome palette. This screen renders a fixed navy hero behind
-    // a fixed cream bottom sheet, so the panel + body palette stays
-    // light-mode-only by design (an adaptive fill would clash with the
-    // white sheet underneath). Brand tokens replace what we can: `blue`
-    // routes to the adaptive `Color.rdBlue` so accent fills track the
-    // global brand blue.
-    private let blue      = Color.rdBlue
-    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255) // brand-fixed bottom sheet
-    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255) // brand-fixed ink on cream
-    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255) // brand-fixed soft text
-    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255) // brand-fixed body text
-    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255) // brand-fixed navy hero
+    private let blue      = Color(red:   0/255, green: 106/255, blue: 255/255)
+    private let panelBg   = Color(red: 244/255, green: 245/255, blue: 247/255)
+    private let textInk   = Color(red:  26/255, green:  26/255, blue:  46/255)
+    private let textMuted = Color(red: 138/255, green: 143/255, blue: 168/255)
+    private let textBody  = Color(red:  74/255, green:  79/255, blue: 104/255)
+    private let darkBg    = Color(red:  13/255, green:  27/255, blue:  42/255)
 
     var body: some View {
         GeometryReader { geo in
@@ -886,7 +874,7 @@ struct WelcomeLoginFormScreen: View {
                         Text(show2FA
                              ? "Ingresa el código de 6 dígitos que enviamos a tu correo."
                              : "Accede a tus propiedades, aplicaciones y conversaciones desde un solo lugar.")
-                            .font(.subheadline)
+                            .font(.system(size: 13.5))
                             .foregroundStyle(.white.opacity(0.65))
                             .multilineTextAlignment(.center)
                             .lineSpacing(3)
@@ -941,7 +929,7 @@ struct WelcomeLoginFormScreen: View {
                 Spacer()
                 Button(action: { showForgot = true }) {
                     Text("¿Olvidaste tu contraseña?")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(blue)
                 }
                 .buttonStyle(.plain)
@@ -951,10 +939,10 @@ struct WelcomeLoginFormScreen: View {
             if let err = error {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                     Text(err)
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                     Spacer(minLength: 0)
                 }
                 .padding(.vertical, 2)
@@ -975,9 +963,9 @@ struct WelcomeLoginFormScreen: View {
                 Button(action: { Task { await loginWithBiometric(savedEmail) } }) {
                     HStack(spacing: 8) {
                         Image(systemName: bio.biometricIcon)
-                            .font(.body.weight(.semibold))
+                            .font(.system(size: 16, weight: .semibold))
                         Text("Iniciar con \(bio.biometricLabel)")
-                            .font(.subheadline.weight(.bold))
+                            .font(.system(size: 14, weight: .bold))
                     }
                     .foregroundStyle(blue)
                     .frame(maxWidth: .infinity)
@@ -998,7 +986,7 @@ struct WelcomeLoginFormScreen: View {
                 }
                 .buttonStyle(.plain)
             }
-            .font(.subheadline)
+            .font(.system(size: 13.5))
             .frame(maxWidth: .infinity)
             .padding(.top, 4)
         }
@@ -1021,11 +1009,11 @@ struct WelcomeLoginFormScreen: View {
             .padding(.top, 4)
 
             Text("Verificación en dos pasos")
-                .font(.headline.weight(.heavy))
+                .font(.system(size: 17, weight: .heavy))
                 .foregroundStyle(textInk)
 
             Text("Por seguridad, te enviamos un código de 6 dígitos. Ingrésalo aquí para continuar.")
-                .font(.subheadline)
+                .font(.system(size: 13))
                 .foregroundStyle(textBody)
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
@@ -1048,10 +1036,10 @@ struct WelcomeLoginFormScreen: View {
             if let err = twoFAError {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                     Text(err)
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                     Spacer(minLength: 0)
                 }
                 .padding(.vertical, 2)
@@ -1063,7 +1051,7 @@ struct WelcomeLoginFormScreen: View {
 
             Button(action: { Task { await resend2FA() } }) {
                 Text(resendCooldown > 0 ? "Reenviar código (\(resendCooldown)s)" : "Reenviar código")
-                    .font(.subheadline.weight(.bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(resendCooldown > 0 ? textMuted : blue)
             }
             .buttonStyle(.plain)
@@ -1079,7 +1067,7 @@ struct WelcomeLoginFormScreen: View {
                 twoFAError = nil
             }) {
                 Text("← Volver al inicio de sesión")
-                    .font(.subheadline)
+                    .font(.system(size: 13))
                     .foregroundStyle(textMuted)
             }
             .buttonStyle(.plain)
@@ -1104,7 +1092,7 @@ struct WelcomeLoginFormScreen: View {
             .keyboardType(keyboardType)
             .textInputAutocapitalization(autocaps)
             .autocorrectionDisabled(!autocorrect)
-            .font(.body)
+            .font(.system(size: 15))
             .foregroundStyle(textInk)
             .padding(.horizontal, 16)
             .frame(height: 52)
@@ -1123,14 +1111,14 @@ struct WelcomeLoginFormScreen: View {
                     SecureField("Contraseña", text: $password)
                 }
             }
-            .font(.body)
+            .font(.system(size: 15))
             .foregroundStyle(textInk)
             .submitLabel(.go)
             .onSubmit { Task { await login() } }
 
             Button(action: { showPassword.toggle() }) {
                 Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
-                    .font(.body)
+                    .font(.system(size: 16))
                     .foregroundStyle(textMuted)
             }
             .buttonStyle(.plain)
@@ -1155,7 +1143,7 @@ struct WelcomeLoginFormScreen: View {
                     ProgressView().tint(.white)
                 } else {
                     Text(label)
-                        .font(.body.weight(.bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
@@ -1273,7 +1261,7 @@ struct ForgotPasswordSheet: View {
                         Circle().fill(Color.rdBlue.opacity(0.1))
                             .frame(width: 72, height: 72)
                         Image(systemName: sent ? "envelope.badge.fill" : "key.fill")
-                            .font(.title)
+                            .font(.system(size: 28))
                             .foregroundStyle(Color.rdBlue)
                     }
                     .padding(.top, 24)
@@ -1286,8 +1274,19 @@ struct ForgotPasswordSheet: View {
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 8)
-                        PrimaryButton(title: "Entendido") { dismiss() }
-                            .padding(.top, Spacing.s8)
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Entendido")
+                                .font(.subheadline).bold()
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.rdBlue)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 8)
                     } else {
                         Text("Restablecer contraseña")
                             .font(.title2).bold()
@@ -1310,12 +1309,23 @@ struct ForgotPasswordSheet: View {
                             }
                         }
 
-                        PrimaryButton(
-                            title: loading ? "Enviando…" : "Enviar enlace",
-                            isLoading: loading
-                        ) { Task { await submit() } }
-                            .disabled(email.isEmpty)
-                            .padding(.top, Spacing.s8)
+                        Button {
+                            Task { await submit() }
+                        } label: {
+                            HStack {
+                                if loading { ProgressView().tint(.white) }
+                                Text(loading ? "Enviando…" : "Enviar enlace")
+                                    .font(.subheadline).bold()
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(email.isEmpty || loading ? Color(.systemGray4) : Color.rdBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(email.isEmpty || loading)
+                        .padding(.top, 8)
                     }
 
                     Spacer(minLength: 16)
@@ -1331,7 +1341,6 @@ struct ForgotPasswordSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
     }
 
     @MainActor
@@ -1397,7 +1406,7 @@ struct BrokerRegisterForm: View {
 
             BackToRoleButton(action: onBack)
 
-            DSRoleBadge(role: "broker")
+            RoleBadge(icon: "person.text.rectangle.fill", title: "Agente Broker", color: Color(red: 0.16, green: 0.65, blue: 0.45))
 
             Text("Crea tu cuenta individual de agente. Puedes operar de forma independiente o afiliarte a una inmobiliaria desde tu dashboard.")
                 .font(.caption.bold())
@@ -1418,7 +1427,7 @@ struct BrokerRegisterForm: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
             Text("Licencia emitida por el Ministerio de Relaciones Exteriores")
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, -10)
@@ -1426,7 +1435,7 @@ struct BrokerRegisterForm: View {
             // Job title picker
             VStack(alignment: .leading, spacing: 4) {
                 Text("CARGO / TÍTULO")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color(.tertiaryLabel))
                     .kerning(0.5)
                 Menu {
@@ -1541,7 +1550,7 @@ struct InmobiliariaRegisterForm: View {
     @State private var loading = false
     @State private var error: String?
 
-    private let purpleColor = Color.rdPurple
+    private let purpleColor = Color(red: 0.55, green: 0.27, blue: 0.68)
 
     init(
         onSuccess: @escaping () -> Void,
@@ -1567,7 +1576,7 @@ struct InmobiliariaRegisterForm: View {
 
             BackToRoleButton(action: onBack)
 
-            DSRoleBadge(role: "inmobiliaria")
+            RoleBadge(icon: "building.2.fill", title: "Inmobiliaria", color: purpleColor)
 
             Text("Registra tu empresa inmobiliaria para supervisar a tu equipo de agentes brokers y gestionar todas las aplicaciones desde un solo lugar.")
                 .font(.caption.bold())
@@ -1607,7 +1616,7 @@ struct InmobiliariaRegisterForm: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
             Text("Licencia emitida por el Ministerio de Relaciones Exteriores")
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, -10)
@@ -1650,7 +1659,7 @@ struct InmobiliariaRegisterForm: View {
     private func featureRow(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.subheadline)
+                .font(.system(size: 13))
                 .foregroundStyle(purpleColor)
                 .padding(.top, 1)
             Text(text)
@@ -1692,7 +1701,7 @@ struct ConstructoraRegisterForm: View {
     @State private var loading = false
     @State private var error: String?
 
-    private let orangeColor = Color.rdOrange
+    private let orangeColor = Color(red: 0.7, green: 0.35, blue: 0.04)
 
     init(
         onSuccess: @escaping () -> Void,
@@ -1716,7 +1725,7 @@ struct ConstructoraRegisterForm: View {
         VStack(spacing: 16) {
             BackToRoleButton(action: onBack)
 
-            DSRoleBadge(role: "constructora")
+            RoleBadge(icon: "hammer.fill", title: "Constructora", color: orangeColor)
 
             Text("Registra tu empresa constructora para publicar proyectos, gestionar inventario de unidades y vincular agentes de venta.")
                 .font(.caption.bold())
@@ -1846,10 +1855,10 @@ struct PasswordStrengthView: View {
     private func requirementRow(_ text: String, met: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: met ? "checkmark.circle.fill" : "xmark.circle")
-                .font(.caption2)
+                .font(.system(size: 11))
                 .foregroundStyle(met ? .green : Color(.tertiaryLabel))
             Text(text)
-                .font(.caption2)
+                .font(.system(size: 11))
                 .foregroundStyle(met ? .secondary : Color(.tertiaryLabel))
         }
     }
@@ -1874,14 +1883,28 @@ struct BackToRoleButton: View {
     }
 }
 
-// `RoleBadge` removed — the design system's `DSRoleBadge` is the single
-// source of truth for role pills across the app. Auth screens reach for
-// it directly with the `role` slug ("broker", "inmobiliaria", etc).
+struct RoleBadge: View {
+    let icon: String
+    let title: String
+    let color: Color
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(.white)
+                .frame(width: 26, height: 26)
+                .background(color, in: RoundedRectangle(cornerRadius: 7))
+            Text(title)
+                .font(.subheadline).bold()
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.08), in: Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
 
-/// Auth-specific labelled text field. Kept as-is (the auth flow needs
-/// the floating-label aesthetic over a generic LabeledRow). Visuals use
-/// `Color.rdSurfaceMuted` so the field renders correctly on both the
-/// light bottom-sheet and the dark hero behind the registration form.
 struct FloatingField: View {
     let label: String
     @Binding var text: String
@@ -1890,8 +1913,8 @@ struct FloatingField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color.rdInk)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color(.label))
             Group {
                 if isSecure {
                     SecureField("", text: $text)
@@ -1899,16 +1922,12 @@ struct FloatingField: View {
                     TextField("", text: $text)
                 }
             }
-            .font(.body)
-            .foregroundStyle(Color.rdInk)
+            .font(.system(size: 15))
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .frame(minHeight: 44)
-            .background(Color.rdSurfaceMuted)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(label)
     }
 }
 
@@ -1916,21 +1935,17 @@ struct SectionDivider: View {
     let title: String
     var body: some View {
         HStack {
-            Rectangle().fill(Color.rdLine).frame(height: 1)
+            Rectangle().fill(Color(.separator)).frame(height: 1)
             Text(title)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Color.rdInkSoft)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
                 .fixedSize()
-            Rectangle().fill(Color.rdLine).frame(height: 1)
+            Rectangle().fill(Color(.separator)).frame(height: 1)
         }
         .padding(.vertical, 4)
     }
 }
 
-// TODO(design-system): promote `ErrorBanner` to a shared component in
-// the design system. It's used by every register form here and by the
-// listing submission flow — well past the duplication threshold for a
-// design-system citizen. Until then, keep this single declaration.
 struct ErrorBanner: View {
     let message: String
     var body: some View {
@@ -1939,19 +1954,9 @@ struct ErrorBanner: View {
             Text(message).font(.caption).foregroundStyle(Color.rdRed)
         }
         .padding(.horizontal)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Error: \(message)")
     }
 }
 
-/// Auth-specific primary button. Internally routes through the design
-/// system's `PrimaryButtonStyle` so the look (ink fill, 56pt height,
-/// loading spinner) stays in sync with the rest of the app. The
-/// `color` argument is preserved for source compatibility but ignored —
-/// the design system uses ink-on-cream for all primary CTAs.
-///
-/// TODO: once all call sites adopt `PrimaryButton` directly, drop this
-/// shim.
 struct ActionButton: View {
     let label: String
     let color: Color
@@ -1961,9 +1966,16 @@ struct ActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label)
+            Group {
+                if loading { ProgressView().tint(.white) }
+                else { Text(label).fontWeight(.bold) }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(disabled ? Color(.systemGray4) : color)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .buttonStyle(PrimaryButtonStyle(isLoading: loading))
         .disabled(loading || disabled)
         .padding(.top, 4)
     }

@@ -18,12 +18,13 @@ struct PlansView: View {
             ScrollView {
                 VStack(spacing: 20) {
 
-                    // Header — quiet ink crown (editorial palette doesn't do
-                    // gradient symbols).
+                    // Header
                     VStack(spacing: 8) {
                         Image(systemName: "crown.fill")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color.rdInk)
+                            .font(.system(size: 40))
+                            .foregroundStyle(
+                                LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                            )
 
                         Text("HogaresRD Pro")
                             .font(.title.bold())
@@ -40,13 +41,13 @@ struct PlansView: View {
                     if store.hasActiveSubscription, let role = store.activeRole {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(Color.rdGreen)
+                                .foregroundStyle(.green)
                             Text("Plan activo: \(roleName(role))")
                                 .font(.subheadline.weight(.semibold))
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Color.rdGreen.opacity(0.12))
+                        .background(.green.opacity(0.1))
                         .clipShape(Capsule())
                     }
 
@@ -105,9 +106,9 @@ struct PlansView: View {
                     // Cancel button
                     if !store.purchasedProductIDs.isEmpty || api.currentUser?.subscriptionStatus == "active" {
                         Button { showCancelFlow = true } label: {
-                            Text("Cancelar suscripción")
+                            Text("Cancelar suscripcion")
                                 .font(.caption)
-                                .foregroundStyle(Color.rdRed)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.top, 8)
                     }
@@ -121,7 +122,6 @@ struct PlansView: View {
             .sheet(isPresented: $showCancelFlow) {
                 CancelSubscriptionView()
                     .environmentObject(api)
-                    .presentationDragIndicator(.visible)
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -169,15 +169,12 @@ struct PlanCard: View {
     let store: StoreManager
     var onPurchase: () -> Void
 
-    /// Map StoreManager's plan-color string to the design-system rd
-    /// palette so dark mode and the editorial cream surface match the
-    /// rest of the app.
     private var planColor: Color {
         switch store.planColor(for: product.id) {
-        case "green":  return .rdGreen
-        case "purple": return .rdPurple
-        case "orange": return .rdOrange
-        default:       return .rdBlue
+        case "green": return Color(red: 0.16, green: 0.65, blue: 0.45)
+        case "purple": return Color(red: 0.55, green: 0.27, blue: 0.68)
+        case "orange": return Color(red: 0.7, green: 0.35, blue: 0.04)
+        default: return .blue
         }
     }
 
@@ -224,7 +221,7 @@ struct PlanCard: View {
                         .fill(planColor)
                         .frame(width: 40, height: 40)
                     Image(systemName: store.planIcon(for: product.id))
-                        .font(.title3)
+                        .font(.system(size: 18))
                         .foregroundColor(.white)
                 }
 
@@ -241,7 +238,7 @@ struct PlanCard: View {
                 if isPurchased {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(Color.rdGreen)
+                        .foregroundStyle(.green)
                 }
             }
             .padding()
@@ -268,10 +265,10 @@ struct PlanCard: View {
             if isPurchased {
                 Text("Plan activo")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rdGreen)
+                    .foregroundStyle(.green)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.rdGreen.opacity(0.12))
+                    .background(.green.opacity(0.1))
             } else {
                 Button(action: onPurchase) {
                     HStack {
@@ -289,11 +286,11 @@ struct PlanCard: View {
                 }
             }
         }
-        .background(Color.rdSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(isPurchased ? Color.rdGreen : Color.rdLine, lineWidth: isPurchased ? 2 : 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isPurchased ? Color.green : Color(.separator), lineWidth: isPurchased ? 2 : 1)
         )
         .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
     }

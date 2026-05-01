@@ -133,7 +133,7 @@ struct AdCampaignsView: View {
             if let err = errorMsg {
                 Section {
                     Label(err, systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(Color.rdRed)
+                        .font(.caption).foregroundStyle(.red)
                 }
             }
         }
@@ -224,7 +224,7 @@ struct AdCampaignsView: View {
     private func metric(_ label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value).font(.caption).bold().foregroundStyle(Color.rdBlue)
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(label).font(.system(size: 9)).foregroundStyle(.secondary)
         }
     }
 

@@ -28,20 +28,27 @@ struct ContactTimelineView: View {
                     contactHeader(c)
                 }
 
-                // Filter chips — design-system ChipRow
-                ChipRow(
-                    items: filters.map { f in
-                        ChipRow<String>.Chip(id: f.type ?? "_all", label: f.label)
-                    },
-                    selection: Binding(
-                        get: { selectedFilter ?? "_all" },
-                        set: { newValue in
-                            selectedFilter = newValue == "_all" ? nil : newValue
-                            Task { await load() }
+                // Filter chips
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(filters, id: \.label) { f in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = f.type }
+                                Task { await load() }
+                            } label: {
+                                Text(f.label)
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 14).padding(.vertical, 7)
+                                    .background(selectedFilter == f.type ? Color.rdBlue : Color(.tertiarySystemFill))
+                                    .foregroundStyle(selectedFilter == f.type ? .white : .primary)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
                         }
-                    )
-                )
-                .padding(.vertical, Spacing.s8)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.vertical, 12)
 
                 if loading {
                     VStack(spacing: 12) {
@@ -52,12 +59,19 @@ struct ContactTimelineView: View {
                     }
                     .padding(.top, 40)
                 } else if events.isEmpty {
-                    EmptyStateView.calm(
-                        systemImage: "clock.arrow.circlepath",
-                        title: "Sin actividad",
-                        description: "No hay eventos registrados para este contacto."
-                    )
+                    VStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("Sin actividad")
+                            .font(.headline)
+                        Text("No hay eventos registrados para este contacto.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                     .padding(.top, 40)
+                    .padding(.horizontal)
                 } else {
                     // Timeline
                     LazyVStack(spacing: 0) {
@@ -98,7 +112,7 @@ struct ContactTimelineView: View {
                     .fill(Color.rdBlue.opacity(0.12))
                     .frame(width: 72, height: 72)
                 Text(c.initials)
-                    .font(.title.weight(.bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(Color.rdBlue)
             }
 
@@ -113,7 +127,7 @@ struct ContactTimelineView: View {
                 if let phone = c.phone, !phone.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "phone.fill")
-                            .font(.caption2)
+                            .font(.system(size: 10))
                         Text(phone)
                     }
                     .font(.caption)
@@ -124,26 +138,26 @@ struct ContactTimelineView: View {
             // Stats row — four badges matching the web profile
             HStack(spacing: 20) {
                 statBadge(icon: "doc.text.fill",   label: "Apps",      count: c.applications ?? 0, color: .rdBlue)
-                statBadge(icon: "bubble.left.and.bubble.right.fill", label: "Mensajes", count: c.conversations ?? 0, color: .rdPurple)
-                statBadge(icon: "calendar",        label: "Visitas",   count: c.tours ?? 0, color: .rdGreen)
-                statBadge(icon: "checkmark.circle", label: "Tareas",    count: c.tasks ?? 0, color: .rdOrange)
+                statBadge(icon: "bubble.left.and.bubble.right.fill", label: "Mensajes", count: c.conversations ?? 0, color: .purple)
+                statBadge(icon: "calendar",        label: "Visitas",   count: c.tours ?? 0, color: .green)
+                statBadge(icon: "checkmark.circle", label: "Tareas",    count: c.tasks ?? 0, color: .orange)
             }
             .padding(.top, 4)
         }
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity)
-        .background(Color.rdSurfaceMuted)
+        .background(Color(.secondarySystemGroupedBackground))
     }
 
     private func statBadge(icon: String, label: String, count: Int, color: Color) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.body)
+                .font(.system(size: 16))
                 .foregroundStyle(color)
             Text("\(count)")
                 .font(.subheadline.bold())
             Text(label)
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundStyle(.secondary)
         }
     }
@@ -159,12 +173,12 @@ struct ContactTimelineView: View {
                     .frame(width: 32, height: 32)
                     .overlay {
                         Image(systemName: event.iconName)
-                            .font(.footnote.weight(.semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 if !isLast {
                     Rectangle()
-                        .fill(Color.rdLine)
+                        .fill(Color(.separator))
                         .frame(width: 2)
                         .frame(maxHeight: .infinity)
                 }
@@ -192,14 +206,14 @@ struct ContactTimelineView: View {
                 if event.type == "tour", let date = event.tourDate, let time = event.tourTime {
                     HStack(spacing: 6) {
                         Image(systemName: "calendar")
-                            .font(.caption2)
+                            .font(.system(size: 10))
                         Text("\(date) \(time)")
                             .font(.caption2)
                         if let tourType = event.tourType {
                             Text(tourType == "virtual" ? "Virtual" : "Presencial")
                                 .font(.caption2.bold())
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Color.rdSurfaceMuted)
+                                .background(Color(.tertiarySystemFill))
                                 .clipShape(Capsule())
                         }
                     }
@@ -210,7 +224,7 @@ struct ContactTimelineView: View {
                 if event.type == "conversation", let count = event.messageCount, count > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "text.bubble")
-                            .font(.caption2)
+                            .font(.system(size: 10))
                         Text("\(count) mensajes")
                             .font(.caption2)
                     }
@@ -224,7 +238,7 @@ struct ContactTimelineView: View {
                 }
 
                 Text(event.formattedDate)
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .padding(.top, 2)
             }
@@ -233,9 +247,7 @@ struct ContactTimelineView: View {
     }
 
     // MARK: - Status Badge
-    //
-    // Maps the event status onto the design-system `DSStatusBadge` so
-    // chip styling stays consistent across the app.
+
     private func statusBadge(_ status: String) -> some View {
         let label: String
         let color: Color
@@ -245,14 +257,20 @@ struct ContactTimelineView: View {
         case "rechazado", "rejected", "cancelled", "cancelada":
             label = status.capitalized; color = .rdRed
         case "en_revision", "pending", "pendiente":
-            label = "Pendiente"; color = .rdOrange
+            label = "Pendiente"; color = .orange
         case "activa":
             label = "Activa"; color = .rdBlue
         case "cerrada":
-            label = "Cerrada"; color = .rdMuted
+            label = "Cerrada"; color = .secondary
         default:
-            label = status.capitalized; color = .rdMuted
+            label = status.capitalized; color = .secondary
         }
-        return DSStatusBadge(label: label, tint: color)
+
+        return Text(label)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
     }
 }

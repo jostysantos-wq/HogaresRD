@@ -12,7 +12,9 @@ struct HomeView: View {
     @State private var showSubmit = false
 
     private let types = [("venta", "Comprar"), ("alquiler", "Alquilar"), ("proyecto", "Proyectos")]
-    private let agencyColors: [Color] = [.rdBlue, .rdRed, .rdGreen, .rdOrange, .rdPurple]
+    private let agencyColors: [Color] = [Color.rdBlue, Color.rdRed, Color.rdGreen,
+                                          Color(red: 0.55, green: 0.27, blue: 0.07),
+                                          Color(red: 0.4, green: 0.1, blue: 0.6)]
 
     var body: some View {
         NavigationStack {
@@ -73,10 +75,9 @@ struct HomeView: View {
                 }
             }
             .ignoresSafeArea(edges: .top)
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarHidden(true)
             .sheet(isPresented: $showSubmit) {
                 SubmitListingView().environmentObject(api)
-                    .presentationDragIndicator(.visible)
             }
         }
         .task { await loadAll() }
@@ -90,7 +91,7 @@ struct HomeView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label.uppercased())
-                        .font(.caption2.weight(.bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.rdRed)
                         .kerning(1.5)
                     Text(title)
@@ -107,12 +108,10 @@ struct HomeView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 200)
             } else if listings.isEmpty {
-                EmptyStateView.calm(
-                    systemImage: "tray",
-                    title: "Sin propiedades",
-                    description: "Vuelve más tarde para ver nuevas propiedades."
-                )
-                .frame(maxWidth: .infinity, minHeight: 100)
+                Text("No hay propiedades disponibles")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 80)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 14) {
@@ -163,9 +162,9 @@ struct HomeView: View {
                     Button { showSubmit = true } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "plus")
-                                .font(.footnote.weight(.bold))
+                                .font(.system(size: 13, weight: .bold))
                             Text("Publicar")
-                                .font(.footnote.weight(.bold))
+                                .font(.system(size: 13, weight: .bold))
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -174,7 +173,6 @@ struct HomeView: View {
                         .clipShape(Capsule())
                         .shadow(color: Color.rdRed.opacity(0.4), radius: 6, y: 3)
                     }
-                    .accessibilityLabel("Publicar propiedad")
                     .padding(.top, 56)
                     .padding(.trailing, 16)
                 }
@@ -287,7 +285,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("PROCESO")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.rdRed)
                     .kerning(1.5)
                 Text("¿Cómo Funciona?")
@@ -330,7 +328,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("DIRECTORIO")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.rdRed)
                     .kerning(1.5)
                 Text("Inmobiliarias Afiliadas")
@@ -453,7 +451,7 @@ struct HowStepCard: View {
                     .font(.title3)
                     .foregroundStyle(iconColor)
                 Text(number)
-                    .font(.caption2.weight(.black))
+                    .font(.system(size: 9, weight: .black))
                     .foregroundStyle(.white)
                     .padding(4)
                     .background(iconColor)
@@ -492,7 +490,7 @@ struct InmobiliariaCard: View {
                         .fill(color)
                         .frame(width: 48, height: 48)
                     Text(agency.initials)
-                        .font(.subheadline.weight(.black))
+                        .font(.system(size: 14, weight: .black))
                         .foregroundStyle(.white)
                 }
 

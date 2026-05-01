@@ -1,20 +1,13 @@
 import SwiftUI
 
 // MARK: - Applications List
-//
-// Wave 8-C refactor: linear, thin-row pattern against the editorial
-// design system. Filters are a `ChipRow` with counts; rows use a leading
-// `StatusDot` + title + caption + optional `DSStatusBadge` when the row
-// requires action. Empty states use `EmptyStateView` factories.
 
 struct ApplicationsView: View {
     @EnvironmentObject var api: APIService
     @State private var applications: [Application] = []
     @State private var loading = true
-    @State private var initialLoadStarted = Date()
-    @State private var showSkeleton = false
     @State private var errorMsg: String?
-    @State private var filter: AppFilter = .activas
+    @State private var filter = 0  // 0=Activas, 1=Finalizadas, 2=Todas
     @State private var selectedAppId: String?
 
     // Deep-link target. When a push notification arrives carrying an
@@ -22,10 +15,6 @@ struct ApplicationsView: View {
     // pre-populate the NavigationStack path so the relevant detail view
     // pushes onto the existing stack on next render.
     @State private var deepLinkAppId: String? = nil
-
-    enum AppFilter: String, Hashable {
-        case todas, activas, completadas
-    }
 
     private static let terminalStatuses: Set<String> = ["rechazado", "completado"]
 
@@ -37,74 +26,87 @@ struct ApplicationsView: View {
     }
     private var displayedApps: [Application] {
         switch filter {
-        case .activas:     return activeApps
-        case .completadas: return finishedApps
-        case .todas:       return applications
+        case 0:  return activeApps
+        case 1:  return finishedApps
+        default: return applications
         }
     }
 
     var body: some View {
         Group {
-            if loading && applications.isEmpty {
-                if showSkeleton {
-                    VStack(spacing: 0) {
-                        ForEach(0..<5, id: \.self) { _ in
-                            SkeletonRow()
-                                .padding(.horizontal, Spacing.s16)
-                            Divider().opacity(0.4)
-                        }
-                        Spacer()
-                    }
-                } else {
-                    Color.clear
-                }
+            if loading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = errorMsg, applications.isEmpty {
-                EmptyStateView.calm(
-                    systemImage: "exclamationmark.triangle",
-                    title: "No pudimos cargar tus aplicaciones",
-                    description: err,
-                    actionTitle: "Reintentar",
-                    action: { Task { await load() } }
-                )
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text(err)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Reintentar") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.rdBlue)
+                }
+                .padding()
             } else if applications.isEmpty {
-                EmptyStateView.calm(
-                    systemImage: "doc.text.magnifyingglass",
-                    title: "Sin aplicaciones",
-                    description: "Cuando apliques a una propiedad verás el estado de tu solicitud aquí."
-                )
+                VStack(spacing: 16) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 60))
+                        .foregroundStyle(Color.rdBlue.opacity(0.35))
+                    Text("Sin aplicaciones")
+                        .font(.title2).bold()
+                    Text("Cuando apliques a una propiedad verás el estado de tu solicitud aquí.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
             } else {
                 VStack(spacing: 0) {
-                    ChipRow(
-                        items: [
-                            .init(id: AppFilter.todas,       label: "Todas",       count: applications.count),
-                            .init(id: AppFilter.activas,     label: "Activas",     count: activeApps.count),
-                            .init(id: AppFilter.completadas, label: "Completadas", count: finishedApps.count)
-                        ],
-                        selection: $filter
-                    )
-                    .padding(.top, Spacing.s8)
+                    // ── Summary bar ──
+                    HStack(spacing: 12) {
+                        summaryPill(count: activeApps.count, label: "Activas", color: .rdBlue)
+                        summaryPill(count: finishedApps.count, label: "Finalizadas", color: .secondary)
+                    }
+                    .padding(.horizontal).padding(.top, 8).padding(.bottom, 4)
 
-                    Divider().opacity(0.4)
+                    // ── Filter tabs ──
+                    HStack(spacing: 0) {
+                        filterTab("Activas", tag: 0, badge: activeApps.count)
+                        filterTab("Finalizadas", tag: 1, badge: finishedApps.count)
+                        filterTab("Todas", tag: 2, badge: applications.count)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 6)
 
+                    Divider()
+
+                    // ── Card list ──
                     if displayedApps.isEmpty {
-                        EmptyStateView.filterCleared(
-                            title: filter == .activas ? "No tienes aplicaciones activas" : "Sin aplicaciones en esta vista",
-                            description: "Ajusta el filtro para ver más resultados.",
-                            onClear: { filter = .todas }
-                        )
+                        VStack(spacing: 12) {
+                            Spacer()
+                            Image(systemName: filter == 0 ? "checkmark.circle" : "tray")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.secondary.opacity(0.5))
+                            Text(filter == 0 ? "No tienes aplicaciones activas" : "No hay aplicaciones finalizadas")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: 0) {
+                            LazyVStack(spacing: 12) {
                                 ForEach(displayedApps) { app in
                                     NavigationLink(value: app.id) {
-                                        ApplicationListRow(app: app)
-                                            .padding(.horizontal, Spacing.s16)
+                                        ApplicationCard(app: app)
                                     }
                                     .buttonStyle(.plain)
-                                    Divider().opacity(0.4)
-                                        .padding(.leading, Spacing.s16 + 16)
                                 }
                             }
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
                         }
                     }
                 }
@@ -143,11 +145,9 @@ struct ApplicationsView: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cerrar") { deepLinkAppId = nil }
-                            .accessibilityLabel("Cerrar detalle")
                     }
                 }
             }
-            .presentationDragIndicator(.visible)
             .environmentObject(api)
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkApplication)) { notif in
@@ -159,6 +159,46 @@ struct ApplicationsView: View {
 
     // ── Helpers ──
 
+    private func summaryPill(count: Int, label: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Text("\(count)")
+                .font(.title3.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func filterTab(_ label: String, tag: Int, badge: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { filter = tag }
+        } label: {
+            VStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Text(label).font(.caption.bold())
+                    Text("\(badge)")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(filter == tag ? Color.rdBlue : Color(.systemGray5))
+                        .foregroundStyle(filter == tag ? .white : .secondary)
+                        .clipShape(Capsule())
+                }
+                .foregroundStyle(filter == tag ? Color.rdBlue : .secondary)
+
+                Rectangle()
+                    .fill(filter == tag ? Color.rdBlue : .clear)
+                    .frame(height: 2)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     /// B2: Treat unauthenticated / role==nil sessions as buyers as well —
     /// only an explicitly broker-side role should land on the broker UI.
     private func isBuyerRole(_ role: String?) -> Bool {
@@ -169,18 +209,7 @@ struct ApplicationsView: View {
     }
 
     private func load() async {
-        if applications.isEmpty {
-            loading = true
-            initialLoadStarted = Date()
-            // Only show the skeleton if the load is taking >300ms — a
-            // brief flash on a cached response looks worse than nothing.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(300))
-                if loading && applications.isEmpty {
-                    showSkeleton = true
-                }
-            }
-        }
+        if applications.isEmpty { loading = true }
         errorMsg = nil
         do {
             applications = try await api.getMyApplications()
@@ -190,59 +219,69 @@ struct ApplicationsView: View {
             errorMsg = error.localizedDescription
         }
         loading = false
-        showSkeleton = false
     }
 }
 
-// MARK: - Linear list row
-//
-// One slim row per application: leading 8pt status dot, two-line text
-// stack (title + listing-name with relative date), optional
-// action-required `DSStatusBadge` on the trailing edge. Tap area is the
-// full row (`contentShape(Rectangle())`).
+// MARK: - Card
 
-private struct ApplicationListRow: View {
+private struct ApplicationCard: View {
     let app: Application
 
     private struct StatusStyle {
         let label: String
-        let tint: Color
-        /// Whether this status requires action from the buyer (drives
-        /// the trailing `DSStatusBadge`).
-        let actionRequired: Bool
+        let icon:  String
+        let fg:    Color
+        let bg:    Color
+        let accent: Color  // left border color
     }
 
     private var style: StatusStyle {
+        // #51: use adaptive Color tokens so badges remain legible in
+        // Dark Mode. The literal RGB values these used to hold rendered
+        // as washed-out smudges on a dark background.
+        let blue   = Color.rdBlue
+        let orange = Color.rdOrange
+        let green  = Color.rdGreen
+        let red    = Color.rdRed
+        let purple = Color.rdPurple
+        let teal   = Color.rdTeal
+
         switch app.status {
         case "aplicado":
-            return .init(label: "Recibida", tint: .rdBlue, actionRequired: false)
+            return .init(label: "Recibida",               icon: "clock.fill",            fg: blue,   bg: blue.opacity(0.10),   accent: blue)
         case "en_revision":
-            return .init(label: "En revisión", tint: .rdOrange, actionRequired: false)
-        case "documentos_requeridos", "documentos_solicitados":
-            return .init(label: "Docs. solicitados", tint: .rdOrange, actionRequired: true)
+            return .init(label: "En revisión",            icon: "magnifyingglass",       fg: orange, bg: orange.opacity(0.10), accent: orange)
+        case "documentos_requeridos":
+            return .init(label: "Docs. requeridos",       icon: "doc.badge.arrow.up",    fg: orange, bg: orange.opacity(0.10), accent: orange)
         case "documentos_enviados":
-            return .init(label: "Docs. enviados", tint: .rdBlue, actionRequired: false)
+            return .init(label: "Docs. enviados",         icon: "doc.badge.checkmark",   fg: blue,   bg: blue.opacity(0.10),   accent: blue)
         case "documentos_insuficientes":
-            return .init(label: "Docs. insuficientes", tint: .rdRed, actionRequired: true)
+            return .init(label: "Docs. insuficientes",    icon: "doc.badge.xmark",       fg: red,    bg: red.opacity(0.10),    accent: red)
         case "en_aprobacion":
-            return .init(label: "En aprobación", tint: .rdPurple, actionRequired: false)
+            return .init(label: "En aprobación",          icon: "hourglass",             fg: purple, bg: purple.opacity(0.10), accent: purple)
         case "reservado":
-            return .init(label: "Reservada", tint: .rdTeal, actionRequired: false)
+            return .init(label: "Reservada",              icon: "bookmark.fill",         fg: teal,   bg: teal.opacity(0.10),   accent: teal)
         case "aprobado":
-            return .init(label: "Aprobada", tint: .rdGreen, actionRequired: false)
+            return .init(label: "Aprobada",               icon: "checkmark.seal.fill",   fg: green,  bg: green.opacity(0.10),  accent: green)
         case "pendiente_pago":
-            return .init(label: "Pendiente de pago", tint: .rdOrange, actionRequired: true)
+            return .init(label: "Pendiente de pago",      icon: "creditcard",            fg: orange, bg: orange.opacity(0.10), accent: orange)
         case "pago_enviado":
-            return .init(label: "Pago enviado", tint: .rdBlue, actionRequired: false)
+            return .init(label: "Pago enviado",           icon: "paperplane.fill",       fg: blue,   bg: blue.opacity(0.10),   accent: blue)
         case "pago_aprobado":
-            return .init(label: "Pago aprobado", tint: .rdGreen, actionRequired: false)
+            return .init(label: "Pago aprobado",          icon: "checkmark.circle.fill", fg: green,  bg: green.opacity(0.10),  accent: green)
         case "completado":
-            return .init(label: "Completada", tint: .rdGreen, actionRequired: false)
+            return .init(label: "Completada",             icon: "flag.checkered",        fg: green,  bg: green.opacity(0.12),  accent: green)
         case "rechazado":
-            return .init(label: "Rechazada", tint: .rdRed, actionRequired: false)
+            return .init(label: "Rechazada",              icon: "xmark.circle.fill",     fg: red,    bg: red.opacity(0.10),    accent: red)
         default:
-            return .init(label: app.status, tint: .rdMuted, actionRequired: false)
+            return .init(label: app.status,               icon: "circle",                fg: .secondary, bg: Color(.systemGray6), accent: .secondary)
         }
+    }
+
+    private var imageURL: URL? {
+        guard let img = app.listingImage, !img.isEmpty else { return nil }
+        if img.hasPrefix("http") { return URL(string: img) }
+        return URL(string: APIService.baseURL + img)
     }
 
     private var isTerminal: Bool {
@@ -250,37 +289,94 @@ private struct ApplicationListRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Spacing.s12) {
-            StatusDot(tint: style.tint)
-                .padding(.top, 6)
+        HStack(spacing: 0) {
+            // ── Color accent bar ──
+            RoundedRectangle(cornerRadius: 2)
+                .fill(style.accent)
+                .frame(width: 4)
+                .padding(.vertical, 8)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.listingTitle)
-                    .font(.body)
-                    .foregroundStyle(isTerminal ? Color.rdInkSoft : Color.rdInk)
-                    .lineLimit(1)
+            HStack(spacing: 12) {
+                // ── Thumbnail ──
+                Group {
+                    if let url = imageURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let img):
+                                img.resizable().aspectRatio(contentMode: .fill)
+                            default:
+                                Rectangle().fill(Color(.systemGray5))
+                                    .overlay(Image(systemName: "photo").foregroundStyle(.secondary))
+                            }
+                        }
+                    } else {
+                        Rectangle().fill(Color(.systemGray5))
+                            .overlay(
+                                Image(systemName: "building.2")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary.opacity(0.5))
+                            )
+                    }
+                }
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .opacity(isTerminal ? 0.6 : 1.0)
 
-                Text("\(style.label) · \(app.timeAgo)")
-                    .font(.caption)
-                    .foregroundStyle(Color.rdInkSoft)
-                    .lineLimit(1)
+                // ── Content ──
+                VStack(alignment: .leading, spacing: 6) {
+                    // Status pill
+                    Label(style.label, systemImage: style.icon)
+                        .font(.caption2.bold())
+                        .foregroundStyle(style.fg)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(style.bg)
+                        .clipShape(Capsule())
+
+                    // Title
+                    Text(app.listingTitle)
+                        .font(.subheadline).bold()
+                        .lineLimit(2)
+                        .foregroundStyle(isTerminal ? .secondary : .primary)
+
+                    // Price + location
+                    HStack(spacing: 8) {
+                        Text(app.priceFormatted)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(isTerminal ? .secondary : Color.rdBlue)
+
+                        if let city = app.listingCity, !city.isEmpty {
+                            HStack(spacing: 2) {
+                                Image(systemName: "mappin")
+                                    .font(.caption2)
+                                Text(city)
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    // Date
+                    Text(app.timeAgo)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Spacer(minLength: 0)
+
+                // ── Chevron ──
+                Image(systemName: "chevron.right")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.quaternary)
             }
-
-            Spacer(minLength: Spacing.s8)
-
-            if style.actionRequired {
-                DSStatusBadge(label: "Acción", tint: .rdOrange)
-            }
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rdInkSoft)
-                .accessibilityHidden(true)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
         }
-        .padding(.vertical, Spacing.s12)
-        .frame(minHeight: 56)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(app.listingTitle), \(style.label), \(app.timeAgo)")
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(isTerminal ? 0.02 : 0.06), radius: 6, x: 0, y: 3)
     }
 }

@@ -49,20 +49,20 @@ struct ContactsListView: View {
                     Spacer()
                 }
             } else if filtered.isEmpty {
-                if searchText.isEmpty {
-                    EmptyStateView.calm(
-                        systemImage: "person.2.slash",
-                        title: "No hay contactos aún",
-                        description: "Los clientes que interactúen contigo aparecerán aquí."
-                    )
-                } else {
-                    EmptyStateView.filterCleared(
-                        systemImage: "magnifyingglass",
-                        title: "Sin resultados",
-                        description: "Intenta con otro término de búsqueda.",
-                        onClear: { searchText = "" }
-                    )
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "person.2.slash")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text(searchText.isEmpty ? "No hay contactos aun" : "Sin resultados")
+                        .font(.headline)
+                    Text(searchText.isEmpty ? "Los clientes que interactuen contigo apareceran aqui." : "Intenta con otro termino de busqueda.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
                 }
+                .padding(.horizontal)
             } else {
                 // Stats bar
                 HStack(spacing: 16) {
@@ -115,7 +115,7 @@ struct ContactsListView: View {
                     .fill(avatarColor(c.id))
                     .frame(width: 48, height: 48)
                 Text(c.initials)
-                    .font(.body.weight(.bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
             }
 
@@ -144,13 +144,13 @@ struct ContactsListView: View {
                     .foregroundStyle(.secondary)
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.arrow.right")
-                        .font(.caption2)
+                        .font(.system(size: 9))
                     Text("\(c.interactions ?? 0)")
                         .font(.caption2.bold())
                 }
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Color.rdSurfaceMuted)
+                .background(Color(.tertiarySystemFill))
                 .clipShape(Capsule())
             }
 
@@ -162,11 +162,8 @@ struct ContactsListView: View {
         .padding(.vertical, 12)
     }
 
-    /// Maps a contact id (or any hashable string) onto the design-system
-    /// accent palette, so each contact gets a stable colour without us
-    /// hard-coding RGB literals or hand-picking shades.
     private func avatarColor(_ id: String) -> Color {
-        let colors: [Color] = [.rdBlue, .rdGreen, .rdPurple, .rdOrange, .rdRed, .rdTeal]
+        let colors: [Color] = [.rdBlue, .rdGreen, Color(red: 0.4, green: 0.1, blue: 0.6), Color(red: 0.7, green: 0.35, blue: 0.04), .rdRed]
         return colors[abs(id.hashValue) % colors.count]
     }
 }

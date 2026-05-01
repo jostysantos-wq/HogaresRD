@@ -138,7 +138,7 @@ struct DashboardHomeView: View {
 
             VStack(spacing: 0) {
                 if pendingApps > 0 {
-                    todayRow(icon: "doc.text.fill", iconColor: .rdOrange, label: "\(pendingApps) aplicaciones en revision") {
+                    todayRow(icon: "doc.text.fill", iconColor: .orange, label: "\(pendingApps) aplicaciones en revision") {
                         onTapTab(0)
                     }
                 }
@@ -177,7 +177,7 @@ struct DashboardHomeView: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.subheadline)
+                    .font(.system(size: 14))
                     .foregroundStyle(iconColor)
                     .frame(width: 28, height: 28)
                     .background(iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
@@ -207,7 +207,7 @@ struct DashboardHomeView: View {
                         trendPositive: true, color: Color.rdBlue)
                 KPICard(icon: "arrow.triangle.2.circlepath", label: "Tasa Conversion",
                         value: String(format: "%.1f%%", (analytics?.conversionRate ?? 0) * 100),
-                        trend: nil, trendPositive: true, color: .rdOrange)
+                        trend: nil, trendPositive: true, color: .orange)
                 if showSalesMetrics {
                     KPICard(icon: "dollarsign.circle.fill", label: "Ingresos",
                             value: formatCurrency(sales?.totalRevenue ?? 0),
@@ -215,7 +215,7 @@ struct DashboardHomeView: View {
                 }
                 KPICard(icon: "clock.fill", label: "Dias Prom. Cierre",
                         value: String(format: "%.0f", analytics?.avgDaysToClose ?? 0),
-                        trend: nil, trendPositive: false, color: .rdPurple)
+                        trend: nil, trendPositive: false, color: .purple)
             }
         }
     }
@@ -231,13 +231,13 @@ struct DashboardHomeView: View {
                 HStack(spacing: 6) {
                     pipelineStage("Enviadas", count: analytics?.enviadas ?? 0, color: Color.rdBlue, status: "aplicado")
                     pipelineArrow
-                    pipelineStage("Revision", count: analytics?.enRevision ?? 0, color: .rdOrange, status: "en_revision")
+                    pipelineStage("Revision", count: analytics?.enRevision ?? 0, color: .orange, status: "en_revision")
                     pipelineArrow
                     pipelineStage("Aprobadas", count: analytics?.aprobadas ?? 0, color: Color.rdGreen, status: "aprobado")
                     pipelineArrow
                     pipelineStage("Rechazadas", count: analytics?.rechazadas ?? 0, color: Color.rdRed, status: "rechazado")
                     pipelineArrow
-                    pipelineStage("Cerradas", count: analytics?.cerradas ?? 0, color: .rdPurple, status: "completado")
+                    pipelineStage("Cerradas", count: analytics?.cerradas ?? 0, color: .purple, status: "completado")
                 }
             }
         }
@@ -252,7 +252,7 @@ struct DashboardHomeView: View {
                     .font(.title3.bold())
                     .foregroundStyle(color)
                 Text(label)
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(width: 72, height: 64)
@@ -264,7 +264,7 @@ struct DashboardHomeView: View {
 
     private var pipelineArrow: some View {
         Image(systemName: "chevron.right")
-            .font(.caption2.weight(.bold))
+            .font(.system(size: 9, weight: .bold))
             .foregroundStyle(.quaternary)
     }
 
@@ -290,7 +290,7 @@ struct DashboardHomeView: View {
                         ZStack {
                             Circle().fill(Color.rdBlue.opacity(0.12)).frame(width: 36, height: 36)
                             Text(member.initials)
-                                .font(.caption.weight(.bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(Color.rdBlue)
                         }
 
@@ -361,7 +361,7 @@ struct DashboardHomeView: View {
     private func activityRow(_ item: HomeActivityItem) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: item.icon)
-                .font(.footnote)
+                .font(.system(size: 13))
                 .foregroundStyle(item.iconColor)
                 .frame(width: 30, height: 30)
                 .background(item.iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
@@ -380,7 +380,7 @@ struct DashboardHomeView: View {
                         ForEach(item.actions) { action in
                             Button(action: action.action) {
                                 Label(action.label, systemImage: action.icon)
-                                    .font(.caption2.weight(.bold))
+                                    .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(action.color)
                                     .padding(.horizontal, 8).padding(.vertical, 4)
                                     .background(action.color.opacity(0.1), in: Capsule())
@@ -395,7 +395,7 @@ struct DashboardHomeView: View {
             Spacer()
 
             Text(item.timeAgo)
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
@@ -412,7 +412,7 @@ struct DashboardHomeView: View {
             items.append(HomeActivityItem(
                 id: "tour_\(tour.id)",
                 icon: tour.status == "pending" ? "calendar.badge.clock" : "calendar.badge.checkmark",
-                iconColor: tour.status == "pending" ? .rdOrange : Color.rdGreen,
+                iconColor: tour.status == "pending" ? .orange : Color.rdGreen,
                 title: "\(tour.client_name) solicito visita",
                 subtitle: "\(tour.listing_title) · \(tour.requested_date) \(formatTime(tour.requested_time))",
                 time: date,
@@ -494,7 +494,7 @@ struct KPICard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
-                    .font(.footnote)
+                    .font(.system(size: 13))
                     .foregroundStyle(color)
                     .frame(width: 28, height: 28)
                     .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
@@ -512,7 +512,7 @@ struct KPICard: View {
 
             if let t = trend {
                 Text(t)
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(trendPositive ? Color.rdGreen : Color.rdRed)
             }
         }

@@ -76,7 +76,7 @@ struct ApplicationDetailView: View {
             } else if let err = errorMsg, detail == nil {
                 VStack(spacing: 14) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle).foregroundStyle(Color.rdOrange)
+                        .font(.system(size: 40)).foregroundStyle(.orange)
                     Text(err)
                         .font(.subheadline).foregroundStyle(.secondary)
                     Button("Reintentar") { Task { await load() } }
@@ -85,14 +85,6 @@ struct ApplicationDetailView: View {
                 .padding(40)
             } else if let d = detail {
                 content(d)
-                    // Wave 8-D: thin sticky status banner under the nav.
-                    // Hidden for terminal states so the user isn't told
-                    // "still in review" once the app is rejected/closed.
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        if d.status != "rechazado" && d.status != "completado" {
-                            statusBanner(d)
-                        }
-                    }
             }
         }
         .navigationTitle(detail?.client.name ?? "Aplicación")
@@ -126,7 +118,6 @@ struct ApplicationDetailView: View {
                     detail = updated
                 }
                 .environmentObject(api)
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showDocsSheet) {
@@ -135,14 +126,12 @@ struct ApplicationDetailView: View {
                     detail = updated
                 }
                 .environmentObject(api)
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showMessageSheet) {
             if let d = detail {
                 ContactClientSheet(detail: d)
                     .environmentObject(api)
-                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showCommissionSheet) {
@@ -151,12 +140,10 @@ struct ApplicationDetailView: View {
                     Task { await load() }
                 }
                 .environmentObject(api)
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showSkipDocsSheet) {
             skipDocsSheetBody
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showReassignSheet) {
             // #57: same-team broker picker → POST /applications/:id/reassign
@@ -166,7 +153,6 @@ struct ApplicationDetailView: View {
                     Task { await load() }
                 }
                 .environmentObject(api)
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showSkipPhaseSheet) {
@@ -176,7 +162,6 @@ struct ApplicationDetailView: View {
                     detail = updated
                 }
                 .environmentObject(api)
-                .presentationDragIndicator(.visible)
             }
         }
         .sheet(item: $reviewingDoc) { doc in
@@ -191,75 +176,10 @@ struct ApplicationDetailView: View {
                 )
                 .environmentObject(api)
             }
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $pendingPreviewURL) { wrap in
             ArchiveDocPreview(url: wrap.url)
                 .ignoresSafeArea()
-        }
-    }
-
-    // MARK: - Status banner (Wave 8-D)
-    //
-    // Thin sticky banner pinned under the navigation bar. Surfaces the
-    // current status + an SLA hint so the broker doesn't have to scroll
-    // back to the header card to see "where" the application is. Hidden
-    // for terminal states (rechazado / completado) — see body's
-    // `safeAreaInset` guard.
-    @ViewBuilder
-    private func statusBanner(_ d: ApplicationDetail) -> some View {
-        HStack(spacing: Spacing.s8) {
-            DSStatusBadge(label: ApplicationStatus.label(for: d.status), tint: statusTint(d.status))
-            Text(slaHint(for: d.status))
-                .font(.caption)
-                .foregroundStyle(Color.rdInkSoft)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Spacing.s16)
-        .padding(.vertical, Spacing.s8)
-        .frame(maxWidth: .infinity)
-        .background(Color.rdSurfaceMuted)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.rdLine).frame(height: 0.5)
-        }
-    }
-
-    private func slaHint(for status: String) -> String {
-        switch status {
-        case "aplicado":                return "Sin revisar · responde dentro de 24 h"
-        case "en_revision":             return "En revisión por el equipo"
-        case "documentos_requeridos":   return "Esperando documentos del cliente"
-        case "documentos_enviados":     return "Documentos por revisar"
-        case "documentos_insuficientes":return "Pendiente de complementar"
-        case "en_aprobacion":           return "En aprobación final"
-        case "reservado":               return "Unidad reservada"
-        case "aprobado":                return "Aplicación aprobada"
-        case "pendiente_pago":          return "Esperando comprobante de pago"
-        case "pago_enviado":            return "Comprobante por revisar"
-        case "pago_aprobado":           return "Pago aprobado · cerrar venta"
-        default:                        return ""
-        }
-    }
-
-    /// Map a server status to one of the editorial palette tints.
-    /// Centralised so the banner, badge, and timeline agree on colour.
-    private func statusTint(_ s: String) -> Color {
-        switch s {
-        case "aplicado":                return .rdBlue
-        case "en_revision":             return .rdOrange
-        case "documentos_requeridos",
-             "documentos_enviados":     return .rdOrange
-        case "documentos_insuficientes": return .rdRed
-        case "en_aprobacion":           return .rdPurple
-        case "reservado":               return .rdTeal
-        case "aprobado":                return .rdGreen
-        case "pendiente_pago",
-             "pago_enviado":            return .rdOrange
-        case "pago_aprobado",
-             "completado":              return .rdGreen
-        case "rechazado":               return .rdRed
-        default:                        return .rdMuted
         }
     }
 
@@ -355,7 +275,7 @@ struct ApplicationDetailView: View {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -441,7 +361,7 @@ struct ApplicationDetailView: View {
                         withAnimation(.easeInOut(duration: 0.15)) { selectedTab = tab }
                     } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: tab.icon).font(.caption2)
+                            Image(systemName: tab.icon).font(.system(size: 11))
                             Text(tab.rawValue).font(.caption).bold()
                         }
                         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -644,12 +564,12 @@ struct ApplicationDetailView: View {
                             if req.required == true {
                                 Text("Requerido")
                                     .font(.caption2.bold())
-                                    .foregroundStyle(Color.rdRed)
+                                    .foregroundStyle(.red)
                             }
                             if req.deferred == true {
                                 Text("Diferido")
                                     .font(.caption2.bold())
-                                    .foregroundStyle(Color.rdOrange)
+                                    .foregroundStyle(.orange)
                             }
                         }
                     }
@@ -708,7 +628,7 @@ struct ApplicationDetailView: View {
         if requested.isEmpty && uploaded.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "doc.text.magnifyingglass")
-                    .font(.largeTitle).foregroundStyle(.secondary)
+                    .font(.system(size: 38)).foregroundStyle(.secondary)
                 Text("Sin documentos todavía")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -722,7 +642,7 @@ struct ApplicationDetailView: View {
         }
     }
 
-    // MARK: - Timeline tab (Wave 8-D: vertical rail timeline)
+    // MARK: - Timeline tab
 
     @ViewBuilder
     private func timelineSection(_ d: ApplicationDetail) -> some View {
@@ -730,106 +650,55 @@ struct ApplicationDetailView: View {
             ($0.created_at ?? "") > ($1.created_at ?? "")
         }
         if events.isEmpty {
-            EmptyStateView.calm(
-                systemImage: "clock",
-                title: "Sin eventos todavía",
-                description: "Las acciones que tomes en esta aplicación aparecerán aquí."
-            )
+            VStack(spacing: 8) {
+                Image(systemName: "clock")
+                    .font(.system(size: 38)).foregroundStyle(.secondary)
+                Text("Sin eventos todavía").font(.subheadline).foregroundStyle(.secondary)
+            }
             .padding(.vertical, 30)
             .frame(maxWidth: .infinity)
         } else {
-            VStack(spacing: 0) {
-                ForEach(Array(events.enumerated()), id: \.element.id) { idx, ev in
-                    timelineRailRow(
-                        ev,
-                        isFirst: idx == 0,
-                        isLast: idx == events.count - 1
-                    )
+            ForEach(events) { ev in
+                let internalNote = ev.is_internal == true
+                HStack(alignment: .top, spacing: 10) {
+                    Circle()
+                        .fill(timelineEventColor(ev.type))
+                        .frame(width: 10, height: 10)
+                        .padding(.top, 6)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            if internalNote {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(ev.description ?? ev.type.capitalized)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                        HStack(spacing: 6) {
+                            if internalNote {
+                                Text("Nota interna").bold()
+                                    .foregroundStyle(.orange)
+                            }
+                            if let actor = ev.actor_name, !actor.isEmpty {
+                                Text(actor)
+                            }
+                            if let date = ev.created_at {
+                                Text(formatEventDate(date))
+                            }
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    }
+                    Spacer()
                 }
+                .padding(12)
+                .background(internalNote
+                            ? Color.orange.opacity(0.10)
+                            : Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-        }
-    }
-
-    /// Single timeline row — left rail with circle + dotted connector,
-    /// right column with title / metadata. Past events render compact;
-    /// the most-recent event (first item) gets the expanded card body.
-    @ViewBuilder
-    private func timelineRailRow(_ ev: AppTimelineEvent, isFirst: Bool, isLast: Bool) -> some View {
-        let internalNote = ev.is_internal == true
-        let tint: Color = internalNote ? .rdOrange : .rdInk
-
-        HStack(alignment: .top, spacing: Spacing.s12) {
-            // Left rail
-            VStack(spacing: 0) {
-                ZStack {
-                    if isFirst {
-                        // Current step — hollow with stroke + soft pulse
-                        Circle()
-                            .strokeBorder(Color.rdInk, lineWidth: 2)
-                            .frame(width: 12, height: 12)
-                    } else {
-                        // Done — filled ink
-                        Circle()
-                            .fill(Color.rdInk)
-                            .frame(width: 12, height: 12)
-                    }
-                }
-                .padding(.top, 6)
-
-                if !isLast {
-                    DottedRailLine()
-                        .stroke(Color.rdInk.opacity(0.4),
-                                style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 4]))
-                        .frame(width: 2)
-                        .frame(maxHeight: .infinity)
-                        .padding(.vertical, 2)
-                }
-            }
-            .frame(width: 12)
-
-            // Right column
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if internalNote {
-                        Image(systemName: "lock.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(ev.description ?? ev.type.capitalized)
-                        .font(.body)
-                        .foregroundStyle(Color.rdInk)
-                }
-                HStack(spacing: 6) {
-                    if internalNote {
-                        DSStatusBadge(label: "Nota interna", tint: .rdOrange)
-                    }
-                    if let actor = ev.actor_name, !actor.isEmpty {
-                        Text(actor)
-                    }
-                    if let date = ev.created_at {
-                        Text(formatEventDate(date))
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .padding(Spacing.s12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Current event gets a card; past events read as compact rows
-            // so the timeline scans linearly from "now" downward.
-            .background(
-                isFirst
-                    ? AnyShapeStyle(Color.rdSurface)
-                    : AnyShapeStyle(Color.clear)
-            )
-            .overlay(alignment: .topLeading) {
-                if isFirst {
-                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        .strokeBorder(tint.opacity(0.25), lineWidth: 1)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-            .padding(.bottom, Spacing.s8)
         }
     }
 
@@ -891,7 +760,6 @@ struct ApplicationDetailView: View {
             Image(systemName: "ellipsis.circle.fill")
                 .font(.title3)
         }
-        .accessibilityLabel("Acciones")
     }
 
     // MARK: - Workflow Checklist + Primary Action Bar
@@ -931,7 +799,7 @@ struct ApplicationDetailView: View {
                             .font(.subheadline.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(step.actor == .client ? Color.rdOrange : Color.rdBlue)
+                            .background(step.actor == .client ? Color.orange : Color.rdBlue)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
@@ -964,7 +832,7 @@ struct ApplicationDetailView: View {
                 if let err = workflowError {
                     Text(err)
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                 }
             }
             .padding(14)
@@ -976,12 +844,12 @@ struct ApplicationDetailView: View {
             )
         } else if d.status == "completado" {
             workflowBanner(icon: "checkmark.seal.fill",
-                           color: Color.rdGreen,
+                           color: .green,
                            title: "Aplicación completada",
                            subtitle: "Registra la comisión si aún no lo has hecho.")
         } else if d.status == "rechazado" {
             workflowBanner(icon: "xmark.octagon.fill",
-                           color: Color.rdRed,
+                           color: .red,
                            title: "Aplicación rechazada",
                            subtitle: d.status_reason ?? "Puedes reabrir esta aplicación desde el menú.")
         }
@@ -1053,12 +921,12 @@ struct ApplicationDetailView: View {
                         .fill(indicatorFill(state))
                         .frame(width: 24, height: 24)
                     Image(systemName: indicatorIcon(state))
-                        .font(.caption2.weight(.bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(indicatorIconColor(state))
                 }
                 if !isLast {
                     Rectangle()
-                        .fill(state == .done ? Color.rdGreen.opacity(0.35) : Color.rdLine)
+                        .fill(state == .done ? Color.green.opacity(0.35) : Color(.separator))
                         .frame(width: 2)
                         .frame(maxHeight: .infinity)
                 }
@@ -1073,9 +941,9 @@ struct ApplicationDetailView: View {
                         .foregroundStyle(titleColor(state))
                     if state == .active || state == .waiting {
                         Text(state == .waiting ? "ESPERANDO" : "ACTUAL")
-                            .font(.caption2.weight(.heavy))
+                            .font(.system(size: 8, weight: .heavy))
                             .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(state == .waiting ? Color.rdOrange : Color.rdBlue)
+                            .background(state == .waiting ? Color.orange : Color.rdBlue)
                             .foregroundStyle(.white)
                             .clipShape(Capsule())
                     }
@@ -1091,10 +959,10 @@ struct ApplicationDetailView: View {
 
     private func indicatorFill(_ state: WorkflowChecklist.RowState) -> Color {
         switch state {
-        case .done:    return .rdGreen
+        case .done:    return .green
         case .active:  return .rdBlue
-        case .waiting: return .rdOrange
-        case .future:  return Color.rdSurfaceMuted
+        case .waiting: return .orange
+        case .future:  return Color(.tertiarySystemFill)
         }
     }
     private func indicatorIcon(_ state: WorkflowChecklist.RowState) -> String {
@@ -1295,10 +1163,31 @@ struct ApplicationDetailView: View {
             .padding(.top, 6)
     }
 
-    /// Wave 8-D: status pills route through the design-system
-    /// `DSStatusBadge` so every screen tints the same status the same way.
     private func statusBadge(_ s: String) -> some View {
-        DSStatusBadge(label: ApplicationStatus.label(for: s), tint: statusTint(s))
+        let (bg, fg): (Color, Color) = {
+            switch s {
+            case "aplicado":                return (.blue.opacity(0.15), .blue)
+            case "en_revision":             return (.orange.opacity(0.15), .orange)
+            case "documentos_requeridos",
+                 "documentos_enviados":     return (.yellow.opacity(0.2), .yellow)
+            case "documentos_insuficientes": return (.red.opacity(0.15), .red)
+            case "en_aprobacion":           return (.purple.opacity(0.15), .purple)
+            case "reservado":               return (.teal.opacity(0.15), .teal)
+            case "aprobado":                return (.green.opacity(0.15), .green)
+            case "pendiente_pago",
+                 "pago_enviado":            return (.orange.opacity(0.15), .orange)
+            case "pago_aprobado",
+                 "completado":              return (.green.opacity(0.2), .green)
+            case "rechazado":               return (.red.opacity(0.15), .red)
+            default:                        return (.gray.opacity(0.15), .gray)
+            }
+        }()
+        return Text(ApplicationStatus.label(for: s))
+            .font(.caption2.bold())
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(bg)
+            .foregroundStyle(fg)
+            .clipShape(Capsule())
     }
 
     private func employmentLabel(_ key: String) -> String {
@@ -1323,11 +1212,11 @@ struct ApplicationDetailView: View {
     }
     private func docStatusColor(_ s: String) -> Color {
         switch s {
-        case "pending":  return .rdOrange
-        case "uploaded": return .rdBlue
-        case "approved": return .rdGreen
-        case "rejected": return .rdRed
-        default:         return .rdMuted
+        case "pending":  return .orange
+        case "uploaded": return .blue
+        case "approved": return .green
+        case "rejected": return .red
+        default:         return .gray
         }
     }
     private func docStatusIcon(_ s: String) -> String {
@@ -1348,23 +1237,23 @@ struct ApplicationDetailView: View {
 
     private func commissionColor(_ s: String) -> Color {
         switch s {
-        case "approved":       return .rdGreen
-        case "rejected":       return .rdRed
-        case "pending_review": return .rdOrange
-        default:               return .rdMuted
+        case "approved":       return .green
+        case "rejected":       return .red
+        case "pending_review": return .orange
+        default:               return .gray
         }
     }
 
     private func timelineEventColor(_ type: String) -> Color {
         switch type {
-        case "status_change":       return .rdBlue
-        case "document_uploaded":   return .rdPurple
-        case "documents_requested": return .rdOrange
-        case "message":             return .rdTeal
+        case "status_change":       return .blue
+        case "document_uploaded":   return .purple
+        case "documents_requested": return .orange
+        case "message":             return .teal
         case "commission_submitted",
-             "commission_approve":  return .rdGreen
-        case "commission_reject":   return .rdRed
-        default:                    return .rdMuted
+             "commission_approve":  return .green
+        case "commission_reject":   return .red
+        default:                    return .gray
         }
     }
 
@@ -1410,21 +1299,6 @@ struct ApplicationDetailView: View {
             created_at:     d.created_at,
             updated_at:     d.updated_at
         )
-    }
-}
-
-// MARK: - DottedRailLine
-//
-// Vertical 2-pt dashed line used as the connector between timeline
-// circles. Kept as a `Shape` (not a `Rectangle().overlay`) so it joins
-// cleanly with `StrokeStyle.dash` and renders sharp on retina displays.
-private struct DottedRailLine: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let x = rect.midX
-        p.move(to: CGPoint(x: x, y: rect.minY))
-        p.addLine(to: CGPoint(x: x, y: rect.maxY))
-        return p
     }
 }
 
@@ -1503,7 +1377,7 @@ struct ChangeStatusSheet: View {
                     Section {
                         Text(info)
                             .font(.caption)
-                            .foregroundStyle(Color.rdOrange)
+                            .foregroundStyle(.orange)
                     }
                 }
                 Section("Nuevo estado") {
@@ -1514,7 +1388,7 @@ struct ChangeStatusSheet: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Label(waitingExplanation, systemImage: "hourglass")
                                     .font(.caption)
-                                    .foregroundStyle(Color.rdOrange)
+                                    .foregroundStyle(.orange)
                                 Text("Este paso se actualizará solo cuando la otra persona complete su acción.")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -1535,7 +1409,7 @@ struct ChangeStatusSheet: View {
                                     Spacer()
                                     if target == opt {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(Color.rdGreen)
+                                            .foregroundStyle(.green)
                                     }
                                 }
                             }
@@ -1550,7 +1424,7 @@ struct ChangeStatusSheet: View {
                     }
                 }
                 if let err = errorMsg {
-                    Section { Text(err).font(.caption).foregroundStyle(Color.rdRed) }
+                    Section { Text(err).font(.caption).foregroundStyle(.red) }
                 }
             }
             .navigationTitle("Cambiar estado")
@@ -1665,7 +1539,7 @@ struct RequestDocumentsSheet: View {
                     }
                 }
                 if let err = errorMsg {
-                    Section { Text(err).font(.caption).foregroundStyle(Color.rdRed) }
+                    Section { Text(err).font(.caption).foregroundStyle(.red) }
                 }
             }
             .navigationTitle("Solicitar documentos")
@@ -1760,11 +1634,11 @@ struct ContactClientSheet: View {
                     Section {
                         Label(mode == .internalNote ? "Nota guardada" : "Mensaje enviado",
                               systemImage: "checkmark.seal.fill")
-                            .foregroundStyle(Color.rdGreen)
+                            .foregroundStyle(.green)
                     }
                 } else if let err = errorMsg {
                     Section {
-                        Text(err).font(.caption).foregroundStyle(Color.rdRed)
+                        Text(err).font(.caption).foregroundStyle(.red)
                     }
                 }
             }
@@ -1856,7 +1730,7 @@ struct ReassignBrokerSheet: View {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                         Button("Reintentar") { Task { await loadBrokers() } }
                     }
                 } else if brokers.isEmpty {
@@ -1891,7 +1765,7 @@ struct ReassignBrokerSheet: View {
                         Section {
                             Label(err, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
-                                .foregroundStyle(Color.rdRed)
+                                .foregroundStyle(.red)
                         }
                     }
                 }
@@ -2022,7 +1896,7 @@ struct SkipPhaseSheet: View {
                                     Spacer()
                                     if target == opt {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(Color.rdGreen)
+                                            .foregroundStyle(.green)
                                     }
                                 }
                             }
@@ -2043,7 +1917,7 @@ struct SkipPhaseSheet: View {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                     }
                 }
             }

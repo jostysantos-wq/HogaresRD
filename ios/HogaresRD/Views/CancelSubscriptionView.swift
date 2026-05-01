@@ -19,8 +19,8 @@ struct CancelSubscriptionView: View {
     private let reasons = [
         ("expensive", "Muy caro para mi presupuesto"),
         ("no_leads", "No estoy recibiendo suficientes leads"),
-        ("competitor", "Encontré otra plataforma"),
-        ("business_pause", "Mi negocio está en pausa temporal"),
+        ("competitor", "Encontre otra plataforma"),
+        ("business_pause", "Mi negocio esta en pausa temporal"),
         ("missing_features", "Le faltan funciones que necesito"),
         ("other", "Otro motivo"),
     ]
@@ -45,7 +45,7 @@ struct CancelSubscriptionView: View {
                 }
                 .padding(24)
             }
-            .navigationTitle("Cancelar suscripción")
+            .navigationTitle("Cancelar suscripcion")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -70,13 +70,13 @@ struct CancelSubscriptionView: View {
     private var step1WhatYouLose: some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.largeTitle)
-                .foregroundStyle(Color.rdOrange)
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
 
-            Text("Esto es lo que perderás")
+            Text("Esto es lo que perderas")
                 .font(.title2.bold())
 
-            Text("Al cancelar, perderás acceso a todas estas herramientas y datos.")
+            Text("Al cancelar, perderas acceso a todas estas herramientas y datos.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -85,14 +85,14 @@ struct CancelSubscriptionView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 statCard("Propiedades", value: stats?.listings ?? 0, icon: "house.fill", color: .rdBlue)
                 statCard("Aplicaciones", value: stats?.applications ?? 0, icon: "doc.text.fill", color: .rdGreen)
-                statCard("Vistas totales", value: stats?.totalViews ?? 0, icon: "eye.fill", color: .rdOrange)
-                statCard("Conversaciones", value: stats?.conversations ?? 0, icon: "bubble.left.fill", color: .rdPurple)
+                statCard("Vistas totales", value: stats?.totalViews ?? 0, icon: "eye.fill", color: .orange)
+                statCard("Conversaciones", value: stats?.conversations ?? 0, icon: "bubble.left.fill", color: Color(red: 0.4, green: 0.1, blue: 0.6))
             }
 
             Button {
                 withAnimation { step = 2 }
             } label: {
-                Text("Continuar con la cancelación")
+                Text("Continuar con la cancelacion")
                     .font(.subheadline.bold())
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -114,13 +114,13 @@ struct CancelSubscriptionView: View {
     private var step2PauseOffer: some View {
         VStack(spacing: 20) {
             Image(systemName: "pause.circle.fill")
-                .font(.largeTitle)
+                .font(.system(size: 48))
                 .foregroundStyle(Color.rdBlue)
 
-            Text("¿Pausa en vez de cancelar?")
+            Text("Pausa en vez de cancelar?")
                 .font(.title2.bold())
 
-            Text("Puedes pausar tu suscripción por 1 mes sin costo. Tus datos y propiedades se mantienen.")
+            Text("Puedes pausar tu suscripcion por 1 mes sin costo. Tus datos y propiedades se mantienen.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -149,7 +149,7 @@ struct CancelSubscriptionView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.rdLine))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.separator)))
             }
             .buttonStyle(.plain)
         }
@@ -160,13 +160,13 @@ struct CancelSubscriptionView: View {
     private var step3Reason: some View {
         VStack(spacing: 20) {
             Image(systemName: "text.bubble.fill")
-                .font(.largeTitle)
+                .font(.system(size: 48))
                 .foregroundStyle(Color.rdBlue)
 
-            Text("Cuéntanos por qué")
+            Text("Cuentanos por que")
                 .font(.title2.bold())
 
-            Text("Tu feedback nos ayuda a mejorar para agentes como tú.")
+            Text("Tu feedback nos ayuda a mejorar para agentes como tu.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -228,7 +228,7 @@ struct CancelSubscriptionView: View {
             if selectedReason == "business_pause" {
                 // Re-offer pause
                 Image(systemName: "pause.circle.fill")
-                    .font(.largeTitle)
+                    .font(.system(size: 48))
                     .foregroundStyle(Color.rdBlue)
                 Text("Pausa gratuita de 1 mes")
                     .font(.title2.bold())
@@ -237,17 +237,17 @@ struct CancelSubscriptionView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                offerButton("Pausar suscripción", offer: "pause", color: .rdBlue)
+                offerButton("Pausar suscripcion", offer: "pause", color: .rdBlue)
             } else if ["expensive", "no_leads", "competitor", "missing_features"].contains(selectedReason) {
                 // Discount offer
                 Image(systemName: "gift.fill")
-                    .font(.largeTitle)
+                    .font(.system(size: 48))
                     .foregroundStyle(Color.rdBlue)
                 Text("30% de descuento por 3 meses")
                     .font(.title2.bold())
                 Text(selectedReason == "no_leads"
-                     ? "Nuestro equipo puede ayudarte a optimizar tus listados. Además, te ofrecemos 30% de descuento."
-                     : "Te ofrecemos un 30% de descuento por los próximos 3 meses para que sigas creciendo.")
+                     ? "Nuestro equipo puede ayudarte a optimizar tus listados. Ademas, te ofrecemos 30% de descuento."
+                     : "Te ofrecemos un 30% de descuento por los proximos 3 meses para que sigas creciendo.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -256,11 +256,11 @@ struct CancelSubscriptionView: View {
             } else {
                 // Generic final confirmation
                 Image(systemName: "hand.wave.fill")
-                    .font(.largeTitle)
+                    .font(.system(size: 48))
                     .foregroundStyle(.secondary)
-                Text("Confirmar cancelación")
+                Text("Confirmar cancelacion")
                     .font(.title2.bold())
-                Text("Tu suscripción se cancelará al final del período actual. Tus datos se mantendrán por 90 días.")
+                Text("Tu suscripcion se cancelara al final del periodo actual. Tus datos se mantendran por 90 dias.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -273,7 +273,7 @@ struct CancelSubscriptionView: View {
                 HStack {
                     if processing { ProgressView().tint(Color.rdRed) }
                     Text(["expensive", "no_leads", "competitor", "missing_features", "business_pause"].contains(selectedReason)
-                         ? "No gracias, cancelar definitivamente" : "Cancelar suscripción")
+                         ? "No gracias, cancelar definitivamente" : "Cancelar suscripcion")
                         .font(.subheadline.bold())
                 }
                 .foregroundStyle(Color.rdRed)
@@ -291,9 +291,9 @@ struct CancelSubscriptionView: View {
     private var resultView: some View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.largeTitle)
+                .font(.system(size: 48))
                 .foregroundStyle(Color.rdGreen)
-            Text("¡Listo!")
+            Text("Listo!")
                 .font(.title2.bold())
             Text(resultMessage)
                 .font(.subheadline)
@@ -353,25 +353,20 @@ struct CancelSubscriptionView: View {
         processing = false
     }
 
-    /// Compact stat tile used by step 1's "what you'll lose" grid. Visually
-    /// echoes the `DSPill` rhythm (icon over value over label, tinted
-    /// background) but at card size — keeps consistency with the broader
-    /// stat-pill pattern without forcing a horizontal pill in a 2x2 grid.
     private func statCard(_ label: String, value: Int, icon: String, color: Color) -> some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(.system(size: 20))
                 .foregroundStyle(color)
             Text("\(value)")
                 .font(.title2.bold())
-                .monospacedDigit()
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(color.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+        .background(color.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

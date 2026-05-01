@@ -123,19 +123,30 @@ struct ConversationThreadView: View {
     }
 
     // MARK: - Theme
-    //
-    // All chat chrome routes through `Color.rd*` design tokens so dark
-    // mode and accent re-skinning stay centralised. `chatTeal` is kept
-    // as a static alias because `MessageBubble` (a sibling type) still
-    // reads it; callers should use `Color.rdTeal` directly.
 
-    static let chatTeal: Color = .rdTeal
+    static let chatTeal = Color(red: 96/255, green: 178/255, blue: 170/255)
 
-    private var chatBackground: Color { .rdSurface }
-    private var cardBackground: Color { .rdSurfaceMuted }
-    private var theirBubbleBackground: Color { .rdSurfaceMuted }
-    private var sendButtonColor: Color { .rdInk }
-    private var sendIconColor: Color { .rdSurface }
+    private var chatBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.07, green: 0.08, blue: 0.09)
+            : Color(red: 0.95, green: 0.94, blue: 0.91)
+    }
+    private var cardBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.13, green: 0.14, blue: 0.16)
+            : .white
+    }
+    private var theirBubbleBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.16, green: 0.17, blue: 0.19)
+            : .white
+    }
+    private var sendButtonColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+    private var sendIconColor: Color {
+        colorScheme == .dark ? .black : .white
+    }
 
     private var headerTitle: String {
         if conversation.clientId == myId {
@@ -160,19 +171,18 @@ struct ConversationThreadView: View {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 38, height: 38)
                     .background(Circle().fill(cardBackground))
-                    .overlay(Circle().stroke(Color.rdLine, lineWidth: 0.5))
+                    .overlay(Circle().stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Volver")
 
             Spacer(minLength: 0)
 
             Text(headerTitle)
-                .font(.body.weight(.semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
@@ -205,16 +215,15 @@ struct ConversationThreadView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.body.weight(.semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 38, height: 38)
                         .background(Circle().fill(cardBackground))
-                        .overlay(Circle().stroke(Color.rdLine, lineWidth: 0.5))
+                        .overlay(Circle().stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
                 }
                 .disabled(toggling)
-                .accessibilityLabel("Más opciones")
             } else {
-                Color.clear.frame(width: 44, height: 44)
+                Color.clear.frame(width: 38, height: 38)
             }
         }
         .padding(.horizontal, 14)
@@ -248,11 +257,11 @@ struct ConversationThreadView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(conversation.propertyTitle)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text("Publicado por \(headerTitle)")
-                        .font(.caption)
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -286,10 +295,10 @@ struct ConversationThreadView: View {
 
     private var avatarFallback: some View {
         ZStack {
-            Circle().fill(Color.rdTeal.opacity(0.18))
+            Circle().fill(Self.chatTeal.opacity(0.18))
             Text(headerInitial)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.rdTeal)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Self.chatTeal)
         }
     }
 
@@ -298,23 +307,23 @@ struct ConversationThreadView: View {
     private var closedBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "lock.fill")
-                .font(.caption).foregroundStyle(Color.rdOrange)
+                .font(.caption).foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Conversación cerrada")
                     .font(.caption).bold()
-                    .foregroundStyle(Color.rdOrange)
+                    .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05))
                 if let name = closedByName {
                     Text("Cerrada por \(name)" + (closedReason.map { " — \($0)" } ?? ""))
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdOrange.opacity(0.85))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color(red: 0.57, green: 0.26, blue: 0.05).opacity(0.85))
                         .lineLimit(2)
                 }
             }
             Spacer()
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.rdOrange.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+        .background(Color(red: 1.0, green: 0.95, blue: 0.78))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 14)
         .padding(.bottom, 6)
     }
@@ -322,7 +331,7 @@ struct ConversationThreadView: View {
     private func errorBanner(_ err: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color.rdOrange)
+                .foregroundStyle(.orange)
             Text(err)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -332,8 +341,8 @@ struct ConversationThreadView: View {
                 .font(.caption2).bold()
         }
         .padding(10)
-        .background(Color.rdOrange.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: Radius.small))
+        .background(Color.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 14)
         .padding(.bottom, 6)
     }
@@ -345,7 +354,7 @@ struct ConversationThreadView: View {
             Spacer()
             Image(systemName: "shield.lefthalf.filled")
                 .font(.system(size: 44))
-                .foregroundStyle(Color.rdTeal)
+                .foregroundStyle(Self.chatTeal)
             Text("Conversación pendiente")
                 .font(.title3).bold()
             Text("\(conversation.clientName) envió \(conversation.messageCount ?? 0) mensaje(s) sobre \(conversation.propertyTitle). Reclama esta conversación para ver los mensajes y responder.")
@@ -365,7 +374,7 @@ struct ConversationThreadView: View {
             }
             .frame(width: 220)
             .padding(.vertical, 12)
-            .background(Color.rdTeal, in: RoundedRectangle(cornerRadius: Radius.medium))
+            .background(Self.chatTeal, in: RoundedRectangle(cornerRadius: 12))
             .foregroundStyle(.white)
             .disabled(claiming)
             Spacer()
@@ -380,16 +389,14 @@ struct ConversationThreadView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if messagesLoaded && messages.isEmpty {
-                        EmptyStateView.calm(
-                            systemImage: "bubble.left.and.bubble.right",
-                            title: "No hay mensajes aún",
-                            description: "Inicia la conversación enviando el primer mensaje."
-                        )
-                        .padding(.top, 40)
+                        Text("No hay mensajes aún")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 40)
                     }
                     ForEach(groupedMessages, id: \.date) { group in
                         Text(group.dateLabel)
-                            .font(.caption2.weight(.semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 14).padding(.vertical, 5)
                             .background(cardBackground.opacity(0.7))
@@ -398,9 +405,7 @@ struct ConversationThreadView: View {
 
                         ForEach(group.messages) { msg in
                             if msg.senderRole == "system" {
-                                DSPill(label: msg.text, tint: .rdMuted)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 6)
+                                SystemMessagePill(text: msg.text)
                                     .id(msg.id)
                             } else {
                                 MessageBubble(
@@ -449,12 +454,12 @@ struct ConversationThreadView: View {
                             } label: {
                                 Text(reply)
                                     .font(.caption)
-                                    .foregroundStyle(Color.rdTeal)
+                                    .foregroundStyle(Self.chatTeal)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
-                                    .background(Color.rdTeal.opacity(0.12))
+                                    .background(Self.chatTeal.opacity(0.12))
                                     .clipShape(Capsule())
-                                    .overlay(Capsule().stroke(Color.rdTeal.opacity(0.3), lineWidth: 0.5))
+                                    .overlay(Capsule().stroke(Self.chatTeal.opacity(0.3), lineWidth: 0.5))
                             }
                             .buttonStyle(.plain)
                         }
@@ -472,37 +477,35 @@ struct ConversationThreadView: View {
                     }
                 } label: {
                     Image(systemName: showQuickReplies ? "xmark" : "plus")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.rdTeal)
-                        .frame(width: 44, height: 44)
-                        .overlay(Circle().stroke(Color.rdTeal, lineWidth: 1.5))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Self.chatTeal)
+                        .frame(width: 38, height: 38)
+                        .overlay(Circle().stroke(Self.chatTeal, lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(showQuickReplies ? "Cerrar respuestas rápidas" : "Abrir respuestas rápidas")
 
                 TextField("Escribe un mensaje...", text: $input, axis: .vertical)
                     .lineLimit(1...4)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                            .stroke(Color.rdLine, lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
                     )
 
                 Button {
                     Task { await send() }
                 } label: {
                     Image(systemName: sending ? "clock" : "paperplane.fill")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(canSend ? sendIconColor : .white)
-                        .frame(width: 44, height: 44)
-                        .background(canSend ? sendButtonColor : Color.rdMuted)
+                        .frame(width: 40, height: 40)
+                        .background(canSend ? sendButtonColor : Color(.systemGray3))
                         .clipShape(Circle())
                 }
                 .disabled(!canSend)
-                .accessibilityLabel("Enviar mensaje")
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -808,7 +811,6 @@ struct ConversationThreadView: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
         .task {
             if !transferred && transferTargets.isEmpty {
                 await loadTransferTargets()
@@ -916,7 +918,6 @@ struct ConversationThreadView: View {
             }
         }
         .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
     }
 
     private func markRead() async {
@@ -956,20 +957,22 @@ struct ConversationThreadView: View {
 }
 
 // MARK: - System Message Pill
-//
-// Wraps `DSPill` so the dotted-border treatment unique to system
-// messages (transfer notices, broker handoffs, etc.) is preserved.
-// New call sites should reach for `DSPill(label:tint:)` directly.
 
 struct SystemMessagePill: View {
     let text: String
     var body: some View {
         HStack {
             Spacer()
-            DSPill(label: text, tint: .rdMuted)
+            Text(text)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color(.systemGray6))
                 .overlay(
-                    Capsule().stroke(Color.rdLine, style: StrokeStyle(lineWidth: 0.5, dash: [3,3]))
+                    Capsule().stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 0.5, dash: [3,3]))
                 )
+                .clipShape(Capsule())
             Spacer()
         }
         .padding(.vertical, 6)
@@ -1006,19 +1009,19 @@ struct MessageBubble: View {
                 }
 
                 Text(msg.text)
-                    .font(.subheadline)
+                    .font(.system(size: 15))
                     .foregroundStyle(isMe ? .white : .primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(isMe ? Self.myColor : theirBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                            .stroke(isMe ? Color.clear : Color.rdLine, lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(isMe ? Color.clear : Color.primary.opacity(0.05), lineWidth: 0.5)
                     )
 
                 Text(timeString)
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
             }
@@ -1048,7 +1051,7 @@ struct MessageBubble: View {
 
     private var avatarInitial: some View {
         Text(String(msg.senderName.prefix(1)).uppercased())
-            .font(.caption2.weight(.bold))
+            .font(.system(size: 11, weight: .bold))
             .foregroundStyle(.white)
             .frame(width: Self.avatarDiameter, height: Self.avatarDiameter)
             .background(Self.myColor.opacity(0.7), in: Circle())

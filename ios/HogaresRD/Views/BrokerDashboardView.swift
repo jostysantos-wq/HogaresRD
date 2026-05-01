@@ -11,14 +11,40 @@ struct BrokerDashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar — design-system ChipRow
-            ChipRow(
-                items: tabs.enumerated().map { idx, title in
-                    ChipRow<Int>.Chip(id: idx, label: title)
-                },
-                selection: $selectedTab
-            )
-            .padding(.vertical, Spacing.s8)
+            // Tab bar
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(tabs.enumerated()), id: \.offset) { i, title in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = i }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    if i == 0 {
+                                        Image(systemName: "house.fill")
+                                            .font(.system(size: 10))
+                                    }
+                                    Text(title)
+                                        .font(.caption).bold()
+                                }
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(selectedTab == i ? Color.rdBlue : Color(.secondarySystemFill))
+                                .foregroundStyle(selectedTab == i ? .white : .primary)
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .id(i)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                }
+                .onChange(of: selectedTab) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(selectedTab, anchor: .center)
+                    }
+                }
+            }
             .background(Color(.systemBackground))
 
             Divider()
@@ -181,10 +207,10 @@ struct DashStatCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.subheadline)
+                    .font(.system(size: 14))
                     .foregroundStyle(color)
                     .frame(width: 30, height: 30)
-                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.small))
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
                 Spacer()
             }
             Text(value)
@@ -198,21 +224,18 @@ struct DashStatCard: View {
                 .lineLimit(1)
             if let sub = subtitle {
                 Text(sub)
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(Spacing.s12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
 // MARK: - Status Badge
-//
-// Wraps `DSStatusBadge` so this file's status→tint mapping stays
-// authoritative for broker dashboard call sites. New screens should
-// reach for `DSStatusBadge(label:tint:)` directly.
 
 struct StatusBadge: View {
     let status: String
@@ -234,18 +257,23 @@ struct StatusBadge: View {
     private var color: Color {
         switch status.lowercased() {
         case "submitted", "pendiente", "reviewing", "en_revision", "docs_pending", "uploaded", "subido":
-            return .rdOrange
+            return .orange
         case "approved", "aprobada", "verified", "verificado", "closed", "cerrada":
-            return .rdGreen
+            return .green
         case "rejected", "rechazada":
-            return .rdRed
+            return .red
         default:
-            return .rdMuted
+            return .secondary
         }
     }
 
     var body: some View {
-        DSStatusBadge(label: label, tint: color)
+        Text(label)
+            .font(.system(size: 10, weight: .bold))
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(color.opacity(0.12))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
     }
 }
 
@@ -349,15 +377,15 @@ struct DashboardApplicationsTab: View {
                 if let a = analytics {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
-                            DashStatCard(icon: "doc.text.fill", label: "Total", value: "\(a.totalApps)", color: .rdBlue)
+                            DashStatCard(icon: "doc.text.fill", label: "Total", value: "\(a.totalApps)", color: .blue)
                                 .frame(width: 140)
-                            DashStatCard(icon: "clock.fill", label: "En Revisión", value: "\(a.enRevision)", color: .rdOrange)
+                            DashStatCard(icon: "clock.fill", label: "En Revisión", value: "\(a.enRevision)", color: .orange)
                                 .frame(width: 140)
-                            DashStatCard(icon: "exclamationmark.triangle.fill", label: "Docs Pendientes", value: "\(a.docsPendientes)", color: .rdOrange)
+                            DashStatCard(icon: "exclamationmark.triangle.fill", label: "Docs Pendientes", value: "\(a.docsPendientes)", color: .orange)
                                 .frame(width: 140)
-                            DashStatCard(icon: "checkmark.circle.fill", label: "Aprobadas", value: "\(a.aprobadas)", color: .rdGreen)
+                            DashStatCard(icon: "checkmark.circle.fill", label: "Aprobadas", value: "\(a.aprobadas)", color: .green)
                                 .frame(width: 140)
-                            DashStatCard(icon: "xmark.circle.fill", label: "Rechazadas", value: "\(a.rechazadas)", color: .rdRed)
+                            DashStatCard(icon: "xmark.circle.fill", label: "Rechazadas", value: "\(a.rechazadas)", color: .red)
                                 .frame(width: 140)
                         }
                         .padding(.horizontal)
@@ -441,15 +469,15 @@ struct DashboardApplicationsTab: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button { pendingBulkAction = .reject } label: {
-                    bulkChip("Rechazar", icon: "xmark.circle.fill", color: .rdRed)
+                    bulkChip("Rechazar", icon: "xmark.circle.fill", color: .red)
                 }
                 .buttonStyle(.plain)
                 Button { pendingBulkAction = .archive } label: {
-                    bulkChip("Archivar", icon: "archivebox.fill", color: .rdMuted)
+                    bulkChip("Archivar", icon: "archivebox.fill", color: .gray)
                 }
                 .buttonStyle(.plain)
                 Button { pendingBulkAction = .markStale } label: {
-                    bulkChip("Obsoletas", icon: "clock.badge.exclamationmark", color: .rdOrange)
+                    bulkChip("Obsoletas", icon: "clock.badge.exclamationmark", color: .orange)
                 }
                 .buttonStyle(.plain)
             }
@@ -462,7 +490,6 @@ struct DashboardApplicationsTab: View {
         }
         .sheet(item: $pendingBulkAction) { action in
             bulkActionSheet(action: action)
-                .presentationDragIndicator(.visible)
         }
     }
 
@@ -614,7 +641,7 @@ struct BulkActionReasonSheet: View {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -638,58 +665,32 @@ struct BulkActionReasonSheet: View {
 struct ApplicationRow: View {
     let app: Application
 
-    /// Tint that drives the leading status dot. Mirrors `StatusBadge`'s
-    /// own mapping so the dot and the trailing badge always agree.
-    private var statusTint: Color {
-        switch app.status.lowercased() {
-        case "submitted", "pendiente", "reviewing", "en_revision", "docs_pending", "uploaded", "subido":
-            return .rdOrange
-        case "approved", "aprobada", "verified", "verificado", "closed", "cerrada":
-            return .rdGreen
-        case "rejected", "rechazada":
-            return .rdRed
-        default:
-            return .rdMuted
-        }
-    }
-
-    /// Linear-style "thin row" — leading dot, body title, caption row,
-    /// optional trailing badge when the row needs the broker's attention.
-    private var actionRequired: Bool {
-        let s = app.status.lowercased()
-        return ["submitted", "pendiente", "reviewing", "en_revision", "docs_pending"].contains(s)
-    }
-
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s12) {
-            StatusDot(tint: statusTint)
-                .padding(.top, 6)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(app.listingTitle)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(app.listingTitle)
+                        .font(.subheadline).bold()
+                        .lineLimit(1)
                     Text(app.priceFormatted)
-                    Text("·").foregroundStyle(.tertiary)
-                    Label(app.intent.capitalized, systemImage: "tag.fill")
-                    Text("·").foregroundStyle(.tertiary)
-                    Label(app.timeAgo, systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(Color.rdBlue)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 0)
-
-            if actionRequired {
+                Spacer()
                 StatusBadge(status: app.status)
             }
+            HStack(spacing: 12) {
+                Label(app.intent.capitalized, systemImage: "tag.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Label(app.timeAgo, systemImage: "clock")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .padding(.horizontal, Spacing.s12)
-        .padding(.vertical, Spacing.s12)
-        .background(Color.rdSurface, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -722,10 +723,10 @@ struct DashboardAnalyticsTab: View {
                 } else if let a = analytics {
                     // Metric cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        DashStatCard(icon: "doc.text.fill", label: "Total Aplicaciones", value: "\(a.totalApps)", color: .rdBlue)
-                        DashStatCard(icon: "chart.line.uptrend.xyaxis", label: "Tasa de Conversión", value: String(format: "%.1f%%", a.conversionRate * 100), color: .rdGreen)
-                        DashStatCard(icon: "calendar.badge.clock", label: "Días Prom. al Cierre", value: String(format: "%.0f", a.avgDaysToClose), color: .rdBlue)
-                        DashStatCard(icon: "sparkles", label: "Nuevas Este Mes", value: "\(a.newThisMonth)", color: .rdPurple)
+                        DashStatCard(icon: "doc.text.fill", label: "Total Aplicaciones", value: "\(a.totalApps)", color: .blue)
+                        DashStatCard(icon: "chart.line.uptrend.xyaxis", label: "Tasa de Conversión", value: String(format: "%.1f%%", a.conversionRate * 100), color: .green)
+                        DashStatCard(icon: "calendar.badge.clock", label: "Días Prom. al Cierre", value: String(format: "%.0f", a.avgDaysToClose), color: .blue)
+                        DashStatCard(icon: "sparkles", label: "Nuevas Este Mes", value: "\(a.newThisMonth)", color: .purple)
                     }
                     .padding(.horizontal)
 
@@ -736,11 +737,11 @@ struct DashboardAnalyticsTab: View {
                             .padding(.horizontal)
 
                         VStack(spacing: 8) {
-                            pipelineRow("Enviadas", count: a.enviadas, color: .rdMuted)
-                            pipelineRow("En Revisión", count: a.enRevision, color: .rdOrange)
-                            pipelineRow("Aprobadas", count: a.aprobadas, color: .rdGreen)
-                            pipelineRow("Rechazadas", count: a.rechazadas, color: .rdRed)
-                            pipelineRow("Cerradas", count: a.cerradas, color: .rdBlue)
+                            pipelineRow("Enviadas", count: a.enviadas, color: .gray)
+                            pipelineRow("En Revisión", count: a.enRevision, color: .orange)
+                            pipelineRow("Aprobadas", count: a.aprobadas, color: .green)
+                            pipelineRow("Rechazadas", count: a.rechazadas, color: .red)
+                            pipelineRow("Cerradas", count: a.cerradas, color: .blue)
                         }
                         .padding(.horizontal)
                     }
@@ -830,13 +831,13 @@ struct SimpleBarChart: View {
             ForEach(Array(data.enumerated()), id: \.offset) { i, item in
                 VStack(spacing: 4) {
                     Text("\(item.value)")
-                        .font(.caption2)
+                        .font(.system(size: 8))
                         .foregroundStyle(.secondary)
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.rdBlue.gradient)
                         .frame(height: maxValue > 0 ? CGFloat(item.value) / CGFloat(maxValue) * 120 : 0)
                     Text(shortMonth(item.label))
-                        .font(.caption2)
+                        .font(.system(size: 8))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -875,10 +876,10 @@ struct DashboardSalesTab: View {
                 } else if let s = sales {
                     // Metric cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        DashStatCard(icon: "dollarsign.circle.fill", label: "Ingresos Totales", value: formatCurrency(s.totalRevenue), color: .rdGreen)
-                        DashStatCard(icon: "chart.bar.fill", label: "Total Ventas", value: "\(s.totalSales)", color: .rdBlue)
-                        DashStatCard(icon: "tag.fill", label: "Precio Promedio", value: formatCurrency(s.avgSalePrice), color: .rdPurple)
-                        DashStatCard(icon: "hourglass", label: "Valor Pipeline", value: formatCurrency(s.activePipelineValue), color: .rdOrange)
+                        DashStatCard(icon: "dollarsign.circle.fill", label: "Ingresos Totales", value: formatCurrency(s.totalRevenue), color: .green)
+                        DashStatCard(icon: "chart.bar.fill", label: "Total Ventas", value: "\(s.totalSales)", color: .blue)
+                        DashStatCard(icon: "tag.fill", label: "Precio Promedio", value: formatCurrency(s.avgSalePrice), color: .purple)
+                        DashStatCard(icon: "hourglass", label: "Valor Pipeline", value: formatCurrency(s.activePipelineValue), color: .orange)
                     }
                     .padding(.horizontal)
 
@@ -1022,13 +1023,15 @@ struct DashboardAccountingTab: View {
                 if loading {
                     ProgressView().padding(.top, 40)
                 } else if let err = errorMsg, response == nil {
-                    EmptyStateView.calm(
-                        systemImage: "exclamationmark.triangle",
-                        title: "Algo salió mal",
-                        description: err,
-                        actionTitle: "Reintentar",
-                        action: { Task { await load() } }
-                    )
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 32)).foregroundStyle(.orange)
+                        Text(err).font(.subheadline).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.rdBlue)
+                    }
                     .padding(32)
                 } else if let r = response {
                     // Metric cards
@@ -1037,14 +1040,14 @@ struct DashboardAccountingTab: View {
                             icon: "checkmark.seal.fill",
                             label: "Aprobadas",
                             value: formatCurrency(r.summary.agent_approved),
-                            color: .rdGreen,
+                            color: .green,
                             subtitle: "Neto al agente"
                         )
                         DashStatCard(
                             icon: "hourglass",
                             label: "Pendientes",
                             value: formatCurrency(r.summary.agent_pending),
-                            color: .rdOrange,
+                            color: .orange,
                             subtitle: "\(r.summary.total_pending_count) sin revisar"
                         )
                         if isInmView {
@@ -1052,7 +1055,7 @@ struct DashboardAccountingTab: View {
                                 icon: "building.2.fill",
                                 label: "Cuota Inmobiliaria",
                                 value: formatCurrency(r.summary.inmobiliaria_approved),
-                                color: .rdBlue,
+                                color: .blue,
                                 subtitle: "Aprobada del equipo"
                             )
                         }
@@ -1060,7 +1063,7 @@ struct DashboardAccountingTab: View {
                             icon: "chart.line.uptrend.xyaxis",
                             label: "Ventas Totales",
                             value: formatCurrency(r.summary.agent_total_sales),
-                            color: .rdPurple,
+                            color: .purple,
                             subtitle: "Monto aprobado"
                         )
                     }
@@ -1115,14 +1118,12 @@ struct DashboardAccountingTab: View {
                 Task { await load() }
             }
             .environmentObject(api)
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $reviewingRow) { row in
             CommissionFormSheet(row: row, mode: .review) {
                 Task { await load() }
             }
             .environmentObject(api)
-            .presentationDragIndicator(.visible)
         }
     }
 
@@ -1173,14 +1174,14 @@ struct DashboardAccountingTab: View {
                     commissionRowLine(
                         label: "Cuota inmobiliaria",
                         value: "\(pctLabel(c.inmobiliaria_percent)) · \(formatCurrency(c.inmobiliaria_amount))",
-                        valueColor: .rdBlue
+                        valueColor: .blue
                     )
                 }
                 Divider().padding(.vertical, 2)
                 commissionRowLine(
                     label: "Neto al agente",
                     value: formatCurrency(c.agent_net),
-                    valueColor: .rdGreen,
+                    valueColor: .green,
                     bold: true
                 )
             }
@@ -1248,15 +1249,20 @@ struct DashboardAccountingTab: View {
     }
 
     private func commissionStatusPill(_ status: String) -> some View {
-        let (label, tint): (String, Color) = {
+        let (label, bg, fg): (String, Color, Color) = {
             switch status {
-            case "pending_review": return ("Pendiente",            .rdOrange)
-            case "approved":       return ("Aprobada",             .rdGreen)
-            case "rejected":       return ("Rechazada",            .rdRed)
-            default:               return (status.capitalized,      .rdMuted)
+            case "pending_review": return ("Pendiente", Color.orange.opacity(0.15), .orange)
+            case "approved":       return ("Aprobada",  Color.green.opacity(0.15),  .green)
+            case "rejected":       return ("Rechazada", Color.red.opacity(0.15),    .red)
+            default:               return (status.capitalized, Color.gray.opacity(0.15), .gray)
             }
         }()
-        return DSStatusBadge(label: label, tint: tint)
+        return Text(label)
+            .font(.caption2).bold()
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(bg)
+            .foregroundStyle(fg)
+            .clipShape(Capsule())
     }
 
     private func pctLabel(_ n: Double) -> String {
@@ -1386,7 +1392,7 @@ struct CommissionFormSheet: View {
                         Spacer()
                         Text(formatCurrency(agentNet))
                             .font(.headline.bold())
-                            .foregroundStyle(Color.rdGreen)
+                            .foregroundStyle(.green)
                     }
                 }
 
@@ -1402,7 +1408,7 @@ struct CommissionFormSheet: View {
                     Section {
                         Text(err)
                             .font(.caption)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -1424,7 +1430,7 @@ struct CommissionFormSheet: View {
                             showRejectConfirm = true
                         } label: {
                             Text("Rechazar")
-                                .foregroundStyle(Color.rdRed)
+                                .foregroundStyle(.red)
                         }
                         .disabled(saving)
                     }
@@ -1718,12 +1724,10 @@ struct DashboardArchiveTab: View {
                 )
                 .environmentObject(api)
             }
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $previewURL) { wrap in
             ArchiveDocPreview(url: wrap.url)
                 .ignoresSafeArea()
-                .presentationDragIndicator(.visible)
         }
     }
 
@@ -1883,7 +1887,7 @@ struct ReviewDocumentSheet: View {
                 if let e = errorMsg {
                     Text(e)
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                         .padding(.horizontal)
                 }
 
@@ -1905,8 +1909,8 @@ struct ReviewDocumentSheet: View {
                             .font(.subheadline).bold()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.rdRed.opacity(0.12))
-                            .foregroundStyle(Color.rdRed)
+                            .background(Color.red.opacity(0.12))
+                            .foregroundStyle(.red)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
@@ -1927,7 +1931,7 @@ struct ReviewDocumentSheet: View {
                                 .font(.subheadline).bold()
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(Color.rdRed)
+                                .background(Color.red)
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
@@ -2114,7 +2118,7 @@ struct DashboardAuditTab: View {
                                             .frame(width: 32, height: 32)
                                             .overlay(
                                                 Image(systemName: event.icon)
-                                                    .font(.footnote)
+                                                    .font(.system(size: 13))
                                                     .foregroundStyle(.white)
                                             )
                                         Rectangle()
@@ -2223,12 +2227,12 @@ struct DashboardSettingsView: View {
                 if let err = errorMsg {
                     Label(err, systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                 }
                 if let msg = successMsg {
                     Label(msg, systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.rdGreen)
+                        .foregroundStyle(.green)
                 }
 
                 Button {
@@ -2306,7 +2310,18 @@ private func formatCurrency(_ value: Double) -> String {
 }
 
 private func emptyState(icon: String, title: String, subtitle: String) -> some View {
-    EmptyStateView.calm(systemImage: icon, title: title, description: subtitle)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+    VStack(spacing: 14) {
+        Image(systemName: icon)
+            .font(.system(size: 44))
+            .foregroundStyle(Color(.tertiaryLabel))
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.secondary)
+        Text(subtitle)
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .multilineTextAlignment(.center)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 40)
 }

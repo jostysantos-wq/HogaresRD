@@ -2,11 +2,52 @@ import SwiftUI
 
 // MARK: - Brand Colors
 //
-// The `Color.rdBlue/Red/Green/Bg/Orange/Purple/Teal` palette plus the
-// new ink/surface/line/muted neutrals live in
-// `DesignSystem/Tokens.swift`. Don't add `Color(red:…)` literals
-// inline — extend the token file instead so dark mode + Dynamic Type
-// keep working everywhere.
+// Brand tokens adapt to light + dark mode via UITraitCollection. Avoid
+// hard-coded `Color(red:…)` literals in views — they ignore Dark Mode and
+// produce invisible text on dark backgrounds. If you need a new tonal
+// step, add it here so it updates everywhere at once.
+extension Color {
+    static let rdBlue  = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.56, blue: 0.96, alpha: 1)
+            : UIColor(red: 0.0,  green: 0.22, blue: 0.66, alpha: 1)
+    })
+    static let rdRed   = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.97, green: 0.36, blue: 0.40, alpha: 1)
+            : UIColor(red: 0.81, green: 0.08, blue: 0.17, alpha: 1)
+    })
+    static let rdGreen = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.78, blue: 0.55, alpha: 1)
+            : UIColor(red: 0.11, green: 0.48, blue: 0.24, alpha: 1)
+    })
+    static let rdBg    = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.10, blue: 0.16, alpha: 1)
+            : UIColor(red: 0.95, green: 0.96, blue: 1.00, alpha: 1)
+    })
+
+    // ── Status palette tokens (adaptive) ──
+    // Used by application/status pills throughout the app. Shipping
+    // dark-mode variants here keeps the badges legible on dark
+    // backgrounds. Names mirror the semantic meaning, not the hue.
+    static let rdOrange = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.99, green: 0.62, blue: 0.18, alpha: 1)
+            : UIColor(red: 0.85, green: 0.47, blue: 0.02, alpha: 1)
+    })
+    static let rdPurple = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.74, green: 0.46, blue: 0.95, alpha: 1)
+            : UIColor(red: 0.55, green: 0.24, blue: 0.78, alpha: 1)
+    })
+    static let rdTeal = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.36, green: 0.80, blue: 0.80, alpha: 1)
+            : UIColor(red: 0.18, green: 0.60, blue: 0.60, alpha: 1)
+    })
+}
 
 // MARK: - Lazy Tab Helper
 
@@ -131,24 +172,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkListing)) { notif in
             if let id = notif.userInfo?["listingId"] as? String {
                 deepLinkListingID = id
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .profileQuickAction)) { notif in
-            // Quick-action chip in ProfileTabView (and the SavedListings
-            // empty-state CTA) routes deep links to the appropriate tab.
-            // Only Messages and Explorar currently have dedicated tabs;
-            // the rest stay inside the Profile stack via NavigationLink.
-            guard let dest = notif.userInfo?["destination"] as? String else { return }
-            switch dest {
-            case ProfileTabView.tabMessages:
-                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = 2 }
-            case "explorar":
-                withAnimation(.easeInOut(duration: 0.2)) { selectedTab = 1 }
-            default:
-                // Other destinations are handled inside the Profile tab —
-                // staying on tab 4 keeps NavigationStack-driven drill-downs
-                // working without breaking other agents' work.
-                break
             }
         }
         .fullScreenCover(item: Binding(
@@ -632,11 +655,6 @@ struct ProfileTabView: View {
     @EnvironmentObject var saved: SavedStore
     @State private var authSheet: AuthView.Mode? = nil
     @State private var showPost = false
-    @State private var showSubscription = false
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-    }
 
     var body: some View {
         NavigationStack {
@@ -644,57 +662,31 @@ struct ProfileTabView: View {
                 // ── Profile Header ──
                 Section {
                     if let user = api.currentUser {
-                        IdentityCard(user: user)
-                            .listRowInsets(EdgeInsets(top: Spacing.s8, leading: Spacing.s16, bottom: Spacing.s8, trailing: Spacing.s16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                        loggedInHeader(user)
                     } else {
                         guestHeader
                     }
                 }
 
                 if let user = api.currentUser {
-                    // ── Subscription banner (pro users only) ──
-                    if let banner = subscriptionBannerStatus(user) {
-                        Section {
-                            SubscriptionStatusBanner(status: banner) {
-                                showSubscription = true
-                            }
-                            .listRowInsets(EdgeInsets(top: Spacing.s4, leading: Spacing.s16, bottom: Spacing.s8, trailing: Spacing.s16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        }
-                    }
-
-                    // ── Quick actions ──
-                    Section {
-                        quickActionsRow(for: user)
-                            .listRowInsets(EdgeInsets(top: Spacing.s4, leading: 0, bottom: Spacing.s8, trailing: 0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
-
                     // ── Account & Settings ──
                     Section {
                         NavigationLink {
                             ProfileView()
                         } label: {
-                            IconTileRow(systemImage: "person.fill", label: "Cuenta y seguridad")
+                            Label("Cuenta y seguridad", systemImage: "person.fill")
                         }
                         NavigationLink {
                             NotificationSettingsView()
                         } label: {
-                            IconTileRow(systemImage: "bell.fill", label: "Notificaciones")
+                            Label("Notificaciones", systemImage: "bell.fill")
                         }
                         NavigationLink {
                             AppSettingsView()
                         } label: {
-                            IconTileRow(systemImage: "gearshape.fill", label: "Apariencia")
+                            Label("Apariencia", systemImage: "gearshape.fill")
                         }
-                    } header: {
-                        Text("Ajustes").sectionHeader()
                     }
-                    .headerProminence(.increased)
 
                     // ── Client: Saved Homes + Saved Searches ──
                     if !user.isAgency {
@@ -702,25 +694,25 @@ struct ProfileTabView: View {
                             NavigationLink {
                                 SavedListingsView()
                             } label: {
-                                if !saved.savedIDs.isEmpty {
-                                    IconTileRow(
-                                        systemImage: "heart.fill",
-                                        label: "Propiedades guardadas",
-                                        accessory: { DSCountPill(count: saved.savedIDs.count, tint: .rdRed) }
-                                    )
-                                } else {
-                                    IconTileRow(systemImage: "heart.fill", label: "Propiedades guardadas")
+                                HStack {
+                                    Label("Propiedades guardadas", systemImage: "heart.fill")
+                                    Spacer()
+                                    if !saved.savedIDs.isEmpty {
+                                        Text("\(saved.savedIDs.count)")
+                                            .font(.caption2).bold()
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 7).padding(.vertical, 3)
+                                            .background(Color.rdRed)
+                                            .clipShape(Capsule())
+                                    }
                                 }
                             }
                             NavigationLink {
                                 SavedSearchesView().environmentObject(api)
                             } label: {
-                                IconTileRow(systemImage: "bell.badge.fill", label: "Búsquedas guardadas")
+                                Label("Búsquedas guardadas", systemImage: "bell.badge.fill")
                             }
-                        } header: {
-                            Text("Tu actividad").sectionHeader()
                         }
-                        .headerProminence(.increased)
                     }
 
                     // ── Role-specific tools ──
@@ -736,139 +728,49 @@ struct ProfileTabView: View {
                     // ── Support ──
                     supportSection
 
-                    // ── Logout (detached, centered, destructive) ──
+                    // ── Logout ──
                     Section {
                         Button(role: .destructive) {
                             api.logout()
                         } label: {
-                            Text("Cerrar sesión")
-                                .font(.body.weight(.semibold))
+                            Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
                                 .foregroundStyle(Color.rdRed)
-                                .frame(maxWidth: .infinity)
                         }
-                    }
-
-                    // ── Version footer ──
-                    Section {
-                        EmptyView()
-                    } footer: {
-                        Text("HogaresRD v\(appVersion)")
-                            .font(.caption2)
-                            .foregroundStyle(Color.rdInkSoft)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, Spacing.s8)
                     }
                 } else {
                     // ── Guest Support ──
                     supportSection
                 }
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(Color.rdSurface)
             .navigationTitle("Perfil")
             .sheet(item: $authSheet) { mode in
                 AuthView(initialMode: mode)
                     .environmentObject(api)
                     .id(mode)
-                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showPost) {
-                SubmitListingView()
-                    .environmentObject(api)
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showSubscription) {
-                PlansView()
-                    .environmentObject(api)
-                    .presentationDragIndicator(.visible)
+                SubmitListingView().environmentObject(api)
             }
         }
     }
 
-    // MARK: - Subscription banner mapping
+    // MARK: - Headers
 
-    private func subscriptionBannerStatus(_ user: User) -> SubscriptionStatusBanner.Status? {
-        guard let raw = user.subscriptionStatus?.lowercased(), !raw.isEmpty else { return nil }
-        switch raw {
-        case "active":
-            return .active
-        case "trial", "trialing":
-            return .trialing(daysRemaining: user.trialDaysRemaining)
-        case "past_due", "canceled", "cancelled", "unpaid":
-            return .pastDue
-        default:
-            return nil
-        }
-    }
-
-    // MARK: - Quick actions chip row
-
-    @ViewBuilder
-    private func quickActionsRow(for user: User) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.s8) {
-                quickActionChip(
-                    icon: "doc.text.fill",
-                    label: user.isAgency ? "Aplicaciones" : "Mis aplicaciones",
-                    tab: ProfileTabView.tabApplications
-                )
-                quickActionChip(
-                    icon: "folder.fill",
-                    label: "Mis documentos",
-                    tab: ProfileTabView.tabDocuments
-                )
-                if !user.isAgency {
-                    quickActionChip(
-                        icon: "heart.fill",
-                        label: "Guardados",
-                        tab: ProfileTabView.tabSaved
-                    )
-                }
-                quickActionChip(
-                    icon: "bubble.left.and.bubble.right.fill",
-                    label: "Mensajes",
-                    tab: ProfileTabView.tabMessages
-                )
+    private func loggedInHeader(_ user: User) -> some View {
+        HStack(spacing: 14) {
+            AvatarView(user: user, size: 56, editable: true, color: avatarColor(user))
+                .environmentObject(api)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(user.name)
+                    .font(.headline)
+                Text(user.email)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                roleBadge(user)
             }
-            .padding(.horizontal, Spacing.s16)
-            .padding(.vertical, Spacing.s4)
         }
+        .padding(.vertical, 4)
     }
-
-    private func quickActionChip(icon: String, label: String, tab: String) -> some View {
-        Button {
-            NotificationCenter.default.post(
-                name: .profileQuickAction,
-                object: nil,
-                userInfo: ["destination": tab]
-            )
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.caption.weight(.semibold))
-                Text(label)
-                    .font(.subheadline.weight(.medium))
-            }
-            .foregroundStyle(Color.rdInk)
-            .padding(.horizontal, Spacing.s12)
-            .padding(.vertical, Spacing.s8)
-            .background(
-                Capsule().fill(Color.rdSurfaceMuted)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-        .accessibilityHint("Abre la pestaña de \(label.lowercased())")
-    }
-
-    // Quick-action destination identifiers — consumed by ContentView.
-    static let tabApplications = "applications"
-    static let tabDocuments    = "documents"
-    static let tabSaved        = "saved"
-    static let tabMessages     = "messages"
-
-    // MARK: - Guest Header
 
     private var guestHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -876,7 +778,7 @@ struct ProfileTabView: View {
                 ZStack {
                     Circle().fill(Color.rdBlue.opacity(0.08)).frame(width: 56, height: 56)
                     Image(systemName: "person.circle")
-                        .font(.title)
+                        .font(.system(size: 28))
                         .foregroundStyle(Color.rdBlue)
                 }
                 VStack(alignment: .leading, spacing: 3) {
@@ -917,10 +819,44 @@ struct ProfileTabView: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - Role Badge
+
+    @ViewBuilder
+    private func roleBadge(_ user: User) -> some View {
+        if user.isConstructora {
+            Label("Constructora", systemImage: "hammer.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.04))
+        } else if user.isInmobiliaria {
+            Label("Inmobiliaria", systemImage: "building.2.crop.circle.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color(red: 0.4, green: 0.1, blue: 0.6))
+        } else if user.isSecretary {
+            Label("Secretaria", systemImage: "person.text.rectangle.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color(red: 0.18, green: 0.55, blue: 0.34))
+        } else if user.isAgency {
+            Label("Agente / Broker", systemImage: "person.badge.key.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color.rdBlue)
+        } else {
+            Label("Cliente", systemImage: "person.fill")
+                .font(.caption2).bold()
+                .foregroundStyle(Color.rdGreen)
+        }
+    }
+
+    private func avatarColor(_ user: User) -> Color {
+        if user.isConstructora { return Color(red: 0.7, green: 0.35, blue: 0.04) }
+        if user.isInmobiliaria { return Color(red: 0.4, green: 0.1, blue: 0.6) }
+        if user.isAgency { return Color.rdBlue }
+        return Color.rdGreen
+    }
+
     // MARK: - Agent Tools
 
     private func agentToolsSection(_ user: User) -> some View {
-        Section {
+        Section("Herramientas de Agente") {
             NavigationLink {
                 // Team leads (inmobiliaria + constructora) ALWAYS get the
                 // full team dashboard. Secretaries get the limited secretary
@@ -933,158 +869,134 @@ struct ProfileTabView: View {
                     BrokerDashboardView().environmentObject(api)
                 }
             } label: {
-                IconTileRow(systemImage: "chart.bar.fill", label: "Dashboard")
+                Label("Dashboard", systemImage: "chart.bar.fill")
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "brain.head.profile.fill", label: "Chat IA")
+                Label("Chat IA", systemImage: "brain.head.profile.fill")
             }
             Button {
                 showPost = true
             } label: {
-                IconTileRow(systemImage: "plus.circle.fill", label: "Publicar propiedad")
+                Label("Publicar propiedad", systemImage: "plus.circle.fill")
+                    .foregroundStyle(Color.rdRed)
             }
-            .buttonStyle(.plain)
             NavigationLink {
                 AgencyDashboardView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "briefcase.fill", label: "Mi portafolio")
+                Label("Mi portafolio", systemImage: "briefcase.fill")
             }
             NavigationLink {
                 ApplicationsView()
             } label: {
-                IconTileRow(systemImage: "doc.text.fill", label: "Aplicaciones recibidas")
+                Label("Aplicaciones recibidas", systemImage: "doc.text.fill")
             }
             NavigationLink {
                 BrokerToursView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "calendar.badge.clock", label: "Visitas agendadas")
+                Label("Visitas agendadas", systemImage: "calendar.badge.clock")
             }
             NavigationLink {
                 AdCampaignsView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "megaphone.fill", label: "Publicidad (Meta Ads)")
+                Label("Publicidad (Meta Ads)", systemImage: "megaphone.fill")
             }
             NavigationLink {
                 BrokerAvailabilityView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "clock.badge.checkmark", label: "Disponibilidad")
+                Label("Disponibilidad", systemImage: "clock.badge.checkmark")
             }
-        } header: {
-            Text("Herramientas de agente").sectionHeader()
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Team Management (Inmobiliaria only)
 
     private var teamManagementSection: some View {
         let level = api.currentUser?.effectiveAccessLevel ?? 1
-        return Section {
+        return Section("Gestión de Equipo") {
             if level >= 2 {
                 NavigationLink {
                     InmobiliariaTeamListView().environmentObject(api)
                 } label: {
-                    IconTileRow(systemImage: "person.2.fill", label: "Mis agentes")
+                    Label("Mis agentes", systemImage: "person.2.fill")
                 }
                 NavigationLink {
                     InmobiliariaPerformanceListView().environmentObject(api)
                 } label: {
-                    IconTileRow(systemImage: "chart.line.uptrend.xyaxis", label: "Rendimiento del equipo")
+                    Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
                 }
             }
             if level >= 3 {
                 NavigationLink {
                     InmobiliariaRequestsListView().environmentObject(api)
                 } label: {
-                    IconTileRow(systemImage: "person.badge.plus", label: "Solicitudes de afiliación")
+                    Label("Solicitudes de afiliación", systemImage: "person.badge.plus")
                 }
             }
-        } header: {
-            Text("Gestión de equipo").sectionHeader()
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Client Tools
 
     private var clientToolsSection: some View {
-        Section {
+        Section("Herramientas") {
             NavigationLink {
                 MyToursView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "calendar.badge.clock", label: "Mis visitas")
+                Label("Mis visitas", systemImage: "calendar.badge.clock")
             }
             NavigationLink {
                 ApplicationsView()
             } label: {
-                IconTileRow(systemImage: "doc.text.fill", label: "Mis aplicaciones")
+                Label("Mis aplicaciones", systemImage: "doc.text.fill")
             }
             NavigationLink {
                 ChatIAView().environmentObject(api)
             } label: {
-                IconTileRow(systemImage: "brain.head.profile.fill", label: "Asistente IA")
+                Label("Asistente IA", systemImage: "brain.head.profile.fill")
             }
-        } header: {
-            Text("Herramientas").sectionHeader()
+            NavigationLink {
+                ConnectorsView()
+            } label: {
+                Label("Conectores", systemImage: "link")
+            }
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Support
 
     private var supportSection: some View {
-        Section {
+        Section("Soporte") {
             Link(destination: URL(string: "https://hogaresrd.com/contacto")!) {
-                IconTileRow(
-                    systemImage: "questionmark.circle.fill",
-                    label: "Ayuda",
-                    accessory: {
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.rdInkSoft)
-                            .accessibilityHidden(true)
-                    }
-                )
+                HStack {
+                    Label("Ayuda", systemImage: "questionmark.circle.fill")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
             Link(destination: URL(string: "https://hogaresrd.com/terminos")!) {
-                IconTileRow(
-                    systemImage: "doc.text.fill",
-                    label: "Términos de uso",
-                    accessory: {
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.rdInkSoft)
-                            .accessibilityHidden(true)
-                    }
-                )
+                HStack {
+                    Label("Términos de uso", systemImage: "doc.text.fill")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
             Link(destination: URL(string: "https://hogaresrd.com/privacidad")!) {
-                IconTileRow(
-                    systemImage: "lock.shield.fill",
-                    label: "Privacidad",
-                    accessory: {
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.rdInkSoft)
-                            .accessibilityHidden(true)
-                    }
-                )
+                HStack {
+                    Label("Privacidad", systemImage: "lock.shield.fill")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
-        } header: {
-            Text("Soporte").sectionHeader()
         }
-        .headerProminence(.increased)
     }
-}
-
-// MARK: - Profile quick-action notification
-//
-// ProfileTabView posts this when the user taps a chip in the "Quick
-// actions" row. ContentView observes it and switches tabs accordingly.
-extension Notification.Name {
-    static let profileQuickAction = Notification.Name("rd.profileQuickAction")
 }
 
 // MARK: - FloatingTabBar
@@ -1100,10 +1012,7 @@ struct FloatingTabBar: View {
     var unreadMessages: Int = 0
     var unreadTasks: Int = 0
 
-    // Use the design-system ink token for the active pill so it tracks
-    // dark-mode changes. Previously this was a hard-coded forest-green
-    // RGB (31, 61, 51) that ignored Dark Mode.
-    private var tabActive: Color { .rdInk }
+    private let forest = Color(red: 31/255, green: 61/255, blue: 51/255)
 
     private struct Item {
         let tag: Int
@@ -1134,8 +1043,6 @@ struct FloatingTabBar: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.label)
-                .accessibilityAddTraits(selection == item.tag ? .isSelected : [])
-                .accessibilityValue(item.badge > 0 ? "\(item.badge) sin leer" : "")
             }
         }
         .padding(.horizontal, 8)
@@ -1145,7 +1052,7 @@ struct FloatingTabBar: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(Color.rdLine, lineWidth: 1)
+                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
                 )
         )
         .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 10)
@@ -1161,7 +1068,7 @@ struct FloatingTabBar: View {
         ZStack {
             if active {
                 Circle()
-                    .fill(tabActive)
+                    .fill(forest)
                     .frame(width: 46, height: 46)
                     .transition(.scale.combined(with: .opacity))
             }
@@ -1169,7 +1076,7 @@ struct FloatingTabBar: View {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: item.icon)
                     .font(.system(size: 18, weight: active ? .semibold : .regular))
-                    .foregroundStyle(active ? .white : Color.rdInkSoft)
+                    .foregroundStyle(active ? .white : Color.black.opacity(0.62))
                     .frame(width: 44, height: 44)
 
                 if item.badge > 0 {
@@ -1178,7 +1085,7 @@ struct FloatingTabBar: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.rdRed, in: Capsule())
+                        .background(Color.red, in: Capsule())
                         .offset(x: 4, y: -2)
                 }
             }

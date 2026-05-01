@@ -11,9 +11,7 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            // Background gradient — dark navy to DR blue.
-            // Brand-fixed splash gradient (intentional one-off — splash always
-            // appears against this navy regardless of system appearance).
+            // Background gradient — dark navy to DR blue
             LinearGradient(
                 colors: [
                     Color(red: 0, green: 0.04, blue: 0.14),
@@ -47,7 +45,7 @@ struct SplashView: View {
                         // Palm fronds
                         Image(systemName: "leaf.fill")
                             .font(.system(size: 44, weight: .medium))
-                            .foregroundStyle(Color.rdRed) // DR Red
+                            .foregroundStyle(Color(red: 0.81, green: 0.07, blue: 0.15)) // DR Red
                             .rotationEffect(.degrees(-15))
                             .offset(y: 8)
 
@@ -71,7 +69,7 @@ struct SplashView: View {
                     +
                     Text("RD")
                         .font(.system(size: 36, weight: .black, design: .default))
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(Color(red: 0.81, green: 0.07, blue: 0.15))
                 }
                 .opacity(textOpacity)
 

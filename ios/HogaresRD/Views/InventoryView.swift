@@ -1,9 +1,6 @@
 import SwiftUI
 
 // MARK: - Inventory Management View
-//
-// Wave 8-C refactor: 56pt thumbnail row pattern (Airbnb-style), status
-// pills via `DSStatusBadge`, empty state via `EmptyStateView.calm`.
 
 struct InventoryManagementView: View {
     let listingId: String
@@ -26,22 +23,21 @@ struct InventoryManagementView: View {
         List {
             // Summary header
             Section {
-                VStack(alignment: .leading, spacing: Spacing.s8) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(listingTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rdInk)
+                        .font(.subheadline).bold()
                         .lineLimit(2)
 
                     if !units.isEmpty {
-                        HStack(spacing: Spacing.s12) {
+                        HStack(spacing: 12) {
                             summaryPill(count: units.count, label: "Total", color: .rdBlue)
                             summaryPill(count: units.filter { $0.status == "available" }.count, label: "Disponibles", color: .rdGreen)
-                            summaryPill(count: units.filter { $0.status == "reserved" }.count, label: "Reservadas", color: .rdOrange)
+                            summaryPill(count: units.filter { $0.status == "reserved" }.count, label: "Reservadas", color: .orange)
                             summaryPill(count: units.filter { $0.status == "sold" }.count, label: "Vendidas", color: .rdRed)
                         }
                     }
                 }
-                .padding(.vertical, Spacing.s4)
+                .padding(.vertical, 4)
             }
 
             // Add unit section
@@ -50,11 +46,11 @@ struct InventoryManagementView: View {
                     showAdd.toggle()
                 } label: {
                     Label(showAdd ? "Cancelar" : "Agregar unidad", systemImage: showAdd ? "xmark" : "plus.circle.fill")
-                        .foregroundStyle(showAdd ? Color.rdInkSoft : Color.rdAccent)
+                        .foregroundStyle(showAdd ? .secondary : Color.rdBlue)
                 }
 
                 if showAdd {
-                    VStack(spacing: Spacing.s8) {
+                    VStack(spacing: 10) {
                         TextField("Etiqueta (ej: Edif. 3 - Apt 2B)", text: $newLabel)
                             .textFieldStyle(.roundedBorder)
 
@@ -88,10 +84,10 @@ struct InventoryManagementView: View {
                                 }
                                 Spacer()
                             }
-                            .padding(.vertical, Spacing.s8)
-                            .background(newLabel.isEmpty ? Color.rdMuted : Color.rdAccent)
+                            .padding(.vertical, 10)
+                            .background(newLabel.isEmpty ? Color(.systemGray4) : Color.rdBlue)
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .disabled(newLabel.isEmpty || adding)
                         .buttonStyle(.plain)
@@ -104,7 +100,7 @@ struct InventoryManagementView: View {
                 Section {
                     Label(err, systemImage: "exclamationmark.triangle")
                         .font(.caption)
-                        .foregroundStyle(Color.rdRed)
+                        .foregroundStyle(.red)
                 }
             }
 
@@ -113,13 +109,18 @@ struct InventoryManagementView: View {
                 Section { ProgressView() }
             } else if units.isEmpty {
                 Section {
-                    EmptyStateView.calm(
-                        systemImage: "building.2",
-                        title: "Sin unidades registradas",
-                        description: "Agrega las unidades individuales de esta propiedad para rastrear su disponibilidad."
-                    )
+                    VStack(spacing: 12) {
+                        Image(systemName: "building.2")
+                            .font(.system(size: 36))
+                            .foregroundStyle(Color(.tertiaryLabel))
+                        Text("Sin unidades registradas")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        Text("Agrega las unidades individuales de esta propiedad para rastrear su disponibilidad.")
+                            .font(.caption).foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.s24)
+                    .padding(.vertical, 24)
                 }
             } else {
                 // Available
@@ -150,7 +151,7 @@ struct InventoryManagementView: View {
                                     } label: {
                                         Label("Liberar", systemImage: "arrow.uturn.backward")
                                     }
-                                    .tint(Color.rdOrange)
+                                    .tint(.orange)
                                 }
                         }
                     }
@@ -178,11 +179,11 @@ struct InventoryManagementView: View {
     private func summaryPill(count: Int, label: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
-                .font(.title3.weight(.bold))
+                .font(.title3).bold()
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.rdInkSoft)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -248,62 +249,51 @@ struct InventoryManagementView: View {
 }
 
 // MARK: - Unit Row
-//
-// Airbnb-style 56pt leading thumbnail (a tinted tile with a building
-// glyph since units don't have individual photos), title + caption
-// stacked, trailing `DSStatusBadge` for unit status.
 
 struct UnitRow: View {
     let unit: UnitInventoryItem
 
-    private var statusTint: Color {
+    private var statusColor: Color {
         switch unit.status {
         case "available": return .rdGreen
-        case "reserved":  return .rdOrange
+        case "reserved":  return .orange
         case "sold":      return .rdRed
-        default:          return .rdMuted
+        default:          return .secondary
         }
     }
 
     var body: some View {
-        HStack(spacing: Spacing.s12) {
-            // 56pt thumbnail tile
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                    .fill(statusTint.opacity(0.12))
-                Image(systemName: "building.2.fill")
-                    .font(.title3)
-                    .foregroundStyle(statusTint)
-            }
-            .frame(width: 56, height: 56)
-            .accessibilityHidden(true)
+        HStack(spacing: 12) {
+            // Status dot
+            Circle()
+                .fill(statusColor)
+                .frame(width: 10, height: 10)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(unit.label)
-                    .font(.body)
-                    .foregroundStyle(Color.rdInk)
-                    .lineLimit(1)
+                    .font(.subheadline).bold()
                 if let type = unit.type, !type.isEmpty {
                     Text(type)
                         .font(.caption)
-                        .foregroundStyle(Color.rdInkSoft)
-                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
                 }
                 if let client = unit.clientName, !client.isEmpty {
                     Label(client, systemImage: "person.fill")
                         .font(.caption2)
-                        .foregroundStyle(statusTint)
-                        .lineLimit(1)
+                        .foregroundStyle(statusColor)
                 }
             }
 
-            Spacer(minLength: Spacing.s8)
+            Spacer()
 
-            DSStatusBadge(label: unit.statusLabel, tint: statusTint)
+            Text(unit.statusLabel)
+                .font(.caption2).bold()
+                .foregroundStyle(statusColor)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(statusColor.opacity(0.12))
+                .clipShape(Capsule())
         }
-        .padding(.vertical, Spacing.s4)
-        .frame(minHeight: 56)
-        .contentShape(Rectangle())
+        .padding(.vertical, 2)
     }
 }
 
@@ -317,13 +307,25 @@ struct InventoryBadgeView: View {
         let reserved  = units.filter { $0.status == "reserved" }.count
         let sold      = units.filter { $0.status == "sold" }.count
 
-        HStack(spacing: Spacing.s8) {
-            DSPill(label: "Disponibles \(available)", tint: .rdGreen)
-            DSPill(label: "Reservadas \(reserved)", tint: .rdOrange)
-            DSPill(label: "Vendidas \(sold)", tint: .rdRed)
+        HStack(spacing: 10) {
+            inventoryDot(count: available, label: "Disponibles", color: .rdGreen)
+            inventoryDot(count: reserved, label: "Reservadas", color: .orange)
+            inventoryDot(count: sold, label: "Vendidas", color: .rdRed)
         }
-        .padding(Spacing.s12)
-        .background(Color.rdSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func inventoryDot(count: Int, label: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text("\(count)")
+                .font(.subheadline).bold()
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }

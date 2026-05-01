@@ -3,15 +3,6 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 // MARK: - Tasks list
-//
-// Wave 8-C refactor: filters via `ChipRow` with counts; rows in
-// Things-style with leading checkmark circle, title + caption (due
-// date), and trailing priority `DSStatusBadge`. Sections grouped by
-// status with sentence-case headers. Empty state via `EmptyStateView`.
-
-enum TaskFilter: String, Hashable {
-    case todas, pendientes, enProgreso, porRevisar, completadas
-}
 
 struct TasksView: View {
     @EnvironmentObject var api: APIService
@@ -19,13 +10,33 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter: TaskFilter = .pendientes
+    @State private var filter = 1 // Start on Pendientes: 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
 
     private var currentUserId: String { api.currentUser?.id ?? "" }
 
     private static let finishedStatuses: Set<String> = ["completada", "no_aplica"]
+
+    private var filteredTasks: [TaskItem] {
+        switch filter {
+        case 1:  return tasks.filter { $0.status == "pendiente" }
+        case 2:  return tasks.filter { $0.status == "en_progreso" }
+        case 3:  return tasks.filter { $0.status == "pending_review" }
+        case 4:  return tasks.filter { $0.status == "completada" }
+        case 5:  return tasks.filter { $0.isOverdue }
+        case 6:  return tasks.filter { $0.status == "no_aplica" }
+        default: return tasks
+        }
+    }
+
+    private var activeTasks: [TaskItem] {
+        filteredTasks.filter { !Self.finishedStatuses.contains($0.status) }
+    }
+
+    private var completedTasks: [TaskItem] {
+        filteredTasks.filter { Self.finishedStatuses.contains($0.status) }
+    }
 
     private var canCreate: Bool {
         api.currentUser?.isTeamLead == true
@@ -37,52 +48,78 @@ struct TasksView: View {
     private var statProgress: Int { tasks.filter { $0.status == "en_progreso" }.count }
     private var statReview: Int { tasks.filter { $0.status == "pending_review" && $0.approverId == currentUserId }.count }
     private var statDone: Int { tasks.filter { $0.status == "completada" }.count }
-
-    private var displayedTasks: [TaskItem] {
-        switch filter {
-        case .todas:       return tasks
-        case .pendientes:  return tasks.filter { $0.status == "pendiente" }
-        case .enProgreso:  return tasks.filter { $0.status == "en_progreso" }
-        case .porRevisar:  return tasks.filter { $0.status == "pending_review" }
-        case .completadas: return tasks.filter { Self.finishedStatuses.contains($0.status) }
-        }
-    }
+    private var statOverdue: Int { tasks.filter { $0.isOverdue }.count }
+    private var statNA: Int { tasks.filter { $0.status == "no_aplica" }.count }
 
     var body: some View {
         Group {
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = errorMsg, tasks.isEmpty {
-                EmptyStateView.calm(
-                    systemImage: "exclamationmark.triangle",
-                    title: "No pudimos cargar tus tareas",
-                    description: err,
-                    actionTitle: "Reintentar",
-                    action: { Task { await load() } }
-                )
-            } else if tasks.isEmpty {
-                EmptyStateView.calm(
-                    systemImage: "checklist",
-                    title: "Sin tareas",
-                    description: "Aquí verás tus tareas pendientes y las que requieren tu revisión."
-                )
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40)).foregroundStyle(.secondary)
+                    Text(err).multilineTextAlignment(.center).foregroundStyle(.secondary)
+                    Button("Reintentar") { Task { await load() } }
+                        .buttonStyle(.borderedProminent).tint(Color.rdBlue)
+                }
+                .padding()
             } else {
                 VStack(spacing: 0) {
-                    ChipRow(
-                        items: [
-                            .init(id: TaskFilter.todas,       label: "Todas",       count: statTotal),
-                            .init(id: TaskFilter.pendientes,  label: "Pendientes",  count: statPending),
-                            .init(id: TaskFilter.enProgreso,  label: "En progreso", count: statProgress),
-                            .init(id: TaskFilter.porRevisar,  label: "Por revisar", count: statReview),
-                            .init(id: TaskFilter.completadas, label: "Completadas", count: statDone)
-                        ],
-                        selection: $filter
-                    )
-                    .padding(.top, Spacing.s8)
+                    // Stats bar
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            statPill("Total", value: statTotal, color: .rdBlue)
+                            statPill("Pendientes", value: statPending, color: .orange)
+                            statPill("En Progreso", value: statProgress, color: .rdBlue)
+                            if statReview > 0 {
+                                statPill("Por Revisar", value: statReview, color: .purple)
+                            }
+                            statPill("Completadas", value: statDone, color: .rdGreen)
+                            statPill("Vencidas", value: statOverdue, color: .rdRed)
+                            if statNA > 0 {
+                                statPill("No Aplica", value: statNA, color: .gray)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                    }
 
-                    Divider().opacity(0.4)
+                    // Swipeable filter tabs
+                    HStack(spacing: 0) {
+                        ForEach([
+                            (0, "Todas"), (1, "Pendientes"), (2, "En Progreso"),
+                            (3, "Por Revisar"), (4, "Completadas"),
+                        ], id: \.0) { tag, label in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { filter = tag }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text(label)
+                                        .font(.caption.bold())
+                                        .foregroundStyle(filter == tag ? Color.rdBlue : .secondary)
+                                    Rectangle()
+                                        .fill(filter == tag ? Color.rdBlue : .clear)
+                                        .frame(height: 2.5)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal, 4)
 
-                    taskListPage(displayedTasks)
+                    // Swipeable content
+                    TabView(selection: $filter) {
+                        taskListPage(tasks).tag(0)
+                        taskListPage(tasks.filter { $0.status == "pendiente" }).tag(1)
+                        taskListPage(tasks.filter { $0.status == "en_progreso" }).tag(2)
+                        taskListPage(tasks.filter { $0.status == "pending_review" }).tag(3)
+                        taskListPage(tasks.filter { Self.finishedStatuses.contains($0.status) }).tag(4)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.easeInOut(duration: 0.2), value: filter)
                 }
             }
         }
@@ -92,37 +129,36 @@ struct TasksView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showCreate = true } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.title3).foregroundStyle(Color.rdAccent)
+                            .font(.title3).foregroundStyle(Color.rdBlue)
                     }
-                    .accessibilityLabel("Nueva tarea")
                 }
             }
         }
         .sheet(isPresented: $showCreate) {
-            CreateTaskSheet(onCreated: { _ in Task { await load() } })
-                .environmentObject(api)
-                .presentationDragIndicator(.visible)
+            CreateTaskSheet(onCreated: { _ in Task { await load() } }).environmentObject(api)
         }
         .sheet(item: $selectedTask) { task in
             NavigationStack {
-                TaskDetailSheet(task: task, onComplete: { Task { await load() } })
-                    .environmentObject(api)
+                TaskDetailSheet(task: task, onComplete: { Task { await load() } }).environmentObject(api)
             }
-            .presentationDragIndicator(.visible)
         }
         .task { await load() }
     }
 
-    // MARK: - Task List Page (sections by status)
+    // MARK: - Task List Page (for each swipeable tab)
 
     @ViewBuilder
     private func taskListPage(_ items: [TaskItem]) -> some View {
         if items.isEmpty {
-            EmptyStateView.filterCleared(
-                title: "No hay tareas en esta vista",
-                description: "Ajusta el filtro para ver más tareas.",
-                onClear: { filter = .todas }
-            )
+            VStack(spacing: 12) {
+                Spacer()
+                Image(systemName: "checklist")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color(.tertiaryLabel))
+                Text("No hay tareas")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Spacer()
+            }
         } else {
             let active = items.filter { !Self.finishedStatuses.contains($0.status) }
             let done = items.filter { Self.finishedStatuses.contains($0.status) }
@@ -153,9 +189,9 @@ struct TasksView: View {
                                     Button {
                                         Task { await markTaskNA(task) }
                                     } label: {
-                                        Label("No aplica", systemImage: "minus.circle")
+                                        Label("No Aplica", systemImage: "minus.circle")
                                     }
-                                    .tint(Color.rdMuted)
+                                    .tint(.gray)
                                 }
                             }
                         }
@@ -172,8 +208,24 @@ struct TasksView: View {
                     }
                 }
             }
-            .listStyle(.plain)
         }
+    }
+
+    // MARK: - Subviews
+
+    private func statPill(_ label: String, value: Int, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(.title3).bold()
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 60)
+        .padding(.vertical, 8).padding(.horizontal, 6)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Actions
@@ -208,31 +260,32 @@ struct TasksView: View {
     }
 }
 
-// MARK: - Task Row (Things-style)
-//
-// Leading checkmark circle, title with strikethrough for finished
-// tasks, caption with listing/due info, trailing priority badge via
-// `DSStatusBadge`. Action chips (REVISAR, Auto) ride on the secondary
-// line so the headline stays scannable.
+// MARK: - Task Row
 
 struct TaskRow: View {
     let task: TaskItem
     var currentUserId: String = ""
 
-    private var priorityTint: Color {
+    private var priorityColor: Color {
         switch task.priority {
-        case "alta": return .rdRed
-        case "baja": return .rdGreen
-        default:     return .rdOrange
+        case "alta": return Color.rdRed
+        case "baja": return Color.rdGreen
+        default:     return .orange
         }
     }
 
-    private var isDone: Bool {
-        task.status == "completada" || task.status == "no_aplica"
+    private var statusColor: Color {
+        switch task.status {
+        case "en_progreso":    return Color.rdBlue
+        case "pending_review": return .purple
+        case "completada":     return Color.rdGreen
+        case "no_aplica":      return .gray
+        default:               return .orange
+        }
     }
 
     /// True when the current user is the approver AND the task is
-    /// waiting for their review. Drives the "REVISAR" chip.
+    /// waiting for their review. Used to show a "ACTION NEEDED" banner.
     private var needsMyReview: Bool {
         task.status == "pending_review" &&
         (task.approverId ?? "") == currentUserId &&
@@ -253,18 +306,40 @@ struct TaskRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s12) {
-            Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                .font(.title3)
-                .foregroundStyle(isDone ? Color.rdGreen : Color.rdMuted)
-                .padding(.top, 2)
-                .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(priorityColor)
+                .frame(width: 8, height: 8)
+                .padding(.top, 6)
 
-            VStack(alignment: .leading, spacing: Spacing.s4) {
+            // Listing thumbnail (when the task is tied to a listing).
+            // Falls back to a placeholder icon when the listing has no
+            // image or when the task isn't related to a listing.
+            if let imgUrl = task.listingImage, let url = URL(string: imgUrl) {
+                CachedAsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    case .failure:
+                        ZStack {
+                            Rectangle().fill(Color(.tertiarySystemFill))
+                            Image(systemName: "photo")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    default:
+                        Rectangle().fill(Color(.tertiarySystemFill))
+                    }
+                }
+                .frame(width: 46, height: 46)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
-                    .font(.body)
-                    .strikethrough(isDone)
-                    .foregroundStyle(isDone ? Color.rdInkSoft : Color.rdInk)
+                    .font(.subheadline).bold()
+                    .strikethrough(task.status == "completada" || task.status == "no_aplica")
+                    .foregroundStyle(task.status == "completada" || task.status == "no_aplica" ? .secondary : .primary)
                     .lineLimit(2)
 
                 // Listing title (when enriched) — helps the user spot
@@ -272,11 +347,11 @@ struct TaskRow: View {
                 if let lt = task.listingTitle, !lt.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "house.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.rdInkSoft)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
                         Text(lt)
-                            .font(.caption)
-                            .foregroundStyle(Color.rdInkSoft)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                 }
@@ -284,7 +359,7 @@ struct TaskRow: View {
                 if let desc = task.description, !desc.isEmpty {
                     Text(desc)
                         .font(.caption)
-                        .foregroundStyle(Color.rdInkSoft)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
 
@@ -292,45 +367,75 @@ struct TaskRow: View {
                 if task.wasRejected, let note = task.reviewNotes, !note.isEmpty {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "arrow.uturn.left.circle.fill")
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                         Text("Devuelta: \(note)")
                             .font(.caption2)
-                            .foregroundStyle(Color.rdRed)
+                            .foregroundStyle(.red)
                             .lineLimit(2)
                     }
                     .padding(.horizontal, 6).padding(.vertical, 4)
-                    .background(Color.rdRed.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.small))
+                    .background(Color.red.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
 
                 HStack(spacing: 6) {
+                    // Status badge
+                    Text(task.statusLabel)
+                        .font(.caption2).bold()
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.15))
+                        .foregroundStyle(statusColor)
+                        .clipShape(Capsule())
+
+                    // "Tu revisión" chip for the approver
                     if needsMyReview {
-                        DSStatusBadge(label: "Revisar", tint: .rdPurple)
+                        Label("REVISAR", systemImage: "eye.fill")
+                            .font(.system(size: 9, weight: .heavy))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.purple)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                     }
+
+                    // Priority badge
+                    Text(task.priorityLabel)
+                        .font(.caption2).bold()
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(priorityColor.opacity(0.15))
+                        .foregroundStyle(priorityColor)
+                        .clipShape(Capsule())
+
                     if task.source == "auto" {
-                        DSStatusBadge(label: "Auto", tint: .rdBlue)
+                        Text("Auto")
+                            .font(.caption2).bold()
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.indigo.opacity(0.15))
+                            .foregroundStyle(.indigo)
+                            .clipShape(Capsule())
                     }
+
                     Spacer()
+
                     if task.isOverdue {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption2)
                             .foregroundStyle(Color.rdRed)
-                            .accessibilityLabel("Tarea vencida")
                     }
+
                     if let dueStr = dueDateFormatted {
                         Text(dueStr)
-                            .font(.caption)
-                            .foregroundStyle(task.isOverdue ? Color.rdRed : Color.rdInkSoft)
+                            .font(.caption2)
+                            .foregroundStyle(task.isOverdue ? Color.rdRed : .secondary)
                     }
                 }
             }
-
-            DSStatusBadge(label: task.priorityLabel, tint: priorityTint)
         }
-        .padding(.vertical, Spacing.s4)
-        .frame(minHeight: 56)
-        .opacity(isDone ? 0.7 : 1)
-        .contentShape(Rectangle())
+        .padding(.vertical, 4)
+        .opacity(task.status == "completada" || task.status == "no_aplica" ? 0.6 : 1)
     }
 }
 
@@ -404,7 +509,7 @@ struct TaskDetailSheet: View {
 
     private var taskColor: Color {
         switch task.sourceEvent {
-        case "documents_requested", "documents_rejected": return Color.rdOrange
+        case "documents_requested", "documents_rejected": return .orange
         case "payment_plan_created": return Color.rdBlue
         case "payment_uploaded": return Color.rdGreen
         case "receipt_ready": return Color.rdGreen
@@ -423,7 +528,7 @@ struct TaskDetailSheet: View {
                                 .fill(taskColor.opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: taskIcon)
-                                .font(.title)
+                                .font(.system(size: 30))
                                 .foregroundStyle(taskColor)
                         }
 
@@ -433,11 +538,19 @@ struct TaskDetailSheet: View {
 
                         // Status + priority
                         HStack(spacing: 8) {
-                            let statusTint: Color = task.status == "completada" ? .rdGreen : task.status == "en_progreso" ? .rdBlue : .rdOrange
-                            DSStatusBadge(label: task.statusLabel, tint: statusTint)
+                            Text(task.statusLabel)
+                                .font(.caption.bold())
+                                .foregroundStyle(task.status == "completada" ? Color.rdGreen : task.status == "en_progreso" ? Color.rdBlue : .orange)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background((task.status == "completada" ? Color.rdGreen : task.status == "en_progreso" ? Color.rdBlue : Color.orange).opacity(0.1))
+                                .clipShape(Capsule())
 
-                            let priorityTint: Color = task.priority == "alta" ? .rdRed : task.priority == "baja" ? .rdGreen : .rdOrange
-                            DSStatusBadge(label: task.priorityLabel, tint: priorityTint)
+                            Text(task.priorityLabel)
+                                .font(.caption.bold())
+                                .foregroundStyle(task.priority == "alta" ? Color.rdRed : task.priority == "baja" ? Color.rdGreen : .orange)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background((task.priority == "alta" ? Color.rdRed : task.priority == "baja" ? Color.rdGreen : Color.orange).opacity(0.1))
+                                .clipShape(Capsule())
 
                             if task.isOverdue {
                                 Label("Vencida", systemImage: "exclamationmark.triangle.fill")
@@ -505,10 +618,10 @@ struct TaskDetailSheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.uturn.left.circle.fill")
-                                    .foregroundStyle(Color.rdRed)
+                                    .foregroundStyle(.red)
                                 Text("Devuelta para revisión")
                                     .font(.caption.bold())
-                                    .foregroundStyle(Color.rdRed)
+                                    .foregroundStyle(.red)
                             }
                             Text(note)
                                 .font(.caption)
@@ -516,10 +629,10 @@ struct TaskDetailSheet: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(Color.rdRed.opacity(0.12))
+                        .background(Color.red.opacity(0.08))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.rdRed.opacity(0.3), lineWidth: 1)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -529,11 +642,11 @@ struct TaskDetailSheet: View {
                     if task.status == "pending_review" && isAssignee {
                         HStack(spacing: 8) {
                             Image(systemName: "hourglass")
-                                .foregroundStyle(Color.rdPurple)
+                                .foregroundStyle(.purple)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Esperando aprobación")
                                     .font(.caption.bold())
-                                    .foregroundStyle(Color.rdPurple)
+                                    .foregroundStyle(.purple)
                                 Text("Enviada para revisión · el aprobador recibirá una notificación")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -541,7 +654,7 @@ struct TaskDetailSheet: View {
                             Spacer()
                         }
                         .padding(12)
-                        .background(Color.rdPurple.opacity(0.12))
+                        .background(Color.purple.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
@@ -582,7 +695,7 @@ struct TaskDetailSheet: View {
                             Divider()
 
                             Image(systemName: uploadIcon)
-                                .font(.largeTitle)
+                                .font(.system(size: 32))
                                 .foregroundStyle(taskColor)
 
                             Text(isBrokerPaymentTask
@@ -657,10 +770,10 @@ struct TaskDetailSheet: View {
                         VStack(spacing: 10) {
                             HStack(spacing: 8) {
                                 Image(systemName: "person.badge.shield.checkmark.fill")
-                                    .foregroundStyle(Color.rdPurple)
+                                    .foregroundStyle(.purple)
                                 Text("Acción requerida · Tú eres el aprobador")
                                     .font(.caption.bold())
-                                    .foregroundStyle(Color.rdPurple)
+                                    .foregroundStyle(.purple)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -693,8 +806,8 @@ struct TaskDetailSheet: View {
                                     .font(.subheadline.bold())
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 13)
-                                    .background(Color.rdRed.opacity(0.12))
-                                    .foregroundStyle(Color.rdRed)
+                                    .background(Color.red.opacity(0.12))
+                                    .foregroundStyle(.red)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
                                 .buttonStyle(.plain)
@@ -715,10 +828,10 @@ struct TaskDetailSheet: View {
                             .buttonStyle(.plain)
                         }
                         .padding(14)
-                        .background(Color.rdPurple.opacity(0.08))
+                        .background(Color.purple.opacity(0.06))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.rdPurple.opacity(0.2), lineWidth: 1)
+                                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -882,7 +995,7 @@ struct TaskDetailSheet: View {
     private func detailRow(icon: String, label: String, value: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.subheadline)
+                .font(.system(size: 14))
                 .foregroundStyle(.secondary)
                 .frame(width: 20)
             Text(label)
@@ -1104,7 +1217,7 @@ struct CreateTaskSheet: View {
                 if let err = errorMsg {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle")
-                            .font(.caption).foregroundStyle(Color.rdRed)
+                            .font(.caption).foregroundStyle(.red)
                     }
                 }
             }
@@ -1249,7 +1362,7 @@ struct RejectTaskSheet: View {
                         .font(.subheadline.bold())
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.rdRed)
+                        .background(Color.red)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -1334,7 +1447,7 @@ struct ReassignApproverSheet: View {
                 }
 
                 if let e = errorMsg {
-                    Section { Text(e).font(.caption).foregroundStyle(Color.rdRed) }
+                    Section { Text(e).font(.caption).foregroundStyle(.red) }
                 }
             }
             .navigationTitle("Reasignar Revisor")

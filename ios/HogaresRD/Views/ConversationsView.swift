@@ -1,34 +1,23 @@
 import SwiftUI
 
 // MARK: - Filter Tab
-enum ConvFilter: String, CaseIterable, Identifiable, Hashable {
+enum ConvFilter: String, CaseIterable, Identifiable {
     case all      = "Todos"
     case unread   = "No leídos"
     case archived = "Archivados"
     var id: String { rawValue }
 }
 
-// MARK: - Conversations List (Front-style)
-//
-// Wave 8-C refactor: each row is a 40pt avatar + content stack with a
-// leading 3pt accent stripe when unread (no more bold-everything). Empty
-// states use `EmptyStateView`; filters use `ChipRow`. Skeleton rows
-// surface during slow initial loads.
+// MARK: - Conversations List (Redesigned — WhatsApp/Zillow style)
 
 struct ConversationsView: View {
     @EnvironmentObject var api: APIService
     @State private var conversations: [Conversation] = []
     @State private var loading = true
-    @State private var showSkeleton = false
     @State private var errorMsg: String?
     @State private var locallyRead: Set<String> = []
     @State private var activeFilter: ConvFilter = .all
     @State private var searchText: String = ""
-
-    /// Tracks whether the user has *ever* had threads, so the
-    /// celebratory empty state only appears when "all caught up" makes
-    /// sense (otherwise we show the calm "no threads yet" state).
-    @AppStorage("conversations.hadThreads") private var hadThreads: Bool = false
 
     private var displayedConversations: [Conversation] {
         var list = conversations
@@ -77,11 +66,10 @@ struct ConversationsView: View {
     var body: some View {
         VStack(spacing: 0) {
             // ── Search bar ──────────────────────────────────
-            HStack(spacing: Spacing.s8) {
+            HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Color.rdInkSoft)
-                    .font(.subheadline)
-                    .accessibilityHidden(true)
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 15))
                 TextField("Buscar conversaciones...", text: $searchText)
                     .font(.subheadline)
                     .submitLabel(.search)
@@ -91,52 +79,72 @@ struct ConversationsView: View {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color.rdInkSoft)
+                            .foregroundStyle(.secondary)
                     }
-                    .accessibilityLabel("Borrar búsqueda")
                 }
             }
-            .padding(.horizontal, Spacing.s12)
+            .padding(.horizontal, 12)
             .padding(.vertical, 9)
-            .background(Color.rdSurfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
-            .padding(.horizontal, Spacing.s16)
-            .padding(.top, Spacing.s8)
+            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
 
             // ── Filter tabs ─────────────────────────────────
-            ChipRow(
-                items: [
-                    .init(id: ConvFilter.all,      label: "Todos",      count: nil),
-                    .init(id: ConvFilter.unread,   label: "No leídos",  count: unreadCount > 0 ? unreadCount : nil),
-                    .init(id: ConvFilter.archived, label: "Archivados", count: nil)
-                ],
-                selection: $activeFilter
-            )
-            .padding(.vertical, Spacing.s4)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(ConvFilter.allCases) { filter in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { activeFilter = filter }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(filter.rawValue)
+                                    .font(.caption.weight(activeFilter == filter ? .bold : .medium))
+                                if filter == .unread && unreadCount > 0 {
+                                    Text("\(unreadCount)")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5).padding(.vertical, 1)
+                                        .background(Color.rdRed, in: Capsule())
+                                }
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .foregroundStyle(activeFilter == filter ? .white : .primary)
+                            .background(
+                                activeFilter == filter ? Color.rdBlue : Color(.secondarySystemFill),
+                                in: Capsule()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
 
-            Divider().opacity(0.4)
+            Divider()
 
             // ── Content ─────────────────────────────────────
             Group {
-                if loading && conversations.isEmpty {
-                    if showSkeleton {
-                        VStack(spacing: 0) {
-                            ForEach(0..<5, id: \.self) { _ in
-                                SkeletonRow().padding(.horizontal, Spacing.s16)
-                                Divider().opacity(0.4)
-                            }
-                            Spacer()
-                        }
-                    } else {
-                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                if loading {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Cargando mensajes...")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let err = errorMsg, conversations.isEmpty {
-                    EmptyStateView.calm(
-                        systemImage: "exclamationmark.triangle",
-                        title: "No pudimos cargar mensajes",
-                        description: err,
-                        actionTitle: "Reintentar",
-                        action: { Task { await load() } }
-                    )
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text(err)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.rdBlue)
+                    }
+                    .padding()
                 } else if displayedConversations.isEmpty {
                     emptyState
                 } else {
@@ -159,7 +167,7 @@ struct ConversationsView: View {
                                 } label: {
                                     Label("Archivar", systemImage: "archivebox")
                                 }
-                                .tint(Color.rdPurple)
+                                .tint(.indigo)
                             }
                             if conv.archived == true {
                                 Button {
@@ -167,7 +175,7 @@ struct ConversationsView: View {
                                 } label: {
                                     Label("Restaurar", systemImage: "arrow.uturn.backward")
                                 }
-                                .tint(Color.rdOrange)
+                                .tint(.orange)
                             }
                         }
                     }
@@ -181,71 +189,69 @@ struct ConversationsView: View {
         .refreshable { await loadAll() }
     }
 
-    @ViewBuilder
     private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: emptyIcon)
+                .font(.system(size: 56))
+                .foregroundStyle(Color.rdBlue.opacity(0.3))
+
+            Text(emptyTitle)
+                .font(.title3).bold()
+
+            Text(emptySubtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var emptyIcon: String {
+        switch activeFilter {
+        case .all: return "bubble.left.and.bubble.right"
+        case .unread: return "checkmark.bubble"
+        case .archived: return "archivebox"
+        }
+    }
+
+    private var emptyTitle: String {
+        if !searchText.isEmpty { return "Sin resultados" }
+        switch activeFilter {
+        case .all: return "Sin mensajes aún"
+        case .unread: return "Todo al día"
+        case .archived: return "Sin archivados"
+        }
+    }
+
+    private var emptySubtitle: String {
         if !searchText.isEmpty {
-            EmptyStateView.filterCleared(
-                title: "Sin resultados",
-                description: "No se encontraron conversaciones para \"\(searchText)\".",
-                onClear: { searchText = "" }
-            )
-        } else {
-            switch activeFilter {
-            case .all:
-                EmptyStateView.calm(
-                    systemImage: "bubble.left.and.bubble.right",
-                    title: "Sin mensajes aún",
-                    description: "Cuando contactes a un agente sobre una propiedad, la conversación aparecerá aquí."
-                )
-            case .unread:
-                if hadThreads {
-                    EmptyStateView.celebratory(
-                        title: "Todo al día",
-                        description: "No tienes mensajes sin leer."
-                    )
-                } else {
-                    EmptyStateView.calm(
-                        systemImage: "checkmark.bubble",
-                        title: "Todo al día",
-                        description: "No tienes mensajes sin leer todavía."
-                    )
-                }
-            case .archived:
-                EmptyStateView.calm(
-                    systemImage: "archivebox",
-                    title: "Sin archivados",
-                    description: "Las conversaciones archivadas aparecerán aquí."
-                )
-            }
+            return "No se encontraron conversaciones para \"\(searchText)\"."
+        }
+        switch activeFilter {
+        case .all:
+            return "Cuando contactes a un agente sobre una propiedad, la conversación aparecerá aquí."
+        case .unread:
+            return "No tienes mensajes sin leer. ¡Estás al día!"
+        case .archived:
+            return "Las conversaciones archivadas aparecerán aquí."
         }
     }
 
     // Load ALL conversations (both active + archived) in one go for client-side filtering
     private func loadAll() async {
-        if conversations.isEmpty {
-            loading = true
-            // Show skeleton only after 300ms — prevents flash on cached
-            // responses.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(300))
-                if loading && conversations.isEmpty {
-                    showSkeleton = true
-                }
-            }
-        }
+        if conversations.isEmpty { loading = true }
         errorMsg = nil
         do {
             async let active  = api.getConversations(archived: false)
             async let archived = api.getConversations(archived: true)
             conversations = try await active + archived
-            if !conversations.isEmpty { hadThreads = true }
         } catch let decodingError as DecodingError {
             errorMsg = decodingErrorMessage(decodingError)
         } catch {
             errorMsg = error.localizedDescription
         }
         loading = false
-        showSkeleton = false
     }
 
     private func decodingErrorMessage(_ error: DecodingError) -> String {
@@ -288,11 +294,7 @@ struct ConversationsView: View {
     }
 }
 
-// MARK: - Conversation Row (Front-style)
-//
-// Two anchors: a 40pt avatar (with optional bottom-right unread dot) and
-// a 3pt accent stripe on the leading edge when there are unread messages.
-// We rely on those anchors instead of bolding the entire row.
+// MARK: - Conversation Row (Redesigned — WhatsApp/iMessage style)
 
 struct ConversationRow: View {
     let conv: Conversation
@@ -316,111 +318,131 @@ struct ConversationRow: View {
         }
     }
 
+    private var otherRole: String {
+        let isClient = conv.clientId == myId
+        return isClient ? "Agente" : "Cliente"
+    }
+
     private var roleColor: Color {
         conv.clientId == myId ? Color.rdBlue : Color.rdGreen
     }
 
     var body: some View {
-        HStack(spacing: Spacing.s12) {
-            // ── Leading accent stripe (unread indicator) ──
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(isUnread ? Color.rdAccent : Color.clear)
-                .frame(width: 3)
-                .accessibilityHidden(true)
-
-            // ── 40pt avatar with unread dot at bottom-right ──
+        HStack(spacing: 12) {
+            // ── Avatar: other party's profile picture, falling back to property image ──
             ZStack(alignment: .bottomTrailing) {
-                avatar
-                    .frame(width: 40, height: 40)
+                if let avatarURL = conv.otherPartyAvatarURL(myId: myId) {
+                    CachedAsyncImage(url: avatarURL, maxPixelSize: 120) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            avatarFallback
+                        }
+                    }
+                    .frame(width: 52, height: 52)
                     .clipShape(Circle())
-
-                if isUnread {
-                    Circle()
-                        .fill(Color.rdAccent)
-                        .frame(width: 8, height: 8)
-                        .overlay(Circle().stroke(Color.rdSurface, lineWidth: 1.5))
-                        .accessibilityHidden(true)
+                } else if let imgStr = conv.propertyImage, let url = URL(string: imgStr) {
+                    CachedAsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            avatarFallback
+                        }
+                    }
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    avatarFallback
                 }
+
+                // Small role indicator dot
+                Circle()
+                    .fill(roleColor)
+                    .frame(width: 14, height: 14)
+                    .overlay(
+                        Image(systemName: conv.clientId == myId ? "person.fill" : "building.2.fill")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(.white)
+                    )
+                    .offset(x: 3, y: 3)
             }
 
             // ── Content ──
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
+                // Top line: name + badges + time
                 HStack(spacing: 6) {
                     Text(otherName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.rdInk)
+                        .font(.subheadline.weight(isUnread ? .bold : .semibold))
                         .lineLimit(1)
 
                     if conv.claimRequired == true {
-                        DSStatusBadge(label: "Nuevo", tint: .rdOrange)
+                        Text("Nuevo")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(Color.orange, in: Capsule())
                     }
 
                     if conv.closed == true {
                         Image(systemName: "lock.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.rdInkSoft)
-                            .accessibilityLabel("Conversación cerrada")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
                     Text(relativeTime(conv.updatedAt))
-                        .font(.caption)
-                        .foregroundStyle(Color.rdInkSoft)
+                        .font(.caption2)
+                        .foregroundStyle(isUnread ? Color.rdBlue : .secondary)
                 }
 
+                // Property name
                 Text(conv.propertyTitle)
                     .font(.caption)
-                    .foregroundStyle(Color.rdInkSoft)
+                    .foregroundStyle(Color.rdBlue)
                     .lineLimit(1)
 
-                if let last = conv.lastMessage, !last.isEmpty {
-                    Text(last)
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdInkSoft)
-                        .lineLimit(1)
-                } else {
-                    Text("Sin mensajes")
-                        .font(.caption2)
-                        .foregroundStyle(Color.rdMuted)
-                        .italic()
-                }
-            }
-        }
-        .padding(.vertical, Spacing.s8)
-        .contentShape(Rectangle())
-    }
+                // Last message preview
+                HStack(spacing: 6) {
+                    if let last = conv.lastMessage, !last.isEmpty {
+                        Text(last)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fontWeight(isUnread ? .medium : .regular)
+                    } else {
+                        Text("Sin mensajes")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .italic()
+                    }
 
-    @ViewBuilder
-    private var avatar: some View {
-        if let avatarURL = conv.otherPartyAvatarURL(myId: myId) {
-            CachedAsyncImage(url: avatarURL, maxPixelSize: 120) { phase in
-                switch phase {
-                case .success(let img):
-                    img.resizable().scaledToFill()
-                default:
-                    avatarFallback
+                    Spacer()
+
+                    // Unread badge
+                    if unread > 0 {
+                        Text("\(unread)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 20, minHeight: 20)
+                            .background(Color.rdBlue, in: Circle())
+                    }
                 }
             }
-        } else if let imgStr = conv.propertyImage, let url = URL(string: imgStr) {
-            CachedAsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let img):
-                    img.resizable().scaledToFill()
-                default:
-                    avatarFallback
-                }
-            }
-        } else {
-            avatarFallback
         }
+        .padding(.vertical, 6)
     }
 
     private var avatarFallback: some View {
         ZStack {
-            Circle().fill(roleColor.opacity(0.12))
-            Image(systemName: conv.clientId == myId ? "person.fill" : "building.2.fill")
-                .foregroundStyle(roleColor.opacity(0.7))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(roleColor.opacity(0.12))
+                .frame(width: 52, height: 52)
+            Image(systemName: "house.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(roleColor.opacity(0.5))
         }
     }
 
