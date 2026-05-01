@@ -8,6 +8,9 @@
     "dev": "node --watch server.js",
     "test": "node --test tests/*.test.js"
   },
+  "engines": {
+    "node": ">=22 <23"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@aws-sdk/client-s3": "^3.1029.0",
