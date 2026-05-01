@@ -5,6 +5,8 @@ data/hogaresrd.db-wal
 data/hogaresrd.db-shm
 data/backups/
 data/errors.log
+data/stripe-processed-events.log
+data/notification-failures.log
 public/uploads/
 server.log
 ios/build/

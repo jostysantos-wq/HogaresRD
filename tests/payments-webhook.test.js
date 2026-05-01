@@ -124,6 +124,132 @@ describe('Stripe webhook — POST /api/stripe/webhook', () => {
     );
   });
 
+  // Group D regression: customer.subscription.deleted must flip the user
+  // and void any pending commissions. We seed a user with stripeCustomerId
+  // + a pending commission, fire the event, then assert.
+  it('customer.subscription.deleted cascades to pending commissions (Group D #2)', async () => {
+    const u = {
+      id: `u_cancel_${Date.now()}`,
+      email: 'cancel@hogaresrd-test.com',
+      role: 'broker',
+      subscriptionStatus: 'active',
+      stripeCustomerId: `cus_cancel_${Date.now()}`,
+    };
+    store.saveUser(u);
+    const a = {
+      id: `app_cancel_${Date.now()}`,
+      listing_id: 'l_dummy',
+      client: { name: 'Test', phone: '8095551234', email: 'b@x.com' },
+      broker: { user_id: u.id },
+      status: 'aprobado',
+      commission: { status: 'pending', sale_amount: '100000', agent_amount: '10000' },
+      timeline_events: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    store.saveApplication(a);
+
+    const eventId = `evt_cancel_${Date.now()}`;
+    const payload = {
+      id:   eventId,
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_test', customer: u.stripeCustomerId, status: 'canceled', metadata: { userId: u.id } } },
+    };
+    const body = JSON.stringify(payload);
+    const sig  = signStripeEvent(body, process.env.STRIPE_WEBHOOK_SECRET);
+    const res  = await postRaw('/api/stripe/webhook', body,
+      { 'stripe-signature': sig, 'Content-Type': 'application/json' }, BASE);
+    assert.equal(res.status, 200, `expected 200 got ${res.status} ${res.text}`);
+
+    // Cascade runs in setImmediate; wait one tick.
+    await new Promise(r => setImmediate(r));
+
+    const userAfter = store.getUserById(u.id);
+    assert.equal(userAfter.subscriptionStatus, 'canceled');
+
+    const appAfter = store.getApplicationById(a.id);
+    assert.equal(appAfter.commission.status, 'voided');
+    assert.equal(appAfter.commission.voided_reason, 'subscription_canceled');
+  });
+
+  // Group D regression: charge.refunded should void approved-unpaid commissions.
+  it('charge.refunded voids approved-but-unpaid commissions (Group D #10)', async () => {
+    const u = {
+      id: `u_refund_${Date.now()}`,
+      email: 'refund@hogaresrd-test.com',
+      role: 'broker',
+      subscriptionStatus: 'active',
+      stripeCustomerId: `cus_refund_${Date.now()}`,
+    };
+    store.saveUser(u);
+    const a = {
+      id: `app_refund_${Date.now()}`,
+      listing_id: 'l_dummy',
+      client: { name: 'Test', phone: '8095551234', email: 'b@x.com' },
+      broker: { user_id: u.id },
+      status: 'completado',
+      commission: { status: 'approved', sale_amount: '100000', agent_amount: '10000', payout_id: null },
+      timeline_events: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    store.saveApplication(a);
+
+    const eventId = `evt_refund_${Date.now()}`;
+    const payload = {
+      id:   eventId,
+      type: 'charge.refunded',
+      data: { object: { id: 'ch_test', customer: u.stripeCustomerId, amount_refunded: 5000 } },
+    };
+    const body = JSON.stringify(payload);
+    const sig  = signStripeEvent(body, process.env.STRIPE_WEBHOOK_SECRET);
+    const res  = await postRaw('/api/stripe/webhook', body,
+      { 'stripe-signature': sig, 'Content-Type': 'application/json' }, BASE);
+    assert.equal(res.status, 200);
+
+    await new Promise(r => setImmediate(r));
+
+    const appAfter = store.getApplicationById(a.id);
+    assert.equal(appAfter.commission.status, 'voided');
+    assert.equal(appAfter.commission.voided_reason, 'stripe_refund');
+  });
+
+  // Group D regression: refund handler must NOT void already-paid-out commissions.
+  it('charge.refunded does NOT void commissions with payout_id set', async () => {
+    const u = {
+      id: `u_paidrefund_${Date.now()}`,
+      email: 'pr@hogaresrd-test.com',
+      role: 'broker',
+      stripeCustomerId: `cus_paidrefund_${Date.now()}`,
+    };
+    store.saveUser(u);
+    const a = {
+      id: `app_paidrefund_${Date.now()}`,
+      listing_id: 'l_dummy',
+      client: { name: 'Test', phone: '8095551234', email: 'b@x.com' },
+      broker: { user_id: u.id },
+      status: 'completado',
+      commission: { status: 'approved', sale_amount: '100000', agent_amount: '10000', payout_id: 'po_already_paid' },
+      timeline_events: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    store.saveApplication(a);
+
+    const payload = {
+      id: `evt_paidrefund_${Date.now()}`,
+      type: 'charge.refunded',
+      data: { object: { customer: u.stripeCustomerId, amount_refunded: 5000 } },
+    };
+    const body = JSON.stringify(payload);
+    const sig  = signStripeEvent(body, process.env.STRIPE_WEBHOOK_SECRET);
+    await postRaw('/api/stripe/webhook', body, { 'stripe-signature': sig, 'Content-Type': 'application/json' }, BASE);
+    await new Promise(r => setImmediate(r));
+
+    const appAfter = store.getApplicationById(a.id);
+    assert.equal(appAfter.commission.status, 'approved', 'paid-out commission must not be voided');
+  });
+
   it('deduplicates a repeated event.id (second call returns deduplicated:true)', async () => {
     const eventId = `evt_dedupe_${Date.now()}`;
     const payload = {

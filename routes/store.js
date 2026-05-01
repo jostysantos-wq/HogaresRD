@@ -540,6 +540,16 @@ function getUserByRefToken(token) {
   return hydrateUser(row);
 }
 
+// Stripe webhooks fire on every renewal at scale; the linear scan
+// fallback in routes/stripe.js findUser() becomes a hotspot. Keep this
+// O(N) for now (the row count is small) but expose a named helper so
+// future indexing can land in one place.
+function getUserByStripeCustomerId(customerId) {
+  if (!customerId) return null;
+  const row = _users.find(u => u.stripeCustomerId === customerId);
+  return hydrateUser(row);
+}
+
 function getUsersByRole(role) {
   return _users.filter(u => u.role === role).map(hydrateUser);
 }
@@ -2018,7 +2028,7 @@ function deleteDeletionRequest(id) {
 // ══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
-  getUsers, getUserById, getUserByEmail, getUserByRefToken, saveUser, deleteUser, deleteUserCascade,
+  getUsers, getUserById, getUserByEmail, getUserByRefToken, getUserByStripeCustomerId, saveUser, deleteUser, deleteUserCascade,
   getActivityByUser, getListingActivity, appendActivity,
   getListings, getListingById, saveListing, deleteListing, invalidateListingsCache: _invalidateCache,
   getAllSubmissions,

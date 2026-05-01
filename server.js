@@ -2770,8 +2770,15 @@ app.get('/api/health', async (req, res) => {
     }
   }
 
-  // Email + Stripe config presence
-  const email  = process.env.RESEND_API_KEY ? 'configured' : 'missing';
+  // Email transport detection — mailer.js prefers Gmail API → Resend →
+  // Workspace SMTP. Any one of the three counts as configured.
+  const hasGmailApi   = !!(process.env.GOOGLE_SERVICE_ACCOUNT_KEY && process.env.GOOGLE_DELEGATED_USER);
+  const hasResend     = !!process.env.RESEND_API_KEY;
+  const hasGmailSmtp  = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+  const email = hasGmailApi ? 'gmail-api'
+              : hasResend ? 'resend'
+              : hasGmailSmtp ? 'gmail-smtp'
+              : 'missing';
   const stripe = (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET)
     ? 'configured' : 'missing';
 

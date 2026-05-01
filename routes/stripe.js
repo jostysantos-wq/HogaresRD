@@ -1,5 +1,7 @@
 const express = require('express');
 const router  = express.Router();
+const fs      = require('fs');
+const path    = require('path');
 const store   = require('./store');
 
 // Stripe is optional — only initialised when the secret key is present.
@@ -268,19 +270,55 @@ router.post('/cancel-feedback', requireAuth, requireStripe, async (req, res) => 
 
 // ── Idempotency cache for Stripe webhook events ──────────────────────────
 // Stripe can replay webhook events (network retries, manual replay from the
-// dashboard). Without dedup, replays mutate user state repeatedly. We track
-// recently-seen event IDs in a FIFO Map capped at 1000 entries (Map preserves
-// insertion order, so we evict the oldest when we exceed the cap).
+// dashboard). Without dedup, replays mutate user state repeatedly.
+//
+// Storage: in-memory FIFO Map (cap 1000) PLUS a JSON-line file under
+// data/stripe-processed-events.log so PM2 graceful reload doesn't lose
+// the dedup window. Stripe retries failed deliveries with exponential
+// backoff for up to ~72h, so we keep entries for 7 days.
 const _processedEventIds = new Map();
 const _MAX_PROCESSED_EVENTS = 1000;
+const _DEDUP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const _DEDUP_LOG_PATH = path.join(__dirname, '..', 'data', 'stripe-processed-events.log');
+
+function _loadProcessedFromDisk() {
+  try {
+    if (!fs.existsSync(_DEDUP_LOG_PATH)) return;
+    const raw = fs.readFileSync(_DEDUP_LOG_PATH, 'utf8');
+    const cutoff = Date.now() - _DEDUP_TTL_MS;
+    const surviving = [];
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const { id, t } = JSON.parse(line);
+        if (id && typeof t === 'number' && t >= cutoff) {
+          _processedEventIds.set(id, t);
+          surviving.push(line);
+        }
+      } catch { /* ignore bad lines */ }
+    }
+    // Compact the file on boot to drop expired entries
+    if (surviving.length < raw.split('\n').filter(l => l.trim()).length) {
+      fs.writeFileSync(_DEDUP_LOG_PATH, surviving.join('\n') + (surviving.length ? '\n' : ''));
+    }
+  } catch (e) {
+    console.warn('[Stripe] dedup log load failed:', e.message);
+  }
+}
+_loadProcessedFromDisk();
 
 function _markEventProcessed(eventId) {
   if (!eventId) return;
-  _processedEventIds.set(eventId, Date.now());
+  const now = Date.now();
+  _processedEventIds.set(eventId, now);
   while (_processedEventIds.size > _MAX_PROCESSED_EVENTS) {
     const oldest = _processedEventIds.keys().next().value;
     _processedEventIds.delete(oldest);
   }
+  // Append-only persistence; survives PM2 reload. Async to keep webhook hot.
+  fs.appendFile(_DEDUP_LOG_PATH, JSON.stringify({ id: eventId, t: now }) + '\n', (err) => {
+    if (err) console.warn('[Stripe] dedup log append failed:', err.message);
+  });
 }
 
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────
@@ -322,7 +360,7 @@ router.post('/webhook', (req, res) => {
       const u = store.getUserById(userId);
       if (u) return u;
     }
-    const match = store.getUsers().find(u => u.stripeCustomerId === sub.customer);
+    const match = store.getUserByStripeCustomerId(sub.customer);
     if (!match) {
       console.warn('[stripe] no user found for customer=%s metadata.userId=%s', sub.customer, userId || 'none');
     }
@@ -361,6 +399,31 @@ router.post('/webhook', (req, res) => {
         store.saveUser(user);
         console.log(`[Stripe] Subscription cancelled → user ${user.id}`);
 
+        // Cascade: void any commissions still in 'pending' state for this
+        // user's open applications. The subscription gate already blocks
+        // new writes (utils/subscription-gate.js), but commissions logged
+        // pre-cancellation should not silently approve later. Approved
+        // commissions are kept (they were earned). Best-effort; never
+        // throws into the webhook hot path.
+        setImmediate(() => {
+          try {
+            const apps = store.getApplicationsByBroker(user.id) || [];
+            let voided = 0;
+            for (const a of apps) {
+              if (a.commission && a.commission.status === 'pending') {
+                a.commission.status = 'voided';
+                a.commission.voided_at = new Date().toISOString();
+                a.commission.voided_reason = 'subscription_canceled';
+                store.saveApplication(a);
+                voided++;
+              }
+            }
+            if (voided) console.log(`[Stripe] Voided ${voided} pending commissions for user ${user.id}`);
+          } catch (e) {
+            console.error('[Stripe] commission cascade error:', e.message);
+          }
+        });
+
         // Send win-back email (fire-and-forget)
         setImmediate(async () => {
           try {
@@ -393,7 +456,7 @@ router.post('/webhook', (req, res) => {
     // Payment failed (e.g. card declined on renewal)
     case 'invoice.payment_failed': {
       const invoice = event.data.object;
-      const user    = store.getUsers().find(u => u.stripeCustomerId === invoice.customer);
+      const user    = store.getUserByStripeCustomerId(invoice.customer);
       if (user) {
         user.subscriptionStatus = 'past_due';
         store.saveUser(user);
@@ -405,7 +468,7 @@ router.post('/webhook', (req, res) => {
     // Payment succeeded (renewal, trial conversion, etc.)
     case 'invoice.payment_succeeded': {
       const invoice = event.data.object;
-      const user    = store.getUsers().find(u => u.stripeCustomerId === invoice.customer);
+      const user    = store.getUserByStripeCustomerId(invoice.customer);
       if (user && user.subscriptionStatus !== 'trialing') {
         user.subscriptionStatus = 'active';
         store.saveUser(user);
@@ -457,6 +520,67 @@ router.post('/webhook', (req, res) => {
             _pn(uid, { type: 'status_changed', title: 'Pago recibido ✓', body: 'Tu anuncio fue pagado y está pendiente de aprobación', url: '/broker#ad-request' });
           }
         }).catch(e => console.error('[Stripe] Ad payment update error:', e.message));
+      }
+      break;
+    }
+
+    // Refund issued (whole or partial). For subscription refunds we void
+    // any approved-but-unpaid commission for the user — assumes a refund
+    // means the sale is unwound. Best-effort; admins can still override.
+    case 'charge.refunded': {
+      const charge = event.data.object;
+      const user   = store.getUserByStripeCustomerId(charge.customer);
+      if (user) {
+        console.log(`[Stripe] Refund processed for user ${user.id}, amount=${charge.amount_refunded}`);
+        setImmediate(() => {
+          try {
+            const apps = store.getApplicationsByBroker(user.id) || [];
+            let voided = 0;
+            for (const a of apps) {
+              if (a.commission && a.commission.status === 'approved' && !a.commission.payout_id) {
+                a.commission.status = 'voided';
+                a.commission.voided_at = new Date().toISOString();
+                a.commission.voided_reason = 'stripe_refund';
+                store.saveApplication(a);
+                voided++;
+              }
+            }
+            if (voided) console.log(`[Stripe] Voided ${voided} unpaid-approved commissions on refund for user ${user.id}`);
+          } catch (e) {
+            console.error('[Stripe] refund cascade error:', e.message);
+          }
+        });
+      }
+      break;
+    }
+
+    // Trial expiring soon — notify the user proactively
+    case 'customer.subscription.trial_will_end': {
+      const sub  = event.data.object;
+      const user = findUser(sub);
+      if (user && user.email) {
+        setImmediate(async () => {
+          try {
+            const { createTransport } = require('./mailer');
+            const et = require('../utils/email-templates');
+            const mailer = createTransport();
+            const firstName = (user.name || '').split(' ')[0] || 'Agente';
+            await mailer.sendMail({
+              to: user.email,
+              subject: 'Tu período de prueba termina pronto — HogaresRD',
+              department: 'ventas',
+              html: et.layout({
+                title: `Hola ${et.esc(firstName)}, tu prueba termina en 3 días`,
+                preheader: 'Agrega un método de pago para no perder acceso.',
+                body:
+                  et.p('Tu prueba gratuita termina en 3 días. Para mantener tus listings activos y seguir recibiendo aplicaciones, agrega tu método de pago.')
+                  + et.button('Configurar método de pago', `${BASE_URL}/subscribe`),
+              }),
+            });
+          } catch (e) {
+            console.error('[Stripe] trial-ending email error:', e.message);
+          }
+        });
       }
       break;
     }
