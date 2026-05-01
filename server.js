@@ -1040,7 +1040,22 @@ app.get('/terminos',          (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/privacidad',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacidad.html')));
 app.get('/blog',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog.html')));
 app.get('/blog/:slug',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'post.html')));
-app.get('/broker',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'broker.html')));
+// Editorial dashboard landing — replaces the legacy /broker.html as the
+// default broker entry point. The legacy page is still reachable via
+// `/broker.html` directly (express.static above) for the few detail
+// surfaces that haven't been migrated yet (e.g. application detail
+// `/broker.html#tab-applications&app=...`). Clean URLs for the new
+// editorial pages are mounted right below for shareable navigation.
+app.get('/broker',            (req, res) => res.redirect('/broker-dashboard.html'));
+app.get('/dashboard',         (req, res) => res.redirect('/broker-dashboard.html'));
+app.get('/panel',             (req, res) => res.redirect('/broker-dashboard.html'));
+app.get('/mis-propiedades',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'mis-propiedades.html')));
+app.get('/aplicaciones',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'aplicaciones.html')));
+app.get('/visitas',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'visitas.html')));
+app.get('/comisiones',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'comisiones.html')));
+app.get('/mensajes',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'mensajes.html')));
+app.get('/campanas',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'campanas.html')));
+app.get('/enlaces-de-referido', (req, res) => res.sendFile(path.join(__dirname, 'public', 'enlaces-de-referido.html')));
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/tareas',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'tareas.html')));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
