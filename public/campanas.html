@@ -178,6 +178,87 @@
   .ph-cta:hover { background: #000; }
   .ph-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* SECTION TABS */
+  .sec-tabs {
+    display: inline-flex; gap: 4px; padding: 4px;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: var(--r-pill); margin-bottom: 14px;
+  }
+  .sec-tab {
+    padding: 8px 16px; border-radius: var(--r-pill);
+    background: transparent; color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 500; cursor: pointer;
+    border: none;
+  }
+  .sec-tab.active { background: var(--ink); color: #fff; }
+  .sec-tab:hover:not(.active) { color: var(--ink); }
+
+  /* AD REQUEST SECTION */
+  .ar-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+  @media (max-width: 980px) { .ar-grid { grid-template-columns: 1fr; } }
+  .ar-form-stack { display: flex; flex-direction: column; gap: 14px; }
+  .ar-field-label {
+    font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-mute); margin-bottom: 6px;
+  }
+  .ar-input, .ar-textarea, .ar-select {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-family: inherit; font-size: 13.5px; color: var(--ink);
+    background: var(--bg-soft);
+  }
+  .ar-input:focus, .ar-textarea:focus, .ar-select:focus {
+    outline: none; border-color: var(--ink); background: var(--bg-card);
+  }
+  .ar-textarea { resize: vertical; min-height: 72px; }
+  .ar-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ar-dropzone {
+    border: 1.5px dashed var(--line); border-radius: 12px;
+    padding: 24px; text-align: center; cursor: pointer;
+    background: var(--bg-soft); color: var(--ink-mute);
+    font-size: 13px; transition: border-color .15s, background .15s;
+  }
+  .ar-dropzone:hover { border-color: var(--ink-soft); background: var(--bg-card); }
+  .ar-dropzone.has-image { border-color: var(--accent); }
+  .ar-img-spec { font-size: 11.5px; color: var(--ink-mute); line-height: 1.5; }
+  .ar-img-preview { margin-top: 10px; }
+  .ar-price-box {
+    background: var(--bg-soft); border-radius: 12px; padding: 14px;
+    text-align: center;
+  }
+  .ar-price-eyebrow {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-mute);
+  }
+  .ar-price-amount {
+    font-family: var(--serif); font-size: 30px; font-weight: 600;
+    color: var(--ink); line-height: 1.1; margin: 4px 0;
+  }
+  .ar-price-sub { font-size: 11.5px; color: var(--ink-mute); }
+  .ar-msg { font-size: 12.5px; min-height: 16px; }
+  .ar-msg.error { color: var(--accent); }
+  .ar-req-list { display: flex; flex-direction: column; gap: 10px; }
+  .ar-req-card {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+  }
+  .ar-req-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .ar-req-body { padding: 12px 14px; }
+  .ar-req-row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .ar-req-title { font-weight: 600; font-size: 13.5px; color: var(--ink); }
+  .ar-req-pill {
+    font-size: 10.5px; font-weight: 600; padding: 3px 9px;
+    border-radius: var(--r-pill); white-space: nowrap;
+  }
+  .ar-req-pill.gold  { background: var(--gold-soft); color: #a47615; }
+  .ar-req-pill.teal  { background: var(--teal-soft); color: #20665f; }
+  .ar-req-pill.plum  { background: var(--plum-soft); color: var(--plum); }
+  .ar-req-pill.mute  { background: var(--bg-soft); color: var(--ink-mute); }
+  .ar-req-pill.accent { background: var(--accent-soft); color: var(--accent); }
+  .ar-req-desc { font-size: 12px; color: var(--ink-soft); margin: 4px 0; }
+  .ar-req-rej  { font-size: 12px; color: var(--accent); margin-top: 4px; }
+  .ar-req-when { font-size: 10.5px; color: var(--ink-mute); margin-top: 6px; }
+
   /* KPI ROW */
   .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
   .kpi {
@@ -783,6 +864,14 @@
       </div>
     </div>
 
+    <!-- SECTION TABS — Meta Ads vs HogaresRD Ads -->
+    <div class="sec-tabs" role="tablist" aria-label="Tipo de publicidad">
+      <button class="sec-tab active" type="button" role="tab" data-sec="meta" aria-selected="true">Meta Ads</button>
+      <button class="sec-tab" type="button" role="tab" data-sec="hrd" aria-selected="false">Anuncios HogaresRD</button>
+    </div>
+
+    <!-- META ADS SECTION (existing dynamic states) -->
+    <div id="metaSection">
     <!-- DYNAMIC AREA -->
     <div id="loadingState" class="panel" style="padding: 60px; text-align:center; color: var(--ink-mute);">Cargando…</div>
 
@@ -890,6 +979,91 @@
         </div>
         <select id="switchAcctSelect" class="pck-select" style="max-width:240px;"></select>
         <button class="btn-secondary" id="disconnectBtn">Desconectar</button>
+      </div>
+    </div>
+    </div><!-- /#metaSection -->
+
+    <!-- HOGARESRD ADS SECTION (ported from /broker.html#ad-request) -->
+    <div id="hrdSection" hidden>
+      <div class="ar-grid">
+        <!-- Left: form -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Nuevo Anuncio</div>
+          </div>
+          <div class="ar-form-stack">
+            <div>
+              <div class="ar-field-label">Título *</div>
+              <input type="text" id="arTitle" class="ar-input" placeholder="Ej: Apartamentos desde $85,000">
+            </div>
+            <div>
+              <div class="ar-field-label">Descripción</div>
+              <textarea id="arDesc" class="ar-textarea" rows="2" placeholder="Texto del anuncio…"></textarea>
+            </div>
+            <div>
+              <div class="ar-field-label" id="arImgLabel">Imagen *</div>
+              <div id="arImgZone" class="ar-dropzone" tabindex="0" role="button" aria-label="Subir imagen">
+                <input type="file" id="arFileInput" accept="image/*" style="display:none">
+                <div>Haz clic para subir imagen</div>
+              </div>
+              <div id="arImgPreview" class="ar-img-preview" style="display:none;"></div>
+              <div id="arImgSpec" class="ar-img-spec" style="margin-top:8px;"></div>
+            </div>
+            <div>
+              <div class="ar-field-label">URL de destino</div>
+              <input type="url" id="arTargetUrl" class="ar-input" placeholder="https://…">
+            </div>
+            <div class="ar-row2">
+              <div>
+                <div class="ar-field-label">Tipo</div>
+                <select id="arType" class="ar-select">
+                  <option value="fullscreen">Pantalla completa</option>
+                  <option value="popup">Popup</option>
+                  <option value="banner">Banner</option>
+                  <option value="card">Tarjeta</option>
+                </select>
+              </div>
+              <div>
+                <div class="ar-field-label">Ubicación</div>
+                <select id="arPlacement" class="ar-select">
+                  <option value="feed">Feed</option>
+                  <option value="app-launch">Apertura de app</option>
+                  <option value="listing-page">Página de propiedad</option>
+                </select>
+              </div>
+            </div>
+            <div class="ar-row2">
+              <div>
+                <div class="ar-field-label">Fecha inicio</div>
+                <input type="date" id="arStartDate" class="ar-input">
+              </div>
+              <div>
+                <div class="ar-field-label">Fecha fin</div>
+                <input type="date" id="arEndDate" class="ar-input">
+              </div>
+            </div>
+            <div class="ar-price-box">
+              <div class="ar-price-eyebrow">Precio</div>
+              <div class="ar-price-amount" id="arPriceAmount">$99</div>
+              <div class="ar-price-sub">por 7 días</div>
+            </div>
+            <div id="arMsg" class="ar-msg"></div>
+            <button class="ph-cta" id="arSubmitBtn" type="button" style="justify-content:center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Pagar y Enviar
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: my requests -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Mis Solicitudes</div>
+          </div>
+          <div id="arRequestsList" class="ar-req-list">
+            <div style="color:var(--ink-mute);font-size:13px;text-align:center;padding:14px;">Cargando…</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1521,6 +1695,200 @@ bootstrap().catch(err => {
   console.error('[campanas] boot failed', err);
   $('loadingState').innerHTML = '<div style="color:var(--accent);">Error cargando: ' + esc(err.message) + '</div>';
 });
+
+// ════════════════════════════════════════════════════════════
+// ANUNCIOS HOGARESRD — ad-request flow
+// (ported from /broker.html#ad-request — same backend endpoints
+// /api/ads/upload, /api/ads/checkout, /api/ads/my-requests)
+// ════════════════════════════════════════════════════════════
+
+// Per-type spec stays in sync with routes/ads.js
+const AD_SPEC_MAP = {
+  banner:     { width: 1200, height: 628,  label: 'Banner web (horizontal, 1.91:1)' },
+  card:       { width: 1080, height: 1080, label: 'Tarjeta cuadrada (1:1)' },
+  popup:      { width: 1080, height: 1350, label: 'Popup vertical (4:5)' },
+  fullscreen: { width: 1080, height: 1920, label: 'Pantalla completa (9:16)' },
+};
+const AD_PRICE_MAP = { banner: 29, card: 49, popup: 79, fullscreen: 99 };
+
+let _arUploadedUrl  = '';
+let _arUploadedFile = null;
+let _arRequestsLoaded = false;
+
+function arCurrentAdType() {
+  return ($('arType')?.value || 'fullscreen').toLowerCase();
+}
+
+function arRefreshSpecLabel() {
+  const t = arCurrentAdType();
+  const spec = AD_SPEC_MAP[t] || AD_SPEC_MAP.fullscreen;
+  const labelEl = $('arImgLabel');
+  const specEl  = $('arImgSpec');
+  if (labelEl) labelEl.textContent = `Imagen * (${spec.width} × ${spec.height} px recomendado)`;
+  if (specEl) specEl.innerHTML = `<strong>Recomendado:</strong> ${spec.width} × ${spec.height} px — ${esc(spec.label)}.<br>Si la imagen no coincide, se recortará automáticamente al centro.`;
+}
+
+async function arUploadImage(file) {
+  if (!file) return;
+  _arUploadedFile = file;
+  const fd = new FormData();
+  fd.append('image', file);
+  fd.append('ad_type', arCurrentAdType());
+  const msg = $('arMsg');
+  msg.textContent = '';
+  msg.classList.remove('error');
+  try {
+    const r = await fetch('/api/ads/upload', { method: 'POST', body: fd, credentials: 'include' });
+    const data = await r.json();
+    if (data.url) {
+      _arUploadedUrl = data.url;
+      const spec = AD_SPEC_MAP[arCurrentAdType()] || AD_SPEC_MAP.fullscreen;
+      const aspect = `${spec.width} / ${spec.height}`;
+      $('arImgPreview').innerHTML = `
+        <div style="background:linear-gradient(135deg,#030d26,#002366);border-radius:12px;padding:16px;text-align:center;position:relative;">
+          <div style="position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.18);padding:3px 9px;border-radius:50px;">Publicidad</div>
+          <img src="${esc(data.url)}" style="display:block;margin:0 auto;max-width:100%;width:240px;aspect-ratio:${aspect};object-fit:cover;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <div style="color:#fff;font-size:12px;font-weight:600;margin-top:10px;text-align:left;">Vista previa</div>
+        </div>`;
+      $('arImgPreview').style.display = '';
+      $('arImgZone').classList.add('has-image');
+    } else {
+      msg.textContent = data.error || 'Error al subir imagen';
+      msg.classList.add('error');
+    }
+  } catch {
+    msg.textContent = 'Error de red';
+    msg.classList.add('error');
+  }
+}
+
+async function submitAdCheckout() {
+  const btn = $('arSubmitBtn');
+  const msg = $('arMsg');
+  msg.textContent = '';
+  msg.classList.remove('error');
+  const title = $('arTitle').value.trim();
+  if (!title)            { msg.textContent = 'El título es obligatorio'; msg.classList.add('error'); return; }
+  if (!_arUploadedUrl)   { msg.textContent = 'Sube una imagen';          msg.classList.add('error'); return; }
+  btn.disabled = true;
+  const originalHtml = btn.innerHTML;
+  btn.textContent = 'Procesando…';
+  try {
+    const r = await api('/api/ads/checkout', {
+      method: 'POST',
+      body: {
+        title,
+        description: $('arDesc').value.trim(),
+        image_url:   _arUploadedUrl,
+        target_url:  $('arTargetUrl').value.trim(),
+        ad_type:     $('arType').value,
+        placement:   $('arPlacement').value,
+        start_date:  $('arStartDate').value || null,
+        end_date:    $('arEndDate').value || null,
+      },
+    });
+    if (r?.url) { window.location.href = r.url; return; }
+    msg.textContent = 'Error: no se recibió URL de pago';
+    msg.classList.add('error');
+  } catch (e) {
+    msg.textContent = e.message || 'Error al procesar pago';
+    msg.classList.add('error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+}
+
+async function loadAdRequests() {
+  const list = $('arRequestsList');
+  try {
+    const data = await api('/api/ads/my-requests');
+    const ads = Array.isArray(data) ? data : [];
+    if (!ads.length) {
+      list.innerHTML = '<div style="color:var(--ink-mute);font-size:13px;text-align:center;padding:14px;">No has enviado solicitudes de anuncio aún.</div>';
+      return;
+    }
+    const statusMap = {
+      pending_payment:  ['Pago pendiente', 'mute'],
+      pending_approval: ['En revisión',    'gold'],
+      approved:         ['Aprobado',       'teal'],
+      rejected:         ['Rechazado',      'accent'],
+    };
+    list.innerHTML = ads.map(ad => {
+      const [label, color] = statusMap[ad.request_status] || ['Pendiente', 'mute'];
+      const when = ad.created_at
+        ? new Date(ad.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '';
+      return `<div class="ar-req-card">
+        ${ad.image_url ? `<img src="${esc(ad.image_url)}" alt="" onerror="this.style.display='none'">` : ''}
+        <div class="ar-req-body">
+          <div class="ar-req-row1">
+            <span class="ar-req-title">${esc(ad.title || '')}</span>
+            <span class="ar-req-pill ${color}">${label}</span>
+          </div>
+          ${ad.description       ? `<div class="ar-req-desc">${esc(ad.description)}</div>` : ''}
+          ${ad.rejection_reason  ? `<div class="ar-req-rej">Motivo: ${esc(ad.rejection_reason)}</div>` : ''}
+          ${when ? `<div class="ar-req-when">${esc(when)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="color:var(--accent);font-size:13px;text-align:center;padding:14px;">Error cargando solicitudes</div>';
+  }
+}
+
+(function wireAdRequest() {
+  const fileInput = $('arFileInput');
+  const zone      = $('arImgZone');
+  const typeSel   = $('arType');
+  const submit    = $('arSubmitBtn');
+
+  if (zone && fileInput) {
+    zone.addEventListener('click', () => fileInput.click());
+    zone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+    });
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files?.[0];
+      if (f) arUploadImage(f);
+    });
+  }
+  if (typeSel) {
+    typeSel.addEventListener('change', () => {
+      const t = (typeSel.value || 'fullscreen').toLowerCase();
+      $('arPriceAmount').textContent = '$' + (AD_PRICE_MAP[t] ?? 99);
+      arRefreshSpecLabel();
+      // Re-upload at the new spec so server can re-crop
+      if (_arUploadedFile) arUploadImage(_arUploadedFile);
+    });
+  }
+  if (submit) submit.addEventListener('click', submitAdCheckout);
+
+  arRefreshSpecLabel();
+})();
+
+// Tab switcher: hide Meta UI, show HogaresRD ads UI, lazy-load my-requests
+(function wireSecTabs() {
+  const tabs       = document.querySelectorAll('.sec-tab');
+  const metaSec    = $('metaSection');
+  const hrdSec     = $('hrdSection');
+  if (!tabs.length || !metaSec || !hrdSec) return;
+  tabs.forEach(t => t.addEventListener('click', () => {
+    const which = t.dataset.sec;
+    tabs.forEach(x => {
+      const on = x === t;
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    metaSec.hidden = which !== 'meta';
+    hrdSec.hidden  = which !== 'hrd';
+    if (which === 'hrd' && !_arRequestsLoaded) {
+      _arRequestsLoaded = true;
+      loadAdRequests();
+    }
+  }));
+})();
 </script>
 
 
