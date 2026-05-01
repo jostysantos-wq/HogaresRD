@@ -4002,6 +4002,13 @@
 
     <div id="commissionModalError" style="color:var(--red);font-size:0.78rem;min-height:1rem;margin-top:0.5rem;"></div>
 
+    <!-- Wave 9-C: secretaries can review/reject but cannot approve.
+         Server gate at routes/applications.js PUT /:id/commission/review
+         returns 403 (code: 'requires_owner') and surfaces
+         secretary_can_approve:false. We hide the "Aprobar / Ajustar"
+         button up-front so secretaries don't get a 403 surprise. -->
+    <small id="commSecretaryNote" style="display:none;color:var(--text-muted);font-size:0.78rem;margin-top:0.4rem;">Requiere aprobación del propietario de la cuenta. Puedes rechazar o solicitar cambios.</small>
+
     <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem;flex-wrap:wrap;">
       <button class="btn btn-outline" onclick="closeCommissionModal()">Cancelar</button>
       <button class="btn btn-danger" id="commRejectBtn" onclick="submitCommissionReview('reject')" style="display:none;background:#fff;color:var(--red);border:1.5px solid var(--red);">Rechazar</button>
@@ -9143,8 +9150,25 @@
     // Show/hide reject button (inmobiliaria review only)
     document.getElementById('commRejectBtn').style.display =
       (mode === 'review') ? 'inline-flex' : 'none';
-    document.getElementById('commSubmitBtn').textContent =
+    const submitBtn = document.getElementById('commSubmitBtn');
+    submitBtn.textContent =
       mode === 'review' ? 'Aprobar / Ajustar' : (existing.status ? 'Actualizar' : 'Registrar comisión');
+
+    // Wave 9-C: secretaries cannot approve commissions — the server
+    // already returns 403 (code: 'requires_owner') with
+    // secretary_can_approve:false from PUT /commission/review. Hide the
+    // "Aprobar / Ajustar" button proactively so it never appears for
+    // secretaries; the "Rechazar" button stays so they can still flag
+    // issues. Owner (inmobiliaria/constructora) flow is unaffected.
+    const secretaryNote = document.getElementById('commSecretaryNote');
+    const isSecretaryReview = (mode === 'review') && (currentUser?.role === 'secretary');
+    if (isSecretaryReview) {
+      submitBtn.style.display = 'none';
+      secretaryNote.style.display = 'block';
+    } else {
+      submitBtn.style.display = '';
+      secretaryNote.style.display = 'none';
+    }
 
     commRecalc();
     document.getElementById('commissionModal').classList.add('open');
