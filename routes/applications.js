@@ -1716,7 +1716,24 @@ router.get('/', userAuth, (req, res) => {
     apps = apps.filter(a => a.stale !== true);
   }
 
-  res.json(apps.map(decryptAppPII));
+  // Enrich with client.avatarUrl (and client_avatar mirror for older
+  // clients) looked up at read time from the user record, so the
+  // /aplicaciones table can show real profile pictures instead of
+  // initials. Anonymous apps (no client.user_id) keep avatarUrl=null
+  // and the UI falls back to initials.
+  const avatarCache = {};
+  const enriched = apps.map(a => {
+    const dec = decryptAppPII(a);
+    const uid = dec.client?.user_id;
+    if (uid) {
+      if (!Object.prototype.hasOwnProperty.call(avatarCache, uid)) {
+        avatarCache[uid] = store.getUserById(uid)?.avatarUrl || null;
+      }
+      if (dec.client) dec.client.avatarUrl = avatarCache[uid];
+    }
+    return dec;
+  });
+  res.json(enriched);
 });
 
 // ── GET /my  — Client's own applications ─────────────────────────

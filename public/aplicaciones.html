@@ -162,6 +162,45 @@
   }
   .chip.active .chip-count { background: rgba(255,255,255,0.18); color: #fff; }
 
+  /* FILTER POPOVER */
+  .filter-anchor { position: relative; }
+  .filter-pop {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
+    width: 320px; max-width: calc(100vw - 32px);
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: var(--r-card); box-shadow: 0 14px 40px rgba(20,18,14,0.12);
+    padding: 16px;
+  }
+  .filter-pop[hidden] { display: none; }
+  .filter-pop h4 {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-mute);
+    margin: 0 0 8px;
+  }
+  .filter-pop .fp-section + .fp-section { margin-top: 14px; }
+  .filter-pop select, .filter-pop input[type="number"], .filter-pop input[type="date"] {
+    width: 100%; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: 13px; color: var(--ink); font-family: inherit;
+  }
+  .filter-pop .fp-row { display: flex; gap: 8px; }
+  .filter-pop .fp-row > * { flex: 1; min-width: 0; }
+  .filter-pop .fp-actions {
+    display: flex; gap: 8px; margin-top: 16px;
+    padding-top: 14px; border-top: 1px solid var(--line-soft);
+  }
+  .filter-pop .fp-btn {
+    flex: 1; padding: 8px 12px; border-radius: var(--r-pill);
+    font-size: 12.5px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--line); background: var(--bg-card); color: var(--ink);
+  }
+  .filter-pop .fp-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filter-pop .fp-btn:hover:not(.primary) { background: var(--bg-soft); }
+  .ph-pill .pill-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); display: inline-block;
+  }
+
   /* KPI ROW */
   .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
   .kpi {
@@ -214,12 +253,13 @@
 
 
   .c-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .recent-av { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
+  .recent-av { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; overflow: hidden; }
   .recent-av.a1 { background: linear-gradient(135deg, #B8A07E, #6E5847); }
   .recent-av.a2 { background: linear-gradient(135deg, #2e8b8b, #1a5d5d); }
   .recent-av.a3 { background: linear-gradient(135deg, #b54c30, #7a2f1d); }
   .recent-av.a4 { background: linear-gradient(135deg, #6c4f8a, #3f2d54); }
   .recent-av.a5 { background: linear-gradient(135deg, #d4a64a, #8a6722); }
+  .recent-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .recent-name { color: var(--ink); font-weight: 500; }
   .recent-mail, .recent-sub { font-size: 11.5px; color: var(--ink-mute); }
   .c-name-text { display: flex; flex-direction: column; min-width: 0; }
@@ -1063,10 +1103,74 @@
         <h1 class="page-title">Aplicaciones</h1>
       </div>
       <div class="page-actions">
-        <button class="ph-pill" id="filterBtn" type="button" title="Filtros avanzados (próximamente)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          Filtrar
-        </button>
+        <div class="filter-anchor">
+          <button class="ph-pill" id="filterBtn" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span>Filtrar</span>
+            <span class="pill-dot" id="filterDot" hidden></span>
+          </button>
+          <div class="filter-pop" id="filterPop" role="dialog" aria-label="Filtros avanzados" hidden>
+            <div class="fp-section">
+              <h4>Estado</h4>
+              <select id="fp-status">
+                <option value="">Todos los estados</option>
+                <option value="aplicado">Aplicado</option>
+                <option value="en_revision">En revisión</option>
+                <option value="documentos_requeridos">Documentos requeridos</option>
+                <option value="documentos_enviados">Documentos enviados</option>
+                <option value="documentos_insuficientes">Documentos insuficientes</option>
+                <option value="en_aprobacion">En aprobación</option>
+                <option value="reservado">Reservado</option>
+                <option value="aprobado">Aprobado</option>
+                <option value="pendiente_pago">Pendiente de pago</option>
+                <option value="pago_enviado">Pago enviado</option>
+                <option value="pago_aprobado">Pago aprobado</option>
+                <option value="completado">Completado</option>
+                <option value="rechazado">Rechazado</option>
+              </select>
+            </div>
+            <div class="fp-section">
+              <h4>Etapa</h4>
+              <select id="fp-stage">
+                <option value="">Todas las etapas</option>
+                <option value="Recepción">Recepción</option>
+                <option value="Revisión">Revisión</option>
+                <option value="Documentos">Documentos</option>
+                <option value="Aprobación">Aprobación</option>
+                <option value="Reserva">Reserva</option>
+                <option value="Pago">Pago</option>
+                <option value="Cierre">Cierre</option>
+                <option value="Cerrada">Cerrada</option>
+              </select>
+            </div>
+            <div class="fp-section">
+              <h4>Asignación</h4>
+              <select id="fp-assigned">
+                <option value="">Todas</option>
+                <option value="assigned">Asignadas a mí</option>
+                <option value="unassigned">Sin asignar</option>
+              </select>
+            </div>
+            <div class="fp-section">
+              <h4>Última actividad</h4>
+              <div class="fp-row">
+                <input type="date" id="fp-from" aria-label="Desde">
+                <input type="date" id="fp-to" aria-label="Hasta">
+              </div>
+            </div>
+            <div class="fp-section">
+              <h4>Crédito potencial (US$)</h4>
+              <div class="fp-row">
+                <input type="number" id="fp-credit-min" placeholder="Mín" min="0" step="1000">
+                <input type="number" id="fp-credit-max" placeholder="Máx" min="0" step="1000">
+              </div>
+            </div>
+            <div class="fp-actions">
+              <button class="fp-btn" id="fp-clear" type="button">Limpiar</button>
+              <button class="fp-btn primary" id="fp-apply" type="button">Aplicar</button>
+            </div>
+          </div>
+        </div>
         <a class="ph-pill" id="exportBtn" href="/api/broker-dashboard/applications?format=csv">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Exportar
@@ -1240,7 +1344,23 @@ const STATE = {
   sortBy: 'updated',   // 'updated' | 'credit'
   sortDir: 'desc',
   analytics: null,
+  // Advanced filters from the Filtrar popover. null/empty means "no filter".
+  adv: {
+    status: '',     // exact status code
+    stage: '',      // STAGE_LABEL value
+    assigned: '',   // 'assigned' | 'unassigned' | ''
+    from: '',       // YYYY-MM-DD
+    to: '',         // YYYY-MM-DD (inclusive)
+    creditMin: '',  // number string
+    creditMax: '',  // number string
+  },
 };
+
+function advFilterCount() {
+  const a = STATE.adv;
+  return ['status','stage','assigned','from','to','creditMin','creditMax']
+    .reduce((n, k) => n + (a[k] ? 1 : 0), 0);
+}
 
 // ════════════════════════════════════════════════════════════════════
 // ICONS
@@ -1296,6 +1416,33 @@ function applyFilters(apps) {
       const email = appClientEmail(a).toLowerCase();
       const title = appPropertyTitle(a).toLowerCase();
       return name.includes(q) || email.includes(q) || title.includes(q);
+    });
+  }
+  const adv = STATE.adv;
+  if (adv.status) out = out.filter(a => a.status === adv.status);
+  if (adv.stage)  out = out.filter(a => (STAGE_LABEL[a.status] || '') === adv.stage);
+  if (adv.assigned === 'assigned') {
+    out = out.filter(a => a.broker && a.broker.user_id);
+  } else if (adv.assigned === 'unassigned') {
+    out = out.filter(a => !a.broker || !a.broker.user_id);
+  }
+  if (adv.from) {
+    const fromTs = new Date(adv.from + 'T00:00:00').getTime();
+    if (Number.isFinite(fromTs)) out = out.filter(a => appUpdated(a) >= fromTs);
+  }
+  if (adv.to) {
+    const toTs = new Date(adv.to + 'T23:59:59.999').getTime();
+    if (Number.isFinite(toTs)) out = out.filter(a => appUpdated(a) <= toTs);
+  }
+  if (adv.creditMin !== '' && adv.creditMin != null) {
+    const min = Number(adv.creditMin);
+    if (Number.isFinite(min)) out = out.filter(a => (appCredit(a) ?? -1) >= min);
+  }
+  if (adv.creditMax !== '' && adv.creditMax != null) {
+    const max = Number(adv.creditMax);
+    if (Number.isFinite(max)) out = out.filter(a => {
+      const c = appCredit(a);
+      return c != null && c <= max;
     });
   }
   return out;
@@ -1439,12 +1586,16 @@ function renderTable() {
       const credit = appCredit(a);
       const updated = relTime(a.updated_at || a.created_at);
       const av = `a${((start + i) % 5) + 1}`;
+      const avatarUrl = a.client?.avatarUrl || a.client?.avatar_url || null;
+      const avatarInner = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="" onerror="this.parentNode.textContent=this.parentNode.dataset.initials">`
+        : escapeHtml(initials(name));
       // Row click opens the inline detail panel (window.openApplicationDetail)
       // — defined in the panel controller IIFE near the bottom of this page.
       return `
         <div class="recent-row" data-id="${escapeHtml(a.id)}">
           <div class="c c-name">
-            <span class="recent-av ${av}">${escapeHtml(initials(name))}</span>
+            <span class="recent-av ${av}" data-initials="${escapeHtml(initials(name))}">${avatarInner}</span>
             <span class="c-name-text">
               <div class="recent-name">${escapeHtml(name)}</div>
               <div class="recent-mail">${escapeHtml(email)}</div>
@@ -1555,11 +1706,80 @@ async function bootstrap() {
     STATE.page++; renderTable();
   });
 
-  document.getElementById('filterBtn').addEventListener('click', () => {
-    toast('Filtros avanzados llegan pronto. Usa los chips de estado por ahora.');
-  });
+  wireFilterPopover();
 
   await loadApplications();
+}
+
+function wireFilterPopover() {
+  const btn = document.getElementById('filterBtn');
+  const pop = document.getElementById('filterPop');
+  const dot = document.getElementById('filterDot');
+  if (!btn || !pop) return;
+
+  const fields = {
+    status:    document.getElementById('fp-status'),
+    stage:     document.getElementById('fp-stage'),
+    assigned:  document.getElementById('fp-assigned'),
+    from:      document.getElementById('fp-from'),
+    to:        document.getElementById('fp-to'),
+    creditMin: document.getElementById('fp-credit-min'),
+    creditMax: document.getElementById('fp-credit-max'),
+  };
+
+  const syncDot = () => {
+    const n = advFilterCount();
+    dot.hidden = n === 0;
+  };
+
+  const writeFromState = () => {
+    for (const [k, el] of Object.entries(fields)) el.value = STATE.adv[k] || '';
+    syncDot();
+  };
+
+  const readToState = () => {
+    for (const [k, el] of Object.entries(fields)) STATE.adv[k] = el.value || '';
+    syncDot();
+  };
+
+  const open = () => {
+    writeFromState();
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+  };
+  const close = () => {
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  };
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    pop.hidden ? open() : close();
+  });
+
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', (e) => {
+    if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !pop.hidden) close();
+  });
+
+  document.getElementById('fp-apply').addEventListener('click', () => {
+    readToState();
+    STATE.page = 1;
+    renderTable();
+    close();
+  });
+
+  document.getElementById('fp-clear').addEventListener('click', () => {
+    for (const k of Object.keys(STATE.adv)) STATE.adv[k] = '';
+    writeFromState();
+    STATE.page = 1;
+    renderTable();
+  });
+
+  syncDot();
 }
 
 bootstrap().catch(err => {
