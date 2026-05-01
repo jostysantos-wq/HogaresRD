@@ -11,6 +11,14 @@
 
 .topnav-v2 {
   position: relative;
+  /* Form a stacking context above the rest of the page so the dropdowns
+   * always paint over hero photocards / sticky cards / map tiles. The
+   * home page's .hero-stage > * { z-index: 1; } would otherwise put the
+   * nav at the same z as the hero content, and document order would
+   * put the hero on top — clipping the dropdown clicks. The nav.topnav-v2
+   * compound selector below bumps specificity so this wins against
+   * page-level inline overrides. */
+  z-index: 100;
   background: transparent;
   border-bottom: none;
   --tn-ink:        var(--ink, #131318);
@@ -235,32 +243,87 @@
 }
 .topnav-v2 .nav-pop[hidden] { display: none; }
 
-/* Account menu (compact list) */
+/* Account menu — richer layout: header card + iconed rows + section dividers */
 .topnav-v2 .nav-user-menu {
-  min-width: 240px;
-  padding: 0.5rem;
+  width: 320px;
+  padding: 0;
   display: block;
+  box-shadow: 0 24px 56px rgba(15,23,42,0.16), 0 4px 14px rgba(15,23,42,0.06);
+  border: 1px solid rgba(15,23,42,0.06);
 }
-.topnav-v2 .nav-user-menu a,
-.topnav-v2 .nav-user-menu button {
-  display: flex; align-items: center; gap: 0.6rem;
+.topnav-v2 .nav-um-head {
+  display: flex; align-items: center; gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid rgba(15,23,42,0.08);
+}
+.topnav-v2 .nav-um-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #B8A07E, #6E5847);
+  color: #fff; font-size: 0.95rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.topnav-v2 .nav-um-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.topnav-v2 .nav-um-presence {
+  position: absolute; bottom: 0; right: 0;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #2DBE60;
+  border: 2px solid #fff;
+}
+.topnav-v2 .nav-um-id { display: flex; flex-direction: column; min-width: 0; }
+.topnav-v2 .nav-um-name {
+  font-size: 0.98rem; font-weight: 700; color: #131318;
+  line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.topnav-v2 .nav-um-status {
+  font-size: 0.82rem; color: #6c6a72;
+  margin-top: 0.15rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.topnav-v2 .nav-um-section {
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid rgba(15,23,42,0.08);
+}
+.topnav-v2 .nav-um-section:last-child { border-bottom: none; }
+.topnav-v2 .nav-um-item {
+  display: flex; align-items: center; gap: 0.85rem;
   width: 100%;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.7rem;
   border: none; background: transparent;
-  font-family: inherit; font-size: 0.86rem;
+  font-family: inherit; font-size: 0.92rem;
   color: #131318;
   text-decoration: none;
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
 }
-.topnav-v2 .nav-user-menu a:hover,
-.topnav-v2 .nav-user-menu button:hover {
-  background: rgba(19,19,24,0.06);
+.topnav-v2 .nav-um-item:hover { background: rgba(15,23,42,0.05); }
+.topnav-v2 .nav-um-icon {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #4a4a52;
 }
-.topnav-v2 .nav-user-menu hr {
-  border: none; border-top: 1px solid rgba(19,19,24,0.08); margin: 0.35rem 0;
+.topnav-v2 .nav-um-icon svg { width: 18px; height: 18px; }
+.topnav-v2 .nav-um-label { flex: 1; min-width: 0; }
+.topnav-v2 .nav-um-meta {
+  font-size: 0.78rem; color: #8a8a92;
+  display: inline-flex; align-items: center; gap: 0.25rem;
 }
+.topnav-v2 .nav-um-meta svg { width: 14px; height: 14px; }
+.topnav-v2 .nav-um-badge {
+  font-size: 0.7rem; font-weight: 700;
+  color: #5a3ec8; background: #ece6ff;
+  padding: 0.18rem 0.5rem; border-radius: 999px;
+}
+.topnav-v2 .nav-um-item.danger { color: #d44a3a; }
+.topnav-v2 .nav-um-item.danger .nav-um-icon { color: #d44a3a; }
+.topnav-v2 .nav-um-item.danger:hover { background: rgba(212,74,58,0.08); }
 
 /* Notification + messages dropdowns share the panel chrome */
 .topnav-v2 .nav-notif-menu,
@@ -378,3 +441,10 @@
 body > .topnav-v2:first-child {
   border-bottom: 1px solid rgba(19,19,24,0.06);
 }
+
+/* Higher-specificity z-index override for hero-stage pages (home).
+   home.html sets `.hero-stage > * { z-index: 1; }` which would equal
+   our base `.topnav-v2 { z-index: 100; }` rule but win by source
+   order. Compound selector lifts specificity so dropdowns always
+   stack above hero photocards. */
+.hero-stage > nav.topnav-v2 { z-index: 100; }
