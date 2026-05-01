@@ -443,6 +443,210 @@
   .tb-menu-logout:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
   .tb-menu-logout:hover svg { color: var(--accent); }
 
+  /* ── Application detail panel — slides in from the right ────────── */
+  .ap-overlay {
+    position: fixed; inset: 0;
+    background: rgba(20, 17, 15, 0.30);
+    z-index: 300; display: none; opacity: 0;
+    transition: opacity .2s;
+  }
+  .ap-overlay.open { display: block; opacity: 1; }
+  .ap-panel {
+    position: fixed; top: 0; right: 0;
+    width: 720px; max-width: 100vw; height: 100vh;
+    background: var(--bg-card);
+    border-left: 1px solid var(--line);
+    box-shadow: -16px 0 48px rgba(20,17,15,.12);
+    z-index: 301; display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .32s cubic-bezier(.4,0,.2,1), visibility 0s .32s;
+    visibility: hidden; pointer-events: none;
+  }
+  .ap-panel.open {
+    transform: translateX(0);
+    transition: transform .32s cubic-bezier(.4,0,.2,1), visibility 0s 0s;
+    visibility: visible; pointer-events: auto;
+  }
+  .ap-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    background: var(--bg-card);
+  }
+  .ap-head-info { flex: 1; min-width: 0; }
+  .ap-head-info h2 {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    letter-spacing: -.01em; color: var(--ink); line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;
+  }
+  .ap-head-info p {
+    font-size: 12.5px; color: var(--ink-mute); margin: 2px 0 0;
+  }
+  .ap-close {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    color: var(--ink-mute); cursor: pointer; flex-shrink: 0;
+    display: grid; place-items: center;
+    transition: background .12s, color .12s;
+  }
+  .ap-close:hover { background: var(--bg-card); color: var(--ink); }
+  .ap-close svg { width: 14px; height: 14px; fill: currentColor; }
+
+  /* Status badge */
+  .ap-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; padding: 5px 11px; border-radius: 6px;
+    white-space: nowrap;
+  }
+  .ap-badge-blue   { background: #EFF6FF; color: #1D4ED8; }
+  .ap-badge-orange { background: #FFFBEB; color: #B45309; }
+  .ap-badge-purple { background: #F5F3FF; color: #6D28D9; }
+  .ap-badge-green  { background: #ECFDF5; color: #047857; }
+  .ap-badge-red    { background: #FEF2F2; color: #B91C1C; }
+  .ap-badge-gold   { background: var(--gold-soft); color: #8a6516; }
+
+  /* Contactar button */
+  .ap-btn-primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 14px; font-size: 12.5px; font-weight: 600;
+    background: var(--ink); color: #fff; border: none; border-radius: 999px;
+    cursor: pointer; text-decoration: none;
+    transition: opacity .15s;
+  }
+  .ap-btn-primary:hover { opacity: .88; }
+  .ap-btn-primary svg { width: 13px; height: 13px; fill: currentColor; }
+
+  /* Workflow strip */
+  .ap-workflow {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--line-soft);
+    overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+  }
+  .ap-workflow::-webkit-scrollbar { display: none; }
+  .ap-wf-steps { display: flex; align-items: flex-start; min-width: max-content; }
+  .ap-wf-step {
+    display: flex; flex-direction: column; align-items: center;
+    position: relative; min-width: 78px; flex: 1;
+  }
+  .ap-wf-step::before, .ap-wf-step::after {
+    content: ''; position: absolute; top: 9px; height: 2px;
+    background: var(--line);
+  }
+  .ap-wf-step::before { left: 0; right: 50%; }
+  .ap-wf-step::after  { left: 50%; right: 0; }
+  .ap-wf-step:first-child::before, .ap-wf-step:last-child::after { display: none; }
+  .ap-wf-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--bg-card);
+    display: grid; place-items: center;
+    font-size: 10.5px; font-weight: 700; color: var(--ink-mute);
+    z-index: 1; position: relative; flex-shrink: 0;
+  }
+  .ap-wf-dot svg { width: 10px; height: 10px; fill: #fff; }
+  .ap-wf-step.done .ap-wf-dot { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .ap-wf-step.done::before, .ap-wf-step.done::after { background: var(--teal); }
+  .ap-wf-step.current .ap-wf-dot {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    box-shadow: 0 0 0 4px rgba(181,76,48,.18);
+  }
+  .ap-wf-step.current::before { background: var(--teal); }
+  .ap-wf-label {
+    font-size: 10.5px; color: var(--ink-mute);
+    margin-top: 6px; text-align: center; white-space: nowrap;
+  }
+  .ap-wf-step.current .ap-wf-label { color: var(--accent); font-weight: 600; }
+  .ap-wf-step.done .ap-wf-label { color: var(--teal); }
+
+  /* Tabs */
+  .ap-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--line-soft);
+    flex-shrink: 0; overflow-x: auto; padding: 0 14px;
+    background: var(--bg-card);
+  }
+  .ap-tabs::-webkit-scrollbar { display: none; }
+  .ap-tab {
+    background: none; border: none;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 13px 14px; font-size: 13px; font-weight: 500;
+    color: var(--ink-mute); cursor: pointer; white-space: nowrap;
+    transition: color .15s, border-color .15s; font-family: inherit;
+  }
+  .ap-tab:hover { color: var(--ink); }
+  .ap-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .ap-tab-content { flex: 1; overflow-y: auto; padding: 18px 22px 28px; background: var(--bg-soft); }
+  .ap-pane { display: none; }
+  .ap-pane.active { display: block; }
+
+  /* Info sections */
+  .ap-section {
+    margin-bottom: 14px; padding: 16px 18px; border-radius: 14px;
+    background: var(--bg-card); border: 1px solid var(--line-soft);
+  }
+  .ap-section-title {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-mute); margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .ap-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+  .ap-info-item label { font-size: 11px; color: var(--ink-mute); display: block; margin-bottom: 2px; }
+  .ap-info-item span { font-size: 14px; font-weight: 600; color: var(--ink); }
+
+  /* Flujo: status advance */
+  .ap-advance {
+    margin-top: 14px; padding: 14px 16px; border-radius: 14px;
+    background: var(--bg-card); border: 1px solid var(--line-soft);
+  }
+  .ap-advance-label {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-mute); margin-bottom: 8px;
+  }
+  .ap-advance-hint { font-size: 12.5px; color: var(--ink-mute); margin-bottom: 10px; }
+  .ap-advance-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ap-status-btn {
+    padding: 8px 14px; border: 1.5px solid var(--line); border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: var(--bg-card); color: var(--ink); transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ap-status-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ap-status-btn.reject { border-color: #B91C1C; color: #B91C1C; }
+  .ap-status-btn.reject:hover { background: #B91C1C; color: #fff; }
+  .ap-status-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Timeline */
+  .ap-timeline { display: flex; flex-direction: column; }
+  .ap-tl-item {
+    display: flex; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .ap-tl-item:last-child { border-bottom: none; }
+  .ap-tl-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; flex-shrink: 0;
+    font-size: 13px; font-weight: 700;
+  }
+  .ap-tl-body { flex: 1; min-width: 0; }
+  .ap-tl-desc { font-size: 13px; color: var(--ink); }
+  .ap-tl-meta { font-size: 11px; color: var(--ink-mute); margin-top: 2px; }
+
+  /* Document list */
+  .ap-doc-list { display: flex; flex-direction: column; gap: 10px; }
+  .ap-doc-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: var(--bg-soft); border-radius: 10px;
+    border: 1px solid var(--line-soft);
+  }
+  .ap-doc-name { flex: 1; font-size: 13px; color: var(--ink); }
+  .ap-doc-status { font-size: 11px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+
+  .ap-empty { padding: 28px 14px; text-align: center; color: var(--ink-mute); font-size: 13px; }
+  .ap-loading { padding: 60px 14px; text-align: center; color: var(--ink-mute); font-size: 13px; }
+  .ap-error { padding: 14px; background: #FEF2F2; color: #B91C1C; border-radius: 10px; font-size: 12.5px; }
+
 </style>
   <link rel="stylesheet" href="/css/dashboard-topbar.css?v=2">
   <link rel="stylesheet" href="/css/ai-chat.css?v=2">
@@ -1031,11 +1235,9 @@ function renderTable() {
       const updated = relTime(a.updated_at || a.created_at);
       const av = `a${((start + i) % 5) + 1}`;
       const isSel = STATE.selected.has(a.id);
-      // Open the legacy /broker.html detail panel — it has the workflow
-      // strip, status badges, and the six-tab application view (Resumen,
-      // Flujo, Documentos, Tours, Pago, Timeline). /broker.html reads
-      // ?app=<id> on boot and auto-opens the panel for that application.
-      const href = `/broker.html?app=${encodeURIComponent(a.id)}`;
+      // Row click opens the inline detail panel (window.openApplicationDetail)
+      // — defined in the panel controller IIFE near the bottom of this page.
+      const href = `#app-${encodeURIComponent(a.id)}`;
       return `
         <div class="recent-row ${isSel ? 'selected' : ''}" data-id="${escapeHtml(a.id)}" data-href="${escapeHtml(href)}">
           <div class="recent-cb">
@@ -1066,11 +1268,14 @@ function renderTable() {
 
   document.getElementById('appsTable').innerHTML = head + body;
 
-  // Wire row click → navigate (ignore clicks on checkbox).
+  // Wire row click → open inline detail panel (ignore clicks on checkbox).
   document.querySelectorAll('#appsTable .recent-row').forEach(row => {
     row.addEventListener('click', (e) => {
       if (e.target.closest('.recent-cb') || e.target.closest('input')) return;
-      location.href = row.dataset.href;
+      const id = row.dataset.id;
+      if (id && typeof window.openApplicationDetail === 'function') {
+        window.openApplicationDetail(id);
+      }
     });
   });
 
@@ -1244,6 +1449,7 @@ async function runBulk(kind) {
 // ════════════════════════════════════════════════════════════════════
 // LOAD
 // ════════════════════════════════════════════════════════════════════
+window.loadApplications = loadApplications;
 async function loadApplications() {
   try {
     const [apps, analytics] = await Promise.all([
@@ -1395,6 +1601,410 @@ bootstrap().catch(err => {
     .catch(() => {});
 })();
 </script>
+
+  <!-- Application detail panel ───────────────────────────────── -->
+  <div class="ap-overlay" id="apOverlay"></div>
+  <div class="ap-panel" id="apPanel" role="dialog" aria-modal="true" aria-labelledby="apTitle">
+    <div class="ap-head">
+      <div class="ap-head-info">
+        <h2 id="apTitle">--</h2>
+        <p id="apSubtitle">--</p>
+      </div>
+      <span id="apBadge"></span>
+      <a class="ap-btn-primary" id="apContactBtn" href="#" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        Contactar
+      </a>
+      <button class="ap-close" id="apClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="ap-workflow" id="apWorkflow"></div>
+    <div class="ap-tabs" id="apTabs">
+      <button class="ap-tab active" data-tab="resumen">Resumen</button>
+      <button class="ap-tab" data-tab="flujo">Flujo</button>
+      <button class="ap-tab" data-tab="documentos">Documentos</button>
+      <button class="ap-tab" data-tab="tours">Tours</button>
+      <button class="ap-tab" data-tab="pago">Pago</button>
+      <button class="ap-tab" data-tab="timeline">Timeline</button>
+    </div>
+    <div class="ap-tab-content">
+      <div class="ap-pane active" id="ap-pane-resumen"></div>
+      <div class="ap-pane" id="ap-pane-flujo"></div>
+      <div class="ap-pane" id="ap-pane-documentos"></div>
+      <div class="ap-pane" id="ap-pane-tours"></div>
+      <div class="ap-pane" id="ap-pane-pago"></div>
+      <div class="ap-pane" id="ap-pane-timeline"></div>
+    </div>
+  </div>
+
+  <script>
+  // ── Application detail panel controller ─────────────────────────────
+  (function () {
+    'use strict';
+    const overlay = document.getElementById('apOverlay');
+    const panel   = document.getElementById('apPanel');
+    const closeBtn= document.getElementById('apClose');
+    const titleEl = document.getElementById('apTitle');
+    const subEl   = document.getElementById('apSubtitle');
+    const badgeEl = document.getElementById('apBadge');
+    const contactBtn = document.getElementById('apContactBtn');
+    const wfEl    = document.getElementById('apWorkflow');
+    const tabsEl  = document.getElementById('apTabs');
+    if (!panel) return;
+
+    const STATUS_LABELS = {
+      aplicado: 'Aplicado', en_revision: 'En Revisión', documentos_requeridos: 'Documentos Requeridos',
+      documentos_enviados: 'Documentos Enviados', documentos_insuficientes: 'Documentos Insuficientes',
+      en_aprobacion: 'En Aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
+      pendiente_pago: 'Pendiente de Pago', pago_enviado: 'Pago Enviado', pago_aprobado: 'Pago Aprobado',
+      completado: 'Completado', rechazado: 'Rechazado',
+    };
+    // Mirrors routes/applications.js STATUS_FLOW so the buttons we expose
+    // match exactly which transitions the server will accept.
+    const STATUS_FLOW = {
+      aplicado:                ['en_revision','rechazado'],
+      en_revision:             ['documentos_requeridos','en_aprobacion','rechazado'],
+      documentos_requeridos:   ['documentos_enviados','rechazado'],
+      documentos_enviados:     ['en_aprobacion','documentos_insuficientes','rechazado'],
+      documentos_insuficientes:['documentos_requeridos','documentos_enviados','rechazado'],
+      en_aprobacion:           ['reservado','aprobado','rechazado'],
+      reservado:               ['aprobado','rechazado'],
+      aprobado:                ['pendiente_pago','rechazado'],
+      pendiente_pago:          ['pago_enviado','rechazado'],
+      pago_enviado:            ['pago_aprobado','pendiente_pago','rechazado'],
+      pago_aprobado:           ['completado'],
+      completado:              [],
+      rechazado:               ['aplicado'],
+    };
+    const WORKFLOW_DISPLAY = [
+      { keys: ['aplicado'],                                                       label: 'Aplicado' },
+      { keys: ['en_revision'],                                                    label: 'Revisión' },
+      { keys: ['documentos_requeridos','documentos_enviados','documentos_insuficientes'], label: 'Documentos' },
+      { keys: ['en_aprobacion'],                                                  label: 'Aprobación' },
+      { keys: ['reservado'],                                                      label: 'Reserva' },
+      { keys: ['aprobado'],                                                       label: 'Aprobado' },
+      { keys: ['pendiente_pago','pago_enviado','pago_aprobado'],                  label: 'Pago' },
+      { keys: ['completado'],                                                     label: 'Completado' },
+    ];
+    function statusColor(s) {
+      if (['aprobado','pago_aprobado','completado'].includes(s)) return 'green';
+      if (['en_revision','documentos_enviados','pago_enviado'].includes(s)) return 'orange';
+      if (['documentos_requeridos','documentos_insuficientes','pendiente_pago'].includes(s)) return 'gold';
+      if (['en_aprobacion','reservado'].includes(s)) return 'purple';
+      if (s === 'rechazado') return 'red';
+      return 'blue';
+    }
+    function badgeHTML(status) {
+      return `<span class="ap-badge ap-badge-${statusColor(status)}">${escapeHtml(STATUS_LABELS[status] || status)}</span>`;
+    }
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function fmtDate(d) {
+      if (!d) return '—';
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '—';
+      return dt.toLocaleDateString('es-DO', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    function fmtDateTime(d) {
+      if (!d) return '—';
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '—';
+      return dt.toLocaleDateString('es-DO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtPriceLocal(p) {
+      if (p == null || p === '') return '—';
+      const n = Number(p);
+      if (!Number.isFinite(n)) return String(p);
+      return 'RD$ ' + n.toLocaleString('es-DO');
+    }
+
+    let currentApp = null;
+
+    function open() {
+      overlay.classList.add('open');
+      panel.classList.add('open');
+    }
+    function close() {
+      overlay.classList.remove('open');
+      panel.classList.remove('open');
+      currentApp = null;
+    }
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panel.classList.contains('open')) close();
+    });
+
+    // Tabs
+    tabsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ap-tab');
+      if (!btn) return;
+      tabsEl.querySelectorAll('.ap-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      panel.querySelectorAll('.ap-pane').forEach(p => p.classList.remove('active'));
+      const pane = document.getElementById('ap-pane-' + tab);
+      if (pane) pane.classList.add('active');
+    });
+
+    async function fetchApp(id) {
+      const res = await fetch(`/api/applications/${encodeURIComponent(id)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.application || data;
+    }
+
+    async function openDetail(id) {
+      // Reset tabs to first pane.
+      tabsEl.querySelectorAll('.ap-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+      panel.querySelectorAll('.ap-pane').forEach((p, i) => p.classList.toggle('active', i === 0));
+      titleEl.textContent = 'Cargando…';
+      subEl.textContent = '';
+      badgeEl.innerHTML = '';
+      contactBtn.style.display = 'none';
+      wfEl.innerHTML = '';
+      document.getElementById('ap-pane-resumen').innerHTML = '<div class="ap-loading">Cargando…</div>';
+      open();
+      try {
+        currentApp = await fetchApp(id);
+        renderAll();
+      } catch (e) {
+        document.getElementById('ap-pane-resumen').innerHTML =
+          `<div class="ap-error">No se pudo cargar la aplicación. ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function renderAll() {
+      const a = currentApp;
+      const client  = a.client  || {};
+      const listing = a.listing || {};
+      titleEl.textContent = client.name || client.full_name || 'Aplicación';
+      subEl.textContent   = listing.title || a.listing_title || 'Propiedad';
+      badgeEl.innerHTML   = badgeHTML(a.status);
+      const canContact = !!(client.user_id || client.email);
+      contactBtn.style.display = canContact ? 'inline-flex' : 'none';
+      contactBtn.href = client.email ? `mailto:${client.email}` : '#';
+
+      renderWorkflow(a.status);
+      renderResumen(a, client, listing);
+      renderFlujo(a);
+      renderDocumentos(a);
+      renderTours(a);
+      renderPago(a);
+      renderTimeline(a);
+    }
+
+    function renderWorkflow(status) {
+      const i = WORKFLOW_DISPLAY.findIndex(s => s.keys.includes(status));
+      const cur = i < 0 ? 0 : i;
+      wfEl.innerHTML = `<div class="ap-wf-steps">${
+        WORKFLOW_DISPLAY.map((s, idx) => {
+          const cls = idx < cur ? 'done' : idx === cur ? 'current' : '';
+          const inner = idx < cur
+            ? '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'
+            : (idx + 1);
+          return `<div class="ap-wf-step ${cls}">
+            <div class="ap-wf-dot">${inner}</div>
+            <div class="ap-wf-label">${escapeHtml(s.label)}</div>
+          </div>`;
+        }).join('')
+      }</div>`;
+    }
+
+    function renderResumen(a, client, listing) {
+      const pane = document.getElementById('ap-pane-resumen');
+      pane.innerHTML = `
+        <div class="ap-section">
+          <div class="ap-section-title">Información del Cliente</div>
+          <div class="ap-info-grid">
+            <div class="ap-info-item"><label>Nombre</label><span>${escapeHtml(client.name || client.full_name || '—')}</span></div>
+            <div class="ap-info-item"><label>Email</label><span>${escapeHtml(client.email || '—')}</span></div>
+            <div class="ap-info-item"><label>Teléfono</label><span>${escapeHtml(client.phone || '—')}</span></div>
+            <div class="ap-info-item"><label>Método de contacto</label><span>${escapeHtml(a.contact_method || a.contactMethod || '—')}</span></div>
+          </div>
+        </div>
+        <div class="ap-section">
+          <div class="ap-section-title">Propiedad</div>
+          <div class="ap-info-grid">
+            <div class="ap-info-item"><label>Título</label><span>${escapeHtml(listing.title || a.listing_title || '—')}</span></div>
+            <div class="ap-info-item"><label>Precio</label><span>${escapeHtml(fmtPriceLocal(listing.price || a.listing_price))}</span></div>
+            <div class="ap-info-item"><label>Ubicación</label><span>${escapeHtml(listing.location || listing.city || '—')}</span></div>
+            <div class="ap-info-item"><label>Tipo</label><span>${escapeHtml(listing.type || listing.property_type || '—')}</span></div>
+          </div>
+        </div>
+        <div class="ap-section">
+          <div class="ap-section-title">Detalles de la Aplicación</div>
+          <div class="ap-info-grid">
+            <div class="ap-info-item"><label>Financiamiento</label><span>${escapeHtml(a.financing || a.financing_type || '—')}</span></div>
+            <div class="ap-info-item"><label>Pre-aprobación</label><span>${(a.pre_approval || a.pre_approved || a.preApproval) ? 'Sí' : 'No'}</span></div>
+            <div class="ap-info-item"><label>Presupuesto</label><span>${escapeHtml(fmtPriceLocal(a.budget))}</span></div>
+            <div class="ap-info-item"><label>Tiempo estimado</label><span>${escapeHtml(a.timeline || a.purchase_timeline || '—')}</span></div>
+            <div class="ap-info-item"><label>Intención</label><span>${escapeHtml(a.intent || a.purchase_intent || '—')}</span></div>
+            <div class="ap-info-item"><label>Fecha</label><span>${escapeHtml(fmtDate(a.created_at || a.createdAt))}</span></div>
+          </div>
+        </div>
+        ${a.notes ? `<div class="ap-section"><div class="ap-section-title">Notas</div><p style="font-size:13px;line-height:1.5;color:var(--ink);">${escapeHtml(a.notes)}</p></div>` : ''}
+      `;
+    }
+
+    function renderFlujo(a) {
+      const transitions = STATUS_FLOW[a.status] || [];
+      const advances = transitions.filter(t => t !== 'rechazado');
+      const canReject = transitions.includes('rechazado');
+      const pane = document.getElementById('ap-pane-flujo');
+      pane.innerHTML = `
+        <div class="ap-section">
+          <div class="ap-section-title">Estado actual</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${badgeHTML(a.status)}
+            <span style="font-size:12.5px;color:var(--ink-mute);">Última actualización: ${escapeHtml(fmtDateTime(a.updated_at || a.created_at))}</span>
+          </div>
+        </div>
+        <div class="ap-advance">
+          <div class="ap-advance-label">Avanzar al siguiente estado</div>
+          <div class="ap-advance-hint">${advances.length
+            ? `Transiciones disponibles desde <strong>${escapeHtml(STATUS_LABELS[a.status] || a.status)}</strong>:`
+            : 'No hay transiciones disponibles desde este estado.'}</div>
+          <div class="ap-advance-buttons">
+            ${advances.map(t => `<button class="ap-status-btn" data-target="${escapeHtml(t)}">${escapeHtml(STATUS_LABELS[t] || t)}</button>`).join('')}
+            ${canReject ? `<button class="ap-status-btn reject" data-target="rechazado">Rechazar</button>` : ''}
+          </div>
+        </div>
+      `;
+      pane.querySelectorAll('.ap-status-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const to = btn.dataset.target;
+          if (!to || !currentApp) return;
+          if (to === 'rechazado' && !confirm('¿Marcar esta aplicación como rechazada?')) return;
+          btn.disabled = true;
+          try {
+            const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/status`, {
+              method: 'PUT',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: to }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            // Refresh the app and the list behind us so chip counts stay in sync.
+            currentApp = await fetchApp(currentApp.id);
+            renderAll();
+            if (typeof window.loadApplications === 'function') window.loadApplications();
+          } catch (e) {
+            alert('No se pudo cambiar el estado: ' + e.message);
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    function renderDocumentos(a) {
+      const pane = document.getElementById('ap-pane-documentos');
+      const requested = a.documents_requested || [];
+      const uploaded  = a.documents_uploaded  || [];
+      if (!requested.length && !uploaded.length) {
+        pane.innerHTML = `<div class="ap-empty">Aún no se han solicitado o subido documentos.</div>`;
+        return;
+      }
+      const reqRows = requested.map(d => `
+        <div class="ap-doc-item">
+          <span class="ap-doc-name">${escapeHtml(d.label || d.type || 'Documento')}</span>
+          <span class="ap-doc-status ap-badge-${d.status === 'approved' ? 'green' : d.status === 'rejected' ? 'red' : 'gold'}">${escapeHtml(d.status || 'pendiente')}</span>
+        </div>`).join('');
+      const upRows = uploaded.map(d => `
+        <div class="ap-doc-item">
+          <span class="ap-doc-name">${escapeHtml(d.original_name || d.label || d.type || 'Archivo')}</span>
+          <span class="ap-doc-status ap-badge-${d.review_status === 'approved' ? 'green' : d.review_status === 'rejected' ? 'red' : 'orange'}">${escapeHtml(d.review_status || 'en revisión')}</span>
+        </div>`).join('');
+      pane.innerHTML = `
+        ${requested.length ? `<div class="ap-section"><div class="ap-section-title">Solicitados</div><div class="ap-doc-list">${reqRows}</div></div>` : ''}
+        ${uploaded.length  ? `<div class="ap-section"><div class="ap-section-title">Subidos por el cliente</div><div class="ap-doc-list">${upRows}</div></div>` : ''}
+      `;
+    }
+
+    function renderTours(a) {
+      const pane = document.getElementById('ap-pane-tours');
+      const tours = a.tours || [];
+      if (!tours.length) {
+        pane.innerHTML = `<div class="ap-empty">Aún no hay visitas programadas.</div>`;
+        return;
+      }
+      pane.innerHTML = `<div class="ap-section">
+        <div class="ap-section-title">Visitas</div>
+        <div class="ap-doc-list">
+          ${tours.map(t => `
+            <div class="ap-doc-item">
+              <span class="ap-doc-name">${escapeHtml(fmtDateTime(t.scheduled_at || t.scheduledAt || t.date))}</span>
+              <span class="ap-doc-status ap-badge-${t.status === 'completed' ? 'green' : t.status === 'canceled' ? 'red' : 'orange'}">${escapeHtml(t.status || 'programada')}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    function renderPago(a) {
+      const pane = document.getElementById('ap-pane-pago');
+      const p = a.payment || {};
+      const plan = a.payment_plan;
+      if (!p.amount && !plan) {
+        pane.innerHTML = `<div class="ap-empty">Sin información de pago aún.</div>`;
+        return;
+      }
+      pane.innerHTML = `
+        <div class="ap-section">
+          <div class="ap-section-title">Pago</div>
+          <div class="ap-info-grid">
+            <div class="ap-info-item"><label>Monto</label><span>${escapeHtml(fmtPriceLocal(p.amount))}</span></div>
+            <div class="ap-info-item"><label>Moneda</label><span>${escapeHtml(p.currency || '—')}</span></div>
+            <div class="ap-info-item"><label>Estado de verificación</label><span>${escapeHtml(p.verification_status || '—')}</span></div>
+            <div class="ap-info-item"><label>Método</label><span>${escapeHtml(p.method || '—')}</span></div>
+          </div>
+        </div>
+        ${plan ? `<div class="ap-section">
+          <div class="ap-section-title">Plan de pago</div>
+          <div class="ap-info-grid">
+            <div class="ap-info-item"><label>Total</label><span>${escapeHtml(fmtPriceLocal(plan.total_amount))}</span></div>
+            <div class="ap-info-item"><label>Cuotas</label><span>${(plan.installments || []).length}</span></div>
+          </div>
+        </div>` : ''}
+      `;
+    }
+
+    function renderTimeline(a) {
+      const pane = document.getElementById('ap-pane-timeline');
+      const events = (a.timeline_events || []).slice().sort((x, y) =>
+        new Date(y.created_at || y.createdAt || 0) - new Date(x.created_at || x.createdAt || 0)
+      );
+      if (!events.length) {
+        pane.innerHTML = `<div class="ap-empty">Aún no hay eventos en la línea de tiempo.</div>`;
+        return;
+      }
+      pane.innerHTML = `<div class="ap-section">
+        <div class="ap-section-title">Línea de tiempo</div>
+        <div class="ap-timeline">
+          ${events.map(ev => {
+            const desc = ev.description || ev.message ||
+              (ev.type === 'status_change' ? `Estado → ${STATUS_LABELS[ev.data?.to] || ev.data?.to || '—'}` : (ev.type || 'Evento'));
+            const initial = (ev.actor_name || ev.actor || '?').slice(0, 1).toUpperCase();
+            return `<div class="ap-tl-item">
+              <span class="ap-tl-icon">${escapeHtml(initial)}</span>
+              <div class="ap-tl-body">
+                <div class="ap-tl-desc">${escapeHtml(desc)}</div>
+                <div class="ap-tl-meta">${escapeHtml(fmtDateTime(ev.created_at || ev.createdAt))}${ev.actor_name ? ' · ' + escapeHtml(ev.actor_name) : ''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    // Expose openDetail so the row click handler can call it.
+    window.openApplicationDetail = openDetail;
+  })();
+  </script>
 
   <script src="/js/dashboard-topbar.js?v=2" defer></script>
   <script src="/js/ai-chat.js?v=2" defer></script>
