@@ -80,13 +80,27 @@ function issueSessionCookie(res) {
   });
 }
 
+// Verify admin session JWT with rotation grace. Tries the current secret
+// first; if that fails AND ADMIN_SESSION_SECRET_PREV is configured, tries
+// the previous secret. Mirrors routes/auth.js JWT_SECRET_PREV pattern.
+function _verifyAdminToken(token) {
+  try {
+    return jwt.verify(token, process.env.ADMIN_SESSION_SECRET);
+  } catch (err) {
+    if (process.env.ADMIN_SESSION_SECRET_PREV) {
+      try { return jwt.verify(token, process.env.ADMIN_SESSION_SECRET_PREV); } catch (_) { /* fall through */ }
+    }
+    throw err;
+  }
+}
+
 // ── Exported middleware ───────────────────────────────────────────────────────
 
 function adminSessionAuth(req, res, next) {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return res.status(401).json({ error: 'No autorizado' });
   try {
-    jwt.verify(token, process.env.ADMIN_SESSION_SECRET);
+    _verifyAdminToken(token);
     next();
   } catch {
     res.clearCookie(COOKIE_NAME, { path: '/' });
@@ -100,7 +114,7 @@ function adminSessionPage(req, res, next) {
   const loginPath = `/${process.env.ADMIN_PATH}/login`;
   if (!token) return res.redirect(loginPath);
   try {
-    jwt.verify(token, process.env.ADMIN_SESSION_SECRET);
+    _verifyAdminToken(token);
     next();
   } catch {
     res.clearCookie(COOKIE_NAME, { path: '/' });

@@ -2876,6 +2876,16 @@ if (require.main === module) {
           clearInterval(readyCheck);
           process.send('ready');
           console.log('[pm2] Ready signal sent — zero-downtime reload complete');
+          // Boot heartbeat: lets ops know the process is up after a deploy.
+          // Throttled per-title in alerts.js, no-op without ALERT_WEBHOOK_URL.
+          try {
+            sendAlert('info', 'hogaresrd: process started', {
+              version: require('./package.json').version,
+              uptime_s: Math.round(process.uptime()),
+              node:    process.version,
+              env:     process.env.NODE_ENV || 'unset',
+            });
+          } catch (_) {}
         }
       }, 500);
       // Safety timeout — send ready after 12s even if cache is slow

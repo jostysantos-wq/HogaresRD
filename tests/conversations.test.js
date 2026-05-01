@@ -72,11 +72,17 @@ describe('Conversations — POST /api/conversations + /messages', () => {
     }, auth(tenant.token));
 
     assert.equal(res.status, 201, `expected 201, got ${res.status} ${res.text}`);
-    assert.ok(res.body.conversation, 'response should include conversation');
-    convId = res.body.conversation.id;
+    // Two response shapes coexist (cascade vs direct path):
+    //   { id: conv.id, created: true }     ← cascade-on, line 185
+    //   { conversation: conv }              ← direct, line 216
+    // Test accepts either so a flag flip doesn't break this suite.
+    convId = res.body.conversation?.id || res.body.id;
+    assert.ok(convId, `response should include conversation id, got: ${JSON.stringify(res.body)}`);
     assert.ok(convId.startsWith('conv_'), 'conversation id should be prefixed conv_');
-    assert.equal(res.body.conversation.clientId, tenant.id);
-    assert.equal(res.body.conversation.propertyId, listing.id);
+    if (res.body.conversation) {
+      assert.equal(res.body.conversation.clientId, tenant.id);
+      assert.equal(res.body.conversation.propertyId, listing.id);
+    }
   });
 
   it('subsequent message via /:id/messages appends a second message (200)', async () => {
@@ -143,7 +149,9 @@ describe('Conversations — POST /api/conversations/:id/claim', () => {
       message:       'Interested in this listing.',
     }, auth(tenant.token));
     assert.equal(r.status, 201, `setup conv failed: ${r.text}`);
-    convId = r.body.conversation.id;
+    // Two response shapes coexist (see suite #1 for context).
+    convId = r.body.conversation?.id || r.body.id;
+    assert.ok(convId, `setup: missing conversation id in ${JSON.stringify(r.body)}`);
 
     // Sanity-check: should be unclaimed and tied to the inmobiliaria.
     const conv = store.getConversationById(convId);
@@ -201,7 +209,9 @@ describe('Conversations — non-participant access guard', () => {
       message:       'Hi there',
     }, auth(tenant.token));
     assert.equal(r.status, 201, `setup conv failed: ${r.text}`);
-    convId = r.body.conversation.id;
+    // Two response shapes coexist (see suite #1 for context).
+    convId = r.body.conversation?.id || r.body.id;
+    assert.ok(convId, `setup: missing conversation id in ${JSON.stringify(r.body)}`);
 
     // Pin the conv to `owner` so the outsider really is a third party
     // (no broker-claim path open for them).
