@@ -824,6 +824,68 @@
   .ap-pp-label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
   .ap-pp-meta { font-size: 11.5px; color: var(--ink-mute); margin-top: 2px; }
   .ap-pp-amount { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .ap-pp-actions {
+    display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .ap-pp-actions .ap-btn { padding: 5px 10px; font-size: 11.5px; }
+  .ap-pp-review {
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--bg-soft); border-radius: 10px;
+    display: none;
+  }
+  .ap-pp-review.open { display: block; }
+  .ap-pp-review img, .ap-pp-review iframe {
+    max-width: 100%; max-height: 320px; border-radius: 8px;
+    border: 1px solid var(--line); display: block; margin-bottom: 8px;
+  }
+  .ap-pp-review iframe { width: 100%; height: 320px; }
+  .ap-pp-review-head {
+    font-size: 11px; font-weight: 700; color: var(--ink-mute);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+  }
+  .ap-pp-reject-note {
+    margin-top: 8px; display: none;
+  }
+  .ap-pp-reject-note.open { display: block; }
+  .ap-pp-reject-note textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--bg-card);
+    font-size: 12.5px; font-family: inherit; resize: vertical;
+    min-height: 60px; margin-bottom: 6px;
+  }
+  .ap-pp-reject-note textarea:focus { outline: none; border-color: var(--accent); }
+  .ap-pp-status-line {
+    margin-top: 8px; padding: 6px 10px;
+    font-size: 11.5px; line-height: 1.4; border-radius: 8px;
+  }
+  .ap-pp-status-line.approved { color: #047857; background: #ECFDF5; }
+  .ap-pp-status-line.rejected { color: #B91C1C; background: #FEF2F2; }
+
+  /* Document review actions inline per row */
+  .ap-doc-item.has-actions {
+    flex-direction: column; align-items: stretch; gap: 8px;
+  }
+  .ap-doc-row { display: flex; align-items: center; gap: 12px; }
+  .ap-doc-row > .ap-doc-name { flex: 1; }
+  .ap-doc-preview-img {
+    max-width: 120px; max-height: 90px;
+    border-radius: 6px; border: 1px solid var(--line);
+    cursor: pointer; object-fit: cover;
+  }
+  .ap-doc-actions-row {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .ap-doc-actions-row .ap-btn { padding: 5px 11px; font-size: 11.5px; }
+
+  /* Reject-note inline dialog (used by both doc + installment) */
+  .ap-reject-dialog {
+    border: none; border-radius: 14px; padding: 0;
+    max-width: 460px; width: calc(100% - 32px);
+    background: var(--bg-card); color: var(--ink);
+    box-shadow: 0 24px 64px rgba(20,17,15,.30);
+  }
+  .ap-reject-dialog::backdrop { background: rgba(20,17,15,.45); }
+  .ap-reject-dialog-body { padding: 22px 22px 18px; }
 
   /* Modal */
   .ap-modal-bg {
@@ -2260,17 +2322,47 @@ bootstrap().catch(err => {
           <div class="ap-section">
             <div class="ap-section-title">Subidos</div>
             <div class="ap-doc-list">
-              ${uploaded.map(d => `
-                <div class="ap-doc-item">
-                  <span class="ap-doc-name">${escapeHtml(d.original_name || d.label || d.type || 'Archivo')}</span>
-                  <span class="ap-doc-status ap-badge-${d.review_status === 'approved' ? 'green' : d.review_status === 'rejected' ? 'red' : 'orange'}">${escapeHtml(d.review_status || 'en revisión')}</span>
-                </div>`).join('')}
+              ${uploaded.map(d => {
+                const docId = d.id || d._id;
+                const fileUrl = `/api/applications/${encodeURIComponent(appId)}/documents/${encodeURIComponent(docId)}/file`;
+                const original = d.original_name || d.original || d.filename || '';
+                const mime = d.mime_type || d.mimetype || '';
+                const isImage = (mime && mime.startsWith('image/')) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(original);
+                const isPdf   = (mime && mime === 'application/pdf') || /\.pdf$/i.test(original);
+                const status  = d.status || d.review_status || 'uploaded';
+                const badgeCls = status === 'approved' ? 'green' : status === 'rejected' ? 'red' : 'orange';
+                const isPending = status === 'uploaded' || status === 'pending_review';
+                return `
+                <div class="ap-doc-item has-actions" data-doc-id="${escapeHtml(docId)}">
+                  <div class="ap-doc-row">
+                    <div style="flex:1;min-width:0;">
+                      <div class="ap-doc-name">${escapeHtml(d.label || (DOC_TYPES.find(t => t.type === d.type)?.label) || d.type || 'Documento')}</div>
+                      ${original ? `<div style="font-size:11px;color:var(--ink-mute);margin-top:2px;">📄 ${escapeHtml(original)}</div>` : ''}
+                      ${d.review_notes ? `<div style="font-size:11.5px;color:#B91C1C;margin-top:4px;font-style:italic;">${escapeHtml(d.review_notes)}</div>` : ''}
+                    </div>
+                    ${isImage ? `<img class="ap-doc-preview-img" src="${escapeHtml(fileUrl)}" alt="" loading="lazy">` : ''}
+                    <span class="ap-doc-status ap-badge-${badgeCls}">${escapeHtml(status)}</span>
+                  </div>
+                  <div class="ap-doc-actions-row">
+                    ${isImage || isPdf
+                      ? `<a class="ap-btn ap-btn-outline" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">Ver archivo</a>`
+                      : `<a class="ap-btn ap-btn-outline" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">Descargar</a>`}
+                    ${isPending ? `
+                      <button class="ap-btn ap-btn-success" data-doc-action="approved" data-doc-id="${escapeHtml(docId)}">Aprobar</button>
+                      <button class="ap-btn ap-btn-danger" data-doc-action="rejected" data-doc-id="${escapeHtml(docId)}">Rechazar</button>
+                    ` : ''}
+                  </div>
+                </div>`;
+              }).join('')}
             </div>
           </div>
-        ` : '<div class="ap-empty">No hay documentos todavía.</div>'}
+        ` : !requested.length ? '<div class="ap-empty">No hay documentos todavía.</div>' : ''}
       `;
 
       pane.querySelector('#apOpenDocModal').addEventListener('click', openDocModal);
+      pane.querySelectorAll('[data-doc-action]').forEach(btn => {
+        btn.addEventListener('click', () => reviewDoc(btn.dataset.docId, btn.dataset.docAction));
+      });
 
       // Drop zone wiring (click to open file picker, drag/drop, paste)
       const dropZone = pane.querySelector('#apDocDrop');
@@ -2291,6 +2383,33 @@ bootstrap().catch(err => {
       fileInput.addEventListener('change', async () => {
         if (fileInput.files.length) await uploadBrokerDocs(appId, Array.from(fileInput.files), statusEl);
       });
+    }
+
+    async function reviewDoc(docId, status) {
+      let note = '';
+      if (status === 'rejected') {
+        note = window.prompt('Motivo del rechazo (el cliente lo verá y podrá volver a subir):', '');
+        if (note == null) return;
+        note = note.trim();
+        if (!note) { alert('El motivo del rechazo es requerido.'); return; }
+      }
+      try {
+        const res = await fetch(`/api/applications/${encodeURIComponent(currentApp.id)}/documents/${encodeURIComponent(docId)}/review`, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, note }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        currentApp = await fetchApp(currentApp.id);
+        renderDocumentos(currentApp);
+        renderTimeline(currentApp);
+        if (typeof window.loadApplications === 'function') window.loadApplications();
+      } catch (e) {
+        alert('No se pudo procesar la revisión: ' + e.message);
+      }
     }
 
     async function uploadBrokerDocs(appId, files, statusEl) {
@@ -2498,22 +2617,152 @@ bootstrap().catch(err => {
           <button class="ap-btn ap-btn-outline" id="apEditPlanBtn">Editar Plan</button>
         </div>
         <div class="ap-pp-installments">
-          ${insts.map(inst => `
-            <div class="ap-pp-card">
-              <div class="ap-pp-card-row">
-                <div class="ap-pp-num">${escapeHtml(String(inst.number || ''))}</div>
-                <div class="ap-pp-info">
-                  <div class="ap-pp-label">${escapeHtml(inst.label || 'Cuota')}</div>
-                  <div class="ap-pp-meta">${inst.due_date ? 'Vence ' + escapeHtml(fmtDate(inst.due_date)) : ''}</div>
-                </div>
-                <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                  <div class="ap-pp-amount">${fmtCur(inst.amount, cur)}</div>
-                  <span class="ap-badge ap-badge-${inst.status === 'approved' ? 'green' : inst.status === 'rejected' ? 'red' : inst.status === 'proof_uploaded' ? 'orange' : 'gold'}">${escapeHtml(PP_STATUS_LABELS[inst.status] || inst.status || 'pendiente')}</span>
-                </div>
-              </div>
-            </div>`).join('')}
+          ${insts.map(inst => renderInstallmentCard(inst, a.id, cur)).join('')}
         </div>`;
       pane.querySelector('#apEditPlanBtn').addEventListener('click', () => renderPlanForm(a, true));
+      bindInstallmentActions(pane, a.id);
+    }
+
+    function renderInstallmentCard(inst, appId, cur) {
+      const proofUrl = `/api/applications/${encodeURIComponent(appId)}/payment-plan/${encodeURIComponent(inst.id)}/proof`;
+      const isPdf = inst.proof_original && /\.pdf$/i.test(inst.proof_original);
+      const badgeCls = inst.status === 'approved' ? 'green'
+                     : inst.status === 'rejected' ? 'red'
+                     : inst.status === 'proof_uploaded' ? 'orange' : 'gold';
+      const canUpload = inst.status === 'pending' || inst.status === 'rejected';
+      const canRemind = canUpload;
+      return `
+        <div class="ap-pp-card" data-iid="${escapeHtml(inst.id)}">
+          <div class="ap-pp-card-row">
+            <div class="ap-pp-num">${escapeHtml(String(inst.number || ''))}</div>
+            <div class="ap-pp-info">
+              <div class="ap-pp-label">${escapeHtml(inst.label || 'Cuota')}</div>
+              <div class="ap-pp-meta">
+                ${inst.due_date ? 'Vence ' + escapeHtml(fmtDate(inst.due_date)) : ''}
+                ${inst.notification_sent_at ? ` · Recordatorio enviado ${escapeHtml(fmtDate(inst.notification_sent_at))}` : ''}
+              </div>
+            </div>
+            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              <div class="ap-pp-amount">${fmtCur(inst.amount, cur)}</div>
+              <span class="ap-badge ap-badge-${badgeCls}">${escapeHtml(PP_STATUS_LABELS[inst.status] || inst.status || 'pendiente')}</span>
+            </div>
+          </div>
+          <div class="ap-pp-actions">
+            ${canUpload ? `<button class="ap-btn ap-btn-outline" data-pp-action="upload" data-iid="${escapeHtml(inst.id)}">Subir comprobante</button>` : ''}
+            ${canRemind ? `<button class="ap-btn ap-btn-outline" data-pp-action="notify" data-iid="${escapeHtml(inst.id)}">Recordatorio</button>` : ''}
+            ${inst.status === 'proof_uploaded' ? `<button class="ap-btn" data-pp-action="review" data-iid="${escapeHtml(inst.id)}">Revisar comprobante</button>` : ''}
+          </div>
+          ${inst.status === 'proof_uploaded' ? `
+            <div class="ap-pp-review" id="apPpReview-${escapeHtml(inst.id)}">
+              <div class="ap-pp-review-head">Comprobante del cliente</div>
+              ${inst.proof_notes ? `<div style="font-size:11.5px;color:var(--ink-mute);margin-bottom:6px;font-style:italic;">${escapeHtml(inst.proof_notes)}</div>` : ''}
+              ${isPdf
+                ? `<iframe src="${escapeHtml(proofUrl)}" loading="lazy"></iframe>`
+                : `<img src="${escapeHtml(proofUrl)}" alt="Comprobante" loading="lazy" onerror="this.style.display='none'">`}
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a class="ap-btn ap-btn-outline" href="${escapeHtml(proofUrl)}" target="_blank" rel="noopener">Descargar</a>
+                <button class="ap-btn ap-btn-success" data-pp-action="approve" data-iid="${escapeHtml(inst.id)}">Aprobar pago</button>
+                <button class="ap-btn ap-btn-danger" data-pp-action="reject-toggle" data-iid="${escapeHtml(inst.id)}">Rechazar</button>
+              </div>
+              <div class="ap-pp-reject-note" id="apPpRejectNote-${escapeHtml(inst.id)}">
+                <textarea placeholder="Motivo del rechazo (requerido)…" id="apPpRejectText-${escapeHtml(inst.id)}"></textarea>
+                <button class="ap-btn ap-btn-danger" data-pp-action="reject-confirm" data-iid="${escapeHtml(inst.id)}">Confirmar rechazo</button>
+              </div>
+            </div>` : ''}
+          ${inst.status === 'approved' && inst.reviewed_at ? `
+            <div class="ap-pp-status-line approved">
+              ✓ Aprobado el ${escapeHtml(fmtDate(inst.reviewed_at))}
+            </div>` : ''}
+          ${inst.status === 'rejected' ? `
+            <div class="ap-pp-status-line rejected">
+              ✕ Rechazado — el cliente debe subir un nuevo comprobante
+              ${inst.review_notes ? ` · <em>${escapeHtml(inst.review_notes)}</em>` : ''}
+            </div>` : ''}
+        </div>`;
+    }
+
+    function bindInstallmentActions(pane, appId) {
+      pane.querySelectorAll('[data-pp-action]').forEach(btn => {
+        btn.addEventListener('click', () => handleInstallmentAction(btn.dataset.ppAction, btn.dataset.iid, appId));
+      });
+    }
+
+    async function handleInstallmentAction(action, iid, appId) {
+      if (action === 'review') {
+        const panel = document.getElementById('apPpReview-' + iid);
+        if (panel) panel.classList.toggle('open');
+        return;
+      }
+      if (action === 'reject-toggle') {
+        const note = document.getElementById('apPpRejectNote-' + iid);
+        if (note) note.classList.toggle('open');
+        return;
+      }
+      if (action === 'upload') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*,application/pdf';
+        input.addEventListener('change', async () => {
+          if (!input.files || !input.files[0]) return;
+          const fd = new FormData();
+          fd.append('proof', input.files[0]);
+          try {
+            const res = await fetch(`/api/applications/${encodeURIComponent(appId)}/payment-plan/${encodeURIComponent(iid)}/upload`, {
+              method: 'POST', credentials: 'include', body: fd,
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            currentApp = await fetchApp(currentApp.id);
+            renderPago(currentApp);
+            renderTimeline(currentApp);
+          } catch (e) { alert('No se pudo subir el comprobante: ' + e.message); }
+        });
+        input.click();
+        return;
+      }
+      if (action === 'notify') {
+        try {
+          const res = await fetch(`/api/applications/${encodeURIComponent(appId)}/payment-plan/${encodeURIComponent(iid)}/notify`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }, body: '{}',
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+          alert('Recordatorio enviado al cliente.');
+          currentApp = await fetchApp(currentApp.id);
+          renderPago(currentApp);
+        } catch (e) { alert('No se pudo enviar el recordatorio: ' + e.message); }
+        return;
+      }
+      if (action === 'approve' || action === 'reject-confirm') {
+        let body;
+        if (action === 'approve') {
+          body = { approved: true };
+        } else {
+          const text = document.getElementById('apPpRejectText-' + iid)?.value.trim() || '';
+          if (!text) { alert('El motivo del rechazo es requerido.'); return; }
+          body = { approved: false, review_notes: text };
+        }
+        try {
+          const res = await fetch(`/api/applications/${encodeURIComponent(appId)}/payment-plan/${encodeURIComponent(iid)}/review`, {
+            method: 'PUT', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+          currentApp = await fetchApp(currentApp.id);
+          renderPago(currentApp);
+          renderTimeline(currentApp);
+          if (typeof window.loadApplications === 'function') window.loadApplications();
+        } catch (e) { alert('No se pudo procesar la revisión: ' + e.message); }
+      }
     }
 
     function ppInstRow(label, amount, dueDate, id) {
