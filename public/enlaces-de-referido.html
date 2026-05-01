@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Enlaces de Referido</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:#F4F1EA; --bg-card:#FFFFFF; --bg-soft:#FBF6EE;
+    --ink:#14110F; --ink-soft:#4a4540; --ink-mute:#8a857f;
+    --line:#E6E0D3; --line-soft:#EFEAE0;
+    --sans:'Inter',-apple-system,sans-serif; --serif:'Cormorant Garamond',Georgia,serif;
+    --accent:#b54c30; --accent-soft:#f2d9d0; --teal:#2e8b8b; --teal-soft:#cfe7e3;
+    --gold:#d4a64a; --gold-soft:#f3e3c1; --plum:#6c4f8a; --plum-soft:#ddd2eb;
+    --r-card:18px; --r-pill:999px;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 14px; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input { font-family: inherit; }
+
+  .app { display: grid; grid-template-columns: 248px 1fr; gap: 18px; padding: 18px; min-height: 100vh; }
+  .sidebar { background: var(--bg-card); border-radius: var(--r-card); padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 18px; height: calc(100vh - 36px); }
+  .sb-brand { display: flex; align-items: center; justify-content: space-between; padding: 0 6px; }
+  .sb-logo { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .sb-logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); display: grid; place-items: center; }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; font-weight: 500; transition: background .15s, color .15s; }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-section-label { padding: 18px 12px 6px; font-size: 10.5px; font-weight: 600; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; }
+  .sb-cta { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 14px; padding: 16px; }
+  .sb-cta-title { font-family: var(--serif); font-size: 18px; font-weight: 600; line-height: 1.15; margin-bottom: 8px; }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn { flex: 1; padding: 7px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #fff; border: 1px solid var(--line); color: var(--ink); cursor: pointer; text-align: center; }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .topbar { background: var(--bg-card); border-radius: var(--r-card); padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search { display: flex; align-items: center; gap: 8px; background: var(--bg-soft); border-radius: var(--r-pill); padding: 8px 14px; flex: 1; max-width: 380px; }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input { border: none; background: transparent; outline: none; color: var(--ink); font-size: 13px; flex: 1; }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--ink); }
+  .tb-ai-dot { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); display: grid; place-items: center; }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-soft); position: relative; }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #B8A07E, #6E5847); border: 2px solid var(--bg-card); cursor: pointer; }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .page-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+  .page-title { font-family: var(--serif); font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
+
+  .hero { background: var(--ink); color: #fff; border-radius: var(--r-card); padding: 28px 32px; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(212,166,74,0.15), transparent 70%); }
+  .hero::after { content: ''; position: absolute; left: -40px; bottom: -80px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(46,139,139,0.18), transparent 70%); }
+  .hero-inner { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+  .hero-eye { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); margin-bottom: 10px; }
+  .hero-code { font-family: var(--serif); font-size: 44px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 14px; line-height: 1; }
+  .hero-code .sep { color: rgba(255,255,255,0.4); margin: 0 12px; }
+  .hero-code em { font-style: italic; color: var(--gold); }
+  .hero-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: rgba(255,255,255,0.7); }
+  .hero-meta strong { color: #fff; font-weight: 600; }
+  .hero-meta .dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+  .hero-actions { display: flex; flex-direction: column; gap: 8px; }
+  .hero-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: var(--r-pill); font-size: 13px; font-weight: 600; transition: opacity .15s; cursor: pointer; }
+  .hero-btn svg { width: 14px; height: 14px; }
+  .hero-btn.solid { background: var(--gold); color: var(--ink); }
+  .hero-btn.ghost { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.18); }
+  .hero-btn:hover { opacity: 0.9; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .kpi { background: var(--bg-card); border-radius: var(--r-card); padding: 18px; position: relative; overflow: hidden; min-height: 130px; }
+  .kpi-num { font-family: var(--serif); font-size: 32px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+  .kpi-num .unit { font-size: 18px; color: var(--ink-mute); font-weight: 500; margin-left: 2px; }
+  .kpi-label { color: var(--ink-mute); font-size: 12px; margin-top: 8px; }
+  .kpi-foot { margin-top: 12px; font-size: 11px; color: var(--ink-mute); }
+  .kpi-icon { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-mute); }
+  .kpi-icon svg { width: 14px; height: 14px; }
+
+  .bottom-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+  .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
+  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
+
+  .gen-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); margin-bottom: 8px; }
+  .gen-select { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--bg-soft); border: 1px solid var(--line-soft); width: 100%; cursor: pointer; text-align: left; transition: border-color .15s; position: relative; }
+  .gen-select:hover { border-color: var(--line); }
+  .gen-select-text { font-size: 13px; color: var(--ink); }
+  .gen-select-text .muted { color: var(--ink-mute); font-weight: 400; }
+  .gen-select-caret svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .gen-select select { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .gen-row2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 16px; }
+  .gen-link-display { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--bg-soft); border: 1px dashed var(--line); overflow: hidden; }
+  .gen-link-display svg { width: 14px; height: 14px; color: var(--ink-mute); flex-shrink: 0; }
+  .gen-link-display code { font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gen-link-display code .accent { color: var(--accent); font-weight: 600; }
+  .gen-copy { display: inline-flex; align-items: center; gap: 6px; padding: 12px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .gen-copy svg { width: 13px; height: 13px; }
+
+  .gen-share { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .share-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: var(--r-pill); background: var(--bg-soft); color: var(--ink); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
+  .share-btn:hover { background: var(--line-soft); }
+  .share-btn svg { width: 13px; height: 13px; }
+  .share-btn.wa { background: #25D366; color: #fff; }
+  .share-btn.wa:hover { background: #20bd5a; }
+
+  .qr-panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; display: flex; flex-direction: column; }
+  .qr-frame { display: grid; place-items: center; padding: 18px; background: var(--bg-soft); border-radius: 14px; margin-bottom: 14px; }
+  .qr-actions { display: flex; gap: 8px; }
+  .qr-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; background: var(--bg-soft); color: var(--ink); font-size: 12px; font-weight: 600; cursor: pointer; }
+  .qr-btn svg { width: 13px; height: 13px; }
+  .qr-btn.primary { background: var(--ink); color: #fff; }
+
+  .recent { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
+  .recent-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .recent-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-soft); font-weight: 500; }
+  .recent-link svg { width: 12px; height: 12px; }
+  .recent-table { display: grid; grid-template-columns: 2fr 1.5fr 1fr 0.8fr 0.8fr; gap: 0; }
+  .recent-table .h { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); padding: 10px 8px; border-bottom: 1px solid var(--line-soft); }
+  .recent-table .c { padding: 14px 8px; border-bottom: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; }
+  .c-name { display: flex; align-items: center; gap: 10px; }
+  .recent-av { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
+  .recent-av.a1 { background: linear-gradient(135deg, #B8A07E, #6E5847); }
+  .recent-av.a2 { background: linear-gradient(135deg, #2e8b8b, #1a5d5d); }
+  .recent-av.a3 { background: linear-gradient(135deg, #b54c30, #7a2f1d); }
+  .recent-av.a4 { background: linear-gradient(135deg, #6c4f8a, #3f2d54); }
+  .recent-av.a5 { background: linear-gradient(135deg, #d4a64a, #8a6722); }
+  .recent-name { color: var(--ink); }
+  .recent-mail { font-size: 11.5px; color: var(--ink-mute); }
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; background: var(--bg-soft); }
+  .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .status-pill.lead { color: #a47615; }
+  .status-pill.lead::before { background: var(--gold); }
+  .status-pill.client { color: var(--teal); }
+  .status-pill.client::before { background: var(--teal); }
+  .status-pill.cierre { color: var(--accent); }
+  .status-pill.cierre::before { background: var(--accent); }
+  .status-pill.churn { color: var(--ink-mute); }
+  .status-pill.churn::before { background: var(--ink-mute); }
+  .recent-amt { font-weight: 600; font-family: var(--serif); font-size: 15px; }
+  .recent-amt.zero { color: var(--ink-mute); font-weight: 500; }
+
+  .skel { background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  @media (max-width: 1240px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .bottom-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; top: 0; }
+    .topbar { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-actions { flex-direction: row; }
+    .recent-table { grid-template-columns: 1.6fr 1fr 0.8fr 0.6fr 0.7fr; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="/broker-dashboard.html" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Panel
+      </a>
+      <a href="/broker.html#tab-listings" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        Mis Propiedades
+      </a>
+      <a href="/broker.html#tab-applications" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Aplicaciones
+      </a>
+      <a href="/broker.html#tab-tours" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Visitas
+      </a>
+      <a href="/broker.html#tab-commissions" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Comisiones
+      </a>
+      <a href="/broker.html#tab-conversations" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        Mensajes
+      </a>
+
+      <div class="sb-section-label">Marketing</div>
+
+      <a href="/enlaces-de-referido.html" class="sb-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Enlaces de Referido
+      </a>
+      <a href="/broker.html#tab-ads" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/></svg>
+        Campañas
+      </a>
+
+      <div class="sb-section-label">Soporte</div>
+
+      <a href="/contacto" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Centro de Ayuda
+      </a>
+    </nav>
+
+    <div class="sb-cta">
+      <div class="sb-cta-title">Publica una <em style="font-style:italic;">propiedad</em></div>
+      <div class="sb-cta-desc">Crea un anuncio nuevo en menos de 3 minutos y conecta con miles de compradores verificados.</div>
+      <div class="sb-cta-row">
+        <a class="sb-cta-btn" href="/broker.html#tab-listings">Más info</a>
+        <a class="sb-cta-btn primary" href="/post.html">Publicar</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar referidos, propiedades, clientes…">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg></span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </a>
+        <a class="tb-avatar" href="/account.html" aria-label="Mi cuenta"></a>
+      </div>
+    </div>
+
+    <div class="page-head">
+      <div class="page-head-left">
+        <div class="page-eyebrow">Marketing · Programa de referidos</div>
+        <h1 class="page-title">Enlaces de <em>Referido</em></h1>
+        <p class="page-sub">Comparte tus enlaces personalizados y recibe crédito por cada cliente que llegue a HogaresRD a través de ti. Vinculación de 30 días.</p>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <div class="hero-eye">Tu código de referido</div>
+          <div class="hero-code" id="heroCode">
+            <span class="skel" style="display:inline-block;width:200px;height:42px;border-radius:8px;">&nbsp;</span>
+          </div>
+          <div class="hero-meta">
+            <span>Enlace corto: <strong id="heroLink">cargando…</strong></span>
+            <span class="dot"></span>
+            <span>Vinculación de <strong>30 días</strong></span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="hero-btn ghost" id="copyGeneralBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <span>Copiar enlace general</span>
+          </button>
+          <button class="hero-btn solid" id="waBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.6 0-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.7.4-.3.3-1 .9-1 2.4s1 2.8 1.2 3c.2.2 2.1 3.2 5.1 4.5 1.8.7 2.5.8 3.4.7.5-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.2-.3-.3-.6-.4zM12 1.9C6.4 1.9 1.9 6.4 1.9 12c0 1.8.5 3.5 1.4 5l-1.5 5.4 5.5-1.5c1.4.8 3 1.2 4.7 1.2 5.6 0 10.1-4.5 10.1-10.1S17.6 1.9 12 1.9z"/></svg>
+            <span>WhatsApp</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div><div class="kpi-label skel" style="height:14px;width:100px;margin-top:8px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div><div class="kpi-label skel" style="height:14px;width:100px;margin-top:8px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div><div class="kpi-label skel" style="height:14px;width:100px;margin-top:8px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div><div class="kpi-label skel" style="height:14px;width:100px;margin-top:8px;">&nbsp;</div></div>
+      <div class="kpi"><div class="kpi-num skel" style="height:32px;width:60px;">&nbsp;</div><div class="kpi-label skel" style="height:14px;width:100px;margin-top:8px;">&nbsp;</div></div>
+    </div>
+
+    <div class="bottom-row">
+
+      <div class="panel">
+        <h2 class="panel-title">Generador de enlaces</h2>
+        <p class="panel-sub">Crea enlaces específicos por propiedad. Cada uno se rastrea por separado.</p>
+
+        <span class="gen-label">Selecciona una propiedad</span>
+        <div class="gen-select" id="propPicker">
+          <span class="gen-select-text" id="pickerLabel"><span class="muted">Enlace general (todas las propiedades)</span></span>
+          <span class="gen-select-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+          <select id="propSelect"></select>
+        </div>
+
+        <div class="gen-row2">
+          <div class="gen-link-display">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            <code id="genLink">cargando…</code>
+          </div>
+          <button class="gen-copy" id="copyLinkBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <span id="copyLinkLabel">Copiar</span>
+          </button>
+        </div>
+
+        <div class="gen-share">
+          <button class="share-btn wa" id="waShareBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.6 0-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.7.4-.3.3-1 .9-1 2.4s1 2.8 1.2 3c.2.2 2.1 3.2 5.1 4.5 1.8.7 2.5.8 3.4.7.5-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.2-.3-.3-.6-.4zM12 1.9C6.4 1.9 1.9 6.4 1.9 12c0 1.8.5 3.5 1.4 5l-1.5 5.4 5.5-1.5c1.4.8 3 1.2 4.7 1.2 5.6 0 10.1-4.5 10.1-10.1S17.6 1.9 12 1.9z"/></svg>
+            WhatsApp
+          </button>
+          <button class="share-btn" id="emailShareBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email
+          </button>
+          <button class="share-btn" id="genericShareBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Compartir
+          </button>
+        </div>
+      </div>
+
+      <aside class="qr-panel">
+        <h2 class="panel-title">Código QR</h2>
+        <p class="panel-sub">Imprime o comparte tu QR para que clientes lleguen directo a tu perfil.</p>
+        <div class="qr-frame" id="qrFrame">
+          <div class="skel" style="width:200px;height:200px;border-radius:10px;"></div>
+        </div>
+        <div class="qr-actions">
+          <button class="qr-btn" id="printQrBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir
+          </button>
+          <button class="qr-btn primary" id="downloadQrBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar QR
+          </button>
+        </div>
+      </aside>
+
+    </div>
+
+    <section class="recent">
+      <div class="recent-head">
+        <h2 class="panel-title">Referidos recientes</h2>
+        <a href="/broker.html#tab-applications" class="recent-link">
+          Ver historial completo
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+      <div class="recent-table" id="recentTable">
+        <div class="h">Cliente</div>
+        <div class="h">Origen</div>
+        <div class="h">Estado</div>
+        <div class="h">Fecha</div>
+        <div class="h" style="text-align:right;">Crédito</div>
+        <div class="c" style="grid-column:1/-1;color:var(--ink-mute);justify-content:center;">Cargando…</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+'use strict';
+
+const fmtUSD = (n) => Number.isFinite(Number(n)) ? `US$ ${Number(n).toLocaleString('es-DO')}` : '—';
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initials = (n='') => n.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase() || '?';
+const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'include', ...opts });
+  if (res.status === 401) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+    return null;
+  }
+  if (!res.ok) throw new Error(`${path} ${res.status}`);
+  return res.json();
+}
+
+const STATE = { user: null, refToken: '', baseLink: '', listings: [], selectedListing: null };
+
+function renderHero() {
+  if (!STATE.refToken) return;
+  const code = STATE.refToken.toUpperCase();
+  const split = Math.min(8, code.length);
+  document.getElementById('heroCode').innerHTML = `
+    <span>${escapeHtml(code.slice(0, split))}</span>
+    ${code.length > split ? `<span class="sep">·</span><em>${escapeHtml(code.slice(split))}</em>` : ''}`;
+  document.getElementById('heroLink').textContent = STATE.baseLink.replace(/^https?:\/\//, '');
+}
+
+function renderKpis(s) {
+  const k = (n, label, icon) => `
+    <div class="kpi">
+      <div class="kpi-num">${n}</div>
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-icon">${icon}</div>
+    </div>`;
+  const I = {
+    click: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l-4 4 4 4"/><path d="M15 5l4 4-4 4"/><path d="M5 15h14"/><path d="M19 9H5"/></svg>',
+    eye:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    lead:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg>',
+    apps:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg>',
+  };
+  document.getElementById('kpiRow').innerHTML = [
+    k(`${(s.clicks_30d || 0).toLocaleString('es-DO')}`, 'Clics (30 días)', I.click),
+    k(`${(s.unique_visitors || 0).toLocaleString('es-DO')}`, 'Visitantes únicos', I.eye),
+    k(`${(s.leads || 0).toLocaleString('es-DO')}`, 'Leads generados', I.lead),
+    k(`${(s.applications || 0).toLocaleString('es-DO')}`, 'Aplicaciones', I.apps),
+    k(`${Number(s.conversion_rate || 0).toFixed(1)}<span class="unit">%</span>`, 'Conversión', I.chart),
+  ].join('');
+}
+
+function buildLinkFor(listing) {
+  const base = location.origin;
+  const ref = STATE.refToken;
+  if (!listing) return `${base}/r/${ref}`;
+  return `${base}/listing.html?id=${encodeURIComponent(listing.id)}&ref=${encodeURIComponent(ref)}`;
+}
+
+function renderGenerator() {
+  const sel = document.getElementById('propSelect');
+  const opts = [{ id: '', title: 'Enlace general (todas las propiedades)' }, ...STATE.listings];
+  sel.innerHTML = opts.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.title || 'Sin título')}</option>`).join('');
+  sel.value = STATE.selectedListing?.id || '';
+  updateGeneratorView();
+}
+
+function updateGeneratorView() {
+  const link = currentLink();
+  const display = link.replace(/^https?:\/\//, '');
+  const html = display.replace(/(ref=[^&]+)/, '<span class="accent">$1</span>');
+  document.getElementById('genLink').innerHTML = html;
+
+  const label = document.getElementById('pickerLabel');
+  if (STATE.selectedListing) {
+    const l = STATE.selectedListing;
+    const meta = [l.location, l.city].filter(Boolean).join(', ');
+    label.innerHTML = `${escapeHtml(l.title || 'Propiedad')} <span class="muted">— ${escapeHtml(meta)} ${l.price ? '· ' + fmtUSD(l.price) : ''}</span>`;
+  } else {
+    label.innerHTML = `<span class="muted">Enlace general (todas las propiedades)</span>`;
+  }
+}
+
+function currentLink() {
+  return STATE.selectedListing ? buildLinkFor(STATE.selectedListing) : STATE.baseLink;
+}
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch { return false; }
+}
+
+function flashCopy(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const orig = el.textContent;
+  el.textContent = '¡Copiado!';
+  setTimeout(() => { el.textContent = orig; }, 1500);
+}
+
+function renderQR(url) {
+  const sz = 200;
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(url)}&margin=4&color=14110F&bgcolor=FFFFFF`;
+  document.getElementById('qrFrame').innerHTML = `
+    <img src="${src}" width="${sz}" height="${sz}" alt="QR de tu enlace de referido"
+         style="display:block;border-radius:8px;background:#fff;"
+         onerror="this.outerHTML='<div style=&quot;color:var(--ink-mute);font-size:12px;padding:40px;text-align:center;&quot;>QR no disponible.<br>Comparte el enlace directamente.</div>'">
+  `;
+}
+
+function renderRecent(applications) {
+  const tbl = document.getElementById('recentTable');
+  const head = `
+    <div class="h">Cliente</div>
+    <div class="h">Origen</div>
+    <div class="h">Estado</div>
+    <div class="h">Fecha</div>
+    <div class="h" style="text-align:right;">Crédito</div>`;
+  const rows = (applications || []).slice(0, 5).map((a, i) => {
+    const name = a.client?.name || 'Cliente';
+    const email = a.client?.email || '';
+    const s = a.status || 'aplicado';
+    const status = s === 'completado' ? ['Cerrado', 'cierre']
+      : ['aprobado','pago_aprobado','pendiente_pago'].includes(s) ? ['Cliente', 'client']
+      : s === 'rechazado' ? ['Expirado', 'churn']
+      : ['Lead', 'lead'];
+    const credit = a.commission?.agent_amount ? fmtUSD(Number(a.commission.agent_amount)) : '—';
+    const d = new Date(a.created_at);
+    const date = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+    const av = `a${(i % 5) + 1}`;
+    return `
+      <div class="c c-name"><span class="recent-av ${av}">${initials(name)}</span><span><div class="recent-name">${escapeHtml(name)}</div><div class="recent-mail">${escapeHtml(email)}</div></span></div>
+      <div class="c">${escapeHtml(a.listing_title || 'Enlace general')}</div>
+      <div class="c"><span class="status-pill ${status[1]}">${status[0]}</span></div>
+      <div class="c">${date}</div>
+      <div class="c recent-amt ${credit === '—' ? 'zero' : ''}" style="text-align:right;">${credit}</div>`;
+  }).join('');
+
+  if (!rows) {
+    tbl.innerHTML = head + `<div class="c" style="grid-column:1/-1;color:var(--ink-mute);justify-content:center;padding:32px;">Aún no tienes referidos. Comparte tu enlace para empezar.</div>`;
+    return;
+  }
+  tbl.innerHTML = head + rows;
+}
+
+async function load() {
+  let me;
+  try { me = await api('/api/auth/me'); } catch { return; }
+  const user = me?.user || me;
+  if (!user || !user.id) return;
+  STATE.user = user;
+
+  const [stats, mine] = await Promise.all([
+    api('/api/referrals/my-stats').catch(() => ({})),
+    api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}`).catch(() => ({ listings: [] })),
+  ]);
+
+  STATE.refToken = stats.ref_token || user.refToken || user.id;
+  STATE.baseLink = stats.link_base || `${location.origin}/r/${STATE.refToken}`;
+  STATE.listings = (mine.listings || mine || []).filter(l => l && (l.status || 'approved') === 'approved');
+
+  renderHero();
+  renderKpis(stats);
+  renderGenerator();
+  renderQR(STATE.baseLink);
+
+  // Pull broker's referred applications
+  let myApps = [];
+  try {
+    const appsResp = await api('/api/applications').catch(() => null);
+    myApps = Array.isArray(appsResp) ? appsResp : (appsResp?.applications || []);
+  } catch {}
+  const referred = myApps.filter(a =>
+    a.referred_by === user.id || a.ref_token === STATE.refToken
+  );
+  renderRecent(referred);
+
+  // Wire interactions
+  document.getElementById('copyGeneralBtn').onclick = async () => {
+    if (await copy(STATE.baseLink)) {
+      const span = document.querySelector('#copyGeneralBtn span');
+      if (span) {
+        const orig = span.textContent;
+        span.textContent = '¡Copiado!';
+        setTimeout(() => { span.textContent = orig; }, 1500);
+      }
+    }
+  };
+  document.getElementById('copyLinkBtn').onclick = async () => {
+    if (await copy(currentLink())) flashCopy('copyLinkLabel');
+  };
+  document.getElementById('waBtn').onclick = () => {
+    const msg = `Hola, te comparto HogaresRD para encontrar propiedades verificadas: ${STATE.baseLink}`;
+    location.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  };
+  document.getElementById('waShareBtn').onclick = () => {
+    const link = currentLink();
+    const msg = STATE.selectedListing
+      ? `Mira esta propiedad en HogaresRD: ${STATE.selectedListing.title} — ${link}`
+      : `Encuentra propiedades verificadas en HogaresRD: ${link}`;
+    location.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  };
+  document.getElementById('emailShareBtn').onclick = () => {
+    const link = currentLink();
+    const subject = STATE.selectedListing
+      ? `Te comparto: ${STATE.selectedListing.title} — HogaresRD`
+      : 'HogaresRD — Propiedades verificadas en RD';
+    const body = `Hola,\n\nMira esto en HogaresRD:\n${link}\n\n— ${STATE.user.name || 'Tu agente'}`;
+    location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+  document.getElementById('genericShareBtn').onclick = async () => {
+    const link = currentLink();
+    if (navigator.share) {
+      try { await navigator.share({ title: 'HogaresRD', url: link }); } catch {}
+    } else if (await copy(link)) {
+      alert('Enlace copiado al portapapeles');
+    }
+  };
+  document.getElementById('printQrBtn').onclick = () => window.print();
+  document.getElementById('downloadQrBtn').onclick = () => {
+    const a = document.createElement('a');
+    a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(currentLink())}&margin=4&color=14110F&bgcolor=FFFFFF&format=png`;
+    a.download = `hogaresrd-${STATE.refToken}-qr.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  document.getElementById('propSelect').onchange = (e) => {
+    const id = e.target.value;
+    STATE.selectedListing = id ? STATE.listings.find(l => l.id === id) : null;
+    updateGeneratorView();
+    renderQR(currentLink());
+  };
+}
+
+load().catch(err => {
+  console.error('[enlaces-de-referido] load failed', err);
+});
+</script>
+
+</body>
+</html>
