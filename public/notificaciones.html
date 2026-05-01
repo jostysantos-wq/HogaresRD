@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Notificaciones</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:        #F4F1EA;
+    --bg-card:   #FFFFFF;
+    --bg-soft:   #FBF6EE;
+    --ink:       #14110F;
+    --ink-soft:  #4a4540;
+    --ink-mute:  #8a857f;
+    --line:      #E6E0D3;
+    --line-soft: #EFEAE0;
+    --sans:      'Inter', -apple-system, sans-serif;
+    --serif:     'Cormorant Garamond', Georgia, serif;
+
+    /* accent palette */
+    --accent:    #b54c30;     /* warm terracotta */
+    --accent-soft:#f2d9d0;
+    --teal:      #2e8b8b;
+    --teal-soft: #cfe7e3;
+    --gold:      #d4a64a;
+    --gold-soft: #f3e3c1;
+    --plum:      #6c4f8a;
+    --plum-soft: #ddd2eb;
+
+    --r-card:    18px;
+    --r-pill:    999px;
+    --r-mini:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  /* ── LAYOUT SHELL ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    gap: 18px;
+    padding: 18px;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ───────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 22px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: sticky;
+    top: 18px;
+    height: calc(100vh - 36px);
+  }
+  .sb-brand {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 6px;
+  }
+  .sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .sb-logo-mark {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--ink);
+    display: grid; place-items: center;
+  }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+  .sb-collapse {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--bg-soft);
+    display: grid; place-items: center;
+    color: var(--ink-mute);
+  }
+  .sb-collapse svg { width: 12px; height: 12px; }
+
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--ink-soft); font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-link.active:hover { background: var(--ink); }
+
+  .sb-section-label {
+    padding: 18px 12px 6px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .sb-cta {
+    background: var(--bg-soft); border: 1px solid var(--line-soft);
+    border-radius: 14px; padding: 16px;
+  }
+  .sb-cta-title {
+    font-family: var(--serif); font-size: 18px; font-weight: 600;
+    line-height: 1.15; margin-bottom: 8px;
+  }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn {
+    flex: 1; padding: 7px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    background: #fff; border: 1px solid var(--line);
+    color: var(--ink); cursor: pointer;
+  }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ── MAIN ─────────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-card);
+    border-radius: var(--r-card);
+    padding: 14px 18px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 16px; align-items: center;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-soft); border-radius: var(--r-pill);
+    padding: 8px 14px; flex: 1; max-width: 380px;
+  }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input {
+    border: none; background: transparent; outline: none;
+    color: var(--ink); font-size: 13px; flex: 1;
+  }
+  .tb-search input::placeholder { color: var(--ink-mute); }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+  }
+  .tb-ai-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    display: grid; place-items: center;
+  }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-soft); position: relative;
+  }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-icon-dot {
+    position: absolute; top: 8px; right: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg-card);
+  }
+  .tb-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    border: 2px solid var(--bg-card); cursor: pointer;
+  }
+
+  /* PAGE HEAD */
+  .page-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .page-eyebrow {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.10em; color: var(--ink-mute);
+    margin: 0 0 6px;
+  }
+  .page-title {
+    font-family: var(--serif); font-size: 32px; font-weight: 600;
+    margin: 0; letter-spacing: -0.01em; line-height: 1.05;
+  }
+  .page-actions { display: flex; align-items: center; gap: 8px; }
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--ink);
+    transition: opacity .15s;
+  }
+  .ph-pill:hover { opacity: 0.92; }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-pill[disabled] {
+    opacity: 0.45; cursor: not-allowed;
+    background: var(--bg-card); color: var(--ink-mute);
+    border-color: var(--line);
+  }
+  .ph-pill[disabled]:hover { opacity: 0.45; }
+
+  /* FILTER CHIPS */
+  .chips {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 12px 14px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .chip:hover { background: var(--line-soft); color: var(--ink); }
+  .chip.active {
+    background: var(--ink); color: #fff;
+  }
+  .chip-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(20,17,15,0.06); color: var(--ink-soft);
+    font-size: 10.5px; font-weight: 700;
+  }
+  .chip.active .chip-count { background: rgba(255,255,255,0.18); color: #fff; }
+
+  /* NOTIFICATION LIST */
+  .notif-card {
+    background: var(--bg-card); border-radius: var(--r-card);
+    overflow: hidden;
+  }
+  .notif-list {
+    display: flex; flex-direction: column;
+  }
+  .notif-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px; align-items: flex-start;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--line-soft);
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background .12s;
+    position: relative;
+  }
+  .notif-row:last-child { border-bottom: none; }
+  .notif-row:hover { background: var(--bg-soft); }
+  .notif-row.unread { border-left-color: var(--accent); background: rgba(255, 248, 240, 0.55); }
+  .notif-row.unread:hover { background: rgba(255, 244, 234, 0.85); }
+
+  .notif-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .notif-icon svg { width: 17px; height: 17px; }
+  .notif-icon.tone-gold { background: rgba(212, 166, 74, 0.15); color: var(--gold); }
+  .notif-icon.tone-plum { background: rgba(108, 79, 138, 0.15); color: var(--plum); }
+  .notif-icon.tone-teal { background: rgba(46, 139, 139, 0.15); color: var(--teal); }
+  .notif-icon.tone-accent { background: rgba(181, 76, 48, 0.15); color: var(--accent); }
+  .notif-icon.tone-mute { background: rgba(138, 133, 127, 0.15); color: var(--ink-mute); }
+
+  .notif-body { min-width: 0; }
+  .notif-title-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 3px;
+  }
+  .notif-title {
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+    line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .notif-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .notif-desc {
+    font-size: 12.5px; color: var(--ink-mute);
+    line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .notif-right {
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .notif-time {
+    font-size: 11.5px; color: var(--ink-mute);
+    white-space: nowrap;
+  }
+  .kebab-wrap { position: relative; }
+  .kebab-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; display: grid; place-items: center;
+    color: var(--ink-mute); cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .kebab-btn:hover { background: var(--bg-soft); color: var(--ink); }
+  .kebab-btn svg { width: 16px; height: 16px; }
+  .kebab-menu {
+    position: absolute; right: 0; top: 36px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 200px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.10);
+    z-index: 30;
+    display: none;
+  }
+  .kebab-menu.open { display: block; }
+  .kebab-menu button, .kebab-menu a {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 11px; border-radius: 8px;
+    font-size: 13px; color: var(--ink-soft);
+    width: 100%; text-align: left;
+    background: none; border: none; cursor: pointer;
+  }
+  .kebab-menu button:hover, .kebab-menu a:hover { background: var(--bg-soft); color: var(--ink); }
+  .kebab-menu svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .kebab-menu .danger { color: var(--accent); }
+  .kebab-menu .danger:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
+  .kebab-menu .divider { height: 1px; background: var(--line-soft); margin: 4px 6px; }
+
+  /* SKELETON ROWS */
+  .skel {
+    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skel-row {
+    display: grid; grid-template-columns: 36px 1fr 60px;
+    gap: 14px; align-items: center;
+    padding: 16px 22px; border-bottom: 1px solid var(--line-soft);
+  }
+  .skel-row:last-child { border-bottom: none; }
+  .skel-row .skel.circle { width: 36px; height: 36px; border-radius: 50%; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 64px 24px;
+  }
+  .empty-state-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--bg-soft);
+    color: var(--ink-mute);
+    margin: 0 auto 16px;
+    display: grid; place-items: center;
+  }
+  .empty-state-icon svg { width: 28px; height: 28px; }
+  .empty-state-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    color: var(--ink); margin: 0 0 6px;
+  }
+  .empty-state-desc {
+    font-size: 13px; color: var(--ink-mute);
+  }
+
+  /* PAGINATION FOOTER */
+  .load-more-wrap {
+    display: flex; justify-content: center;
+    padding: 16px 22px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .load-more-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink);
+    font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--line);
+  }
+  .load-more-btn:hover { background: var(--line-soft); }
+  .load-more-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--ink); color: #fff;
+    padding: 12px 18px; border-radius: 12px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+    z-index: 200;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--accent); }
+
+  /* RESPONSIVE */
+  @media (max-width: 1240px) {
+    .notif-desc { white-space: normal; }
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; top: 0; }
+    .topbar { grid-template-columns: 1fr; }
+    .topbar-right { justify-content: flex-end; }
+    .page-head { flex-direction: column; align-items: flex-start; }
+    .notif-row { padding: 14px 16px; }
+  }
+
+  /* — sidebar additions — */
+  [hidden] { display: none !important; }
+  .sb-nav { padding-bottom: 8px; }
+  .sb-link { position: relative; }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 18px; height: 18px; padding: 0 6px;
+    border-radius: 999px;
+    background: var(--accent); color: #fff;
+    font-size: 10.5px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .sb-link.active .sb-badge { background: #fff; color: var(--ink); }
+  .sb-team-only[hidden] { display: none !important; }
+  .sb-section-label[hidden] { display: none !important; }
+  .sb-footer { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+  .sb-cta-eyebrow {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px;
+  }
+  .sb-logout {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--ink-soft); font-size: 13px; font-weight: 500;
+    background: transparent; cursor: pointer;
+    transition: background .15s, color .15s;
+    border: none; text-align: left; width: 100%;
+  }
+  .sb-logout svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-logout:hover { background: var(--bg-soft); color: var(--ink); }
+
+
+  /* — topbar account dropdown — */
+  .tb-account-wrap { position: relative; display: inline-flex; gap: 10px; align-items: center; }
+  .tb-icon, .tb-avatar { cursor: pointer; }
+  .tb-menu {
+    position: absolute; top: calc(100% + 10px); right: 0;
+    min-width: 280px;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px -8px rgba(20, 17, 15, 0.18), 0 2px 8px rgba(20,17,15,0.06);
+    padding: 10px;
+    z-index: 100;
+  }
+  .tb-menu[hidden] { display: none; }
+  .tb-menu-head {
+    padding: 12px 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    margin-bottom: 8px;
+  }
+  .tb-menu-name {
+    font-family: var(--serif); font-size: 17px; font-weight: 600;
+    line-height: 1.2; color: var(--ink);
+  }
+  .tb-menu-email {
+    font-size: 12px; color: var(--ink-mute); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tb-menu-role {
+    display: inline-block; margin-top: 6px;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tb-menu-list { display: flex; flex-direction: column; gap: 1px; }
+  .tb-menu-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 12px; border-radius: 8px;
+    color: var(--ink-soft); font-size: 13px; font-weight: 500;
+    text-align: left; background: none; border: none;
+    cursor: pointer; width: 100%;
+    transition: background .12s, color .12s;
+  }
+  .tb-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--ink-mute); }
+  .tb-menu-item:hover { background: var(--bg-soft); color: var(--ink); }
+  .tb-menu-item:hover svg { color: var(--ink); }
+  .tb-menu-sep {
+    height: 1px; background: var(--line-soft);
+    margin: 6px 4px;
+  }
+  .tb-menu-logout { color: var(--accent); }
+  .tb-menu-logout svg { color: var(--accent); }
+  .tb-menu-logout:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
+  .tb-menu-logout:hover svg { color: var(--accent); }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ╭─ SIDEBAR ───────────────────────────────────────────╮ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+        <nav class="sb-nav" aria-label="Navegación principal">
+
+      <div class="sb-section-label">Principal</div>
+      <a href="/broker-dashboard.html" class="sb-link" data-nav="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Panel</span>
+      </a>
+      <a href="/mis-propiedades.html" class="sb-link" data-nav="mis-propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        <span>Mis Propiedades</span>
+      </a>
+      <a href="/aplicaciones.html" class="sb-link" data-nav="aplicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Aplicaciones</span> <span class="sb-badge" id="navAppsBadge" hidden></span>
+      </a>
+      <a href="/visitas.html" class="sb-link" data-nav="visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Visitas</span> <span class="sb-badge" id="navVisitsBadge" hidden></span>
+      </a>
+      <a href="/comisiones.html" class="sb-link" data-nav="comisiones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span>Comisiones</span>
+      </a>
+      <a href="/mensajes.html" class="sb-link" data-nav="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        <span>Mensajes</span> <span class="sb-badge" id="navMsgBadge" hidden></span>
+      </a>
+      <a href="/tareas" class="sb-link" data-nav="tareas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Tareas</span> <span class="sb-badge" id="navTasksBadge" hidden></span>
+      </a>
+      <a href="/notificaciones" class="sb-link active" data-nav="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span>Notificaciones</span> <span class="sb-badge" id="navNotifBadge" hidden></span>
+      </a>
+
+      <div class="sb-section-label">Marketing</div>
+      <a href="/enlaces-de-referido.html" class="sb-link" data-nav="referidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <span>Enlaces de Referido</span>
+      </a>
+      <a href="/campanas.html" class="sb-link" data-nav="campanas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 01-5.8-1.6"/></svg>
+        <span>Campañas</span>
+      </a>
+
+      <div class="sb-section-label sb-team-label" id="sbTeamLabel" hidden>Equipo</div>
+      <a href="/broker.html#tab-team-members" class="sb-link sb-team-only" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Miembros</span>
+      </a>
+      <a href="/broker.html#tab-team-requests" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span>
+      </a>
+      <a href="/broker.html#tab-team-performance" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg>
+        <span>Rendimiento</span>
+      </a>
+      <a href="/broker.html#tab-team-secretaries" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Secretarias</span>
+      </a>
+      <a href="/broker.html#tab-empresa" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg>
+        <span>Perfil de Empresa</span>
+      </a>
+      <a href="/broker.html#tab-publicaciones" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <span>Publicaciones</span>
+      </a>
+
+      <div class="sb-section-label">Soporte</div>
+      <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Centro de Ayuda</span>
+      </a>
+
+    </nav>
+
+        <div class="sb-footer">
+      <a class="sb-cta" href="/post.html">
+        <div class="sb-cta-eyebrow">HogaresRD</div>
+        <div class="sb-cta-title">Publica una <em>propiedad</em></div>
+        <div class="sb-cta-desc">Llega a miles de compradores verificados.</div>
+        <div class="sb-cta-row">
+          <span class="sb-cta-btn primary">Publicar →</span>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ╭─ MAIN ──────────────────────────────────────────────╮ -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar propiedades, clientes, transacciones…" id="topbarSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot">
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg>
+          </span>
+          Asistente IA
+        </a>
+      </div>
+            <div class="topbar-right">
+        <a class="tb-icon" href="/notificaciones" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="tb-icon-dot" id="notifDot" hidden></span>
+        </a>
+        <div class="tb-account-wrap" id="tbAccountWrap">
+          <button class="tb-icon" id="tbSettingsBtn" aria-label="Configuración" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+          <button class="tb-avatar" id="tbAvatarBtn" aria-label="Mi cuenta" aria-haspopup="menu" aria-expanded="false"></button>
+          <div class="tb-menu" id="tbMenu" role="menu" hidden>
+            <div class="tb-menu-head" id="tbMenuHead">
+              <div class="tb-menu-name" id="tbMenuName">Cargando…</div>
+              <div class="tb-menu-email" id="tbMenuEmail"></div>
+              <span class="tb-menu-role" id="tbMenuRole"></span>
+            </div>
+            <div class="tb-menu-list">
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-perfil">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Mi Perfil
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/subscription">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                Mi Suscripción
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-2fa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+                Verificación 2FA
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-contrasena">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Cambiar contraseña
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-empresa" id="tbMenuEmpresa" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/></svg>
+                Perfil de Empresa
+              </a>
+              <div class="tb-menu-sep"></div>
+              <a role="menuitem" class="tb-menu-item" href="/terminos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Términos
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/contacto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Centro de Ayuda
+              </a>
+              <div class="tb-menu-sep"></div>
+              <button role="menuitem" class="tb-menu-item tb-menu-logout" id="tbMenuLogout" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE HEADER -->
+    <div class="page-head">
+      <div>
+        <p class="page-eyebrow" id="eyebrow">Centro de actividad</p>
+        <h1 class="page-title">Notificaciones</h1>
+      </div>
+      <div class="page-actions">
+        <button class="ph-pill" id="markAllBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Marcar todas leídas
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTER CHIPS -->
+    <div class="chips" id="chips" role="tablist">
+      <button class="chip active" data-filter="all" role="tab">Todas <span class="chip-count" data-count="all">0</span></button>
+      <button class="chip" data-filter="unread" role="tab">No leídas <span class="chip-count" data-count="unread">0</span></button>
+      <button class="chip" data-filter="application" role="tab">Aplicaciones <span class="chip-count" data-count="application">0</span></button>
+      <button class="chip" data-filter="tour" role="tab">Visitas <span class="chip-count" data-count="tour">0</span></button>
+      <button class="chip" data-filter="payment" role="tab">Pagos <span class="chip-count" data-count="payment">0</span></button>
+      <button class="chip" data-filter="message" role="tab">Mensajes <span class="chip-count" data-count="message">0</span></button>
+      <button class="chip" data-filter="system" role="tab">Sistema <span class="chip-count" data-count="system">0</span></button>
+    </div>
+
+    <!-- NOTIFICATION LIST CARD -->
+    <section class="notif-card">
+      <div class="notif-list" id="notifList" aria-live="polite">
+        <!-- Skeleton rows for first 1.5s -->
+        <div class="skel-row"><div class="skel circle"></div><div><div class="skel" style="height:12px;width:60%;margin-bottom:6px;"></div><div class="skel" style="height:11px;width:80%;"></div></div><div class="skel" style="height:11px;width:48px;"></div></div>
+        <div class="skel-row"><div class="skel circle"></div><div><div class="skel" style="height:12px;width:55%;margin-bottom:6px;"></div><div class="skel" style="height:11px;width:75%;"></div></div><div class="skel" style="height:11px;width:48px;"></div></div>
+        <div class="skel-row"><div class="skel circle"></div><div><div class="skel" style="height:12px;width:65%;margin-bottom:6px;"></div><div class="skel" style="height:11px;width:70%;"></div></div><div class="skel" style="height:11px;width:48px;"></div></div>
+        <div class="skel-row"><div class="skel circle"></div><div><div class="skel" style="height:12px;width:50%;margin-bottom:6px;"></div><div class="skel" style="height:11px;width:65%;"></div></div><div class="skel" style="height:11px;width:48px;"></div></div>
+        <div class="skel-row"><div class="skel circle"></div><div><div class="skel" style="height:12px;width:58%;margin-bottom:6px;"></div><div class="skel" style="height:11px;width:78%;"></div></div><div class="skel" style="height:11px;width:48px;"></div></div>
+      </div>
+      <div class="load-more-wrap" id="loadMoreWrap" hidden>
+        <button class="load-more-btn" id="loadMoreBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          Cargar más
+        </button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── HELPERS ─────────────────────────────────────────────────
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const MONTHS_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function relativeTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'ahora';
+  if (diff < 3600) return Math.floor(diff/60) + ' min';
+  if (diff < 86400) return Math.floor(diff/3600) + ' h';
+  if (diff < 86400*7) return Math.floor(diff/86400) + ' d';
+  return `${d.getDate()} ${MONTHS_ES[d.getMonth()]}`;
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Accept': 'application/json' };
+  if (opts.body && !opts.headers?.['Content-Type']) headers['Content-Type'] = 'application/json';
+  Object.assign(headers, opts.headers || {});
+  const body = opts.body && typeof opts.body !== 'string' ? JSON.stringify(opts.body) : opts.body;
+  const res = await fetch(path, { credentials: 'include', ...opts, headers, body });
+  if (res.status === 401) {
+    location.href = '/login.html?next=' + encodeURIComponent('/notificaciones');
+    throw new Error('unauthorized');
+  }
+  if (!res.ok) {
+    let msg = `${path} ${res.status}`;
+    try {
+      const j = await res.json();
+      if (j?.error) msg = j.error;
+    } catch {}
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  // 204-style endpoints may return no body
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('json') ? res.json() : null;
+}
+
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg, kind = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = 'toast' + (kind ? ' ' + kind : ''); }, 2600);
+}
+
+// ── ICONS ───────────────────────────────────────────────────
+const ICON = {
+  doc:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  dollar:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+  bubble:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>',
+  bell:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
+  bellOff:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 01-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0118 8"/><path d="M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 00-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  kebab:    '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+  read:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  unread:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><polyline points="4 4 12 13 20 4"/></svg>',
+  trash:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  open:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+};
+
+// ── CATEGORY MAP ─────────────────────────────────────────────
+// Maps notification.type → { category, icon, tone, label }
+function categorize(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'application' || t === 'new_application' || t === 'status_changed' || t === 'document_reviewed') {
+    return { category: 'application', icon: 'doc', tone: 'gold' };
+  }
+  if (t === 'tour' || t === 'tour_update' || t === 'visit' || t === 'scheduled') {
+    return { category: 'tour', icon: 'calendar', tone: 'plum' };
+  }
+  if (t === 'payment' || t === 'payment_approved' || t === 'commission' ||
+      t === 'commission_submitted' || t === 'commission_reviewed') {
+    return { category: 'payment', icon: 'dollar', tone: 'teal' };
+  }
+  if (t === 'message' || t === 'new_message' || t === 'chat') {
+    return { category: 'message', icon: 'bubble', tone: 'accent' };
+  }
+  return { category: 'system', icon: 'bell', tone: 'mute' };
+}
+
+// ── STATE ────────────────────────────────────────────────────
+const state = {
+  me: null,
+  notifications: [],
+  unreadCount: 0,
+  filter: 'all',
+  pollMs: 30000,
+  pollTimer: null,
+  loading: false,
+  pageLimit: 50,
+  hasMore: false,
+  openKebabId: null,
+  initialLoad: true,
+};
+
+// ── RENDER ───────────────────────────────────────────────────
+function counts() {
+  const c = { all: 0, unread: 0, application: 0, tour: 0, payment: 0, message: 0, system: 0 };
+  for (const n of state.notifications) {
+    c.all++;
+    if (!n.read_at) c.unread++;
+    const { category } = categorize(n.type);
+    c[category] = (c[category] || 0) + 1;
+  }
+  return c;
+}
+
+function renderChips() {
+  const c = counts();
+  document.querySelectorAll('.chip').forEach(chip => {
+    const f = chip.dataset.filter;
+    chip.classList.toggle('active', f === state.filter);
+    const cnt = chip.querySelector('.chip-count');
+    if (cnt) cnt.textContent = c[f] ?? 0;
+  });
+}
+
+function filtered() {
+  if (state.filter === 'all') return state.notifications;
+  if (state.filter === 'unread') return state.notifications.filter(n => !n.read_at);
+  return state.notifications.filter(n => categorize(n.type).category === state.filter);
+}
+
+function renderEyebrow() {
+  const eb = document.getElementById('eyebrow');
+  if (!eb) return;
+  const u = state.unreadCount;
+  eb.textContent = `Centro de actividad · ${u} sin leer`;
+  const dot = document.getElementById('notifDot');
+  if (dot) dot.hidden = u === 0;
+  const navBadge = document.getElementById('navNotifBadge');
+  if (navBadge) {
+    if (u > 0) {
+      navBadge.textContent = u > 99 ? '99+' : String(u);
+      navBadge.hidden = false;
+    } else {
+      navBadge.hidden = true;
+    }
+  }
+  const btn = document.getElementById('markAllBtn');
+  if (btn) btn.disabled = u === 0;
+}
+
+function renderRow(n) {
+  const cat = categorize(n.type);
+  const isUnread = !n.read_at;
+  const time = relativeTime(n.created_at);
+  const title = n.title || 'Notificación';
+  const body = n.body || '';
+  const hasUrl = !!n.url;
+  return `
+    <div class="notif-row ${isUnread ? 'unread' : ''}" data-id="${escapeHtml(n.id)}" data-url="${escapeHtml(n.url || '')}">
+      <span class="notif-icon tone-${cat.tone}">${ICON[cat.icon]}</span>
+      <div class="notif-body">
+        <div class="notif-title-row">
+          ${isUnread ? '<span class="notif-dot" aria-label="No leída"></span>' : ''}
+          <div class="notif-title">${escapeHtml(title)}</div>
+        </div>
+        ${body ? `<div class="notif-desc">${escapeHtml(body)}</div>` : ''}
+      </div>
+      <div class="notif-right">
+        <span class="notif-time">${escapeHtml(time)}</span>
+        <div class="kebab-wrap">
+          <button class="kebab-btn" data-kebab="${escapeHtml(n.id)}" aria-label="Opciones">${ICON.kebab}</button>
+          <div class="kebab-menu" data-menu="${escapeHtml(n.id)}">
+            ${hasUrl ? `<a href="${escapeHtml(n.url)}" data-action="open">${ICON.open} Ver detalle</a>` : ''}
+            <button type="button" data-action="${isUnread ? 'mark-read' : 'mark-unread'}">
+              ${isUnread ? ICON.read + ' Marcar leída' : ICON.unread + ' Marcar no leída'}
+            </button>
+            <div class="divider"></div>
+            <button type="button" class="danger" data-action="delete">${ICON.trash} Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEmpty() {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-icon">${ICON.bellOff}</div>
+      <h2 class="empty-state-title">Estás al día</h2>
+      <p class="empty-state-desc">No tienes notificaciones nuevas.</p>
+    </div>
+  `;
+}
+
+function renderList() {
+  const list = document.getElementById('notifList');
+  if (!list) return;
+  const items = filtered();
+  if (state.notifications.length === 0) {
+    list.innerHTML = renderEmpty();
+    document.getElementById('loadMoreWrap').hidden = true;
+    return;
+  }
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICON.bellOff}</div><h2 class="empty-state-title">Sin resultados</h2><p class="empty-state-desc">No hay notificaciones en este filtro.</p></div>`;
+    document.getElementById('loadMoreWrap').hidden = true;
+    return;
+  }
+  list.innerHTML = items.map(renderRow).join('');
+  document.getElementById('loadMoreWrap').hidden = !state.hasMore;
+}
+
+function renderAll() {
+  renderChips();
+  renderEyebrow();
+  renderList();
+}
+
+// ── DATA ─────────────────────────────────────────────────────
+async function loadNotifications(limit = state.pageLimit) {
+  if (state.loading) return;
+  state.loading = true;
+  try {
+    const data = await api(`/api/notifications?limit=${encodeURIComponent(limit)}`);
+    state.notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+    state.unreadCount = Number(data?.unreadCount || 0);
+    state.hasMore = state.notifications.length >= limit;
+    renderAll();
+  } catch (err) {
+    if (err.message !== 'unauthorized') {
+      console.error('[notificaciones] load failed', err);
+      // If first load fails, show a soft error — keep skeleton replaced with empty
+      if (state.initialLoad) {
+        document.getElementById('notifList').innerHTML = renderEmpty();
+      }
+    }
+  } finally {
+    state.loading = false;
+    state.initialLoad = false;
+  }
+}
+
+async function markRead(id) {
+  const n = state.notifications.find(x => x.id === id);
+  if (!n || n.read_at) return;
+  // Optimistic
+  n.read_at = new Date().toISOString();
+  state.unreadCount = Math.max(0, state.unreadCount - 1);
+  renderAll();
+  try {
+    const res = await api(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+    if (res && typeof res.unreadCount === 'number') {
+      state.unreadCount = res.unreadCount;
+      renderEyebrow();
+    }
+  } catch (err) {
+    // Revert
+    n.read_at = null;
+    state.unreadCount += 1;
+    renderAll();
+    toast(err.message || 'No se pudo marcar como leída', 'error');
+  }
+}
+
+async function markUnread(id) {
+  // The API does not expose an "unread" endpoint — best effort optimistic
+  // toggle. Will resync on next poll if the server disagrees.
+  const n = state.notifications.find(x => x.id === id);
+  if (!n || !n.read_at) return;
+  n.read_at = null;
+  state.unreadCount += 1;
+  renderAll();
+  toast('Marcada como no leída (local)');
+}
+
+async function markAllRead() {
+  const btn = document.getElementById('markAllBtn');
+  if (btn) btn.disabled = true;
+  try {
+    await api('/api/notifications/mark-all-read', { method: 'POST' });
+    const now = new Date().toISOString();
+    for (const n of state.notifications) {
+      if (!n.read_at) n.read_at = now;
+    }
+    state.unreadCount = 0;
+    renderAll();
+    toast('Todas marcadas como leídas');
+  } catch (err) {
+    toast(err.message || 'Error al marcar todas', 'error');
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function deleteNotification(id) {
+  const idx = state.notifications.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const removed = state.notifications[idx];
+  state.notifications.splice(idx, 1);
+  if (!removed.read_at) state.unreadCount = Math.max(0, state.unreadCount - 1);
+  renderAll();
+  try {
+    await api(`/api/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {
+    // Revert
+    state.notifications.splice(idx, 0, removed);
+    if (!removed.read_at) state.unreadCount += 1;
+    renderAll();
+    toast(err.message || 'No se pudo eliminar', 'error');
+  }
+}
+
+// ── EVENT WIRING ─────────────────────────────────────────────
+function closeAllKebabs() {
+  document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+  state.openKebabId = null;
+}
+
+document.getElementById('chips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  state.filter = chip.dataset.filter || 'all';
+  renderAll();
+});
+
+document.getElementById('markAllBtn').addEventListener('click', () => {
+  if (state.unreadCount === 0) return;
+  markAllRead();
+});
+
+document.getElementById('loadMoreBtn').addEventListener('click', () => {
+  state.pageLimit = Math.min(200, state.pageLimit + 50);
+  loadNotifications(state.pageLimit);
+});
+
+document.getElementById('notifList').addEventListener('click', (e) => {
+  // Kebab open/close
+  const kebabBtn = e.target.closest('.kebab-btn');
+  if (kebabBtn) {
+    e.stopPropagation();
+    const id = kebabBtn.dataset.kebab;
+    const menu = document.querySelector(`.kebab-menu[data-menu="${CSS.escape(id)}"]`);
+    if (!menu) return;
+    const wasOpen = menu.classList.contains('open');
+    closeAllKebabs();
+    if (!wasOpen) {
+      menu.classList.add('open');
+      state.openKebabId = id;
+    }
+    return;
+  }
+
+  // Kebab menu actions
+  const action = e.target.closest('[data-action]');
+  if (action) {
+    e.stopPropagation();
+    const row = action.closest('.notif-row');
+    const id = row?.dataset.id;
+    if (!id) return;
+    const act = action.dataset.action;
+    closeAllKebabs();
+    if (act === 'open') {
+      // Anchor handles navigation; mark as read first (fire-and-forget)
+      markRead(id);
+      return;
+    }
+    if (act === 'mark-read') { markRead(id); return; }
+    if (act === 'mark-unread') { markUnread(id); return; }
+    if (act === 'delete') { deleteNotification(id); return; }
+  }
+
+  // Row click → mark read; if URL exists navigate after marking
+  const row = e.target.closest('.notif-row');
+  if (row) {
+    const id = row.dataset.id;
+    const url = row.dataset.url;
+    if (!id) return;
+    if (url) {
+      markRead(id).finally(() => { location.href = url; });
+    } else {
+      markRead(id);
+    }
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (state.openKebabId && !e.target.closest('.kebab-wrap')) {
+    closeAllKebabs();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAllKebabs();
+});
+
+// ── POLLING ──────────────────────────────────────────────────
+function startPolling() {
+  stopPolling();
+  state.pollTimer = setInterval(() => {
+    if (document.hidden) return;
+    loadNotifications(state.pageLimit);
+  }, state.pollMs);
+}
+function stopPolling() {
+  if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    loadNotifications(state.pageLimit);
+    startPolling();
+  }
+});
+
+// ── BOOTSTRAP ────────────────────────────────────────────────
+async function boot() {
+  // Skeleton holds for ~1.5s minimum so it doesn't flash
+  const skeletonHold = new Promise(r => setTimeout(r, 1500));
+  const [me] = await Promise.all([
+    api('/api/auth/me').catch(() => null),
+    loadNotifications(state.pageLimit),
+    skeletonHold,
+  ]);
+  const user = me && (me.user || me);
+  if (!user || !user.id) {
+    location.href = '/login.html?next=' + encodeURIComponent('/notificaciones');
+    return;
+  }
+  state.me = user;
+  // The renders fired by loadNotifications above already populated the UI.
+  // After skeleton hold, ensure we re-render once more to clear any pending skel.
+  renderAll();
+  startPolling();
+}
+
+boot().catch(err => {
+  console.error('[notificaciones] boot failed', err);
+});
+</script>
+
+
+<script>
+(function () {
+  'use strict';
+  const wrap = document.getElementById('tbAccountWrap');
+  if (!wrap) return;
+  const menu = document.getElementById('tbMenu');
+  const settingsBtn = document.getElementById('tbSettingsBtn');
+  const avatarBtn = document.getElementById('tbAvatarBtn');
+  const logoutBtn = document.getElementById('tbMenuLogout');
+  const nameEl = document.getElementById('tbMenuName');
+  const emailEl = document.getElementById('tbMenuEmail');
+  const roleEl = document.getElementById('tbMenuRole');
+  const empresaEl = document.getElementById('tbMenuEmpresa');
+
+  const ROLE_LABELS = {
+    user: 'Cliente',
+    broker: 'Agente',
+    agent: 'Agente',
+    inmobiliaria: 'Inmobiliaria',
+    constructora: 'Constructora',
+    secretary: 'Secretaria',
+    admin: 'Admin',
+  };
+
+  function setOpen(open) {
+    menu.hidden = !open;
+    if (settingsBtn) settingsBtn.setAttribute('aria-expanded', open);
+    if (avatarBtn) avatarBtn.setAttribute('aria-expanded', open);
+  }
+  function toggle(e) { e.preventDefault(); e.stopPropagation(); setOpen(menu.hidden); }
+
+  if (settingsBtn) settingsBtn.addEventListener('click', toggle);
+  if (avatarBtn) avatarBtn.addEventListener('click', toggle);
+
+  document.addEventListener('click', (e) => {
+    if (menu.hidden) return;
+    if (!wrap.contains(e.target)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) setOpen(false);
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+      try { localStorage.removeItem('token'); sessionStorage.clear(); } catch (_) {}
+      location.href = '/';
+    });
+  }
+
+  // Populate identity card + reveal team-only nav for org roles
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(me => {
+      const u = me && (me.user || me);
+      if (!u) return;
+      if (nameEl) nameEl.textContent = u.name || u.email || 'Mi cuenta';
+      if (emailEl) emailEl.textContent = u.email || '';
+      if (roleEl) {
+        const label = ROLE_LABELS[(u.role || '').toLowerCase()] || (u.role || 'Cuenta');
+        roleEl.textContent = label;
+      }
+      const role = (u.role || '').toLowerCase();
+      const isOrg = ['inmobiliaria', 'constructora', 'admin'].includes(role);
+      if (empresaEl && isOrg) empresaEl.hidden = false;
+      // Reveal team nav for org-level roles
+      if (isOrg) {
+        const teamLabel = document.getElementById('sbTeamLabel');
+        if (teamLabel) teamLabel.hidden = false;
+        document.querySelectorAll('.sb-team-only').forEach(el => { el.hidden = false; });
+      }
+      if (avatarBtn && u.name) {
+        const initials = u.name.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+        avatarBtn.textContent = initials;
+        avatarBtn.style.color = '#fff';
+        avatarBtn.style.fontSize = '11.5px';
+        avatarBtn.style.fontWeight = '700';
+        avatarBtn.style.display = 'grid';
+        avatarBtn.style.placeItems = 'center';
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+
+</body>
+</html>
