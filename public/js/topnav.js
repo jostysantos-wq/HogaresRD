@@ -131,6 +131,12 @@
     const initials = name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
     const isPro = PRO_ROLES.includes(user.role);
     const dashHref = isPro ? '/broker-dashboard.html' : '/my-applications';
+    // Render an <img> when the user has an uploaded avatar, otherwise
+    // fall back to the colored gradient pill with initials.
+    const avatarUrl = user.avatarUrl || user.avatar_url || user.avatar || '';
+    const avatarInner = avatarUrl
+      ? `<img src="${escapeHtml(avatarUrl)}" alt="" referrerpolicy="no-referrer">`
+      : escapeHtml(initials);
 
     actions.insertAdjacentHTML('beforeend',
       // Messages icon + dropdown
@@ -158,7 +164,7 @@
       `</div>` +
       // User chip + account dropdown
       `<button class="nav-user" type="button" aria-label="Cuenta" aria-haspopup="menu" aria-expanded="false" id="tnv-user-btn">` +
-        `<span class="nav-user-avatar">${escapeHtml(initials)}</span>` +
+        `<span class="nav-user-avatar">${avatarInner}</span>` +
         `<span class="nav-user-meta">` +
           `<span class="nav-user-name">${escapeHtml(name.split(' ')[0])}</span>` +
           `<span class="nav-user-mail">${escapeHtml(email)}</span>` +
@@ -168,7 +174,7 @@
       `<div class="nav-pop nav-user-menu" id="tnv-user-menu" role="menu" hidden>` +
         `<div class="nav-um-head">` +
           `<div class="nav-um-avatar">` +
-            `<span>${escapeHtml(initials)}</span>` +
+            (avatarUrl ? avatarInner : `<span>${escapeHtml(initials)}</span>`) +
             `<span class="nav-um-presence" aria-label="En línea"></span>` +
           `</div>` +
           `<div class="nav-um-id">` +
