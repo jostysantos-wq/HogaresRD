@@ -690,13 +690,24 @@ function buyerConfirmationHtml(app, link) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ── GET /badge-count  — In-flight applications for nav badge ─────
+// ── GET /badge-count  — Actionable applications for nav badge ─────
 // ══════════════════════════════════════════════════════════════════
-// Drives the red dot on the "Aplicaciones" nav link. Counts
-// applications still moving through the workflow (excludes terminal
-// `completado`/`rechazado` states). Scoped by role: brokers see their
-// own; inmobiliaria/constructora see the team's; secretaries inherit
-// from their organization.
+// Drives the red dot on the "Aplicaciones" nav link. Counts only
+// applications where the user actually needs to do something — not
+// every in-flight application. Scoped by role: brokers see their own;
+// inmobiliaria/constructora see the team's; secretaries inherit from
+// their organization.
+//
+// Actionable statuses (broker-facing, "ball in your court"):
+//   - aplicado            — new application, never reviewed
+//   - documentos_enviados — client uploaded docs, broker must review
+//   - pago_enviado        — client uploaded receipt, broker must verify
+// Everything else (en_revision, en_aprobacion, pendiente_pago, …) is
+// a state the broker has already advanced TO and is waiting on the
+// client/system, so it does not need a nudge.
+const BROKER_ACTIONABLE_STATUSES = new Set([
+  'aplicado', 'documentos_enviados', 'pago_enviado',
+]);
 router.get('/badge-count', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);
   if (!user) return res.json({ count: 0 });
@@ -710,7 +721,7 @@ router.get('/badge-count', userAuth, (req, res) => {
     apps = store.getApplicationsByBroker(user.id);
   }
 
-  const count = apps.filter(a => a.status !== 'completado' && a.status !== 'rechazado').length;
+  const count = apps.filter(a => BROKER_ACTIONABLE_STATUSES.has(a.status)).length;
   res.json({ count });
 });
 

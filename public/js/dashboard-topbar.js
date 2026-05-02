@@ -537,6 +537,46 @@
     if (bell) wireNotifications(bell);
 
     ensureActiveSidebarVisible();
+    refreshSidebarBadges();
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  // Sidebar badges — populate apps / visits / msgs / tareas /
+  // notifications counts on every dashboard page so the user sees the
+  // same nudges regardless of which page they're on.
+  // ───────────────────────────────────────────────────────────────────
+  async function refreshSidebarBadges() {
+    function setBadge(id, n) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (typeof n === 'number' && n > 0) {
+        el.textContent = n > 99 ? '99+' : String(n);
+        el.hidden = false;
+      } else {
+        el.hidden = true;
+      }
+    }
+    async function fetchCount(url) {
+      try {
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        return j && typeof j.count === 'number' ? j.count : null;
+      } catch (_) { return null; }
+    }
+    const targets = [
+      ['navAppsBadge',     '/api/applications/badge-count'],
+      ['navVisitsBadge',   '/api/tours/badge-count'],
+      ['navMsgBadge',      '/api/conversations/unread-count'],
+      ['navTasksBadge',    '/api/tasks/badge-count'],
+      ['navNotifBadge',    '/api/notifications/unread-count'],
+    ];
+    const results = await Promise.all(targets.map(([, url]) => fetchCount(url)));
+    targets.forEach(([id], i) => setBadge(id, results[i]));
+    // Unread notifications also drive the bell-icon dot in the topbar.
+    const notifCount = results[4];
+    const dot = document.getElementById('notifDot');
+    if (dot) dot.hidden = !(typeof notifCount === 'number' && notifCount > 0);
   }
 
   if (document.readyState === 'loading') {
