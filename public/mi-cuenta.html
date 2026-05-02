@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Mi Cuenta</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:#F4F1EA; --bg-card:#FFFFFF; --bg-soft:#FBF6EE;
+    --ink:#14110F; --ink-soft:#4a4540; --ink-mute:#8a857f;
+    --line:#E6E0D3; --line-soft:#EFEAE0;
+    --sans:'Inter',-apple-system,sans-serif; --serif:'Cormorant Garamond',Georgia,serif;
+    --accent:#b54c30; --accent-soft:#f2d9d0; --teal:#2e8b8b; --teal-soft:#cfe7e3;
+    --gold:#d4a64a; --gold-soft:#f3e3c1; --plum:#6c4f8a; --plum-soft:#ddd2eb;
+    --r-card:18px; --r-pill:999px;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 14px; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea { font-family: inherit; }
+
+  .app { display: grid; grid-template-columns: 248px 1fr; gap: 18px; padding: 18px; min-height: 100vh; }
+  .sidebar { background: var(--bg-card); border-radius: var(--r-card); padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 18px; height: calc(100vh - 36px); }
+  .sb-brand { display: flex; align-items: center; padding: 0 6px; }
+  .sb-logo { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .sb-logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); display: grid; place-items: center; }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; font-weight: 500; transition: background .15s, color .15s; position: relative; }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-section-label { padding: 18px 12px 6px; font-size: 10.5px; font-weight: 600; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; }
+  .sb-team-only[hidden], .sb-team-label[hidden] { display: none !important; }
+  .sb-badge { margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px; background: var(--accent); color: #fff; border-radius: 9px; font-size: 10.5px; font-weight: 700; display: inline-grid; place-items: center; }
+  .sb-link.active .sb-badge { background: #fff; color: var(--ink); }
+  .sb-cta { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 14px; padding: 16px; display: block; }
+  .sb-cta-eyebrow { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+  .sb-cta-title { font-family: var(--serif); font-size: 18px; font-weight: 600; line-height: 1.15; margin-bottom: 8px; }
+  .sb-cta-title em { font-style: italic; color: var(--accent); }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn { flex: 1; padding: 7px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #fff; border: 1px solid var(--line); color: var(--ink); cursor: pointer; text-align: center; }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .topbar { background: var(--bg-card); border-radius: var(--r-card); padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search { display: flex; align-items: center; gap: 8px; background: var(--bg-soft); border-radius: var(--r-pill); padding: 8px 14px; flex: 1; max-width: 380px; }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input { border: none; background: transparent; outline: none; color: var(--ink); font-size: 13px; flex: 1; }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--ink); }
+  .tb-ai-dot { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); display: grid; place-items: center; }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-soft); position: relative; cursor: pointer; }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-icon-dot { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-card); }
+  .tb-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #B8A07E, #6E5847); border: 2px solid var(--bg-card); cursor: pointer; }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .page-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+  .page-title { font-family: var(--serif); font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
+
+  /* Tabs */
+  .acc-tabs { display: flex; gap: 4px; background: var(--bg-card); border-radius: var(--r-card); padding: 6px; }
+  .acc-tab { flex: 1; padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; color: var(--ink-mute); cursor: pointer; transition: background .15s, color .15s; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; background: transparent; }
+  .acc-tab svg { width: 14px; height: 14px; }
+  .acc-tab:hover { color: var(--ink); }
+  .acc-tab.active { background: var(--ink); color: #fff; }
+
+  .acc-pane { display: none; }
+  .acc-pane.active { display: block; }
+
+  .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 24px; }
+  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
+
+  /* Form */
+  .form-stack { display: flex; flex-direction: column; gap: 14px; }
+  .field-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); margin-bottom: 6px; }
+  .field-input, .field-textarea { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; font-size: 13.5px; color: var(--ink); background: var(--bg-soft); }
+  .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+  .field-textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
+  .field-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 540px) { .field-row2 { grid-template-columns: 1fr; } }
+  .field-help { font-size: 11.5px; color: var(--ink-mute); margin-top: 4px; }
+  .field-counter { font-size: 11px; color: var(--ink-mute); text-align: right; margin-top: 3px; }
+
+  /* Avatar block */
+  .avatar-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin-bottom: 18px; }
+  .avatar-circle { position: relative; width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #B8A07E, #6E5847); display: grid; place-items: center; color: #fff; font-size: 28px; font-weight: 700; overflow: hidden; flex-shrink: 0; }
+  .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-edit-btn { position: absolute; bottom: 0; right: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; cursor: pointer; border: 3px solid var(--bg-card); }
+  .avatar-edit-btn svg { width: 13px; height: 13px; }
+  .avatar-edit-btn:hover { background: var(--accent); }
+  .avatar-info-name { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.2; margin-bottom: 3px; }
+  .avatar-info-role { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); margin-bottom: 6px; }
+  .avatar-info-email { font-size: 13px; color: var(--ink-soft); }
+  .avatar-msg { font-size: 12px; min-height: 14px; margin-top: 6px; color: var(--ink-mute); }
+  .avatar-msg.ok { color: var(--teal); }
+  .avatar-msg.error { color: var(--accent); }
+
+  /* Read-only key-value list */
+  .kv-list { display: grid; gap: 10px; }
+  .kv-row { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .kv-row:last-child { border-bottom: none; }
+  .kv-key { font-size: 12px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .kv-val { font-size: 13.5px; color: var(--ink); font-weight: 500; }
+  @media (max-width: 540px) { .kv-row { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* 2FA status pill */
+  .twofa-status { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--bg-soft); border-radius: 12px; margin-bottom: 18px; }
+  .twofa-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-mute); flex-shrink: 0; }
+  .twofa-dot.on  { background: var(--teal); }
+  .twofa-dot.off { background: var(--gold); }
+  .twofa-status-label { font-size: 13px; font-weight: 600; flex: 1; }
+
+  /* Save bar */
+  .save-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; background: var(--bg-card); border-radius: var(--r-card); position: sticky; bottom: 18px; z-index: 5; box-shadow: 0 -4px 20px rgba(20,17,15,0.06); }
+  .save-msg { font-size: 12.5px; min-height: 16px; flex: 1; }
+  .save-msg.ok { color: var(--teal); }
+  .save-msg.error { color: var(--accent); }
+  .save-msg.muted { color: var(--ink-mute); }
+  .save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 26px; border-radius: var(--r-pill); background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap; }
+  .save-btn svg { width: 13px; height: 13px; }
+  .save-btn:hover { background: #000; }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .save-btn.danger { background: var(--accent); }
+  .save-btn.danger:hover { background: #952a14; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 999px; font-size: 13.5px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 1000; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast.error { background: var(--accent); }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(20,17,15,0.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--bg-card); border-radius: 16px; max-width: 460px; width: 100%; padding: 28px; }
+  .modal-title { font-family: var(--serif); font-size: 24px; font-weight: 600; margin: 0 0 8px; }
+  .modal-sub { font-size: 13px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal-btn { padding: 10px 18px; border-radius: var(--r-pill); font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+  .modal-btn.ghost { background: transparent; color: var(--ink-soft); }
+  .modal-btn.ghost:hover { background: var(--bg-soft); }
+  .modal-btn.primary { background: var(--ink); color: #fff; }
+  .modal-btn.primary:hover { background: #000; }
+  .modal-btn.danger { background: var(--accent); color: #fff; }
+  .modal-btn.danger:hover { background: #952a14; }
+  .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* 6-digit code input */
+  .digit-row { display: flex; gap: 8px; justify-content: center; margin: 18px 0; }
+  .digit-input { width: 44px; height: 52px; text-align: center; font-size: 22px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg-soft); color: var(--ink); }
+  .digit-input:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+
+  /* Topbar account dropdown */
+  .tb-account-wrap { position: relative; display: inline-flex; gap: 10px; align-items: center; }
+  .tb-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 280px; background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px -8px rgba(20, 17, 15, 0.18), 0 2px 8px rgba(20,17,15,0.06); padding: 10px; z-index: 100; }
+  .tb-menu[hidden] { display: none; }
+  .tb-menu-head { padding: 12px 12px 14px; border-bottom: 1px solid var(--line-soft); margin-bottom: 8px; }
+  .tb-menu-name { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+  .tb-menu-email { font-size: 12px; color: var(--ink-mute); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tb-menu-role { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: var(--bg-soft); color: var(--ink-soft); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tb-menu-list { display: flex; flex-direction: column; gap: 1px; }
+  .tb-menu-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 8px; color: var(--ink-soft); font-size: 13px; font-weight: 500; text-align: left; background: none; border: none; cursor: pointer; width: 100%; transition: background .12s, color .12s; }
+  .tb-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--ink-mute); }
+  .tb-menu-item:hover { background: var(--bg-soft); color: var(--ink); }
+  .tb-menu-item:hover svg { color: var(--ink); }
+  .tb-menu-sep { height: 1px; background: var(--line-soft); margin: 6px 4px; }
+  .tb-menu-logout { color: var(--accent); }
+  .tb-menu-logout svg { color: var(--accent); }
+  .tb-menu-logout:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
+  .tb-menu-logout:hover svg { color: var(--accent); }
+</style>
+  <link rel="stylesheet" href="/css/dashboard-topbar.css?v=3">
+  <link rel="stylesheet" href="/css/ai-chat.css?v=2">
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav" aria-label="Navegación principal">
+
+      <div class="sb-section-label">Principal</div>
+      <a href="/broker-dashboard.html" class="sb-link" data-nav="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span>Panel</span></a>
+      <a href="/mis-propiedades.html" class="sb-link" data-nav="mis-propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Mis Propiedades</span></a>
+      <a href="/aplicaciones.html" class="sb-link" data-nav="aplicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Aplicaciones</span></a>
+      <a href="/visitas.html" class="sb-link" data-nav="visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Visitas</span></a>
+      <a href="/comisiones.html" class="sb-link" data-nav="comisiones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><span>Comisiones</span></a>
+      <a href="/mensajes.html" class="sb-link" data-nav="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg><span>Mensajes</span></a>
+      <a href="/tareas" class="sb-link" data-nav="tareas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Tareas</span></a>
+      <a href="/notificaciones" class="sb-link" data-nav="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span>Notificaciones</span></a>
+
+      <div class="sb-section-label">Marketing</div>
+      <a href="/enlaces-de-referido.html" class="sb-link" data-nav="referidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><span>Enlaces de Referido</span></a>
+      <a href="/campanas.html" class="sb-link" data-nav="campanas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 01-5.8-1.6"/></svg><span>Campañas</span></a>
+
+      <div class="sb-section-label sb-team-label" id="sbTeamLabel" hidden>Equipo</div>
+      <a href="/equipo-miembros.html" class="sb-link sb-team-only" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Miembros</span></a>
+      <a href="/equipo-solicitudes.html" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span></a>
+      <a href="/equipo-rendimiento.html" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
+      <a href="/equipo-secretarias.html" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Secretarias</span></a>
+      <a href="/equipo-empresa.html" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
+      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
+
+      <div class="sb-section-label">Soporte</div>
+      <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Centro de Ayuda</span></a>
+
+    </nav>
+
+    <div class="sb-footer">
+      <a class="sb-cta" href="/post.html">
+        <div class="sb-cta-eyebrow">HogaresRD</div>
+        <div class="sb-cta-title">Publica una <em>propiedad</em></div>
+        <div class="sb-cta-desc">Llega a miles de compradores verificados.</div>
+        <div class="sb-cta-row">
+          <span class="sb-cta-btn primary">Publicar →</span>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar…" id="topbarSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg></span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notificaciones" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="tb-icon-dot" id="notifDot" hidden></span>
+        </a>
+        <div class="tb-account-wrap" id="tbAccountWrap">
+          <button class="tb-icon" id="tbSettingsBtn" aria-label="Configuración" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+          <button class="tb-avatar" id="tbAvatarBtn" aria-label="Mi cuenta" aria-haspopup="menu" aria-expanded="false"></button>
+          <div class="tb-menu" id="tbMenu" role="menu" hidden>
+            <div class="tb-menu-head">
+              <div class="tb-menu-name" id="tbMenuName">Cargando…</div>
+              <div class="tb-menu-email" id="tbMenuEmail"></div>
+              <span class="tb-menu-role" id="tbMenuRole"></span>
+            </div>
+            <div class="tb-menu-list">
+              <a role="menuitem" class="tb-menu-item" href="/mi-cuenta.html#perfil">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Mi Perfil
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/subscription">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                Mi Suscripción
+              </a>
+              <a role="menuitem" class="tb-menu-item" id="tbMenuEmpresa" href="/equipo-empresa.html" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/></svg>
+                Perfil de Empresa
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/mi-cuenta.html#seguridad">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+                Seguridad
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/mi-cuenta.html#contrasena">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Cambiar contraseña
+              </a>
+              <div class="tb-menu-sep"></div>
+              <a role="menuitem" class="tb-menu-item" href="/terminos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Términos
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/contacto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Centro de Ayuda
+              </a>
+              <div class="tb-menu-sep"></div>
+              <button role="menuitem" class="tb-menu-item tb-menu-logout" id="tbMenuLogout" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE HEAD -->
+    <div class="page-head">
+      <div class="page-head-left">
+        <div class="page-eyebrow">Configuración</div>
+        <h1 class="page-title">Mi <em>cuenta</em></h1>
+        <p class="page-sub">Tu información personal, ajustes de seguridad y cambio de contraseña en un solo lugar.</p>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="acc-tabs" role="tablist">
+      <button class="acc-tab active" data-tab="perfil" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Perfil
+      </button>
+      <button class="acc-tab" data-tab="seguridad" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+        Seguridad
+      </button>
+      <button class="acc-tab" data-tab="contrasena" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Contraseña
+      </button>
+    </div>
+
+    <!-- PANE: PERFIL -->
+    <div class="acc-pane active" id="pane-perfil" role="tabpanel">
+      <section class="panel">
+        <h2 class="panel-title">Foto e identidad</h2>
+        <p class="panel-sub">Tu foto aparece en mensajes a clientes, listados y el equipo. Recomendado: 400×400 px, fondo claro.</p>
+        <div class="avatar-row">
+          <div class="avatar-circle" id="avCircle">
+            <span id="avInitials">?</span>
+            <input type="file" id="avFileInput" accept="image/jpeg,image/png,image/webp" hidden>
+            <label for="avFileInput" class="avatar-edit-btn" title="Cambiar foto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M14.06 6.19l3.75 3.75"/></svg>
+            </label>
+          </div>
+          <div>
+            <div class="avatar-info-name" id="avName">Cargando…</div>
+            <div class="avatar-info-role" id="avRole"></div>
+            <div class="avatar-info-email" id="avEmail"></div>
+            <div class="avatar-msg" id="avMsg"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:18px;">
+        <h2 class="panel-title">Información de contacto</h2>
+        <p class="panel-sub">Esta información ayuda a clientes a comunicarse contigo y aparece en tu perfil público.</p>
+        <div class="form-stack">
+          <div class="field-row2">
+            <div>
+              <label class="field-label" for="prfPhone">Teléfono</label>
+              <input type="tel" id="prfPhone" class="field-input" placeholder="809-555-0000" maxlength="40">
+            </div>
+            <div id="prfJobTitleWrap" hidden>
+              <label class="field-label" for="prfJobTitle">Título / Cargo</label>
+              <input type="text" id="prfJobTitle" class="field-input" placeholder="Agente Senior" maxlength="60">
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="prfBio">Descripción profesional</label>
+            <textarea id="prfBio" class="field-textarea" placeholder="Una breve descripción profesional…" maxlength="300"></textarea>
+            <div class="field-counter"><span id="prfBioCount">0</span>/300</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:18px;">
+        <h2 class="panel-title">Datos de la cuenta</h2>
+        <p class="panel-sub">Esta información no puede modificarse aquí. Contacta soporte si necesitas cambios.</p>
+        <div class="kv-list" id="prfReadonly"></div>
+      </section>
+
+      <div class="save-bar">
+        <span class="save-msg muted" id="prfMsg">Cambios sin guardar.</span>
+        <button class="save-btn" type="button" id="prfSaveBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Guardar perfil
+        </button>
+      </div>
+    </div>
+
+    <!-- PANE: SEGURIDAD (2FA) -->
+    <div class="acc-pane" id="pane-seguridad" role="tabpanel">
+      <section class="panel">
+        <h2 class="panel-title">Verificación en dos pasos</h2>
+        <p class="panel-sub">Pide un código por correo cada vez que inicies sesión desde un dispositivo nuevo. Reduce el riesgo si tu contraseña se filtra.</p>
+
+        <div class="twofa-status">
+          <span class="twofa-dot off" id="twoFADot"></span>
+          <span class="twofa-status-label" id="twoFALabel">Cargando…</span>
+          <button class="save-btn" id="twoFAToggleBtn" type="button" disabled>—</button>
+        </div>
+
+        <div class="kv-list">
+          <div class="kv-row">
+            <span class="kv-key">Cómo funciona</span>
+            <span class="kv-val">Cuando inicies sesión desde un dispositivo nuevo, te enviaremos un código de 6 dígitos a tu correo registrado. Lo introduces tras la contraseña.</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">Códigos válidos por</span>
+            <span class="kv-val">10 minutos desde la solicitud.</span>
+          </div>
+          <div class="kv-row">
+            <span class="kv-key">Recuperación</span>
+            <span class="kv-val">Si pierdes acceso al correo, contacta a soporte con tu identidad para recuperar la cuenta.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PANE: CONTRASEÑA -->
+    <div class="acc-pane" id="pane-contrasena" role="tabpanel">
+      <section class="panel">
+        <h2 class="panel-title">Cambiar contraseña</h2>
+        <p class="panel-sub">Usa una contraseña fuerte que no uses en otros sitios. Mínimo 10 caracteres con mayúsculas, minúsculas, números y un símbolo.</p>
+        <div class="form-stack">
+          <div>
+            <label class="field-label" for="pwCurrent">Contraseña actual</label>
+            <input type="password" id="pwCurrent" class="field-input" autocomplete="current-password">
+          </div>
+          <div class="field-row2">
+            <div>
+              <label class="field-label" for="pwNew">Contraseña nueva</label>
+              <input type="password" id="pwNew" class="field-input" autocomplete="new-password">
+            </div>
+            <div>
+              <label class="field-label" for="pwConfirm">Confirmar nueva</label>
+              <input type="password" id="pwConfirm" class="field-input" autocomplete="new-password">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="save-bar">
+        <span class="save-msg muted" id="pwMsg">Tu sesión seguirá activa después del cambio.</span>
+        <button class="save-btn" type="button" id="pwSaveBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Actualizar contraseña
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 2FA enable code modal -->
+<div class="modal-backdrop" id="twoFAEnableModal">
+  <div class="modal">
+    <h3 class="modal-title">Activar verificación 2FA</h3>
+    <p class="modal-sub">Te enviamos un código de 6 dígitos a tu correo. Introdúcelo aquí para confirmar.</p>
+    <div class="digit-row" id="twoFADigits">
+      <input class="digit-input twofa-digit" data-idx="0" maxlength="1" inputmode="numeric" autocomplete="one-time-code">
+      <input class="digit-input twofa-digit" data-idx="1" maxlength="1" inputmode="numeric">
+      <input class="digit-input twofa-digit" data-idx="2" maxlength="1" inputmode="numeric">
+      <input class="digit-input twofa-digit" data-idx="3" maxlength="1" inputmode="numeric">
+      <input class="digit-input twofa-digit" data-idx="4" maxlength="1" inputmode="numeric">
+      <input class="digit-input twofa-digit" data-idx="5" maxlength="1" inputmode="numeric">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="twoFAEnableCancel">Cancelar</button>
+      <button class="modal-btn primary" id="twoFAEnableConfirm" disabled>Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2FA disable password modal -->
+<div class="modal-backdrop" id="twoFADisableModal">
+  <div class="modal">
+    <h3 class="modal-title">Desactivar verificación 2FA</h3>
+    <p class="modal-sub">Confirma con tu contraseña para desactivar el segundo paso al iniciar sesión.</p>
+    <div>
+      <label class="field-label" for="twoFADisablePw">Contraseña</label>
+      <input type="password" id="twoFADisablePw" class="field-input" autocomplete="current-password">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="twoFADisableCancel">Cancelar</button>
+      <button class="modal-btn danger" id="twoFADisableConfirm">Desactivar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const ROLE_LABELS = {
+  user: 'Cliente', broker: 'Agente', agent: 'Agente',
+  inmobiliaria: 'Inmobiliaria', constructora: 'Constructora',
+  secretary: 'Secretaria', admin: 'Admin',
+};
+
+async function api(path, opts = {}) {
+  const init = { credentials: 'include', ...opts };
+  if (init.body && typeof init.body !== 'string' && !(init.body instanceof FormData)) {
+    init.body = JSON.stringify(init.body);
+    init.headers = { 'Content-Type': 'application/json', ...(init.headers || {}) };
+  }
+  const res = await fetch(path, init);
+  if (res.status === 401) { location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.hash); return null; }
+  let json = null;
+  try { json = await res.json(); } catch {}
+  if (!res.ok) {
+    const msg = json?.error || `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+  return json;
+}
+
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+const $ = (id) => document.getElementById(id);
+const STATE = { user: null };
+
+// ── Tab routing (hash-driven) ───────────────────────────────────
+const VALID_TABS = ['perfil', 'seguridad', 'contrasena'];
+function showTab(tab) {
+  if (!VALID_TABS.includes(tab)) tab = 'perfil';
+  document.querySelectorAll('.acc-tab').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('.acc-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + tab).classList.add('active');
+  if (location.hash.slice(1) !== tab) {
+    history.replaceState(null, '', '#' + tab);
+  }
+}
+document.querySelectorAll('.acc-tab').forEach(b => {
+  b.addEventListener('click', () => showTab(b.dataset.tab));
+});
+window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
+
+// ── Perfil ──────────────────────────────────────────────────────
+function fillProfile(u) {
+  const name = u.name || '';
+  const initials = (name || u.email || '?').trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+  $('avInitials').textContent = initials;
+  // Show avatar image if exists
+  const circle = $('avCircle');
+  let img = circle.querySelector('img');
+  if (u.avatarUrl) {
+    if (!img) {
+      img = document.createElement('img');
+      img.alt = '';
+      circle.insertBefore(img, $('avInitials'));
+    }
+    img.src = u.avatarUrl + '?t=' + Date.now();
+    img.style.display = '';
+    $('avInitials').style.display = 'none';
+  } else if (img) {
+    img.style.display = 'none';
+    $('avInitials').style.display = '';
+  }
+
+  $('avName').textContent = name || 'Mi cuenta';
+  $('avRole').textContent = ROLE_LABELS[(u.role || '').toLowerCase()] || u.role || '';
+  $('avEmail').textContent = u.email || '';
+
+  $('prfPhone').value = u.phone || '';
+  $('prfBio').value = u.bio || '';
+  $('prfBioCount').textContent = (u.bio || '').length;
+
+  const role = (u.role || '').toLowerCase();
+  if (['broker', 'agency'].includes(role)) {
+    $('prfJobTitleWrap').hidden = false;
+    $('prfJobTitle').value = u.jobTitle || '';
+  }
+
+  // Read-only data
+  const rows = [];
+  const addRow = (key, val) => { if (val) rows.push(`<div class="kv-row"><span class="kv-key">${key}</span><span class="kv-val"></span></div>`); return val; };
+  const buf = document.createElement('div');
+  function row(key, val) {
+    if (!val) return;
+    const r = document.createElement('div');
+    r.className = 'kv-row';
+    const k = document.createElement('span'); k.className = 'kv-key'; k.textContent = key;
+    const v = document.createElement('span'); v.className = 'kv-val'; v.textContent = val;
+    r.appendChild(k); r.appendChild(v);
+    buf.appendChild(r);
+  }
+  row('Correo', u.email);
+  row('Rol', ROLE_LABELS[(u.role || '').toLowerCase()] || u.role);
+  row('No. de licencia', u.licenseNumber);
+  if (role === 'agency') row('Nombre de agencia', u.agencyName);
+  if (role === 'inmobiliaria' || role === 'constructora') row('Nombre de empresa', u.companyName);
+  if (u.inmobiliaria_name) row('Inmobiliaria afiliada', u.inmobiliaria_name);
+  if (u.createdAt) row('Miembro desde', new Date(u.createdAt).toLocaleDateString('es-DO', { year:'numeric', month:'long', day:'numeric' }));
+  $('prfReadonly').replaceChildren(...buf.children);
+}
+
+$('prfBio').addEventListener('input', e => {
+  $('prfBioCount').textContent = e.target.value.length;
+});
+
+$('avFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const msg = $('avMsg');
+  msg.textContent = 'Subiendo…'; msg.className = 'avatar-msg';
+  try {
+    const fd = new FormData();
+    fd.append('avatar', file);
+    const data = await api('/api/upload/avatar', { method: 'POST', body: fd });
+    if (!data || !data.avatarUrl) throw new Error('Respuesta inválida del servidor');
+    if (STATE.user) STATE.user.avatarUrl = data.avatarUrl;
+    fillProfile(STATE.user);
+    msg.textContent = '✓ Foto actualizada'; msg.className = 'avatar-msg ok';
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  } catch(err) {
+    msg.textContent = err.message || 'Error al subir';
+    msg.className = 'avatar-msg error';
+  }
+  e.target.value = '';
+});
+
+$('prfSaveBtn').addEventListener('click', async () => {
+  const btn = $('prfSaveBtn');
+  const msg = $('prfMsg');
+  msg.className = 'save-msg muted'; msg.textContent = 'Guardando…';
+  btn.disabled = true;
+  try {
+    const body = {
+      phone: $('prfPhone').value.trim(),
+      bio:   $('prfBio').value.trim(),
+    };
+    if (!$('prfJobTitleWrap').hidden) body.jobTitle = $('prfJobTitle').value.trim();
+    const data = await api('/api/user/profile', { method: 'PATCH', body });
+    if (data?.user && STATE.user) Object.assign(STATE.user, data.user);
+    msg.className = 'save-msg ok'; msg.textContent = '✓ Cambios guardados';
+    toast('Perfil guardado');
+    setTimeout(() => { msg.className = 'save-msg muted'; msg.textContent = 'Cambios sin guardar.'; }, 3000);
+  } catch(e) {
+    msg.className = 'save-msg error'; msg.textContent = e.message || 'No se pudo guardar';
+    toast(e.message || 'Error', true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ── Seguridad (2FA) ─────────────────────────────────────────────
+let _twoFAEnabled = false;
+let _twoFASession = null;
+
+function render2FA() {
+  const dot = $('twoFADot'), label = $('twoFALabel'), btn = $('twoFAToggleBtn');
+  btn.disabled = false;
+  if (_twoFAEnabled) {
+    dot.className = 'twofa-dot on';
+    label.textContent = 'Activado — pediremos código al iniciar sesión.';
+    btn.textContent = 'Desactivar';
+    btn.classList.add('danger');
+  } else {
+    dot.className = 'twofa-dot off';
+    label.textContent = 'Desactivado — solo se pedirá tu contraseña.';
+    btn.textContent = 'Activar';
+    btn.classList.remove('danger');
+  }
+}
+
+async function load2FA() {
+  try {
+    const me = await api('/api/auth/me');
+    const u = me?.user || me;
+    _twoFAEnabled = !!u?.twoFAEnabled;
+    render2FA();
+  } catch {}
+}
+
+$('twoFAToggleBtn').addEventListener('click', async () => {
+  if (_twoFAEnabled) {
+    $('twoFADisableModal').classList.add('open');
+    $('twoFADisablePw').value = '';
+    setTimeout(() => $('twoFADisablePw').focus(), 50);
+  } else {
+    try {
+      const res = await api('/api/auth/2fa/enable', { method: 'POST' });
+      _twoFASession = res?.sessionId;
+      $('twoFAEnableModal').classList.add('open');
+      document.querySelectorAll('.twofa-digit').forEach(d => d.value = '');
+      $('twoFAEnableConfirm').disabled = true;
+      setTimeout(() => document.querySelector('.twofa-digit[data-idx="0"]').focus(), 50);
+    } catch(e) {
+      toast(e.message || 'Error', true);
+    }
+  }
+});
+
+document.querySelectorAll('.twofa-digit').forEach(input => {
+  input.addEventListener('input', (e) => {
+    const v = e.target.value.replace(/\D/g, '');
+    e.target.value = v;
+    if (v && +e.target.dataset.idx < 5) {
+      document.querySelector(`.twofa-digit[data-idx="${+e.target.dataset.idx + 1}"]`).focus();
+    }
+    const code = Array.from(document.querySelectorAll('.twofa-digit')).map(d => d.value).join('');
+    $('twoFAEnableConfirm').disabled = code.length !== 6;
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !e.target.value && +e.target.dataset.idx > 0) {
+      document.querySelector(`.twofa-digit[data-idx="${+e.target.dataset.idx - 1}"]`).focus();
+    }
+  });
+  input.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+    document.querySelectorAll('.twofa-digit').forEach((d, i) => { d.value = paste[i] || ''; });
+    if (paste.length === 6) $('twoFAEnableConfirm').disabled = false;
+  });
+});
+
+$('twoFAEnableCancel').addEventListener('click', () => $('twoFAEnableModal').classList.remove('open'));
+$('twoFAEnableConfirm').addEventListener('click', async () => {
+  const code = Array.from(document.querySelectorAll('.twofa-digit')).map(d => d.value).join('');
+  try {
+    await api('/api/auth/2fa/confirm-enable', { method: 'POST', body: { sessionId: _twoFASession, code } });
+    _twoFAEnabled = true;
+    render2FA();
+    $('twoFAEnableModal').classList.remove('open');
+    toast('Verificación 2FA activada');
+  } catch(e) {
+    toast(e.message || 'Código incorrecto', true);
+    document.querySelectorAll('.twofa-digit').forEach(d => d.value = '');
+    document.querySelector('.twofa-digit[data-idx="0"]').focus();
+    $('twoFAEnableConfirm').disabled = true;
+  }
+});
+
+$('twoFADisableCancel').addEventListener('click', () => $('twoFADisableModal').classList.remove('open'));
+$('twoFADisableConfirm').addEventListener('click', async () => {
+  const pw = $('twoFADisablePw').value;
+  if (!pw) { toast('Ingresa tu contraseña', true); return; }
+  try {
+    await api('/api/auth/2fa/disable', { method: 'POST', body: { password: pw } });
+    _twoFAEnabled = false;
+    render2FA();
+    $('twoFADisableModal').classList.remove('open');
+    toast('Verificación 2FA desactivada');
+  } catch(e) {
+    toast(e.message || 'Error', true);
+  }
+});
+
+// ── Contraseña ──────────────────────────────────────────────────
+$('pwSaveBtn').addEventListener('click', async () => {
+  const cur = $('pwCurrent').value;
+  const nw = $('pwNew').value;
+  const cf = $('pwConfirm').value;
+  const msg = $('pwMsg');
+  msg.className = 'save-msg muted';
+  if (!cur || !nw || !cf) { msg.className = 'save-msg error'; msg.textContent = 'Completa todos los campos.'; return; }
+  if (nw !== cf)          { msg.className = 'save-msg error'; msg.textContent = 'Las contraseñas no coinciden.'; return; }
+  if (nw.length < 10)     { msg.className = 'save-msg error'; msg.textContent = 'Mínimo 10 caracteres.'; return; }
+  $('pwSaveBtn').disabled = true;
+  msg.textContent = 'Guardando…';
+  try {
+    await api('/api/auth/change-password', { method: 'POST', body: { currentPassword: cur, newPassword: nw } });
+    msg.className = 'save-msg ok'; msg.textContent = '✓ Contraseña actualizada';
+    $('pwCurrent').value = ''; $('pwNew').value = ''; $('pwConfirm').value = '';
+    toast('Contraseña actualizada');
+    setTimeout(() => { msg.className = 'save-msg muted'; msg.textContent = 'Tu sesión seguirá activa después del cambio.'; }, 3000);
+  } catch(e) {
+    msg.className = 'save-msg error'; msg.textContent = e.message || 'No se pudo cambiar la contraseña';
+    toast(e.message || 'Error', true);
+  } finally {
+    $('pwSaveBtn').disabled = false;
+  }
+});
+
+// ── Bootstrap ───────────────────────────────────────────────────
+async function bootstrap() {
+  let me;
+  try { me = await api('/api/auth/me'); } catch { return; }
+  const u = me?.user || me;
+  if (!u || !u.id) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.hash);
+    return;
+  }
+  STATE.user = u;
+  fillProfile(u);
+  _twoFAEnabled = !!u.twoFAEnabled;
+  render2FA();
+  showTab(location.hash.slice(1) || 'perfil');
+}
+bootstrap().catch(err => console.error('[mi-cuenta] bootstrap failed', err));
+</script>
+
+
+<script>
+(function () {
+  'use strict';
+  const wrap = document.getElementById('tbAccountWrap');
+  if (!wrap) return;
+  const menu = document.getElementById('tbMenu');
+  const settingsBtn = document.getElementById('tbSettingsBtn');
+  const avatarBtn = document.getElementById('tbAvatarBtn');
+  const logoutBtn = document.getElementById('tbMenuLogout');
+  const nameEl = document.getElementById('tbMenuName');
+  const emailEl = document.getElementById('tbMenuEmail');
+  const roleEl = document.getElementById('tbMenuRole');
+  const empresaEl = document.getElementById('tbMenuEmpresa');
+
+  const ROLE_LABELS = {
+    user: 'Cliente', broker: 'Agente', agent: 'Agente',
+    inmobiliaria: 'Inmobiliaria', constructora: 'Constructora',
+    secretary: 'Secretaria', admin: 'Admin',
+  };
+
+  function setOpen(open) {
+    menu.hidden = !open;
+    if (settingsBtn) settingsBtn.setAttribute('aria-expanded', open);
+    if (avatarBtn) avatarBtn.setAttribute('aria-expanded', open);
+  }
+  function toggle(e) { e.preventDefault(); e.stopPropagation(); setOpen(menu.hidden); }
+
+  if (settingsBtn) settingsBtn.addEventListener('click', toggle);
+  if (avatarBtn) avatarBtn.addEventListener('click', toggle);
+
+  document.addEventListener('click', (e) => {
+    if (menu.hidden) return;
+    if (!wrap.contains(e.target)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) setOpen(false);
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+      try { localStorage.removeItem('token'); sessionStorage.clear(); } catch (_) {}
+      location.href = '/';
+    });
+  }
+
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(me => {
+      const u = me && (me.user || me);
+      if (!u) return;
+      if (nameEl) nameEl.textContent = u.name || u.email || 'Mi cuenta';
+      if (emailEl) emailEl.textContent = u.email || '';
+      if (roleEl) {
+        const label = ROLE_LABELS[(u.role || '').toLowerCase()] || (u.role || 'Cuenta');
+        roleEl.textContent = label;
+      }
+      const isOrg = ['inmobiliaria', 'constructora', 'admin'].includes((u.role || '').toLowerCase());
+      if (empresaEl && isOrg) empresaEl.hidden = false;
+      if (isOrg) {
+        const teamLabel = document.getElementById('sbTeamLabel');
+        if (teamLabel) teamLabel.hidden = false;
+        document.querySelectorAll('.sb-team-only').forEach(el => { el.hidden = false; });
+      }
+      if (avatarBtn) {
+        const ini = (u.name || u.email || '?').trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+        avatarBtn.style.color = '#fff';
+        avatarBtn.style.fontSize = '11.5px';
+        avatarBtn.style.fontWeight = '700';
+        avatarBtn.style.display = 'grid';
+        avatarBtn.style.placeItems = 'center';
+        avatarBtn.style.overflow = 'hidden';
+        if (u.avatarUrl) {
+          const img = document.createElement('img');
+          img.src = u.avatarUrl;
+          img.alt = '';
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+          img.onerror = () => { avatarBtn.textContent = ini; };
+          avatarBtn.textContent = '';
+          avatarBtn.appendChild(img);
+        } else {
+          avatarBtn.textContent = ini;
+        }
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+
+  <script src="/js/dashboard-topbar.js?v=3" defer></script>
+  <script src="/js/ai-chat.js?v=2" defer></script>
+</body>
+</html>

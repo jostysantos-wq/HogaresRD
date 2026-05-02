@@ -1131,6 +1131,7 @@ app.get('/enlaces-de-referido', (req, res) => res.sendFile(path.join(__dirname, 
 app.get('/my-applications',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'my-applications.html')));
 app.get('/tareas',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'tareas.html')));
 app.get('/notificaciones',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'notificaciones.html')));
+app.get('/mi-cuenta',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'mi-cuenta.html')));
 app.get('/verify-email',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 app.get('/register-success',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-success.html')));
 app.get('/subscribe',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'subscribe.html')));
