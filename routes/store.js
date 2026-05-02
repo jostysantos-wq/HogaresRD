@@ -676,6 +676,44 @@ async function deleteUserCascade(userId) {
   }
   summary.applications = clientApps.length;
 
+  // 7b. Clean up referral / broker FKs on applications where the deleted
+  // user appears in a routing role. Otherwise referral_payee_id and
+  // broker.user_id reference a tombstone — pushNotify silently no-ops,
+  // commission UI shows "—" without explanation, and getApplicationsByBroker
+  // can't rebuild the assigned-to view. We preserve cached display names
+  // (referral_payee_name, broker.name) for audit-trail readability but
+  // null the FK so future code never tries to resolve a ghost user.
+  let referralOrphans = 0;
+  let brokerOrphans   = 0;
+  for (const raw of _applications) {
+    const app = hydrateApplication(raw);
+    if (!app) continue;
+    let touched = false;
+    if (app.referral_payee_id === userId) {
+      app.referral_payee_id = null;
+      app.referral_payee_orphaned = true; // flag for the broker UI
+      touched = true;
+      referralOrphans++;
+    }
+    if (app.referral_acknowledged_by === userId) {
+      app.referral_acknowledged_by = null; // keep _at intact
+      touched = true;
+    }
+    if (app.referred_by === userId) {
+      app.referred_by = null;
+      touched = true;
+    }
+    if (app.broker && app.broker.user_id === userId) {
+      app.broker.user_id = null;
+      app.broker_orphaned = true; // surface to inmobiliaria for re-cascade
+      touched = true;
+      brokerOrphans++;
+    }
+    if (touched) saveApplication(app);
+  }
+  summary.applicationsReferralOrphaned = referralOrphans;
+  summary.applicationsBrokerOrphaned   = brokerOrphans;
+
   // 8. 2FA sessions
   _twofa = _twofa.filter(s => {
     const data = typeof s.data === 'string' ? _jsonParse(s.data, {}) : (s.data || {});

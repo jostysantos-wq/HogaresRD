@@ -20,6 +20,7 @@ const transporter = createTransport();
 const et           = require('../utils/email-templates');
 const { logSec }   = require('./security-log');
 const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
+const { isSubscriptionActive } = require('../utils/subscription-gate');
 
 function _sendMail(to, subject, html) {
   if (!to) return;
@@ -156,7 +157,6 @@ router.post('/', requireLogin, (req, res) => {
   // org would never see it). The previous resolver picked the first
   // agency blindly; this version filters by subscription.
   if (!inmobiliariaId && listing) {
-    const { isSubscriptionActive } = require('../utils/subscription-gate');
     const tryOrg = (id) => {
       if (!id) return null;
       const u = store.getUserById(id);
@@ -541,6 +541,18 @@ router.post('/:id/claim', requireLogin, async (req, res) => {
   if (conv.inmobiliariaId && conv.inmobiliariaId !== userInmId && conv.inmobiliariaId !== user.sub)
     return res.status(403).json({ error: 'No perteneces a esta organizacion.' });
 
+  // Subscription gate: cascade-engine.claimLead checks this defensively,
+  // but the direct claim route did not — an agent whose subscription
+  // lapsed mid-cascade could still grab an unclaimed conversation here
+  // and then send messages on the paid surface via POST /:id/messages
+  // (which is also unguarded). Block at claim time.
+  if (!isSubscriptionActive(fullUser)) {
+    return res.status(402).json({
+      error: 'Tu suscripcion no esta activa. Renueva tu plan para reclamar conversaciones.',
+      needsSubscription: true,
+    });
+  }
+
   // Atomic DB claim: UPDATE only if brokerId is still NULL
   // This prevents the TOCTOU race where two agents claim simultaneously
   const now = new Date().toISOString();
@@ -593,6 +605,19 @@ router.post('/:id/messages', msgRateLimiter, requireLogin, (req, res) => {
       return res.status(403).json({ error: 'Debes reclamar esta conversacion antes de enviar mensajes.' });
     }
     return res.status(403).json({ error: 'Sin acceso.' });
+  }
+
+  // Subscription gate for the assigned broker: an agent whose
+  // subscription lapses AFTER claiming should lose write access until
+  // they reactivate. (Clients and admins are unaffected.)
+  if (isAssignedBroker && !isAdmin) {
+    const fullBroker = store.getUserById(user.sub);
+    if (!isSubscriptionActive(fullBroker)) {
+      return res.status(402).json({
+        error: 'Tu suscripcion no esta activa. Renueva tu plan para enviar mensajes.',
+        needsSubscription: true,
+      });
+    }
   }
 
   // Audit: log admin message posting
@@ -1020,6 +1045,14 @@ router.put('/:id/transfer', requireLogin, (req, res) => {
       error: 'Solo puedes transferir a agentes de tu misma inmobiliaria.',
     });
   }
+  // Target must have an active subscription — otherwise the transfer
+  // would hand the conversation to someone who can't reply via
+  // /:id/messages (which is also subscription-gated).
+  if (!isSubscriptionActive(target)) {
+    return res.status(400).json({
+      error: 'El destinatario no tiene una suscripcion activa.',
+    });
+  }
 
   const now = new Date().toISOString();
   const fromBroker = {
@@ -1290,6 +1323,10 @@ router.put('/:id/respond-transfer', requireLogin, (req, res) => {
   const currentBroker = store.getUserById(conv.brokerId);
   if (!sameTeam(currentBroker, target)) {
     return res.status(400).json({ error: 'El agente destino ya no pertenece al mismo equipo.' });
+  }
+  // Subscription gate: target may have lapsed since the request was sent.
+  if (!isSubscriptionActive(target)) {
+    return res.status(400).json({ error: 'El agente destino no tiene una suscripcion activa.' });
   }
 
   tr.status = 'accepted';

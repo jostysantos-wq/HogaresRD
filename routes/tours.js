@@ -6,6 +6,7 @@ const store     = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
 const { notify: pushNotify } = require('./push');
 const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
+const { isSubscriptionActive } = require('../utils/subscription-gate');
 const { createTransport } = require('./mailer');
 const et = require('../utils/email-templates');
 
@@ -321,6 +322,16 @@ router.post('/request', tourRequestLimiter, optionalAuth, (req, res) => {
     return res.status(403).json({
       error: 'Este agente no está asociado a esta propiedad.',
       code:  'broker_not_affiliated',
+    });
+  }
+  // Subscription gate: an agent whose subscription has lapsed should
+  // not auto-confirm or accept new tour bookings — same gate the
+  // application/conversation paths apply to broker assignment. Admin
+  // override skips this so back-office bookings still work.
+  if (!requesterIsAdmin && !isSubscriptionActive(requestedBroker)) {
+    return res.status(403).json({
+      error: 'Este agente no tiene una suscripcion activa.',
+      code:  'broker_subscription_inactive',
     });
   }
 

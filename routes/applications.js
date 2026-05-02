@@ -336,6 +336,20 @@ function scrubForBuyer(app) {
   // Commission block — entirely broker/owner internal.
   delete copy.commission;
 
+  // Referral plumbing — top-level fields mirror commission and are
+  // strictly broker/admin/inmobiliaria signals (who referred the lead,
+  // whether the broker has settled the kickback, when it was
+  // acknowledged). Buyers and anonymous track-token recipients should
+  // see none of this.
+  delete copy.referral_payee_id;
+  delete copy.referral_payee_name;
+  delete copy.referral_acknowledged_at;
+  delete copy.referral_acknowledged_by;
+  delete copy.referral_paid;
+  delete copy.referral_paid_at;
+  delete copy.referred_by;
+  delete copy.ref_token;
+
   // Payment: keep buyer-visible status/amount fields, drop file paths.
   if (copy.payment && typeof copy.payment === 'object') {
     delete copy.payment.receipt_path;
