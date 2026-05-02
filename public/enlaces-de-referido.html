@@ -928,7 +928,7 @@ function poRenderRow(row, kind) {
     <div class="po-row">
       <div>
         <div class="po-listing">${escapeHtml(row.listing_title)}</div>
-        <div class="po-meta">${escapeHtml(row.client_name || 'Cliente')} · ${new Date(row.created_at).toLocaleDateString('es-DO')}</div>
+        <div class="po-meta">${escapeHtml(row.client_label || row.client_name || 'Cliente')} · ${new Date(row.created_at).toLocaleDateString('es-DO')}</div>
       </div>
       ${broker}
       <div>${statusPill}</div>

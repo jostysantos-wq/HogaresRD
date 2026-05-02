@@ -19,6 +19,7 @@ const { createTransport } = require('./mailer');
 const transporter = createTransport();
 const et           = require('../utils/email-templates');
 const { logSec }   = require('./security-log');
+const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
 
 function _sendMail(to, subject, html) {
   if (!to) return;
@@ -93,7 +94,15 @@ router.post('/', requireLogin, (req, res) => {
     return res.json({ conversation: existing });
   }
 
-  // Resolve referring agent from refToken (body param or cookie)
+  // Resolve referring agent from refToken (body param or cookie).
+  //
+  // Mirrors the affiliation rule used in routes/applications.js POST: a
+  // ref token only pre-assigns / scopes the conversation when the
+  // referring agent or org is actually on the listing's agencies[]. An
+  // outsider's ref token would otherwise capture the conversation
+  // permanently, so when the client later applies, Layer A would route
+  // the lead to the outsider with NO referral fee — the lead-theft
+  // scenario the affiliation check was designed to prevent.
   const refTk = bodyRefToken || req.cookies?.hrd_ref || null;
   let assignedBrokerId = null;
   let assignedBrokerName = null;
@@ -102,15 +111,21 @@ router.post('/', requireLogin, (req, res) => {
   if (refTk) {
     const refAgent = store.getUserByRefToken(refTk);
     if (refAgent) {
-      if (['agency', 'broker'].includes(refAgent.role)) {
-        // Individual agent — pre-assign conversation to them
+      const refRole = (refAgent.role || '').toLowerCase();
+      const affiliated = isReferrerAffiliatedWithListing(refAgent, listing);
+      if (affiliated && ['agency', 'broker'].includes(refRole)) {
+        // Affiliated individual agent — pre-assign conversation to them.
         assignedBrokerId = refAgent.id;
         assignedBrokerName = refAgent.name;
-      } else if (['inmobiliaria', 'constructora'].includes(refAgent.role)) {
-        // Org link — leave brokerId null so ALL org agents see it
-        // Store inmobiliaria_id so we can restrict visibility
+      } else if (affiliated && ['inmobiliaria', 'constructora'].includes(refRole)) {
+        // Affiliated org link — leave brokerId null so ALL org agents see it.
         inmobiliariaId = refAgent.id;
       }
+      // Non-affiliated referrers (any role) intentionally fall through:
+      // the conversation routes via the listing's normal cascade and
+      // the ref token is preserved on the conversation row for later
+      // attribution — when the client applies, the application handler
+      // will record the outsider as referral_payee_id (fee, not lead).
     }
   }
 

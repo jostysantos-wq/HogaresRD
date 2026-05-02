@@ -130,11 +130,21 @@ router.get('/my-payouts', userAuth, (req, res) => {
       if (typeof raw === 'number' && isFinite(raw)) amount = raw;
     }
     const broker = a.broker || {};
+    // Minimize PII: the referrer never had a relationship with the
+    // client beyond sending a click. Show first name + last initial so
+    // they can recognize "their" lead without learning a full identity
+    // they were never authorized to see.
+    const fullClientName = String(a.client?.name || '').trim();
+    const parts = fullClientName.split(/\s+/).filter(Boolean);
+    let clientLabel = '';
+    if (parts.length === 0) clientLabel = '';
+    else if (parts.length === 1) clientLabel = parts[0];
+    else clientLabel = `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
     const row = {
       application_id: a.id,
       listing_id:     a.listing_id,
       listing_title:  a.listing_title || 'Propiedad',
-      client_name:    a.client?.name || '',
+      client_label:   clientLabel,
       broker_name:    broker.name || '',
       broker_agency:  broker.agency_name || '',
       status:         a.status,

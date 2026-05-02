@@ -110,31 +110,9 @@ const DOCUMENT_TYPES = {
 // when they record the commission.
 const DEFAULT_REFERRAL_PERCENT = 25;
 
-// Decide whether the referring user is "affiliated" with this listing —
-// i.e., already part of one of the listing.agencies entries (directly, via
-// their parent inmobiliaria, or via shared contact info). When affiliated,
-// the legacy direct-routing applies (no fee split). When NOT affiliated,
-// the lead must go to the listing's actual broker via cascade and the
-// referrer is recorded as a fee payee instead of the broker.
-function isReferrerAffiliatedWithListing(referrer, listing) {
-  if (!referrer || !listing) return false;
-  const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];
-  if (agencies.length === 0) return false;
-  const refEmail = (referrer.email || '').toLowerCase();
-  const refPhoneTail = String(referrer.phone || '').replace(/\D/g, '').slice(-8);
-  const refInmId = referrer.inmobiliaria_id || null;
-  for (const a of agencies) {
-    if (!a) continue;
-    if (a.user_id && (a.user_id === referrer.id || a.user_id === refInmId)) return true;
-    if (a.inmobiliaria && (a.inmobiliaria === referrer.id || a.inmobiliaria === refInmId)) return true;
-    if (a.email && refEmail && a.email.toLowerCase() === refEmail) return true;
-    if (refPhoneTail && refPhoneTail.length >= 8) {
-      const tail = String(a.phone || '').replace(/\D/g, '').slice(-8);
-      if (tail.length >= 8 && tail === refPhoneTail) return true;
-    }
-  }
-  return false;
-}
+// Affiliation predicate — shared with routes/conversations.js so any
+// "is this referrer on the listing?" decision uses identical rules.
+const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
 
 const STATUS_LABELS = {
   aplicado:                'Aplicado',
@@ -1165,7 +1143,14 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
       if (affiliated && ['agency', 'broker'].includes(refRole)) {
         referredByAgent = refUser;
       } else if (affiliated && ['inmobiliaria', 'constructora'].includes(refRole)) {
-        referredByInmobiliaria = refUser;
+        // Org link only routes through team cascade if the org's
+        // subscription is active. Inactive orgs would scope cascade to
+        // a team that can't act on the lead.
+        if (isSubscriptionActive(refUser)) {
+          referredByInmobiliaria = refUser;
+        } else {
+          console.warn(`[applications] Referred inmobiliaria ${refUser.id} has inactive subscription — falling back to listing's normal cascade`);
+        }
       } else if (['agency', 'broker', 'inmobiliaria', 'constructora'].includes(refRole)) {
         // Outside referrer — record for fee, do NOT override broker assignment.
         referralPayee = refUser;
@@ -1185,8 +1170,17 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
   let existingConversationBroker = null;
   if (req.user?.sub && listing_id) {
     try {
+      // 90-day freshness window — a year-old cold thread shouldn't trump
+      // cascade. If the conversation has been silent that long, the
+      // assigned agent likely isn't actively working the relationship.
+      const FRESHNESS_MS = 90 * 24 * 60 * 60 * 1000;
+      const cutoff = Date.now() - FRESHNESS_MS;
       const myConvos = (store.getConversationsByClient(req.user.sub) || [])
-        .filter(c => c && c.propertyId === listing_id && c.brokerId);
+        .filter(c => {
+          if (!c || c.propertyId !== listing_id || !c.brokerId) return false;
+          const ts = new Date(c.updatedAt || c.createdAt || 0).getTime();
+          return isFinite(ts) && ts >= cutoff;
+        });
       if (myConvos.length > 0) {
         myConvos.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
         const candidate = store.getUserById(myConvos[0].brokerId);
@@ -4369,6 +4363,24 @@ router.put('/:id/commission/review', userAuth, async (req, res) => {
         error: 'La cuota de inmobiliaria + comisión de referido no puede exceder la comisión del agente.',
       });
     }
+    // Re-trigger acknowledgment when the adjusted referral amount is
+    // higher than what the broker originally accepted. Otherwise the
+    // inmobiliaria can quietly raise the fee on a deal the broker
+    // already submitted, leaving the audit trail with a stale ack.
+    if (app.referral_payee_id) {
+      const prevAmount = Number(app.commission?.referral_amount || 0);
+      const newAmount  = Number(recomputed.referral_amount || 0);
+      if (newAmount > prevAmount + 0.01 && req.body?.referral_acknowledged !== true) {
+        return res.status(400).json({
+          error: 'El ajuste aumenta la comisión de referido. El agente debe reconocer el nuevo monto.',
+          code:  'referral_ack_required',
+          referral_payee_id:   app.referral_payee_id,
+          referral_payee_name: app.referral_payee_name || '',
+          previous_amount:     prevAmount,
+          adjusted_amount:     newAmount,
+        });
+      }
+    }
     // Stash on req so the transaction body can use the validated values
     req._commissionRecomputed = recomputed;
   }
@@ -4403,6 +4415,17 @@ router.put('/:id/commission/review', userAuth, async (req, res) => {
         app.commission.reviewer_name   = user.name || '';
         app.commission.reviewed_at     = now;
         app.commission.adjustment_note = (req.body?.note || '').toString().slice(0, 300);
+        // If this adjustment changes the referral fee and the broker
+        // re-acknowledged it via the body flag, re-stamp the ack so the
+        // trail captures consent for the NEW amount.
+        if (app.referral_payee_id && req.body?.referral_acknowledged === true) {
+          app.referral_acknowledged_at = now;
+          app.referral_acknowledged_by = user.id;
+          addEvent(app, 'referral_acknowledged_after_adjust',
+            `${user.name || 'La organización'} ajustó la comisión de referido a ${req._commissionRecomputed.referral_percent}% ($${req._commissionRecomputed.referral_amount.toLocaleString()}). Reconocimiento re-registrado.`,
+            user.id, user.name || '',
+            { referral_payee_id: app.referral_payee_id, referral_percent: req._commissionRecomputed.referral_percent });
+        }
       }
 
       if (!Array.isArray(app.commission.history)) app.commission.history = [];
@@ -4510,8 +4533,13 @@ router.post('/:id/referral/mark-paid', userAuth, (req, res) => {
   }
   const isBroker = app.broker?.user_id === req.user.sub;
   const isAdmin  = user.role === 'admin';
-  if (!isBroker && !isAdmin) {
-    return res.status(403).json({ error: 'Solo el agente asignado puede marcar la comisión de referido como pagada.' });
+  // Inmobiliaria/constructora owner may also mark paid for a deal in
+  // their org — covers the case where a sub-broker has churned and the
+  // org itself is settling outstanding referral fees centrally.
+  const isInmOwner = ['inmobiliaria', 'constructora'].includes(user.role)
+                  && app.inmobiliaria_id === user.id;
+  if (!isBroker && !isAdmin && !isInmOwner) {
+    return res.status(403).json({ error: 'Solo el agente asignado o la inmobiliaria pueden marcar la comisión de referido como pagada.' });
   }
   if (app.referral_paid) {
     return res.json({ success: true, already_paid: true, paid_at: app.referral_paid_at });

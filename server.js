@@ -408,8 +408,34 @@ app.use((req, res, next) => {
 });
 
 // ── Short referral links ─────────────────────────────────────
-app.get('/r/:refToken', (req, res) => res.redirect(`/comprar?ref=${req.params.refToken}`));
-app.get('/r/:refToken/:listingId', (req, res) => res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`));
+// Log the click before redirecting so general links (no listing) are
+// also captured. listing.html POSTs /api/referrals/click on its own
+// when the URL carries ?ref=, but general links never reach a listing
+// page until the visitor picks one — without this insert, every
+// general-link click goes uncounted in the agent's stats.
+function _hashClickIp(ip) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(String(ip || '')).digest('hex').slice(0, 12);
+}
+async function _logShortLinkClick(req, refToken, listingId) {
+  if (!refToken || !/^[a-f0-9]{16}$/i.test(refToken)) return;
+  try {
+    const agent = store.getUserByRefToken(refToken);
+    if (!agent || !store.pool) return;
+    await store.pool.query(
+      'INSERT INTO referral_clicks (ref_token, agent_id, listing_id, ip_hash, created_at) VALUES ($1, $2, $3, $4, $5)',
+      [refToken, agent.id, listingId || null, _hashClickIp(req.ip), new Date().toISOString()]
+    );
+  } catch (_) { /* best-effort — never block the redirect */ }
+}
+app.get('/r/:refToken', (req, res) => {
+  _logShortLinkClick(req, req.params.refToken, null);
+  res.redirect(`/comprar?ref=${req.params.refToken}`);
+});
+app.get('/r/:refToken/:listingId', (req, res) => {
+  _logShortLinkClick(req, req.params.refToken, req.params.listingId);
+  res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`);
+});
 
 // ── API routes ─────────────────────────────────────────────────
 const { requireActiveSubscription } = require('./utils/subscription-gate');

@@ -1,7 +1,7 @@
 const express      = require('express');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
-const { userAuth } = require('./auth');
+const { userAuth, optionalAuth } = require('./auth');
 const router       = express.Router();
 
 // Cache favorite counts (refreshed every 60s to avoid scanning all users per request)
@@ -46,7 +46,12 @@ function capArray(arr, maxItems, maxLen) {
 }
 
 // GET /api/listings?q=&province=&city=&type=&condition=&propertyType=&priceMin=&priceMax=&bedroomsMin=&tags=&page=&limit=
-router.get('/', (req, res) => {
+//
+// Public endpoint: anonymous browsing of approved listings is allowed.
+// optionalAuth populates req.user when a token is present so the
+// `affiliated_to` filter (below) can verify the requester is authorized
+// to query that user's affiliation graph.
+router.get('/', optionalAuth, (req, res) => {
   const filters = {
     q:           req.query.q           || '',
     province:    req.query.province    || '',
@@ -83,10 +88,19 @@ router.get('/', (req, res) => {
   // phone tail). Mirrors isReferrerAffiliatedWithListing in
   // routes/applications.js so the affiliate-link picker on
   // /enlaces-de-referido stays in sync with the routing decision.
+  //
+  // SECURITY: this filter exposes the affiliation graph (which agent is
+  // tied to which listings), so it MUST require the requester to be the
+  // queried user themselves OR an admin. Without this gate, a scraper
+  // could enumerate user ids and dump the entire agent-listing map.
   if (req.query.affiliated_to) {
     const uid = String(req.query.affiliated_to);
-    const u = store.getUserById(uid);
-    if (u) {
+    const me = req.user || null;
+    const meRecord = me?.sub ? store.getUserById(me.sub) : null;
+    const isAdmin  = meRecord?.role === 'admin';
+    const authorized = !!me && (String(me.sub) === uid || isAdmin);
+    const u = authorized ? store.getUserById(uid) : null;
+    if (authorized && u) {
       const refEmail = (u.email || '').toLowerCase();
       const refPhoneTail = String(u.phone || '').replace(/\D/g, '').slice(-8);
       const refInmId = u.inmobiliaria_id || null;
