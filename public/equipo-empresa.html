@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>HogaresRD — Publicaciones</title>
+<title>HogaresRD — Perfil de Empresa</title>
 <meta name="viewport" content="width=1440">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,83 +70,92 @@
   .page-title { font-family: var(--serif); font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
   .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
   .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
+  .page-actions { display: flex; gap: 8px; align-items: center; }
 
-  /* Two-column layout: composer left, feed right */
-  .pub-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items: flex-start; }
-  @media (max-width: 1080px) { .pub-grid { grid-template-columns: 1fr; } }
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-pill:hover { background: var(--bg-soft); }
 
-  .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
+  /* Two-column layout */
+  .emp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: flex-start; }
+  @media (max-width: 1080px) { .emp-grid { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 24px; }
   .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
   .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
 
-  /* Composer */
-  .pub-type-row { display: flex; gap: 6px; margin-bottom: 14px; padding: 4px; background: var(--bg-soft); border-radius: var(--r-pill); }
-  .pub-type-btn {
-    flex: 1; padding: 8px 14px; border-radius: var(--r-pill);
-    font-size: 12.5px; font-weight: 500; cursor: pointer;
-    color: var(--ink-soft); background: transparent; border: none;
-    transition: background .15s, color .15s;
+  /* Form */
+  .form-stack { display: flex; flex-direction: column; gap: 14px; }
+  .field-label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-mute); margin-bottom: 6px;
   }
-  .pub-type-btn.active { background: var(--ink); color: #fff; }
-  .pub-input, .pub-textarea {
+  .field-input, .field-textarea {
     width: 100%; padding: 11px 13px;
     border: 1px solid var(--line); border-radius: 10px;
     font-size: 13.5px; color: var(--ink); background: var(--bg-soft);
-    margin-bottom: 12px;
   }
-  .pub-input:focus, .pub-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
-  .pub-textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
-  .pub-submit-row {
+  .field-input:focus, .field-textarea:focus {
+    outline: none; border-color: var(--ink); background: var(--bg-card);
+  }
+  .field-textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
+  .field-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 540px) { .field-row2 { grid-template-columns: 1fr; } }
+
+  .field-with-icon {
+    position: relative;
+  }
+  .field-with-icon svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; color: var(--ink-mute);
+    pointer-events: none;
+  }
+  .field-with-icon .field-input { padding-left: 36px; }
+
+  /* Cover image preview */
+  .cover-preview-wrap {
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-soft);
+    border: 1px dashed var(--line);
+    aspect-ratio: 3/1;
+    display: grid; place-items: center;
+    color: var(--ink-mute); font-size: 12px;
+  }
+  .cover-preview-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  /* Save bar */
+  .save-bar {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-top: 6px;
+    gap: 12px; padding: 18px 24px;
+    background: var(--bg-card); border-radius: var(--r-card);
+    position: sticky; bottom: 18px; z-index: 5;
+    box-shadow: 0 -4px 20px rgba(20,17,15,0.06);
   }
-  .pub-submit-btn {
+  .save-msg { font-size: 12.5px; min-height: 16px; flex: 1; }
+  .save-msg.ok    { color: var(--teal); }
+  .save-msg.error { color: var(--accent); }
+  .save-msg.muted { color: var(--ink-mute); }
+  .save-btn {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 22px; border-radius: var(--r-pill);
+    padding: 11px 26px; border-radius: var(--r-pill);
     background: var(--ink); color: #fff;
     font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    white-space: nowrap;
   }
-  .pub-submit-btn svg { width: 13px; height: 13px; }
-  .pub-submit-btn:hover { background: #000; }
-  .pub-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .pub-msg { font-size: 12.5px; min-height: 16px; }
-  .pub-msg.ok    { color: var(--teal); }
-  .pub-msg.error { color: var(--accent); }
-
-  /* Feed */
-  .feed-list { display: flex; flex-direction: column; gap: 12px; }
-  .feed-card {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
-    padding: 16px;
-    background: var(--bg-card); border: 1px solid var(--line-soft);
-    border-radius: 14px;
-    transition: border-color .12s;
-    align-items: flex-start;
-  }
-  .feed-card:hover { border-color: var(--line); }
-  .feed-card.no-image { grid-template-columns: 1fr auto; }
-  .feed-img { width: 96px; height: 72px; border-radius: 10px; object-fit: cover; }
-  .feed-body { min-width: 0; }
-  .feed-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .feed-pill { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-pill); }
-  .feed-pill.update  { background: var(--teal-soft); color: #20665f; }
-  .feed-pill.article { background: var(--plum-soft); color: var(--plum); }
-  .feed-date { font-size: 11.5px; color: var(--ink-mute); }
-  .feed-title { font-weight: 600; font-size: 14.5px; color: var(--ink); margin: 0 0 4px; line-height: 1.35; }
-  .feed-content { font-size: 13px; color: var(--ink-soft); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .feed-del {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: transparent; border: none;
-    display: grid; place-items: center;
-    color: var(--ink-mute); cursor: pointer;
-  }
-  .feed-del:hover { background: var(--bg-soft); color: var(--accent); }
-  .feed-del svg { width: 14px; height: 14px; }
-
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-mute); font-size: 14px; line-height: 1.5; }
-  .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: var(--serif); font-size: 20px; font-weight: 600; }
-  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 16px; background: var(--bg-soft); border-radius: 50%; display: grid; place-items: center; color: var(--ink-mute); }
-  .empty-state-icon svg { width: 22px; height: 22px; }
+  .save-btn svg { width: 13px; height: 13px; }
+  .save-btn:hover { background: #000; }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -221,8 +230,8 @@
       <a href="/equipo-solicitudes.html" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span></a>
       <a href="/broker.html#tab-team-performance" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
       <a href="/equipo-secretarias.html" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Secretarias</span></a>
-      <a href="/equipo-empresa.html" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
-      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only active" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
+      <a href="/equipo-empresa.html" class="sb-link sb-team-only active" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
+      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
 
       <div class="sb-section-label">Soporte</div>
       <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Centro de Ayuda</span></a>
@@ -247,7 +256,7 @@
       <div class="topbar-left">
         <div class="tb-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar publicaciones…" id="topbarSearch">
+          <input type="text" placeholder="Buscar…" id="topbarSearch">
         </div>
         <div class="tb-divider"></div>
         <a class="tb-ai" href="/asistente">
@@ -303,56 +312,107 @@
     <div class="page-head">
       <div class="page-head-left">
         <div class="page-eyebrow">Equipo</div>
-        <h1 class="page-title">Publicaciones de <em>la empresa</em></h1>
-        <p class="page-sub">Comparte actualizaciones rápidas o publica artículos largos. Tus publicaciones aparecen en el feed de la inmobiliaria que verán tus clientes y agentes.</p>
+        <h1 class="page-title">Perfil de <em>la empresa</em></h1>
+        <p class="page-sub">Esta información aparece en tu página pública y en cada listado que publicas. Mantén tu eslogan, descripción, oficina y redes actualizados para que los clientes confíen y te encuentren.</p>
       </div>
     </div>
 
-    <!-- TWO-COLUMN: Composer + Feed -->
-    <div class="pub-grid">
+    <!-- TWO-COLUMN FORM -->
+    <div class="emp-grid">
 
-      <!-- Composer -->
+      <!-- LEFT: Company info -->
       <section class="panel">
-        <h2 class="panel-title">Nueva publicación</h2>
-        <p class="panel-sub">Las actualizaciones son rápidas (sin título); los artículos llevan título y se destacan.</p>
+        <h2 class="panel-title">Información de la empresa</h2>
+        <p class="panel-sub">Lo más importante para tu perfil público — lo que verán los visitantes en cada listado.</p>
 
-        <div class="pub-type-row" role="tablist" aria-label="Tipo de publicación">
-          <button class="pub-type-btn active" type="button" role="tab" data-type="update" aria-selected="true">Actualización</button>
-          <button class="pub-type-btn" type="button" role="tab" data-type="article" aria-selected="false">Artículo</button>
-        </div>
-
-        <div id="pubTitleWrap" hidden>
-          <input type="text" id="pubTitle" class="pub-input" placeholder="Título del artículo" maxlength="180">
-        </div>
-
-        <textarea id="pubContent" class="pub-textarea" placeholder="¿Qué quieres compartir?" maxlength="2000"></textarea>
-
-        <input type="url" id="pubImage" class="pub-input" placeholder="URL de imagen (opcional)" style="margin-bottom:0;">
-
-        <div class="pub-submit-row">
-          <span class="pub-msg" id="pubMsg"></span>
-          <button class="pub-submit-btn" id="pubSubmitBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Publicar
-          </button>
-        </div>
-      </section>
-
-      <!-- Feed -->
-      <section class="panel">
-        <h2 class="panel-title">Feed reciente</h2>
-        <p class="panel-sub">Las publicaciones aparecen en orden cronológico — las más recientes arriba.</p>
-
-        <div class="feed-list" id="feedList">
-          <div class="empty-state" id="feedLoading">
-            <div class="empty-state-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="form-stack">
+          <div>
+            <label class="field-label" for="empTagline">Eslogan / Tagline</label>
+            <input type="text" id="empTagline" class="field-input" placeholder="Tu hogar, nuestra misión." maxlength="120">
+          </div>
+          <div>
+            <label class="field-label" for="empDescription">Descripción de la empresa</label>
+            <textarea id="empDescription" class="field-textarea" placeholder="Cuéntale a tus clientes sobre tu historia, valores y enfoque." maxlength="2000"></textarea>
+          </div>
+          <div class="field-row2">
+            <div>
+              <label class="field-label" for="empYears">Años de experiencia</label>
+              <input type="number" id="empYears" class="field-input" min="0" max="100" placeholder="0">
             </div>
-            Cargando publicaciones…
+            <div>
+              <label class="field-label" for="empWebsite">Sitio web</label>
+              <input type="url" id="empWebsite" class="field-input" placeholder="https://…">
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="empAddress">Dirección de la oficina</label>
+            <input type="text" id="empAddress" class="field-input" placeholder="Av. Winston Churchill #1099, Santo Domingo" maxlength="200">
+          </div>
+          <div>
+            <label class="field-label" for="empHours">Horario de atención</label>
+            <input type="text" id="empHours" class="field-input" placeholder="Lun-Vie 9AM-6PM, Sáb 9AM-1PM" maxlength="120">
           </div>
         </div>
       </section>
 
+      <!-- RIGHT: Cover image + social media -->
+      <div style="display:flex;flex-direction:column;gap:18px;">
+
+        <section class="panel">
+          <h2 class="panel-title">Imagen de portada</h2>
+          <p class="panel-sub">Foto del equipo, oficina o un proyecto destacado. Aparece como banner en tu página pública. Recomendado: 1200×400 px.</p>
+          <input type="url" id="empCoverImage" class="field-input" placeholder="https://… (URL pública de la imagen)">
+          <div class="cover-preview-wrap" id="empCoverPreviewWrap">
+            <span id="empCoverPlaceholder">Sin imagen — pega una URL arriba para previsualizar</span>
+            <img id="empCoverPreview" alt="" style="display:none;">
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2 class="panel-title">Redes sociales</h2>
+          <p class="panel-sub">Aparecerán como botones rápidos en tu perfil público. Deja en blanco las que no uses.</p>
+          <div class="form-stack">
+            <div>
+              <label class="field-label" for="empFacebook">Facebook</label>
+              <div class="field-with-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <input type="url" id="empFacebook" class="field-input" placeholder="https://facebook.com/…">
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="empInstagram">Instagram</label>
+              <div class="field-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                <input type="url" id="empInstagram" class="field-input" placeholder="https://instagram.com/…">
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="empLinkedin">LinkedIn</label>
+              <div class="field-with-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                <input type="url" id="empLinkedin" class="field-input" placeholder="https://linkedin.com/company/…">
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="empWhatsapp">WhatsApp</label>
+              <div class="field-with-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01a1.1 1.1 0 00-.795.372c-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+                <input type="tel" id="empWhatsapp" class="field-input" placeholder="+1 809 000 0000">
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- SAVE BAR (sticky) -->
+    <div class="save-bar">
+      <span class="save-msg muted" id="empMsg">Los cambios se guardan al hacer clic en "Guardar perfil".</span>
+      <button class="save-btn" type="button" id="empSaveBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar perfil
+      </button>
     </div>
 
   </main>
@@ -362,14 +422,6 @@
 
 <script>
 'use strict';
-
-const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtDate = (iso) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return '—';
-  return d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 async function api(path, opts = {}) {
   const init = { credentials: 'include', ...opts };
@@ -395,131 +447,112 @@ function toast(msg, isError = false) {
   toast._t = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
-const STATE = { user: null, posts: [], type: 'update' };
+const $ = (id) => document.getElementById(id);
 
-// ── Composer type toggle ───────────────────────────────────────
-function setPubType(type) {
-  STATE.type = type === 'article' ? 'article' : 'update';
-  document.querySelectorAll('.pub-type-btn').forEach(b => {
-    const on = b.dataset.type === STATE.type;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  document.getElementById('pubTitleWrap').hidden = STATE.type !== 'article';
+const FIELDS = {
+  empTagline:     'tagline',
+  empDescription: 'companyDescription',
+  empYears:       'yearsInBusiness',
+  empWebsite:     'website',
+  empAddress:     'officeAddress',
+  empHours:       'officeHours',
+  empCoverImage:  'coverImage',
+};
+const SOCIAL_FIELDS = {
+  empFacebook:  'facebook',
+  empInstagram: 'instagram',
+  empLinkedin:  'linkedin',
+  empWhatsapp:  'whatsapp',
+};
+
+const STATE = { user: null, loaded: false };
+
+function setMsg(text, kind) {
+  const el = $('empMsg');
+  el.textContent = text;
+  el.classList.remove('ok', 'error', 'muted');
+  if (kind) el.classList.add(kind);
 }
 
-// ── Render feed ────────────────────────────────────────────────
-function renderFeed() {
-  const list = document.getElementById('feedList');
-  if (!STATE.posts.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        </div>
-        <strong>Aún no hay publicaciones</strong>
-        Cuando publiques tu primera actualización o artículo, aparecerá aquí.
-      </div>`;
-    return;
+function fillForm(profile) {
+  const p = profile || {};
+  for (const [id, key] of Object.entries(FIELDS)) {
+    const el = $(id);
+    if (el) el.value = p[key] != null ? p[key] : '';
   }
-  // Sort newest first
-  const items = [...STATE.posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  list.innerHTML = items.map(p => {
-    const isArticle = p.post_type === 'article';
-    const hasImg = !!p.image;
-    return `
-      <div class="feed-card ${hasImg ? '' : 'no-image'}" data-id="${escapeHtml(p.id)}">
-        ${hasImg ? `<img src="${escapeHtml(p.image)}" alt="" class="feed-img" onerror="this.remove()">` : ''}
-        <div class="feed-body">
-          <div class="feed-meta">
-            <span class="feed-pill ${isArticle ? 'article' : 'update'}">${isArticle ? 'Artículo' : 'Actualización'}</span>
-            <span class="feed-date">${escapeHtml(fmtDate(p.created_at))}</span>
-          </div>
-          ${p.title ? `<h3 class="feed-title">${escapeHtml(p.title)}</h3>` : ''}
-          <div class="feed-content">${escapeHtml(p.content || '')}</div>
-        </div>
-        <button class="feed-del" data-id="${escapeHtml(p.id)}" aria-label="Eliminar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-        </button>
-      </div>`;
-  }).join('');
-
-  list.querySelectorAll('.feed-del').forEach(btn => {
-    btn.addEventListener('click', () => deletePost(btn.dataset.id));
-  });
+  const social = p.social || {};
+  for (const [id, key] of Object.entries(SOCIAL_FIELDS)) {
+    const el = $(id);
+    if (el) el.value = social[key] != null ? social[key] : '';
+  }
+  refreshCoverPreview();
 }
 
-// ── Submit composer ────────────────────────────────────────────
-async function submitPost() {
-  const msg = document.getElementById('pubMsg');
-  const submitBtn = document.getElementById('pubSubmitBtn');
-  const content = document.getElementById('pubContent').value.trim();
-  msg.textContent = '';
-  msg.classList.remove('error', 'ok');
-
-  if (!content) {
-    msg.textContent = 'Escribe el contenido antes de publicar.';
-    msg.classList.add('error');
-    return;
+function refreshCoverPreview() {
+  const url = $('empCoverImage').value.trim();
+  const img = $('empCoverPreview');
+  const placeholder = $('empCoverPlaceholder');
+  if (url) {
+    img.src = url;
+    img.style.display = '';
+    placeholder.style.display = 'none';
+    img.onerror = () => {
+      img.style.display = 'none';
+      placeholder.style.display = '';
+      placeholder.textContent = 'No se pudo cargar la imagen — verifica la URL';
+    };
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = '';
+    placeholder.textContent = 'Sin imagen — pega una URL arriba para previsualizar';
   }
-  const title = STATE.type === 'article' ? document.getElementById('pubTitle').value.trim() : '';
-  if (STATE.type === 'article' && !title) {
-    msg.textContent = 'El artículo necesita un título.';
-    msg.classList.add('error');
-    return;
-  }
+}
 
-  submitBtn.disabled = true;
+function readForm() {
+  const body = {};
+  for (const [id, key] of Object.entries(FIELDS)) {
+    const el = $(id);
+    if (!el) continue;
+    body[key] = el.value.trim();
+  }
+  const social = {};
+  for (const [id, key] of Object.entries(SOCIAL_FIELDS)) {
+    const el = $(id);
+    if (!el) continue;
+    social[key] = el.value.trim();
+  }
+  body.social = social;
+  return body;
+}
+
+async function save() {
+  const btn = $('empSaveBtn');
+  setMsg('Guardando…', 'muted');
+  btn.disabled = true;
   try {
-    await api('/api/inmobiliaria/posts', {
-      method: 'POST',
-      body: {
-        post_type: STATE.type,
-        title,
-        content,
-        image: document.getElementById('pubImage').value.trim() || null,
-      },
-    });
-    document.getElementById('pubContent').value = '';
-    document.getElementById('pubTitle').value = '';
-    document.getElementById('pubImage').value = '';
-    msg.textContent = 'Publicado ✓';
-    msg.classList.add('ok');
-    setTimeout(() => { msg.textContent = ''; msg.classList.remove('ok'); }, 2200);
-    await load();
+    await api('/api/inmobiliaria/profile', { method: 'PATCH', body: readForm() });
+    setMsg('Perfil guardado ✓', 'ok');
+    toast('Perfil guardado');
+    setTimeout(() => setMsg('Los cambios se guardan al hacer clic en "Guardar perfil".', 'muted'), 3000);
   } catch (e) {
-    msg.textContent = e.message || 'No se pudo publicar.';
-    msg.classList.add('error');
+    setMsg(e.message || 'No se pudo guardar', 'error');
+    toast(e.message || 'No se pudo guardar', true);
   } finally {
-    submitBtn.disabled = false;
+    btn.disabled = false;
   }
 }
 
-// ── Delete post ────────────────────────────────────────────────
-async function deletePost(id) {
-  if (!id || !confirm('¿Eliminar esta publicación? Esta acción no se puede deshacer.')) return;
-  try {
-    await api(`/api/inmobiliaria/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    toast('Publicación eliminada');
-    await load();
-  } catch (e) {
-    toast(e.message || 'No se pudo eliminar', true);
-  }
-}
-
-// ── Load feed ──────────────────────────────────────────────────
 async function load() {
   try {
-    const data = await api('/api/inmobiliaria/posts').catch(() => []);
-    STATE.posts = Array.isArray(data) ? data : [];
+    const data = await api('/api/inmobiliaria/profile');
+    fillForm(data?.profile || {});
+    STATE.loaded = true;
   } catch (e) {
-    console.error('[equipo-publicaciones] load failed', e);
-    STATE.posts = [];
+    console.error('[equipo-empresa] load failed', e);
+    fillForm({});
   }
-  renderFeed();
 }
 
-// ── Bootstrap ──────────────────────────────────────────────────
 async function bootstrap() {
   let me;
   try { me = await api('/api/auth/me'); } catch { return; }
@@ -536,16 +569,22 @@ async function bootstrap() {
     return;
   }
 
-  // Wire composer interactions
-  document.querySelectorAll('.pub-type-btn').forEach(b => {
-    b.addEventListener('click', () => setPubType(b.dataset.type));
+  // Wire interactions
+  $('empCoverImage').addEventListener('input', refreshCoverPreview);
+  $('empSaveBtn').addEventListener('click', save);
+
+  // Save on Cmd/Ctrl+S
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      save();
+    }
   });
-  document.getElementById('pubSubmitBtn').addEventListener('click', submitPost);
 
   await load();
 }
 
-bootstrap().catch(err => console.error('[equipo-publicaciones] bootstrap failed', err));
+bootstrap().catch(err => console.error('[equipo-empresa] bootstrap failed', err));
 </script>
 
 
