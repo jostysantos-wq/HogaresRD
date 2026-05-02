@@ -156,6 +156,33 @@
   .recent-amt { font-weight: 600; font-family: var(--serif); font-size: 15px; }
   .recent-amt.zero { color: var(--ink-mute); font-weight: 500; }
 
+  .aff-search { display: flex; align-items: center; gap: 8px; background: var(--bg-soft); border-radius: var(--r-pill); padding: 9px 14px; margin-bottom: 14px; max-width: 420px; }
+  .aff-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .aff-search input { flex: 1; border: none; background: transparent; outline: none; color: var(--ink); font-size: 13px; }
+  .aff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .aff-card { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .aff-card-img { aspect-ratio: 16/10; background: var(--line-soft); position: relative; overflow: hidden; }
+  .aff-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .aff-card-img .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-mute); font-size: 28px; font-family: var(--serif); font-style: italic; }
+  .aff-card-badge { position: absolute; top: 10px; left: 10px; background: var(--bg-card); color: var(--ink); font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-pill); }
+  .aff-card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .aff-card-title { font-family: var(--serif); font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.25; min-height: 38px; }
+  .aff-card-meta { font-size: 12px; color: var(--ink-mute); display: flex; align-items: center; gap: 4px; }
+  .aff-card-meta svg { width: 11px; height: 11px; }
+  .aff-card-price { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+  .aff-card-link { font-size: 11.5px; color: var(--ink-mute); background: var(--bg-card); border: 1px dashed var(--line); border-radius: 8px; padding: 7px 10px; margin-top: 8px; word-break: break-all; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; }
+  .aff-card-link em { color: var(--accent); font-style: normal; font-weight: 600; }
+  .aff-card-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .aff-btn { flex: 1; padding: 8px 10px; border-radius: 9px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; }
+  .aff-btn svg { width: 12px; height: 12px; }
+  .aff-btn.copy { background: var(--ink); color: #fff; }
+  .aff-btn.copy:hover { background: #000; }
+  .aff-btn.copy.flash { background: var(--teal); }
+  .aff-btn.wa { background: #25D366; color: #fff; }
+  .aff-btn.wa:hover { background: #20bd5a; }
+  .aff-empty { padding: 28px 16px; text-align: center; color: var(--ink-mute); font-size: 13px; grid-column: 1 / -1; }
+  @media (max-width: 720px) { .aff-grid { grid-template-columns: 1fr; } }
+
   .payouts-blurb { font-size: 12.5px; color: var(--ink-mute); line-height: 1.55; margin: 0 0 14px; max-width: 700px; }
   .payouts-tabs { display: flex; gap: 4px; background: var(--bg-soft); border-radius: 12px; padding: 4px; margin-bottom: 14px; width: fit-content; }
   .po-tab { padding: 7px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--ink-mute); cursor: pointer; border: none; background: transparent; display: inline-flex; align-items: center; gap: 7px; }
@@ -556,6 +583,19 @@
 
     </div>
 
+    <section class="recent" id="affiliatedSection" style="display:none;">
+      <div class="recent-head">
+        <h2 class="panel-title">Mis listados afiliados</h2>
+        <span class="recent-link" id="affiliatedCount" style="cursor:default;"></span>
+      </div>
+      <p class="payouts-blurb">Genera un enlace específico para cada propiedad que tienes asociada. Cuando un cliente lo usa y aplica, la solicitud va directamente a ti — sin pasar por la cascada y sin reparto de comisión.</p>
+      <div class="aff-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="affiliatedSearch" placeholder="Buscar por título, sector o ciudad…">
+      </div>
+      <div class="aff-grid" id="affiliatedGrid"></div>
+    </section>
+
     <section class="recent">
       <div class="recent-head">
         <h2 class="panel-title">Referidos recientes</h2>
@@ -737,6 +777,130 @@ function renderRecent(applications) {
   tbl.innerHTML = head + rows;
 }
 
+// ── Affiliated listings — per-listing referral links ─────────────────
+let STATE_AFFILIATED = { listings: [], filter: '' };
+
+function affBuildLink(l) {
+  if (!STATE.refToken) return '';
+  return `${location.origin}/listing.html?id=${encodeURIComponent(l.id)}&ref=${encodeURIComponent(STATE.refToken)}`;
+}
+
+function affLocation(l) {
+  return [l.sector, l.city, l.province].filter(Boolean).join(', ') || '—';
+}
+
+function affCardHTML(l) {
+  const link = affBuildLink(l);
+  const linkDisplay = link.replace(/^https?:\/\//, '').replace(/(\?ref=[^&]+)/, '<em>$1</em>');
+  const photo = (Array.isArray(l.images) && l.images[0])
+    ? (typeof l.images[0] === 'string' ? l.images[0] : l.images[0].url || '')
+    : '';
+  const img = photo
+    ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : `<div class="ph">${escapeHtml((l.title || 'sin foto').toLowerCase().slice(0, 16))}</div>`;
+  const badge = l.type === 'alquiler' ? 'Alquiler' : 'En Venta';
+  const price = (l.price != null && l.price !== '')
+    ? (l.type === 'alquiler' ? `${fmtUSD(l.price)} <span style="font-size:11px;color:var(--ink-mute);font-family:var(--sans);font-weight:500;">/ mes</span>` : fmtUSD(l.price))
+    : '—';
+  return `
+    <div class="aff-card" data-id="${escapeHtml(l.id)}">
+      <div class="aff-card-img">${img}<span class="aff-card-badge">${badge}</span></div>
+      <div class="aff-card-body">
+        <div class="aff-card-title">${escapeHtml(l.title || 'Propiedad')}</div>
+        <div class="aff-card-meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          ${escapeHtml(affLocation(l))}
+        </div>
+        <div class="aff-card-price">${price}</div>
+        <div class="aff-card-link">${linkDisplay}</div>
+        <div class="aff-card-actions">
+          <button class="aff-btn copy" type="button" data-act="copy" data-id="${escapeHtml(l.id)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <span class="lbl">Copiar enlace</span>
+          </button>
+          <button class="aff-btn wa" type="button" data-act="wa" data-id="${escapeHtml(l.id)}">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01a1.1 1.1 0 00-.795.372c-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+            WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function affRender() {
+  const grid = document.getElementById('affiliatedGrid');
+  if (!grid) return;
+  const q = (STATE_AFFILIATED.filter || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const visible = STATE_AFFILIATED.listings.filter(l => {
+    if (!q) return true;
+    return [l.title, l.sector, l.city, l.province].some(v => norm(v).includes(q));
+  });
+  if (!visible.length) {
+    grid.innerHTML = `<div class="aff-empty">${
+      STATE_AFFILIATED.listings.length === 0
+        ? 'Aún no tienes listados afiliados. Cuando crees una propiedad o aparezcas en una agencia de algún listado, lo verás aquí.'
+        : 'Ningún listado coincide con tu búsqueda.'
+    }</div>`;
+    return;
+  }
+  grid.innerHTML = visible.map(affCardHTML).join('');
+}
+
+function affWireActions() {
+  const grid = document.getElementById('affiliatedGrid');
+  if (!grid) return;
+  grid.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const listing = STATE_AFFILIATED.listings.find(l => l.id === id);
+    if (!listing) return;
+    const link = affBuildLink(listing);
+    if (btn.dataset.act === 'copy') {
+      const ok = await copy(link);
+      if (ok) {
+        const lbl = btn.querySelector('.lbl');
+        const orig = lbl?.textContent || 'Copiar enlace';
+        if (lbl) lbl.textContent = '¡Copiado!';
+        btn.classList.add('flash');
+        setTimeout(() => { if (lbl) lbl.textContent = orig; btn.classList.remove('flash'); }, 1500);
+      }
+    } else if (btn.dataset.act === 'wa') {
+      const msg = `Hola, quiero compartir esta propiedad contigo: ${listing.title || 'Propiedad'} — ${link}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+    }
+  });
+  const search = document.getElementById('affiliatedSearch');
+  if (search) {
+    search.addEventListener('input', (e) => {
+      STATE_AFFILIATED.filter = e.target.value || '';
+      affRender();
+    });
+  }
+}
+
+async function loadAffiliatedListings(userId) {
+  const data = await api(`/api/listings?affiliated_to=${encodeURIComponent(userId)}`).catch(() => null);
+  const all = data?.listings || data || [];
+  // Only approved, public-facing listings make sense to share.
+  STATE_AFFILIATED.listings = (Array.isArray(all) ? all : [])
+    .filter(l => l && (l.status || 'approved') === 'approved')
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+  const sec = document.getElementById('affiliatedSection');
+  if (!STATE_AFFILIATED.listings.length) {
+    // If the user doesn't own / is not on any listing, hide entirely —
+    // the generic generator above already serves that case.
+    sec.style.display = 'none';
+    return;
+  }
+  sec.style.display = '';
+  document.getElementById('affiliatedCount').textContent =
+    `${STATE_AFFILIATED.listings.length} ${STATE_AFFILIATED.listings.length === 1 ? 'listado' : 'listados'}`;
+  affRender();
+}
+
 // ── Referral payouts (Option B: outside-listing referrals) ─────────────
 const STATUS_LABELS_ES = {
   aplicado: 'Aplicado', en_revision: 'En Revisión',
@@ -841,7 +1005,7 @@ async function load() {
 
   const [stats, mine] = await Promise.all([
     api('/api/referrals/my-stats').catch(() => ({})),
-    api(`/api/listings?creator_user_id=${encodeURIComponent(user.id)}`).catch(() => ({ listings: [] })),
+    api(`/api/listings?affiliated_to=${encodeURIComponent(user.id)}`).catch(() => ({ listings: [] })),
   ]);
 
   STATE.refToken = stats.ref_token || user.refToken || user.id;
@@ -868,6 +1032,11 @@ async function load() {
   // referral fee. Loads pending / paid / in-progress buckets.
   poWireTabs();
   await loadPayouts();
+
+  // Affiliated-listings grid: per-listing share links that route the
+  // application directly to this agent (no cascade, no fee split).
+  affWireActions();
+  await loadAffiliatedListings(user.id);
 
   // Wire interactions
   document.getElementById('copyGeneralBtn').onclick = async () => {

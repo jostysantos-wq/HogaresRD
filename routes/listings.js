@@ -75,6 +75,43 @@ router.get('/', (req, res) => {
     );
   }
 
+  // Affiliation filter — broader than creator_user_id. Returns every
+  // listing the given user could legitimately credit themselves on
+  // (their own listings, listings their inmobiliaria created, listings
+  // where they appear in `agencies[]` directly or through their parent
+  // inmobiliaria, and listings whose agency card shares their email or
+  // phone tail). Mirrors isReferrerAffiliatedWithListing in
+  // routes/applications.js so the affiliate-link picker on
+  // /enlaces-de-referido stays in sync with the routing decision.
+  if (req.query.affiliated_to) {
+    const uid = String(req.query.affiliated_to);
+    const u = store.getUserById(uid);
+    if (u) {
+      const refEmail = (u.email || '').toLowerCase();
+      const refPhoneTail = String(u.phone || '').replace(/\D/g, '').slice(-8);
+      const refInmId = u.inmobiliaria_id || null;
+      listings = listings.filter(l => {
+        if (String(l.creator_user_id || '') === uid) return true;
+        if (String(l.inmobiliaria_id || '') === uid) return true;
+        if (refInmId && String(l.inmobiliaria_id || '') === String(refInmId)) return true;
+        const agencies = Array.isArray(l.agencies) ? l.agencies : [];
+        for (const a of agencies) {
+          if (!a) continue;
+          if (a.user_id && (String(a.user_id) === uid || (refInmId && String(a.user_id) === String(refInmId)))) return true;
+          if (a.inmobiliaria && (String(a.inmobiliaria) === uid || (refInmId && String(a.inmobiliaria) === String(refInmId)))) return true;
+          if (a.email && refEmail && String(a.email).toLowerCase() === refEmail) return true;
+          if (refPhoneTail && refPhoneTail.length >= 8) {
+            const tail = String(a.phone || '').replace(/\D/g, '').slice(-8);
+            if (tail.length >= 8 && tail === refPhoneTail) return true;
+          }
+        }
+        return false;
+      });
+    } else {
+      listings = [];
+    }
+  }
+
   // Tag filter (comma-separated, match ANY)
   if (req.query.tags) {
     const wanted = req.query.tags.split(',').map(t => t.trim()).filter(Boolean);
