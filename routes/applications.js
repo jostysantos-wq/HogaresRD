@@ -1173,18 +1173,17 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     }
   }
 
-  // Layer A — conversation-aware routing. If the client has no explicit
-  // ref token but has an active conversation with an agent on this same
-  // listing, honor that relationship: the application goes to the agent
-  // who has been talking to them, NOT through cascade. This closes the
-  // gap where a client chats with Agent A then applies and lands with
-  // Agent B by accident. Only triggers when:
-  //   - no ref_token routing decision was made above
-  //   - the client is logged in (we need their user id to look up convos)
-  //   - we can find ONE conversation with a claimed broker on this
-  //     listing (if there are multiple, pick the most recently updated)
-  let conversationBroker = null;
-  if (!referredByAgent && !referredByInmobiliaria && req.user?.sub && listing_id) {
+  // Layer A — conversation-aware routing. Look up the most recent active
+  // conversation between this client and a broker on this listing. Used
+  // for two purposes:
+  //   1. Routing: when no ref token applies, the conversation broker
+  //      wins over cascade (the agent already in the relationship).
+  //   2. Audit: when a ref token DOES apply but a conversation also
+  //      exists with a different agent, emit a transparency event so
+  //      the timeline shows the client deliberately used another
+  //      agent's link instead of the conversation broker.
+  let existingConversationBroker = null;
+  if (req.user?.sub && listing_id) {
     try {
       const myConvos = (store.getConversationsByClient(req.user.sub) || [])
         .filter(c => c && c.propertyId === listing_id && c.brokerId);
@@ -1192,11 +1191,19 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
         myConvos.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
         const candidate = store.getUserById(myConvos[0].brokerId);
         if (candidate && isSubscriptionActive(candidate)) {
-          conversationBroker = candidate;
+          existingConversationBroker = candidate;
         }
       }
     } catch (_) { /* ignore — falls through to cascade */ }
   }
+  // Routing-only handle: only use the conversation broker for assignment
+  // when no ref token has already taken precedence. Per product policy,
+  // a fresh deliberate ref-link click overrides an existing conversation
+  // (covers the "client wants to switch agents" case). The audit event
+  // below records when this override happens.
+  const conversationBroker = (existingConversationBroker && !referredByAgent && !referredByInmobiliaria)
+    ? existingConversationBroker
+    : null;
 
   // Cascade decision:
   // - Broker ref → no cascade (direct assign)
@@ -1486,6 +1493,23 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
       `Asignación directa a ${conversationBroker.name || 'el agente'} por conversación previa con el cliente.`,
       'system', 'Sistema',
       { broker_id: conversationBroker.id });
+  }
+  // Transparency: ref-token agent or org took precedence over an existing
+  // conversation with a different agent. Doesn't change routing — just
+  // leaves a clear trail so the conversation broker (or admin) can see
+  // why they didn't get the lead.
+  if (existingConversationBroker && (referredByAgent || referredByInmobiliaria)) {
+    const winner = referredByAgent || referredByInmobiliaria;
+    if (existingConversationBroker.id !== winner.id) {
+      addEvent(app, 'routed_via_referral_over_conversation',
+        `El cliente tenía conversación previa con ${existingConversationBroker.name || 'otro agente'} sobre esta propiedad, pero usó el enlace de referido de ${winner.name || 'otro agente'} al aplicar.`,
+        'system', 'Sistema',
+        {
+          conversation_broker_id: existingConversationBroker.id,
+          ref_winner_id:          winner.id,
+          ref_winner_role:        (winner.role || '').toLowerCase(),
+        });
+    }
   }
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',
