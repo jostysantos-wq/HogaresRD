@@ -9344,7 +9344,10 @@
 
     try {
       if (commCurrentMode === 'review') {
-        // Inmobiliaria reviewing — decide if they changed anything
+        // Inmobiliaria reviewing — decide if they changed anything.
+        // Forward referral_acknowledged so the server can re-stamp the
+        // ack when the adjusted referral fee goes UP. Without it, every
+        // legitimate raise lands in the `referral_ack_required` 400.
         await API(`/api/applications/${commCurrentAppId}/commission/review`, {
           method: 'PUT',
           body:   {
@@ -9353,6 +9356,7 @@
             agent_percent:        agentP,
             inmobiliaria_percent: inmP,
             referral_percent:     referralActive ? refP : 0,
+            referral_acknowledged: refAck,
             note,
           },
         });

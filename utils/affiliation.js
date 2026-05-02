@@ -23,6 +23,16 @@
 // ───────────────────────────────────────────────────────────────────────
 'use strict';
 
+// Optional store reference — used to resolve creator's parent
+// inmobiliaria. Some callers don't have circular-import access to the
+// store (e.g., utility tests), so the require is lazy and guarded.
+let _store = null;
+function _getStore() {
+  if (_store !== null) return _store;
+  try { _store = require('../routes/store'); } catch { _store = false; }
+  return _store || null;
+}
+
 function isReferrerAffiliatedWithListing(referrer, listing) {
   if (!referrer || !listing) return false;
   const refInmId = referrer.inmobiliaria_id || null;
@@ -32,6 +42,21 @@ function isReferrerAffiliatedWithListing(referrer, listing) {
   if (listing.creator_user_id) {
     if (String(listing.creator_user_id) === String(referrer.id)) return true;
     if (refInmId && String(listing.creator_user_id) === String(refInmId)) return true;
+    // Creator is a sub-broker on the referrer's org — referrer is the
+    // parent inmobiliaria of the listing's creator. Without this lookup,
+    // a parent inmobiliaria's own affiliate link gets downgraded to
+    // "outside referrer" on team-created listings whose agencies[] was
+    // submitted without an `inmobiliaria` field stamped.
+    const store = _getStore();
+    if (store) {
+      try {
+        const creator = store.getUserById(listing.creator_user_id);
+        if (creator?.inmobiliaria_id) {
+          if (String(creator.inmobiliaria_id) === String(referrer.id)) return true;
+          if (refInmId && String(creator.inmobiliaria_id) === String(refInmId)) return true;
+        }
+      } catch (_) { /* store unavailable — fall through */ }
+    }
   }
 
   const agencies = Array.isArray(listing.agencies) ? listing.agencies : [];

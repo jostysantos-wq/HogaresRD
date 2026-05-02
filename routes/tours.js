@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const store     = require('./store');
 const { userAuth, optionalAuth } = require('./auth');
 const { notify: pushNotify } = require('./push');
+const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
 const { createTransport } = require('./mailer');
 const et = require('../utils/email-templates');
 
@@ -297,16 +298,38 @@ router.post('/request', tourRequestLimiter, optionalAuth, (req, res) => {
     return res.status(400).json({ error: 'Email inválido' });
   }
 
+  // Get listing — needed for the affiliation check below.
+  const listing = store.getListingById(listing_id);
+  if (!listing) {
+    return res.status(404).json({ error: 'Propiedad no encontrada.' });
+  }
+  const listingTitle = listing.title || 'Propiedad';
+
+  // SECURITY: validate that the requested broker_id is actually affiliated
+  // with this listing. Without this check, a malicious client can pass
+  // ANY user_id as broker_id and book a "tour" against an unaffiliated
+  // agent's calendar — same lead-theft surface the application flow
+  // closed earlier. Admins may book on behalf of any broker.
+  const requestedBroker = store.getUserById(broker_id);
+  if (!requestedBroker) {
+    return res.status(400).json({ error: 'Agente no encontrado.' });
+  }
+  const requesterIsAdmin = req.user?.sub
+    ? (store.getUserById(req.user.sub)?.role === 'admin')
+    : false;
+  if (!requesterIsAdmin && !isReferrerAffiliatedWithListing(requestedBroker, listing)) {
+    return res.status(403).json({
+      error: 'Este agente no está asociado a esta propiedad.',
+      code:  'broker_not_affiliated',
+    });
+  }
+
   // Verify the slot is still available
   const available = generateSlots(broker_id, date);
   const slotAvailable = available.some(s => s.time === time);
   if (!slotAvailable) {
     return res.status(409).json({ error: 'Este horario ya no está disponible. Por favor selecciona otro.' });
   }
-
-  // Get listing title
-  const listing = store.getListingById(listing_id);
-  const listingTitle = listing ? listing.title : 'Propiedad';
 
   const tour = {
     id:             uid(),

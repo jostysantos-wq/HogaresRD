@@ -107,6 +107,14 @@ router.post('/', requireLogin, (req, res) => {
   let assignedBrokerId = null;
   let assignedBrokerName = null;
   let inmobiliariaId = null;
+  // Only persist the ref token on the conversation row when the
+  // referrer is actually on the listing. Outside-referrer tokens are
+  // intentionally dropped here so admin tooling that ever reads
+  // `conv.refToken` for reconciliation can't mis-route attribution.
+  // (The application handler will still pick up the outsider's token
+  // from the cookie/body when the client applies, and record it as a
+  // fee payee — that path doesn't depend on conv.refToken.)
+  let persistRefToken = false;
 
   if (refTk) {
     const refAgent = store.getUserByRefToken(refTk);
@@ -117,15 +125,15 @@ router.post('/', requireLogin, (req, res) => {
         // Affiliated individual agent — pre-assign conversation to them.
         assignedBrokerId = refAgent.id;
         assignedBrokerName = refAgent.name;
+        persistRefToken = true;
       } else if (affiliated && ['inmobiliaria', 'constructora'].includes(refRole)) {
         // Affiliated org link — leave brokerId null so ALL org agents see it.
         inmobiliariaId = refAgent.id;
+        persistRefToken = true;
       }
       // Non-affiliated referrers (any role) intentionally fall through:
       // the conversation routes via the listing's normal cascade and
-      // the ref token is preserved on the conversation row for later
-      // attribution — when the client applies, the application handler
-      // will record the outsider as referral_payee_id (fee, not lead).
+      // the ref token is NOT persisted on the conversation row.
     }
   }
 
@@ -139,27 +147,55 @@ router.post('/', requireLogin, (req, res) => {
     timestamp:  new Date().toISOString(),
   };
 
-  // If no inmobiliariaId from ref token, try to resolve from the listing's agencies
-  if (!inmobiliariaId && propertyId) {
-    const listing = store.getListingById(propertyId);
-    if (listing) {
-      // Check listing creator
-      const creator = listing.creator_user_id ? store.getUserById(listing.creator_user_id) : null;
-      if (creator && ['inmobiliaria', 'constructora'].includes(creator.role)) {
-        inmobiliariaId = creator.id;
+  // If no inmobiliariaId from ref token, try to resolve from the listing.
+  //
+  // Preference order: (1) listing creator IS an org, (2) creator's parent
+  // org, (3) the FIRST agencies[] entry whose org has an active subscription.
+  // Without the subscription gate, the conversation could get scoped to
+  // an inactive org whose team can't claim it (and the other affiliated
+  // org would never see it). The previous resolver picked the first
+  // agency blindly; this version filters by subscription.
+  if (!inmobiliariaId && listing) {
+    const { isSubscriptionActive } = require('../utils/subscription-gate');
+    const tryOrg = (id) => {
+      if (!id) return null;
+      const u = store.getUserById(id);
+      if (!u) return null;
+      if (!['inmobiliaria', 'constructora'].includes((u.role || '').toLowerCase())) return null;
+      return isSubscriptionActive(u) ? u.id : null;
+    };
+
+    // (1) creator is an org
+    const creator = listing.creator_user_id ? store.getUserById(listing.creator_user_id) : null;
+    if (creator) {
+      const creatorRole = (creator.role || '').toLowerCase();
+      if (['inmobiliaria', 'constructora'].includes(creatorRole)) {
+        inmobiliariaId = isSubscriptionActive(creator) ? creator.id : null;
+      } else if (creator.inmobiliaria_id) {
+        // (2) creator's parent org
+        inmobiliariaId = tryOrg(creator.inmobiliaria_id);
       }
-      // Check affiliated agencies
-      if (!inmobiliariaId && Array.isArray(listing.agencies)) {
-        for (const a of listing.agencies) {
-          if (!a.user_id) continue;
+    }
+
+    // (3) scan agencies[] for the first subscribed org
+    if (!inmobiliariaId && Array.isArray(listing.agencies)) {
+      for (const a of listing.agencies) {
+        if (!a) continue;
+        // Direct org reference on the agency card
+        let candidate = tryOrg(a.inmobiliaria);
+        if (candidate) { inmobiliariaId = candidate; break; }
+        // Or via the agency user's role / parent
+        if (a.user_id) {
           const agentUser = store.getUserById(a.user_id);
-          if (agentUser && ['inmobiliaria', 'constructora'].includes(agentUser.role)) {
-            inmobiliariaId = agentUser.id;
-            break;
-          }
-          if (agentUser?.inmobiliaria_id) {
-            inmobiliariaId = agentUser.inmobiliaria_id;
-            break;
+          if (agentUser) {
+            const agentRole = (agentUser.role || '').toLowerCase();
+            if (['inmobiliaria', 'constructora'].includes(agentRole)) {
+              candidate = isSubscriptionActive(agentUser) ? agentUser.id : null;
+              if (candidate) { inmobiliariaId = candidate; break; }
+            } else if (agentUser.inmobiliaria_id) {
+              candidate = tryOrg(agentUser.inmobiliaria_id);
+              if (candidate) { inmobiliariaId = candidate; break; }
+            }
           }
         }
       }
@@ -176,7 +212,7 @@ router.post('/', requireLogin, (req, res) => {
     brokerId:       assignedBrokerId,   // pre-assigned from ref link, or null
     brokerName:     assignedBrokerName,
     inmobiliariaId: inmobiliariaId,      // set from ref link or listing agencies
-    refToken:       refTk || null,
+    refToken:       persistRefToken ? refTk : null,
     createdAt:      new Date().toISOString(),
     updatedAt:      new Date().toISOString(),
     lastMessage:    message.trim(),

@@ -428,11 +428,27 @@ async function _logShortLinkClick(req, refToken, listingId) {
     );
   } catch (_) { /* best-effort — never block the redirect */ }
 }
-app.get('/r/:refToken', (req, res) => {
+// Rate-limit the redirect path so a bot can't inflate referral_clicks
+// and the agent's "Top listings" stats. The redirect itself is cheap
+// (cookie + 302) but the DB insert is unbounded otherwise. 30 req per
+// IP per minute matches the click-tracking expectation while leaving
+// real users plenty of headroom.
+const _rRedirectLimiter = require('express-rate-limit')({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: false,
+  legacyHeaders: false,
+  // On limit: still redirect, just skip the click insert (covered by
+  // the regex guard inside _logShortLinkClick).
+  handler: (req, res) => res.redirect(req.params.listingId
+    ? `/listing/${req.params.listingId}?ref=${req.params.refToken}`
+    : `/comprar?ref=${req.params.refToken}`),
+});
+app.get('/r/:refToken', _rRedirectLimiter, (req, res) => {
   _logShortLinkClick(req, req.params.refToken, null);
   res.redirect(`/comprar?ref=${req.params.refToken}`);
 });
-app.get('/r/:refToken/:listingId', (req, res) => {
+app.get('/r/:refToken/:listingId', _rRedirectLimiter, (req, res) => {
   _logShortLinkClick(req, req.params.refToken, req.params.listingId);
   res.redirect(`/listing/${req.params.listingId}?ref=${req.params.refToken}`);
 });

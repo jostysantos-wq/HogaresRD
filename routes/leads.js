@@ -1,6 +1,7 @@
 const express  = require('express');
 const crypto   = require('crypto');
 const store    = require('./store');
+const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
 
 const router     = express.Router();
 const { adminSessionAuth } = require('./admin-auth');
@@ -52,21 +53,34 @@ router.post('/', leadLimiter, (req, res) => {
     updated_at:    new Date().toISOString()
   };
 
-  // Resolve referring agent or org (inmobiliaria/constructora)
+  // Resolve referring agent or org (inmobiliaria/constructora).
+  //
+  // Routing policy mirrors the application flow (Option B): only an
+  // affiliated referrer can take direct assignment / org-scoped cascade.
+  // An outside agent's general ref link DOES record `referred_by` for
+  // analytics, but the lead falls through to normal cascade so the
+  // listing's actual broker gets it. This prevents lead theft via
+  // generic affiliate links on listings the referrer doesn't own.
   let refUser = null;
   let orgScope = null;
+  let refAffiliated = false;
   if (lead.ref_token) {
     refUser = store.getUserByRefToken(lead.ref_token);
     if (refUser) {
       lead.referred_by = refUser.id;
-      // Direct agent ref → lead is already assigned, mark as en_proceso
-      if (['agency', 'broker'].includes(refUser.role)) {
+      const refRole  = (refUser.role || '').toLowerCase();
+      const listing  = store.getListingById(lead.listing_id);
+      refAffiliated  = listing ? isReferrerAffiliatedWithListing(refUser, listing) : false;
+      if (refAffiliated && ['agency', 'broker'].includes(refRole)) {
+        // Affiliated individual broker → direct assign, skip cascade.
         lead.status = 'en_proceso';
-      }
-      // Org links cascade within team; broker links skip cascade entirely
-      if (['inmobiliaria', 'constructora'].includes(refUser.role)) {
+      } else if (refAffiliated && ['inmobiliaria', 'constructora'].includes(refRole)) {
+        // Affiliated org → cascade scoped to that org's team.
         orgScope = refUser.id;
       }
+      // Non-affiliated referrer falls through: `referred_by` stays
+      // recorded for the agent's analytics, but cascade dispatches
+      // normally so the listing's real team gets the inquiry.
     }
   }
 
@@ -81,12 +95,12 @@ router.post('/', leadLimiter, (req, res) => {
   res.status(201).json({ ok: true, id: lead.id });
 
   // Start cascade if enabled
-  // - Broker ref → skip cascade (direct assign via referred_by)
-  // - Inmobiliaria ref → cascade scoped to that org's team
-  // - No ref → normal cascade
+  // - Affiliated broker ref → skip cascade (direct assign via referred_by)
+  // - Affiliated inmobiliaria ref → cascade scoped to that org's team
+  // - Outside ref OR no ref → normal cascade
   const cascadeEngine = require('./cascade-engine');
-  const isBrokerRef = refUser && ['agency', 'broker'].includes(refUser.role);
-  if (cascadeEngine.isEnabled() && !isBrokerRef && lead.listing_id) {
+  const skipCascade = refAffiliated && refUser && ['agency', 'broker'].includes((refUser.role || '').toLowerCase());
+  if (cascadeEngine.isEnabled() && !skipCascade && lead.listing_id) {
     cascadeEngine.startCascade('lead', lead.id, lead.listing_id, {
       name: lead.name || '', phone: lead.phone || '', email: lead.email || '',
     }, orgScope);

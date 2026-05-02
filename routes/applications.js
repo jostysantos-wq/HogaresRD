@@ -1137,7 +1137,12 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
   let referralPayee = null;          // set when referrer gets a FEE instead of direct assignment
   if (earlyRefToken) {
     const refUser = store.getUserByRefToken(earlyRefToken);
-    if (refUser) {
+    // Block self-referral: a logged-in user can't earn a referral fee
+    // (or direct routing) on their own application. Combined with the
+    // inmobiliaria mark-paid permission, this would otherwise allow an
+    // org to "settle" a referral fee back to itself with no money moved.
+    const isSelfRef = refUser && req.user?.sub && String(refUser.id) === String(req.user.sub);
+    if (refUser && !isSelfRef) {
       const refRole = (refUser.role || '').toLowerCase();
       const affiliated = isReferrerAffiliatedWithListing(refUser, listing);
       if (affiliated && ['agency', 'broker'].includes(refRole)) {
@@ -4533,13 +4538,27 @@ router.post('/:id/referral/mark-paid', userAuth, (req, res) => {
   }
   const isBroker = app.broker?.user_id === req.user.sub;
   const isAdmin  = user.role === 'admin';
-  // Inmobiliaria/constructora owner may also mark paid for a deal in
-  // their org — covers the case where a sub-broker has churned and the
-  // org itself is settling outstanding referral fees centrally.
+  // The application snapshots inmobiliaria_id at creation time, so a
+  // legacy app from a since-departed broker still references their
+  // OLD org. To prevent that org from silently flipping referral_paid
+  // on stale apps after the broker has moved on, also require the
+  // assigned broker to currently belong to the same org.
+  const brokerUser = app.broker?.user_id ? store.getUserById(app.broker.user_id) : null;
+  const sameOrg = brokerUser?.inmobiliaria_id && app.inmobiliaria_id
+                && String(brokerUser.inmobiliaria_id) === String(app.inmobiliaria_id);
+  // Inmobiliaria/constructora owner OR their secretary may mark paid
+  // for a deal in their org — covers the case where a sub-broker has
+  // churned and the org settles referral fees centrally.
   const isInmOwner = ['inmobiliaria', 'constructora'].includes(user.role)
-                  && app.inmobiliaria_id === user.id;
-  if (!isBroker && !isAdmin && !isInmOwner) {
-    return res.status(403).json({ error: 'Solo el agente asignado o la inmobiliaria pueden marcar la comisión de referido como pagada.' });
+                  && app.inmobiliaria_id === user.id
+                  && sameOrg;
+  const isOrgSecretary = user.role === 'secretary'
+                  && user.inmobiliaria_id
+                  && app.inmobiliaria_id
+                  && String(user.inmobiliaria_id) === String(app.inmobiliaria_id)
+                  && sameOrg;
+  if (!isBroker && !isAdmin && !isInmOwner && !isOrgSecretary) {
+    return res.status(403).json({ error: 'Solo el agente asignado, la inmobiliaria de su equipo actual o la secretaria pueden marcar la comisión de referido como pagada.' });
   }
   if (app.referral_paid) {
     return res.json({ success: true, already_paid: true, paid_at: app.referral_paid_at });
