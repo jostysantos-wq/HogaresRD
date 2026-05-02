@@ -3,6 +3,20 @@ const crypto   = require('crypto');
 const store    = require('./store');
 const { isReferrerAffiliatedWithListing } = require('../utils/affiliation');
 
+// Short-window dedup: a double-click on the inquiry form would otherwise
+// create two leads, fire two cascades, and pop two notifications for the
+// same agents. Key on (listing_id, phone, 60s) — the same shape
+// applications use. In-memory is fine for our PM2 fork-mode topology
+// since all requests hit the same process.
+const _recentLeadKeys = new Map(); // key → expiresAt ms
+function _claimLeadKey(key) {
+  const now = Date.now();
+  for (const [k, exp] of _recentLeadKeys) if (exp <= now) _recentLeadKeys.delete(k);
+  if (_recentLeadKeys.has(key)) return false;
+  _recentLeadKeys.set(key, now + 60 * 1000);
+  return true;
+}
+
 const router     = express.Router();
 const { adminSessionAuth } = require('./admin-auth');
 
@@ -27,6 +41,13 @@ router.post('/', leadLimiter, (req, res) => {
 
   if (!name || !phone || !listing_id) {
     return res.status(400).json({ error: 'name, phone y listing_id son requeridos' });
+  }
+
+  // Dedup a double-click: same listing + same phone within 60s gets
+  // the same response shape as the original, no second cascade.
+  const dedupKey = `${listing_id}|${String(phone).trim().toLowerCase()}`;
+  if (!_claimLeadKey(dedupKey)) {
+    return res.status(202).json({ ok: true, duplicate: true, accepted: true });
   }
 
   const lead = {

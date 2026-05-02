@@ -273,8 +273,23 @@ router.post('/leave', userAuth, brokerAuth, async (req, res) => {
 // and rewrite the broker block + emit a `broker_reassigned` timeline
 // event. Closed apps (rechazado/completado) are left untouched.
 async function reassignBrokerApplications(fromUserId, toUserId, reason) {
-  const target = store.getUserById(toUserId);
+  let target = store.getUserById(toUserId);
   if (!target) return;
+  // If the chosen target's subscription has lapsed, fall back to the
+  // inmobiliaria owner so the apps don't land on someone who can't
+  // act on them. (Every broker-side endpoint is subscription-gated.)
+  // If the org owner ALSO has an inactive subscription, leave the apps
+  // unassigned and surface them to admin via /admin/orphaned-leads.
+  const { isSubscriptionActive } = require('../utils/subscription-gate');
+  if (!isSubscriptionActive(target) && target.inmobiliaria_id) {
+    const owner = store.getUserById(target.inmobiliaria_id);
+    if (owner && isSubscriptionActive(owner)) {
+      target = owner;
+    } else {
+      target = null;
+    }
+  }
+  if (!target) return; // no subscribed target — leave open apps for admin to triage
 
   const apps = (typeof store.getApplicationsByBroker === 'function'
     ? store.getApplicationsByBroker(fromUserId)

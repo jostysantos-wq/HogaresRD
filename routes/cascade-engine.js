@@ -213,17 +213,31 @@ function notifyAgents(agentIds, item, listing, tierNum) {
   const tierLabels = { 1: 'Exclusiva', 2: 'Prioritaria', 3: 'Abierta' };
   const tierLabel = tierLabels[tierNum] || '';
 
+  // Tier-3 ("Abierta") fans the lead out to a wider affiliate pool that
+  // hasn't been pre-vetted by the listing's primary team. Truncate the
+  // buyer's name to first-name only on push notifications and in the
+  // payload, matching the same minimization the lead-queue API applies.
+  // Once an agent CLAIMS the lead, they get the full name via the
+  // detail endpoint; until then it's first-name + ellipsis.
+  const truncate = (name) => {
+    if (!name) return 'Un cliente';
+    if (tierNum < 3) return name;
+    const first = String(name).trim().split(/\s+/)[0] || 'Un cliente';
+    return `${first}…`;
+  };
+  const displayName = truncate(item.buyer_name);
+
   for (const userId of agentIds) {
     push.notify(userId, {
       title: `🏠 Nueva consulta — ${tierLabel}`,
-      body: `${item.buyer_name || 'Un cliente'} está interesado en "${listing.title || 'una propiedad'}". ${isMarketOpen() ? `Tienes ${Math.round((TIER_WINDOWS[tierNum] || TIER_WINDOWS[3]) / 60_000)} minutos para responder.` : 'Responde cuando abras — el timer inicia a las 8 AM.'}`,
+      body: `${displayName} está interesado en "${listing.title || 'una propiedad'}". ${isMarketOpen() ? `Tienes ${Math.round((TIER_WINDOWS[tierNum] || TIER_WINDOWS[3]) / 60_000)} minutos para responder.` : 'Responde cuando abras — el timer inicia a las 8 AM.'}`,
       url: '/broker#lead-queue',
       type: 'lead_cascade',
       data: {
         leadQueueId: item.id,
         listingId: listing.id,
         tier: tierNum,
-        buyerName: item.buyer_name,
+        buyerName: displayName,
       },
     }).catch(() => {});
   }

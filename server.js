@@ -1839,6 +1839,30 @@ app.put('/admin/applications/:id/reassign', adminSessionAuth, (req, res) => {
     return res.status(400).json({ error: 'El usuario seleccionado no es un agente/inmobiliaria' });
   }
 
+  const { isSubscriptionActive } = require('./utils/subscription-gate');
+  const { isReferrerAffiliatedWithListing } = require('./utils/affiliation');
+  // Subscription gate: refuse to assign to a broker whose plan has lapsed —
+  // every broker-side endpoint is subscription-gated, so the app would
+  // freeze on their dashboard. Force admin to choose another or use ?force=1
+  // to acknowledge.
+  if (!isSubscriptionActive(newBroker) && req.query.force !== '1') {
+    return res.status(400).json({
+      error: 'El agente seleccionado no tiene suscripcion activa. Usa ?force=1 para asignar de todas formas.',
+      code:  'broker_subscription_inactive',
+    });
+  }
+  // Affiliation gate: even an admin shouldn't accidentally hand a lead
+  // to an agent unrelated to the listing — that's the lead-theft surface
+  // the affiliation predicate exists to close. Pass ?force=1 to override
+  // when there's a legitimate cross-agency reason.
+  const listing = app_.listing_id ? store.getListingById(app_.listing_id) : null;
+  if (listing && !isReferrerAffiliatedWithListing(newBroker, listing) && req.query.force !== '1') {
+    return res.status(400).json({
+      error: 'El agente seleccionado no esta asociado a esta propiedad. Usa ?force=1 para asignar de todas formas.',
+      code:  'broker_not_affiliated',
+    });
+  }
+
   const oldBroker = { ...(app_.broker || {}) };
   app_.broker = {
     user_id:     newBroker.id,

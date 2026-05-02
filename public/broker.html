@@ -9341,14 +9341,19 @@
 
     const btn = document.getElementById('commSubmitBtn');
     btn.disabled = true; btn.textContent = 'Guardando…';
+    // Capture the modal's app + mode at submit time. If the user closes
+    // this modal and opens another for a different app before this PUT/POST
+    // resolves, the response shouldn't mutate the new modal's UI.
+    const localAppId = commCurrentAppId;
+    const localMode  = commCurrentMode;
 
     try {
-      if (commCurrentMode === 'review') {
+      if (localMode === 'review') {
         // Inmobiliaria reviewing — decide if they changed anything.
         // Forward referral_acknowledged so the server can re-stamp the
         // ack when the adjusted referral fee goes UP. Without it, every
         // legitimate raise lands in the `referral_ack_required` 400.
-        await API(`/api/applications/${commCurrentAppId}/commission/review`, {
+        await API(`/api/applications/${localAppId}/commission/review`, {
           method: 'PUT',
           body:   {
             action: 'adjust',
@@ -9362,7 +9367,7 @@
         });
         toast('Comisión aprobada y ajustada');
       } else {
-        await API(`/api/applications/${commCurrentAppId}/commission`, {
+        await API(`/api/applications/${localAppId}/commission`, {
           method: 'POST',
           body:   {
             sale_amount:          sale,
@@ -9375,19 +9380,25 @@
         });
         toast('Comisión registrada y enviada a aprobación');
       }
-      closeCommissionModal();
+      // Only mutate global UI if the modal is still pointing at the same app.
+      if (commCurrentAppId === localAppId) closeCommissionModal();
       loadAccounting();
-      // If the detail panel is open for this app, refresh it
-      if (currentApp && (currentApp._id || currentApp.id) === commCurrentAppId) {
-        const data = await API(`/api/applications/${commCurrentAppId}`);
+      // If the detail panel is open for THIS app (not a different one we've
+      // since navigated to), refresh it.
+      if (currentApp && (currentApp._id || currentApp.id) === localAppId) {
+        const data = await API(`/api/applications/${localAppId}`);
         currentApp = data.application || data;
         renderDetail();
       }
     } catch (e) {
-      errEl.textContent = e.message || 'Error al guardar';
+      // Only surface the error if the user is still looking at this modal.
+      if (commCurrentAppId === localAppId) errEl.textContent = e.message || 'Error al guardar';
     } finally {
-      btn.disabled = false;
-      btn.textContent = commCurrentMode === 'review' ? 'Aprobar / Ajustar' : 'Registrar comisión';
+      // Only reset the button if it still belongs to the same modal/mode.
+      if (commCurrentAppId === localAppId) {
+        btn.disabled = false;
+        btn.textContent = localMode === 'review' ? 'Aprobar / Ajustar' : 'Registrar comisión';
+      }
     }
   };
 

@@ -683,6 +683,9 @@ async function deleteUserCascade(userId) {
   // can't rebuild the assigned-to view. We preserve cached display names
   // (referral_payee_name, broker.name) for audit-trail readability but
   // null the FK so future code never tries to resolve a ghost user.
+  // Admin's /admin/orphaned-leads endpoint live-detects null broker.user_id,
+  // so no separate orphan flag is needed (and prior round-3 flags were
+  // unread dead data).
   let referralOrphans = 0;
   let brokerOrphans   = 0;
   for (const raw of _applications) {
@@ -691,7 +694,6 @@ async function deleteUserCascade(userId) {
     let touched = false;
     if (app.referral_payee_id === userId) {
       app.referral_payee_id = null;
-      app.referral_payee_orphaned = true; // flag for the broker UI
       touched = true;
       referralOrphans++;
     }
@@ -705,7 +707,6 @@ async function deleteUserCascade(userId) {
     }
     if (app.broker && app.broker.user_id === userId) {
       app.broker.user_id = null;
-      app.broker_orphaned = true; // surface to inmobiliaria for re-cascade
       touched = true;
       brokerOrphans++;
     }

@@ -2228,20 +2228,33 @@
       const appId = data.id;
       window._lastAppId = appId;
 
-      // Upload attached files sequentially to avoid hammering the server
-      for (const doc of toUpload) {
-        try {
-          const fd = new FormData();
-          fd.append('files', doc.file);
-          fd.append('type',  doc.type);
-          fd.append('label', doc.label);
-          await fetch(`/api/applications/${appId}/initial-upload`, {
-            method: 'POST',
-            body: fd,
-            credentials: 'include',
-          });
-        } catch (upErr) {
-          console.warn('[apply] upload failed', doc.type, upErr);
+      // Upload attached files sequentially to avoid hammering the server.
+      // Skip when the server returned 202 with id:null (a concurrent
+      // duplicate that hasn't materialized yet) — uploading to
+      // /api/applications/null/initial-upload would 404 and silently drop
+      // the user's files. Leave the docs locally and surface a hint on
+      // the success screen so the user can resume from their portal.
+      let _filesQueuedForResume = 0;
+      if (appId && !data.duplicate) {
+        for (const doc of toUpload) {
+          try {
+            const fd = new FormData();
+            fd.append('files', doc.file);
+            fd.append('type',  doc.type);
+            fd.append('label', doc.label);
+            await fetch(`/api/applications/${appId}/initial-upload`, {
+              method: 'POST',
+              body: fd,
+              credentials: 'include',
+            });
+          } catch (upErr) {
+            console.warn('[apply] upload failed', doc.type, upErr);
+          }
+        }
+      } else {
+        _filesQueuedForResume = toUpload.length;
+        if (_filesQueuedForResume > 0) {
+          console.warn('[apply] duplicate-accepted response — files not uploaded automatically; user must resume from portal');
         }
       }
 

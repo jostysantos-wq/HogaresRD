@@ -61,8 +61,8 @@ ${preheaderHtml}
       </td>
     </tr>
   </table>
-  <div style="margin-top:14px;font-size:1.35rem;font-weight:800;color:#fff;line-height:1.3;">${title}</div>
-  ${subtitle ? `<div style="margin-top:6px;font-size:0.88rem;color:rgba(255,255,255,0.7);">${subtitle}</div>` : ''}
+  <div style="margin-top:14px;font-size:1.35rem;font-weight:800;color:#fff;line-height:1.3;">${esc(title)}</div>
+  ${subtitle ? `<div style="margin-top:6px;font-size:0.88rem;color:rgba(255,255,255,0.7);">${esc(subtitle)}</div>` : ''}
 </td></tr>
 
 <!-- Body -->
