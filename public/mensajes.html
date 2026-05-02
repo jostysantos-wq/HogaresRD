@@ -475,6 +475,18 @@
   }
   .composer-send:disabled { opacity: 0.55; cursor: not-allowed; }
   .composer-send svg { width: 13px; height: 13px; }
+  .composer-applylink {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 12px; border-radius: 12px;
+    background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .composer-applylink:hover { background: var(--line-soft); }
+  .composer-applylink svg { width: 14px; height: 14px; }
+  .msg-link { color: inherit; text-decoration: underline; word-break: break-all; }
+  .msg.them .msg-link { color: var(--accent); }
+  .msg.me .msg-link { color: #fff; text-decoration-color: rgba(255,255,255,0.7); }
   .composer-send .spinner {
     width: 13px; height: 13px;
     border: 2px solid rgba(255,255,255,0.32);
@@ -897,6 +909,26 @@
 
 // ── HELPERS ─────────────────────────────────────────────────
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Convert URLs in user-typed text into clickable links. Escapes the
+// surrounding text first so untrusted content can't break out of the
+// anchor — we only insert <a> tags around our own validated href.
+function linkify(text) {
+  const s = String(text ?? '');
+  const re = /\bhttps?:\/\/[^\s<>"']+/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(s)) !== null) {
+    out += escapeHtml(s.slice(last, m.index));
+    let url = m[0];
+    // Trim trailing punctuation so "(see https://x.com)." doesn't include the period
+    let trail = '';
+    while (/[).,;!?]$/.test(url)) { trail = url.slice(-1) + trail; url = url.slice(0, -1); }
+    out += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="msg-link">${escapeHtml(url)}</a>`;
+    out += escapeHtml(trail);
+    last = m.index + m[0].length;
+  }
+  out += escapeHtml(s.slice(last));
+  return out;
+}
 const initials = (name = '') => (name || '').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 const avClass = (id = '') => {
   const s = String(id || '');
@@ -1120,7 +1152,7 @@ function renderThread() {
     if (isSystem) {
       return `${dayDivider}<div class="msg system">${escapeHtml(m.text || '')}</div>`;
     }
-    return `${dayDivider}<div class="msg ${isMine ? 'me' : 'them'}">${escapeHtml(m.text || '')}<span class="msg-time">${escapeHtml(timeOnly(m.timestamp))}</span></div>`;
+    return `${dayDivider}<div class="msg ${isMine ? 'me' : 'them'}">${linkify(m.text || '')}<span class="msg-time">${escapeHtml(timeOnly(m.timestamp))}</span></div>`;
   }).join('');
 
   const propertyLink = c.propertyId ? `/listing.html?id=${encodeURIComponent(c.propertyId)}` : null;
@@ -1136,8 +1168,21 @@ function renderThread() {
   } else if (closed) {
     footerHtml = `<div class="composer-locked">Esta conversación está cerrada. Reábrela para enviar mensajes.</div>`;
   } else {
+    // Show "Insert apply link" only for brokers/agents who have a refToken
+    // and only when the conversation is tied to a listing. Clicking it
+    // drops `/listing.html?id=…&ref=<my-token>` into the composer so the
+    // agent can wrap a personal note around it before sending.
+    const myRole = (state.me?.role || '').toLowerCase();
+    const isProAgent = ['broker','agency','inmobiliaria','constructora','secretary'].includes(myRole);
+    const refTok = state.me?.refToken || '';
+    const canShareApply = isProAgent && refTok && c.propertyId;
     footerHtml = `
       <div class="composer">
+        ${canShareApply ? `
+          <button class="composer-applylink" id="applyLinkBtn" type="button" title="Insertar enlace para aplicar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 14 11 16 15 12"/></svg>
+            <span>Aplicar</span>
+          </button>` : ''}
         <textarea id="composerText" rows="1" placeholder="Escribe un mensaje…"></textarea>
         <button class="composer-send" id="sendBtn">
           <span id="sendIcon">${ICON.send}</span>
@@ -1203,6 +1248,26 @@ function renderThread() {
       }
     });
     send.addEventListener('click', sendMessage);
+  }
+
+  const applyBtn = document.getElementById('applyLinkBtn');
+  if (applyBtn && textarea && c.propertyId && state.me?.refToken) {
+    applyBtn.addEventListener('click', () => {
+      const url = `${location.origin}/listing.html?id=${encodeURIComponent(c.propertyId)}&ref=${encodeURIComponent(state.me.refToken)}`;
+      const intro = `Cuando estés listo, puedes aplicar para "${c.propertyTitle || 'esta propiedad'}" aquí:`;
+      const cur = textarea.value.trim();
+      // Don't double-insert if the same URL is already in the composer
+      if (cur.includes(url)) {
+        textarea.focus();
+        return;
+      }
+      textarea.value = (cur ? cur + '\n\n' : '') + intro + '\n' + url;
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 140) + 'px';
+      textarea.focus();
+      // Position cursor at the end so the agent can keep typing if they want
+      textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+    });
   }
 
   const claimBtn = document.getElementById('claimBtn');

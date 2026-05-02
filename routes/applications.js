@@ -1173,12 +1173,41 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     }
   }
 
+  // Layer A — conversation-aware routing. If the client has no explicit
+  // ref token but has an active conversation with an agent on this same
+  // listing, honor that relationship: the application goes to the agent
+  // who has been talking to them, NOT through cascade. This closes the
+  // gap where a client chats with Agent A then applies and lands with
+  // Agent B by accident. Only triggers when:
+  //   - no ref_token routing decision was made above
+  //   - the client is logged in (we need their user id to look up convos)
+  //   - we can find ONE conversation with a claimed broker on this
+  //     listing (if there are multiple, pick the most recently updated)
+  let conversationBroker = null;
+  if (!referredByAgent && !referredByInmobiliaria && req.user?.sub && listing_id) {
+    try {
+      const myConvos = (store.getConversationsByClient(req.user.sub) || [])
+        .filter(c => c && c.propertyId === listing_id && c.brokerId);
+      if (myConvos.length > 0) {
+        myConvos.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        const candidate = store.getUserById(myConvos[0].brokerId);
+        if (candidate && isSubscriptionActive(candidate)) {
+          conversationBroker = candidate;
+        }
+      }
+    } catch (_) { /* ignore — falls through to cascade */ }
+  }
+
   // Cascade decision:
   // - Broker ref → no cascade (direct assign)
   // - Inmobiliaria ref → cascade scoped to that org's team
+  // - Conversation broker → no cascade (already in a relationship)
   // - No ref → normal cascade among listing agencies
   const cascadeEngine = require('./cascade-engine');
-  const useCascade = cascadeEngine.isEnabled() && (agencies.length > 0 || referredByInmobiliaria) && !referredByAgent;
+  const useCascade = cascadeEngine.isEnabled()
+    && (agencies.length > 0 || referredByInmobiliaria)
+    && !referredByAgent
+    && !conversationBroker;
 
   // Helper: try to resolve an agency contact to a registered user
   // so we can populate broker.user_id. Listings with agency cards
@@ -1236,6 +1265,16 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
       console.warn(`[applications] Referred agent ${referredByAgent.id} has inactive subscription — skipping direct assignment`);
       referredByAgent = null; // clear so cascade/fallback activates
     }
+  } else if (conversationBroker) {
+    // Layer A — client has been chatting with this broker on this listing.
+    // Honor the existing relationship over cascade.
+    broker = {
+      user_id:     conversationBroker.id,
+      name:        conversationBroker.name || '',
+      agency_name: conversationBroker.inmobiliaria_name || '',
+      email:       conversationBroker.email || '',
+      phone:       conversationBroker.phone || '',
+    };
   } else if (referredByInmobiliaria) {
     // Inmobiliaria affiliate link → leave broker unassigned, cascade within team
     broker = { user_id: null, name: 'Pendiente de asignación', agency_name: referredByInmobiliaria.name || '', email: '', phone: '' };
@@ -1441,6 +1480,12 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
       `Lead referido por ${app.referral_payee_name}. La comisión incluirá una cuota de referido.`,
       'system', 'Sistema',
       { referral_payee_id: referralPayee.id });
+  }
+  if (conversationBroker) {
+    addEvent(app, 'routed_from_conversation',
+      `Asignación directa a ${conversationBroker.name || 'el agente'} por conversación previa con el cliente.`,
+      'system', 'Sistema',
+      { broker_id: conversationBroker.id });
   }
 
   addEvent(app, 'status_change', 'Aplicación recibida', 'system', 'Sistema',
