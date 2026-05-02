@@ -1302,6 +1302,16 @@ load().catch(err => {
       // Show "Perfil de Empresa" only for org-level roles
       const isOrg = ['inmobiliaria', 'constructora', 'admin'].includes((u.role || '').toLowerCase());
       if (empresaEl && isOrg) empresaEl.hidden = false;
+
+      // Reveal the EQUIPO sidebar section for team-lead roles. The sidebar
+      // markup ships hidden by default so it never flashes for solo brokers
+      // or end users; only org-level accounts (inmobiliaria/constructora/admin)
+      // see it. Each .sb-team-only link + the section label flip together.
+      if (isOrg) {
+        const teamLabel = document.getElementById('sbTeamLabel');
+        if (teamLabel) teamLabel.hidden = false;
+        document.querySelectorAll('.sb-team-only').forEach(el => { el.hidden = false; });
+      }
       // Avatar initials
       if (avatarBtn && u.name) {
         const initials = u.name.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
