@@ -57,7 +57,7 @@ Vanilla JS + HTML. Translations in `/public/locales/` (Spanish-first / Dominican
 | `ADMIN_KEY` | Admin panel access |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Payments |
-| `STRIPE_BROKER_PRICE_ID`, `STRIPE_INM_PRICE_ID` | Subscription price IDs |
+| `STRIPE_BROKER_PRICE_ID`, `STRIPE_INM_PRICE_ID`, `STRIPE_CONSTRUCTORA_PRICE_ID` | Subscription price IDs (Broker $10, Inmobiliaria/Constructora $25) |
 | `EMAIL_USER` / `EMAIL_PASS` | Gmail SMTP (App Password) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web push (auto-generated if missing) |
 | `TWILIO_*` | SMS 2FA |

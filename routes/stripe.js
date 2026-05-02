@@ -9,9 +9,14 @@ const store   = require('./store');
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const stripe    = stripeKey ? require('stripe')(stripeKey) : null;
 
-const BROKER_PRICE_ID = process.env.STRIPE_BROKER_PRICE_ID;   // $10/month
-const INM_PRICE_ID    = process.env.STRIPE_INM_PRICE_ID;       // $25/month
-const WEBHOOK_SECRET  = process.env.STRIPE_WEBHOOK_SECRET;
+const BROKER_PRICE_ID        = process.env.STRIPE_BROKER_PRICE_ID;       // $10/month
+const INM_PRICE_ID           = process.env.STRIPE_INM_PRICE_ID;           // $25/month
+// Constructora has the same $25/mo price as Inmobiliaria but is tracked
+// against its own Stripe Price so revenue/MRR can be split by segment.
+// Falls back to INM_PRICE_ID if the dedicated env var isn't set yet (e.g.
+// dev environments or staged rollout) so the role doesn't break.
+const CONSTRUCTORA_PRICE_ID  = process.env.STRIPE_CONSTRUCTORA_PRICE_ID || INM_PRICE_ID;
+const WEBHOOK_SECRET         = process.env.STRIPE_WEBHOOK_SECRET;
 const BASE_URL        = process.env.BASE_URL || 'http://localhost:3000';
 
 const cookieParser    = require('cookie-parser');
@@ -45,7 +50,8 @@ function requireStripe(req, res, next) {
 // ── Price ID by role ──────────────────────────────────────────────────────
 function priceForRole(role) {
   if (role === 'agency' || role === 'broker') return BROKER_PRICE_ID;
-  if (role === 'inmobiliaria' || role === 'constructora') return INM_PRICE_ID;
+  if (role === 'inmobiliaria') return INM_PRICE_ID;
+  if (role === 'constructora') return CONSTRUCTORA_PRICE_ID;
   return null;
 }
 
@@ -154,7 +160,9 @@ router.get('/status', requireAuth, (req, res) => {
     canAccessDashboard,
     paywallRequired,
     isLegacyTrial,
-    planName:             (user.role === 'inmobiliaria' || user.role === 'constructora') ? (user.role === 'constructora' ? 'Constructora ($35/mes)' : 'Inmobiliaria ($25/mes)') : 'Agente ($10/mes)',
+    planName:             user.role === 'constructora' ? 'Constructora ($25/mes)'
+                          : user.role === 'inmobiliaria' ? 'Inmobiliaria ($25/mes)'
+                          : 'Agente ($10/mes)',
     hasPaymentMethod:     !!user.stripeSubscriptionId,
     subscriptionRenewsAt: user.subscriptionRenewsAt || null,
   });
