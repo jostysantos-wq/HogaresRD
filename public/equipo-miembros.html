@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>HogaresRD — Miembros del equipo</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/icons/favicon.ico">
+<style>
+  :root {
+    --bg:#F4F1EA; --bg-card:#FFFFFF; --bg-soft:#FBF6EE;
+    --ink:#14110F; --ink-soft:#4a4540; --ink-mute:#8a857f;
+    --line:#E6E0D3; --line-soft:#EFEAE0;
+    --sans:'Inter',-apple-system,sans-serif; --serif:'Cormorant Garamond',Georgia,serif;
+    --accent:#b54c30; --accent-soft:#f2d9d0; --teal:#2e8b8b; --teal-soft:#cfe7e3;
+    --gold:#d4a64a; --gold-soft:#f3e3c1; --plum:#6c4f8a; --plum-soft:#ddd2eb;
+    --r-card:18px; --r-pill:999px;
+    --lvl1:#94a3b8; --lvl2:#d4a64a; --lvl3:#6c4f8a;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 14px; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea { font-family: inherit; }
+
+  .app { display: grid; grid-template-columns: 248px 1fr; gap: 18px; padding: 18px; min-height: 100vh; }
+  .sidebar { background: var(--bg-card); border-radius: var(--r-card); padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 18px; height: calc(100vh - 36px); }
+  .sb-brand { display: flex; align-items: center; padding: 0 6px; }
+  .sb-logo { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .sb-logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); display: grid; place-items: center; }
+  .sb-logo-mark svg { width: 17px; height: 17px; }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+  .sb-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; font-weight: 500; transition: background .15s, color .15s; position: relative; }
+  .sb-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-link:hover { background: var(--bg-soft); color: var(--ink); }
+  .sb-link.active { background: var(--ink); color: #fff; }
+  .sb-section-label { padding: 18px 12px 6px; font-size: 10.5px; font-weight: 600; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; }
+  .sb-team-only[hidden], .sb-team-label[hidden] { display: none !important; }
+  .sb-badge { margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px; background: var(--accent); color: #fff; border-radius: 9px; font-size: 10.5px; font-weight: 700; display: inline-grid; place-items: center; }
+  .sb-link.active .sb-badge { background: #fff; color: var(--ink); }
+  .sb-cta { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 14px; padding: 16px; display: block; }
+  .sb-cta-eyebrow { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+  .sb-cta-title { font-family: var(--serif); font-size: 18px; font-weight: 600; line-height: 1.15; margin-bottom: 8px; }
+  .sb-cta-title em { font-style: italic; color: var(--accent); }
+  .sb-cta-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.45; margin-bottom: 12px; }
+  .sb-cta-row { display: flex; gap: 6px; }
+  .sb-cta-btn { flex: 1; padding: 7px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #fff; border: 1px solid var(--line); color: var(--ink); cursor: pointer; text-align: center; }
+  .sb-cta-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .topbar { background: var(--bg-card); border-radius: var(--r-card); padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tb-search { display: flex; align-items: center; gap: 8px; background: var(--bg-soft); border-radius: var(--r-pill); padding: 8px 14px; flex: 1; max-width: 380px; }
+  .tb-search svg { width: 14px; height: 14px; color: var(--ink-mute); }
+  .tb-search input { border: none; background: transparent; outline: none; color: var(--ink); font-size: 13px; flex: 1; }
+  .tb-divider { width: 1px; height: 22px; background: var(--line); }
+  .tb-ai { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--ink); }
+  .tb-ai-dot { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); display: grid; place-items: center; }
+  .tb-ai-dot svg { width: 12px; height: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .tb-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-soft); position: relative; cursor: pointer; }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-icon-dot { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-card); }
+  .tb-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #B8A07E, #6E5847); border: 2px solid var(--bg-card); cursor: pointer; }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .page-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+  .page-title { font-family: var(--serif); font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
+  .page-actions { display: flex; gap: 8px; align-items: center; }
+
+  .ph-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .ph-pill svg { width: 13px; height: 13px; }
+  .ph-pill:hover { background: var(--bg-soft); }
+
+  /* KPI strip */
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .kpi { background: var(--bg-card); border-radius: var(--r-card); padding: 18px 20px; position: relative; overflow: hidden; min-height: 110px; }
+  .kpi-num { font-family: var(--serif); font-size: 32px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+  .kpi-label { color: var(--ink-mute); font-size: 12px; margin-top: 8px; }
+  .kpi-icon { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-mute); }
+  .kpi-icon svg { width: 14px; height: 14px; }
+  .kpi.accent .kpi-num { color: var(--accent); }
+
+  /* Invite + search */
+  .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
+  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
+
+  .invite-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--bg-card); border: 1px dashed var(--line);
+    border-radius: var(--r-card); padding: 14px 18px;
+  }
+  .invite-bar-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--gold-soft); color: #a47615;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .invite-bar-icon svg { width: 16px; height: 16px; }
+  .invite-bar-text { font-size: 12.5px; color: var(--ink-soft); flex: 1; min-width: 200px; line-height: 1.5; }
+  .invite-bar-text strong { color: var(--ink); }
+  .invite-copy-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; border: none;
+    white-space: nowrap;
+  }
+  .invite-copy-btn:hover { background: #000; }
+  .invite-copy-btn svg { width: 13px; height: 13px; }
+
+  .search-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  .search-input {
+    flex: 1; padding: 11px 14px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13.5px; color: var(--ink); background: var(--bg-soft);
+  }
+  .search-input:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+
+  /* Member grid */
+  .mem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .mem-card {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px;
+    background: var(--bg-card); border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    transition: border-color .12s;
+  }
+  .mem-card:hover { border-color: var(--line); }
+  .mem-av {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .mem-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mem-text { min-width: 0; flex: 1; }
+  .mem-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+  .mem-name { font-weight: 600; font-size: 14.5px; color: var(--ink); line-height: 1.25; }
+  .mem-lvl-pill {
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: var(--r-pill); white-space: nowrap;
+  }
+  .mem-lvl-pill.lvl1 { background: rgba(148,163,184,0.15); color: var(--lvl1); }
+  .mem-lvl-pill.lvl2 { background: var(--gold-soft); color: #a47615; }
+  .mem-lvl-pill.lvl3 { background: var(--plum-soft); color: var(--plum); }
+  .mem-title { font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 2px; }
+  .mem-meta { font-size: 12px; color: var(--ink-mute); line-height: 1.5; }
+  .mem-meta.mute { color: var(--ink-mute); }
+  .mem-apps {
+    display: inline-block; margin-top: 8px;
+    font-size: 10.5px; font-weight: 600; padding: 3px 9px;
+    border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+  }
+
+  /* Dropdown menu on each card */
+  .mem-menu-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; border: none;
+    display: grid; place-items: center;
+    color: var(--ink-mute); cursor: pointer;
+    flex-shrink: 0; font-size: 18px; line-height: 0;
+  }
+  .mem-menu-btn:hover { background: var(--bg-soft); color: var(--ink); }
+  .mem-dropdown {
+    position: absolute; top: 50px; right: 16px;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 6px;
+    box-shadow: 0 12px 40px -8px rgba(20,17,15,0.18);
+    min-width: 200px; z-index: 50;
+    display: none;
+  }
+  .mem-dropdown.open { display: block; }
+  .mem-dropdown-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    color: var(--ink-soft); font-size: 13px; font-weight: 500;
+    text-align: left; background: none; border: none;
+    cursor: pointer; transition: background .12s, color .12s;
+  }
+  .mem-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .mem-dropdown-item:hover { background: var(--bg-soft); color: var(--ink); }
+  .mem-dropdown-item.danger { color: var(--accent); }
+  .mem-dropdown-item.danger:hover { background: rgba(181, 76, 48, 0.08); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-mute); font-size: 14px; line-height: 1.5; }
+  .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 16px; background: var(--bg-soft); border-radius: 50%; display: grid; place-items: center; color: var(--ink-mute); }
+  .empty-state-icon svg { width: 22px; height: 22px; }
+
+  /* Modal (shared between detail + role) */
+  .modal-bd {
+    position: fixed; inset: 0; background: rgba(20,18,14,0.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px;
+  }
+  .modal-bd.open { display: flex; }
+  .modal {
+    background: var(--bg-card); border-radius: var(--r-card);
+    width: 100%; max-width: 540px; max-height: calc(100vh - 40px);
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(20,18,14,0.18);
+  }
+  .modal-head {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .modal-head-av {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    color: #fff; font-size: 16px; font-weight: 700;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .modal-head-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .modal-head-text { flex: 1; min-width: 0; }
+  .modal-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 2px; }
+  .modal-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0; line-height: 1.4; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-mute); padding: 4px; border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--bg-soft); color: var(--ink); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: 18px 24px; overflow-y: auto; }
+  .modal-foot {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 14px 24px 18px;
+    border-top: 1px solid var(--line-soft);
+    flex-wrap: wrap;
+  }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .info-item {
+    background: var(--bg-soft); border-radius: 10px; padding: 10px 12px;
+  }
+  .info-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); margin-bottom: 4px; }
+  .info-value { font-size: 13.5px; color: var(--ink); font-weight: 500; }
+
+  .info-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin: 14px 0 8px; }
+  .recent-app-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 10px 12px;
+    background: var(--bg-soft); border-radius: 10px; margin-bottom: 6px;
+  }
+  .recent-app-title { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .recent-app-client { font-size: 11.5px; color: var(--ink-mute); margin-top: 1px; }
+  .recent-app-pill { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-pill); white-space: nowrap; }
+  .notes-textarea {
+    width: 100%; min-height: 80px; padding: 11px 13px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13px; color: var(--ink); background: var(--bg-soft);
+    resize: vertical; line-height: 1.5;
+  }
+  .notes-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+
+  .modal-btn-secondary {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--bg-soft); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .modal-btn-secondary:hover { background: var(--line-soft); }
+  .modal-btn-secondary svg { width: 13px; height: 13px; }
+  .modal-btn-primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; border: none;
+  }
+  .modal-btn-primary:hover { background: #000; }
+  .modal-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .modal-btn-danger {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: var(--r-pill);
+    background: var(--bg-soft); border: 1px solid var(--line);
+    color: var(--accent); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .modal-btn-danger:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .modal-btn-danger svg { width: 13px; height: 13px; }
+
+  /* Role assignment modal */
+  .role-input {
+    width: 100%; padding: 11px 13px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13.5px; color: var(--ink); background: var(--bg-soft);
+    margin-bottom: 18px;
+  }
+  .role-input:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+  .role-lvl-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .role-lvl-btn {
+    border: 1.5px solid var(--line); border-radius: 12px;
+    background: var(--bg-soft); padding: 14px 8px;
+    text-align: center; cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .role-lvl-num { font-family: var(--serif); font-size: 24px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+  .role-lvl-name { font-size: 11.5px; font-weight: 600; }
+  .role-lvl-btn[data-lvl="1"] .role-lvl-num,
+  .role-lvl-btn[data-lvl="1"] .role-lvl-name { color: var(--lvl1); }
+  .role-lvl-btn[data-lvl="2"] .role-lvl-num,
+  .role-lvl-btn[data-lvl="2"] .role-lvl-name { color: #a47615; }
+  .role-lvl-btn[data-lvl="3"] .role-lvl-num,
+  .role-lvl-btn[data-lvl="3"] .role-lvl-name { color: var(--plum); }
+  .role-lvl-btn.active[data-lvl="1"] { border-color: var(--lvl1); background: rgba(148,163,184,0.12); }
+  .role-lvl-btn.active[data-lvl="2"] { border-color: #d4a64a; background: var(--gold-soft); }
+  .role-lvl-btn.active[data-lvl="3"] { border-color: var(--plum); background: var(--plum-soft); }
+  .role-lvl-desc {
+    margin-top: 12px; font-size: 12px; color: var(--ink-mute); line-height: 1.5;
+    padding: 12px 14px; background: var(--bg-soft); border-radius: 10px;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff;
+    padding: 12px 22px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s; z-index: 1000;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast.error { background: var(--accent); }
+
+  /* Topbar account dropdown */
+  .tb-account-wrap { position: relative; display: inline-flex; gap: 10px; align-items: center; }
+  .tb-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 280px; background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px -8px rgba(20, 17, 15, 0.18), 0 2px 8px rgba(20,17,15,0.06); padding: 10px; z-index: 100; }
+  .tb-menu[hidden] { display: none; }
+  .tb-menu-head { padding: 12px 12px 14px; border-bottom: 1px solid var(--line-soft); margin-bottom: 8px; }
+  .tb-menu-name { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+  .tb-menu-email { font-size: 12px; color: var(--ink-mute); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tb-menu-role { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: var(--bg-soft); color: var(--ink-soft); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tb-menu-list { display: flex; flex-direction: column; gap: 1px; }
+  .tb-menu-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 8px; color: var(--ink-soft); font-size: 13px; font-weight: 500; text-align: left; background: none; border: none; cursor: pointer; width: 100%; transition: background .12s, color .12s; }
+  .tb-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--ink-mute); }
+  .tb-menu-item:hover { background: var(--bg-soft); color: var(--ink); }
+  .tb-menu-item:hover svg { color: var(--ink); }
+  .tb-menu-sep { height: 1px; background: var(--line-soft); margin: 6px 4px; }
+  .tb-menu-logout { color: var(--accent); }
+  .tb-menu-logout svg { color: var(--accent); }
+  .tb-menu-logout:hover { background: rgba(181, 76, 48, 0.08); color: var(--accent); }
+  .tb-menu-logout:hover svg { color: var(--accent); }
+</style>
+  <link rel="stylesheet" href="/css/dashboard-topbar.css?v=2">
+  <link rel="stylesheet" href="/css/ai-chat.css?v=2">
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <a href="/" class="sb-logo">
+        <span class="sb-logo-mark">
+          <svg viewBox="120 70 280 290" fill="none">
+            <line x1="154" y1="88" x2="154" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="358" y1="88" x2="358" y2="340" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="178" y1="244" x2="256" y2="190" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+            <line x1="256" y1="190" x2="334" y2="244" stroke="#fff" stroke-width="36" stroke-linecap="square"/>
+          </svg>
+        </span>
+        Hogares<span style="font-style:italic;color:var(--ink-mute);">RD</span>
+      </a>
+    </div>
+
+    <nav class="sb-nav" aria-label="Navegación principal">
+
+      <div class="sb-section-label">Principal</div>
+      <a href="/broker-dashboard.html" class="sb-link" data-nav="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span>Panel</span></a>
+      <a href="/mis-propiedades.html" class="sb-link" data-nav="mis-propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Mis Propiedades</span></a>
+      <a href="/aplicaciones.html" class="sb-link" data-nav="aplicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Aplicaciones</span></a>
+      <a href="/visitas.html" class="sb-link" data-nav="visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Visitas</span></a>
+      <a href="/comisiones.html" class="sb-link" data-nav="comisiones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><span>Comisiones</span></a>
+      <a href="/mensajes.html" class="sb-link" data-nav="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg><span>Mensajes</span></a>
+      <a href="/tareas" class="sb-link" data-nav="tareas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Tareas</span></a>
+      <a href="/notificaciones" class="sb-link" data-nav="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span>Notificaciones</span></a>
+
+      <div class="sb-section-label">Marketing</div>
+      <a href="/enlaces-de-referido.html" class="sb-link" data-nav="referidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><span>Enlaces de Referido</span></a>
+      <a href="/campanas.html" class="sb-link" data-nav="campanas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 01-5.8-1.6"/></svg><span>Campañas</span></a>
+
+      <div class="sb-section-label sb-team-label" id="sbTeamLabel" hidden>Equipo</div>
+      <a href="/equipo-miembros.html" class="sb-link sb-team-only active" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Miembros</span></a>
+      <a href="/equipo-solicitudes.html" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span></a>
+      <a href="/broker.html#tab-team-performance" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
+      <a href="/equipo-secretarias.html" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Secretarias</span></a>
+      <a href="/broker.html#tab-empresa" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
+      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
+
+      <div class="sb-section-label">Soporte</div>
+      <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Centro de Ayuda</span></a>
+
+    </nav>
+
+    <div class="sb-footer">
+      <a class="sb-cta" href="/post.html">
+        <div class="sb-cta-eyebrow">HogaresRD</div>
+        <div class="sb-cta-title">Publica una <em>propiedad</em></div>
+        <div class="sb-cta-desc">Llega a miles de compradores verificados.</div>
+        <div class="sb-cta-row">
+          <span class="sb-cta-btn primary">Publicar →</span>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="tb-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar agente…" id="topbarSearch">
+        </div>
+        <div class="tb-divider"></div>
+        <a class="tb-ai" href="/asistente">
+          <span class="tb-ai-dot"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg></span>
+          Asistente IA
+        </a>
+      </div>
+      <div class="topbar-right">
+        <a class="tb-icon" href="/notifications.html" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="tb-icon-dot" id="notifDot" hidden></span>
+        </a>
+        <div class="tb-account-wrap" id="tbAccountWrap">
+          <button class="tb-icon" id="tbSettingsBtn" aria-label="Configuración" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+          <button class="tb-avatar" id="tbAvatarBtn" aria-label="Mi cuenta" aria-haspopup="menu" aria-expanded="false"></button>
+          <div class="tb-menu" id="tbMenu" role="menu" hidden>
+            <div class="tb-menu-head">
+              <div class="tb-menu-name" id="tbMenuName">Cargando…</div>
+              <div class="tb-menu-email" id="tbMenuEmail"></div>
+              <span class="tb-menu-role" id="tbMenuRole"></span>
+            </div>
+            <div class="tb-menu-list">
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-perfil">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Mi Perfil
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/subscription">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                Mi Suscripción
+              </a>
+              <a role="menuitem" class="tb-menu-item" id="tbMenuEmpresa" href="/broker.html#tab-empresa" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/></svg>
+                Perfil de Empresa
+              </a>
+              <a role="menuitem" class="tb-menu-item" href="/broker.html#tab-2fa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+                Seguridad
+              </a>
+              <div class="tb-menu-sep"></div>
+              <button role="menuitem" class="tb-menu-item tb-menu-logout" id="tbMenuLogout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE HEAD -->
+    <div class="page-head">
+      <div class="page-head-left">
+        <div class="page-eyebrow">Equipo</div>
+        <h1 class="page-title">Miembros del <em>equipo</em></h1>
+        <p class="page-sub">Gestiona los agentes afiliados a tu empresa: revisa su actividad, asigna roles, restablece contraseñas o desvincula cuentas.</p>
+      </div>
+      <div class="page-actions">
+        <button class="ph-pill" id="exportTeamBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-row">
+      <div class="kpi accent">
+        <div class="kpi-num" id="kpiTeam">—</div>
+        <div class="kpi-label">Total de agentes</div>
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-num" id="kpiApps">—</div>
+        <div class="kpi-label">Aplicaciones totales del equipo</div>
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-num" id="kpiPending">—</div>
+        <div class="kpi-label">Solicitudes pendientes</div>
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      </div>
+    </div>
+
+    <!-- INVITE LINK -->
+    <div class="invite-bar">
+      <span class="invite-bar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></span>
+      <span class="invite-bar-text"><strong>Enlace de afiliación:</strong> compártelo con agentes para que soliciten unirse a tu empresa. Las solicitudes aparecerán en la pestaña <a href="/equipo-solicitudes.html" style="color:var(--accent);font-weight:600;">Solicitudes</a>.</span>
+      <button class="invite-copy-btn" type="button" id="inviteCopyBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copiar enlace
+      </button>
+    </div>
+
+    <!-- MEMBERS PANEL -->
+    <section class="panel">
+      <h2 class="panel-title">Agentes afiliados</h2>
+      <p class="panel-sub">Cada tarjeta muestra el rol, contacto y carga de aplicaciones. Usa el menú "···" para acciones por agente.</p>
+      <div class="search-row">
+        <input type="text" id="memSearch" class="search-input" placeholder="Buscar por nombre o correo…" autocomplete="off">
+      </div>
+      <div id="memList">
+        <div class="empty-state" id="memLoading">
+          <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          Cargando agentes…
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-bd" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="dmTitle">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal-head">
+      <span class="modal-head-av" id="dmAv"></span>
+      <div class="modal-head-text">
+        <h2 class="modal-title" id="dmTitle">—</h2>
+        <p class="modal-sub" id="dmMeta"></p>
+      </div>
+      <button class="modal-close" type="button" id="dmClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid" id="dmInfoGrid"></div>
+      <div class="info-section-label">Aplicaciones recientes</div>
+      <div id="dmAppsList"></div>
+      <div class="info-section-label" style="margin-top:18px;">Notas internas</div>
+      <textarea class="notes-textarea" id="dmNotes" placeholder="Notas internas sobre este agente…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn-danger" type="button" id="dmRemove">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/></svg>
+        Desvincular
+      </button>
+      <button class="modal-btn-secondary" type="button" id="dmSendReset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        Restablecer contraseña
+      </button>
+      <button class="modal-btn-primary" type="button" id="dmSaveNotes">Guardar notas</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROLE ASSIGNMENT MODAL -->
+<div class="modal-bd" id="roleModal" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+  <div class="modal" style="max-width: 460px;">
+    <div class="modal-head">
+      <div class="modal-head-text">
+        <h2 class="modal-title" id="rmTitle">Asignar rol</h2>
+        <p class="modal-sub" id="rmSub">—</p>
+      </div>
+      <button class="modal-close" type="button" id="rmClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="info-section-label" style="margin-top:0;">Título del cargo</div>
+      <input type="text" id="rmTitleInput" class="role-input" placeholder="Ej: CMO, Gerente de Ventas, Asistente…" maxlength="100">
+      <div class="info-section-label">Nivel de acceso</div>
+      <div class="role-lvl-grid" id="rmLevelGrid">
+        <button type="button" class="role-lvl-btn" data-lvl="1">
+          <div class="role-lvl-num">1</div>
+          <div class="role-lvl-name">Asistente</div>
+        </button>
+        <button type="button" class="role-lvl-btn" data-lvl="2">
+          <div class="role-lvl-num">2</div>
+          <div class="role-lvl-name">Gerente</div>
+        </button>
+        <button type="button" class="role-lvl-btn" data-lvl="3">
+          <div class="role-lvl-num">3</div>
+          <div class="role-lvl-name">Director</div>
+        </button>
+      </div>
+      <div class="role-lvl-desc" id="rmLevelDesc">Selecciona un nivel.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn-secondary" type="button" id="rmCancel">Cancelar</button>
+      <button class="modal-btn-primary" type="button" id="rmSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initials = (n='') => n.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase() || '?';
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '—';
+  return d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+async function api(path, opts = {}) {
+  const init = { credentials: 'include', ...opts };
+  if (init.body && typeof init.body !== 'string') init.body = JSON.stringify(init.body);
+  if (init.body) init.headers = { 'Content-Type': 'application/json', ...(init.headers || {}) };
+  const res = await fetch(path, init);
+  if (res.status === 401) { location.href = '/login.html?next=' + encodeURIComponent(location.pathname); return null; }
+  let json = null;
+  try { json = await res.json(); } catch {}
+  if (!res.ok) {
+    const msg = json?.error || `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+  return json;
+}
+
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+const STATE = { user: null, brokers: [], pending: 0, search: '' };
+
+const LEVEL_LABELS = { 1: 'Asistente', 2: 'Gerente', 3: 'Director' };
+const LEVEL_DESCS = {
+  1: 'Asistente — puede ver aplicaciones asignadas y sus propias propiedades.',
+  2: 'Gerente — puede ver agentes, aprobar pagos y consultar analíticas del equipo.',
+  3: 'Director — acceso completo: gestionar equipo, asignar roles, facturación y configuración.',
+};
+
+const STATUS_LABELS = {
+  aplicado: 'Aplicado', en_revision: 'En revisión', documentos_requeridos: 'Docs solicitados',
+  documentos_enviados: 'Docs enviados', documentos_insuficientes: 'Docs insuficientes',
+  en_aprobacion: 'En aprobación', reservado: 'Reservado', aprobado: 'Aprobado',
+  pendiente_pago: 'Pago pendiente', pago_enviado: 'Pago enviado', pago_aprobado: 'Pago aprobado',
+  completado: 'Completado', rechazado: 'Rechazado',
+};
+const STATUS_COLORS = {
+  aplicado: '#a47615', en_revision: '#6c4f8a', documentos_requeridos: '#b54c30',
+  documentos_enviados: '#b54c30', documentos_insuficientes: '#b54c30',
+  en_aprobacion: '#6c4f8a', reservado: '#2e8b8b', aprobado: '#2e8b8b',
+  pendiente_pago: '#a47615', pago_enviado: '#a47615', pago_aprobado: '#2e8b8b',
+  completado: '#2e8b8b', rechazado: '#8a857f',
+};
+
+// ── KPI strip ────────────────────────────────────────────────
+function renderKpis() {
+  const totalApps = STATE.brokers.reduce((s, b) => s + (b.app_count || 0), 0);
+  document.getElementById('kpiTeam').textContent = STATE.brokers.length;
+  document.getElementById('kpiApps').textContent = totalApps;
+  document.getElementById('kpiPending').textContent = STATE.pending;
+}
+
+// ── Member grid ──────────────────────────────────────────────
+function renderGrid() {
+  const list = document.getElementById('memList');
+  const q = STATE.search.trim().toLowerCase();
+  const filtered = q
+    ? STATE.brokers.filter(b => (b.name || '').toLowerCase().includes(q) || (b.email || '').toLowerCase().includes(q))
+    : STATE.brokers;
+
+  if (!STATE.brokers.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <strong>Sin agentes afiliados</strong>
+        Comparte el enlace de afiliación para que tus primeros agentes soliciten unirse al equipo.
+      </div>`;
+    return;
+  }
+  if (!filtered.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <strong>Sin coincidencias</strong>
+        Prueba otro término de búsqueda.
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = `<div class="mem-grid">${filtered.map(b => {
+    const lvl = Number(b.access_level) || 1;
+    const titleDisplay = b.team_title || b.jobTitle || '';
+    const av = b.avatarUrl
+      ? `<img src="${escapeHtml(b.avatarUrl)}" alt="" onerror="this.parentNode.textContent='${escapeHtml(initials(b.name))}'">`
+      : escapeHtml(initials(b.name));
+    return `
+      <div class="mem-card" data-id="${escapeHtml(b.id)}">
+        <span class="mem-av">${av}</span>
+        <div class="mem-text">
+          <div class="mem-name-row">
+            <span class="mem-name">${escapeHtml(b.name)}</span>
+            <span class="mem-lvl-pill lvl${lvl}">${LEVEL_LABELS[lvl]}</span>
+          </div>
+          ${titleDisplay ? `<div class="mem-title">${escapeHtml(titleDisplay)}</div>` : ''}
+          <div class="mem-meta">${escapeHtml(b.email || '')}</div>
+          ${b.licenseNumber ? `<div class="mem-meta mute">Lic. ${escapeHtml(b.licenseNumber)}</div>` : ''}
+          <span class="mem-apps">${b.app_count || 0} ${(b.app_count || 0) === 1 ? 'aplicación' : 'aplicaciones'}</span>
+        </div>
+        <button class="mem-menu-btn" type="button" data-id="${escapeHtml(b.id)}" aria-label="Opciones">⋯</button>
+        <div class="mem-dropdown" id="drop_${escapeHtml(b.id)}">
+          <button class="mem-dropdown-item" type="button" data-action="view" data-id="${escapeHtml(b.id)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Ver detalles
+          </button>
+          <button class="mem-dropdown-item" type="button" data-action="role" data-id="${escapeHtml(b.id)}" data-name="${escapeHtml(b.name)}" data-level="${lvl}" data-title="${escapeHtml(titleDisplay)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+            Asignar rol
+          </button>
+          <button class="mem-dropdown-item" type="button" data-action="reset" data-id="${escapeHtml(b.id)}" data-name="${escapeHtml(b.name)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            Restablecer contraseña
+          </button>
+          <button class="mem-dropdown-item danger" type="button" data-action="remove" data-id="${escapeHtml(b.id)}" data-name="${escapeHtml(b.name)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/></svg>
+            Desvincular
+          </button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+
+  // Wire dropdown toggles
+  list.querySelectorAll('.mem-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const drop = document.getElementById('drop_' + btn.dataset.id);
+      document.querySelectorAll('.mem-dropdown.open').forEach(d => { if (d !== drop) d.classList.remove('open'); });
+      drop.classList.toggle('open');
+    });
+  });
+  list.querySelectorAll('.mem-dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.mem-dropdown.open').forEach(d => d.classList.remove('open'));
+      const { action, id, name } = item.dataset;
+      if (action === 'view')   openDetailModal(id);
+      else if (action === 'role')   openRoleModal(id, name, item.dataset.level, item.dataset.title || '');
+      else if (action === 'reset')  sendBrokerReset(id, name);
+      else if (action === 'remove') removeBroker(id, name);
+    });
+  });
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.mem-dropdown.open').forEach(d => d.classList.remove('open'));
+});
+
+// ── Action handlers ──────────────────────────────────────────
+async function sendBrokerReset(brokerId, brokerName) {
+  if (!confirm(`¿Enviar correo de restablecimiento de contraseña a ${brokerName}?`)) return;
+  try {
+    await api(`/api/inmobiliaria/brokers/${encodeURIComponent(brokerId)}/send-reset`, { method: 'POST' });
+    toast(`Correo enviado a ${brokerName}`);
+  } catch (e) { toast(e.message || 'No se pudo enviar el correo', true); }
+}
+
+async function removeBroker(brokerId, brokerName) {
+  if (!confirm(`¿Desvincular a ${brokerName}? Perderá acceso a tu inmobiliaria, pero conservará su cuenta personal.`)) return;
+  try {
+    await api(`/api/inmobiliaria/brokers/${encodeURIComponent(brokerId)}/remove`, { method: 'POST' });
+    toast(`${brokerName} desvinculado`);
+    await load();
+  } catch (e) { toast(e.message || 'No se pudo desvincular', true); }
+}
+
+// ── Detail modal ─────────────────────────────────────────────
+let _detailBroker = null;
+
+function openDetailModal(brokerId) {
+  const modal = document.getElementById('detailModal');
+  modal.classList.add('open');
+  _detailBroker = null;
+  document.getElementById('dmTitle').textContent = 'Cargando…';
+  document.getElementById('dmMeta').textContent = '';
+  document.getElementById('dmInfoGrid').innerHTML = '';
+  document.getElementById('dmAppsList').innerHTML = '';
+  document.getElementById('dmNotes').value = '';
+
+  api(`/api/inmobiliaria/brokers/${encodeURIComponent(brokerId)}/details`)
+    .then(b => {
+      _detailBroker = b;
+      const av = document.getElementById('dmAv');
+      av.textContent = '';
+      if (b.avatarUrl) {
+        const img = document.createElement('img');
+        img.src = b.avatarUrl; img.alt = '';
+        img.onerror = () => { av.textContent = initials(b.name); };
+        av.appendChild(img);
+      } else {
+        av.textContent = initials(b.name);
+      }
+      document.getElementById('dmTitle').textContent = b.name;
+      document.getElementById('dmMeta').textContent = b.email + (b.phone ? ' · ' + b.phone : '');
+
+      const items = [
+        { label: 'Correo', value: b.email },
+        { label: 'Teléfono', value: b.phone || '—' },
+        { label: 'Cargo', value: b.team_title || b.jobTitle || '—' },
+        { label: 'Licencia MIREX', value: b.licenseNumber || '—' },
+        { label: 'Tipo', value: b.role === 'agency' ? 'Agencia' : 'Agente' },
+        { label: 'Afiliado desde', value: fmtDate(b.joined_at) },
+        { label: 'Email verificado', value: b.emailVerified ? 'Sí' : 'No' },
+        { label: 'Aplicaciones totales', value: String(b.app_count ?? 0) },
+      ];
+      document.getElementById('dmInfoGrid').innerHTML = items.map(i =>
+        `<div class="info-item"><div class="info-label">${escapeHtml(i.label)}</div><div class="info-value">${escapeHtml(i.value)}</div></div>`
+      ).join('');
+
+      const appsEl = document.getElementById('dmAppsList');
+      const apps = Array.isArray(b.recent_apps) ? b.recent_apps : [];
+      if (!apps.length) {
+        appsEl.innerHTML = '<p style="font-size:12.5px;color:var(--ink-mute);padding:8px 0;">Sin aplicaciones aún.</p>';
+      } else {
+        appsEl.innerHTML = apps.map(a => {
+          const color = STATUS_COLORS[a.status] || '#8a857f';
+          return `
+            <div class="recent-app-row">
+              <div style="min-width:0;flex:1;">
+                <div class="recent-app-title">${escapeHtml(a.title || 'Sin título')}</div>
+                ${a.client ? `<div class="recent-app-client">${escapeHtml(a.client)}</div>` : ''}
+              </div>
+              <span class="recent-app-pill" style="background:${color}1a;color:${color};">${escapeHtml(STATUS_LABELS[a.status] || a.status || '—')}</span>
+            </div>`;
+        }).join('');
+      }
+      document.getElementById('dmNotes').value = b.notes || '';
+    })
+    .catch(e => {
+      document.getElementById('dmTitle').textContent = 'Error al cargar';
+      document.getElementById('dmMeta').textContent = e.message || '';
+    });
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+  _detailBroker = null;
+}
+
+function wireDetailModal() {
+  const modal = document.getElementById('detailModal');
+  document.getElementById('dmClose').addEventListener('click', closeDetailModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeDetailModal(); });
+  document.getElementById('dmSaveNotes').addEventListener('click', async () => {
+    if (!_detailBroker) return;
+    const notes = document.getElementById('dmNotes').value;
+    const btn = document.getElementById('dmSaveNotes');
+    btn.disabled = true;
+    try {
+      await api(`/api/inmobiliaria/brokers/${encodeURIComponent(_detailBroker.id)}/notes`, { method: 'PATCH', body: { notes } });
+      toast('Notas guardadas');
+    } catch (e) { toast(e.message || 'No se pudo guardar', true); }
+    finally { btn.disabled = false; }
+  });
+  document.getElementById('dmSendReset').addEventListener('click', () => {
+    if (!_detailBroker) return;
+    closeDetailModal();
+    sendBrokerReset(_detailBroker.id, _detailBroker.name);
+  });
+  document.getElementById('dmRemove').addEventListener('click', () => {
+    if (!_detailBroker) return;
+    closeDetailModal();
+    removeBroker(_detailBroker.id, _detailBroker.name);
+  });
+}
+
+// ── Role assignment modal ────────────────────────────────────
+let _roleTarget = null;
+
+function openRoleModal(userId, userName, currentLevel, currentTitle) {
+  _roleTarget = { id: userId, name: userName };
+  const modal = document.getElementById('roleModal');
+  document.getElementById('rmSub').textContent = userName;
+  document.getElementById('rmTitleInput').value = currentTitle || '';
+  setRoleLevel(Number(currentLevel) || 1);
+  modal.classList.add('open');
+}
+
+function closeRoleModal() {
+  document.getElementById('roleModal').classList.remove('open');
+  _roleTarget = null;
+}
+
+function setRoleLevel(lvl) {
+  document.querySelectorAll('#rmLevelGrid [data-lvl]').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.lvl) === lvl);
+  });
+  document.getElementById('rmLevelDesc').textContent = LEVEL_DESCS[lvl] || '';
+  document.getElementById('rmLevelGrid').dataset.selected = lvl;
+}
+
+function wireRoleModal() {
+  const modal = document.getElementById('roleModal');
+  document.getElementById('rmClose').addEventListener('click', closeRoleModal);
+  document.getElementById('rmCancel').addEventListener('click', closeRoleModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeRoleModal(); });
+
+  document.querySelectorAll('#rmLevelGrid [data-lvl]').forEach(btn => {
+    btn.addEventListener('click', () => setRoleLevel(Number(btn.dataset.lvl)));
+  });
+
+  document.getElementById('rmSave').addEventListener('click', async () => {
+    if (!_roleTarget) return;
+    const lvl = Number(document.getElementById('rmLevelGrid').dataset.selected) || 1;
+    const title = document.getElementById('rmTitleInput').value.trim();
+    const btn = document.getElementById('rmSave');
+    btn.disabled = true;
+    try {
+      await api(`/api/inmobiliaria/team/${encodeURIComponent(_roleTarget.id)}/role`, {
+        method: 'PUT',
+        body: { access_level: lvl, team_title: title },
+      });
+      toast('Rol actualizado');
+      closeRoleModal();
+      await load();
+    } catch (e) { toast(e.message || 'No se pudo guardar', true); }
+    finally { btn.disabled = false; }
+  });
+}
+
+// ── Invite link copy + CSV export + search ───────────────────
+function wireToolbar() {
+  document.getElementById('inviteCopyBtn').addEventListener('click', async () => {
+    const url = window.location.origin + '/register-agency';
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('inviteCopyBtn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado';
+      setTimeout(() => { btn.innerHTML = originalHtml; }, 1800);
+    } catch { toast('No se pudo copiar al portapapeles', true); }
+  });
+
+  document.getElementById('exportTeamBtn').addEventListener('click', () => {
+    if (!STATE.brokers.length) { toast('No hay agentes para exportar', true); return; }
+    const rows = [['Nombre','Cargo','Nivel','Correo','Teléfono','Licencia','Aplicaciones','Fecha afiliación']];
+    STATE.brokers.forEach(b => rows.push([
+      b.name || '',
+      b.team_title || b.jobTitle || '',
+      LEVEL_LABELS[Number(b.access_level) || 1] || '',
+      b.email || '',
+      b.phone || '',
+      b.licenseNumber || '',
+      b.app_count ?? 0,
+      b.joined_at ? new Date(b.joined_at).toLocaleDateString('es-DO') : '',
+    ]));
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `equipo_hogaresrd_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    toast('CSV descargado');
+  });
+
+  let searchT;
+  document.getElementById('memSearch').addEventListener('input', (e) => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => {
+      STATE.search = e.target.value || '';
+      renderGrid();
+    }, 120);
+  });
+}
+
+// ── Load ──────────────────────────────────────────────────────
+async function load() {
+  try {
+    const data = await api('/api/inmobiliaria/brokers').catch(() => ({ brokers: [], pending_requests: [] }));
+    STATE.brokers = Array.isArray(data?.brokers) ? data.brokers : [];
+    STATE.pending = Array.isArray(data?.pending_requests) ? data.pending_requests.length : 0;
+  } catch (e) {
+    console.error('[equipo-miembros] load failed', e);
+    STATE.brokers = []; STATE.pending = 0;
+  }
+  renderKpis();
+  renderGrid();
+}
+
+async function bootstrap() {
+  let me;
+  try { me = await api('/api/auth/me'); } catch { return; }
+  const user = me?.user || me;
+  if (!user || !user.id) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
+    return;
+  }
+  STATE.user = user;
+
+  const role = (user.role || '').toLowerCase();
+  if (!['inmobiliaria', 'constructora', 'admin'].includes(role)) {
+    location.replace('/broker-dashboard.html');
+    return;
+  }
+
+  wireDetailModal();
+  wireRoleModal();
+  wireToolbar();
+  await load();
+}
+
+bootstrap().catch(err => console.error('[equipo-miembros] bootstrap failed', err));
+</script>
+
+
+<script>
+(function () {
+  'use strict';
+  const wrap = document.getElementById('tbAccountWrap');
+  if (!wrap) return;
+  const menu = document.getElementById('tbMenu');
+  const settingsBtn = document.getElementById('tbSettingsBtn');
+  const avatarBtn = document.getElementById('tbAvatarBtn');
+  const logoutBtn = document.getElementById('tbMenuLogout');
+  const nameEl = document.getElementById('tbMenuName');
+  const emailEl = document.getElementById('tbMenuEmail');
+  const roleEl = document.getElementById('tbMenuRole');
+  const empresaEl = document.getElementById('tbMenuEmpresa');
+
+  const ROLE_LABELS = {
+    user: 'Cliente', broker: 'Agente', agent: 'Agente',
+    inmobiliaria: 'Inmobiliaria', constructora: 'Constructora',
+    secretary: 'Secretaria', admin: 'Admin',
+  };
+
+  function setOpen(open) {
+    menu.hidden = !open;
+    if (settingsBtn) settingsBtn.setAttribute('aria-expanded', open);
+    if (avatarBtn) avatarBtn.setAttribute('aria-expanded', open);
+  }
+  function toggle(e) { e.preventDefault(); e.stopPropagation(); setOpen(menu.hidden); }
+
+  if (settingsBtn) settingsBtn.addEventListener('click', toggle);
+  if (avatarBtn) avatarBtn.addEventListener('click', toggle);
+
+  document.addEventListener('click', (e) => {
+    if (menu.hidden) return;
+    if (!wrap.contains(e.target)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) setOpen(false);
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+      try { localStorage.removeItem('token'); sessionStorage.clear(); } catch (_) {}
+      location.href = '/';
+    });
+  }
+
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(me => {
+      const u = me && (me.user || me);
+      if (!u) return;
+      if (nameEl) nameEl.textContent = u.name || u.email || 'Mi cuenta';
+      if (emailEl) emailEl.textContent = u.email || '';
+      if (roleEl) {
+        const label = ROLE_LABELS[(u.role || '').toLowerCase()] || (u.role || 'Cuenta');
+        roleEl.textContent = label;
+      }
+      const isOrg = ['inmobiliaria', 'constructora', 'admin'].includes((u.role || '').toLowerCase());
+      if (empresaEl && isOrg) empresaEl.hidden = false;
+      if (isOrg) {
+        const teamLabel = document.getElementById('sbTeamLabel');
+        if (teamLabel) teamLabel.hidden = false;
+        document.querySelectorAll('.sb-team-only').forEach(el => { el.hidden = false; });
+      }
+      if (avatarBtn && u.name) {
+        const ini = u.name.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+        avatarBtn.textContent = ini;
+        avatarBtn.style.color = '#fff';
+        avatarBtn.style.fontSize = '11.5px';
+        avatarBtn.style.fontWeight = '700';
+        avatarBtn.style.display = 'grid';
+        avatarBtn.style.placeItems = 'center';
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+
+  <script src="/js/dashboard-topbar.js?v=2" defer></script>
+  <script src="/js/ai-chat.js?v=2" defer></script>
+</body>
+</html>

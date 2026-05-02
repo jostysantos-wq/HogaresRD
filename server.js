@@ -324,6 +324,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
     '/equipo-solicitudes.html', '/equipo-solicitudes',
     '/equipo-publicaciones.html', '/equipo-publicaciones',
     '/equipo-secretarias.html', '/equipo-secretarias',
+    '/equipo-miembros.html', '/equipo-miembros',
   ];
 
   app.get(PAYWALLED_PATHS, (req, res, next) => {
