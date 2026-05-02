@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>HogaresRD — Solicitudes de Afiliación</title>
+<title>HogaresRD — Publicaciones</title>
 <meta name="viewport" content="width=1440">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,7 @@
   body { font-family: var(--sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 14px; min-height: 100vh; }
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; }
-  input { font-family: inherit; }
+  input, textarea { font-family: inherit; }
 
   .app { display: grid; grid-template-columns: 248px 1fr; gap: 18px; padding: 18px; min-height: 100vh; }
   .sidebar { background: var(--bg-card); border-radius: var(--r-card); padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 18px; height: calc(100vh - 36px); }
@@ -38,11 +38,7 @@
   .sb-link.active { background: var(--ink); color: #fff; }
   .sb-section-label { padding: 18px 12px 6px; font-size: 10.5px; font-weight: 600; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; }
   .sb-team-only[hidden], .sb-team-label[hidden] { display: none !important; }
-  .sb-badge {
-    margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px;
-    background: var(--accent); color: #fff; border-radius: 9px;
-    font-size: 10.5px; font-weight: 700; display: inline-grid; place-items: center;
-  }
+  .sb-badge { margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px; background: var(--accent); color: #fff; border-radius: 9px; font-size: 10.5px; font-weight: 700; display: inline-grid; place-items: center; }
   .sb-link.active .sb-badge { background: #fff; color: var(--ink); }
   .sb-cta { background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 14px; padding: 16px; display: block; }
   .sb-cta-eyebrow { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
@@ -75,84 +71,82 @@
   .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
   .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
 
-  /* KPI strip */
-  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .kpi { background: var(--bg-card); border-radius: var(--r-card); padding: 18px 20px; position: relative; overflow: hidden; min-height: 110px; }
-  .kpi-num { font-family: var(--serif); font-size: 32px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
-  .kpi-label { color: var(--ink-mute); font-size: 12px; margin-top: 8px; }
-  .kpi-icon { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-soft); display: grid; place-items: center; color: var(--ink-mute); }
-  .kpi-icon svg { width: 14px; height: 14px; }
-  .kpi.accent .kpi-num { color: var(--accent); }
+  /* Two-column layout: composer left, feed right */
+  .pub-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items: flex-start; }
+  @media (max-width: 1080px) { .pub-grid { grid-template-columns: 1fr; } }
 
-  /* Panel + request list */
   .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
-  .panel-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0; }
-  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 4px 0 0; line-height: 1.5; }
-  .panel-tools { display: flex; gap: 8px; align-items: center; }
+  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
 
-  .ph-pill {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 14px; border-radius: var(--r-pill);
-    background: var(--bg-card); border: 1px solid var(--line);
-    color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  /* Composer */
+  .pub-type-row { display: flex; gap: 6px; margin-bottom: 14px; padding: 4px; background: var(--bg-soft); border-radius: var(--r-pill); }
+  .pub-type-btn {
+    flex: 1; padding: 8px 14px; border-radius: var(--r-pill);
+    font-size: 12.5px; font-weight: 500; cursor: pointer;
+    color: var(--ink-soft); background: transparent; border: none;
+    transition: background .15s, color .15s;
   }
-  .ph-pill svg { width: 13px; height: 13px; }
-  .ph-pill:hover { background: var(--bg-soft); }
+  .pub-type-btn.active { background: var(--ink); color: #fff; }
+  .pub-input, .pub-textarea {
+    width: 100%; padding: 11px 13px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13.5px; color: var(--ink); background: var(--bg-soft);
+    margin-bottom: 12px;
+  }
+  .pub-input:focus, .pub-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+  .pub-textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
+  .pub-submit-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-top: 6px;
+  }
+  .pub-submit-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: var(--r-pill);
+    background: var(--ink); color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+  }
+  .pub-submit-btn svg { width: 13px; height: 13px; }
+  .pub-submit-btn:hover { background: #000; }
+  .pub-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pub-msg { font-size: 12.5px; min-height: 16px; }
+  .pub-msg.ok    { color: var(--teal); }
+  .pub-msg.error { color: var(--accent); }
 
-  .req-list { display: flex; flex-direction: column; gap: 12px; }
-  .req-card {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 18px; padding: 16px 18px;
-    background: var(--bg-soft); border: 1px solid var(--line-soft);
+  /* Feed */
+  .feed-list { display: flex; flex-direction: column; gap: 12px; }
+  .feed-card {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
+    padding: 16px;
+    background: var(--bg-card); border: 1px solid var(--line-soft);
     border-radius: 14px;
     transition: border-color .12s;
+    align-items: flex-start;
   }
-  .req-card:hover { border-color: var(--line); }
-  .req-info { display: flex; gap: 14px; min-width: 0; flex: 1; }
-  .req-av {
-    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, #B8A07E, #6E5847);
-    color: #fff; font-size: 13px; font-weight: 700;
+  .feed-card:hover { border-color: var(--line); }
+  .feed-card.no-image { grid-template-columns: 1fr auto; }
+  .feed-img { width: 96px; height: 72px; border-radius: 10px; object-fit: cover; }
+  .feed-body { min-width: 0; }
+  .feed-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .feed-pill { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-pill); }
+  .feed-pill.update  { background: var(--teal-soft); color: #20665f; }
+  .feed-pill.article { background: var(--plum-soft); color: var(--plum); }
+  .feed-date { font-size: 11.5px; color: var(--ink-mute); }
+  .feed-title { font-weight: 600; font-size: 14.5px; color: var(--ink); margin: 0 0 4px; line-height: 1.35; }
+  .feed-content { font-size: 13px; color: var(--ink-soft); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .feed-del {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; border: none;
     display: grid; place-items: center;
+    color: var(--ink-mute); cursor: pointer;
   }
-  .req-text { min-width: 0; }
-  .req-name { font-weight: 600; font-size: 14.5px; color: var(--ink); margin-bottom: 2px; }
-  .req-meta { font-size: 12.5px; color: var(--ink-mute); line-height: 1.5; }
-  .req-meta strong { color: var(--ink-soft); font-weight: 500; }
-  .req-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .req-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: var(--r-pill);
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
-    border: 1px solid var(--line);
-  }
-  .req-btn svg { width: 12px; height: 12px; }
-  .req-btn.approve { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .req-btn.approve:hover { background: #000; }
-  .req-btn.reject { background: var(--bg-card); color: var(--ink-soft); }
-  .req-btn.reject:hover { background: var(--bg); border-color: var(--ink-mute); color: var(--accent); }
-  .req-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .feed-del:hover { background: var(--bg-soft); color: var(--accent); }
+  .feed-del svg { width: 14px; height: 14px; }
 
-  .empty-state {
-    text-align: center; padding: 60px 20px;
-    color: var(--ink-mute); font-size: 14px; line-height: 1.5;
-  }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-mute); font-size: 14px; line-height: 1.5; }
   .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: var(--serif); font-size: 20px; font-weight: 600; }
-  .empty-state-icon {
-    width: 56px; height: 56px; margin: 0 auto 16px;
-    background: var(--bg-soft); border-radius: 50%;
-    display: grid; place-items: center; color: var(--ink-mute);
-  }
+  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 16px; background: var(--bg-soft); border-radius: 50%; display: grid; place-items: center; color: var(--ink-mute); }
   .empty-state-icon svg { width: 22px; height: 22px; }
-
-  .skel {
-    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 8px;
-  }
-  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -160,23 +154,14 @@
     padding: 12px 22px; border-radius: 999px;
     font-size: 13.5px; font-weight: 500;
     opacity: 0; pointer-events: none;
-    transition: opacity .25s, transform .25s;
-    z-index: 1000;
+    transition: opacity .25s, transform .25s; z-index: 1000;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .toast.error { background: var(--accent); }
 
   /* Topbar account dropdown */
   .tb-account-wrap { position: relative; display: inline-flex; gap: 10px; align-items: center; }
-  .tb-menu {
-    position: absolute; top: calc(100% + 10px); right: 0;
-    min-width: 280px;
-    background: var(--bg-card); border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 12px 40px -8px rgba(20, 17, 15, 0.18), 0 2px 8px rgba(20,17,15,0.06);
-    padding: 10px;
-    z-index: 100;
-  }
+  .tb-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 280px; background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px -8px rgba(20, 17, 15, 0.18), 0 2px 8px rgba(20,17,15,0.06); padding: 10px; z-index: 100; }
   .tb-menu[hidden] { display: none; }
   .tb-menu-head { padding: 12px 12px 14px; border-bottom: 1px solid var(--line-soft); margin-bottom: 8px; }
   .tb-menu-name { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.2; color: var(--ink); }
@@ -218,63 +203,29 @@
     <nav class="sb-nav" aria-label="Navegación principal">
 
       <div class="sb-section-label">Principal</div>
-      <a href="/broker-dashboard.html" class="sb-link" data-nav="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-        <span>Panel</span>
-      </a>
-      <a href="/mis-propiedades.html" class="sb-link" data-nav="mis-propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
-        <span>Mis Propiedades</span>
-      </a>
-      <a href="/aplicaciones.html" class="sb-link" data-nav="aplicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span>Aplicaciones</span>
-      </a>
-      <a href="/visitas.html" class="sb-link" data-nav="visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>Visitas</span>
-      </a>
-      <a href="/comisiones.html" class="sb-link" data-nav="comisiones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-        <span>Comisiones</span>
-      </a>
-      <a href="/mensajes.html" class="sb-link" data-nav="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
-        <span>Mensajes</span>
-      </a>
-      <a href="/tareas" class="sb-link" data-nav="tareas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        <span>Tareas</span>
-      </a>
-      <a href="/notificaciones" class="sb-link" data-nav="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <span>Notificaciones</span>
-      </a>
+      <a href="/broker-dashboard.html" class="sb-link" data-nav="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span>Panel</span></a>
+      <a href="/mis-propiedades.html" class="sb-link" data-nav="mis-propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Mis Propiedades</span></a>
+      <a href="/aplicaciones.html" class="sb-link" data-nav="aplicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Aplicaciones</span></a>
+      <a href="/visitas.html" class="sb-link" data-nav="visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Visitas</span></a>
+      <a href="/comisiones.html" class="sb-link" data-nav="comisiones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><span>Comisiones</span></a>
+      <a href="/mensajes.html" class="sb-link" data-nav="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg><span>Mensajes</span></a>
+      <a href="/tareas" class="sb-link" data-nav="tareas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Tareas</span></a>
+      <a href="/notificaciones" class="sb-link" data-nav="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span>Notificaciones</span></a>
 
       <div class="sb-section-label">Marketing</div>
-      <a href="/enlaces-de-referido.html" class="sb-link" data-nav="referidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-        <span>Enlaces de Referido</span>
-      </a>
-      <a href="/campanas.html" class="sb-link" data-nav="campanas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 01-5.8-1.6"/></svg>
-        <span>Campañas</span>
-      </a>
+      <a href="/enlaces-de-referido.html" class="sb-link" data-nav="referidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><span>Enlaces de Referido</span></a>
+      <a href="/campanas.html" class="sb-link" data-nav="campanas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 01-5.8-1.6"/></svg><span>Campañas</span></a>
 
       <div class="sb-section-label sb-team-label" id="sbTeamLabel" hidden>Equipo</div>
-      <a href="/broker.html#tab-team-members" class="sb-link sb-team-only" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        <span>Miembros</span>
-      </a>
-      <a href="/equipo-solicitudes.html" class="sb-link sb-team-only active" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        <span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span>
-      </a>
-      <a href="/broker.html#tab-team-performance" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg>
-        <span>Rendimiento</span>
-      </a>
-      <a href="/broker.html#tab-team-secretaries" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        <span>Secretarias</span>
-      </a>
-      <a href="/broker.html#tab-empresa" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg>
-        <span>Perfil de Empresa</span>
-      </a>
-      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
-        <span>Publicaciones</span>
-      </a>
+      <a href="/broker.html#tab-team-members" class="sb-link sb-team-only" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Miembros</span></a>
+      <a href="/equipo-solicitudes.html" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span></a>
+      <a href="/broker.html#tab-team-performance" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
+      <a href="/broker.html#tab-team-secretaries" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Secretarias</span></a>
+      <a href="/broker.html#tab-empresa" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
+      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only active" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
 
       <div class="sb-section-label">Soporte</div>
-      <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Centro de Ayuda</span>
-      </a>
+      <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Centro de Ayuda</span></a>
 
     </nav>
 
@@ -296,7 +247,7 @@
       <div class="topbar-left">
         <div class="tb-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar agente por nombre o correo…" id="topbarSearch">
+          <input type="text" placeholder="Buscar publicaciones…" id="topbarSearch">
         </div>
         <div class="tb-divider"></div>
         <a class="tb-ai" href="/asistente">
@@ -315,7 +266,7 @@
           </button>
           <button class="tb-avatar" id="tbAvatarBtn" aria-label="Mi cuenta" aria-haspopup="menu" aria-expanded="false"></button>
           <div class="tb-menu" id="tbMenu" role="menu" hidden>
-            <div class="tb-menu-head" id="tbMenuHead">
+            <div class="tb-menu-head">
               <div class="tb-menu-name" id="tbMenuName">Cargando…</div>
               <div class="tb-menu-email" id="tbMenuEmail"></div>
               <span class="tb-menu-role" id="tbMenuRole"></span>
@@ -352,59 +303,57 @@
     <div class="page-head">
       <div class="page-head-left">
         <div class="page-eyebrow">Equipo</div>
-        <h1 class="page-title">Solicitudes de <em>afiliación</em></h1>
-        <p class="page-sub">Revisa y aprueba a los agentes que quieren unirse a tu equipo. Aprobar a un agente le da acceso a tu inmobiliaria; rechazar lo descarta.</p>
-      </div>
-      <div class="page-actions">
-        <a class="ph-pill" href="/enlaces-de-referido.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-          Compartir enlace de afiliación
-        </a>
+        <h1 class="page-title">Publicaciones de <em>la empresa</em></h1>
+        <p class="page-sub">Comparte actualizaciones rápidas o publica artículos largos. Tus publicaciones aparecen en el feed de la inmobiliaria que verán tus clientes y agentes.</p>
       </div>
     </div>
 
-    <!-- KPI STRIP -->
-    <div class="kpi-row" id="kpiRow">
-      <div class="kpi accent">
-        <div class="kpi-num" id="kpiPending">—</div>
-        <div class="kpi-label">Pendientes de revisión</div>
-        <div class="kpi-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-num" id="kpiTeam">—</div>
-        <div class="kpi-label">Agentes en tu equipo</div>
-        <div class="kpi-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        </div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-num" id="kpiOldest">—</div>
-        <div class="kpi-label">Días desde solicitud más antigua</div>
-        <div class="kpi-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-      </div>
-    </div>
+    <!-- TWO-COLUMN: Composer + Feed -->
+    <div class="pub-grid">
 
-    <!-- REQUESTS PANEL -->
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <h2 class="panel-title">Solicitudes pendientes</h2>
-          <p class="panel-sub">Cada solicitud requiere tu acción. Las solicitudes rechazadas se descartan permanentemente.</p>
+      <!-- Composer -->
+      <section class="panel">
+        <h2 class="panel-title">Nueva publicación</h2>
+        <p class="panel-sub">Las actualizaciones son rápidas (sin título); los artículos llevan título y se destacan.</p>
+
+        <div class="pub-type-row" role="tablist" aria-label="Tipo de publicación">
+          <button class="pub-type-btn active" type="button" role="tab" data-type="update" aria-selected="true">Actualización</button>
+          <button class="pub-type-btn" type="button" role="tab" data-type="article" aria-selected="false">Artículo</button>
         </div>
-      </div>
-      <div class="req-list" id="reqList">
-        <div class="empty-state" id="reqLoading">
-          <div class="empty-state-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+
+        <div id="pubTitleWrap" hidden>
+          <input type="text" id="pubTitle" class="pub-input" placeholder="Título del artículo" maxlength="180">
+        </div>
+
+        <textarea id="pubContent" class="pub-textarea" placeholder="¿Qué quieres compartir?" maxlength="2000"></textarea>
+
+        <input type="url" id="pubImage" class="pub-input" placeholder="URL de imagen (opcional)" style="margin-bottom:0;">
+
+        <div class="pub-submit-row">
+          <span class="pub-msg" id="pubMsg"></span>
+          <button class="pub-submit-btn" id="pubSubmitBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Publicar
+          </button>
+        </div>
+      </section>
+
+      <!-- Feed -->
+      <section class="panel">
+        <h2 class="panel-title">Feed reciente</h2>
+        <p class="panel-sub">Las publicaciones aparecen en orden cronológico — las más recientes arriba.</p>
+
+        <div class="feed-list" id="feedList">
+          <div class="empty-state" id="feedLoading">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            Cargando publicaciones…
           </div>
-          Cargando solicitudes…
         </div>
-      </div>
-    </section>
+      </section>
+
+    </div>
 
   </main>
 </div>
@@ -415,18 +364,11 @@
 'use strict';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const initials = (n='') => n.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase() || '?';
 const fmtDate = (iso) => {
   if (!iso) return '—';
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return '—';
   return d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-const daysAgo = (iso) => {
-  if (!iso) return null;
-  const d = new Date(iso).getTime();
-  if (!Number.isFinite(d)) return null;
-  return Math.max(0, Math.floor((Date.now() - d) / 86400000));
 };
 
 async function api(path, opts = {}) {
@@ -434,10 +376,7 @@ async function api(path, opts = {}) {
   if (init.body && typeof init.body !== 'string') init.body = JSON.stringify(init.body);
   if (init.body) init.headers = { 'Content-Type': 'application/json', ...(init.headers || {}) };
   const res = await fetch(path, init);
-  if (res.status === 401) {
-    location.href = '/login.html?next=' + encodeURIComponent(location.pathname);
-    return null;
-  }
+  if (res.status === 401) { location.href = '/login.html?next=' + encodeURIComponent(location.pathname); return null; }
   let json = null;
   try { json = await res.json(); } catch {}
   if (!res.ok) {
@@ -456,98 +395,131 @@ function toast(msg, isError = false) {
   toast._t = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
-const STATE = { user: null, brokers: [], pending: [] };
+const STATE = { user: null, posts: [], type: 'update' };
 
-function renderKpis() {
-  document.getElementById('kpiPending').textContent = STATE.pending.length;
-  document.getElementById('kpiTeam').textContent = STATE.brokers.length;
-  // Oldest pending request: how many days has the oldest been waiting
-  let oldest = null;
-  for (const r of STATE.pending) {
-    const d = daysAgo(r.requested_at);
-    if (d != null && (oldest == null || d > oldest)) oldest = d;
-  }
-  document.getElementById('kpiOldest').textContent = oldest == null ? '—' : oldest;
+// ── Composer type toggle ───────────────────────────────────────
+function setPubType(type) {
+  STATE.type = type === 'article' ? 'article' : 'update';
+  document.querySelectorAll('.pub-type-btn').forEach(b => {
+    const on = b.dataset.type === STATE.type;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.getElementById('pubTitleWrap').hidden = STATE.type !== 'article';
 }
 
-function renderRequests() {
-  const list = document.getElementById('reqList');
-  if (!STATE.pending.length) {
+// ── Render feed ────────────────────────────────────────────────
+function renderFeed() {
+  const list = document.getElementById('feedList');
+  if (!STATE.posts.length) {
     list.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </div>
-        <strong>Todo al día</strong>
-        No hay solicitudes pendientes en este momento. Cuando un agente solicite unirse a tu inmobiliaria, aparecerá aquí.
+        <strong>Aún no hay publicaciones</strong>
+        Cuando publiques tu primera actualización o artículo, aparecerá aquí.
       </div>`;
     return;
   }
   // Sort newest first
-  const items = [...STATE.pending].sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at));
-  list.innerHTML = items.map(r => `
-    <div class="req-card" data-id="${escapeHtml(r.broker_id)}">
-      <div class="req-info">
-        <div class="req-av">${escapeHtml(initials(r.broker_name))}</div>
-        <div class="req-text">
-          <div class="req-name">${escapeHtml(r.broker_name)}</div>
-          <div class="req-meta">
-            ${escapeHtml(r.broker_email)}${r.broker_license ? ` · <strong>Lic. ${escapeHtml(r.broker_license)}</strong>` : ''}
+  const items = [...STATE.posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  list.innerHTML = items.map(p => {
+    const isArticle = p.post_type === 'article';
+    const hasImg = !!p.image;
+    return `
+      <div class="feed-card ${hasImg ? '' : 'no-image'}" data-id="${escapeHtml(p.id)}">
+        ${hasImg ? `<img src="${escapeHtml(p.image)}" alt="" class="feed-img" onerror="this.remove()">` : ''}
+        <div class="feed-body">
+          <div class="feed-meta">
+            <span class="feed-pill ${isArticle ? 'article' : 'update'}">${isArticle ? 'Artículo' : 'Actualización'}</span>
+            <span class="feed-date">${escapeHtml(fmtDate(p.created_at))}</span>
           </div>
-          <div class="req-meta" style="margin-top:4px;">
-            Solicitado: ${escapeHtml(fmtDate(r.requested_at))}
-          </div>
+          ${p.title ? `<h3 class="feed-title">${escapeHtml(p.title)}</h3>` : ''}
+          <div class="feed-content">${escapeHtml(p.content || '')}</div>
         </div>
-      </div>
-      <div class="req-actions">
-        <button class="req-btn approve" data-action="approve" data-id="${escapeHtml(r.broker_id)}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Aprobar
+        <button class="feed-del" data-id="${escapeHtml(p.id)}" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
         </button>
-        <button class="req-btn reject" data-action="reject" data-id="${escapeHtml(r.broker_id)}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Rechazar
-        </button>
-      </div>
-    </div>`).join('');
+      </div>`;
+  }).join('');
 
-  list.querySelectorAll('.req-btn').forEach(btn => {
-    btn.addEventListener('click', () => respond(btn.dataset.id, btn.dataset.action, btn));
+  list.querySelectorAll('.feed-del').forEach(btn => {
+    btn.addEventListener('click', () => deletePost(btn.dataset.id));
   });
 }
 
-async function respond(brokerId, action, btn) {
-  if (!brokerId || !['approve', 'reject'].includes(action)) return;
-  const card = btn.closest('.req-card');
-  if (action === 'reject' && !confirm('¿Rechazar esta solicitud? El agente recibirá una notificación de rechazo.')) {
+// ── Submit composer ────────────────────────────────────────────
+async function submitPost() {
+  const msg = document.getElementById('pubMsg');
+  const submitBtn = document.getElementById('pubSubmitBtn');
+  const content = document.getElementById('pubContent').value.trim();
+  msg.textContent = '';
+  msg.classList.remove('error', 'ok');
+
+  if (!content) {
+    msg.textContent = 'Escribe el contenido antes de publicar.';
+    msg.classList.add('error');
     return;
   }
-  // Disable both buttons on this card
-  if (card) card.querySelectorAll('.req-btn').forEach(b => b.disabled = true);
+  const title = STATE.type === 'article' ? document.getElementById('pubTitle').value.trim() : '';
+  if (STATE.type === 'article' && !title) {
+    msg.textContent = 'El artículo necesita un título.';
+    msg.classList.add('error');
+    return;
+  }
+
+  submitBtn.disabled = true;
   try {
-    await api(`/api/inmobiliaria/brokers/${encodeURIComponent(brokerId)}/${action}`, { method: 'POST' });
-    toast(action === 'approve' ? 'Agente aprobado ✓' : 'Solicitud rechazada');
+    await api('/api/inmobiliaria/posts', {
+      method: 'POST',
+      body: {
+        post_type: STATE.type,
+        title,
+        content,
+        image: document.getElementById('pubImage').value.trim() || null,
+      },
+    });
+    document.getElementById('pubContent').value = '';
+    document.getElementById('pubTitle').value = '';
+    document.getElementById('pubImage').value = '';
+    msg.textContent = 'Publicado ✓';
+    msg.classList.add('ok');
+    setTimeout(() => { msg.textContent = ''; msg.classList.remove('ok'); }, 2200);
     await load();
   } catch (e) {
-    toast(e.message || 'Error procesando la solicitud', true);
-    if (card) card.querySelectorAll('.req-btn').forEach(b => b.disabled = false);
+    msg.textContent = e.message || 'No se pudo publicar.';
+    msg.classList.add('error');
+  } finally {
+    submitBtn.disabled = false;
   }
 }
 
+// ── Delete post ────────────────────────────────────────────────
+async function deletePost(id) {
+  if (!id || !confirm('¿Eliminar esta publicación? Esta acción no se puede deshacer.')) return;
+  try {
+    await api(`/api/inmobiliaria/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    toast('Publicación eliminada');
+    await load();
+  } catch (e) {
+    toast(e.message || 'No se pudo eliminar', true);
+  }
+}
+
+// ── Load feed ──────────────────────────────────────────────────
 async function load() {
   try {
-    const data = await api('/api/inmobiliaria/brokers').catch(() => ({ brokers: [], pending_requests: [] }));
-    STATE.brokers = Array.isArray(data?.brokers) ? data.brokers : [];
-    STATE.pending = Array.isArray(data?.pending_requests) ? data.pending_requests : [];
+    const data = await api('/api/inmobiliaria/posts').catch(() => []);
+    STATE.posts = Array.isArray(data) ? data : [];
   } catch (e) {
-    console.error('[equipo-solicitudes] load failed', e);
-    STATE.brokers = [];
-    STATE.pending = [];
+    console.error('[equipo-publicaciones] load failed', e);
+    STATE.posts = [];
   }
-  renderKpis();
-  renderRequests();
+  renderFeed();
 }
 
+// ── Bootstrap ──────────────────────────────────────────────────
 async function bootstrap() {
   let me;
   try { me = await api('/api/auth/me'); } catch { return; }
@@ -558,18 +530,22 @@ async function bootstrap() {
   }
   STATE.user = user;
 
-  // Only inmobiliaria/constructora can manage join requests. Other roles
-  // get bounced to the dashboard so they don't sit on an empty page.
   const role = (user.role || '').toLowerCase();
   if (!['inmobiliaria', 'constructora', 'admin'].includes(role)) {
     location.replace('/broker-dashboard.html');
     return;
   }
 
+  // Wire composer interactions
+  document.querySelectorAll('.pub-type-btn').forEach(b => {
+    b.addEventListener('click', () => setPubType(b.dataset.type));
+  });
+  document.getElementById('pubSubmitBtn').addEventListener('click', submitPost);
+
   await load();
 }
 
-bootstrap().catch(err => console.error('[equipo-solicitudes] bootstrap failed', err));
+bootstrap().catch(err => console.error('[equipo-publicaciones] bootstrap failed', err));
 </script>
 
 
@@ -632,7 +608,6 @@ bootstrap().catch(err => console.error('[equipo-solicitudes] bootstrap failed', 
       }
       const isOrg = ['inmobiliaria', 'constructora', 'admin'].includes((u.role || '').toLowerCase());
       if (empresaEl && isOrg) empresaEl.hidden = false;
-      // Reveal EQUIPO sidebar section for team-lead roles
       if (isOrg) {
         const teamLabel = document.getElementById('sbTeamLabel');
         if (teamLabel) teamLabel.hidden = false;
