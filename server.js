@@ -296,19 +296,34 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', '.well-known', 'apple-app-site-association'));
 });
 
-// ── Subscription gate for legacy dashboard pages ──────────────
-// /broker.html runs its own client-side paywall check, but the page
-// briefly renders before the JS redirects, producing a "flash of old
-// dashboard" when a non-subscribed user is forwarded here from
-// /broker-dashboard.html (e.g. clicking a team-management tab).
-// Intercepting at the server avoids that paint entirely.
+// ── Subscription gate for pro dashboard pages ─────────────────
+// Each of these pages is intended for subscribed pro users (agency,
+// broker, inmobiliaria, constructora, secretary). Without a server-side
+// gate, the HTML loads, paints, then bounces client-side to /subscribe —
+// causing a visible flash of the dashboard. Intercepting here issues a
+// 302 before any HTML is sent, so non-subscribed users go straight to
+// /subscribe and the new dashboards stay consistent with /broker.html.
+//
+// Regular users and admins always fall through. Pro users with active
+// subscriptions (or whose parent inmobiliaria has one) also fall through.
 {
   const { isSubscriptionActive } = require('./utils/subscription-gate');
   const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora'];
   const COOKIE_NAME = 'hrdt';
   let _verifyJWT = null;
 
-  app.get(['/broker.html', '/broker'], (req, res, next) => {
+  const PAYWALLED_PATHS = [
+    '/broker.html', '/broker',
+    '/broker-dashboard.html', '/broker-dashboard',
+    '/aplicaciones.html', '/aplicaciones',
+    '/campanas.html', '/campanas',
+    '/comisiones.html', '/comisiones',
+    '/mis-propiedades.html', '/mis-propiedades',
+    '/tareas.html', '/tareas',
+    '/enlaces-de-referido.html', '/enlaces-de-referido',
+  ];
+
+  app.get(PAYWALLED_PATHS, (req, res, next) => {
     try {
       if (!_verifyJWT) {
         try { _verifyJWT = require('./routes/auth').verifyJWT; } catch { _verifyJWT = null; }
