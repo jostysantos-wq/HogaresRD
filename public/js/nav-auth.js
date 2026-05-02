@@ -19,7 +19,7 @@
   const area = document.getElementById('navAuthArea');
   if (!area) return;
 
-  const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'secretary'];
+  const PRO_ROLES = ['agency', 'broker', 'inmobiliaria', 'constructora', 'secretary'];
 
   /* ── helpers ───────────────────────────────────────────────── */
   function getStoredUser() {
@@ -41,7 +41,7 @@
     const initials   = (user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     const firstName  = (user.name || 'Usuario').split(' ')[0];
     const isPro      = PRO_ROLES.includes(user.role);
-    const isInm      = user.role === 'inmobiliaria';
+    const isInm      = user.role === 'inmobiliaria' || user.role === 'constructora';
 
     /* ── SVG icon helper ── */
     const _i = (d) => `<svg class="_nav-svg" viewBox="0 0 24 24"><path d="${d}"/></svg>`;

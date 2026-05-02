@@ -719,4 +719,73 @@ router.post('/team-broadcast', async (req, res) => {
   res.json({ ok: true, sent });
 });
 
+// ══════════════════════════════════════════════════════════════════
+// ── GET /listings-summary — minimal listings list for selectors
+// ══════════════════════════════════════════════════════════════════
+// Used by the campaign wizard (broker.html, campanas.html) and similar
+// dropdown pickers that just need {id, title, price} per listing the
+// caller owns. Inmobiliaria/constructora owners see their team's full
+// portfolio; brokers see only their own listings.
+router.get('/listings-summary', (req, res) => {
+  const user = req.brokerUser;
+  let listings;
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') {
+    const teamIds = new Set([user.id, ...store.getUsersByInmobiliaria(user.id).map(b => b.id)]);
+    listings = store.getListings({}).filter(l =>
+      teamIds.has(l.creator_user_id) || String(l.inmobiliaria_id || '') === user.id
+    );
+  } else if (user.role === 'secretary') {
+    const inmId = user.inmobiliaria_id;
+    if (!inmId) return res.json({ listings: [] });
+    const teamIds = new Set([inmId, ...store.getUsersByInmobiliaria(inmId).map(b => b.id)]);
+    listings = store.getListings({}).filter(l =>
+      teamIds.has(l.creator_user_id) || String(l.inmobiliaria_id || '') === inmId
+    );
+  } else {
+    listings = store.getListings({}).filter(l => l.creator_user_id === user.id);
+  }
+
+  res.json({
+    listings: listings.map(l => ({
+      id:           l.id,
+      title:        l.title,
+      price:        l.price,
+      listingType:  l.listingType || l.listing_type || null,
+      propertyType: l.propertyType || l.property_type || null,
+    })),
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── GET /team-members — minimal team list for selectors
+// ══════════════════════════════════════════════════════════════════
+// Used by the task-approver picker (tareas.html) and any UI that needs
+// {id, name, role} per team member. Solo brokers (no inmobiliaria_id)
+// get an empty array, which the frontend treats as "approver picker
+// not applicable."
+router.get('/team-members', (req, res) => {
+  const user = req.brokerUser;
+  let inmId = null;
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') inmId = user.id;
+  else if (user.inmobiliaria_id) inmId = user.inmobiliaria_id;
+
+  if (!inmId) return res.json({ members: [] });
+
+  const owner = store.getUserById(inmId);
+  const members = [];
+  if (owner) {
+    members.push({
+      id: owner.id, name: owner.name, role: owner.role,
+      avatarUrl: owner.avatarUrl || null, isOwner: true,
+    });
+  }
+  for (const m of store.getUsersByInmobiliaria(inmId)) {
+    members.push({
+      id: m.id, name: m.name, role: m.role,
+      avatarUrl: m.avatarUrl || null, isOwner: false,
+    });
+  }
+  res.json({ members });
+});
+
 module.exports = router;

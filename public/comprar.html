@@ -1231,7 +1231,7 @@
       }).slice(0, 8);
 
       if (!combined.length) {
-        dropdown.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">No se encontraron resultados para "${query}"</div>`;
+        dropdown.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">No se encontraron resultados para "${esc(query)}"</div>`;
       } else {
         dropdown.innerHTML = combined.map(loc =>
           mapSuggestionHTML(loc.name, loc.province || loc.city || '', loc.lat || 0, loc.lng || 0)

@@ -169,7 +169,25 @@ systemctl reload nginx
 # Idempotent: only adds the line if it isn't already in the user's
 # crontab. Cron does NOT inherit a login shell, so we source .env first
 # to make DATABASE_URL available to pg_dump.
+#
+# Backups are encrypted at rest with AES-256-CBC; the passphrase lives
+# OUTSIDE /var/www so a compromise of the app directory doesn't yield
+# both ciphertext and key. We bootstrap the key file here if it's
+# missing — it's a 48-byte URL-safe random string. Operators MUST copy
+# this file off-server (1Password, secrets manager, offline vault);
+# losing it loses every backup written with it.
 echo "→ Installing daily DB backup cron..."
+BACKUP_KEY_FILE="/etc/hogaresrd/backup.key"
+if [ ! -e "$BACKUP_KEY_FILE" ]; then
+    install -d -m 0700 /etc/hogaresrd
+    install -m 0400 /dev/null "$BACKUP_KEY_FILE"
+    openssl rand -base64 48 > "$BACKUP_KEY_FILE"
+    chmod 0400 "$BACKUP_KEY_FILE"
+    echo "  Generated backup encryption key: $BACKUP_KEY_FILE"
+    echo "  ⚠️  Copy this file off-server NOW — losing it = backups unrecoverable"
+else
+    echo "  Backup encryption key already present at $BACKUP_KEY_FILE"
+fi
 BACKUP_CRON='0 3 * * * set -a; . /var/www/hogaresrd/.env; set +a; /var/www/hogaresrd/deploy/db-backup.sh >> /var/log/hogaresrd/backup.log 2>&1'
 if ! (crontab -l 2>/dev/null | grep -Fq '/var/www/hogaresrd/deploy/db-backup.sh'); then
     (crontab -l 2>/dev/null; echo "$BACKUP_CRON") | crontab -
@@ -177,7 +195,7 @@ if ! (crontab -l 2>/dev/null | grep -Fq '/var/www/hogaresrd/deploy/db-backup.sh'
 else
     echo "  Cron already present, skipping"
 fi
-chmod +x /var/www/hogaresrd/deploy/db-backup.sh || true
+chmod +x /var/www/hogaresrd/deploy/db-backup.sh /var/www/hogaresrd/deploy/restore-backup.sh || true
 
 echo ""
 echo "═══════════════════════════════════════════════════"

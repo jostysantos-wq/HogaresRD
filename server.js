@@ -2739,6 +2739,29 @@ if (process.env.ENABLE_AI_MONITOR === '1') {
   console.log('[ai-monitor] Daily cron disabled (set ENABLE_AI_MONITOR=1 to enable)');
 }
 
+// ── SLA cron (every hour at :47) ───────────────────────────────────
+// Single shared scheduler that calls every registered SLA handler
+// (tasks today; future: applications, conversations idle, etc.).
+// Each handler is responsible for its own per-record idempotency so
+// breaches don't re-fire on every run. The :47 offset puts this cron
+// in a quiet minute (existing cadence: :00, :17, :30).
+let _slaRunning = false;
+const slaRegistry = require('./utils/sla-registry');
+cron.schedule('47 * * * *', async () => {
+  if (_slaRunning) {
+    console.warn('[cron sla] previous run still in flight, skipping');
+    return;
+  }
+  _slaRunning = true;
+  try {
+    await slaRegistry.runAll();
+  } catch (err) {
+    console.error('[cron sla] runAll failed:', err && err.message);
+  } finally {
+    _slaRunning = false;
+  }
+});
+
 // ── Health-check cron (every 5 minutes) ─────────────────────────────
 // Inlines the same DB probe + notification-failure check as /api/health.
 // Fires alerts when:

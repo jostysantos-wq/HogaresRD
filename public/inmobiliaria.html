@@ -574,7 +574,11 @@
           const initials = data.name.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
           const avatarEl = document.getElementById('agencyAvatar');
           if (p.companyLogo) {
-            avatarEl.innerHTML = `<img src="${esc(p.companyLogo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+            const img = document.createElement('img');
+            img.src = p.companyLogo;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+            img.onerror = () => { avatarEl.textContent = initials; };
+            avatarEl.replaceChildren(img);
           } else { avatarEl.textContent = initials; }
           document.getElementById('agencyName').textContent = data.name;
           if (p.tagline) document.getElementById('agencyTagline').textContent = p.tagline;

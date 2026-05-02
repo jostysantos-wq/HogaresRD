@@ -614,10 +614,24 @@ async function deleteUserCascade(userId) {
   _tours = _tours.filter(t => !userTours.some(ut => ut.id === t.id));
   summary.tours = userTours.length;
 
-  // 3. Tasks
+  // 3. Tasks. Two distinct cases:
+  //   (a) user is assignee or creator → delete the task outright
+  //   (b) user is ONLY the approver → clear approver_id so the task
+  //       falls back to creator-as-approver (or null = auto-complete on
+  //       submit if creator was 'system'). Hard-deleting (b) would lose
+  //       legitimate work that doesn't belong to the deleted user.
   const userTasks = getTasksByUser(userId);
   for (const t of userTasks) deleteTask(t.id);
   summary.tasks = userTasks.length;
+  let approverOrphans = 0;
+  for (const t of getTasksByApprover(userId)) {
+    if (t.assigned_to === userId || t.assigned_by === userId) continue; // covered above
+    t.approver_id = null;
+    t.updated_at  = new Date().toISOString();
+    saveTask(t);
+    approverOrphans++;
+  }
+  summary.tasksApproverCleared = approverOrphans;
 
   // 4. Saved searches
   const userSearches = getSavedSearchesByUser(userId);
@@ -801,6 +815,29 @@ function deleteListing(id) {
     a.updated_at = nowIso;
     // Persist the flag — fire-and-forget through the regular write path.
     try { saveApplication(a); } catch (err) { _dbWriteError('deleteListing/saveApplication', err); }
+  }
+
+  // Archive any tasks that pointed directly at the listing. Tasks with
+  // application_id stay live because the application survives (frozen
+  // listing snapshot). Inline rather than going through tasks.js to keep
+  // the require graph acyclic.
+  const nowIso2 = new Date().toISOString();
+  for (const t of _tasks) {
+    if (t.listing_id !== id || t.archived) continue;
+    t.archived         = true;
+    t.archived_at      = nowIso2;
+    t.archived_reason  = 'listing_deleted';
+    t.updated_at       = nowIso2;
+    if (!Array.isArray(t.audit_log)) t.audit_log = [];
+    t.audit_log.push({
+      id: require('crypto').randomUUID(),
+      type: 'archived',
+      actor_id: 'system',
+      timestamp: nowIso2,
+      data: { reason: 'listing_deleted', listing_id: id },
+    });
+    if (t.audit_log.length > 200) t.audit_log = t.audit_log.slice(-200);
+    try { saveTask(t); } catch (err) { _dbWriteError('deleteListing/saveTask', err); }
   }
 }
 
@@ -1585,6 +1622,22 @@ function getTasksByUser(userId) {
 function getTasksByAssignee(userId) { return _tasks.filter(t => t.assigned_to === userId).map(hydrateTask); }
 function getTaskById(id) { return hydrateTask(_tasks.find(t => t.id === id)); }
 function getTasksByApplication(appId) { return _tasks.filter(t => t.application_id === appId).map(hydrateTask); }
+// Tasks where `userId` is the resolved approver. approver_id lives in the
+// task's `extra` JSON blob (not a top-level column), so the filter has to
+// hydrate first. In-memory anyway — the route handler used to inline this
+// scan and reach into `_tasks` directly; this function gives it a clean home.
+function getTasksByApprover(userId) {
+  return _tasks.map(hydrateTask).filter(t => {
+    if (!t) return false;
+    if (t.approver_id) return t.approver_id === userId;
+    // Fallback: when the row has no explicit approver_id, the creator
+    // implicitly approves (unless the task came from the system).
+    return t.assigned_by === userId && t.assigned_by !== 'system';
+  });
+}
+// Return every task hydrated. Use sparingly — there's no pagination at
+// this layer; callers must filter/page.
+function getAllTasks() { return _tasks.map(hydrateTask); }
 
 function saveTask(task, client = null) {
   const row = {};
@@ -2056,6 +2109,7 @@ module.exports = {
   getAllPageContent, getPageSection, savePageSection,
   getReports, getReportById, saveReport,
   getTasksByUser, getTasksByAssignee, getTaskById, getTasksByApplication,
+  getTasksByApprover, getAllTasks,
   saveTask, deleteTask,
   getNotificationsByUser, getUnreadNotificationCount,
   saveNotification, markNotificationRead, markAllNotificationsRead, deleteNotification,

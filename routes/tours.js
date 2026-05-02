@@ -805,4 +805,34 @@ router.get('/settings', userAuth, (req, res) => {
   res.json({ auto_confirm_tours: !!user?.auto_confirm_tours });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/tours/badge-count — Pending tours awaiting broker action
+// ─────────────────────────────────────────────────────────────────────────────
+// Drives the "Visitas" nav badge. Counts tours in `pending` status scoped
+// by role: brokers see their own assignments; secretaries / inmobiliaria
+// / constructora users see the team's pending requests.
+router.get('/badge-count', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.json({ count: 0 });
+
+  let tours;
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') {
+    const teamIds = new Set(store.getUsersByInmobiliaria(user.id).map(m => m.id));
+    teamIds.add(user.id);
+    tours = store.getTours().filter(t => teamIds.has(t.broker_id));
+  } else if (user.role === 'secretary' && user.inmobiliaria_id) {
+    const teamIds = new Set(store.getUsersByInmobiliaria(user.inmobiliaria_id).map(m => m.id));
+    teamIds.add(user.inmobiliaria_id);
+    tours = store.getTours().filter(t => teamIds.has(t.broker_id));
+  } else if (BROKER_ROLES.includes(user.role)) {
+    tours = store.getToursByBroker(user.id);
+  } else {
+    // Clients: count their own pending tour requests too.
+    tours = store.getToursByClient(user.id);
+  }
+
+  const count = tours.filter(t => t.status === 'pending').length;
+  res.json({ count });
+});
+
 module.exports = router;

@@ -1877,6 +1877,7 @@ class APIService: ObservableObject {
         let email: String
         let phone: String?
         let joinedAt: String?
+        let avatarUrl: String?
     }
 
     struct SecretariesResponse: Codable {

@@ -608,6 +608,7 @@
     .role-broker       { background: #e8f0fb; color: #0038A8; }
     .role-client       { background: #e8f5ee; color: #0a7c4f; }
     .role-inmobiliaria { background: #f3eefe; color: #4a2d9c; }
+    .role-constructora { background: #fef3e0; color: #92480b; }
     .role-secretary    { background: #fff3cd; color: #856404; }
     .role-admin        { background: #ffe0e3; color: #a81022; }
     .role-other        { background: #f0f4f9; color: #4d6a8a; }
@@ -1530,6 +1531,10 @@
             <div class="num" id="usInmob" style="color:var(--purple);">—</div>
             <div class="lbl">Inmobiliarias</div>
           </div>
+          <div class="lead-stat" style="border-top:3px solid var(--warning);">
+            <div class="num" id="usConstr" style="color:var(--warning);">—</div>
+            <div class="lbl">Constructoras</div>
+          </div>
           <div class="lead-stat" style="border-top:3px solid var(--danger);">
             <div class="num" id="usLocked" style="color:var(--danger);">—</div>
             <div class="lbl">Bloqueados</div>
@@ -1541,6 +1546,7 @@
           <button class="filter-btn" data-role="broker" onclick="setUserRole('broker', this)">Brokers</button>
           <button class="filter-btn" data-role="client" onclick="setUserRole('client', this)">Clientes</button>
           <button class="filter-btn" data-role="inmobiliaria" onclick="setUserRole('inmobiliaria', this)">Inmobiliarias</button>
+          <button class="filter-btn" data-role="constructora" onclick="setUserRole('constructora', this)">Constructoras</button>
           <button class="filter-btn" data-role="secretary" onclick="setUserRole('secretary', this)">Secretarias</button>
           <button class="filter-btn" data-role="locked" onclick="setUserRole('locked', this)">Bloqueados</button>
         </div>
@@ -3772,6 +3778,7 @@
         document.getElementById('usBrokers').textContent = data.filter(u => u.role === 'broker').length;
         document.getElementById('usClients').textContent = data.filter(u => u.role === 'client').length;
         document.getElementById('usInmob').textContent   = data.filter(u => u.role === 'inmobiliaria').length;
+        document.getElementById('usConstr').textContent  = data.filter(u => u.role === 'constructora').length;
         document.getElementById('usLocked').textContent  = locked;
         renderUsers(data);
       })
@@ -3808,8 +3815,8 @@
       return;
     }
     const now = Date.now();
-    const roleClass = { broker: 'role-broker', client: 'role-client', inmobiliaria: 'role-inmobiliaria', secretary: 'role-secretary', admin: 'role-admin' };
-    const roleLabel = { broker: 'Broker', client: 'Cliente', inmobiliaria: 'Inmobiliaria', secretary: 'Secretaria', admin: 'Admin' };
+    const roleClass = { broker: 'role-broker', client: 'role-client', inmobiliaria: 'role-inmobiliaria', constructora: 'role-constructora', secretary: 'role-secretary', admin: 'role-admin' };
+    const roleLabel = { broker: 'Broker', client: 'Cliente', inmobiliaria: 'Inmobiliaria', constructora: 'Constructora', secretary: 'Secretaria', admin: 'Admin' };
 
     tbody.innerHTML = users.map(u => {
       const initials   = (u.name || u.email || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();

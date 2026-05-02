@@ -126,7 +126,7 @@ router.post('/join-request', userAuth, brokerAuth, (req, res) => {
     return res.status(400).json({ error: 'ID de inmobiliaria requerido' });
 
   const inm = store.getUserById(inmobiliaria_id);
-  if (!inm || inm.role !== 'inmobiliaria')
+  if (!inm || !OWNER_ROLES.includes(inm.role))
     return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
 
   if (broker.inmobiliaria_id === inmobiliaria_id)
@@ -329,6 +329,7 @@ router.get('/brokers', userAuth, teamAuth(LEVEL_GERENTE), (req, res) => {
     access_level:  b.access_level || LEVEL_ASISTENTE,
     joined_at:     b.inmobiliaria_joined_at || b.createdAt,
     app_count:     store.getApplicationsByBroker(b.id).length,
+    avatarUrl:     b.avatarUrl || null,
   }));
 
   const pending_requests = (inm?.join_requests || [])
@@ -581,6 +582,7 @@ router.get('/secretaries', userAuth, teamAuth(LEVEL_DIRECTOR), (req, res) => {
   res.json({
     secretaries: secretaries.map(s => ({
       id: s.id, name: s.name, email: s.email, phone: s.phone,
+      avatarUrl: s.avatarUrl || null,
       joinedAt: s.inmobiliaria_joined_at || s.createdAt,
     })),
   });

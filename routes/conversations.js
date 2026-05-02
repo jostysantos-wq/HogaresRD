@@ -285,8 +285,11 @@ router.get('/', requireLogin, (req, res) => {
 });
 
 // ── GET /api/conversations/unread ─────────────────────────────────────────
-// Quick unread count for badge in nav.
-router.get('/unread', requireLogin, (req, res) => {
+// Quick unread count for badge in nav. Also mounted at `/unread-count` —
+// the dashboard's other badge endpoints use that suffix uniformly
+// (/applications/badge-count, /tours/badge-count, /notifications/unread-count)
+// and tareas.html calls them all in one batch.
+const unreadCountHandler = (req, res) => {
   const user = getUser(req);
   let convs;
 
@@ -336,7 +339,9 @@ router.get('/unread', requireLogin, (req, res) => {
   }
 
   res.json({ count: 0 });
-});
+};
+router.get('/unread',       requireLogin, unreadCountHandler);
+router.get('/unread-count', requireLogin, unreadCountHandler);
 
 // ── GET /api/conversations/:id ────────────────────────────────────────────
 router.get('/:id', requireLogin, async (req, res) => {

@@ -559,6 +559,7 @@ struct TeamBroker: Decodable, Identifiable {
     let joinedAt: String?
     let appCount: Int
     let emailVerified: Bool?
+    let avatarUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, role
@@ -569,6 +570,7 @@ struct TeamBroker: Decodable, Identifiable {
         case joinedAt = "joined_at"
         case appCount = "app_count"
         case emailVerified = "emailVerified"
+        case avatarUrl
     }
 
     init(from decoder: Decoder) throws {
@@ -585,6 +587,7 @@ struct TeamBroker: Decodable, Identifiable {
         joinedAt       = try? c.decode(String.self, forKey: .joinedAt)
         appCount       = (try? c.decode(Int.self, forKey: .appCount)) ?? 0
         emailVerified  = try? c.decode(Bool.self, forKey: .emailVerified)
+        avatarUrl      = try? c.decode(String.self, forKey: .avatarUrl)
     }
 
     var accessLabel: String {

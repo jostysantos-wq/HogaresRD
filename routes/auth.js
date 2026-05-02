@@ -419,14 +419,22 @@ router.post('/register', authLimiter, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── Public: list registered inmobiliarias (for registration dropdowns) ────
+// ── Public: list registered inmobiliarias + constructoras for the
+// broker / agency signup dropdown. The endpoint name is historical;
+// the response covers both org-owner roles so brokers can affiliate
+// with either.
 router.get('/inmobiliarias', (req, res) => {
   try {
-    const inms = store.getUsersByRole('inmobiliaria').map(u => ({
+    const owners = [
+      ...store.getUsersByRole('inmobiliaria'),
+      ...store.getUsersByRole('constructora'),
+    ];
+    const list = owners.map(u => ({
       id:   u.id,
       name: (u.companyName || u.agencyName || u.name || '').trim(),
+      role: u.role,
     })).filter(u => u.name).sort((a, b) => a.name.localeCompare(b.name, 'es'));
-    res.json(inms);
+    res.json(list);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener inmobiliarias' });
   }
@@ -1920,6 +1928,33 @@ router.post('/apple-subscription', authLimiter, userAuth, async (req, res) => {
     console.error('[auth] Apple subscription error:', err.message);
     res.status(500).json({ error: 'Error processing subscription' });
   }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── POST /change-password ── Logged-in user updates their password
+// ══════════════════════════════════════════════════════════════════
+router.post('/change-password', userAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword)
+    return res.status(400).json({ error: 'Faltan datos requeridos.' });
+  if (typeof newPassword !== 'string' || newPassword.length < 6)
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'Sesión inválida.' });
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash || '');
+  if (!valid) {
+    logSec('password_change_failed', req, { userId: user.id });
+    return res.status(401).json({ error: 'La contraseña actual no coincide.' });
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  user.passwordUpdatedAt = new Date().toISOString();
+  store.saveUser(user);
+  logSec('password_changed', req, { userId: user.id });
+
+  res.json({ ok: true });
 });
 
 module.exports        = router;

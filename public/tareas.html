@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>HogaresRD — Tareas</title>
-<meta name="viewport" content="width=1440">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
@@ -355,6 +355,20 @@
     font-size: 11.5px; color: var(--ink-mute); margin-top: 2px;
     display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
   }
+  /* Decoration row under the task title — counts of comments / attachments
+     / subtasks / blocked-by-deps, plus a recurrence badge. Each badge
+     stays compact so the row height does not jump when the data appears. */
+  .task-badges {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+    font-size: 10.5px; color: var(--ink-mute);
+  }
+  .task-badges .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 7px; border-radius: 999px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+  }
+  .task-badges .badge.recurrence { background: #eef6ff; border-color: #cfe2ff; color: #1d4ed8; }
+  .task-badges .badge.blocked    { background: #fff4e6; border-color: #fde0b3; color: #9a4f00; }
 
   .link-chip {
     display: inline-flex; align-items: center; gap: 6px;
@@ -503,7 +517,369 @@
   }
   .sheet-close:hover { background: var(--line-soft); color: var(--ink); }
   .sheet-close svg { width: 14px; height: 14px; }
-  .sheet-body { padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
+  .sheet-body { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 18px; flex: 1; overflow-y: auto; }
+  /* Optional ribbon (SLA / overdue / blocked) sits flush above the tabs.
+     Hidden when empty so the tab strip remains anchored to the head. */
+  .sheet-ribbon { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .sheet-ribbon:empty { display: none; }
+  /* Single ribbon row. Reuses the .review-note shape (flat tinted block,
+     no border, 12px text) but with an icon column and tonal background per
+     state. Stays inside the cream-and-ink palette by mapping each state
+     to one of the existing accent-soft tokens. */
+  .sla-ribbon {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 12.5px; line-height: 1.35;
+  }
+  .sla-ribbon .ico { font-size: 14px; flex-shrink: 0; }
+  .sla-ribbon strong { font-weight: 600; }
+  .sla-ribbon.overdue { background: var(--accent-soft); color: #6b2410; }
+  .sla-ribbon.idle    { background: var(--gold-soft);   color: #6b4a08; }
+  .sla-ribbon.blocked { background: var(--gold-soft);   color: #6b4a08; }
+  /* Tab strip — same anatomy as aplicaciones.html .ap-tabs but uses the
+     dashboard's cream-and-ink palette and a full-bleed bottom border.
+     Negative left/right margins make the underline span the full sheet. */
+  .sheet-tabs {
+    display: flex; gap: 4px;
+    border-bottom: 1px solid var(--line);
+    padding: 0 24px; margin: 14px -24px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sheet-tabs::-webkit-scrollbar { display: none; }
+  .sheet-tab {
+    padding: 10px 12px; font-size: 12.5px; font-weight: 600;
+    color: var(--ink-mute); background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  .sheet-tab:hover { color: var(--ink); }
+  .sheet-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .tab-count {
+    background: var(--bg-soft); color: var(--ink-mute);
+    border: 1px solid var(--line);
+    font-size: 10.5px; padding: 1px 6px; border-radius: 999px; font-weight: 600;
+    min-width: 18px; text-align: center;
+  }
+  .sheet-tab.active .tab-count { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .sheet-pane { display: none; flex-direction: column; gap: 18px; }
+  .sheet-pane.active { display: flex; }
+  /* Empty-state inside an unfilled pane (e.g. no comments yet). */
+  .pane-empty {
+    text-align: center; color: var(--ink-mute); font-size: 12px;
+    padding: 24px 16px;
+  }
+  /* Subtask checklist — one row per child, status circle + title + status pill.
+     Inline-expand pattern: clicking the chevron reveals a 2-line meta strip;
+     clicking the title navigates into the child as a full sheet. */
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; }
+  .subtask-row {
+    display: grid; grid-template-columns: 22px 1fr auto auto;
+    align-items: center; gap: 10px;
+    padding: 8px 8px 8px 4px; border-radius: 8px;
+    transition: background .12s;
+  }
+  .subtask-row:hover { background: var(--bg-soft); }
+  .subtask-row .st-status {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1.5px solid var(--ink-mute); background: transparent;
+    margin: 0 auto;
+  }
+  .subtask-row.done .st-status { background: var(--teal); border-color: var(--teal); }
+  .subtask-row.na   .st-status { background: var(--ink-mute); border-color: var(--ink-mute); }
+  .subtask-row .st-title {
+    font-size: 13px; color: var(--ink); cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .subtask-row .st-title:hover { text-decoration: underline; }
+  .subtask-row .st-meta {
+    grid-column: 2 / -1;
+    font-size: 11.5px; color: var(--ink-mute);
+    padding: 0 0 4px 0; display: none;
+  }
+  .subtask-row.expanded .st-meta { display: block; }
+  .subtask-row .st-chev {
+    background: none; border: none; color: var(--ink-mute);
+    cursor: pointer; padding: 4px; border-radius: 6px;
+    transition: transform .15s, background .12s;
+  }
+  .subtask-row .st-chev:hover { background: var(--line-soft); }
+  .subtask-row.expanded .st-chev { transform: rotate(90deg); }
+  .subtask-add-btn {
+    margin-top: 6px; align-self: flex-start;
+    background: none; border: 1px dashed var(--line);
+    color: var(--ink-soft); font-size: 12px; font-weight: 500;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  .subtask-add-btn:hover { background: var(--bg-soft); border-color: var(--ink-mute); }
+  /* Dependency chip — same shape as listing-link chip but tinted gold to
+     telegraph "waiting". Clickable: opens that predecessor in the sheet.
+     A trailing × removes the dependency (creator/assignee only). */
+  .dep-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dep-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; padding-right: 6px; border-radius: 999px;
+    background: var(--gold-soft); color: #6b4a08;
+    font-size: 12px; cursor: pointer;
+    transition: background .12s;
+  }
+  .dep-chip:hover { background: #ecd9a8; }
+  .dep-chip .dep-x {
+    background: none; border: none; color: inherit;
+    cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1;
+    opacity: 0.65;
+  }
+  .dep-chip .dep-x:hover { opacity: 1; }
+  /* Picker modal — uses the existing .modal-back/.modal pattern but hosts
+     a search input + result list. Reused for the dependency picker today;
+     same component will fit "approver picker" / "listing picker" later. */
+  .picker-search {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13px; background: var(--bg-card); color: var(--ink);
+  }
+  .picker-search:focus { outline: none; border-color: var(--ink); }
+  .picker-results {
+    margin-top: 10px; max-height: 320px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .picker-row {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 10px 12px; border-radius: 8px;
+    cursor: pointer; transition: background .12s;
+  }
+  .picker-row:hover { background: var(--bg-soft); }
+  .picker-row .pr-title { font-size: 13px; color: var(--ink); }
+  .picker-row .pr-sub   { font-size: 11px; color: var(--ink-mute); }
+  .picker-empty { padding: 24px; text-align: center; color: var(--ink-mute); font-size: 12px; }
+  /* Attachments — drop-zone follows the dashed-border-on-soft-bg pattern
+     established by aplicaciones.html documents tab. Hover/drag-over state
+     intensifies the border so users see the affordance. */
+  .attach-drop {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 22px 16px; border: 1.5px dashed var(--line);
+    border-radius: 12px; background: var(--bg-soft);
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .attach-drop:hover, .attach-drop.dragging {
+    border-color: var(--ink); background: var(--bg-card);
+  }
+  .attach-drop .ad-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .attach-drop .ad-sub   { font-size: 11px; color: var(--ink-mute); text-align: center; }
+  .attach-drop input[type="file"] { display: none; }
+  /* Attachment row — file-icon thumb, name + meta, progress overlay, hover
+     actions. Image attachments swap the icon for a square thumbnail
+     loaded from the protected file endpoint with credentials. */
+  .attach-list { display: flex; flex-direction: column; gap: 6px; }
+  .attach-row {
+    display: grid; grid-template-columns: 44px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 8px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--bg-card);
+    position: relative; overflow: hidden;
+  }
+  .attach-row.uploading { opacity: 0.85; }
+  .attach-row .at-thumb {
+    width: 44px; height: 44px; border-radius: 8px;
+    background: var(--bg-soft); display: grid; place-items: center;
+    color: var(--ink-mute); font-size: 11px; font-weight: 700;
+    overflow: hidden;
+  }
+  .attach-row .at-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .attach-row .at-thumb.pdf  { background: #fde7e7; color: #a8260c; }
+  .attach-row .at-thumb.doc  { background: #e6efff; color: #1d4ed8; }
+  .attach-row .at-thumb.xls  { background: #e3f3e8; color: #056a3c; }
+  .attach-row .at-thumb.zip  { background: var(--gold-soft); color: #6b4a08; }
+  .attach-row .at-meta { min-width: 0; }
+  .attach-row .at-name {
+    font-size: 13px; color: var(--ink); font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .attach-row.image .at-name { cursor: zoom-in; }
+  .attach-row .at-sub {
+    font-size: 11px; color: var(--ink-mute); margin-top: 2px;
+  }
+  .attach-row .at-actions {
+    display: flex; gap: 4px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .attach-row:hover .at-actions { opacity: 1; }
+  .attach-row .at-btn {
+    background: none; border: none; padding: 6px;
+    border-radius: 6px; cursor: pointer; color: var(--ink-mute);
+  }
+  .attach-row .at-btn:hover { background: var(--bg-soft); color: var(--ink); }
+  /* Progress bar slides under the row content. Replaced with a check-icon
+     when the upload completes. */
+  .attach-row .at-progress {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 2px; background: transparent;
+  }
+  .attach-row .at-progress > span {
+    display: block; height: 100%; background: var(--teal);
+    width: 0; transition: width .25s;
+  }
+  /* Lightbox for image attachments — reuses .modal-back to fade backdrop;
+     image fills the available room with rounded corners. */
+  .attach-lightbox {
+    position: fixed; inset: 0; z-index: 250;
+    background: rgba(0, 0, 0, 0.78);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+  }
+  .attach-lightbox.open { display: flex; }
+  .attach-lightbox img {
+    max-width: 92vw; max-height: 92vh; border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  /* Activity feed — unified chronological view of audit events + user
+     comments. Avatar/icon column is fixed-width so timestamps line up.
+     System-generated rows (audits) use a smaller circular dot; user
+     comments use an avatar with initials. */
+  .feed { display: flex; flex-direction: column; gap: 14px; }
+  .feed-row {
+    display: grid; grid-template-columns: 32px 1fr;
+    gap: 10px; align-items: flex-start;
+  }
+  .feed-row.system .feed-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    display: grid; place-items: center;
+    font-size: 13px; color: var(--ink-mute);
+  }
+  .feed-row.user .feed-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent-soft); color: #6b2410;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .feed-body { min-width: 0; }
+  .feed-head {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 12.5px;
+  }
+  .feed-head .who { font-weight: 600; color: var(--ink); }
+  .feed-head .when { color: var(--ink-mute); font-size: 11.5px; }
+  .feed-row.system .feed-head .who { color: var(--ink-mute); font-weight: 500; }
+  .feed-text {
+    margin-top: 4px; font-size: 13px; color: var(--ink); line-height: 1.45;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .feed-row.system .feed-text {
+    color: var(--ink-soft); font-size: 12px;
+  }
+  .feed-actions {
+    display: inline-flex; gap: 4px; margin-left: auto;
+    opacity: 0; transition: opacity .15s;
+  }
+  .feed-row:hover .feed-actions { opacity: 1; }
+  .feed-actions button {
+    background: none; border: none; color: var(--ink-mute);
+    font-size: 11.5px; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  }
+  .feed-actions button:hover { background: var(--line-soft); color: var(--ink); }
+  /* Composer — single textarea that grows on focus, send button below.
+     Anchored to the bottom of the Actividad pane via flex layout. */
+  .feed-composer {
+    margin-top: 18px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg-card);
+    transition: border-color .15s, background .15s;
+  }
+  .feed-composer:focus-within { border-color: var(--ink); }
+  .feed-composer.dragging { border-color: var(--teal); background: var(--teal-soft); }
+  .feed-composer textarea {
+    width: 100%; min-height: 56px; max-height: 240px;
+    border: none; outline: none; resize: vertical;
+    font-family: inherit; font-size: 13px; color: var(--ink);
+    background: transparent; line-height: 1.45;
+  }
+  .feed-composer textarea::placeholder { color: var(--ink-mute); }
+  /* Pending-attachments row — chips appear under the textarea while the
+     user composes, before they hit Comentar. Each chip is a thumbnail
+     for images, a file-type tag otherwise, with × to remove. */
+  .composer-pending {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+  }
+  .composer-pending:empty { display: none; }
+  .composer-pending .pending-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 6px 4px 4px; border-radius: 8px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    font-size: 11.5px; color: var(--ink-soft);
+  }
+  .composer-pending .pending-chip img {
+    width: 22px; height: 22px; border-radius: 4px; object-fit: cover;
+  }
+  .composer-pending .pending-chip .pc-name {
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .composer-pending .pending-chip button {
+    background: none; border: none; color: var(--ink-mute);
+    cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1;
+  }
+  .composer-pending .pending-chip button:hover { color: var(--ink); }
+  .feed-composer-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 6px;
+  }
+  .feed-composer-foot .left { display: flex; align-items: center; gap: 6px; }
+  .feed-composer-foot .hint { font-size: 11px; color: var(--ink-mute); }
+  .feed-composer-foot .icon-btn {
+    background: none; border: none; padding: 4px;
+    border-radius: 6px; cursor: pointer; color: var(--ink-mute);
+    display: inline-flex; align-items: center;
+  }
+  .feed-composer-foot .icon-btn:hover { background: var(--line-soft); color: var(--ink); }
+  .feed-composer-foot button.send {
+    padding: 6px 14px; font-size: 12.5px; font-weight: 600;
+    background: var(--ink); color: #fff; border: none; border-radius: 8px;
+    cursor: pointer;
+  }
+  .feed-composer-foot button.send:disabled { opacity: 0.5; cursor: not-allowed; }
+  .feed-composer-foot button.send:hover:not(:disabled) { background: #2a2520; }
+  /* Edit-comment inline state — replaces the body with an editable area.
+     Cancel reverts; Save calls PATCH. */
+  .feed-edit textarea {
+    width: 100%; min-height: 60px; padding: 8px;
+    border: 1px solid var(--line); border-radius: 8px;
+    font-family: inherit; font-size: 13px; color: var(--ink);
+    background: var(--bg-card); resize: vertical;
+  }
+  .feed-edit-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .feed-edit-actions button {
+    padding: 4px 10px; font-size: 11.5px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--bg-card);
+    color: var(--ink); cursor: pointer;
+  }
+  .feed-edit-actions button.primary {
+    background: var(--ink); color: #fff; border-color: var(--ink);
+  }
+  /* Mobile guards. The sheet collapses to 100 vw on small screens (already
+     covered by the existing .sheet rule). These rules fix the parts that
+     would otherwise overflow the narrower body:
+       - composer hint is too long → hide on <520 px
+       - dep chip text needs to truncate inside its flex container
+       - composer foot's left cluster needs to wrap as a fallback */
+  @media (max-width: 520px) {
+    .feed-composer-foot { flex-wrap: wrap; gap: 6px; }
+    .feed-composer-foot .left { flex: 1 1 auto; min-width: 0; }
+    .feed-composer-foot .hint { display: none; }
+    .sheet-body { padding: 0 16px 18px; }
+    .sheet-tabs { padding: 0 16px; margin: 14px -16px 0; }
+    .sla-ribbon { padding: 10px 12px; font-size: 12px; }
+    .subtask-row .st-meta { font-size: 11px; }
+    .attach-drop { padding: 18px 12px; }
+    .attach-drop .ad-sub { font-size: 10.5px; }
+    .pending-chip .pc-name { max-width: 100px; }
+    .dep-chip { max-width: calc(100% - 4px); }
+    .dep-chip > span:first-of-type, .dep-chip { overflow: hidden; }
+  }
   .sheet-section h4 {
     font-size: 11px; font-weight: 600; color: var(--ink-mute);
     text-transform: uppercase; letter-spacing: 0.05em;
@@ -1022,6 +1398,15 @@
           </div>
         </div>
         <div class="field">
+          <label for="ntRecur">Repetir</label>
+          <select id="ntRecur" name="recurrence">
+            <option value="">No repetir</option>
+            <option value="daily">Diaria</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensual</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="ntListing">Propiedad relacionada (opcional)</label>
           <select id="ntListing" name="listing_id">
             <option value="">— Ninguna —</option>
@@ -1046,6 +1431,27 @@
         <button type="submit" class="btn btn-primary" id="ntSubmit">Crear tarea</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ╭─ Attachment lightbox (image preview) ─────────────────╮ -->
+<div class="attach-lightbox" id="attachLightbox">
+  <img id="attachLightboxImg" alt="">
+</div>
+
+<!-- ╭─ MODAL: Picker (used for adding a dependency) ────────╮ -->
+<div class="modal-back" id="pickerBack">
+  <div class="modal" id="pickerModal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="pickerTitle">Agregar dependencia</h3>
+      <button class="sheet-close" id="pickerClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input id="pickerSearch" class="picker-search" type="text" placeholder="Buscar por título…" autocomplete="off">
+      <div id="pickerResults" class="picker-results"></div>
+    </div>
   </div>
 </div>
 
@@ -1296,6 +1702,39 @@ function approverCell(t) {
   return `<span class="approver-cell"><span class="av-mini">${escapeHtml(initials(name))}</span> ${escapeHtml(name)}</span>`;
 }
 
+// Spanish label for the recurrence rule. "—" when the task is one-off.
+// Counts/until aren't surfaced in the meta cell — they're only in the
+// API for power users; the meta cell stays compact.
+function recurrenceLabel(t) {
+  const r = t.recurrence;
+  if (!r || !r.rule) return '<span style="color:var(--ink-mute);">No repite</span>';
+  const labels = { daily: 'Diaria', weekly: 'Semanal', monthly: 'Mensual' };
+  return escapeHtml(labels[r.rule] || r.rule);
+}
+
+// Inline metadata badges — comments, attachments, subtask progress,
+// recurrence rule, blocked-by-deps. Each is conditional so the row
+// shows nothing when the task has none of these features in use.
+function taskBadges(t) {
+  const out = [];
+  const c = Array.isArray(t.comments)    ? t.comments.length    : 0;
+  const a = Array.isArray(t.attachments) ? t.attachments.length : 0;
+  const blocking = Array.isArray(t.unfulfilled_dependencies) ? t.unfulfilled_dependencies.length : 0;
+  if (c) out.push(`<span class="badge" title="Comentarios">💬 ${c}</span>`);
+  if (a) out.push(`<span class="badge" title="Archivos">📎 ${a}</span>`);
+  if (t.subtask_progress) {
+    out.push(`<span class="badge" title="Subtareas">↳ ${t.subtask_progress.done}/${t.subtask_progress.total}</span>`);
+  }
+  if (t.recurrence && t.recurrence.rule) {
+    const ruleLabel = { daily: 'diaria', weekly: 'semanal', monthly: 'mensual' }[t.recurrence.rule] || t.recurrence.rule;
+    out.push(`<span class="badge recurrence" title="Tarea recurrente">↻ ${escapeHtml(ruleLabel)}</span>`);
+  }
+  if (blocking) {
+    out.push(`<span class="badge blocked" title="Bloqueada por otras tareas">⏳ ${blocking}</span>`);
+  }
+  return out.length ? `<div class="task-badges">${out.join('')}</div>` : '';
+}
+
 function approverName(id) {
   if (!id) return '—';
   if (STATE.user && id === STATE.user.id) return 'Tú';
@@ -1378,6 +1817,7 @@ function renderTable() {
               <td>
                 <div class="task-title" data-open="${escapeHtml(t.id)}">${escapeHtml(t.title || 'Sin título')}</div>
                 ${t.description ? `<div class="task-sub">${escapeHtml(t.description)}</div>` : ''}
+                ${taskBadges(t)}
               </td>
               <td>${linkChip(t)}</td>
               <td>${priorityPill(t)}</td>
@@ -1507,6 +1947,9 @@ function openSheet(id) {
   const t = STATE.tasks.find(x => x.id === id);
   if (!t) return;
   STATE.selected = t;
+  STATE.activeTab = 'detalle';   // always start on Detalle for a freshly-opened task
+  STATE.feedPage  = 1;
+  STATE.feedTaskId = t.id;
   document.getElementById('sheetTitle').textContent = t.title || 'Tarea';
   renderSheetBody(t);
   renderSheetActions(t);
@@ -1523,20 +1966,115 @@ function closeSheet() {
   STATE.selected = null;
 }
 
+// ── Sheet rendering ─────────────────────────────────────────────────
+// The sheet body is split into three tabs (Detalle / Actividad / Archivos)
+// to keep the panel scannable as features layer in. Each pane has its
+// own renderer; renderSheetBody is the orchestrator that writes the
+// shell and dispatches to the per-pane renderers, preserving the user's
+// active tab across re-renders.
 function renderSheetBody(t) {
+  const sb         = document.getElementById('sheetBody');
+  const activeTab  = STATE.activeTab || 'detalle';
+  const attachCount = Array.isArray(t.attachments) ? t.attachments.length : 0;
+  const activityCount = (Array.isArray(t.comments) ? t.comments.length : 0)
+                      + (Array.isArray(t.audit_log) ? t.audit_log.length : 0);
+  sb.innerHTML = `
+    <div class="sheet-ribbon" id="sheetRibbon"></div>
+    <div class="sheet-tabs" role="tablist">
+      <button class="sheet-tab ${activeTab === 'detalle'   ? 'active' : ''}" data-pane="detalle"   role="tab">Detalle</button>
+      <button class="sheet-tab ${activeTab === 'actividad' ? 'active' : ''}" data-pane="actividad" role="tab">
+        Actividad${activityCount ? `<span class="tab-count">${activityCount}</span>` : ''}
+      </button>
+      <button class="sheet-tab ${activeTab === 'archivos'  ? 'active' : ''}" data-pane="archivos"  role="tab">
+        Archivos${attachCount ? `<span class="tab-count">${attachCount}</span>` : ''}
+      </button>
+    </div>
+    <div class="sheet-pane ${activeTab === 'detalle'   ? 'active' : ''}" data-pane="detalle"   id="paneDetalle"></div>
+    <div class="sheet-pane ${activeTab === 'actividad' ? 'active' : ''}" data-pane="actividad" id="paneActividad"></div>
+    <div class="sheet-pane ${activeTab === 'archivos'  ? 'active' : ''}" data-pane="archivos"  id="paneArchivos"></div>
+  `;
+  renderRibbon(t);
+  renderPaneDetalle(t);
+  renderPaneActividad(t);
+  renderPaneArchivos(t);
+
+  sb.querySelectorAll('.sheet-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.pane));
+  });
+}
+
+// Render the at-a-glance status ribbons stacked above the tab strip.
+// Three signals can fire (any combination):
+//   - overdue:   due_date is past and the task is still active
+//   - idle:      no activity for 5+ days while the task is still active
+//   - blocked:   unfulfilled_dependencies present
+// Each maps to a single tonal banner in the existing palette so the user
+// gets the answer without parsing the sheet meta grid.
+function renderRibbon(t) {
+  const wrap = document.getElementById('sheetRibbon');
+  if (!wrap) return;
+  const isTerminal = t.status === 'completada' || t.status === 'no_aplica';
+  const out = [];
+
+  // Overdue
+  if (!isTerminal && t.due_date && new Date(t.due_date).getTime() < Date.now()) {
+    const ms   = Date.now() - new Date(t.due_date).getTime();
+    const days = Math.floor(ms / 86400000);
+    const hrs  = Math.floor((ms % 86400000) / 3600000);
+    const txt  = days >= 1 ? `${days} día${days !== 1 ? 's' : ''}` : `${hrs} hora${hrs !== 1 ? 's' : ''}`;
+    out.push(`
+      <div class="sla-ribbon overdue">
+        <span class="ico">⚠</span>
+        <span><strong>Vencida</strong> hace ${escapeHtml(txt)}.</span>
+      </div>`);
+  }
+
+  // Blocked by dependencies
+  const blocking = Array.isArray(t.unfulfilled_dependencies) ? t.unfulfilled_dependencies : [];
+  if (!isTerminal && blocking.length) {
+    const names = blocking.slice(0, 2).map(b => escapeHtml(b.title || 'tarea')).join(', ');
+    const extra = blocking.length > 2 ? ` y ${blocking.length - 2} más` : '';
+    out.push(`
+      <div class="sla-ribbon blocked">
+        <span class="ico">⏳</span>
+        <span><strong>Bloqueada</strong> por ${names}${escapeHtml(extra)}.</span>
+      </div>`);
+  }
+
+  // Idle (5+ days since last update). Suppressed when overdue is already
+  // shown so we don't double-up with two warning ribbons stacked.
+  const updatedAt = t.updated_at ? new Date(t.updated_at).getTime() : 0;
+  const idleDays  = updatedAt ? Math.floor((Date.now() - updatedAt) / 86400000) : 0;
+  const overdueShown = !isTerminal && t.due_date && new Date(t.due_date).getTime() < Date.now();
+  if (!isTerminal && !overdueShown && idleDays >= 5) {
+    out.push(`
+      <div class="sla-ribbon idle">
+        <span class="ico">💤</span>
+        <span><strong>Inactiva</strong> desde hace ${idleDays} día${idleDays !== 1 ? 's' : ''}.</span>
+      </div>`);
+  }
+
+  wrap.innerHTML = out.join('');
+}
+
+function switchTab(name) {
+  if (!['detalle', 'actividad', 'archivos'].includes(name)) return;
+  STATE.activeTab = name;
+  document.querySelectorAll('.sheet-tab').forEach(b => b.classList.toggle('active', b.dataset.pane === name));
+  document.querySelectorAll('.sheet-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === name));
+}
+
+// Detalle: the existing description + meta + linked-resource + review-note
+// content. Subtask/dependency sections will land here in steps 4 + 5.
+function renderPaneDetalle(t) {
   const meta = [
     { k: 'Estado',     v: statusPill(t) },
     { k: 'Prioridad',  v: priorityPill(t) },
     { k: 'Vence',      v: t.due_date ? `<span class="due-cell ${isOverdueTask(t) ? 'overdue' : ''}">${escapeHtml(relativeDue(t.due_date))}</span>` : '<span style="color:var(--ink-mute);">Sin fecha</span>' },
     { k: 'Aprobador',  v: approverCell(t) },
+    { k: 'Repite',     v: recurrenceLabel(t) },
   ];
-  const events = [];
-  events.push({ when: t.created_at, label: 'Creada' });
-  if (t.submitted_at) events.push({ when: t.submitted_at, label: 'Enviada para revisión' });
-  if (t.reviewed_at)  events.push({ when: t.reviewed_at,  label: t.approval_status === 'rejected' ? 'Devuelta para revisión' : t.approval_status === 'not_applicable' ? 'Marcada como no aplica' : 'Revisada' });
-  if (t.completed_at) events.push({ when: t.completed_at, label: 'Completada' });
-
-  document.getElementById('sheetBody').innerHTML = `
+  document.getElementById('paneDetalle').innerHTML = `
     ${t.description ? `<div class="sheet-section">
       <h4>Descripción</h4>
       <div class="sheet-desc">${escapeHtml(t.description)}</div>
@@ -1558,20 +2096,735 @@ function renderSheetBody(t) {
       <div class="review-note">${escapeHtml(t.review_notes)}</div>
     </div>` : ''}
 
+    <div class="sheet-section" id="paneSubtasks">
+      <h4>${t.subtask_progress
+        ? `Subtareas (${t.subtask_progress.done}/${t.subtask_progress.total})`
+        : 'Subtareas'}</h4>
+      <div class="subtask-list" id="subtaskList">
+        <div class="pane-empty" style="padding:8px;">Cargando…</div>
+      </div>
+      ${(STATE.user && (t.assigned_by === STATE.user.id))
+        ? `<button class="subtask-add-btn" data-act="add-subtask" data-parent="${escapeHtml(t.id)}" type="button">+ Subtarea</button>`
+        : ''}
+    </div>
+
+    <div class="sheet-section" id="paneDependencies">
+      <h4>Bloqueada por</h4>
+      <div class="dep-list" id="depList">${renderDependencyChips(t)}</div>
+      ${(STATE.user && (t.assigned_by === STATE.user.id || t.assigned_to === STATE.user.id))
+        ? `<button class="subtask-add-btn" data-act="add-dep" data-task="${escapeHtml(t.id)}" type="button">+ Dependencia</button>`
+        : ''}
+    </div>
+  `;
+
+  // Fetch subtasks lazily — the pane is open before the request returns,
+  // so the user sees the section header immediately and the list fills in.
+  loadSubtasks(t);
+  // Wire the "+ Subtarea" button to the existing create modal, pre-filling
+  // parent_task_id so the API links the new task as a child.
+  const addBtn = document.querySelector('[data-act="add-subtask"]');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      openNewTaskModal();
+      STATE.subtaskParentId = addBtn.dataset.parent;
+    });
+  }
+
+  // Wire dependency chip removal + "+ Dependencia" button.
+  document.querySelectorAll('.dep-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      // Click the X → remove. Click anywhere else → open the predecessor.
+      if (e.target.closest('.dep-x')) {
+        e.stopPropagation();
+        removeDependency(t.id, chip.dataset.depId);
+      } else {
+        openSheet(chip.dataset.depId);
+      }
+    });
+  });
+  const addDepBtn = document.querySelector('[data-act="add-dep"]');
+  if (addDepBtn) {
+    addDepBtn.addEventListener('click', () => openDepPicker(t));
+  }
+}
+
+// Render the chip list that sits inside #depList. Pulled out so we can
+// re-render after add/remove without re-rendering the whole pane.
+function renderDependencyChips(t) {
+  const blocking = Array.isArray(t.unfulfilled_dependencies) ? t.unfulfilled_dependencies : [];
+  if (!blocking.length) {
+    return `<div class="pane-empty" style="padding:8px;">Sin dependencias.</div>`;
+  }
+  const canRemove = STATE.user
+    && (t.assigned_by === STATE.user.id || t.assigned_to === STATE.user.id);
+  return blocking.map(b => `
+    <span class="dep-chip" data-dep-id="${escapeHtml(b.id)}" title="${escapeHtml(b.title || 'Tarea')}">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${escapeHtml(b.title || 'Tarea')}</span>
+      ${canRemove ? `<button class="dep-x" type="button" aria-label="Quitar dependencia">×</button>` : ''}
+    </span>
+  `).join('');
+}
+
+async function removeDependency(taskId, predecessorId) {
+  try {
+    await api(`/api/tasks/${encodeURIComponent(taskId)}/depends-on/${encodeURIComponent(predecessorId)}`, { method: 'DELETE' });
+    toast('Dependencia eliminada', 'success');
+    // Refresh the selected task so the chip list and SLA ribbon both update.
+    const fresh = await api(`/api/tasks/${encodeURIComponent(taskId)}`);
+    if (STATE.selected && STATE.selected.id === taskId) {
+      STATE.selected = fresh;
+      renderSheetBody(fresh);
+      renderSheetActions(fresh);
+    }
+  } catch (err) {
+    toast(err.message || 'No se pudo eliminar la dependencia', 'error');
+  }
+}
+
+// Open the dependency picker. Filters to tasks visible to the current
+// user (via /api/tasks) and excludes the current task + its existing
+// dependencies. Submitting calls POST /:id/depends-on.
+function openDepPicker(t) {
+  const back   = document.getElementById('pickerBack');
+  const search = document.getElementById('pickerSearch');
+  const list   = document.getElementById('pickerResults');
+  document.getElementById('pickerTitle').textContent = 'Agregar dependencia';
+  search.value = '';
+  back.classList.add('open');
+  setTimeout(() => search.focus(), 80);
+
+  const existing = new Set((t.unfulfilled_dependencies || []).map(d => d.id));
+  existing.add(t.id);   // can't depend on self
+
+  // Source pool: every task already loaded into the dashboard. Server-side
+  // search is a future improvement; the client-side filter is fine while
+  // the page caps tasks at ~200 by default.
+  const pool = (STATE.tasks || []).filter(x => !existing.has(x.id) && !x.archived);
+
+  const renderPicker = () => {
+    const q = (search.value || '').trim().toLowerCase();
+    const matches = pool.filter(x =>
+      !q || (x.title || '').toLowerCase().includes(q)
+    ).slice(0, 30);
+    if (!matches.length) {
+      list.innerHTML = `<div class="picker-empty">${q ? 'Sin resultados.' : 'No hay otras tareas disponibles.'}</div>`;
+      return;
+    }
+    list.innerHTML = matches.map(x => `
+      <div class="picker-row" data-id="${escapeHtml(x.id)}">
+        <div class="pr-title">${escapeHtml(x.title || 'Sin título')}</div>
+        <div class="pr-sub">${escapeHtml(STATUS_LABELS[x.status] || x.status)}${x.due_date ? ` · vence ${escapeHtml(relativeDue(x.due_date))}` : ''}</div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.picker-row').forEach(row => {
+      row.addEventListener('click', () => addDependency(t.id, row.dataset.id));
+    });
+  };
+  search.oninput = renderPicker;
+  renderPicker();
+}
+
+async function addDependency(taskId, predecessorId) {
+  try {
+    await api(`/api/tasks/${encodeURIComponent(taskId)}/depends-on`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ predecessor_id: predecessorId }),
+    });
+    toast('Dependencia agregada', 'success');
+    closeDepPicker();
+    const fresh = await api(`/api/tasks/${encodeURIComponent(taskId)}`);
+    if (STATE.selected && STATE.selected.id === taskId) {
+      STATE.selected = fresh;
+      renderSheetBody(fresh);
+      renderSheetActions(fresh);
+    }
+  } catch (err) {
+    toast(err.message || 'No se pudo agregar la dependencia', 'error');
+  }
+}
+
+function closeDepPicker() {
+  document.getElementById('pickerBack').classList.remove('open');
+}
+document.getElementById('pickerClose').addEventListener('click', closeDepPicker);
+document.getElementById('pickerBack').addEventListener('click', (e) => {
+  if (e.target.id === 'pickerBack') closeDepPicker();
+});
+
+async function loadSubtasks(t) {
+  const list = document.getElementById('subtaskList');
+  if (!list) return;
+  try {
+    const r = await api(`/api/tasks/${encodeURIComponent(t.id)}/subtasks`);
+    const subs = (r && r.subtasks) || [];
+    if (!subs.length) {
+      list.innerHTML = `<div class="pane-empty" style="padding:8px;">Sin subtareas todavía.</div>`;
+      return;
+    }
+    list.innerHTML = subs.map(renderSubtaskRow).join('');
+    // Wire the chevrons (inline-expand) and titles (open child sheet).
+    list.querySelectorAll('.st-chev').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.closest('.subtask-row').classList.toggle('expanded');
+      });
+    });
+    list.querySelectorAll('.st-title').forEach(el => {
+      el.addEventListener('click', () => openSheet(el.dataset.id));
+    });
+  } catch (err) {
+    list.innerHTML = `<div class="pane-empty" style="padding:8px;color:var(--accent);">No se pudieron cargar las subtareas.</div>`;
+  }
+}
+
+function renderSubtaskRow(t) {
+  const isDone = t.status === 'completada';
+  const isNa   = t.status === 'no_aplica';
+  const cls    = `subtask-row${isDone ? ' done' : ''}${isNa ? ' na' : ''}`;
+  const due    = t.due_date ? relativeDue(t.due_date) : '—';
+  return `
+    <div class="${cls}">
+      <span class="st-status" aria-hidden="true"></span>
+      <span class="st-title" data-id="${escapeHtml(t.id)}" title="Abrir tarea">${escapeHtml(t.title || 'Sin título')}</span>
+      ${statusPill(t)}
+      <button class="st-chev" type="button" aria-label="Detalles">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div class="st-meta">Vence ${escapeHtml(due)} · Aprobador: ${approverName(t.approver_id)}</div>
+    </div>`;
+}
+
+// Unified feed of audit_log entries + user comments, sorted chronologically.
+// Each row is one of:
+//   - system row (audit entry): icon + small label + timestamp
+//   - user row (comment): avatar with initials + author + timestamp + body
+// Composer at the bottom posts into the same stream. Edit/delete on
+// hover for the user's own comments, plus the task creator can delete
+// any comment on their task.
+// Default page size for the activity feed. Audit_log + comments together
+// can hit the server-side cap of ~400 entries on a long-lived recurring
+// task; rendering all at once on every sheet open is wasteful when the
+// user usually only cares about the last few. "Mostrar anteriores"
+// reveals the rest in 30-row pages.
+const FEED_PAGE_SIZE = 30;
+
+function renderPaneActividad(t) {
+  const audit    = Array.isArray(t.audit_log) ? t.audit_log : [];
+  const comments = Array.isArray(t.comments)  ? t.comments  : [];
+
+  // Merge + sort by timestamp asc (so newest is at the bottom, like
+  // GitHub/Linear). The composer follows the latest entry naturally.
+  const items = [
+    ...audit.map(a => ({ kind: 'audit',   when: a.timestamp,  data: a })),
+    ...comments.map(c => ({ kind: 'comment', when: c.created_at, data: c })),
+  ].sort((a, b) => (a.when || '').localeCompare(b.when || ''));
+
+  // Window the feed: keep the most recent FEED_PAGE_SIZE * (page+1) rows.
+  // Page state lives on STATE so it survives re-renders triggered by
+  // post-comment / upload refreshes within the same task.
+  if (!STATE.feedPage || STATE.feedTaskId !== t.id) {
+    STATE.feedPage = 1;
+    STATE.feedTaskId = t.id;
+  }
+  const visibleStart = Math.max(0, items.length - FEED_PAGE_SIZE * STATE.feedPage);
+  const visible     = items.slice(visibleStart);
+  const hasMore     = visibleStart > 0;
+
+  const feedHtml = items.length
+    ? `${hasMore ? `<button type="button" class="subtask-add-btn" id="feedShowMore" style="align-self:center;margin-bottom:6px;">Mostrar anteriores (${visibleStart})</button>` : ''}
+       <div class="feed">${visible.map(renderFeedRow).join('')}</div>`
+    : `<div class="pane-empty">Sin actividad todavía.</div>`;
+
+  document.getElementById('paneActividad').innerHTML = `
     <div class="sheet-section">
-      <h4>Historial</h4>
-      <div class="timeline">
-        ${events.map(e => `<div class="tl-row">
-          <span class="tl-dot"></span>
-          <div>
-            <div>${escapeHtml(e.label)}</div>
-            <div class="when">${escapeHtml(fmtDateTime(e.when))}</div>
-          </div>
-        </div>`).join('')}
+      <h4>Actividad</h4>
+      ${feedHtml}
+    </div>
+    <div class="feed-composer" id="feedComposer">
+      <textarea id="feedInput" maxlength="4000" placeholder="Escribe un comentario para el equipo…" rows="2"></textarea>
+      <div class="composer-pending" id="composerPending"></div>
+      <div class="feed-composer-foot">
+        <div class="left">
+          <button type="button" class="icon-btn" id="feedAttachBtn" title="Adjuntar archivo">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input id="feedAttachInput" type="file" multiple style="display:none"
+                 accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.csv,.rtf,.zip">
+          <span class="hint">Adjunta archivos o pega una imagen. Visible para asignado, creador y aprobador.</span>
+        </div>
+        <button type="button" class="send" id="feedSend" disabled>Comentar</button>
       </div>
     </div>
   `;
+
+  // Wire the "Mostrar anteriores" button BEFORE the composer so re-renders
+  // don't lose the click handler. It just bumps the page counter and
+  // re-renders the pane.
+  document.getElementById('feedShowMore')?.addEventListener('click', () => {
+    STATE.feedPage = (STATE.feedPage || 1) + 1;
+    renderPaneActividad(t);
+  });
+  wireFeedComposer(t);
+  wireFeedActions(t);
 }
+
+// Render one row of the feed. Audit entries get a system icon and a
+// short translated label; comments get an avatar with the author's
+// initials, the body, and (on hover, for the author) edit/delete buttons.
+function renderFeedRow(item) {
+  if (item.kind === 'audit')   return renderAuditRow(item.data);
+  if (item.kind === 'comment') return renderCommentRow(item.data);
+  return '';
+}
+
+const AUDIT_LABELS = {
+  created:              'creó la tarea',
+  status_change:        'cambió el estado',
+  edited:               'editó la tarea',
+  approver_changed:     'cambió el aprobador',
+  parent_changed:       'movió a otra tarea padre',
+  depends_on_added:     'agregó una dependencia',
+  depends_on_removed:   'quitó una dependencia',
+  recurrence_set:       'cambió la recurrencia',
+  recurrence_spawned:   'generó una nueva ocurrencia',
+  recurrence_ended:     'finalizó la recurrencia',
+  reopened:             'reabrió la tarea',
+  archived:             'archivó la tarea',
+  comment_added:        'agregó un comentario',
+  comment_edited:       'editó un comentario',
+  comment_deleted:      'eliminó un comentario',
+  attachment_added:     'subió un archivo',
+  attachment_deleted:   'eliminó un archivo',
+  sla_overdue:          'detectó tarea vencida',
+  sla_idle:             'detectó tarea inactiva',
+};
+
+function renderAuditRow(a) {
+  const label = AUDIT_LABELS[a.type] || a.type;
+  const actor = a.actor_id === 'system'
+    ? 'Sistema'
+    : (a.actor_id && STATE.user && a.actor_id === STATE.user.id ? 'Tú' : approverName(a.actor_id));
+  // For status_change, show the from→to so the row has real signal.
+  let extra = '';
+  if (a.type === 'status_change' && a.data?.from && a.data?.to) {
+    extra = `: ${escapeHtml(STATUS_LABELS[a.data.from] || a.data.from)} → ${escapeHtml(STATUS_LABELS[a.data.to] || a.data.to)}`;
+  }
+  return `
+    <div class="feed-row system">
+      <div class="feed-icon" title="${escapeHtml(a.type)}">·</div>
+      <div class="feed-body">
+        <div class="feed-head">
+          <span class="who">${escapeHtml(actor)}</span>
+          <span>${escapeHtml(label)}${extra}</span>
+          <span class="when">${escapeHtml(fmtDateTime(a.timestamp))}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCommentRow(c) {
+  const isMine = STATE.user && c.author_id === STATE.user.id;
+  const isCreatorOfTask = STATE.user && STATE.selected && STATE.selected.assigned_by === STATE.user.id;
+  const canEdit   = isMine;
+  const canDelete = isMine || isCreatorOfTask;
+  return `
+    <div class="feed-row user" data-comment-id="${escapeHtml(c.id)}">
+      <div class="feed-icon">${escapeHtml(initials(c.author_name || ''))}</div>
+      <div class="feed-body">
+        <div class="feed-head">
+          <span class="who">${escapeHtml(c.author_name || 'Miembro')}</span>
+          <span class="when">${escapeHtml(fmtDateTime(c.created_at))}${c.edited_at ? ' · editado' : ''}</span>
+          ${canEdit || canDelete ? `<span class="feed-actions">
+            ${canEdit   ? '<button type="button" data-act="edit-comment">Editar</button>' : ''}
+            ${canDelete ? '<button type="button" data-act="delete-comment">Eliminar</button>' : ''}
+          </span>` : ''}
+        </div>
+        <div class="feed-text" data-role="body">${escapeHtml(c.body || '')}</div>
+      </div>
+    </div>`;
+}
+
+function wireFeedComposer(t) {
+  const composer  = document.getElementById('feedComposer');
+  const input     = document.getElementById('feedInput');
+  const send      = document.getElementById('feedSend');
+  const pendingEl = document.getElementById('composerPending');
+  const attachBtn = document.getElementById('feedAttachBtn');
+  const attachIn  = document.getElementById('feedAttachInput');
+  if (!input || !send) return;
+
+  // Pending files staged on the composer. Each entry: { id, file, url? }.
+  // url is set for image previews so the chip can render a thumbnail
+  // without uploading first.
+  const pending = [];
+  const refreshSend = () => {
+    send.disabled = !(input.value.trim() || pending.length);
+  };
+  const renderPending = () => {
+    pendingEl.innerHTML = pending.map(p => `
+      <span class="pending-chip" data-id="${escapeHtml(p.id)}">
+        ${p.url ? `<img src="${escapeHtml(p.url)}" alt="">` : ''}
+        <span class="pc-name">${escapeHtml(p.file.name)}</span>
+        <button type="button" data-act="rm-pending">×</button>
+      </span>
+    `).join('');
+    pendingEl.querySelectorAll('[data-act="rm-pending"]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        const id = e.target.closest('.pending-chip').dataset.id;
+        const idx = pending.findIndex(p => p.id === id);
+        if (idx >= 0) {
+          if (pending[idx].url) URL.revokeObjectURL(pending[idx].url);
+          pending.splice(idx, 1);
+          renderPending();
+          refreshSend();
+        }
+      });
+    });
+  };
+  const stageFiles = (files) => {
+    // Cap at 5 files per send (matches server-side ATTACH_FILES_PER_REQ).
+    const room = Math.max(0, 5 - pending.length);
+    for (const f of Array.from(files).slice(0, room)) {
+      const id = crypto.randomUUID();
+      const isImage = (f.type || '').startsWith('image/');
+      pending.push({
+        id, file: f,
+        url: isImage ? URL.createObjectURL(f) : null,
+      });
+    }
+    renderPending();
+    refreshSend();
+  };
+
+  input.addEventListener('input', refreshSend);
+  // ⌘+Enter / Ctrl+Enter posts. Plain Enter inserts a newline (matches
+  // multi-line note conventions in the rest of the dashboard).
+  input.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !send.disabled) {
+      e.preventDefault();
+      send.click();
+    }
+  });
+  // Paperclip → file picker.
+  attachBtn.addEventListener('click', () => attachIn.click());
+  attachIn.addEventListener('change', () => {
+    if (attachIn.files && attachIn.files.length) stageFiles(attachIn.files);
+    attachIn.value = '';
+  });
+  // Drag/drop on the composer surface.
+  ['dragenter', 'dragover'].forEach(ev =>
+    composer.addEventListener(ev, e => { e.preventDefault(); composer.classList.add('dragging'); }));
+  ['dragleave', 'drop'].forEach(ev =>
+    composer.addEventListener(ev, e => { e.preventDefault(); composer.classList.remove('dragging'); }));
+  composer.addEventListener('drop', (e) => {
+    if (e.dataTransfer && e.dataTransfer.files.length) stageFiles(e.dataTransfer.files);
+  });
+  // Paste an image from clipboard (e.g. screenshot).
+  input.addEventListener('paste', (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file') {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      stageFiles(files);
+    }
+  });
+
+  send.addEventListener('click', async () => {
+    const body = input.value.trim();
+    if (!body && !pending.length) return;
+    send.disabled = true; send.textContent = 'Enviando…';
+    try {
+      // 1. Upload pending files first (if any). Single multipart call.
+      if (pending.length) {
+        const fd = new FormData();
+        for (const p of pending) fd.append('files', p.file, p.file.name);
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `/api/tasks/${encodeURIComponent(t.id)}/attachments`);
+          xhr.withCredentials = true;
+          xhr.onload  = () => xhr.status >= 200 && xhr.status < 300
+            ? resolve() : reject(new Error('Error al subir'));
+          xhr.onerror = () => reject(new Error('Error de red al subir'));
+          xhr.send(fd);
+        });
+      }
+      // 2. Post the comment if there's a body.
+      if (body) {
+        await api(`/api/tasks/${encodeURIComponent(t.id)}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body }),
+        });
+      }
+      // 3. Reset state, re-fetch the canonical task.
+      input.value = '';
+      for (const p of pending) if (p.url) URL.revokeObjectURL(p.url);
+      pending.length = 0;
+      renderPending();
+      const fresh = await api(`/api/tasks/${encodeURIComponent(t.id)}`);
+      if (STATE.selected && STATE.selected.id === t.id) {
+        STATE.selected = fresh;
+        renderSheetBody(fresh);
+        renderSheetActions(fresh);
+      }
+    } catch (err) {
+      toast(err.message || 'No se pudo publicar', 'error');
+    } finally {
+      // refreshSend will re-disable if both fields are empty post-clear.
+      send.textContent = 'Comentar';
+      refreshSend();
+    }
+  });
+}
+
+function wireFeedActions(t) {
+  const pane = document.getElementById('paneActividad');
+  if (!pane) return;
+  pane.querySelectorAll('[data-act="edit-comment"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row    = btn.closest('.feed-row');
+      const cid    = row.dataset.commentId;
+      const bodyEl = row.querySelector('[data-role="body"]');
+      const original = bodyEl.textContent;
+      bodyEl.outerHTML = `
+        <div class="feed-edit">
+          <textarea>${escapeHtml(original)}</textarea>
+          <div class="feed-edit-actions">
+            <button type="button" data-act="cancel-edit">Cancelar</button>
+            <button type="button" class="primary" data-act="save-edit">Guardar</button>
+          </div>
+        </div>`;
+      const editArea = row.querySelector('.feed-edit textarea');
+      editArea.focus();
+      row.querySelector('[data-act="cancel-edit"]').addEventListener('click', () => {
+        renderSheetBody(STATE.selected);
+      });
+      row.querySelector('[data-act="save-edit"]').addEventListener('click', async () => {
+        const newBody = editArea.value.trim();
+        if (!newBody) return;
+        try {
+          await api(`/api/tasks/${encodeURIComponent(t.id)}/comments/${encodeURIComponent(cid)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body: newBody }),
+          });
+          const fresh = await api(`/api/tasks/${encodeURIComponent(t.id)}`);
+          if (STATE.selected && STATE.selected.id === t.id) {
+            STATE.selected = fresh;
+            renderSheetBody(fresh);
+            renderSheetActions(fresh);
+          }
+        } catch (err) {
+          toast(err.message || 'No se pudo guardar', 'error');
+        }
+      });
+    });
+  });
+  pane.querySelectorAll('[data-act="delete-comment"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este comentario?')) return;
+      const row = btn.closest('.feed-row');
+      const cid = row.dataset.commentId;
+      try {
+        await api(`/api/tasks/${encodeURIComponent(t.id)}/comments/${encodeURIComponent(cid)}`, { method: 'DELETE' });
+        const fresh = await api(`/api/tasks/${encodeURIComponent(t.id)}`);
+        if (STATE.selected && STATE.selected.id === t.id) {
+          STATE.selected = fresh;
+          renderSheetBody(fresh);
+          renderSheetActions(fresh);
+        }
+      } catch (err) {
+        toast(err.message || 'No se pudo eliminar', 'error');
+      }
+    });
+  });
+}
+
+// Archivos pane — drop-zone + attachment list. Drop-zone is also clickable
+// (input is hidden inside it). Each row has a hover-only actions cluster
+// (download + delete); image rows show a thumbnail preview and click-to-zoom.
+function renderPaneArchivos(t) {
+  const list = Array.isArray(t.attachments) ? t.attachments : [];
+  const canDeleteAny = STATE.user
+    && (t.assigned_by === STATE.user.id || t.assigned_to === STATE.user.id);
+  document.getElementById('paneArchivos').innerHTML = `
+    <div class="sheet-section">
+      <label class="attach-drop" for="attachInput" id="attachDrop">
+        <span class="ad-title">📎  Arrastra archivos o haz clic para subir</span>
+        <span class="ad-sub">Hasta 10 MB cada uno · 20 archivos por tarea · imágenes, PDF, Office</span>
+        <input id="attachInput" type="file" multiple
+               accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.csv,.rtf,.zip">
+      </label>
+    </div>
+
+    ${list.length ? `<div class="sheet-section">
+      <h4>Archivos (${list.length})</h4>
+      <div class="attach-list">${list.map(a => renderAttachRow(t, a, canDeleteAny || a.uploaded_by === (STATE.user && STATE.user.id))).join('')}</div>
+    </div>` : `<div class="pane-empty">Aún no hay archivos en esta tarea.</div>`}
+  `;
+  wireAttachDropZone(t);
+  wireAttachRowActions(t);
+}
+
+function renderAttachRow(t, a, canDelete) {
+  const isImage = (a.mime || '').startsWith('image/');
+  const fileUrl = `/api/tasks/${encodeURIComponent(t.id)}/attachments/${encodeURIComponent(a.id)}/file`;
+  const ext     = (a.original_name || '').split('.').pop().toLowerCase();
+  const cls     = isImage ? 'image' :
+                  ['pdf'].includes(ext)              ? 'pdf' :
+                  ['doc','docx','odt','rtf'].includes(ext) ? 'doc' :
+                  ['xls','xlsx','csv','ods'].includes(ext) ? 'xls' :
+                  ['zip'].includes(ext)              ? 'zip' : '';
+  const thumb = isImage
+    ? `<img src="${escapeHtml(fileUrl)}" alt="" loading="lazy">`
+    : `<span>${escapeHtml(ext.toUpperCase().slice(0, 4) || 'FILE')}</span>`;
+  return `
+    <div class="attach-row ${cls}" data-att-id="${escapeHtml(a.id)}" data-url="${escapeHtml(fileUrl)}" data-mime="${escapeHtml(a.mime || '')}">
+      <div class="at-thumb ${cls}">${thumb}</div>
+      <div class="at-meta">
+        <div class="at-name" data-act="${isImage ? 'zoom' : 'download'}" title="${escapeHtml(a.original_name || '')}">${escapeHtml(a.original_name || 'Archivo')}</div>
+        <div class="at-sub">${formatBytes(a.size || 0)} · ${escapeHtml(fmtDateTime(a.uploaded_at))}</div>
+      </div>
+      <div class="at-actions">
+        <a class="at-btn" href="${escapeHtml(fileUrl)}" download="${escapeHtml(a.original_name || '')}" title="Descargar">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </a>
+        ${canDelete ? `<button class="at-btn" type="button" data-act="delete" title="Eliminar">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>` : ''}
+      </div>
+    </div>`;
+}
+
+function formatBytes(n) {
+  if (!n) return '0 B';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function wireAttachDropZone(t) {
+  const drop  = document.getElementById('attachDrop');
+  const input = document.getElementById('attachInput');
+  if (!drop || !input) return;
+
+  input.addEventListener('change', () => {
+    if (input.files && input.files.length) uploadAttachments(t, input.files);
+    input.value = '';
+  });
+  ['dragenter', 'dragover'].forEach(ev =>
+    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragging'); }));
+  ['dragleave', 'drop'].forEach(ev =>
+    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragging'); }));
+  drop.addEventListener('drop', (e) => {
+    if (e.dataTransfer && e.dataTransfer.files.length) uploadAttachments(t, e.dataTransfer.files);
+  });
+}
+
+async function uploadAttachments(t, files) {
+  // Build the multipart body. We use XHR (not fetch) so we can show
+  // upload progress — fetch's body streaming isn't supported in Safari
+  // on the upload side. One request per batch (server already accepts
+  // up to 5 files per call); silently splits if more are dropped.
+  const arr = Array.from(files).slice(0, 5);
+  const fd  = new FormData();
+  for (const f of arr) fd.append('files', f, f.name);
+
+  // Inject a transient "uploading" row so the user gets immediate feedback.
+  const list = document.querySelector('#paneArchivos .attach-list')
+    || (() => {
+      // No list yet (empty state): replace the .pane-empty placeholder.
+      const sect = document.createElement('div');
+      sect.className = 'sheet-section';
+      sect.innerHTML = `<h4>Archivos</h4><div class="attach-list"></div>`;
+      const empty = document.querySelector('#paneArchivos .pane-empty');
+      (empty?.parentNode || document.getElementById('paneArchivos')).appendChild(sect);
+      empty?.remove();
+      return sect.querySelector('.attach-list');
+    })();
+  const placeholder = document.createElement('div');
+  placeholder.className = 'attach-row uploading';
+  placeholder.innerHTML = `
+    <div class="at-thumb">↑</div>
+    <div class="at-meta">
+      <div class="at-name">Subiendo ${arr.length} archivo${arr.length !== 1 ? 's' : ''}…</div>
+      <div class="at-sub">${arr.map(f => escapeHtml(f.name)).join(', ').slice(0, 80)}</div>
+    </div>
+    <div class="at-progress"><span></span></div>`;
+  list.prepend(placeholder);
+
+  try {
+    const resp = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/tasks/${encodeURIComponent(t.id)}/attachments`);
+      xhr.withCredentials = true;
+      xhr.upload.addEventListener('progress', (e) => {
+        if (!e.lengthComputable) return;
+        placeholder.querySelector('.at-progress > span').style.width = `${Math.round(e.loaded / e.total * 100)}%`;
+      });
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+        } else {
+          let msg = 'Error al subir';
+          try { msg = JSON.parse(xhr.responseText).error || msg; } catch {}
+          reject(new Error(msg));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Error de red al subir'));
+      xhr.send(fd);
+    });
+    placeholder.remove();
+    toast('Archivos subidos', 'success');
+    // Re-fetch the task to pick up the canonical attachment list.
+    const fresh = await api(`/api/tasks/${encodeURIComponent(t.id)}`);
+    if (STATE.selected && STATE.selected.id === t.id) {
+      STATE.selected = fresh;
+      renderSheetBody(fresh);
+      renderSheetActions(fresh);
+    }
+  } catch (err) {
+    placeholder.remove();
+    toast(err.message || 'No se pudieron subir los archivos', 'error');
+  }
+}
+
+function wireAttachRowActions(t) {
+  document.querySelectorAll('#paneArchivos .attach-row').forEach(row => {
+    const id = row.dataset.attId;
+    row.querySelector('[data-act="zoom"]')?.addEventListener('click', () => {
+      const lb = document.getElementById('attachLightbox');
+      document.getElementById('attachLightboxImg').src = row.dataset.url;
+      lb.classList.add('open');
+    });
+    row.querySelector('[data-act="delete"]')?.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este archivo?')) return;
+      try {
+        await api(`/api/tasks/${encodeURIComponent(t.id)}/attachments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        toast('Archivo eliminado', 'success');
+        const fresh = await api(`/api/tasks/${encodeURIComponent(t.id)}`);
+        if (STATE.selected && STATE.selected.id === t.id) {
+          STATE.selected = fresh;
+          renderSheetBody(fresh);
+          renderSheetActions(fresh);
+        }
+      } catch (err) {
+        toast(err.message || 'No se pudo eliminar', 'error');
+      }
+    });
+  });
+}
+
+// Lightbox close-on-click (zoom-out cursor over the whole backdrop).
+document.getElementById('attachLightbox')?.addEventListener('click', () => {
+  document.getElementById('attachLightbox').classList.remove('open');
+});
 
 function renderSheetActions(t) {
   const wrap = document.getElementById('sheetActions');
@@ -1581,7 +2834,16 @@ function renderSheetActions(t) {
 
   const buttons = [];
   if (isMine && !isDone && t.status !== 'pending_review') {
-    buttons.push(`<button class="btn btn-primary" data-act="complete" type="button">Completar</button>`);
+    // Block the button when the task is waiting on predecessors. The API
+    // also enforces this with a 409 response — the disabled state is the
+    // UX layer that prevents the round-trip and explains why.
+    const blocking = Array.isArray(t.unfulfilled_dependencies) ? t.unfulfilled_dependencies.length : 0;
+    if (blocking) {
+      buttons.push(`<button class="btn btn-primary" type="button" disabled
+        title="Esperando ${blocking} tarea${blocking !== 1 ? 's' : ''} previa${blocking !== 1 ? 's' : ''}">Completar</button>`);
+    } else {
+      buttons.push(`<button class="btn btn-primary" data-act="complete" type="button">Completar</button>`);
+    }
   }
   if (isApprover && t.status === 'pending_review') {
     buttons.push(`<button class="btn btn-primary" data-act="approve" type="button">Aprobar</button>`);
@@ -1778,6 +3040,9 @@ function openEditTaskModal(t) {
   document.getElementById('ntDesc').value = t.description || '';
   document.getElementById('ntDue').value = t.due_date ? t.due_date.slice(0, 10) : '';
   document.getElementById('ntPriority').value = t.priority || 'media';
+  // Recurrence dropdown — only the rule is exposed in the form; advanced
+  // count/until live in the API only (matches the design proposal).
+  document.getElementById('ntRecur').value = (t.recurrence && t.recurrence.rule) || '';
   populatePickers(t);
   document.getElementById('modalBack').classList.add('open');
   setTimeout(() => document.getElementById('ntTitle').focus(), 60);
@@ -1821,6 +3086,7 @@ document.getElementById('newTaskForm').addEventListener('submit', async (e) => {
   const description = document.getElementById('ntDesc').value.trim();
   const dueRaw = document.getElementById('ntDue').value;
   const priority = document.getElementById('ntPriority').value;
+  const recurRule = document.getElementById('ntRecur').value;
   const listing_id = document.getElementById('ntListing').value || null;
   const application_id = document.getElementById('ntApplication').value || null;
   const approver_id = document.getElementById('ntApprover').value || null;
@@ -1843,6 +3109,14 @@ document.getElementById('newTaskForm').addEventListener('submit', async (e) => {
   submit.disabled = true;
   submit.textContent = editingTask ? 'Guardando…' : 'Creando…';
 
+  // Recurrence is set via a dedicated endpoint (PUT /:id/recurrence) on
+  // edit so the create+update flows can reuse the same /api/tasks PUT.
+  // For new tasks we send the validated payload inside POST /api/tasks
+  // (the route already accepts a `recurrence` object on create).
+  const recurrencePayload = recurRule
+    ? { rule: recurRule, interval: 1 }
+    : null;
+
   try {
     if (editingTask) {
       await api(`/api/tasks/${encodeURIComponent(editingTask.id)}`, {
@@ -1860,14 +3134,35 @@ document.getElementById('newTaskForm').addEventListener('submit', async (e) => {
           });
         } catch (_) { /* approver change is best-effort here */ }
       }
+      // Push the recurrence change too. Best-effort: a 400 from the API
+      // (unrecognized rule, etc.) shouldn't block the rest of the edit.
+      const before = editingTask.recurrence || null;
+      const changed = (before?.rule || null) !== (recurrencePayload?.rule || null);
+      if (changed) {
+        try {
+          await api(`/api/tasks/${encodeURIComponent(editingTask.id)}/recurrence`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(recurrencePayload || {}),
+          });
+        } catch (_) { /* recurrence change is best-effort */ }
+      }
       toast('Tarea actualizada', 'success');
     } else {
+      // Subtask creation flag set by the "+ Subtarea" button. Cleared
+      // after one POST so reopening the modal afterwards starts fresh.
+      const parent_task_id = STATE.subtaskParentId || null;
+      STATE.subtaskParentId = null;
       await api('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, due_date, priority, listing_id, application_id, approver_id }),
+        body: JSON.stringify({
+          title, description, due_date, priority, listing_id, application_id, approver_id,
+          ...(recurrencePayload ? { recurrence: recurrencePayload } : {}),
+          ...(parent_task_id ? { parent_task_id } : {}),
+        }),
       });
-      toast('Tarea creada', 'success');
+      toast(parent_task_id ? 'Subtarea creada' : 'Tarea creada', 'success');
     }
     closeNewTaskModal();
     loadTasks();
@@ -2042,7 +3337,7 @@ async function loadAuxData() {
 
   // Team members (for approver picker) — best-effort, may not exist for solo brokers
   try {
-    const r = await api('/api/teams/my-members').catch(() => null);
+    const r = await api('/api/broker/team-members').catch(() => null);
     const list = (r && (r.members || r)) || [];
     STATE.teamMembers = Array.isArray(list) ? list : [];
   } catch (_) { STATE.teamMembers = []; }

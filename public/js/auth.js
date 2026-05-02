@@ -61,7 +61,7 @@ async function redirectIfAuth() {
     const user = await res.json();
     if (!user) return;
     const role = user?.role;
-    if (role === 'agency' || role === 'broker' || role === 'inmobiliaria') {
+    if (role === 'agency' || role === 'broker' || role === 'inmobiliaria' || role === 'constructora') {
       window.location.href = '/broker';
     } else {
       window.location.href = '/home';
@@ -75,7 +75,7 @@ async function redirectIfAuth() {
 // A 60-second warning modal appears before the final logout.
 
 (function initIdleTimeout() {
-  const PRO_ROLES       = ['agency', 'broker', 'inmobiliaria'];
+  const PRO_ROLES       = ['agency', 'broker', 'inmobiliaria', 'constructora'];
   const IDLE_MS         = 20 * 60 * 1000;  // 20 minutes idle → show warning
   const COUNTDOWN_SEC   = 60;              // 60-second countdown before logout
 

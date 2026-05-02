@@ -14,6 +14,31 @@ router.get('/favorites', userAuth, (req, res) => {
   res.json({ favorites: listings });
 });
 
+// POST /api/user/favorites — toggle favorite via { listingId } body.
+// Used by listing-card heart toggles (listing.html#toggleSimFav). The
+// :listingId variant below is the explicit add; this one flips state
+// based on whether the id is already in the list, so the caller doesn't
+// need to track current state.
+router.post('/favorites', userAuth, (req, res) => {
+  const listingId = String((req.body && req.body.listingId) || '');
+  if (!listingId) return res.status(400).json({ error: 'listingId requerido' });
+
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const listing = store.getListingById(listingId);
+  if (!listing || listing.status !== 'approved')
+    return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+  if (!Array.isArray(user.favorites)) user.favorites = [];
+  const idx = user.favorites.indexOf(listingId);
+  if (idx >= 0) user.favorites.splice(idx, 1);
+  else user.favorites.push(listingId);
+  store.saveUser(user);
+
+  res.json({ success: true, favorites: user.favorites, isFavorite: idx < 0 });
+});
+
 // POST /api/user/favorites/:listingId — add favorite
 router.post('/favorites/:listingId', userAuth, (req, res) => {
   const user = store.getUserById(req.user.sub);

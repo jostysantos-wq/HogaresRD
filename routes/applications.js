@@ -690,6 +690,31 @@ function buyerConfirmationHtml(app, link) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// ── GET /badge-count  — In-flight applications for nav badge ─────
+// ══════════════════════════════════════════════════════════════════
+// Drives the red dot on the "Aplicaciones" nav link. Counts
+// applications still moving through the workflow (excludes terminal
+// `completado`/`rechazado` states). Scoped by role: brokers see their
+// own; inmobiliaria/constructora see the team's; secretaries inherit
+// from their organization.
+router.get('/badge-count', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.json({ count: 0 });
+
+  let apps;
+  if (user.role === 'inmobiliaria' || user.role === 'constructora') {
+    apps = store.getApplicationsByInmobiliaria(user.id);
+  } else if (user.role === 'secretary' && user.inmobiliaria_id) {
+    apps = store.getApplicationsByInmobiliaria(user.inmobiliaria_id);
+  } else {
+    apps = store.getApplicationsByBroker(user.id);
+  }
+
+  const count = apps.filter(a => a.status !== 'completado' && a.status !== 'rechazado').length;
+  res.json({ count });
+});
+
+// ══════════════════════════════════════════════════════════════════
 // ── GET /track-token  — Magic-link tracker (B3) ──────────────────
 // ══════════════════════════════════════════════════════════════════
 // Anonymous applicants receive an email link of the form
@@ -1226,12 +1251,15 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
   const safeStr  = (v, max = 120) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   const safeEnum = (v, allowed, fallback = '') => (allowed.includes(v) ? v : fallback);
 
+  // Validate DOB format BEFORE encrypting — once encrypted, the validator
+  // can't introspect the value, and we don't want garbage in the column.
+  const dobValidated = /^\d{4}-\d{2}-\d{2}$/.test(date_of_birth || '') ? date_of_birth : '';
   const clientExtended = {
     id_type:           safeEnum(id_type, ['cedula', 'passport', '']),
     id_number:         encrypt(safeStr(id_number, 30)) || '',       // ENCRYPTED: government ID
     nationality:       safeStr(nationality, 60),
-    current_address:   safeStr(current_address, 250),
-    date_of_birth:     /^\d{4}-\d{2}-\d{2}$/.test(date_of_birth || '') ? date_of_birth : '',
+    current_address:   encrypt(safeStr(current_address, 250)) || '', // ENCRYPTED: street address
+    date_of_birth:     encrypt(dobValidated) || '',                  // ENCRYPTED: DOB
     employment_status: safeEnum(employment_status, ['employed','self_employed','retired','student','unemployed',''], ''),
     employer_name:     encrypt(safeStr(employer_name, 120)) || '',  // ENCRYPTED: employer
     job_title:         safeStr(job_title, 80),
@@ -1864,11 +1892,15 @@ router.get('/:id', userAuth, (req, res) => {
 // Helper: decrypt sensitive PII + financial fields before sending to authorized users
 function decryptAppPII(app) {
   const copy = JSON.parse(JSON.stringify(app)); // deep clone
-  // PII fields
+  // PII fields. `decrypt()` is graceful — values written before a field
+  // moved into the encrypted set come through as legacy plaintext, so we
+  // can encrypt new writes without a backfill migration.
   if (copy.client) {
-    if (copy.client.id_number)      copy.client.id_number      = decrypt(copy.client.id_number);
-    if (copy.client.monthly_income) copy.client.monthly_income = decrypt(copy.client.monthly_income);
-    if (copy.client.employer_name)  copy.client.employer_name  = decrypt(copy.client.employer_name);
+    if (copy.client.id_number)       copy.client.id_number       = decrypt(copy.client.id_number);
+    if (copy.client.monthly_income)  copy.client.monthly_income  = decrypt(copy.client.monthly_income);
+    if (copy.client.employer_name)   copy.client.employer_name   = decrypt(copy.client.employer_name);
+    if (copy.client.date_of_birth)   copy.client.date_of_birth   = decrypt(copy.client.date_of_birth);
+    if (copy.client.current_address) copy.client.current_address = decrypt(copy.client.current_address);
   }
   if (copy.co_applicant) {
     if (copy.co_applicant.id_number)      copy.co_applicant.id_number      = decrypt(copy.co_applicant.id_number);
@@ -4167,10 +4199,11 @@ router.put('/:id/commission/review', userAuth, async (req, res) => {
       });
       app.updated_at = now;
 
+      const reviewerName = user.name || 'la organización';
       addEvent(app, 'commission_' + action,
-        action === 'approve' ? `Comisión aprobada por ${user.name || 'inmobiliaria'}` :
-        action === 'adjust'  ? `Comisión ajustada por ${user.name || 'inmobiliaria'}` :
-                               `Comisión rechazada por ${user.name || 'inmobiliaria'}`,
+        action === 'approve' ? `Comisión aprobada por ${reviewerName}` :
+        action === 'adjust'  ? `Comisión ajustada por ${reviewerName}` :
+                               `Comisión rechazada por ${reviewerName}`,
         user.id, user.name || '', { commission: app.commission });
 
       await saveApplicationEncryptingFinancials(app, client);

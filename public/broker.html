@@ -8260,7 +8260,7 @@
 
   // ── Profile Page ───────────────────────────────────────────
   const ROLE_LABELS = {
-    broker: 'Agente Broker', agency: 'Agente / Agencia', inmobiliaria: 'Inmobiliaria', user: 'Usuario', secretary: 'Secretaria'
+    broker: 'Agente Broker', agency: 'Agente / Agencia', inmobiliaria: 'Inmobiliaria', constructora: 'Constructora', user: 'Usuario', secretary: 'Secretaria'
   };
 
   async function loadProfilePage() {
@@ -8312,7 +8312,8 @@
       addRow('Rol', ROLE_LABELS[user.role] || user.role);
       addRow('No. de licencia', user.licenseNumber);
       if (user.role === 'agency')        addRow('Nombre de agencia', user.agencyName);
-      if (user.role === 'inmobiliaria')  addRow('Nombre de empresa', user.companyName);
+      if (user.role === 'inmobiliaria' || user.role === 'constructora')
+        addRow('Nombre de empresa', user.companyName);
       if (user.inmobiliaria_name)        addRow('Inmobiliaria afiliada', user.inmobiliaria_name);
       addRow('Miembro desde', user.createdAt ? new Date(user.createdAt).toLocaleDateString('es-DO', { year:'numeric', month:'long', day:'numeric' }) : null);
       document.getElementById('perfilReadonlyTable').innerHTML = rows.join('');
@@ -10091,10 +10092,13 @@
 
     const previewImg = document.getElementById('previewImg');
     const imgSrc = listing?.image || (listing?.images && listing.images[0]);
+    previewImg.innerHTML = '<span>Imagen de la propiedad</span>';
     if (imgSrc) {
-      previewImg.innerHTML = `<img src="${imgSrc}" alt="" onerror="this.parentNode.innerHTML='<span>Imagen de la propiedad</span>'" />`;
-    } else {
-      previewImg.innerHTML = '<span>Imagen de la propiedad</span>';
+      const img = document.createElement('img');
+      img.src = imgSrc;
+      img.alt = '';
+      img.onerror = () => { previewImg.innerHTML = '<span>Imagen de la propiedad</span>'; };
+      previewImg.replaceChildren(img);
     }
   }
 
@@ -10841,13 +10845,22 @@
     const conv = await res.json();
 
     document.getElementById('brkThreadTitle').textContent = conv.clientName;
-    document.getElementById('brkThreadSub').innerHTML     = `<a href="/listing/${conv.propertyId}" style="color:var(--accent);text-decoration:none;">${esc(conv.propertyTitle)} →</a>`;
+    document.getElementById('brkThreadSub').innerHTML     = `<a href="/listing/${esc(conv.propertyId)}" style="color:var(--accent);text-decoration:none;">${esc(conv.propertyTitle)} →</a>`;
     document.getElementById('brkClientChip').textContent  = `Iniciado el ${new Date(conv.createdAt).toLocaleDateString('es-DO')}`;
     // Avatar: prefer client photo, fall back to initial
     const _initial = (conv.clientName || '?').trim().charAt(0).toUpperCase() || '·';
     const _avatarEl = document.getElementById('brkThreadAvatar');
     if (conv.clientAvatar) {
-      _avatarEl.innerHTML = `<img src="${conv.clientAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='<span>'+${JSON.stringify(esc(_initial))}+'</span>'">`;
+      const img = document.createElement('img');
+      img.src = conv.clientAvatar;
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+      img.onerror = () => {
+        const span = document.createElement('span');
+        span.textContent = _initial;
+        _avatarEl.replaceChildren(span);
+      };
+      _avatarEl.replaceChildren(img);
     } else {
       _avatarEl.innerHTML = `<span>${esc(_initial)}</span>`;
     }
@@ -11947,7 +11960,7 @@ async function loadInventory() {
       </div>`;
     }).join('');
   } catch (e) {
-    wrap.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`;
+    wrap.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${esc(e.message)}</div>`;
   }
 }
 
@@ -12063,7 +12076,7 @@ async function loadTareas() {
     renderTareas();
   } catch(e) {
     if (!_allTareas.length) {
-      grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${e.message}</div>`;
+      grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--red);">${esc(e.message)}</div>`;
     }
   }
 }

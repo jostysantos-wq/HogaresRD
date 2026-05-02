@@ -502,6 +502,28 @@
       .catch(() => {});
   }
 
+  // ───────────────────────────────────────────────────────────────────
+  // Active sidebar link visibility
+  //
+  // The sidebar nav scrolls internally (.sb-nav has overflow-y: auto on a
+  // viewport-height parent), so on shorter screens the active row can be
+  // below the fold inside the sidebar. On team-only pages (Rendimiento,
+  // Miembros, etc.) the active link also starts with `hidden` and is
+  // revealed asynchronously after /api/auth/me resolves — by then the
+  // user's already looking at a sidebar with no visible selection. Scroll
+  // the active link into view (within the nav, not the page).
+  // ───────────────────────────────────────────────────────────────────
+  function ensureActiveSidebarVisible() {
+    const active = document.querySelector('.sidebar .sb-link.active');
+    if (!active) return;
+    const reveal = () => active.scrollIntoView({ block: 'nearest' });
+    if (!active.hidden) { reveal(); return; }
+    const obs = new MutationObserver(() => {
+      if (!active.hidden) { obs.disconnect(); reveal(); }
+    });
+    obs.observe(active, { attributes: true, attributeFilter: ['hidden'] });
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────
   function boot() {
     const input = document.getElementById('topbarSearch');
@@ -513,6 +535,8 @@
     const topbar = document.querySelector('.topbar') || document;
     const bell = topbar.querySelector('a[aria-label="Notificaciones"], button[aria-label="Notificaciones"]:not(.tb-notif-btn)');
     if (bell) wireNotifications(bell);
+
+    ensureActiveSidebarVisible();
   }
 
   if (document.readyState === 'loading') {
