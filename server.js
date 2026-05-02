@@ -321,6 +321,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
     '/mis-propiedades.html', '/mis-propiedades',
     '/tareas.html', '/tareas',
     '/enlaces-de-referido.html', '/enlaces-de-referido',
+    '/equipo-solicitudes.html', '/equipo-solicitudes',
   ];
 
   app.get(PAYWALLED_PATHS, (req, res, next) => {
