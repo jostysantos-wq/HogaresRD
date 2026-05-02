@@ -475,15 +475,6 @@
   }
   .composer-send:disabled { opacity: 0.55; cursor: not-allowed; }
   .composer-send svg { width: 13px; height: 13px; }
-  .composer-applylink {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 12px; border-radius: 12px;
-    background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line);
-    font-size: 12px; font-weight: 600; cursor: pointer;
-    flex-shrink: 0;
-  }
-  .composer-applylink:hover { background: var(--line-soft); }
-  .composer-applylink svg { width: 14px; height: 14px; }
   .msg-link { color: inherit; text-decoration: underline; word-break: break-all; }
   .msg.them .msg-link { color: var(--accent); }
   .msg.me .msg-link { color: #fff; text-decoration-color: rgba(255,255,255,0.7); }
@@ -1168,21 +1159,8 @@ function renderThread() {
   } else if (closed) {
     footerHtml = `<div class="composer-locked">Esta conversación está cerrada. Reábrela para enviar mensajes.</div>`;
   } else {
-    // Show "Insert apply link" only for brokers/agents who have a refToken
-    // and only when the conversation is tied to a listing. Clicking it
-    // drops `/listing.html?id=…&ref=<my-token>` into the composer so the
-    // agent can wrap a personal note around it before sending.
-    const myRole = (state.me?.role || '').toLowerCase();
-    const isProAgent = ['broker','agency','inmobiliaria','constructora','secretary'].includes(myRole);
-    const refTok = state.me?.refToken || '';
-    const canShareApply = isProAgent && refTok && c.propertyId;
     footerHtml = `
       <div class="composer">
-        ${canShareApply ? `
-          <button class="composer-applylink" id="applyLinkBtn" type="button" title="Insertar enlace para aplicar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 14 11 16 15 12"/></svg>
-            <span>Aplicar</span>
-          </button>` : ''}
         <textarea id="composerText" rows="1" placeholder="Escribe un mensaje…"></textarea>
         <button class="composer-send" id="sendBtn">
           <span id="sendIcon">${ICON.send}</span>
@@ -1190,6 +1168,14 @@ function renderThread() {
         </button>
       </div>`;
   }
+
+  // Whether the current user can drop an "apply" link into this thread.
+  // Only brokers/agents/secretaries who have a refToken on a listing
+  // conversation see the kebab option below.
+  const myRole = (state.me?.role || '').toLowerCase();
+  const isProAgent = ['broker','agency','inmobiliaria','constructora','secretary'].includes(myRole);
+  const refTok = state.me?.refToken || '';
+  const canShareApply = isProAgent && refTok && c.propertyId && !unclaimed && !closed;
 
   col.innerHTML = `
     <div class="thread-head">
@@ -1206,7 +1192,8 @@ function renderThread() {
           <div class="divider"></div>
           ${propertyLink ? `<a href="${propertyLink}" target="_blank">${ICON.prop}<span>Ver propiedad</span></a>` : ''}
           ${appLink ? `<a href="${appLink}">${ICON.app}<span>Ir a aplicación</span></a>` : ''}
-          ${(propertyLink || appLink) ? '<div class="divider"></div>' : ''}
+          ${canShareApply ? `<button id="actSendApplyLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 14 11 16 15 12"/></svg><span>Enviar enlace para aplicar</span></button>` : ''}
+          ${(propertyLink || appLink || canShareApply) ? '<div class="divider"></div>' : ''}
           ${!closed ? `<button id="actClose">${ICON.close}<span>Cerrar conversación</span></button>` : ''}
           ${!archived ? `<button id="actArchive">${ICON.archive}<span>Archivar</span></button>` : ''}
         </div>
@@ -1250,9 +1237,10 @@ function renderThread() {
     send.addEventListener('click', sendMessage);
   }
 
-  const applyBtn = document.getElementById('applyLinkBtn');
-  if (applyBtn && textarea && c.propertyId && state.me?.refToken) {
-    applyBtn.addEventListener('click', () => {
+  const sendApplyLinkBtn = document.getElementById('actSendApplyLink');
+  if (sendApplyLinkBtn && textarea && c.propertyId && state.me?.refToken) {
+    sendApplyLinkBtn.addEventListener('click', () => {
+      closeKebab();
       const url = `${location.origin}/listing.html?id=${encodeURIComponent(c.propertyId)}&ref=${encodeURIComponent(state.me.refToken)}`;
       const intro = `Cuando estés listo, puedes aplicar para "${c.propertyTitle || 'esta propiedad'}" aquí:`;
       const cur = textarea.value.trim();
