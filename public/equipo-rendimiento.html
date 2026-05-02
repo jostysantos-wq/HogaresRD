@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>HogaresRD — Publicaciones</title>
+<title>HogaresRD — Rendimiento del equipo</title>
 <meta name="viewport" content="width=1440">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,7 @@
   body { font-family: var(--sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 14px; min-height: 100vh; }
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; }
-  input, textarea { font-family: inherit; }
+  input, textarea, select { font-family: inherit; }
 
   .app { display: grid; grid-template-columns: 248px 1fr; gap: 18px; padding: 18px; min-height: 100vh; }
   .sidebar { background: var(--bg-card); border-radius: var(--r-card); padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 18px; height: calc(100vh - 36px); }
@@ -70,83 +70,130 @@
   .page-title { font-family: var(--serif); font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
   .page-title em { font-style: italic; color: var(--accent); font-weight: 500; }
   .page-sub { color: var(--ink-mute); margin: 0; max-width: 600px; line-height: 1.5; font-size: 13px; }
+  .page-actions { display: flex; gap: 8px; align-items: center; }
 
-  /* Two-column layout: composer left, feed right */
-  .pub-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items: flex-start; }
-  @media (max-width: 1080px) { .pub-grid { grid-template-columns: 1fr; } }
+  /* Range selector */
+  .range-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--line);
+    color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+    position: relative;
+  }
+  .range-pill svg { width: 13px; height: 13px; }
+  .range-pill select {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    border: none; outline: none; appearance: none;
+  }
+
+  /* KPI grid (4 columns × 2 rows) */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 1080px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--bg-card); border-radius: var(--r-card); padding: 18px 20px; position: relative; overflow: hidden; min-height: 110px; }
+  .kpi-num { font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+  .kpi-num .unit { font-size: 16px; color: var(--ink-mute); font-weight: 500; margin-left: 2px; }
+  .kpi-label { color: var(--ink-mute); font-size: 11.5px; margin-top: 8px; }
+  .kpi-foot { margin-top: 8px; font-size: 10.5px; color: var(--ink-mute); }
+  .kpi.accent .kpi-num { color: var(--accent); }
+  .kpi.teal .kpi-num { color: var(--teal); }
+  .kpi.gold .kpi-num { color: #a47615; }
+  .kpi.plum .kpi-num { color: var(--plum); }
+
+  /* Two-col: chart + broadcast */
+  .perf-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+  @media (max-width: 1080px) { .perf-grid { grid-template-columns: 1fr; } }
 
   .panel { background: var(--bg-card); border-radius: var(--r-card); padding: 22px; }
-  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0 0 6px; }
-  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 18px; line-height: 1.5; }
-
-  /* Composer */
-  .pub-type-row { display: flex; gap: 6px; margin-bottom: 14px; padding: 4px; background: var(--bg-soft); border-radius: var(--r-pill); }
-  .pub-type-btn {
-    flex: 1; padding: 8px 14px; border-radius: var(--r-pill);
-    font-size: 12.5px; font-weight: 500; cursor: pointer;
-    color: var(--ink-soft); background: transparent; border: none;
-    transition: background .15s, color .15s;
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .panel-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin: 0; }
+  .panel-sub { font-size: 12.5px; color: var(--ink-mute); margin: 4px 0 0; line-height: 1.5; }
+  .panel-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-soft); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 500;
   }
-  .pub-type-btn.active { background: var(--ink); color: #fff; }
-  .pub-input, .pub-textarea {
-    width: 100%; padding: 11px 13px;
+
+  /* Chart container */
+  .chart-wrap { height: 280px; position: relative; }
+
+  /* Broadcast composer */
+  .broadcast-textarea {
+    width: 100%; min-height: 120px;
+    padding: 12px 14px;
     border: 1px solid var(--line); border-radius: 10px;
     font-size: 13.5px; color: var(--ink); background: var(--bg-soft);
-    margin-bottom: 12px;
+    resize: vertical; line-height: 1.55;
   }
-  .pub-input:focus, .pub-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
-  .pub-textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
-  .pub-submit-row {
+  .broadcast-textarea:focus { outline: none; border-color: var(--ink); background: var(--bg-card); }
+  .broadcast-foot {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-top: 6px;
+    gap: 12px; margin-top: 12px;
   }
-  .pub-submit-btn {
+  .broadcast-status { font-size: 12px; min-height: 16px; flex: 1; color: var(--ink-mute); }
+  .broadcast-status.ok    { color: var(--teal); }
+  .broadcast-status.error { color: var(--accent); }
+  .broadcast-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 10px 22px; border-radius: var(--r-pill);
     background: var(--ink); color: #fff;
     font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    white-space: nowrap;
   }
-  .pub-submit-btn svg { width: 13px; height: 13px; }
-  .pub-submit-btn:hover { background: #000; }
-  .pub-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .pub-msg { font-size: 12.5px; min-height: 16px; }
-  .pub-msg.ok    { color: var(--teal); }
-  .pub-msg.error { color: var(--accent); }
+  .broadcast-btn svg { width: 13px; height: 13px; }
+  .broadcast-btn:hover { background: #000; }
+  .broadcast-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Feed */
-  .feed-list { display: flex; flex-direction: column; gap: 12px; }
-  .feed-card {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
-    padding: 16px;
-    background: var(--bg-card); border: 1px solid var(--line-soft);
-    border-radius: 14px;
-    transition: border-color .12s;
-    align-items: flex-start;
+  /* Agent table */
+  .agent-table-wrap { overflow-x: auto; }
+  .agent-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .agent-table th {
+    text-align: left; padding: 10px 8px;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-mute);
+    border-bottom: 1px solid var(--line-soft);
+    white-space: nowrap;
   }
-  .feed-card:hover { border-color: var(--line); }
-  .feed-card.no-image { grid-template-columns: 1fr auto; }
-  .feed-img { width: 96px; height: 72px; border-radius: 10px; object-fit: cover; }
-  .feed-body { min-width: 0; }
-  .feed-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .feed-pill { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-pill); }
-  .feed-pill.update  { background: var(--teal-soft); color: #20665f; }
-  .feed-pill.article { background: var(--plum-soft); color: var(--plum); }
-  .feed-date { font-size: 11.5px; color: var(--ink-mute); }
-  .feed-title { font-weight: 600; font-size: 14.5px; color: var(--ink); margin: 0 0 4px; line-height: 1.35; }
-  .feed-content { font-size: 13px; color: var(--ink-soft); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .feed-del {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: transparent; border: none;
-    display: grid; place-items: center;
-    color: var(--ink-mute); cursor: pointer;
+  .agent-table th.center { text-align: center; }
+  .agent-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink-soft); vertical-align: middle;
   }
-  .feed-del:hover { background: var(--bg-soft); color: var(--accent); }
-  .feed-del svg { width: 14px; height: 14px; }
+  .agent-table td.center { text-align: center; }
+  .agent-table tr:last-child td { border-bottom: none; }
+  .agent-table tr:hover td { background: var(--bg-soft); }
+  .agent-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .agent-av {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #B8A07E, #6E5847);
+    color: #fff; font-size: 11px; font-weight: 700;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .agent-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .agent-info { min-width: 0; }
+  .agent-name {
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 500; color: var(--ink); font-size: 13px;
+  }
+  .agent-name-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ink-mute); flex-shrink: 0;
+  }
+  .agent-name-dot.active { background: #2e8b8b; }
+  .agent-name-dot.inactive { background: var(--accent); }
+  .agent-sub { font-size: 11px; color: var(--ink-mute); margin-top: 1px; }
+  .num-strong { font-weight: 600; color: var(--ink); }
+  .num-mute { color: var(--ink-mute); }
+  .num-good { color: var(--teal); font-weight: 600; }
+  .num-warn { color: #a47615; font-weight: 600; }
 
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-mute); font-size: 14px; line-height: 1.5; }
-  .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: var(--serif); font-size: 20px; font-weight: 600; }
-  .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 16px; background: var(--bg-soft); border-radius: 50%; display: grid; place-items: center; color: var(--ink-mute); }
-  .empty-state-icon svg { width: 22px; height: 22px; }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--ink-mute); font-size: 14px; line-height: 1.5; }
+  .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: var(--serif); font-size: 19px; font-weight: 600; }
 
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -219,10 +266,10 @@
       <div class="sb-section-label sb-team-label" id="sbTeamLabel" hidden>Equipo</div>
       <a href="/equipo-miembros.html" class="sb-link sb-team-only" hidden data-nav="team-members"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Miembros</span></a>
       <a href="/equipo-solicitudes.html" class="sb-link sb-team-only" hidden data-nav="team-requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Solicitudes</span> <span class="sb-badge" id="navTeamReqBadge" hidden></span></a>
-      <a href="/equipo-rendimiento.html" class="sb-link sb-team-only" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
+      <a href="/equipo-rendimiento.html" class="sb-link sb-team-only active" hidden data-nav="team-performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 21 6"/></svg><span>Rendimiento</span></a>
       <a href="/equipo-secretarias.html" class="sb-link sb-team-only" hidden data-nav="team-secretaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Secretarias</span></a>
       <a href="/equipo-empresa.html" class="sb-link sb-team-only" hidden data-nav="empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/><rect x="11" y="17" width="2" height="4"/></svg><span>Perfil de Empresa</span></a>
-      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only active" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
+      <a href="/equipo-publicaciones.html" class="sb-link sb-team-only" hidden data-nav="publicaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span>Publicaciones</span></a>
 
       <div class="sb-section-label">Soporte</div>
       <a href="/contacto" class="sb-link" data-nav="ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Centro de Ayuda</span></a>
@@ -247,7 +294,7 @@
       <div class="topbar-left">
         <div class="tb-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar publicaciones…" id="topbarSearch">
+          <input type="text" placeholder="Buscar…" id="topbarSearch">
         </div>
         <div class="tb-divider"></div>
         <a class="tb-ai" href="/asistente">
@@ -303,73 +350,135 @@
     <div class="page-head">
       <div class="page-head-left">
         <div class="page-eyebrow">Equipo</div>
-        <h1 class="page-title">Publicaciones de <em>la empresa</em></h1>
-        <p class="page-sub">Comparte actualizaciones rápidas o publica artículos largos. Tus publicaciones aparecen en el feed de la inmobiliaria que verán tus clientes y agentes.</p>
+        <h1 class="page-title">Rendimiento del <em>equipo</em></h1>
+        <p class="page-sub">Métricas operativas por agente — leads reclamados, tiempo de respuesta, conversaciones y conversión. Usa el rango para comparar periodos.</p>
+      </div>
+      <div class="page-actions">
+        <span class="range-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="rangeLabel">Últ. 30 días</span>
+          <span style="color:var(--ink-mute);font-size:10px;">▾</span>
+          <select id="tpRangeSelect" aria-label="Rango">
+            <option value="7d">Últ. 7 días</option>
+            <option value="30d" selected>Últ. 30 días</option>
+            <option value="90d">Últ. 90 días</option>
+            <option value="all">Todo el tiempo</option>
+          </select>
+        </span>
       </div>
     </div>
 
-    <!-- TWO-COLUMN: Composer + Feed -->
-    <div class="pub-grid">
+    <!-- KPI GRID (2 rows × 4 cols) -->
+    <div class="kpi-row">
+      <div class="kpi accent">
+        <div class="kpi-num" id="tpTeamSize">—</div>
+        <div class="kpi-label">Agentes en el equipo</div>
+      </div>
+      <div class="kpi accent">
+        <div class="kpi-num" id="tpTotalLeads">—</div>
+        <div class="kpi-label">Total de leads en el periodo</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-num" id="tpClaimedPct">—</div>
+        <div class="kpi-label">Leads reclamados (%)</div>
+      </div>
+      <div class="kpi gold">
+        <div class="kpi-num" id="tpAvgResponse">—</div>
+        <div class="kpi-label">Tiempo de respuesta promedio</div>
+      </div>
+      <div class="kpi accent">
+        <div class="kpi-num" id="tpLeadsMonth">—</div>
+        <div class="kpi-label">Leads este mes</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-num" id="tpConversion">—</div>
+        <div class="kpi-label">Tasa de conversión a completadas</div>
+      </div>
+      <div class="kpi plum">
+        <div class="kpi-num" id="tpPipeline">—</div>
+        <div class="kpi-label">Valor de pipeline activo (US$)</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-num" id="tpActiveAgents">—</div>
+        <div class="kpi-label" id="tpInactiveLabel">Agentes activos</div>
+      </div>
+    </div>
 
-      <!-- Composer -->
+    <!-- TWO-COL: Chart + Broadcast -->
+    <div class="perf-grid">
+
+      <!-- Chart -->
       <section class="panel">
-        <h2 class="panel-title">Nueva publicación</h2>
-        <p class="panel-sub">Las actualizaciones son rápidas (sin título); los artículos llevan título y se destacan.</p>
-
-        <div class="pub-type-row" role="tablist" aria-label="Tipo de publicación">
-          <button class="pub-type-btn active" type="button" role="tab" data-type="update" aria-selected="true">Actualización</button>
-          <button class="pub-type-btn" type="button" role="tab" data-type="article" aria-selected="false">Artículo</button>
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Leads por día</h2>
+            <p class="panel-sub">Volumen de leads recibidos día a día durante el rango seleccionado.</p>
+          </div>
         </div>
-
-        <div id="pubTitleWrap" hidden>
-          <input type="text" id="pubTitle" class="pub-input" placeholder="Título del artículo" maxlength="180">
+        <div class="chart-wrap">
+          <canvas id="chartLeadsPerDay"></canvas>
         </div>
+      </section>
 
-        <textarea id="pubContent" class="pub-textarea" placeholder="¿Qué quieres compartir?" maxlength="2000"></textarea>
-
-        <input type="url" id="pubImage" class="pub-input" placeholder="URL de imagen (opcional)" style="margin-bottom:0;">
-
-        <div class="pub-submit-row">
-          <span class="pub-msg" id="pubMsg"></span>
-          <button class="pub-submit-btn" id="pubSubmitBtn" type="button">
+      <!-- Broadcast -->
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Anuncio al equipo</h2>
+            <p class="panel-sub">Notifica a todos los agentes y secretarias afiliados al mismo tiempo.</p>
+          </div>
+        </div>
+        <textarea id="broadcastMsg" class="broadcast-textarea" placeholder="Escribe un mensaje para todo el equipo…" maxlength="500"></textarea>
+        <div class="broadcast-foot">
+          <span class="broadcast-status" id="broadcastStatus"></span>
+          <button class="broadcast-btn" type="button" id="broadcastBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Publicar
+            Enviar
           </button>
         </div>
       </section>
 
-      <!-- Feed -->
-      <section class="panel">
-        <h2 class="panel-title">Feed reciente</h2>
-        <p class="panel-sub">Las publicaciones aparecen en orden cronológico — las más recientes arriba.</p>
-
-        <div class="feed-list" id="feedList">
-          <div class="empty-state" id="feedLoading">
-            <div class="empty-state-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            Cargando publicaciones…
-          </div>
-        </div>
-      </section>
-
     </div>
+
+    <!-- AGENT TABLE -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Rendimiento por agente</h2>
+          <p class="panel-sub">El punto verde indica actividad reciente; el rojo, inactividad de 3+ días.</p>
+        </div>
+      </div>
+      <div class="agent-table-wrap">
+        <table class="agent-table" id="tpAgentTable">
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th class="center">Conversaciones</th>
+              <th class="center">Abiertas</th>
+              <th class="center">Cerradas</th>
+              <th class="center">Aplicaciones</th>
+              <th class="center">Tiempo resp.</th>
+              <th class="center">Leads reclamados</th>
+            </tr>
+          </thead>
+          <tbody id="tpAgentBody">
+            <tr><td colspan="7" class="empty-state" style="padding:32px 16px;">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 'use strict';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtDate = (iso) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return '—';
-  return d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+const initials = (n='') => n.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase() || '?';
 
 async function api(path, opts = {}) {
   const init = { credentials: 'include', ...opts };
@@ -395,131 +504,176 @@ function toast(msg, isError = false) {
   toast._t = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
-const STATE = { user: null, posts: [], type: 'update' };
+const $ = (id) => document.getElementById(id);
+const STATE = { user: null, range: '30d', leadsChart: null };
 
-// ── Composer type toggle ───────────────────────────────────────
-function setPubType(type) {
-  STATE.type = type === 'article' ? 'article' : 'update';
-  document.querySelectorAll('.pub-type-btn').forEach(b => {
-    const on = b.dataset.type === STATE.type;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  document.getElementById('pubTitleWrap').hidden = STATE.type !== 'article';
+const RANGE_LABELS = { '7d': 'Últ. 7 días', '30d': 'Últ. 30 días', '90d': 'Últ. 90 días', 'all': 'Todo el tiempo' };
+
+function fmtUSD(n) {
+  const v = Number(n) || 0;
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return '$' + Math.round(v / 1e3) + 'K';
+  return '$' + Math.round(v).toLocaleString('es-DO');
 }
 
-// ── Render feed ────────────────────────────────────────────────
-function renderFeed() {
-  const list = document.getElementById('feedList');
-  if (!STATE.posts.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        </div>
-        <strong>Aún no hay publicaciones</strong>
-        Cuando publiques tu primera actualización o artículo, aparecerá aquí.
-      </div>`;
+// ── Render KPIs ──────────────────────────────────────────────
+function renderKpis(data) {
+  const agg = data.aggregate || {};
+  $('tpTeamSize').textContent = data.team_size || 0;
+  $('tpTotalLeads').textContent = agg.total_leads || 0;
+  $('tpClaimedPct').textContent = (agg.claimed_pct || 0) + '%';
+  const avgMin = agg.avg_speed_to_lead_min;
+  $('tpAvgResponse').innerHTML = avgMin != null
+    ? `${avgMin}<span class="unit"> min</span>`
+    : '<span class="unit">N/A</span>';
+  $('tpLeadsMonth').textContent = agg.leads_this_month || 0;
+  $('tpConversion').textContent = (agg.conversion_rate || 0) + '%';
+  $('tpPipeline').textContent = fmtUSD(agg.active_pipeline_value);
+  $('tpActiveAgents').textContent = agg.active_agents || 0;
+  const inactive = agg.inactive_agents || 0;
+  $('tpInactiveLabel').textContent = inactive > 0
+    ? `Agentes activos · ${inactive} inactivos (3+ días)`
+    : 'Agentes activos';
+}
+
+// ── Render agent table ───────────────────────────────────────
+function renderAgentTable(agents) {
+  const tbody = $('tpAgentBody');
+  if (!agents || !agents.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:48px 16px;"><strong>Sin agentes</strong>No hay agentes afiliados en este periodo.</td></tr>';
     return;
   }
-  // Sort newest first
-  const items = [...STATE.posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  list.innerHTML = items.map(p => {
-    const isArticle = p.post_type === 'article';
-    const hasImg = !!p.image;
+  const sorted = [...agents].sort((a, b) => (b.conversations_handled || 0) - (a.conversations_handled || 0));
+  tbody.innerHTML = sorted.map(a => {
+    const ini = initials(a.name || '?');
+    const respTime = a.avg_response_min != null ? `${a.avg_response_min} min` : '—';
+    const respClass = a.avg_response_min == null ? 'num-mute'
+      : a.avg_response_min <= 30 ? 'num-good'
+      : a.avg_response_min <= 120 ? 'num-warn'
+      : 'num-mute';
+    const dotClass = a.isActive ? 'active' : 'inactive';
+    const dotTitle = a.isActive ? 'Activo' : `Inactivo${a.daysSinceLogin != null ? ` ${a.daysSinceLogin}d` : ''}`;
+    const subText = a.daysSinceLogin != null && a.daysSinceLogin > 0
+      ? `${a.role || 'Agente'} · hace ${a.daysSinceLogin}d`
+      : `${a.role || 'Agente'} · hoy`;
+    const av = a.avatarUrl
+      ? `<img src="${escapeHtml(a.avatarUrl)}" alt="" onerror="this.parentNode.textContent='${escapeHtml(ini)}'">`
+      : escapeHtml(ini);
     return `
-      <div class="feed-card ${hasImg ? '' : 'no-image'}" data-id="${escapeHtml(p.id)}">
-        ${hasImg ? `<img src="${escapeHtml(p.image)}" alt="" class="feed-img" onerror="this.remove()">` : ''}
-        <div class="feed-body">
-          <div class="feed-meta">
-            <span class="feed-pill ${isArticle ? 'article' : 'update'}">${isArticle ? 'Artículo' : 'Actualización'}</span>
-            <span class="feed-date">${escapeHtml(fmtDate(p.created_at))}</span>
+      <tr>
+        <td>
+          <div class="agent-cell">
+            <span class="agent-av">${av}</span>
+            <div class="agent-info">
+              <div class="agent-name">
+                <span>${escapeHtml(a.name || '—')}</span>
+                <span class="agent-name-dot ${dotClass}" title="${escapeHtml(dotTitle)}"></span>
+              </div>
+              <div class="agent-sub">${escapeHtml(subText)}</div>
+            </div>
           </div>
-          ${p.title ? `<h3 class="feed-title">${escapeHtml(p.title)}</h3>` : ''}
-          <div class="feed-content">${escapeHtml(p.content || '')}</div>
-        </div>
-        <button class="feed-del" data-id="${escapeHtml(p.id)}" aria-label="Eliminar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-        </button>
-      </div>`;
+        </td>
+        <td class="center num-strong">${a.conversations_handled || 0}</td>
+        <td class="center num-good">${a.open_conversations || 0}</td>
+        <td class="center num-mute">${a.closed_conversations || 0}</td>
+        <td class="center num-strong">${a.applications_count || 0}</td>
+        <td class="center ${respClass}">${respTime}</td>
+        <td class="center num-strong">${a.leads_claimed || 0}</td>
+      </tr>`;
   }).join('');
+}
 
-  list.querySelectorAll('.feed-del').forEach(btn => {
-    btn.addEventListener('click', () => deletePost(btn.dataset.id));
+// ── Render leads chart ───────────────────────────────────────
+function renderChart(leadsByDay) {
+  if (typeof Chart === 'undefined') return;
+  const data = Array.isArray(leadsByDay) ? leadsByDay : [];
+  if (STATE.leadsChart) { STATE.leadsChart.destroy(); STATE.leadsChart = null; }
+  const canvas = $('chartLeadsPerDay');
+  if (!canvas) return;
+  STATE.leadsChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [{
+        label: 'Leads',
+        data: data.map(d => d.count),
+        backgroundColor: '#b54c30',
+        borderRadius: 4,
+        maxBarThickness: 28,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#14110F', cornerRadius: 8, padding: 10 },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8a857f', font: { size: 10 }, maxTicksLimit: 14 },
+          grid: { color: 'rgba(20,17,15,0.06)', drawBorder: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#8a857f', stepSize: 1, font: { size: 10 } },
+          grid: { color: 'rgba(20,17,15,0.06)', drawBorder: false },
+        },
+      },
+    },
   });
 }
 
-// ── Submit composer ────────────────────────────────────────────
-async function submitPost() {
-  const msg = document.getElementById('pubMsg');
-  const submitBtn = document.getElementById('pubSubmitBtn');
-  const content = document.getElementById('pubContent').value.trim();
-  msg.textContent = '';
-  msg.classList.remove('error', 'ok');
-
-  if (!content) {
-    msg.textContent = 'Escribe el contenido antes de publicar.';
-    msg.classList.add('error');
-    return;
-  }
-  const title = STATE.type === 'article' ? document.getElementById('pubTitle').value.trim() : '';
-  if (STATE.type === 'article' && !title) {
-    msg.textContent = 'El artículo necesita un título.';
-    msg.classList.add('error');
-    return;
-  }
-
-  submitBtn.disabled = true;
-  try {
-    await api('/api/inmobiliaria/posts', {
-      method: 'POST',
-      body: {
-        post_type: STATE.type,
-        title,
-        content,
-        image: document.getElementById('pubImage').value.trim() || null,
-      },
-    });
-    document.getElementById('pubContent').value = '';
-    document.getElementById('pubTitle').value = '';
-    document.getElementById('pubImage').value = '';
-    msg.textContent = 'Publicado ✓';
-    msg.classList.add('ok');
-    setTimeout(() => { msg.textContent = ''; msg.classList.remove('ok'); }, 2200);
-    await load();
-  } catch (e) {
-    msg.textContent = e.message || 'No se pudo publicar.';
-    msg.classList.add('error');
-  } finally {
-    submitBtn.disabled = false;
-  }
-}
-
-// ── Delete post ────────────────────────────────────────────────
-async function deletePost(id) {
-  if (!id || !confirm('¿Eliminar esta publicación? Esta acción no se puede deshacer.')) return;
-  try {
-    await api(`/api/inmobiliaria/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    toast('Publicación eliminada');
-    await load();
-  } catch (e) {
-    toast(e.message || 'No se pudo eliminar', true);
-  }
-}
-
-// ── Load feed ──────────────────────────────────────────────────
+// ── Load ──────────────────────────────────────────────────────
 async function load() {
+  const range = STATE.range;
+  $('rangeLabel').textContent = RANGE_LABELS[range] || range;
   try {
-    const data = await api('/api/inmobiliaria/posts').catch(() => []);
-    STATE.posts = Array.isArray(data) ? data : [];
+    const data = await api(`/api/broker/team-performance?range=${range === 'all' ? '' : range}`);
+    if (!data) return;
+    renderKpis(data);
+    renderAgentTable(data.agents || []);
+    renderChart(data.leads_by_day || []);
   } catch (e) {
-    console.error('[equipo-publicaciones] load failed', e);
-    STATE.posts = [];
+    console.error('[equipo-rendimiento] load failed', e);
+    $('tpAgentBody').innerHTML = `<tr><td colspan="7" class="empty-state" style="padding:48px 16px;color:var(--accent);"><strong>Error al cargar</strong>${escapeHtml(e.message || 'Inténtalo de nuevo')}</td></tr>`;
   }
-  renderFeed();
 }
 
-// ── Bootstrap ──────────────────────────────────────────────────
+// ── Broadcast ────────────────────────────────────────────────
+async function sendBroadcast() {
+  const ta = $('broadcastMsg');
+  const status = $('broadcastStatus');
+  const btn = $('broadcastBtn');
+  const msg = (ta.value || '').trim();
+  status.textContent = '';
+  status.classList.remove('ok', 'error');
+
+  if (!msg) {
+    status.textContent = 'Escribe un mensaje primero.';
+    status.classList.add('error');
+    return;
+  }
+  btn.disabled = true;
+  const originalHtml = btn.innerHTML;
+  btn.textContent = 'Enviando…';
+  try {
+    const res = await api('/api/broker/team-broadcast', { method: 'POST', body: { message: msg } });
+    const sent = res?.sent ?? 0;
+    status.textContent = `Enviado a ${sent} miembro${sent === 1 ? '' : 's'} ✓`;
+    status.classList.add('ok');
+    ta.value = '';
+    setTimeout(() => { status.textContent = ''; status.classList.remove('ok'); }, 5000);
+  } catch (e) {
+    status.textContent = e.message || 'No se pudo enviar';
+    status.classList.add('error');
+    toast(e.message || 'No se pudo enviar', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
 async function bootstrap() {
   let me;
   try { me = await api('/api/auth/me'); } catch { return; }
@@ -536,16 +690,16 @@ async function bootstrap() {
     return;
   }
 
-  // Wire composer interactions
-  document.querySelectorAll('.pub-type-btn').forEach(b => {
-    b.addEventListener('click', () => setPubType(b.dataset.type));
+  $('tpRangeSelect').addEventListener('change', (e) => {
+    STATE.range = e.target.value;
+    load();
   });
-  document.getElementById('pubSubmitBtn').addEventListener('click', submitPost);
+  $('broadcastBtn').addEventListener('click', sendBroadcast);
 
   await load();
 }
 
-bootstrap().catch(err => console.error('[equipo-publicaciones] bootstrap failed', err));
+bootstrap().catch(err => console.error('[equipo-rendimiento] bootstrap failed', err));
 </script>
 
 
