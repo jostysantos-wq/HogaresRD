@@ -7,6 +7,7 @@ const crypto    = require('crypto');
 const rateLimit = require('express-rate-limit');
 const store     = require('./store');
 const { userAuth } = require('./auth');
+const { decrypt } = require('../utils/encryption');
 
 const router = express.Router();
 
@@ -97,6 +98,80 @@ router.get('/my-stats', userAuth, async (req, res) => {
     console.error('[referrals] Stats error:', err.message);
     res.json({ clicks: 0, unique_visitors: 0, leads: 0, applications: 0, conversion_rate: 0 });
   }
+});
+
+// ── GET /api/referrals/my-payouts — referral fees owed to me ──
+// Returns the applications where the authenticated user is the
+// referral_payee but is NOT the assigned broker. Splits results
+// into pending (commission recorded but not yet marked paid),
+// paid (broker marked paid), and awaiting_close (lead converted but
+// commission not yet recorded — may still go to zero).
+router.get('/my-payouts', userAuth, (req, res) => {
+  const user = store.getUserById(req.user.sub);
+  if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+  const apps = (store.getApplications() || []).filter(a => a.referral_payee_id === user.id);
+  const pending = [];
+  const paid = [];
+  const awaiting_close = [];
+  let total_pending = 0;
+  let total_paid = 0;
+
+  for (const a of apps) {
+    const com = a.commission || null;
+    // Decrypt the relevant amount in-place to a local var (don't mutate stored row).
+    let amount = 0;
+    if (com) {
+      let raw = com.referral_amount;
+      if (typeof raw === 'string') {
+        const dec = decrypt(raw);
+        raw = dec ? Number(dec) : 0;
+      }
+      if (typeof raw === 'number' && isFinite(raw)) amount = raw;
+    }
+    const broker = a.broker || {};
+    const row = {
+      application_id: a.id,
+      listing_id:     a.listing_id,
+      listing_title:  a.listing_title || 'Propiedad',
+      client_name:    a.client?.name || '',
+      broker_name:    broker.name || '',
+      broker_agency:  broker.agency_name || '',
+      status:         a.status,
+      commission_status: com?.status || null,
+      referral_percent:  com?.referral_percent || 0,
+      referral_amount:   amount,
+      paid:              !!a.referral_paid,
+      paid_at:           a.referral_paid_at || null,
+      created_at:        a.created_at,
+    };
+    if (a.referral_paid) {
+      paid.push(row);
+      total_paid += amount;
+    } else if (com && amount > 0) {
+      pending.push(row);
+      total_pending += amount;
+    } else {
+      awaiting_close.push(row);
+    }
+  }
+
+  // Most recent first
+  const byCreated = (x, y) => (y.created_at || '').localeCompare(x.created_at || '');
+  pending.sort(byCreated);
+  paid.sort(byCreated);
+  awaiting_close.sort(byCreated);
+
+  res.json({
+    pending, paid, awaiting_close,
+    totals: {
+      pending: Math.round(total_pending * 100) / 100,
+      paid:    Math.round(total_paid * 100) / 100,
+      count_pending:  pending.length,
+      count_paid:     paid.length,
+      count_awaiting: awaiting_close.length,
+    },
+  });
 });
 
 // ── GET /api/referrals/my-clicks — recent click log ───────────

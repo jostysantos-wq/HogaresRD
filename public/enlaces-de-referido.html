@@ -156,6 +156,31 @@
   .recent-amt { font-weight: 600; font-family: var(--serif); font-size: 15px; }
   .recent-amt.zero { color: var(--ink-mute); font-weight: 500; }
 
+  .payouts-blurb { font-size: 12.5px; color: var(--ink-mute); line-height: 1.55; margin: 0 0 14px; max-width: 700px; }
+  .payouts-tabs { display: flex; gap: 4px; background: var(--bg-soft); border-radius: 12px; padding: 4px; margin-bottom: 14px; width: fit-content; }
+  .po-tab { padding: 7px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--ink-mute); cursor: pointer; border: none; background: transparent; display: inline-flex; align-items: center; gap: 7px; }
+  .po-tab:hover { color: var(--ink); }
+  .po-tab.active { background: var(--bg-card); color: var(--ink); box-shadow: 0 1px 3px rgba(20,17,15,0.06); }
+  .po-tab-count { background: var(--line); color: var(--ink-soft); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+  .po-tab.active .po-tab-count { background: var(--ink); color: #fff; }
+  .po-list { display: flex; flex-direction: column; gap: 10px; }
+  .po-row { display: grid; grid-template-columns: 1.6fr 1.4fr 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; background: var(--bg-soft); border-radius: 12px; border: 1px solid var(--line-soft); }
+  .po-row .po-listing { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .po-row .po-meta    { font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
+  .po-row .po-broker  { font-size: 12.5px; color: var(--ink-soft); }
+  .po-row .po-broker-em { font-size: 11px; color: var(--ink-mute); }
+  .po-amount { font-family: var(--serif); font-size: 18px; font-weight: 600; text-align: right; }
+  .po-amount.zero { color: var(--ink-mute); font-weight: 500; font-size: 13px; font-family: var(--sans); }
+  .po-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; background: var(--bg-card); }
+  .po-status.pending { color: var(--gold); background: var(--gold-soft); }
+  .po-status.paid    { color: var(--teal); background: var(--teal-soft); }
+  .po-status.awaiting{ color: var(--ink-mute); }
+  .po-empty { padding: 28px 16px; text-align: center; color: var(--ink-mute); font-size: 13px; }
+  @media (max-width: 720px) {
+    .po-row { grid-template-columns: 1fr; gap: 6px; }
+    .po-amount { text-align: left; }
+  }
+
   .skel { background: linear-gradient(90deg, var(--bg-soft) 25%, var(--line-soft) 50%, var(--bg-soft) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
@@ -549,6 +574,20 @@
       </div>
     </section>
 
+    <section class="recent" id="payoutsSection" style="display:none;">
+      <div class="recent-head">
+        <h2 class="panel-title">Comisiones de referido</h2>
+        <span class="recent-link" id="payoutsTotals" style="cursor:default;"></span>
+      </div>
+      <p class="payouts-blurb">Cuando un cliente que enviaste aplica a un listado de otra agencia, esa agencia te debe una comisión de referido (25% de su comisión bruta por defecto). Aquí ves lo pendiente y lo pagado.</p>
+      <div class="payouts-tabs" id="payoutsTabs">
+        <button class="po-tab active" data-tab="pending" type="button">Pendientes <span class="po-tab-count" id="poCountPending">0</span></button>
+        <button class="po-tab" data-tab="paid" type="button">Pagadas <span class="po-tab-count" id="poCountPaid">0</span></button>
+        <button class="po-tab" data-tab="awaiting" type="button">En proceso <span class="po-tab-count" id="poCountAwaiting">0</span></button>
+      </div>
+      <div class="po-list" id="poList"></div>
+    </section>
+
   </main>
 </div>
 
@@ -698,6 +737,101 @@ function renderRecent(applications) {
   tbl.innerHTML = head + rows;
 }
 
+// ── Referral payouts (Option B: outside-listing referrals) ─────────────
+const STATUS_LABELS_ES = {
+  aplicado: 'Aplicado', en_revision: 'En Revisión',
+  documentos_requeridos: 'Documentos Requeridos', documentos_enviados: 'Docs Enviados',
+  documentos_insuficientes: 'Docs Insuficientes', en_aprobacion: 'En Aprobación',
+  reservado: 'Reservado', aprobado: 'Aprobado',
+  pendiente_pago: 'Pendiente de Pago', pago_enviado: 'Pago Enviado',
+  pago_aprobado: 'Pago Aprobado', completado: 'Cerrado', rechazado: 'Rechazado',
+};
+let STATE_PAYOUTS = { pending: [], paid: [], awaiting_close: [], totals: null, activeTab: 'pending' };
+
+function poRenderRow(row, kind) {
+  const amount = (row.referral_amount > 0)
+    ? `<div class="po-amount">${fmtUSD(row.referral_amount)}</div>`
+    : `<div class="po-amount zero">Por definirse</div>`;
+  const statusPill = kind === 'paid'
+    ? `<span class="po-status paid">✓ Pagada${row.paid_at ? ' · ' + new Date(row.paid_at).toLocaleDateString('es-DO') : ''}</span>`
+    : kind === 'awaiting'
+      ? `<span class="po-status awaiting">${STATUS_LABELS_ES[row.status] || row.status || 'En proceso'}</span>`
+      : `<span class="po-status pending">Pendiente${row.referral_percent ? ' · ' + row.referral_percent + '%' : ''}</span>`;
+  const broker = row.broker_name
+    ? `<div><div class="po-broker">${escapeHtml(row.broker_name)}</div><div class="po-broker-em">${escapeHtml(row.broker_agency || '')}</div></div>`
+    : `<div class="po-broker-em">Aún sin agente asignado</div>`;
+  return `
+    <div class="po-row">
+      <div>
+        <div class="po-listing">${escapeHtml(row.listing_title)}</div>
+        <div class="po-meta">${escapeHtml(row.client_name || 'Cliente')} · ${new Date(row.created_at).toLocaleDateString('es-DO')}</div>
+      </div>
+      ${broker}
+      <div>${statusPill}</div>
+      ${amount}
+    </div>`;
+}
+
+function poRender() {
+  const tab = STATE_PAYOUTS.activeTab;
+  const list = (
+    tab === 'pending'  ? STATE_PAYOUTS.pending :
+    tab === 'paid'     ? STATE_PAYOUTS.paid :
+    STATE_PAYOUTS.awaiting_close
+  );
+  const el = document.getElementById('poList');
+  if (!list.length) {
+    const msg = tab === 'pending'
+      ? 'No tienes comisiones pendientes de cobro en este momento.'
+      : tab === 'paid'
+        ? 'Aún no se ha marcado ninguna comisión de referido como pagada.'
+        : 'Ningún referido está actualmente esperando que el agente registre la comisión.';
+    el.innerHTML = `<div class="po-empty">${msg}</div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => poRenderRow(r, tab)).join('');
+}
+
+function poWireTabs() {
+  document.querySelectorAll('#payoutsTabs .po-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#payoutsTabs .po-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      STATE_PAYOUTS.activeTab = btn.dataset.tab;
+      poRender();
+    });
+  });
+}
+
+async function loadPayouts() {
+  const data = await api('/api/referrals/my-payouts').catch(() => null);
+  if (!data) return;
+  STATE_PAYOUTS.pending        = data.pending        || [];
+  STATE_PAYOUTS.paid           = data.paid           || [];
+  STATE_PAYOUTS.awaiting_close = data.awaiting_close || [];
+  STATE_PAYOUTS.totals         = data.totals         || null;
+
+  // Don't surface the section at all if the user has zero referrals across
+  // every bucket — that's the case for first-time agents and for any agent
+  // whose referrals have all been to listings they're affiliated with
+  // (which routes via the legacy direct-assign path, not as fee payouts).
+  const totalCount = STATE_PAYOUTS.pending.length + STATE_PAYOUTS.paid.length + STATE_PAYOUTS.awaiting_close.length;
+  if (totalCount === 0) {
+    document.getElementById('payoutsSection').style.display = 'none';
+    return;
+  }
+  document.getElementById('payoutsSection').style.display = '';
+
+  document.getElementById('poCountPending').textContent  = STATE_PAYOUTS.pending.length;
+  document.getElementById('poCountPaid').textContent     = STATE_PAYOUTS.paid.length;
+  document.getElementById('poCountAwaiting').textContent = STATE_PAYOUTS.awaiting_close.length;
+  if (data.totals) {
+    document.getElementById('payoutsTotals').textContent =
+      `Pendiente ${fmtUSD(data.totals.pending)} · Pagado ${fmtUSD(data.totals.paid)}`;
+  }
+  poRender();
+}
+
 async function load() {
   let me;
   try { me = await api('/api/auth/me'); } catch { return; }
@@ -729,6 +863,11 @@ async function load() {
     a.referred_by === user.id || a.ref_token === STATE.refToken
   );
   renderRecent(referred);
+
+  // Outside-listing referrals → the broker who closes pays this user a
+  // referral fee. Loads pending / paid / in-progress buckets.
+  poWireTabs();
+  await loadPayouts();
 
   // Wire interactions
   document.getElementById('copyGeneralBtn').onclick = async () => {

@@ -2219,13 +2219,14 @@
             <th style="text-align:right;">Venta</th>
             <th style="text-align:right;">Comisión</th>
             <th style="text-align:right;">Cuota Inm.</th>
+            <th style="text-align:right;">Referido</th>
             <th style="text-align:right;">Neto Agente</th>
             <th>Estado</th>
             <th style="text-align:right;">Acciones</th>
           </tr>
         </thead>
         <tbody id="commTableBody">
-          <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando comisiones…</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando comisiones…</td></tr>
         </tbody>
       </table>
     </div>
@@ -3985,6 +3986,12 @@
                oninput="commRecalc()"
                style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
       </div>
+      <div id="commReferralRow" style="display:none;">
+        <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">% Comisión de referido <span id="commReferralPayeeName" style="color:var(--accent);text-transform:none;letter-spacing:0;font-weight:600;"></span></label>
+        <input type="number" id="commReferralPercent" placeholder="25" min="0" max="100" step="1"
+               oninput="commRecalc()"
+               style="width:100%;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:0.88rem;font-family:inherit;">
+      </div>
       <div>
         <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Nota (opcional)</label>
         <input type="text" id="commNote" placeholder="Ej: firmado el 2026-04-15"
@@ -3996,6 +4003,7 @@
     <div id="commPreview" style="margin-top:1rem;background:var(--bg-section);border-radius:10px;padding:0.8rem 1rem;font-size:0.82rem;line-height:1.7;">
       <div style="display:flex;justify-content:space-between;color:var(--text-muted);"><span>Comisión total del agente:</span> <strong id="commPreviewAgent" style="color:var(--text);">$0</strong></div>
       <div style="display:flex;justify-content:space-between;color:var(--text-muted);"><span>Cuota de la inmobiliaria:</span> <strong id="commPreviewInm" style="color:var(--text);">$0</strong></div>
+      <div id="commPreviewReferralRow" style="display:none;justify-content:space-between;color:var(--text-muted);"><span>Comisión de referido:</span> <strong id="commPreviewReferral" style="color:var(--text);">$0</strong></div>
       <hr style="border:none;border-top:1px solid var(--border);margin:0.5rem 0;">
       <div style="display:flex;justify-content:space-between;"><span style="font-weight:700;">Neto al agente:</span> <strong id="commPreviewNet" style="color:var(--green);">$0</strong></div>
     </div>
@@ -9074,7 +9082,7 @@
       : commData.filter(r => r.commission?.status === commFilterValue);
 
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin comisiones registradas todavía.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin comisiones registradas todavía.</td></tr>';
       return;
     }
 
@@ -9090,9 +9098,18 @@
       if ((c.status === 'pending_review' || c.status === 'rejected') && iAmThisAgent) {
         actions.push(`<button onclick="openCommissionFromRow('${r.application_id}')" style="background:#fff;color:var(--accent);border:1.5px solid var(--accent);border-radius:6px;padding:0.3rem 0.65rem;font-size:0.72rem;font-weight:700;cursor:pointer;">Editar</button>`);
       }
+      // Referral-paid action: only visible to the assigned broker, only
+      // when there's a recorded referral fee that hasn't been paid.
+      if (r.referral_payee_id && !r.referral_paid && (c.referral_amount || 0) > 0 && iAmThisAgent) {
+        actions.push(`<button onclick="markReferralPaid('${r.application_id}')" style="background:#fff;color:var(--green,#16a34a);border:1.5px solid var(--green,#16a34a);border-radius:6px;padding:0.3rem 0.65rem;font-size:0.72rem;font-weight:700;cursor:pointer;">Marcar referido pagado</button>`);
+      }
       const agentCell = isInmView
         ? `<td><div style="font-weight:600;font-size:0.8rem;">${esc(r.agent_name || '—')}</div></td>`
         : '';
+      // Referral cell — empty if no referral payee on the application
+      const referralCell = r.referral_payee_id
+        ? `<td style="text-align:right;color:var(--orange,#d97706);">${c.referral_percent || 0}% · ${fmtPrice(c.referral_amount || 0)}<div style="font-size:0.7rem;color:var(--text-muted);font-weight:500;">→ ${esc(r.referral_payee_name || 'referidor')}${r.referral_paid ? ' · ✓ pagada' : ''}</div></td>`
+        : `<td style="text-align:right;color:var(--text-muted);font-size:0.75rem;">—</td>`;
       return `
         <tr>
           <td><div style="font-weight:600;font-size:0.83rem;">${esc(r.listing_title || '—')}</div></td>
@@ -9101,12 +9118,24 @@
           <td style="text-align:right;font-weight:700;">${fmtPrice(c.sale_amount || 0)}</td>
           <td style="text-align:right;">${c.agent_percent || 0}% · ${fmtPrice(c.agent_amount || 0)}</td>
           <td style="text-align:right;color:var(--accent);">${c.inmobiliaria_percent || 0}% · ${fmtPrice(c.inmobiliaria_amount || 0)}</td>
+          ${referralCell}
           <td style="text-align:right;color:var(--green);font-weight:700;">${fmtPrice(c.agent_net || 0)}</td>
           <td>${commStatusBadge(c.status)}</td>
           <td style="text-align:right;white-space:nowrap;">${actions.join(' ')}</td>
         </tr>`;
     }).join('');
   }
+
+  window.markReferralPaid = async function(appId) {
+    if (!confirm('¿Confirmas que ya pagaste la comisión de referido al referidor?')) return;
+    try {
+      await API(`/api/applications/${appId}/referral/mark-paid`, { method: 'POST' });
+      toast('Marcado como pagado');
+      loadAccounting();
+    } catch (e) {
+      toast(e.message || 'No se pudo marcar como pagado', 'error');
+    }
+  };
 
   // ── Commission Modal — submit + review + adjust ──────
   let commCurrentAppId = null;
@@ -9129,18 +9158,18 @@
     try {
       const a = await API(`/api/applications/${appId}`);
       commCurrentAppId = appId;
-      commOpenModal('submit', a.commission || {}, a.listing_title || '', a.listing_price || 0);
+      commOpenModal('submit', a.commission || {}, a.listing_title || '', a.listing_price || 0, a);
     } catch (e) { toast(e.message, 'error'); }
   };
   window.openCommissionReview = async function(appId) {
     try {
       const a = await API(`/api/applications/${appId}`);
       commCurrentAppId = appId;
-      commOpenModal('review', a.commission || {}, a.listing_title || '', a.listing_price || 0);
+      commOpenModal('review', a.commission || {}, a.listing_title || '', a.listing_price || 0, a);
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  function commOpenModal(mode, existing, listingTitle, listingPrice) {
+  function commOpenModal(mode, existing, listingTitle, listingPrice, app) {
     commCurrentMode = mode;
     document.getElementById('commissionModalTitle').textContent =
       mode === 'review' ? 'Revisar comisión' : (existing.status ? 'Editar comisión' : 'Registrar comisión');
@@ -9153,6 +9182,24 @@
     document.getElementById('commInmPercent').value   = existing.inmobiliaria_percent || 0;
     document.getElementById('commNote').value         = '';
     document.getElementById('commissionModalError').textContent = '';
+
+    // Show referral fee row when this application has an outside referrer
+    const refRow      = document.getElementById('commReferralRow');
+    const refPreview  = document.getElementById('commPreviewReferralRow');
+    const refInput    = document.getElementById('commReferralPercent');
+    const refPayeeEl  = document.getElementById('commReferralPayeeName');
+    if (app && app.referral_payee_id) {
+      refRow.style.display     = '';
+      refPreview.style.display = 'flex';
+      refInput.value           = (existing.referral_percent != null && existing.referral_percent !== '')
+                                  ? existing.referral_percent : 25;
+      refPayeeEl.textContent   = app.referral_payee_name ? `→ ${app.referral_payee_name}` : '';
+    } else {
+      refRow.style.display     = 'none';
+      refPreview.style.display = 'none';
+      refInput.value           = 0;
+      refPayeeEl.textContent   = '';
+    }
 
     // Show/hide reject button (inmobiliaria review only)
     document.getElementById('commRejectBtn').style.display =
@@ -9190,11 +9237,17 @@
     const sale    = Number(String(document.getElementById('commSaleAmount').value).replace(/[^\d.]/g, '')) || 0;
     const agentP  = Number(document.getElementById('commAgentPercent').value) || 0;
     const inmP    = Number(document.getElementById('commInmPercent').value) || 0;
+    const refRow  = document.getElementById('commReferralRow');
+    const refP    = (refRow && refRow.style.display !== 'none')
+                      ? (Number(document.getElementById('commReferralPercent').value) || 0)
+                      : 0;
     const agentA  = Math.round(sale * agentP / 100 * 100) / 100;
     const inmA    = Math.round(sale * inmP / 100 * 100) / 100;
-    const net     = Math.max(0, agentA - inmA);
+    const refA    = Math.round(agentA * refP / 100 * 100) / 100;
+    const net     = Math.max(0, agentA - inmA - refA);
     document.getElementById('commPreviewAgent').textContent = fmtPrice(agentA);
     document.getElementById('commPreviewInm').textContent   = fmtPrice(inmA);
+    document.getElementById('commPreviewReferral').textContent = fmtPrice(refA);
     document.getElementById('commPreviewNet').textContent   = fmtPrice(net);
   };
 
@@ -9204,12 +9257,23 @@
     const sale     = Number(saleStr) || 0;
     const agentP   = Number(document.getElementById('commAgentPercent').value) || 0;
     const inmP     = Number(document.getElementById('commInmPercent').value) || 0;
+    const refRow   = document.getElementById('commReferralRow');
+    const referralActive = refRow && refRow.style.display !== 'none';
+    const refP     = referralActive ? (Number(document.getElementById('commReferralPercent').value) || 0) : 0;
     const note     = document.getElementById('commNote').value.trim().slice(0, 300);
     const errEl    = document.getElementById('commissionModalError');
     errEl.textContent = '';
     if (sale <= 0) { errEl.textContent = 'El monto de venta es obligatorio.'; return; }
     if (agentP <= 0) { errEl.textContent = 'El porcentaje del agente debe ser mayor a 0.'; return; }
     if (inmP > agentP) { errEl.textContent = 'La cuota de la inmobiliaria no puede ser mayor al porcentaje del agente.'; return; }
+    // Referral + inmobiliaria together can't exceed agent's gross commission.
+    const agentA = sale * agentP / 100;
+    const inmA   = sale * inmP / 100;
+    const refA   = agentA * refP / 100;
+    if ((inmA + refA) > agentA + 0.01) {
+      errEl.textContent = 'La cuota de inmobiliaria + comisión de referido no puede exceder la comisión del agente.';
+      return;
+    }
 
     const btn = document.getElementById('commSubmitBtn');
     btn.disabled = true; btn.textContent = 'Guardando…';
@@ -9224,6 +9288,7 @@
             sale_amount:          sale,
             agent_percent:        agentP,
             inmobiliaria_percent: inmP,
+            referral_percent:     referralActive ? refP : 0,
             note,
           },
         });
@@ -9235,6 +9300,7 @@
             sale_amount:          sale,
             agent_percent:        agentP,
             inmobiliaria_percent: inmP,
+            referral_percent:     referralActive ? refP : 0,
             note,
           },
         });
