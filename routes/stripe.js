@@ -75,8 +75,26 @@ router.post('/create-checkout', requireAuth, requireStripe, async (req, res) => 
       });
     }
 
-    // Get or create a Stripe customer for this user
+    // Get or create a Stripe customer for this user.
+    // If a stripeCustomerId exists but doesn't resolve (typical after a
+    // test→live key migration: test-mode customer IDs don't exist in
+    // live mode), wipe the stale ID + subscription fields and create a
+    // fresh customer so the user can subscribe.
     let customerId = user.stripeCustomerId;
+    if (customerId) {
+      try {
+        const existing = await stripe.customers.retrieve(customerId);
+        if (existing.deleted) customerId = null;
+      } catch (e) {
+        const stale = e?.code === 'resource_missing' || e?.statusCode === 404;
+        if (stale) {
+          console.warn(`[Stripe] Stale customer ${customerId} for user ${user.id}; recreating.`);
+          customerId = null;
+        } else {
+          throw e;
+        }
+      }
+    }
     if (!customerId) {
       const customer = await stripe.customers.create({
         email:    user.email,
@@ -84,7 +102,13 @@ router.post('/create-checkout', requireAuth, requireStripe, async (req, res) => 
         metadata: { userId: user.id, role: user.role },
       });
       customerId = customer.id;
-      user.stripeCustomerId = customerId;
+      user.stripeCustomerId      = customerId;
+      // Any prior subscription state belongs to the old (test-mode)
+      // customer and is now meaningless. Clear it so a stale 'active'
+      // status doesn't keep masking the paywall.
+      user.stripeSubscriptionId  = null;
+      user.subscriptionStatus    = 'none';
+      user.subscriptionRenewsAt  = null;
       store.saveUser(user);
     }
 
