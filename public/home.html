@@ -2456,7 +2456,7 @@
         ? '<img src="' + photo + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
         : '<span>' + (l.title || '').toLowerCase() + '</span>';
       return `
-        <a href="/listing/${id}" class="bo-card">
+        <a href="${window.HRD_REF ? window.HRD_REF.withRef('/listing/' + id) : '/listing/' + id}" class="bo-card">
           <div class="bo-card-img placeholder bo-img-grad-${gradFor(l)}">
             ${imgInner}
             ${statusPill(status)}
@@ -2485,7 +2485,7 @@
         ? '<img src="' + photo + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
         : '<span>' + (l.title || '').toLowerCase() + '</span>';
       return `
-        <a href="/listing/${id}" class="ny-card">
+        <a href="${window.HRD_REF ? window.HRD_REF.withRef('/listing/' + id) : '/listing/' + id}" class="ny-card">
           <div class="ny-card-img placeholder bo-img-grad-${gradFor(l)}">
             ${imgInner}
           </div>
@@ -2634,6 +2634,7 @@
     loadNearby();
   </script>
 
+  <script src="/js/referral-link.js"></script>
   <script src="/js/topnav.js?v=7" defer></script>
   <script src="/js/i18n.js" defer></script>
   <script src="/js/pixel.js" defer></script>

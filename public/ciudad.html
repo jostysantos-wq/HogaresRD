@@ -537,7 +537,7 @@
         ? '<span class="badge badge-nueva">Nueva</span>'
         : l.condition === 'usada' ? '<span class="badge badge-usada">Usada</span>' : '';
       return `
-        <a class="prop-card" href="/listing/${esc(l.id)}">
+        <a class="prop-card" href="${esc(window.HRD_REF ? window.HRD_REF.withRef('/listing/' + l.id) : '/listing/' + l.id)}">
           <div class="card-img">
             ${img}
             <div class="card-badges">${typeBadge}${condBadge}</div>
@@ -731,7 +731,8 @@
 
     init();
   </script>
-<script src="/js/topnav.js?v=7" defer></script>
+<script src="/js/referral-link.js"></script>
+  <script src="/js/topnav.js?v=7" defer></script>
   <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>

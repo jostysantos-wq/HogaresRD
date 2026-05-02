@@ -361,7 +361,7 @@
         ? `<div class="meta-pill"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>${esc(l.units_total)} unidades</div>` : '';
 
       return `
-        <a class="prop-card" href="/listing/${esc(l.id)}">
+        <a class="prop-card" href="${esc(window.HRD_REF ? window.HRD_REF.withRef('/listing/' + l.id) : '/listing/' + l.id)}">
           <div class="card-img">
             ${img}
             <div class="card-badges">
@@ -530,7 +530,8 @@
 
     loadListings(1);
   </script>
-<script src="/js/topnav.js?v=7" defer></script>
+<script src="/js/referral-link.js"></script>
+  <script src="/js/topnav.js?v=7" defer></script>
   <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>

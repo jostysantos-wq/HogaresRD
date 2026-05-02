@@ -393,7 +393,7 @@
                 ${esc(loc)}
               </div>
               <div class="compare-header-actions">
-                <a class="compare-view-btn" href="/listing/${esc(l.id)}">Ver detalle</a>
+                <a class="compare-view-btn" href="${esc(window.HRD_REF ? window.HRD_REF.withRef('/listing/' + l.id) : '/listing/' + l.id)}">Ver detalle</a>
                 <button class="compare-remove-btn" onclick="removeListing('${esc(l.id)}')">Quitar</button>
               </div>
             </div>
@@ -484,6 +484,7 @@
 
     loadComparison();
   </script>
+  <script src="/js/referral-link.js"></script>
   <script src="/js/topnav.js?v=7" defer></script>
   <script src="/js/i18n.js" defer></script>
   <script src="/js/pixel.js" defer></script>

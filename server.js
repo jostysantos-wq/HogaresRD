@@ -375,7 +375,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 // ── Referral cookie middleware ────────────────────────────────
 // When any page is visited with ?ref=TOKEN, validate it exists in DB
-// then set a 30-day cookie for attribution
+// then set a 30-day cookie for attribution.
+// httpOnly is false on purpose: this is a tracking ID, not a secret,
+// and listing-link builders + the listing page itself need to read it
+// from JS so the ref is propagated through internal navigation.
+// Server-side attribution still works (req.cookies sees it regardless).
 app.use((req, res, next) => {
   const ref = req.query.ref;
   if (ref && typeof ref === 'string' && ref.length === 16 && /^[a-f0-9]{16}$/i.test(ref)) {
@@ -384,7 +388,7 @@ app.use((req, res, next) => {
     if (agent) {
       res.cookie('hrd_ref', ref, {
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
       });

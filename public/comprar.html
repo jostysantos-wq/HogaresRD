@@ -638,7 +638,7 @@
         : `<div class="card-img-placeholder"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>`;
       const isSaved = getSaved().includes(l.id);
       return `
-        <a class="prop-card" href="/listing/${esc(l.id)}">
+        <a class="prop-card" href="${esc(window.HRD_REF ? window.HRD_REF.withRef('/listing/' + l.id) : '/listing/' + l.id)}">
           <div class="card-img">
             ${img}
             <div class="card-badges">
@@ -1429,7 +1429,8 @@
       }
     }
   </script>
-<script src="/js/topnav.js?v=7" defer></script>
+<script src="/js/referral-link.js"></script>
+  <script src="/js/topnav.js?v=7" defer></script>
   <script src="/js/i18n.js" defer></script>
 <script src="/js/pixel.js" defer></script>
   <script src="/js/nav-auth.js"></script>
