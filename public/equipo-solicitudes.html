@@ -638,14 +638,25 @@ bootstrap().catch(err => console.error('[equipo-solicitudes] bootstrap failed', 
         if (teamLabel) teamLabel.hidden = false;
         document.querySelectorAll('.sb-team-only').forEach(el => { el.hidden = false; });
       }
-      if (avatarBtn && u.name) {
-        const ini = u.name.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
-        avatarBtn.textContent = ini;
+      if (avatarBtn) {
+        const ini = (u.name || u.email || '?').trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
         avatarBtn.style.color = '#fff';
         avatarBtn.style.fontSize = '11.5px';
         avatarBtn.style.fontWeight = '700';
         avatarBtn.style.display = 'grid';
         avatarBtn.style.placeItems = 'center';
+        avatarBtn.style.overflow = 'hidden';
+        if (u.avatarUrl) {
+          const img = document.createElement('img');
+          img.src = u.avatarUrl;
+          img.alt = '';
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+          img.onerror = () => { avatarBtn.textContent = ini; };
+          avatarBtn.textContent = '';
+          avatarBtn.appendChild(img);
+        } else {
+          avatarBtn.textContent = ini;
+        }
       }
     })
     .catch(() => {});
