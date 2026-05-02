@@ -3967,6 +3967,28 @@
     <h3 id="commissionModalTitle" style="margin:0 0 0.5rem;">Registrar comisión</h3>
     <p id="commissionModalSubtitle" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.9rem;line-height:1.5;"></p>
 
+    <!-- Referral acknowledgment banner — only shown when application has
+         a referral_payee_id. Displays the referrer's name and asks the
+         broker to actively acknowledge before submitting. Once
+         acknowledged once, switches to a "✓ Reconocido el …" line. -->
+    <div id="commReferralAck" style="display:none;background:#FFF7E5;border:1px solid #F2D9A0;border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.9rem;">
+      <div id="commReferralAckPending" style="display:none;">
+        <div style="display:flex;align-items:flex-start;gap:0.6rem;">
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px;flex-shrink:0;color:#B8860B;margin-top:1px;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div style="font-size:0.83rem;color:#5C4810;line-height:1.5;">
+            <strong>Lead referido</strong> por <strong id="commReferralAckPayee">—</strong>. Esta venta requiere reconocer la comisión de referido (25% por defecto, ajustable abajo) antes de continuar.
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;font-size:0.82rem;color:#3a2d09;cursor:pointer;">
+          <input type="checkbox" id="commReferralAckCheckbox" onchange="commUpdateAckState()" style="width:16px;height:16px;cursor:pointer;">
+          Reconozco la relación de referido y la comisión correspondiente.
+        </label>
+      </div>
+      <div id="commReferralAckDone" style="display:none;font-size:0.82rem;color:#16632e;">
+        <strong>✓ Referido reconocido</strong> <span id="commReferralAckDoneMeta" style="color:#3d8557;font-weight:500;"></span>
+      </div>
+    </div>
+
     <div class="apply-grid cols-2" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
       <div>
         <label style="display:block;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Monto de venta (USD) <span style="color:var(--red);">*</span></label>
@@ -9140,6 +9162,17 @@
   // ── Commission Modal — submit + review + adjust ──────
   let commCurrentAppId = null;
   let commCurrentMode  = 'submit'; // 'submit' | 'review'
+  let commCurrentNeedsAck = false; // true when app has unacknowledged referral payee
+
+  // Toggles the submit button's enabled state based on the referral
+  // acknowledgment checkbox. Called from the checkbox onchange.
+  window.commUpdateAckState = function() {
+    const submitBtn = document.getElementById('commSubmitBtn');
+    if (!submitBtn) return;
+    if (!commCurrentNeedsAck) { submitBtn.disabled = false; return; }
+    const cb = document.getElementById('commReferralAckCheckbox');
+    submitBtn.disabled = !(cb && cb.checked);
+  };
 
   // Open commission submission modal from the application detail panel
   window.openCommissionForm = function() {
@@ -9188,18 +9221,41 @@
     const refPreview  = document.getElementById('commPreviewReferralRow');
     const refInput    = document.getElementById('commReferralPercent');
     const refPayeeEl  = document.getElementById('commReferralPayeeName');
+    const refAck      = document.getElementById('commReferralAck');
+    const refAckPending = document.getElementById('commReferralAckPending');
+    const refAckDone    = document.getElementById('commReferralAckDone');
+    const refAckCheckbox = document.getElementById('commReferralAckCheckbox');
     if (app && app.referral_payee_id) {
       refRow.style.display     = '';
       refPreview.style.display = 'flex';
       refInput.value           = (existing.referral_percent != null && existing.referral_percent !== '')
                                   ? existing.referral_percent : 25;
       refPayeeEl.textContent   = app.referral_payee_name ? `→ ${app.referral_payee_name}` : '';
+      refAck.style.display     = '';
+      if (app.referral_acknowledged_at) {
+        // Already acknowledged — show the "Reconocido el …" line, no checkbox required.
+        refAckPending.style.display = 'none';
+        refAckDone.style.display    = '';
+        const dt = new Date(app.referral_acknowledged_at);
+        const dateStr = isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('es-DO', { day:'numeric', month:'short', year:'numeric' });
+        document.getElementById('commReferralAckDoneMeta').textContent = dateStr ? `el ${dateStr}` : '';
+      } else {
+        // Not yet acknowledged — surface checkbox + payee name
+        refAckPending.style.display = '';
+        refAckDone.style.display    = 'none';
+        refAckCheckbox.checked      = false;
+        document.getElementById('commReferralAckPayee').textContent = app.referral_payee_name || 'el referidor';
+      }
     } else {
       refRow.style.display     = 'none';
       refPreview.style.display = 'none';
       refInput.value           = 0;
       refPayeeEl.textContent   = '';
+      refAck.style.display     = 'none';
     }
+    // Stash payee state for submit-time inspection (was the ack required?
+    // is the checkbox currently checked?)
+    commCurrentNeedsAck = !!(app && app.referral_payee_id && !app.referral_acknowledged_at);
 
     // Show/hide reject button (inmobiliaria review only)
     document.getElementById('commRejectBtn').style.display =
@@ -9225,6 +9281,7 @@
     }
 
     commRecalc();
+    commUpdateAckState();
     document.getElementById('commissionModal').classList.add('open');
   }
 
@@ -9274,6 +9331,13 @@
       errEl.textContent = 'La cuota de inmobiliaria + comisión de referido no puede exceder la comisión del agente.';
       return;
     }
+    // First-time referral acknowledgment must be checked before submit.
+    const ackCheckbox = document.getElementById('commReferralAckCheckbox');
+    const refAck      = (ackCheckbox && ackCheckbox.checked) === true;
+    if (commCurrentNeedsAck && !refAck) {
+      errEl.textContent = 'Marca la casilla para reconocer la comisión de referido antes de continuar.';
+      return;
+    }
 
     const btn = document.getElementById('commSubmitBtn');
     btn.disabled = true; btn.textContent = 'Guardando…';
@@ -9301,6 +9365,7 @@
             agent_percent:        agentP,
             inmobiliaria_percent: inmP,
             referral_percent:     referralActive ? refP : 0,
+            referral_acknowledged: refAck,
             note,
           },
         });

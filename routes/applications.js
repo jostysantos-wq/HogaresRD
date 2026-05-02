@@ -1408,11 +1408,16 @@ router.post('/', appCreateLimiter, optionalAuth, async (req, res) => {
     // affiliated with the listing's agencies. The application's broker
     // is still the listing's agent (set above); this just marks who is
     // entitled to a share of the commission. Owed/paid state is set
-    // when the broker records the commission.
-    referral_payee_id:    null,
-    referral_payee_name:  '',
-    referral_paid:        false,
-    referral_paid_at:     null,
+    // when the broker records the commission. The ack fields capture
+    // the moment the assigned broker explicitly accepted the referral
+    // relationship (required on first commission submit) — once set we
+    // don't prompt again on subsequent edits.
+    referral_payee_id:        null,
+    referral_payee_name:      '',
+    referral_acknowledged_at: null,
+    referral_acknowledged_by: null,
+    referral_paid:            false,
+    referral_paid_at:         null,
     timeline_events: [],
     created_at:      new Date().toISOString(),
     updated_at:      new Date().toISOString(),
@@ -4103,6 +4108,21 @@ router.post('/:id/commission', userAuth, (req, res) => {
   }
 
   const body = req.body || {};
+  // Outside-referral applications: the broker MUST explicitly acknowledge
+  // the referral relationship the first time they record commission.
+  // This surfaces the referrer's name as a friction point so the broker
+  // can't silently submit a commission without seeing they owe a fee.
+  // Once acknowledged once, subsequent edits don't re-prompt.
+  if (app.referral_payee_id && !app.referral_acknowledged_at) {
+    if (body.referral_acknowledged !== true) {
+      return res.status(400).json({
+        error: 'Debes reconocer la comisión de referido antes de registrar esta venta.',
+        code:  'referral_ack_required',
+        referral_payee_id:   app.referral_payee_id,
+        referral_payee_name: app.referral_payee_name || '',
+      });
+    }
+  }
   // When the application has a referral payee, default the referral
   // percent to the platform default if the broker didn't set one
   // explicitly. This way submitting a commission on a referred deal
@@ -4159,6 +4179,15 @@ router.post('/:id/commission', userAuth, (req, res) => {
     snapshot: { ...payload },
     note:     (req.body?.note || '').toString().slice(0, 300),
   });
+  // First-time referral acknowledgment — record who and when.
+  if (app.referral_payee_id && !app.referral_acknowledged_at && body.referral_acknowledged === true) {
+    app.referral_acknowledged_at = now;
+    app.referral_acknowledged_by = user.id;
+    addEvent(app, 'referral_acknowledged',
+      `${user.name || 'El agente'} reconoció la comisión de referido (${payload.referral_percent}% · $${payload.referral_amount.toLocaleString()}) hacia ${app.referral_payee_name || 'el referidor'}.`,
+      user.id, user.name || 'Agente',
+      { referral_payee_id: app.referral_payee_id, referral_percent: payload.referral_percent });
+  }
   app.updated_at = now;
 
   addEvent(app, 'commission_submitted',
@@ -4493,10 +4522,12 @@ router.get('/commissions/summary', userAuth, (req, res) => {
       // Referral fee context — surfaced at row level so the table can
       // render the "owe X to Y" badge and a mark-paid action without a
       // second round-trip.
-      referral_payee_id:   a.referral_payee_id   || null,
-      referral_payee_name: a.referral_payee_name || '',
-      referral_paid:       !!a.referral_paid,
-      referral_paid_at:    a.referral_paid_at    || null,
+      referral_payee_id:        a.referral_payee_id        || null,
+      referral_payee_name:      a.referral_payee_name      || '',
+      referral_acknowledged_at: a.referral_acknowledged_at || null,
+      referral_acknowledged_by: a.referral_acknowledged_by || null,
+      referral_paid:            !!a.referral_paid,
+      referral_paid_at:         a.referral_paid_at         || null,
       created_at:     a.created_at,
       updated_at:     a.updated_at,
     };
