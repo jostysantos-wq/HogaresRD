@@ -286,6 +286,60 @@
     margin-top: 4px; font-size: 12px; color: var(--ink-mute);
   }
 
+  /* PROGRESS CARD (donut + legend) — mirrors the iOS Tareas redesign
+     so the same at-a-glance breakdown shows on both surfaces. */
+  .progress-card {
+    background: var(--bg-card); border-radius: var(--r-card);
+    padding: 18px 20px; display: grid;
+    grid-template-columns: 140px 1fr; gap: 24px; align-items: center;
+  }
+  .progress-card .progress-head {
+    grid-column: 1 / -1; display: flex; align-items: baseline;
+    justify-content: space-between; margin-bottom: 4px;
+  }
+  .progress-card .progress-title {
+    font-family: var(--serif); font-size: 20px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .progress-card .progress-sub {
+    font-size: 12px; color: var(--ink-mute);
+  }
+  .progress-donut {
+    position: relative; width: 140px; height: 140px;
+  }
+  .progress-donut svg {
+    width: 100%; height: 100%; transform: rotate(-90deg);
+  }
+  .progress-donut .progress-center {
+    position: absolute; inset: 0;
+    display: grid; place-items: center; text-align: center;
+  }
+  .progress-donut .progress-total {
+    font-family: var(--serif); font-size: 26px; font-weight: 600;
+    line-height: 1; letter-spacing: -0.01em;
+  }
+  .progress-donut .progress-total-label {
+    margin-top: 2px; font-size: 11px; color: var(--ink-mute);
+  }
+  .progress-legend {
+    display: grid; gap: 10px;
+  }
+  .progress-legend-row {
+    display: grid; grid-template-columns: 12px 1fr auto;
+    align-items: center; gap: 10px; font-size: 13px;
+  }
+  .progress-legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .progress-legend-row .count {
+    font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 720px) {
+    .progress-card { grid-template-columns: 1fr; }
+    .progress-donut { margin: 0 auto; }
+  }
+
   /* TABLE */
   .table-card {
     background: var(--bg-card); border-radius: var(--r-card);
@@ -1337,6 +1391,58 @@
       </div>
     </div>
 
+    <!-- PROGRESS DONUT — mirrors the iOS Tareas redesign -->
+    <section class="progress-card" id="progressCard">
+      <div class="progress-head">
+        <div class="progress-title">Progreso de tareas</div>
+        <div class="progress-sub">Distribución por estado</div>
+      </div>
+      <div class="progress-donut" id="progressDonut">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <!-- background ring -->
+          <circle cx="18" cy="18" r="15.915" fill="none"
+                  stroke="var(--line-soft)" stroke-width="3.5"/>
+          <!-- four segments; stroke-dasharray sizes each slice as a
+               percentage of the 100-unit circumference (2πr ≈ 100). JS
+               updates the dasharray + dashoffset on render. -->
+          <circle id="segCompletada"  cx="18" cy="18" r="15.915" fill="none"
+                  stroke="var(--teal)"   stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="0"/>
+          <circle id="segEnProgreso"  cx="18" cy="18" r="15.915" fill="none"
+                  stroke="var(--gold)"   stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="0"/>
+          <circle id="segPendiente"   cx="18" cy="18" r="15.915" fill="none"
+                  stroke="var(--plum)"   stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="0"/>
+          <circle id="segPendingRev"  cx="18" cy="18" r="15.915" fill="none"
+                  stroke="var(--accent)" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="0"/>
+        </svg>
+        <div class="progress-center">
+          <div class="progress-total" id="progressTotal">0</div>
+          <div class="progress-total-label">tareas</div>
+        </div>
+      </div>
+      <div class="progress-legend">
+        <div class="progress-legend-row">
+          <div class="progress-legend-dot" style="background: var(--teal);"></div>
+          <div>Completadas</div>
+          <div class="count" id="legendCompletada">0</div>
+        </div>
+        <div class="progress-legend-row">
+          <div class="progress-legend-dot" style="background: var(--gold);"></div>
+          <div>En progreso</div>
+          <div class="count" id="legendEnProgreso">0</div>
+        </div>
+        <div class="progress-legend-row">
+          <div class="progress-legend-dot" style="background: var(--plum);"></div>
+          <div>Pendientes</div>
+          <div class="count" id="legendPendiente">0</div>
+        </div>
+        <div class="progress-legend-row">
+          <div class="progress-legend-dot" style="background: var(--accent);"></div>
+          <div>En revisión</div>
+          <div class="count" id="legendPendingRev">0</div>
+        </div>
+      </div>
+    </section>
+
     <!-- TABLE -->
     <section class="table-card" id="tableCard">
       <div class="table-head-row">
@@ -1637,6 +1743,48 @@ function renderKpis() {
   document.getElementById('kpiPendingHoy').textContent = pendingToday;
   document.getElementById('kpiInReview').textContent = inReview;
   document.getElementById('kpiDoneWeek').textContent = doneWeek;
+
+  renderProgressDonut();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render: progress donut
+// ════════════════════════════════════════════════════════════════════
+// Mirrors the iOS Tareas progress-card. Computes the four-bucket
+// breakdown over all visible tasks and animates each segment via
+// stroke-dasharray on a 100-unit circumference.
+function renderProgressDonut() {
+  const tasks = STATE.tasks.filter(t => t.status !== 'no_aplica');
+  const completada  = tasks.filter(t => t.status === 'completada').length;
+  const enProgreso  = tasks.filter(t => t.status === 'en_progreso').length;
+  const pendingRev  = tasks.filter(t => t.status === 'pending_review').length;
+  const pendiente   = tasks.filter(t => t.status === 'pendiente').length;
+  const total       = completada + enProgreso + pendingRev + pendiente;
+
+  document.getElementById('progressTotal').textContent      = total;
+  document.getElementById('legendCompletada').textContent   = completada;
+  document.getElementById('legendEnProgreso').textContent   = enProgreso;
+  document.getElementById('legendPendiente').textContent    = pendiente;
+  document.getElementById('legendPendingRev').textContent   = pendingRev;
+
+  // The 4 segments stack: each one's dasharray is its slice length,
+  // and dashoffset is the sum of preceding slices (negated, since
+  // SVG dashoffset is leading-edge before the dasharray pattern).
+  const segments = [
+    { id: 'segCompletada', value: completada },
+    { id: 'segEnProgreso', value: enProgreso },
+    { id: 'segPendiente',  value: pendiente  },
+    { id: 'segPendingRev', value: pendingRev  },
+  ];
+  let cursor = 0;
+  for (const seg of segments) {
+    const pct = total > 0 ? (seg.value / total) * 100 : 0;
+    const el  = document.getElementById(seg.id);
+    if (!el) continue;
+    el.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
+    el.setAttribute('stroke-dashoffset', String(-cursor));
+    cursor += pct;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
