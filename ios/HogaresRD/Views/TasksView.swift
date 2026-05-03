@@ -689,6 +689,36 @@ struct TaskDetailSheet: View {
                     .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
+                    // Collaboration: comments + attachments. Mirrors the
+                    // web's task-sheet "Actividad" + "Archivos" tabs.
+                    NavigationLink {
+                        TaskCollabView(task: task).environmentObject(api)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color.rdBlue)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Comentarios y archivos")
+                                    .font(.subheadline).bold()
+                                    .foregroundStyle(.primary)
+                                Text("Conversación, documentos y soporte de esta tarea")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+
                     // Upload section (for document/payment tasks)
                     if needsUpload {
                         VStack(spacing: 14) {
