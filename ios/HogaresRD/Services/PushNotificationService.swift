@@ -1,7 +1,8 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 import UIKit
 
+@MainActor
 class PushNotificationService: NSObject, ObservableObject {
     static let shared = PushNotificationService()
 
@@ -18,24 +19,16 @@ class PushNotificationService: NSObject, ObservableObject {
 
     /// Call AFTER splash screen to avoid blocking launch.
     func deferredInit() {
-        checkAuthorizationStatus()
-        // Always re-register to ensure the server has the latest token
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            if settings.authorizationStatus == .authorized {
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
+        Task {
+            let status = await refreshAuthorizationStatus()
+            if status == .authorized {
+                UIApplication.shared.registerForRemoteNotifications()
             }
         }
     }
 
     func checkAuthorizationStatus() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-                self.authStatus = settings.authorizationStatus
-                self.isAuthorized = settings.authorizationStatus == .authorized
-            }
-        }
+        Task { _ = await refreshAuthorizationStatus() }
     }
 
     /// Async version — returns current authorization so callers can await
@@ -43,10 +36,8 @@ class PushNotificationService: NSObject, ObservableObject {
     @discardableResult
     func refreshAuthorizationStatus() async -> UNAuthorizationStatus {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
-        await MainActor.run {
-            self.authStatus = settings.authorizationStatus
-            self.isAuthorized = settings.authorizationStatus == .authorized
-        }
+        self.authStatus = settings.authorizationStatus
+        self.isAuthorized = settings.authorizationStatus == .authorized
         return settings.authorizationStatus
     }
 
@@ -54,12 +45,10 @@ class PushNotificationService: NSObject, ObservableObject {
         do {
             let granted = try await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .badge, .sound])
-            await MainActor.run {
-                self.isAuthorized = granted
-                self.authStatus = granted ? .authorized : .denied
-                if granted {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
+            self.isAuthorized = granted
+            self.authStatus = granted ? .authorized : .denied
+            if granted {
+                UIApplication.shared.registerForRemoteNotifications()
             }
             return granted
         } catch {
@@ -70,20 +59,15 @@ class PushNotificationService: NSObject, ObservableObject {
 
     func handleDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
-            debugLog("[Push] Device token received: \(token.prefix(16))...")
-        // Match the rest of the file's MainActor.run / Task @MainActor style
-        // — this @Published is otherwise mutated inconsistently across
-        // dispatch primitives.
-        Task { @MainActor in
-            self.deviceToken = token
-        }
+        debugLog("[Push] Device token received: \(token.prefix(16))...")
+        self.deviceToken = token
         Task {
             await registerTokenWithServer(token)
         }
     }
 
     func handleRegistrationError(_ error: Error) {
-            debugLog("APNs registration error: \(error)")
+        debugLog("APNs registration error: \(error)")
     }
 
     private func registerTokenWithServer(_ token: String) async {
@@ -99,7 +83,6 @@ class PushNotificationService: NSObject, ObservableObject {
     /// the user grants permission via the soft-ask primer so every channel
     /// is on by default (they can still disable individual ones from the
     /// Notifications settings screen).
-    @MainActor
     func enableAllPreferences() {
         let defaults = UserDefaults.standard
         defaults.set(true, forKey: "push_user_enabled")

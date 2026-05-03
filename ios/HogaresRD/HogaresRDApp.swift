@@ -1,13 +1,22 @@
 import SwiftUI
-import UserNotifications
+@preconcurrency import UserNotifications
 import AuthenticationServices
 
 // MARK: - AppDelegate (Push Notifications)
+//
+// UIApplicationDelegate callbacks are documented to run on the main
+// thread, so we mark the class @MainActor. That lets us call into
+// PushNotificationService (also @MainActor) directly without a
+// Sendable hop, and it satisfies the Swift 6 concurrency checker
+// when the delegate has @MainActor-isolated state.
 
+@MainActor
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
+    nonisolated func application(_ application: UIApplication,
+                                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        Task { @MainActor in
+            UNUserNotificationCenter.current().delegate = self
+        }
         return true
     }
 
@@ -21,36 +30,35 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         PushNotificationService.shared.handleRegistrationError(error)
     }
 
-    // Show notifications even when the app is in the foreground
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification) async
+    // Show notifications even when the app is in the foreground.
+    // Marked `nonisolated` so the protocol requirement (which is itself
+    // non-isolated) is satisfied without forcing the non-Sendable
+    // UNNotification through an actor hop.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            willPresent notification: UNNotification) async
         -> UNNotificationPresentationOptions {
         // Fire a lightweight "received" signal so ContentView can refresh
         // its unread-message badge immediately instead of waiting for the
         // next 30s poll — the user sees the red dot appear the instant
         // the push banner drops down.
         let userInfo = notification.request.content.userInfo
-        await MainActor.run {
-            NotificationCenter.default.post(
-                name: .pushNotificationReceived,
-                object: nil,
-                userInfo: userInfo
-            )
-        }
+        NotificationCenter.default.post(
+            name: .pushNotificationReceived,
+            object: nil,
+            userInfo: userInfo
+        )
         return [.banner, .badge, .sound]
     }
 
-    // Handle notification tap
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                didReceive response: UNNotificationResponse) async {
+    // Handle notification tap.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            didReceive response: UNNotificationResponse) async {
         let userInfo = response.notification.request.content.userInfo
-        await MainActor.run {
-            NotificationCenter.default.post(
-                name: .pushNotificationTapped,
-                object: nil,
-                userInfo: userInfo
-            )
-        }
+        NotificationCenter.default.post(
+            name: .pushNotificationTapped,
+            object: nil,
+            userInfo: userInfo
+        )
     }
 }
 
