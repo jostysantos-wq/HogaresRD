@@ -8,6 +8,9 @@ struct DashboardListingAnalyticsTab: View {
     @EnvironmentObject var api: APIService
     @State private var summary: ListingAnalyticsSummary?
     @State private var listings: [ListingAnalyticsItem] = []
+    @State private var listingToDelete: ListingAnalyticsItem?
+    @State private var deleting: Bool = false
+    @State private var deleteError: String?
     @State private var pendingListings: [Listing] = []
     @State private var loading = true
     @State private var range = "all"
@@ -200,7 +203,7 @@ struct DashboardListingAnalyticsTab: View {
 
                                     Divider().frame(height: 24)
 
-                                    // More menu — Editar / Ver público
+                                    // More menu — Editar / Ver público / Eliminar
                                     Menu {
                                         Button {
                                             if let url = URL(string: "\(apiBase)/submit?edit=\(listing.id)") {
@@ -215,6 +218,12 @@ struct DashboardListingAnalyticsTab: View {
                                             }
                                         } label: {
                                             Label("Ver Público", systemImage: "eye")
+                                        }
+                                        Divider()
+                                        Button(role: .destructive) {
+                                            listingToDelete = listing
+                                        } label: {
+                                            Label("Eliminar Propiedad", systemImage: "trash")
                                         }
                                     } label: {
                                         HStack(spacing: 5) {
@@ -268,6 +277,41 @@ struct DashboardListingAnalyticsTab: View {
         .sheet(item: $webViewURL) { wrapper in
             SafariWebView(url: wrapper.url)
                 .ignoresSafeArea()
+        }
+        .alert(
+            "¿Eliminar esta propiedad?",
+            isPresented: .init(
+                get: { listingToDelete != nil },
+                set: { if !$0 { listingToDelete = nil } }
+            ),
+            presenting: listingToDelete
+        ) { listing in
+            Button("Cancelar", role: .cancel) { listingToDelete = nil }
+            Button("Eliminar", role: .destructive) {
+                Task { await delete(listing) }
+            }
+        } message: { listing in
+            Text("Esta acción es permanente. \"\(listing.title)\" se quitará del catálogo público y no podrás revertirla.")
+        }
+        .alert(deleteError ?? "", isPresented: .constant(deleteError != nil)) {
+            Button("OK") { deleteError = nil }
+        }
+    }
+
+    private func delete(_ listing: ListingAnalyticsItem) async {
+        deleting = true
+        defer { deleting = false }
+        do {
+            _ = try await api.deleteListing(id: listing.id)
+            await MainActor.run {
+                listings.removeAll { $0.id == listing.id }
+                listingToDelete = nil
+            }
+        } catch {
+            await MainActor.run {
+                deleteError = (error as? LocalizedError)?.errorDescription ?? "No se pudo eliminar."
+                listingToDelete = nil
+            }
         }
     }
 

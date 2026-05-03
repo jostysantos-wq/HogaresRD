@@ -26,6 +26,9 @@ struct ConversationThreadView: View {
 
     // Transfer state
     @State private var showTransferSheet: Bool = false
+    @State private var showRequestTransferSheet: Bool = false
+    @State private var requestTransferSending: Bool = false
+    @State private var requestTransferResult: String?
     @State private var transferTargets:   [TransferTarget] = []
     @State private var transferLoading:   Bool = false
     @State private var transferSelected:  TransferTarget?
@@ -57,6 +60,21 @@ struct ConversationThreadView: View {
         guard isPro else { return false }
         if let bId = conversation.brokerId, !bId.isEmpty { return bId == myId }
         return false
+    }
+
+    /// Inmobiliaria/constructora directors can REQUEST a transfer
+    /// from one of their team brokers — the assigned broker then
+    /// accepts or declines. UI gate; server re-checks ownership +
+    /// same-org membership.
+    private var canRequestTransfer: Bool {
+        let role = (api.currentUser?.role ?? "").lowercased()
+        guard ["inmobiliaria", "constructora"].contains(role) else { return false }
+        // Conversation must have a broker (someone to ask) and that
+        // broker isn't the director themselves.
+        guard let bId = conversation.brokerId, !bId.isEmpty, bId != myId else { return false }
+        // Conversation must belong to this director's org.
+        if let cid = conversation.inmobiliariaId, cid != myId { return false }
+        return true
     }
 
     /// Pro users (assigned broker, secretary on the team, or admin) can
@@ -133,6 +151,9 @@ struct ConversationThreadView: View {
         }
         .sheet(isPresented: $showTransferSheet) {
             transferSheet
+        }
+        .sheet(isPresented: $showRequestTransferSheet) {
+            requestTransferSheetView
         }
         .alert("Error", isPresented: .constant(toggleError != nil), actions: {
             Button("OK") { toggleError = nil }
@@ -215,7 +236,7 @@ struct ConversationThreadView: View {
 
             Spacer(minLength: 0)
 
-            if canToggleClose || canTransfer || canShareApply {
+            if canToggleClose || canTransfer || canShareApply || canRequestTransfer {
                 Menu {
                     if canShareApply {
                         Button {
@@ -229,6 +250,13 @@ struct ConversationThreadView: View {
                             openTransferSheet()
                         } label: {
                             Label("Transferir a otro agente", systemImage: "person.crop.circle.badge.arrow.right")
+                        }
+                    }
+                    if canRequestTransfer && !isClosed {
+                        Button {
+                            openRequestTransferSheet()
+                        } label: {
+                            Label("Solicitar transferencia", systemImage: "person.crop.circle.badge.questionmark")
                         }
                     }
                     if canToggleClose {
@@ -852,6 +880,93 @@ struct ConversationThreadView: View {
         }
     }
 
+    /// Director-side: request the assigned broker to transfer the
+    /// conversation to a specific teammate. The broker accepts or
+    /// declines via PUT /:id/respond-transfer; this UI just creates
+    /// the request.
+    @ViewBuilder
+    private var requestTransferSheetView: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Pedirás al agente asignado que transfiera esta conversación a otro miembro del equipo. El agente puede aceptar o rechazar.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Destinatario") {
+                    if transferTargets.isEmpty {
+                        HStack {
+                            ProgressView()
+                            Text("Cargando compañeros…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(transferTargets) { t in
+                            Button {
+                                transferSelected = t
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(t.name).font(.subheadline.bold())
+                                        Text(t.email).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if transferSelected?.id == t.id {
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rdBlue)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Section("Motivo (opcional)") {
+                    TextField("Ej: nuevo agente toma la zona…", text: $transferReason, axis: .vertical)
+                        .lineLimit(2...6)
+                }
+
+                if let result = requestTransferResult {
+                    Section {
+                        Label(result, systemImage: result.contains("enviada") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(result.contains("enviada") ? .green : .red)
+                            .font(.callout)
+                    }
+                }
+
+                Section {
+                    Button {
+                        Task { await submitTransferRequest() }
+                    } label: {
+                        HStack {
+                            if requestTransferSending { ProgressView().tint(.white).padding(.trailing, 4) }
+                            Text(requestTransferSending ? "Enviando…" : "Enviar solicitud")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .disabled(transferSelected == nil || requestTransferSending)
+                    .listRowBackground(transferSelected == nil ? Color(.systemGray5) : Color.rdBlue)
+                    .foregroundStyle(.white)
+                }
+            }
+            .navigationTitle("Solicitar transferencia")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { showRequestTransferSheet = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .task {
+            if transferTargets.isEmpty {
+                await loadTransferTargets()
+            }
+        }
+    }
+
     private func teammateRoleLabel(_ role: String) -> String {
         switch role {
         case "broker":       return "Agente Broker"
@@ -885,6 +1000,40 @@ struct ConversationThreadView: View {
         input = input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? draft
             : (input + "\n\n" + draft)
+    }
+
+    private func openRequestTransferSheet() {
+        transferSelected = nil
+        transferReason = ""
+        transferTargets = []
+        transferError = nil
+        requestTransferResult = nil
+        showRequestTransferSheet = true
+    }
+
+    private func submitTransferRequest() async {
+        guard let target = transferSelected else { return }
+        requestTransferSending = true
+        requestTransferResult = nil
+        defer { requestTransferSending = false }
+        do {
+            _ = try await api.requestConversationTransfer(
+                conversationId: conversation.id,
+                targetUserId: target.id,
+                reason: transferReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : transferReason
+            )
+            await MainActor.run {
+                requestTransferResult = "Solicitud enviada — esperando respuesta del agente."
+            }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run {
+                showRequestTransferSheet = false
+            }
+        } catch {
+            await MainActor.run {
+                requestTransferResult = (error as? LocalizedError)?.errorDescription ?? "No se pudo enviar la solicitud."
+            }
+        }
     }
 
     private func loadTransferTargets() async {

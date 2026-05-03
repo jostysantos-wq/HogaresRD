@@ -753,6 +753,38 @@ struct TaskDetailSheet: View {
                         .buttonStyle(.plain)
                     }
 
+                    // Subtasks + dependencies — mirrors the web's
+                    // task-sheet sections. Server runs cycle detection
+                    // on every write; the UI just lists + offers a
+                    // picker.
+                    NavigationLink {
+                        TaskRelationsView(task: task) { onComplete() }
+                            .environmentObject(api)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "rectangle.stack.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.teal)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Subtareas y dependencias")
+                                    .font(.subheadline).bold()
+                                    .foregroundStyle(.primary)
+                                Text("Estructura jerárquica y precedencia")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+
                     // Upload section (for document/payment tasks)
                     if needsUpload {
                         VStack(spacing: 14) {

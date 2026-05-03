@@ -97,6 +97,10 @@ struct ListingDetailView: View {
     @State private var showFullGallery  = false
     @State private var showTourBooking  = false
     @State private var showReport       = false
+    @State private var showAffiliationRequest = false
+    @State private var affiliationMessage = ""
+    @State private var affiliationSubmitting = false
+    @State private var affiliationResult: String?
 
     // Mortgage calculator state
     @State private var mcDownPercent: Double = 30
@@ -173,6 +177,42 @@ struct ListingDetailView: View {
                 ReportView(reportType: .listing, targetId: l.id, targetName: l.title)
                     .environmentObject(APIService.shared)
             }
+        }
+        .sheet(isPresented: $showAffiliationRequest) {
+            NavigationStack {
+                Form {
+                    Section {
+                        Text(listing?.title ?? "")
+                            .font(.subheadline.bold())
+                        Text("La inmobiliaria/dueño revisará tu solicitud y, si la aprueba, te incluirá como agente de esta propiedad. Eso te permite credit las consultas con tu enlace de referido.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Section("Mensaje (opcional)") {
+                        TextField("Cuéntales por qué quieres afiliarte…", text: $affiliationMessage, axis: .vertical)
+                            .lineLimit(3...8)
+                    }
+                    if let result = affiliationResult {
+                        Section {
+                            Label(result, systemImage: result.contains("enviada") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundStyle(result.contains("enviada") ? .green : .red)
+                                .font(.callout)
+                        }
+                    }
+                }
+                .navigationTitle("Solicitar afiliación")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { showAffiliationRequest = false; affiliationResult = nil }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Enviar") { Task { await submitAffiliationRequest() } }
+                            .disabled(affiliationSubmitting || listing == nil)
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
         }
         .task {
             await load()
@@ -467,11 +507,84 @@ struct ListingDetailView: View {
                 }
 
                 glassButton(systemImage: "square.and.arrow.up") { shareListing(l) }
-                glassButton(systemImage: "ellipsis") { showReport = true }
+
+                // Top-right menu — Reportar always; "Solicitar afiliación"
+                // when the current user is a pro who is NOT already on the
+                // listing's agencies[] (server enforces the same predicate).
+                Menu {
+                    if shouldShowAffiliationRequest(l) {
+                        Button {
+                            affiliationMessage = ""
+                            showAffiliationRequest = true
+                        } label: {
+                            Label("Solicitar afiliación", systemImage: "person.crop.rectangle.stack.fill")
+                        }
+                    }
+                    Button {
+                        showReport = true
+                    } label: {
+                        Label("Reportar", systemImage: "exclamationmark.bubble")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background(.ultraThinMaterial.opacity(0.55), in: Circle())
+                        .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.top, 56)
+    }
+
+    /// Submits POST /api/listings/:id/request-affiliation. Server
+    /// notifies the listing owner; the result is purely cosmetic on
+    /// our end (the user has to wait for owner approval).
+    private func submitAffiliationRequest() async {
+        guard let l = listing else { return }
+        affiliationSubmitting = true
+        affiliationResult = nil
+        defer { affiliationSubmitting = false }
+        do {
+            let msg = affiliationMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+            _ = try await APIService.shared.requestListingAffiliation(
+                id: l.id,
+                message: msg.isEmpty ? nil : msg
+            )
+            await MainActor.run {
+                affiliationResult = "Solicitud enviada — esperando aprobación del dueño."
+                affiliationMessage = ""
+            }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run {
+                showAffiliationRequest = false
+                affiliationResult = nil
+            }
+        } catch {
+            affiliationResult = (error as? LocalizedError)?.errorDescription ?? "No se pudo enviar la solicitud."
+        }
+    }
+
+    /// Show "Solicitar afiliación" only to pros who don't already
+    /// appear in the listing's agencies (by user_id or email match).
+    /// Owners and clients see only "Reportar".
+    private func shouldShowAffiliationRequest(_ l: Listing) -> Bool {
+        guard let me = APIService.shared.currentUser else { return false }
+        let proRoles: Set<String> = ["broker", "agency", "inmobiliaria", "constructora"]
+        guard proRoles.contains(me.role) else { return false }
+        if isMyListing(l) { return false }
+        // If the user is already on this listing, hide the action.
+        let alreadyOn = (l.agencies ?? []).contains { agency in
+            if let uid = agency.userId, uid == me.id { return true }
+            if !me.email.isEmpty,
+               let aem = agency.email,
+               aem.lowercased() == me.email.lowercased() { return true }
+            return false
+        }
+        return !alreadyOn
     }
 
     /// Translucent round button used in the hero overlay.

@@ -1377,6 +1377,18 @@ struct CommissionFormSheet: View {
                     }
                 }
 
+                // History link — full audit trail for this row.
+                if row.commission.sale_amount > 0 {
+                    Section {
+                        NavigationLink {
+                            CommissionHistoryView(applicationId: row.application_id)
+                                .environmentObject(api)
+                        } label: {
+                            Label("Historial de la comisión", systemImage: "clock.arrow.circlepath")
+                        }
+                    }
+                }
+
                 Section("Detalles de la comisión") {
                     HStack {
                         Text("Monto de venta (USD)")
