@@ -104,14 +104,20 @@ struct DashboardHomeView: View {
     // MARK: - Greeting Header
 
     private var greetingHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("\(greeting), \(userName)")
-                .font(.title2.bold())
+        VStack(alignment: .leading, spacing: 6) {
+            Text(greeting.uppercased())
+                .font(.system(size: 11, weight: .heavy))
+                .tracking(1.2)
+                .foregroundStyle(.secondary)
+            Text(userName.isEmpty ? "Bienvenido" : userName)
+                .font(.system(size: 28, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             HStack(spacing: 6) {
                 Text(api.currentUser?.role.capitalized ?? "Agente")
                     .font(.caption2.bold())
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .padding(.horizontal, 9).padding(.vertical, 3)
                     .background(Color.rdBlue, in: Capsule())
                 if let company = api.currentUser?.agencyName, !company.isEmpty {
                     Text(company)
@@ -176,11 +182,12 @@ struct DashboardHomeView: View {
     private func todayRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(iconColor)
-                    .frame(width: 28, height: 28)
-                    .background(iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+                ZStack {
+                    Circle().fill(iconColor.opacity(0.13)).frame(width: 34, height: 34)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                }
                 Text(label)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
@@ -198,82 +205,149 @@ struct DashboardHomeView: View {
 
     private var kpiSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Metricas", systemImage: "chart.bar.fill")
-                .font(.headline)
+            sectionTitle("Métricas", systemImage: "chart.bar.fill")
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                KPICard(icon: "doc.text.fill", label: "Aplicaciones", value: "\(analytics?.totalApps ?? 0)",
-                        trend: analytics?.newThisMonth ?? 0 > 0 ? "+\(analytics?.newThisMonth ?? 0) este mes" : nil,
-                        trendPositive: true, color: Color.rdBlue)
-                KPICard(icon: "arrow.triangle.2.circlepath", label: "Tasa Conversion",
-                        value: String(format: "%.1f%%", (analytics?.conversionRate ?? 0) * 100),
-                        trend: nil, trendPositive: true, color: .orange)
+                KPICard(
+                    icon: "doc.text.fill",
+                    label: "Aplicaciones",
+                    value: "\(analytics?.totalApps ?? 0)",
+                    delta: (analytics?.newThisMonth ?? 0) > 0 ? "+\(analytics?.newThisMonth ?? 0)" : nil,
+                    deltaPositive: true,
+                    footnote: (analytics?.newThisMonth ?? 0) > 0 ? "este mes" : nil,
+                    color: Color.rdBlue
+                )
+                KPICard(
+                    icon: "arrow.triangle.2.circlepath",
+                    label: "Tasa Conversión",
+                    value: String(format: "%.1f%%", (analytics?.conversionRate ?? 0) * 100),
+                    delta: nil,
+                    deltaPositive: true,
+                    footnote: "vs total",
+                    color: .orange
+                )
                 if showSalesMetrics {
-                    KPICard(icon: "dollarsign.circle.fill", label: "Ingresos",
-                            value: formatCurrency(sales?.totalRevenue ?? 0),
-                            trend: "\(sales?.totalSales ?? 0) ventas", trendPositive: true, color: Color.rdGreen)
+                    KPICard(
+                        icon: "dollarsign.circle.fill",
+                        label: "Ingresos",
+                        value: formatCurrency(sales?.totalRevenue ?? 0),
+                        delta: (sales?.totalSales ?? 0) > 0 ? "\(sales?.totalSales ?? 0)" : nil,
+                        deltaPositive: true,
+                        footnote: "ventas",
+                        color: Color.rdGreen
+                    )
                 }
-                KPICard(icon: "clock.fill", label: "Dias Prom. Cierre",
-                        value: String(format: "%.0f", analytics?.avgDaysToClose ?? 0),
-                        trend: nil, trendPositive: false, color: .purple)
+                KPICard(
+                    icon: "clock.fill",
+                    label: "Días Prom. Cierre",
+                    value: String(format: "%.0f", analytics?.avgDaysToClose ?? 0),
+                    delta: nil,
+                    deltaPositive: false,
+                    footnote: "días",
+                    color: .purple
+                )
             }
         }
     }
 
     // MARK: - Pipeline Funnel
 
+    private struct PipelineStageInfo {
+        let label: String
+        let count: Int
+        let color: Color
+        let status: String
+    }
+
+    private var pipelineStages: [PipelineStageInfo] {
+        [
+            .init(label: "Enviadas",   count: analytics?.enviadas   ?? 0, color: Color.rdBlue,  status: "aplicado"),
+            .init(label: "Revisión",   count: analytics?.enRevision ?? 0, color: .orange,       status: "en_revision"),
+            .init(label: "Aprobadas",  count: analytics?.aprobadas  ?? 0, color: Color.rdGreen, status: "aprobado"),
+            .init(label: "Rechazadas", count: analytics?.rechazadas ?? 0, color: Color.rdRed,   status: "rechazado"),
+            .init(label: "Cerradas",   count: analytics?.cerradas   ?? 0, color: .purple,       status: "completado"),
+        ]
+    }
+
     private var pipelineSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Pipeline", systemImage: "arrow.right.arrow.left")
-                .font(.headline)
+            sectionTitle("Pipeline", systemImage: "arrow.right.arrow.left")
 
+            // Donut summary card — total leads in the center, segments
+            // sized by stage. Mirrors the web's lead-funnel donut.
+            VStack(alignment: .leading, spacing: 14) {
+                let total = pipelineStages.reduce(0) { $0 + $1.count }
+                HStack(spacing: 18) {
+                    ZStack {
+                        DonutChart(
+                            segments: pipelineStages.map { .init(value: $0.count, color: $0.color) },
+                            lineWidth: 16
+                        )
+                        .frame(width: 108, height: 108)
+
+                        VStack(spacing: 0) {
+                            Text("\(total)")
+                                .font(.title3.bold())
+                            Text("aplicaciones")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(pipelineStages, id: \.status) { stage in
+                            HStack(spacing: 8) {
+                                Circle().fill(stage.color).frame(width: 8, height: 8)
+                                Text(stage.label)
+                                    .font(.caption)
+                                Spacer()
+                                Text("\(stage.count)")
+                                    .font(.caption.bold())
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+
+            // Tap-to-filter chips — quick affordance to jump straight
+            // into the Aplicaciones tab pre-filtered by status.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    pipelineStage("Enviadas", count: analytics?.enviadas ?? 0, color: Color.rdBlue, status: "aplicado")
-                    pipelineArrow
-                    pipelineStage("Revision", count: analytics?.enRevision ?? 0, color: .orange, status: "en_revision")
-                    pipelineArrow
-                    pipelineStage("Aprobadas", count: analytics?.aprobadas ?? 0, color: Color.rdGreen, status: "aprobado")
-                    pipelineArrow
-                    pipelineStage("Rechazadas", count: analytics?.rechazadas ?? 0, color: Color.rdRed, status: "rechazado")
-                    pipelineArrow
-                    pipelineStage("Cerradas", count: analytics?.cerradas ?? 0, color: .purple, status: "completado")
+                    ForEach(pipelineStages, id: \.status) { stage in
+                        pipelineStage(stage)
+                    }
                 }
             }
         }
     }
 
-    private func pipelineStage(_ label: String, count: Int, color: Color, status: String) -> some View {
+    private func pipelineStage(_ stage: PipelineStageInfo) -> some View {
         Button {
-            onTapPipelineStage(status)
+            onTapPipelineStage(stage.status)
         } label: {
-            VStack(spacing: 6) {
-                Text("\(count)")
-                    .font(.title3.bold())
-                    .foregroundStyle(color)
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("\(stage.count)")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(stage.color)
+                Text(stage.label)
+                    .font(.caption.bold())
+                    .foregroundStyle(.primary)
             }
-            .frame(width: 72, height: 64)
-            .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.2), lineWidth: 1))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(stage.color.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(stage.color.opacity(0.22), lineWidth: 1))
         }
         .buttonStyle(.plain)
-    }
-
-    private var pipelineArrow: some View {
-        Image(systemName: "chevron.right")
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(.quaternary)
     }
 
     // MARK: - Team Leaderboard
 
     private var leaderboardSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Ranking del Equipo", systemImage: "trophy.fill")
-                .font(.headline)
+            sectionTitle("Ranking del Equipo", systemImage: "trophy.fill")
 
             let sorted = teamMembers.sorted { $0.appCount > $1.appCount }
             let maxCount = sorted.first?.appCount ?? 1
@@ -328,8 +402,7 @@ struct DashboardHomeView: View {
 
     private var activityFeed: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Actividad Reciente", systemImage: "clock.arrow.circlepath")
-                .font(.headline)
+            sectionTitle("Actividad Reciente", systemImage: "clock.arrow.circlepath")
 
             let items = buildActivityItems()
 
@@ -360,11 +433,18 @@ struct DashboardHomeView: View {
 
     private func activityRow(_ item: HomeActivityItem) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.icon)
-                .font(.system(size: 13))
-                .foregroundStyle(item.iconColor)
-                .frame(width: 30, height: 30)
-                .background(item.iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+            ZStack {
+                Circle().fill(item.iconColor.opacity(0.13)).frame(width: 34, height: 34)
+                if let initials = item.avatarInitials, !initials.isEmpty {
+                    Text(initials)
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(item.iconColor)
+                } else {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(item.iconColor)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
@@ -413,14 +493,15 @@ struct DashboardHomeView: View {
                 id: "tour_\(tour.id)",
                 icon: tour.status == "pending" ? "calendar.badge.clock" : "calendar.badge.checkmark",
                 iconColor: tour.status == "pending" ? .orange : Color.rdGreen,
-                title: "\(tour.client_name) solicito visita",
+                title: "\(tour.client_name) solicitó visita",
                 subtitle: "\(tour.listing_title) · \(tour.requested_date) \(formatTime(tour.requested_time))",
                 time: date,
                 actions: tour.status == "pending" ? [
                     HomeQuickAction(label: "Confirmar", icon: "checkmark", color: Color.rdGreen) {
                         Task { try? await api.updateTourStatus(tourId: tour.id, status: "confirmed") }
                     },
-                ] : []
+                ] : [],
+                avatarInitials: initials(tour.client_name)
             ))
         }
 
@@ -436,14 +517,15 @@ struct DashboardHomeView: View {
                     id: "conv_\(conv.id)",
                     icon: "bubble.left.fill",
                     iconColor: Color.rdBlue,
-                    title: "\(otherName) envio un mensaje",
+                    title: "\(otherName) envió un mensaje",
                     subtitle: conv.propertyTitle + (conv.lastMessage.map { " · \($0.prefix(40))" } ?? ""),
                     time: date,
                     actions: [
                         HomeQuickAction(label: "Responder", icon: "arrowshape.turn.up.left.fill", color: Color.rdBlue) {
                             onTapMessages()
                         },
-                    ]
+                    ],
+                    avatarInitials: initials(otherName)
                 ))
             }
         }
@@ -468,6 +550,24 @@ struct DashboardHomeView: View {
         return "$\(Int(v))"
     }
 
+    private func initials(_ name: String) -> String {
+        let parts = name.split(separator: " ").prefix(2)
+        let chars = parts.compactMap { $0.first }.map { String($0) }
+        return chars.joined().uppercased()
+    }
+
+    private func sectionTitle(_ text: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.rdBlue)
+            Text(text)
+                .font(.system(size: 17, weight: .heavy))
+                .tracking(-0.2)
+            Spacer()
+        }
+    }
+
     private func parseDate(_ s: String?) -> Date? {
         guard let s else { return nil }
         let fmt = ISO8601DateFormatter()
@@ -481,44 +581,64 @@ struct DashboardHomeView: View {
 }
 
 // MARK: - KPI Card Component
+//
+// Mirrors the web dashboard's stat cards: tinted icon circle in the top-
+// left, a colored ↑/↓ delta pill on the top-right, large value, label,
+// and a small footnote line. The delta pill is hidden when no delta is
+// available (some metrics — e.g. avg-days-to-close — don't have a
+// period-over-period number to show).
 
 struct KPICard: View {
     let icon: String
     let label: String
     let value: String
-    var trend: String? = nil
-    var trendPositive: Bool = true
+    var delta: String? = nil
+    var deltaPositive: Bool = true
+    var footnote: String? = nil
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 13))
-                    .foregroundStyle(color)
-                    .frame(width: 28, height: 28)
-                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+                ZStack {
+                    Circle().fill(color.opacity(0.13)).frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(color)
+                }
                 Spacer()
+                if let d = delta {
+                    HStack(spacing: 2) {
+                        Image(systemName: deltaPositive ? "arrow.up" : "arrow.down")
+                            .font(.system(size: 9, weight: .heavy))
+                        Text(d)
+                            .font(.system(size: 10, weight: .heavy))
+                    }
+                    .foregroundStyle(deltaPositive ? Color.rdGreen : Color.rdRed)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background((deltaPositive ? Color.rdGreen : Color.rdRed).opacity(0.13), in: Capsule())
+                }
             }
-
-            Text(value)
-                .font(.title2.bold())
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if let t = trend {
-                Text(t)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(trendPositive ? Color.rdGreen : Color.rdRed)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(value)
+                    .font(.system(size: 26, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+                HStack(spacing: 4) {
+                    Text(label)
+                        .font(.caption.bold())
+                        .foregroundStyle(.primary)
+                    if let f = footnote {
+                        Text("· \(f)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -532,6 +652,11 @@ struct HomeActivityItem: Identifiable {
     let subtitle: String
     let time: Date
     let actions: [HomeQuickAction]
+    /// When non-nil, the avatar circle shows these initials instead of
+    /// the SF Symbol icon. Used for activity items that are tied to a
+    /// specific person (clients, agents) so the feed reads more like
+    /// the web's activity timeline.
+    var avatarInitials: String? = nil
 
     var timeAgo: String {
         let diff = Date().timeIntervalSince(time)
