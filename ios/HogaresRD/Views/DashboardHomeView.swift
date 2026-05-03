@@ -408,7 +408,7 @@ struct DashboardHomeView: View {
 
         // Tours
         for tour in tours.prefix(5) {
-            let date = parseDate(tour.created_at ?? tour.requested_date) ?? Date.distantPast
+            let date = parseDate(tour.created_at) ?? Date.distantPast
             items.append(HomeActivityItem(
                 id: "tour_\(tour.id)",
                 icon: tour.status == "pending" ? "calendar.badge.clock" : "calendar.badge.checkmark",

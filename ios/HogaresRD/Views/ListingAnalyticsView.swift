@@ -151,7 +151,7 @@ struct DashboardListingAnalyticsTab: View {
                             }
                         }
                         .pickerStyle(.menu)
-                        .onChange(of: sort) { _ in
+                        .onChange(of: sort) { _, _ in
                             Task { await loadData() }
                         }
                         Spacer()

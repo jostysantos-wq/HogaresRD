@@ -785,7 +785,8 @@ struct PrivacySettingsView: View {
             var req = URLRequest(url: url)
             req.httpMethod = "PATCH"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            if let t = APIService.shared.token {
+            // Token lives on the main-actor-isolated APIService singleton.
+            if let t = await APIService.shared.token {
                 req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
             }
             req.httpBody = try? JSONSerialization.data(withJSONObject: [key: value])

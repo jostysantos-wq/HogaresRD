@@ -768,7 +768,10 @@ struct NotificationSettingsView: View {
     /// Sync a notification preference to the server so it persists across
     /// platforms. Fire-and-forget — UserDefaults is instant UI truth.
     /// Maps iOS toggle keys to server push preference keys
-    private static let prefKeyMap: [String: String] = [
+    // `nonisolated` so non-main-actor contexts (Task.detached below)
+    // can read this constant table without an actor hop. Safe because
+    // the value is immutable.
+    nonisolated private static let prefKeyMap: [String: String] = [
         "notif_newListings":   "new_listing",
         "notif_priceDrops":    "saved_search_match",
         "notif_agentMessages": "new_message",
@@ -778,7 +781,9 @@ struct NotificationSettingsView: View {
 
     private func syncNotifPref(_ key: String, _ value: Bool) {
         Task.detached {
-            let t = APIService.shared.token ?? ""
+            // Reading APIService.shared.token requires hopping to the main
+            // actor where the singleton lives.
+            let t = await APIService.shared.token ?? ""
             // Sync to user profile
             if let url = URL(string: "\(apiBase)/api/user/profile") {
                 var req = URLRequest(url: url)

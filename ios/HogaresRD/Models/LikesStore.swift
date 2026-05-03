@@ -67,13 +67,14 @@ class LikesStore: ObservableObject {
         }
 
         // Sync with server in background (fire-and-forget).
-        Task.detached { [weak self] in
+        // Using `Task { ... }` (not `.detached`) so the closure inherits
+        // LikesStore's @MainActor isolation — no actor hop, no
+        // captured-self-in-concurrent-context warning.
+        Task { [weak self] in
             if let newCount = try? await APIService.shared.toggleLike(
                 listingId: id, liked: wasLiking
             ) {
-                await MainActor.run {
-                    self?.likeCounts[id] = newCount
-                }
+                self?.likeCounts[id] = newCount
             }
         }
 

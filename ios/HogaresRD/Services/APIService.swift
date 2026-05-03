@@ -78,7 +78,11 @@ private final class ResponseCache {
 @MainActor
 class APIService: ObservableObject {
     static let shared = APIService()
-    static let baseURL = apiBase
+    /// `nonisolated` so `Listing` / `User` / `Conversation` model
+    /// computeds (which run anywhere, not just on the main actor)
+    /// can read the base URL without an actor hop. Safe because the
+    /// value is an immutable string constant.
+    nonisolated static let baseURL = apiBase
 
     @Published var currentUser: User?
     @Published var token: String?
@@ -399,7 +403,7 @@ class APIService: ObservableObject {
         guard let user = loginResp.user, let token = loginResp.token else {
             throw APIError.server("Respuesta inesperada")
         }
-        await persist(user: user, token: token)
+        persist(user: user, token: token)
         return .success(user)
     }
 
@@ -423,7 +427,7 @@ class APIService: ObservableObject {
         guard let user = loginResp.user, let token = loginResp.token else {
             throw APIError.server("Respuesta inesperada")
         }
-        await persist(user: user, token: token)
+        persist(user: user, token: token)
     }
 
     // Sync Apple subscription with server (upgrade/downgrade role)
@@ -446,7 +450,7 @@ class APIService: ObservableObject {
             // Update local user with new role
             if let loginResp = try? decoder.decode(LoginResponse.self, from: data),
                let user = loginResp.user, let token = loginResp.token {
-                await persist(user: user, token: token)
+                persist(user: user, token: token)
             }
         }
     }
@@ -919,7 +923,7 @@ class APIService: ObservableObject {
             throw APIError.server("Codigo invalido")
         }
         let auth = try decoder.decode(AuthResponse.self, from: data)
-        await persist(user: auth.user, token: auth.token)
+        persist(user: auth.user, token: auth.token)
         return auth.user
     }
 
@@ -1022,7 +1026,7 @@ class APIService: ObservableObject {
         guard let user = loginResp.user, let token = loginResp.token else {
             throw APIError.server("Respuesta inesperada")
         }
-        await persist(user: user, token: token)
+        persist(user: user, token: token)
         // Save rotated biometric token (server issues a new one on each login)
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let newBio = json["newBiometricToken"] as? String {
@@ -2477,7 +2481,7 @@ class APIService: ObservableObject {
                 dict["avatarUrl"] = avatarUrl
                 let newData = try JSONSerialization.data(withJSONObject: dict)
                 let updatedUser = try decoder.decode(User.self, from: newData)
-                await persist(user: updatedUser, token: t)
+                persist(user: updatedUser, token: t)
             }
         }
 

@@ -216,10 +216,12 @@ struct ListingDetailView: View {
         }
         .task {
             await load()
-            // Defer tracking to background — don't compete with data loading
+            // Defer tracking to background — don't compete with data loading.
+            // The track methods touch APIService.shared (main-actor isolated),
+            // so the calls must hop back to the main actor — hence `await`.
             Task.detached(priority: .utility) { [id] in
-                APIService.shared.trackListingView(id)
-                APIService.shared.trackRecentlyViewed(id)
+                await APIService.shared.trackListingView(id)
+                await APIService.shared.trackRecentlyViewed(id)
             }
         }
     }

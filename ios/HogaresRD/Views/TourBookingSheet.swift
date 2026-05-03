@@ -1783,7 +1783,6 @@ struct RescheduleSheet: View {
         let comps = cal.dateComponents([.year, .month], from: currentMonth)
         let year = comps.year!, month = comps.month!
         let monthLabel = "\(monthNames[month - 1]) \(year)"
-        let monthStr = String(format: "%04d-%02d", year, month)
 
         VStack(spacing: 12) {
             HStack {

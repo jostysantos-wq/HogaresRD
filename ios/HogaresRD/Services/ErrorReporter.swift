@@ -133,12 +133,20 @@ final class ErrorReporter {
         }
     }
 
-    private func flush() async {
+    /// Atomically drain the buffer. Synchronous so NSLock isn't held
+    /// across an `await` boundary — Swift 6 forbids that pattern, and
+    /// it would risk a deadlock-by-suspension under heavy load.
+    private func drainBuffer() -> [[String: Any]] {
         lock.lock()
-        guard !buffer.isEmpty else { lock.unlock(); return }
+        defer { lock.unlock() }
         let batch = buffer
         buffer = []
-        lock.unlock()
+        return batch
+    }
+
+    private func flush() async {
+        let batch = drainBuffer()
+        guard !batch.isEmpty else { return }
 
         // Fire-and-forget POST to server
         guard let url = URL(string: "\(apiBase)/api/admin/client-errors") else { return }
