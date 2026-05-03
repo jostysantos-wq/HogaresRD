@@ -2214,6 +2214,33 @@ class APIService: ObservableObject {
         return try decoder.decode(TaskItem.self, from: data)
     }
 
+    /// Edit task metadata. Allowed for assignee, creator, and approver.
+    /// `status` only accepts pendiente or en_progreso — moves to
+    /// pending_review / completada must go through dedicated endpoints.
+    /// Pass nil for any field to leave it unchanged. Returns the enriched
+    /// task (with subtask_progress + unfulfilled_dependencies).
+    func updateTask(id: String,
+                    title: String? = nil,
+                    description: String? = nil,
+                    status: String? = nil,
+                    priority: String? = nil,
+                    dueDate: String?? = .none) async throws -> TaskItem {
+        var body: [String: Any] = [:]
+        if let title       { body["title"] = title }
+        if let description { body["description"] = description }
+        if let status      { body["status"] = status }
+        if let priority    { body["priority"] = priority }
+        // Distinguish "don't touch" (.none) from "explicitly clear" (.some(nil)).
+        if case let .some(value) = dueDate {
+            body["due_date"] = value as Any   // nil → null on the wire
+        }
+        let json = try JSONSerialization.data(withJSONObject: body)
+        let req = try authedRequest(apiURL("/api/tasks/\(id)"), method: "PUT", body: json)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo editar la tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
     /// Reassign the approver for a task. Only the current approver (or
     /// admin) can delegate. New approver cannot be the task assignee —
     /// server enforces separation of duties.
@@ -3149,12 +3176,17 @@ class APIService: ObservableObject {
 
     // MARK: - Tasks (reopen + delete)
 
+    /// Reopen a finalized task (completada / no_aplica → en_progreso).
+    /// Server requires a non-empty `reason` and gates this to the
+    /// creator or the current approver.
     @discardableResult
-    func reopenTask(id: String) async throws -> TaskItem {
+    func reopenTask(id: String, reason: String) async throws -> TaskItem {
         guard let t = token else { throw APIError.server("No autenticado") }
         var req = URLRequest(url: apiURL("/api/tasks/\(id)/reopen"))
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["reason": reason])
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "No se pudo reabrir la tarea")
         return try decoder.decode(TaskItem.self, from: data)

@@ -755,14 +755,30 @@ struct TaskDetailSheet: View {
     @State private var markingNA = false
     @State private var showFileImporter = false
     @State private var showRecurrenceSheet = false
+    @State private var showEditSheet = false
+    @State private var showReopenSheet = false
+    @State private var reopenReason = ""
+    @State private var reopening = false
+    @State private var showDeleteAlert = false
+    @State private var deleting = false
 
     // The current user, for action-gating
     private var currentUserId: String { api.currentUser?.id ?? "" }
     private var isAssignee: Bool { task.assignedTo == currentUserId }
     private var isApprover: Bool { (task.approverId ?? "") == currentUserId && !isAssignee }
+    private var isCreator:  Bool { task.assignedBy == currentUserId }
     private var canReview: Bool { isApprover && task.status == "pending_review" }
     /// Only the creator can change recurrence (server enforces this).
     private var canEditRecurrence: Bool { task.assignedBy == currentUserId }
+    /// Edit metadata: server allows assignee, creator, or approver.
+    private var canEdit: Bool { isAssignee || isCreator || isApprover }
+    /// Reopen: creator or approver, AND task is finalized.
+    private var canReopen: Bool {
+        (isCreator || (task.approverId ?? "") == currentUserId) &&
+        (task.status == "completada" || task.status == "no_aplica")
+    }
+    /// Hard-delete: server permits the creator only.
+    private var canDelete: Bool { isCreator }
 
     /// Does this task require a file upload?
     private var needsUpload: Bool {
@@ -1304,6 +1320,30 @@ struct TaskDetailSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }
                 }
+                if canEdit || canReopen || canDelete {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            if canEdit {
+                                Button {
+                                    showEditSheet = true
+                                } label: { Label("Editar", systemImage: "pencil") }
+                            }
+                            if canReopen {
+                                Button {
+                                    reopenReason = ""
+                                    showReopenSheet = true
+                                } label: { Label("Reabrir", systemImage: "arrow.uturn.backward.circle") }
+                            }
+                            if canDelete {
+                                Button(role: .destructive) {
+                                    showDeleteAlert = true
+                                } label: { Label("Eliminar", systemImage: "trash") }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
             }
             .photosPicker(isPresented: $showPicker, selection: $selectedPhotos, maxSelectionCount: 5, matching: .any(of: [.images]))
             .onChange(of: selectedPhotos) {
@@ -1354,9 +1394,63 @@ struct TaskDetailSheet: View {
                 // already gates the entry button.
                 TaskRecurrenceSheet(
                     taskId: task.id,
-                    existing: nil,                       // model doesn't carry recurrence yet
-                    onSaved: { _ in onComplete() }
+                    existing: task.recurrence,
+                    onSaved: { updated in
+                        task = updated
+                        onComplete()
+                    }
                 ).environmentObject(api)
+            }
+            .sheet(isPresented: $showEditSheet) {
+                EditTaskSheet(task: task) { updated in
+                    task = updated
+                    onComplete()
+                }
+                .environmentObject(api)
+            }
+            .sheet(isPresented: $showReopenSheet) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            Text("Esta tarea volverá a estar activa (En Progreso). El asignado recibirá una notificación.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Section("Motivo (obligatorio)") {
+                            TextField("Explica por qué se reabre…", text: $reopenReason, axis: .vertical)
+                                .lineLimit(3...6)
+                        }
+                        Section {
+                            Button {
+                                Task { await reopen() }
+                            } label: {
+                                HStack {
+                                    if reopening { ProgressView() }
+                                    Text("Reabrir tarea")
+                                        .font(.subheadline.bold())
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .disabled(reopening || reopenReason.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    }
+                    .navigationTitle("Reabrir tarea")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancelar") { showReopenSheet = false }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+            .alert("Eliminar tarea", isPresented: $showDeleteAlert) {
+                Button("Cancelar", role: .cancel) { }
+                Button("Eliminar", role: .destructive) {
+                    Task { await deleteTask() }
+                }
+            } message: {
+                Text("Esta acción no se puede deshacer. Se borrarán los comentarios, archivos y el historial de auditoría.")
             }
             .sheet(isPresented: $showNASheet) {
                 NavigationStack {
@@ -1655,6 +1749,35 @@ struct TaskDetailSheet: View {
             errorMsg = error.localizedDescription
         }
         reviewing = false
+    }
+
+    private func reopen() async {
+        let reason = reopenReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !reason.isEmpty else { return }
+        reopening = true
+        errorMsg = nil
+        do {
+            let updated = try await api.reopenTask(id: task.id, reason: reason)
+            task = updated
+            showReopenSheet = false
+            onComplete()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        reopening = false
+    }
+
+    private func deleteTask() async {
+        deleting = true
+        errorMsg = nil
+        do {
+            _ = try await api.deleteTask(id: task.id)
+            onComplete()
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        deleting = false
     }
 }
 
@@ -2017,3 +2140,145 @@ struct ReassignApproverSheet: View {
 }
 
 // FlowLayout is already defined in ListingDetailView.swift
+
+// MARK: - Edit Task Sheet
+//
+// Mirrors the web's "Editar tarea" form. Server allows assignee +
+// creator + approver to edit metadata; status moves only between
+// pendiente / en_progreso (terminal transitions go through dedicated
+// /complete and /approve endpoints, so we don't expose them here).
+
+struct EditTaskSheet: View {
+    let task: TaskItem
+    var onSaved: (TaskItem) -> Void
+
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) var dismiss
+
+    @State private var title: String
+    @State private var desc:  String
+    @State private var priority: String
+    @State private var hasDueDate: Bool
+    @State private var dueDate: Date
+    @State private var status: String
+    @State private var saving = false
+    @State private var errorMsg: String?
+
+    init(task: TaskItem, onSaved: @escaping (TaskItem) -> Void) {
+        self.task = task
+        self.onSaved = onSaved
+        _title    = State(initialValue: task.title)
+        _desc     = State(initialValue: task.description ?? "")
+        _priority = State(initialValue: task.priority)
+        _status   = State(initialValue: task.status == "en_progreso" ? "en_progreso" : "pendiente")
+        let parsed: Date? = {
+            guard let due = task.dueDate else { return nil }
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = f.date(from: due) { return d }
+            f.formatOptions = [.withInternetDateTime]
+            return f.date(from: due)
+        }()
+        _hasDueDate = State(initialValue: parsed != nil)
+        _dueDate    = State(initialValue: parsed ?? Date().addingTimeInterval(7 * 86400))
+    }
+
+    /// Server's PUT only accepts pendiente / en_progreso; anything else
+    /// must go through the dedicated state-transition endpoints. We
+    /// therefore only let the user toggle between those two — and only
+    /// when the current status is one of them. For terminal/review
+    /// states we hide the picker entirely.
+    private var canEditStatus: Bool {
+        task.status == "pendiente" || task.status == "en_progreso"
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Tarea") {
+                    TextField("Título", text: $title)
+                    TextEditor(text: $desc)
+                        .frame(minHeight: 80)
+                        .overlay(alignment: .topLeading) {
+                            if desc.isEmpty {
+                                Text("Descripción (opcional)")
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 4)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                }
+
+                Section("Prioridad") {
+                    Picker("Prioridad", selection: $priority) {
+                        Text("Alta").tag("alta")
+                        Text("Media").tag("media")
+                        Text("Baja").tag("baja")
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Fecha límite") {
+                    Toggle("Tiene fecha límite", isOn: $hasDueDate)
+                    if hasDueDate {
+                        DatePicker("Vence", selection: $dueDate, displayedComponents: .date)
+                    }
+                }
+
+                if canEditStatus {
+                    Section("Estado") {
+                        Picker("Estado", selection: $status) {
+                            Text("Pendiente").tag("pendiente")
+                            Text("En Progreso").tag("en_progreso")
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                }
+
+                if let err = errorMsg {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.triangle")
+                            .font(.caption).foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Editar tarea")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Guardando…" : "Guardar") {
+                        Task { await save() }
+                    }
+                    .disabled(saving || title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        saving = true
+        errorMsg = nil
+        let dueStr: String?? = hasDueDate
+            ? .some(ISO8601DateFormatter().string(from: dueDate))
+            : .some(nil)   // explicit clear
+        do {
+            let updated = try await api.updateTask(
+                id: task.id,
+                title: title.trimmingCharacters(in: .whitespaces),
+                description: desc.trimmingCharacters(in: .whitespaces),
+                status: canEditStatus ? status : nil,
+                priority: priority,
+                dueDate: dueStr
+            )
+            onSaved(updated)
+            dismiss()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        saving = false
+    }
+}
