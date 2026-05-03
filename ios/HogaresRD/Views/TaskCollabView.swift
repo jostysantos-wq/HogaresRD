@@ -306,6 +306,33 @@ struct TaskAttachmentsTab: View {
         GridItem(.flexible(), spacing: 10),
     ]
 
+    /// Mirrors the server's allowed extensions in routes/tasks.js
+    /// (jpg/png/gif/webp/heic/heif/tiff/bmp/pdf/doc/docx/xls/xlsx/odt/ods/txt/csv/rtf/zip).
+    /// Files outside this set are rejected by multer's fileFilter.
+    private var allowedAttachmentTypes: [UTType] {
+        var types: [UTType] = [
+            .pdf, .image, .jpeg, .png, .plainText, .rtf, .commaSeparatedText, .zip,
+        ]
+        let extras: [String] = [
+            "public.heic",
+            "public.heif",
+            "public.tiff",
+            "com.compuserve.gif",
+            "org.webmproject.webp",
+            "com.microsoft.bmp",
+            "com.microsoft.word.doc",
+            "org.openxmlformats.wordprocessingml.document",
+            "com.microsoft.excel.xls",
+            "org.openxmlformats.spreadsheetml.sheet",
+            "org.oasis-open.opendocument.text",
+            "org.oasis-open.opendocument.spreadsheet",
+        ]
+        for id in extras {
+            if let t = UTType(id) { types.append(t) }
+        }
+        return types
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if loading && items.isEmpty {
@@ -353,7 +380,7 @@ struct TaskAttachmentsTab: View {
         }
         .fileImporter(
             isPresented: $showFileImporter,
-            allowedContentTypes: [.pdf, .jpeg, .png, .image],
+            allowedContentTypes: allowedAttachmentTypes,
             allowsMultipleSelection: false
         ) { result in
             guard case .success(let urls) = result, let url = urls.first else { return }
