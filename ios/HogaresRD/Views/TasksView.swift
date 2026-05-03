@@ -726,8 +726,17 @@ struct TaskRow: View {
 // MARK: - Task Detail Sheet (with upload capability)
 
 struct TaskDetailSheet: View {
-    let task: TaskItem
+    @State private var task: TaskItem
     var onComplete: () -> Void
+
+    init(task: TaskItem, onComplete: @escaping () -> Void) {
+        // Seed from the list-view payload; the .task modifier below
+        // immediately refetches via GET /api/tasks/:id so the banners
+        // can rely on subtask_progress + unfulfilled_dependencies +
+        // recurrence (none of which the list endpoint returns).
+        self._task = State(initialValue: task)
+        self.onComplete = onComplete
+    }
 
     @EnvironmentObject var api: APIService
     @Environment(\.dismiss) var dismiss
@@ -944,6 +953,14 @@ struct TaskDetailSheet: View {
                         .background(Color.purple.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+
+                    // ── Detail-only banners ────────────────────────
+                    // These three live above the action buttons so the
+                    // user sees blockers and recurrence cadence before
+                    // deciding to Complete / Submit / Approve.
+                    blockingDependenciesBanner
+                    subtaskProgressBanner
+                    recurrenceSummaryBanner
 
                     // Description
                     if let desc = task.description, !desc.isEmpty {
@@ -1282,6 +1299,7 @@ struct TaskDetailSheet: View {
             }
             .navigationTitle("Detalle de Tarea")
             .navigationBarTitleDisplayMode(.inline)
+            .task { await refreshTask() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }
@@ -1376,6 +1394,125 @@ struct TaskDetailSheet: View {
                 }
                 .presentationDetents([.medium])
             }
+        }
+    }
+
+    // MARK: - Detail-only banners
+
+    /// Lists the predecessor tasks that haven't been completada/no_aplica
+    /// yet. The server still allows the user to hit Complete (the actual
+    /// blocking happens on Submit), but surfacing the list inline saves
+    /// a round-trip through the rejection flow.
+    @ViewBuilder
+    private var blockingDependenciesBanner: some View {
+        if let deps = task.unfulfilledDependencies, !deps.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.orange)
+                    Text("Bloqueada por \(deps.count) tarea\(deps.count == 1 ? "" : "s")")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                    Spacer()
+                }
+                ForEach(deps) { dep in
+                    HStack(spacing: 8) {
+                        Image(systemName: "circle.dotted")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(dep.title)
+                            .font(.caption)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(statusLabelFor(dep.status))
+                            .font(.system(size: 9, weight: .heavy))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Color(.tertiarySystemFill), in: Capsule())
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color.orange.opacity(0.08))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.25), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    /// "X de Y subtareas completadas" with a thin progress bar. Hidden
+    /// when the task has no children (server returns nil for that case).
+    @ViewBuilder
+    private var subtaskProgressBanner: some View {
+        if let progress = task.subtaskProgress, progress.total > 0 {
+            let pct = Double(progress.done) / Double(progress.total)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "rectangle.stack.fill")
+                        .foregroundStyle(Color.rdBlue)
+                    Text("\(progress.done) de \(progress.total) subtareas completadas")
+                        .font(.caption.bold())
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("\(Int(pct * 100))%")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color(.systemGray5)).frame(height: 6)
+                        Capsule().fill(Color.rdBlue)
+                            .frame(width: geo.size.width * CGFloat(pct), height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    /// Single-line "Repite cada N días/semanas/meses [hasta …]" summary.
+    /// Only rendered when the task has a recurrence rule.
+    @ViewBuilder
+    private var recurrenceSummaryBanner: some View {
+        if let summary = task.recurrenceSummary {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .foregroundStyle(.purple)
+                Text(summary)
+                    .font(.caption.bold())
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Spacer()
+            }
+            .padding(10)
+            .background(Color.purple.opacity(0.07))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func statusLabelFor(_ status: String) -> String {
+        switch status {
+        case "en_progreso":    return "EN CURSO"
+        case "pending_review": return "REVISIÓN"
+        case "completada":     return "DONE"
+        case "no_aplica":      return "N/A"
+        default:               return "PENDIENTE"
+        }
+    }
+
+    /// Refresh the task from the detail endpoint so the inline banners
+    /// have subtask_progress / unfulfilled_dependencies / recurrence.
+    /// The list endpoint omits these to keep the index cheap.
+    private func refreshTask() async {
+        do {
+            let fresh = try await api.getTask(id: task.id)
+            task = fresh
+        } catch {
+            // Silent — the seeded task already covers the core fields,
+            // and any user-visible failures will surface when they hit
+            // an action button that uses the live state.
         }
     }
 

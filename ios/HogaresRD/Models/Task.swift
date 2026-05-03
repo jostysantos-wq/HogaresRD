@@ -28,26 +28,48 @@ struct TaskItem: Decodable, Identifiable {
     let createdAt: String?
     let updatedAt: String?
 
+    // ── Detail-only enrichment ─────────────────────────────────────
+    // These are populated by GET /api/tasks/:id (single task) but NOT
+    // by the list endpoint, so they're optional and start nil for
+    // tasks that come from the list view. TaskDetailSheet refreshes
+    // its local copy on appear to fill them in.
+    let subtaskProgress: SubtaskProgress?
+    let unfulfilledDependencies: [DependencyRef]?
+    let recurrence: TaskRecurrence?
+
+    struct SubtaskProgress: Decodable, Equatable {
+        let total: Int
+        let done: Int
+    }
+
+    struct DependencyRef: Decodable, Identifiable, Equatable {
+        let id: String
+        let title: String
+        let status: String
+    }
+
     enum CodingKeys: String, CodingKey {
-        case id, title, description, status, priority, source
-        case dueDate        = "due_date"
-        case assignedTo     = "assigned_to"
-        case assignedBy     = "assigned_by"
-        case approverId     = "approver_id"
-        case applicationId  = "application_id"
-        case listingId      = "listing_id"
-        case sourceEvent    = "source_event"
-        case listingTitle   = "listing_title"
-        case listingImage   = "listing_image"
-        case listingCity    = "listing_city"
-        case approvalStatus = "approval_status"
-        case reviewNotes    = "review_notes"
-        case reviewedAt     = "reviewed_at"
-        case reviewedBy     = "reviewed_by"
-        case submittedAt    = "submitted_at"
-        case completedAt    = "completed_at"
-        case createdAt      = "created_at"
-        case updatedAt      = "updated_at"
+        case id, title, description, status, priority, source, recurrence
+        case dueDate                  = "due_date"
+        case assignedTo               = "assigned_to"
+        case assignedBy               = "assigned_by"
+        case approverId               = "approver_id"
+        case applicationId            = "application_id"
+        case listingId                = "listing_id"
+        case sourceEvent              = "source_event"
+        case listingTitle             = "listing_title"
+        case listingImage             = "listing_image"
+        case listingCity              = "listing_city"
+        case approvalStatus           = "approval_status"
+        case reviewNotes              = "review_notes"
+        case reviewedAt               = "reviewed_at"
+        case reviewedBy               = "reviewed_by"
+        case submittedAt              = "submitted_at"
+        case completedAt              = "completed_at"
+        case createdAt                = "created_at"
+        case updatedAt                = "updated_at"
+        case subtaskProgress          = "subtask_progress"
+        case unfulfilledDependencies  = "unfulfilled_dependencies"
     }
 
     init(from decoder: Decoder) throws {
@@ -76,6 +98,9 @@ struct TaskItem: Decodable, Identifiable {
         completedAt    = try? c.decode(String.self, forKey: .completedAt)
         createdAt      = try? c.decode(String.self, forKey: .createdAt)
         updatedAt      = try? c.decode(String.self, forKey: .updatedAt)
+        subtaskProgress         = try? c.decode(SubtaskProgress.self, forKey: .subtaskProgress)
+        unfulfilledDependencies = try? c.decode([DependencyRef].self, forKey: .unfulfilledDependencies)
+        recurrence              = try? c.decode(TaskRecurrence.self, forKey: .recurrence)
     }
 
     var isOverdue: Bool {
@@ -120,6 +145,36 @@ struct TaskItem: Decodable, Identifiable {
         case "no_aplica":      return "No Aplica"
         default:               return "Pendiente"
         }
+    }
+
+    /// Human-readable summary of the task's recurrence rule, or nil when
+    /// the task isn't recurring. Mirrors the web's "Repite cada N…" line.
+    var recurrenceSummary: String? {
+        guard let r = recurrence else { return nil }
+        let unit: String = {
+            switch r.rule {
+            case "daily":   return r.interval == 1 ? "día"    : "días"
+            case "weekly":  return r.interval == 1 ? "semana" : "semanas"
+            case "monthly": return r.interval == 1 ? "mes"    : "meses"
+            default:        return r.rule
+            }
+        }()
+        var s = r.interval == 1 ? "Repite cada \(unit)" : "Repite cada \(r.interval) \(unit)"
+        if let until = r.until, !until.isEmpty {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            var d = f.date(from: until)
+            if d == nil { f.formatOptions = [.withInternetDateTime]; d = f.date(from: until) }
+            if let date = d {
+                let df = DateFormatter()
+                df.dateFormat = "d MMM yyyy"
+                df.locale = Locale(identifier: "es_DO")
+                s += " hasta el \(df.string(from: date))"
+            }
+        } else if let count = r.count, count > 0 {
+            s += " · \(count) ocurrencias"
+        }
+        return s
     }
 }
 

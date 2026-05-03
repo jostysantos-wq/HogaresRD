@@ -2134,6 +2134,18 @@ class APIService: ObservableObject {
         return try decoder.decode(TasksResponse.self, from: data).tasks
     }
 
+    /// Fetch a single task by ID. The detail endpoint enriches the
+    /// response with subtask_progress, unfulfilled_dependencies, and
+    /// the recurrence rule — none of which the list endpoint includes.
+    /// TaskDetailSheet calls this on appear so the inline banners have
+    /// the data they need.
+    func getTask(id: String) async throws -> TaskItem {
+        let req = try authedRequest(apiURL("/api/tasks/\(id)"))
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cargar la tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
     /// Lightweight count of tasks that need the user's attention. Used
     /// to drive the red badge on the Tareas menu entry. Returns 0 on
     /// any error so the UI degrades gracefully.
