@@ -23,6 +23,14 @@ struct TasksView: View {
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
 
+    // Extended filters — persist what's reasonable to remember across
+    // launches; keep search text ephemeral so the user doesn't come
+    // back to a stale query.
+    @State private var searchText: String = ""
+    @AppStorage("rd_tareas_priority_filter") private var priorityFilterRaw: String = ""    // CSV
+    @AppStorage("rd_tareas_date_filter")     private var dateFilterRaw:     String = "any"
+    @State private var showFilterSheet = false
+
     enum TaskFilter: String, CaseIterable, Identifiable {
         case todas        = "Todas"
         case pendientes   = "Pendientes"
@@ -31,6 +39,48 @@ struct TasksView: View {
         case completadas  = "Completadas"
         case vencidas     = "Vencidas"
         var id: String { rawValue }
+    }
+
+    enum DueDateFilter: String, CaseIterable, Identifiable {
+        case any        = "any"
+        case today      = "today"
+        case thisWeek   = "this_week"
+        case thisMonth  = "this_month"
+        case overdue    = "overdue"
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .any:       return "Cualquier fecha"
+            case .today:     return "Hoy"
+            case .thisWeek:  return "Esta semana"
+            case .thisMonth: return "Este mes"
+            case .overdue:   return "Vencidas"
+            }
+        }
+    }
+
+    private var dateFilter: DueDateFilter {
+        DueDateFilter(rawValue: dateFilterRaw) ?? .any
+    }
+    private var prioritySet: Set<String> {
+        Set(priorityFilterRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
+    }
+    private func togglePriority(_ p: String) {
+        var set = prioritySet
+        if set.contains(p) { set.remove(p) } else { set.insert(p) }
+        priorityFilterRaw = set.sorted().joined(separator: ",")
+    }
+    private var hasExtraFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+            || !prioritySet.isEmpty
+            || dateFilter != .any
+    }
+    private var extraFilterCount: Int {
+        var n = 0
+        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty { n += 1 }
+        if !prioritySet.isEmpty { n += 1 }
+        if dateFilter != .any { n += 1 }
+        return n
     }
 
     private var currentUserId: String { api.currentUser?.id ?? "" }
@@ -49,13 +99,54 @@ struct TasksView: View {
     }
 
     private var filteredTasks: [TaskItem] {
+        let byStatus: [TaskItem]
         switch filter {
-        case .todas:        return tasks
-        case .pendientes:   return tasks.filter { $0.status == "pendiente" }
-        case .enProgreso:   return tasks.filter { $0.status == "en_progreso" }
-        case .porRevisar:   return tasks.filter { $0.status == "pending_review" }
-        case .completadas:  return tasks.filter { Self.finishedStatuses.contains($0.status) }
-        case .vencidas:     return tasks.filter { $0.isOverdue }
+        case .todas:        byStatus = tasks
+        case .pendientes:   byStatus = tasks.filter { $0.status == "pendiente" }
+        case .enProgreso:   byStatus = tasks.filter { $0.status == "en_progreso" }
+        case .porRevisar:   byStatus = tasks.filter { $0.status == "pending_review" }
+        case .completadas:  byStatus = tasks.filter { Self.finishedStatuses.contains($0.status) }
+        case .vencidas:     byStatus = tasks.filter { $0.isOverdue }
+        }
+
+        return byStatus.filter { task in
+            // Priority filter (additive — empty set means no filter).
+            if !prioritySet.isEmpty && !prioritySet.contains(task.priority) {
+                return false
+            }
+            // Due-date filter.
+            if !matchesDateFilter(task) { return false }
+            // Search — case-insensitive over title + description.
+            let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+            if !q.isEmpty {
+                let hayTitle = task.title.lowercased().contains(q)
+                let hayDesc  = (task.description ?? "").lowercased().contains(q)
+                if !hayTitle && !hayDesc { return false }
+            }
+            return true
+        }
+    }
+
+    private func matchesDateFilter(_ task: TaskItem) -> Bool {
+        switch dateFilter {
+        case .any:     return true
+        case .overdue: return task.isOverdue
+        case .today, .thisWeek, .thisMonth:
+            guard let due = parseISO(task.dueDate) else { return false }
+            let cal = Calendar.current
+            let now = Date()
+            switch dateFilter {
+            case .today:
+                return cal.isDateInToday(due)
+            case .thisWeek:
+                guard let weekRange = cal.dateInterval(of: .weekOfYear, for: now) else { return false }
+                return weekRange.contains(due)
+            case .thisMonth:
+                guard let monthRange = cal.dateInterval(of: .month, for: now) else { return false }
+                return monthRange.contains(due)
+            default:
+                return true
+            }
         }
     }
 
@@ -101,11 +192,27 @@ struct TasksView: View {
                     .listRowSeparator(.hidden)
 
                     Section {
+                        searchAndFilterBar
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 0, trailing: 16))
+                    .listRowSeparator(.hidden)
+
+                    Section {
                         filterChips
                     }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .listRowSeparator(.hidden)
+
+                    if hasExtraFilters {
+                        Section {
+                            activeFiltersRow
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+                        .listRowSeparator(.hidden)
+                    }
 
                     let active = filteredTasks.filter { !Self.finishedStatuses.contains($0.status) }
                     let done   = filteredTasks.filter {  Self.finishedStatuses.contains($0.status) }
@@ -179,7 +286,70 @@ struct TasksView: View {
                 TaskDetailSheet(task: task, onComplete: { Task { await load() } }).environmentObject(api)
             }
         }
+        .sheet(isPresented: $showFilterSheet) {
+            taskFilterSheet
+                .presentationDetents([.medium])
+        }
         .task { await load() }
+    }
+
+    // MARK: - Filter sheet
+
+    private var taskFilterSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Prioridad") {
+                    ForEach(["alta", "media", "baja"], id: \.self) { p in
+                        Button {
+                            togglePriority(p)
+                        } label: {
+                            HStack {
+                                Text(p.capitalized)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if prioritySet.contains(p) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.rdBlue)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section("Fecha límite") {
+                    ForEach(DueDateFilter.allCases) { d in
+                        Button {
+                            dateFilterRaw = d.rawValue
+                        } label: {
+                            HStack {
+                                Text(d.label)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if dateFilter == d {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.rdBlue)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section {
+                    Button(role: .destructive) {
+                        priorityFilterRaw = ""
+                        dateFilterRaw = DueDateFilter.any.rawValue
+                    } label: {
+                        Text("Restablecer filtros")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .navigationTitle("Filtros")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Listo") { showFilterSheet = false }
+                }
+            }
+        }
     }
 
     // MARK: - Stats grid (2 × 2)
@@ -340,6 +510,86 @@ struct TasksView: View {
                 .font(.caption.bold())
                 .foregroundStyle(.primary)
         }
+    }
+
+    // MARK: - Search + filter bar
+
+    private var searchAndFilterBar: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Buscar por título o descripción", text: $searchText)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 9)
+            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+
+            Button {
+                showFilterSheet = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "line.3.horizontal.decrease.circle\(hasExtraFilters ? ".fill" : "")")
+                        .font(.title3)
+                        .foregroundStyle(hasExtraFilters ? Color.rdBlue : .secondary)
+                    if extraFilterCount > 0 {
+                        Text("\(extraFilterCount)")
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .frame(width: 14, height: 14)
+                            .background(Color.rdRed, in: Circle())
+                            .offset(x: 6, y: -4)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .frame(width: 36, height: 36)
+        }
+    }
+
+    /// One-line summary of which extra filters are active, with a quick
+    /// "limpiar" button so the user doesn't have to open the sheet to
+    /// reset.
+    private var activeFiltersRow: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(prioritySet).sorted(), id: \.self) { p in
+                miniFilterChip("Prioridad: \(p.capitalized)") { togglePriority(p) }
+            }
+            if dateFilter != .any {
+                miniFilterChip(dateFilter.label) { dateFilterRaw = DueDateFilter.any.rawValue }
+            }
+            Spacer()
+            Button("Limpiar") {
+                searchText = ""
+                priorityFilterRaw = ""
+                dateFilterRaw = DueDateFilter.any.rawValue
+            }
+            .font(.caption.bold())
+            .foregroundStyle(Color.rdBlue)
+        }
+    }
+
+    private func miniFilterChip(_ label: String, onClear: @escaping () -> Void) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.caption2.bold())
+            Button(action: onClear) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption2)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8).padding(.vertical, 4)
+        .background(Color.rdBlue.opacity(0.13), in: Capsule())
+        .foregroundStyle(Color.rdBlue)
     }
 
     // MARK: - Filter chips
