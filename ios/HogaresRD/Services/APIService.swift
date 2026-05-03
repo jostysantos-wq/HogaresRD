@@ -3040,6 +3040,324 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "No se pudo reasignar la solicitud")
         return true
     }
+
+    // MARK: - Application workflow gaps (skip-phase, recommend-status,
+    //         commission history)
+
+    /// Skip the entire current phase on an application. Server requires
+    /// caller to be the broker / inmobiliaria owner / secretary / admin.
+    @discardableResult
+    func skipApplicationPhase(id: String, reason: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(id)/skip-phase"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let r = reason, !r.isEmpty { body["reason"] = r }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo saltar la fase")
+        return true
+    }
+
+    /// Secretary suggests a status transition; the broker / inmobiliaria
+    /// owner reviews and confirms via PUT /:id/status. Useful for
+    /// segregation-of-duties workflows.
+    @discardableResult
+    func recommendApplicationStatus(id: String, recommended: String, note: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(id)/recommend-status"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = ["recommended_status": recommended]
+        if let n = note, !n.isEmpty { body["note"] = n }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo recomendar el estado")
+        return true
+    }
+
+    /// Full commission history (submit / adjust / reject / approve
+    /// snapshots with byName + at + note). Used to surface the audit
+    /// trail on iOS commission detail.
+    func getCommissionHistory(applicationId: String) async throws -> CommissionHistory {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(applicationId)/commission/history"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cargar el historial de comisión")
+        return try decoder.decode(CommissionHistory.self, from: data)
+    }
+
+    // MARK: - Conversation transfer flow (request + respond)
+
+    /// Director requests an assigned broker to hand the conversation to
+    /// another teammate. The assigned broker accepts/declines via
+    /// `respondConversationTransfer`.
+    @discardableResult
+    func requestConversationTransfer(conversationId: String, targetUserId: String, reason: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/conversations/\(conversationId)/request-transfer"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = ["targetUserId": targetUserId]
+        if let r = reason, !r.isEmpty { body["reason"] = r }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo solicitar la transferencia")
+        return true
+    }
+
+    /// Assigned broker responds to a director's transfer request.
+    /// `action` is "accept" or "decline".
+    @discardableResult
+    func respondConversationTransfer(conversationId: String, requestId: String, action: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/conversations/\(conversationId)/respond-transfer"))
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["requestId": requestId, "action": action]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo responder a la transferencia")
+        return true
+    }
+
+    // MARK: - Tasks (reopen + delete)
+
+    @discardableResult
+    func reopenTask(id: String) async throws -> TaskItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(id)/reopen"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo reabrir la tarea")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    @discardableResult
+    func deleteTask(id: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(id)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo eliminar la tarea")
+        return true
+    }
+
+    // MARK: - Inmobiliaria public profile (equipo-empresa parity)
+
+    /// Fetch the current org's public profile (tagline, description,
+    /// social links, etc.). Server returns `{ profile: {...} }` for
+    /// inmobiliaria/constructora users.
+    func getInmobiliariaProfile() async throws -> InmobiliariaProfile {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/profile"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cargar el perfil de la empresa")
+        struct Wrapper: Decodable { let profile: InmobiliariaProfile? }
+        return (try? decoder.decode(Wrapper.self, from: data).profile) ?? InmobiliariaProfile()
+    }
+
+    /// Update the org public profile. All fields optional — only those
+    /// passed are saved. Mirrors the web's `/equipo-empresa.html` form.
+    @discardableResult
+    func updateInmobiliariaProfile(
+        tagline: String? = nil,
+        companyDescription: String? = nil,
+        coverImage: String? = nil,
+        website: String? = nil,
+        yearsInBusiness: Int? = nil,
+        officeAddress: String? = nil,
+        officeHours: String? = nil,
+        social: InmobiliariaSocial? = nil
+    ) async throws -> InmobiliariaProfile {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/profile"))
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let v = tagline            { body["tagline"] = v }
+        if let v = companyDescription { body["companyDescription"] = v }
+        if let v = coverImage         { body["coverImage"] = v }
+        if let v = website            { body["website"] = v }
+        if let v = yearsInBusiness    { body["yearsInBusiness"] = v }
+        if let v = officeAddress      { body["officeAddress"] = v }
+        if let v = officeHours        { body["officeHours"] = v }
+        if let s = social {
+            body["social"] = [
+                "facebook":  s.facebook  ?? "",
+                "instagram": s.instagram ?? "",
+                "linkedin":  s.linkedin  ?? "",
+                "whatsapp":  s.whatsapp  ?? "",
+            ]
+        }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo guardar el perfil")
+        struct Wrapper: Decodable { let profile: InmobiliariaProfile? }
+        return (try? decoder.decode(Wrapper.self, from: data).profile) ?? InmobiliariaProfile()
+    }
+
+    // MARK: - Listings (delete + request affiliation)
+
+    @discardableResult
+    func deleteListing(id: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/listings/\(id)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo eliminar la propiedad")
+        return true
+    }
+
+    /// Agent requests to be added to a listing's `agencies[]` so they
+    /// can credit themselves on referrals.
+    @discardableResult
+    func requestListingAffiliation(id: String, message: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/listings/\(id)/request-affiliation"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let m = message, !m.isEmpty { body["message"] = m }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo solicitar la afiliación")
+        return true
+    }
+
+    // MARK: - Broker join/leave inmobiliaria
+
+    @discardableResult
+    func requestJoinInmobiliaria(inmobiliariaId: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/join-request"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["inmobiliaria_id": inmobiliariaId]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo enviar la solicitud")
+        return true
+    }
+
+    @discardableResult
+    func cancelJoinRequest() async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/join-request"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cancelar la solicitud")
+        return true
+    }
+
+    /// Broker leaves the current inmobiliaria. `transferToUserId`
+    /// designates who inherits open applications (defaults server-side
+    /// to the inmobiliaria owner). `reassignBrokerApplications` falls
+    /// back to a subscribed target if the chosen one is inactive.
+    @discardableResult
+    func leaveInmobiliaria(transferToUserId: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/leave"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let id = transferToUserId, !id.isEmpty { body["transferToUserId"] = id }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo abandonar la inmobiliaria")
+        return true
+    }
+
+    // MARK: - Lead queue (cascade tray for unassigned leads)
+
+    /// Returns leads visible to the broker — tier 1 (exclusive),
+    /// tier 2 (priority), tier 3 (open) — depending on their role +
+    /// affiliation. Each row carries enough metadata to claim it.
+    func getLeadQueue() async throws -> [LeadQueueItem] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/lead-queue"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cargar la cola de leads")
+        struct Wrapper: Decodable { let leads: [LeadQueueItem]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let leads = w.leads { return leads }
+        return (try? decoder.decode([LeadQueueItem].self, from: data)) ?? []
+    }
+
+    /// Claim a lead from the cascade queue. Server requires active
+    /// subscription + affiliated/eligible role at the lead's current
+    /// tier. Returns the resulting conversation id (or app id, depending
+    /// on the lead source).
+    @discardableResult
+    func claimLeadFromQueue(id: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/lead-queue/\(id)/claim"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo reclamar el lead")
+        return true
+    }
+
+    // MARK: - Listing comparisons sync (LOW gap from audit)
+
+    /// Fetch the user's saved comparison set from the server so the
+    /// compare screen syncs across devices.
+    func getMyComparisons() async throws -> [String] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/user/comparisons"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo cargar la comparación")
+        struct Wrapper: Decodable { let comparisons: [String]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.comparisons { return arr }
+        return (try? decoder.decode([String].self, from: data)) ?? []
+    }
+
+    @discardableResult
+    func saveMyComparisons(_ ids: [String]) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/user/comparisons"))
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["comparisons": ids])
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo guardar la comparación")
+        return true
+    }
+
+    // MARK: - Application timeline events (LOW)
+
+    /// Returns the server-side audit timeline for an application —
+    /// status transitions, document uploads, commission events, etc.
+    /// The detail endpoint already returns timeline_events embedded,
+    /// but this is a separate endpoint for incremental polling.
+    func getApplicationEvents(id: String) async throws -> [ApplicationEvent] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(id)/events"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar los eventos")
+        struct Wrapper: Decodable { let events: [ApplicationEvent]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.events { return arr }
+        return (try? decoder.decode([ApplicationEvent].self, from: data)) ?? []
+    }
 }
 
 // MARK: - Referral payouts response shape
@@ -3221,4 +3539,114 @@ private class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
                     newRequest request: URLRequest) async -> URLRequest? {
         nil // Don't follow redirects
     }
+}
+
+// MARK: - Models for the gap-API additions
+
+/// Commission audit trail returned by GET /:id/commission/history.
+/// `history` entries carry `at`, `by`, `byName`, `action`, optional
+/// snapshot of the commission values, and optional reviewer note.
+struct CommissionHistory: Decodable {
+    let application_id: String
+    let status: String?
+    let history: [CommissionHistoryEntry]
+}
+
+struct CommissionHistoryEntry: Decodable, Identifiable {
+    var id: String { "\(at)-\(by ?? "")" }
+    let at: String
+    let by: String?
+    let byName: String?
+    let action: String
+    let note: String?
+    let snapshot: CommissionSnapshot?
+}
+
+struct CommissionSnapshot: Decodable {
+    let sale_amount: Double?
+    let agent_percent: Double?
+    let agent_amount: Double?
+    let inmobiliaria_percent: Double?
+    let inmobiliaria_amount: Double?
+    let referral_percent: Double?
+    let referral_amount: Double?
+    let agent_net: Double?
+}
+
+/// Mirror of the inmobiliaria public profile shape stored on the user
+/// record under `profile`. All fields optional — server preserves
+/// existing values for any fields not explicitly sent.
+struct InmobiliariaProfile: Codable {
+    var tagline: String?
+    var companyDescription: String?
+    var coverImage: String?
+    var website: String?
+    var yearsInBusiness: Int?
+    var officeAddress: String?
+    var officeHours: String?
+    var social: InmobiliariaSocial?
+
+    init() {
+        self.tagline = nil
+        self.companyDescription = nil
+        self.coverImage = nil
+        self.website = nil
+        self.yearsInBusiness = nil
+        self.officeAddress = nil
+        self.officeHours = nil
+        self.social = nil
+    }
+}
+
+struct InmobiliariaSocial: Codable {
+    var facebook: String?
+    var instagram: String?
+    var linkedin: String?
+    var whatsapp: String?
+}
+
+/// Cascade lead queue item — what an agent sees in the "claim a lead"
+/// tray. Tier-3 entries carry a truncated `buyer_name` (server-side
+/// minimization).
+struct LeadQueueItem: Decodable, Identifiable {
+    let id: String
+    let inquiry_type: String?
+    let listing_id: String?
+    let listing_title: String?
+    let listing_price: AnyCodableNumber?
+    let listing_city: String?
+    let listing_image: String?
+    let buyer_name: String?
+    let tier: Int?
+    let remaining_ms: Int?
+    let created_at: String?
+}
+
+/// Helper: server returns listing_price as String OR Number. Decode
+/// either without losing data.
+struct AnyCodableNumber: Decodable {
+    let value: String
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let s = try? c.decode(String.self) { value = s; return }
+        if let d = try? c.decode(Double.self) {
+            value = (d.truncatingRemainder(dividingBy: 1) == 0)
+                ? String(Int(d))
+                : String(d)
+            return
+        }
+        if let i = try? c.decode(Int.self)    { value = String(i); return }
+        value = ""
+    }
+}
+
+/// Application timeline event — same shape as embedded
+/// `app.timeline_events[]` in the detail endpoint.
+struct ApplicationEvent: Decodable, Identifiable {
+    let id: String
+    let type: String
+    let description: String?
+    let actor: String?
+    let actor_name: String?
+    let created_at: String
 }
