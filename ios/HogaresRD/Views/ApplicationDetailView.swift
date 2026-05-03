@@ -37,6 +37,10 @@ struct ApplicationDetailView: View {
     @State private var showSkipDocsSheet = false
     @State private var showReassignSheet = false
     @State private var showSkipPhaseSheet = false
+    @State private var showWithdrawAlert  = false
+    @State private var withdrawNote: String = ""
+    @State private var withdrawing: Bool = false
+    @State private var withdrawError: String?
     @State private var skipDocsNote      = ""
     @State private var skipDocsBusy      = false
     @State private var skipDocsError: String?
@@ -163,6 +167,18 @@ struct ApplicationDetailView: View {
                 }
                 .environmentObject(api)
             }
+        }
+        .alert("Retirar solicitud", isPresented: $showWithdrawAlert) {
+            TextField("Motivo (opcional)", text: $withdrawNote)
+            Button("Cancelar", role: .cancel) { withdrawNote = "" }
+            Button("Retirar", role: .destructive) {
+                Task { await withdraw() }
+            }
+        } message: {
+            Text("Esta acción cierra la solicitud. El agente y la inmobiliaria serán notificados. No podrás reactivarla desde la app.")
+        }
+        .alert(withdrawError ?? "", isPresented: .constant(withdrawError != nil)) {
+            Button("OK") { withdrawError = nil }
         }
         .sheet(item: $reviewingDoc) { doc in
             NavigationStack {
@@ -756,6 +772,20 @@ struct ApplicationDetailView: View {
                     Label("Registrar / Revisar comisión", systemImage: "dollarsign.circle.fill")
                 }
             }
+
+            // Buyer-only: withdraw their own application. Hidden once
+            // the deal has reached terminal/late states. Server also
+            // enforces ownership.
+            if let me = api.currentUser?.id,
+               d.client.user_id == me,
+               !["completado", "rechazado"].contains(d.status) {
+                Divider()
+                Button(role: .destructive) {
+                    showWithdrawAlert = true
+                } label: {
+                    Label("Retirar solicitud", systemImage: "xmark.circle.fill")
+                }
+            }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
                 .font(.title3)
@@ -1056,6 +1086,21 @@ struct ApplicationDetailView: View {
             else { errorMsg = "No se pudo cargar la aplicación" }
         }
         loading = false
+    }
+
+    /// Buyer withdraws their own application. Server enforces ownership
+    /// and rejects the request once the deal is in a terminal state.
+    private func withdraw() async {
+        let note = withdrawNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        withdrawNote = ""
+        withdrawing = true
+        defer { withdrawing = false }
+        do {
+            _ = try await api.withdrawApplication(id: id, reason: note.isEmpty ? nil : note)
+            await load()
+        } catch {
+            withdrawError = (error as? LocalizedError)?.errorDescription ?? "No se pudo retirar la solicitud."
+        }
     }
 
     // MARK: - Live state updates (SSE + polling fallback)

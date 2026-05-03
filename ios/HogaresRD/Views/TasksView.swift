@@ -461,12 +461,15 @@ struct TaskDetailSheet: View {
     @State private var naNote = ""
     @State private var markingNA = false
     @State private var showFileImporter = false
+    @State private var showRecurrenceSheet = false
 
     // The current user, for action-gating
     private var currentUserId: String { api.currentUser?.id ?? "" }
     private var isAssignee: Bool { task.assignedTo == currentUserId }
     private var isApprover: Bool { (task.approverId ?? "") == currentUserId && !isAssignee }
     private var canReview: Bool { isApprover && task.status == "pending_review" }
+    /// Only the creator can change recurrence (server enforces this).
+    private var canEditRecurrence: Bool { task.assignedBy == currentUserId }
 
     /// Does this task require a file upload?
     private var needsUpload: Bool {
@@ -718,6 +721,37 @@ struct TaskDetailSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
+
+                    // Recurrence — creator only. Mirrors the web's
+                    // "Repite" dropdown on the task sheet.
+                    if canEditRecurrence {
+                        Button {
+                            showRecurrenceSheet = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.clockwise.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.purple)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Recurrencia")
+                                        .font(.subheadline).bold()
+                                        .foregroundStyle(.primary)
+                                    Text("Repetir esta tarea automáticamente")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     // Upload section (for document/payment tasks)
                     if needsUpload {
@@ -980,6 +1014,15 @@ struct TaskDetailSheet: View {
                     dismiss()
                 })
                 .environmentObject(api)
+            }
+            .sheet(isPresented: $showRecurrenceSheet) {
+                // Server requires creator role; canEditRecurrence
+                // already gates the entry button.
+                TaskRecurrenceSheet(
+                    taskId: task.id,
+                    existing: nil,                       // model doesn't carry recurrence yet
+                    onSaved: { _ in onComplete() }
+                ).environmentObject(api)
             }
             .sheet(isPresented: $showNASheet) {
                 NavigationStack {

@@ -63,6 +63,15 @@ struct ProfileView: View {
                 } label: {
                     Label("Editar perfil", systemImage: "person.text.rectangle")
                 }
+                // Inmobiliaria/constructora owners can also edit the
+                // public agency profile (mirrors /equipo-empresa.html).
+                if user.isInmobiliaria {
+                    NavigationLink {
+                        EditInmobiliariaProfileView().environmentObject(api)
+                    } label: {
+                        Label("Perfil de empresa", systemImage: "building.2.crop.circle.fill")
+                    }
+                }
             }
 
             // ── Subscription ──

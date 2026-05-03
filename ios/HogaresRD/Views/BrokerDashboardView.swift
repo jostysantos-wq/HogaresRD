@@ -125,6 +125,11 @@ struct BrokerDashboardView: View {
             // ── Workflow ──
             Section("Trabajo") {
                 NavigationLink {
+                    LeadQueueView().environmentObject(api)
+                } label: {
+                    Label("Cola de leads", systemImage: "tray.full.fill")
+                }
+                NavigationLink {
                     TasksView().environmentObject(api)
                 } label: {
                     Label("Tareas", systemImage: "checklist")
