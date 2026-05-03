@@ -3358,6 +3358,303 @@ class APIService: ObservableObject {
         if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.events { return arr }
         return (try? decoder.decode([ApplicationEvent].self, from: data)) ?? []
     }
+
+    // MARK: - Task collaboration (comments, attachments, subtasks,
+    //         dependencies, recurrence) — public/tareas.html parity
+
+    // ── Comments ──
+    func getTaskComments(taskId: String) async throws -> [TaskComment] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/comments"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar los comentarios")
+        struct Wrapper: Decodable { let comments: [TaskComment]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.comments { return arr }
+        return (try? decoder.decode([TaskComment].self, from: data)) ?? []
+    }
+
+    @discardableResult
+    func postTaskComment(taskId: String, body: String) async throws -> TaskComment {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/comments"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["body": body])
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo publicar el comentario")
+        // Server returns either the comment directly or { comment: {...} }
+        struct Wrapper: Decodable { let comment: TaskComment? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let c = w.comment { return c }
+        return try decoder.decode(TaskComment.self, from: data)
+    }
+
+    @discardableResult
+    func editTaskComment(taskId: String, commentId: String, body: String) async throws -> TaskComment {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/comments/\(commentId)"))
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["body": body])
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo editar el comentario")
+        struct Wrapper: Decodable { let comment: TaskComment? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let c = w.comment { return c }
+        return try decoder.decode(TaskComment.self, from: data)
+    }
+
+    @discardableResult
+    func deleteTaskComment(taskId: String, commentId: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/comments/\(commentId)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo eliminar el comentario")
+        return true
+    }
+
+    // ── Attachments ──
+    func getTaskAttachments(taskId: String) async throws -> [TaskAttachment] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/attachments"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar los archivos")
+        struct Wrapper: Decodable { let attachments: [TaskAttachment]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.attachments { return arr }
+        return (try? decoder.decode([TaskAttachment].self, from: data)) ?? []
+    }
+
+    /// Upload one or more files to a task. Server enforces magic-byte
+    /// validation + path-traversal guard. `data` should be raw bytes;
+    /// `mimeType` MUST match the file (e.g. "image/jpeg"); `filename`
+    /// is the visible name. Returns the saved attachment record.
+    @discardableResult
+    func uploadTaskAttachment(taskId: String, fileData: Data, filename: String, mimeType: String) async throws -> TaskAttachment {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        let url = apiURL("/api/tasks/\(taskId)/attachments")
+        let boundary = "----HRDBoundary\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo subir el archivo")
+        struct Wrapper: Decodable { let attachment: TaskAttachment? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let a = w.attachment { return a }
+        return try decoder.decode(TaskAttachment.self, from: data)
+    }
+
+    @discardableResult
+    func deleteTaskAttachment(taskId: String, attachmentId: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/attachments/\(attachmentId)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo eliminar el archivo")
+        return true
+    }
+
+    /// URL for downloading or previewing a task attachment file.
+    /// Note: server requires Authorization header on this path; iOS
+    /// callers should fetch via `session.data(for:)` with the header
+    /// rather than handing it to a UIImage / WKWebView directly.
+    func taskAttachmentFileURL(taskId: String, attachmentId: String) -> URL {
+        apiURL("/api/tasks/\(taskId)/attachments/\(attachmentId)/file")
+    }
+
+    // ── Subtasks + dependencies ──
+    func getTaskSubtasks(taskId: String) async throws -> [TaskItem] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/subtasks"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar las subtareas")
+        struct Wrapper: Decodable { let subtasks: [TaskItem]? }
+        if let w = try? decoder.decode(Wrapper.self, from: data), let arr = w.subtasks { return arr }
+        return (try? decoder.decode([TaskItem].self, from: data)) ?? []
+    }
+
+    /// Set or clear the parent task. Pass `parentId: nil` to detach.
+    /// Server runs cycle detection before saving.
+    @discardableResult
+    func setTaskParent(taskId: String, parentId: String?) async throws -> TaskItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/parent"))
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["parent_task_id": parentId as Any]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.fragmentsAllowed])
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo actualizar la jerarquía")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    /// Add a dependency edge: the current task can't complete until
+    /// `predecessorId` is done. Server BFS-checks for cycles.
+    @discardableResult
+    func addTaskDependency(taskId: String, predecessorId: String) async throws -> TaskItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/depends-on"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["predecessor_id": predecessorId]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo añadir la dependencia")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    @discardableResult
+    func removeTaskDependency(taskId: String, predecessorId: String) async throws -> TaskItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/depends-on/\(predecessorId)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo quitar la dependencia")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    // ── Recurrence ──
+    /// Set the task's recurrence rule, or pass `nil` to clear it.
+    /// `interval` is the spacing (e.g. 2 with rule "weekly" = every
+    /// 2 weeks). `count` and `until` are mutually compatible terminator
+    /// rules (count = N occurrences, until = ISO date).
+    @discardableResult
+    func setTaskRecurrence(taskId: String, recurrence: TaskRecurrence?) async throws -> TaskItem {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/tasks/\(taskId)/recurrence"))
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: Any
+        if let r = recurrence {
+            var dict: [String: Any] = ["rule": r.rule, "interval": r.interval]
+            if let c = r.count { dict["count"] = c }
+            if let u = r.until { dict["until"] = u }
+            body = dict
+        } else {
+            body = NSNull()
+        }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.fragmentsAllowed])
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo actualizar la recurrencia")
+        return try decoder.decode(TaskItem.self, from: data)
+    }
+
+    // MARK: - Agency posts (equipo-publicaciones parity)
+
+    func getAgencyPosts() async throws -> [AgencyPost] {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/posts"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar las publicaciones")
+        return (try? decoder.decode([AgencyPost].self, from: data)) ?? []
+    }
+
+    @discardableResult
+    func createAgencyPost(title: String, body: String, kind: String = "update", imageUrl: String? = nil) async throws -> AgencyPost {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/posts"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var dict: [String: Any] = ["title": title, "body": body, "kind": kind]
+        if let img = imageUrl, !img.isEmpty { dict["image_url"] = img }
+        req.httpBody = try JSONSerialization.data(withJSONObject: dict)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo crear la publicación")
+        return try decoder.decode(AgencyPost.self, from: data)
+    }
+
+    @discardableResult
+    func updateAgencyPost(id: String, title: String? = nil, body: String? = nil, imageUrl: String? = nil) async throws -> AgencyPost {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/posts/\(id)"))
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var dict: [String: Any] = [:]
+        if let v = title    { dict["title"] = v }
+        if let v = body     { dict["body"] = v }
+        if let v = imageUrl { dict["image_url"] = v }
+        req.httpBody = try JSONSerialization.data(withJSONObject: dict)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo actualizar la publicación")
+        return try decoder.decode(AgencyPost.self, from: data)
+    }
+
+    @discardableResult
+    func deleteAgencyPost(id: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/posts/\(id)"))
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo eliminar la publicación")
+        return true
+    }
+
+    // MARK: - Agency reviews (invite + moderate)
+
+    /// Send a review-invite email to a buyer with a completed deal.
+    @discardableResult
+    func inviteAgencyReview(applicationId: String, message: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/reviews/invite"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var dict: [String: Any] = ["application_id": applicationId]
+        if let m = message, !m.isEmpty { dict["message"] = m }
+        req.httpBody = try JSONSerialization.data(withJSONObject: dict)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo enviar la invitación")
+        return true
+    }
+
+    @discardableResult
+    func approveAgencyReview(id: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/reviews/\(id)/approve"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo aprobar la reseña")
+        return true
+    }
+
+    @discardableResult
+    func rejectAgencyReview(id: String, reason: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/inmobiliaria/reviews/\(id)/reject"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var dict: [String: Any] = [:]
+        if let r = reason, !r.isEmpty { dict["reason"] = r }
+        req.httpBody = try JSONSerialization.data(withJSONObject: dict)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo rechazar la reseña")
+        return true
+    }
 }
 
 // MARK: - Referral payouts response shape
@@ -3649,4 +3946,67 @@ struct ApplicationEvent: Decodable, Identifiable {
     let actor: String?
     let actor_name: String?
     let created_at: String
+}
+
+// MARK: - Task collaboration models (round-3 parity)
+
+struct TaskComment: Decodable, Identifiable {
+    let id: String
+    let author_id: String?
+    let author_name: String?
+    let body: String
+    let created_at: String
+    let edited_at: String?
+    let edited_by: String?
+}
+
+struct TaskAttachment: Decodable, Identifiable {
+    let id: String
+    let filename: String?
+    let original_name: String?
+    let size: Int?
+    let mime_type: String?
+    let uploaded_by: String?
+    let uploader_name: String?
+    let uploaded_at: String?
+}
+
+/// Recurrence rule mirrors the server's `validateRecurrence` shape.
+/// `rule` is one of: daily, weekly, biweekly, monthly, yearly (server
+/// also accepts a few business-day variants — see VALID_RECURRENCE_RULES
+/// in routes/tasks.js for the canonical list).
+struct TaskRecurrence: Codable, Equatable {
+    var rule: String           // e.g. "weekly"
+    var interval: Int          // 1..365
+    var count: Int?            // optional terminator: N occurrences
+    var until: String?         // optional ISO date terminator
+}
+
+// MARK: - Agency posts + reviews
+
+struct AgencyPost: Decodable, Identifiable {
+    let id: String
+    let inmobiliaria_id: String?
+    let title: String?
+    let body: String?
+    let kind: String?          // "update" / "article" / etc.
+    let image_url: String?
+    let author_id: String?
+    let author_name: String?
+    let created_at: String?
+    let updated_at: String?
+}
+
+struct AgencyReview: Decodable, Identifiable {
+    let id: String
+    let inmobiliaria_id: String?
+    let reviewer_name: String?
+    let reviewer_email: String?
+    let rating: Int
+    let comment: String?
+    let status: String         // "pending" / "approved" / "rejected"
+    let created_at: String?
+    let approved_at: String?
+    let rejected_at: String?
+    let rejected_reason: String?
 }
