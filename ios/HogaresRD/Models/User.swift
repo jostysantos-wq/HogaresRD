@@ -6,6 +6,12 @@ struct User: Codable {
     let email: String
     let role: String
     let phone: String?
+    /// Editable via PATCH /api/user/profile (mi-cuenta parity).
+    /// Visible only on the broker / agency role on the web.
+    let jobTitle: String?
+    /// Free-form professional bio (max 300 chars). Editable via
+    /// PATCH /api/user/profile.
+    let bio: String?
     let agencyName: String?
     let marketingOptIn: Bool?
     let twoFAEnabled: Bool?

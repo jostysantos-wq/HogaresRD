@@ -1669,11 +1669,23 @@ class APIService: ObservableObject {
     /// Agent submits (or re-submits) a commission for an application.
     /// Server will put it in pending_review status.
     @discardableResult
+    /// Submit/edit a commission. When the application has a referral
+    /// payee, the server requires `referral_acknowledged: true` on the
+    /// FIRST submit (returns 400 with code `referral_ack_required`
+    /// otherwise). The caller should pass `referralAcknowledged: true`
+    /// after presenting the broker with the referrer's name and an
+    /// explicit checkbox; subsequent edits don't re-prompt because the
+    /// server stamps `referral_acknowledged_at` on first acceptance.
+    /// `referralPercent` is the % of the agent's gross commission paid
+    /// to the referrer (default 25 on the server when the app has a
+    /// payee and the broker omits this field).
     func submitCommission(
         applicationId: String,
         saleAmount: Double,
         agentPercent: Double,
         inmobiliariaPercent: Double,
+        referralPercent: Double? = nil,
+        referralAcknowledged: Bool = false,
         note: String
     ) async throws -> Commission {
         guard let t = token else { throw APIError.server("No autenticado") }
@@ -1682,16 +1694,29 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "sale_amount":          saleAmount,
             "agent_percent":        agentPercent,
             "inmobiliaria_percent": inmobiliariaPercent,
             "note":                 note,
         ]
+        if let r = referralPercent { body["referral_percent"] = r }
+        if referralAcknowledged    { body["referral_acknowledged"] = true }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            // Surface the structured error code for the UI to handle: when
+            // the server says `referral_ack_required`, the caller can pop
+            // the ack sheet and retry.
+            if let code = json?["code"] as? String, code == "referral_ack_required" {
+                throw APIError.referralAckRequired(
+                    payeeId: json?["referral_payee_id"] as? String,
+                    payeeName: json?["referral_payee_name"] as? String,
+                    previousAmount: json?["previous_amount"] as? Double,
+                    adjustedAmount: json?["adjusted_amount"] as? Double
+                )
+            }
             throw APIError.server((json?["error"] as? String) ?? "Error al registrar comisión")
         }
         struct Wrapper: Decodable { let commission: Commission }
@@ -1701,6 +1726,9 @@ class APIService: ObservableObject {
     /// Inmobiliaria owner reviews a pending commission.
     /// action: "approve" | "adjust" | "reject"
     /// For "adjust", pass the new numbers; otherwise they're ignored.
+    /// When `adjust` raises the referral fee, the server requires
+    /// `referral_acknowledged: true` so the broker can re-confirm the
+    /// new amount.
     @discardableResult
     func reviewCommission(
         applicationId: String,
@@ -1708,6 +1736,8 @@ class APIService: ObservableObject {
         saleAmount: Double? = nil,
         agentPercent: Double? = nil,
         inmobiliariaPercent: Double? = nil,
+        referralPercent: Double? = nil,
+        referralAcknowledged: Bool = false,
         note: String
     ) async throws -> Commission {
         guard let t = token else { throw APIError.server("No autenticado") }
@@ -1720,10 +1750,20 @@ class APIService: ObservableObject {
         if let s = saleAmount          { body["sale_amount"] = s }
         if let a = agentPercent        { body["agent_percent"] = a }
         if let i = inmobiliariaPercent { body["inmobiliaria_percent"] = i }
+        if let r = referralPercent     { body["referral_percent"] = r }
+        if referralAcknowledged        { body["referral_acknowledged"] = true }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, resp) = try await session.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let code = json?["code"] as? String, code == "referral_ack_required" {
+                throw APIError.referralAckRequired(
+                    payeeId: json?["referral_payee_id"] as? String,
+                    payeeName: json?["referral_payee_name"] as? String,
+                    previousAmount: json?["previous_amount"] as? Double,
+                    adjustedAmount: json?["adjusted_amount"] as? Double
+                )
+            }
             throw APIError.server((json?["error"] as? String) ?? "Error al revisar comisión")
         }
         struct Wrapper: Decodable { let commission: Commission }
@@ -2900,6 +2940,140 @@ class APIService: ObservableObject {
         let (data, resp) = try await session.data(for: req)
         try throwIfErr(data, resp, fallback: "Error actualizando propiedad")
     }
+
+    // MARK: - Referral payouts (Option B fee model)
+    //
+    // Mirrors the web's /enlaces-de-referido payouts panel: when an
+    // outside agent's referral link converts on a listing they're not
+    // affiliated with, the listing's broker is the assigned agent and
+    // the referrer is recorded as `referral_payee_id` entitled to a
+    // share of the broker's commission. These two endpoints surface
+    // (a) the running ledger to the referrer and (b) the broker's
+    // mark-paid action so the referrer's pending tab clears.
+
+    /// Fetch the authenticated user's referral payouts, split into
+    /// pending (commission recorded but unpaid), paid, and
+    /// awaiting_close (lead converted but commission not yet on file).
+    func getMyReferralPayouts() async throws -> ReferralPayouts {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/referrals/my-payouts"))
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudieron cargar las comisiones de referido")
+        return try decoder.decode(ReferralPayouts.self, from: data)
+    }
+
+    /// Broker marks a referral fee as paid. Server requires the caller
+    /// to be the assigned broker, the inmobiliaria owner of the same
+    /// org, the org's secretary, or admin.
+    @discardableResult
+    func markReferralPaid(applicationId: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(applicationId)/referral/mark-paid"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo marcar como pagada")
+        return true
+    }
+
+    // MARK: - Profile edit (mi-cuenta)
+    //
+    // Web exposes editable phone / jobTitle / bio at /mi-cuenta#perfil
+    // via PATCH /api/user/profile. iOS previously had no consumer, so
+    // these fields were registration-only on mobile.
+    @discardableResult
+    func updateProfile(phone: String? = nil, jobTitle: String? = nil, bio: String? = nil) async throws -> User {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/user/profile"))
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let p = phone    { body["phone"]    = p }
+        if let j = jobTitle { body["jobTitle"] = j }
+        if let b = bio      { body["bio"]      = b }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo actualizar el perfil")
+        // Server returns { success, user: { id, phone, bio, jobTitle, avatarUrl, … } }
+        // but the `user` shape is partial. Refresh the full user via /me.
+        return try await getMe()
+    }
+
+    // MARK: - Application withdraw + reassign
+
+    /// Buyer withdraws their own application. Server permits either the
+    /// authenticated client (when applicant is logged in) or anonymous
+    /// access via the track-token; iOS only uses the authenticated path.
+    @discardableResult
+    func withdrawApplication(id: String, reason: String? = nil) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(id)/withdraw"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = [:]
+        if let r = reason, !r.isEmpty { body["reason"] = r }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo retirar la solicitud")
+        return true
+    }
+
+    /// Inmobiliaria owner / broker / secretary / admin reassigns an
+    /// application to another agent on the same team. The server route
+    /// keys the target by EMAIL (matching the web's reassign UI) so that
+    /// off-platform contacts created via /api/admin/users-by-email can
+    /// also be reassigned. Same-team membership is enforced server-side.
+    @discardableResult
+    func reassignApplication(id: String, targetEmail: String) async throws -> Bool {
+        guard let t = token else { throw APIError.server("No autenticado") }
+        var req = URLRequest(url: apiURL("/api/applications/\(id)/reassign"))
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["email": targetEmail]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await session.data(for: req)
+        try throwIfErr(data, resp, fallback: "No se pudo reasignar la solicitud")
+        return true
+    }
+}
+
+// MARK: - Referral payouts response shape
+
+struct ReferralPayouts: Decodable {
+    let pending: [ReferralPayoutRow]
+    let paid: [ReferralPayoutRow]
+    let awaiting_close: [ReferralPayoutRow]
+    let totals: ReferralPayoutTotals?
+}
+
+struct ReferralPayoutRow: Decodable, Identifiable {
+    var id: String { application_id }
+    let application_id: String
+    let listing_id: String?
+    let listing_title: String
+    let client_label: String?
+    let broker_name: String
+    let broker_agency: String?
+    let status: String?
+    let commission_status: String?
+    let referral_percent: Double
+    let referral_amount: Double
+    let paid: Bool
+    let paid_at: String?
+    let created_at: String
+}
+
+struct ReferralPayoutTotals: Decodable {
+    let pending: Double
+    let paid: Double
+    let count_pending: Int
+    let count_paid: Int
+    let count_awaiting: Int
 }
 
 // MARK: - Application state poll payload
@@ -3023,10 +3197,17 @@ struct AgencyDetail: Decodable {
 enum APIError: LocalizedError {
     case server(String)
     case subscriptionRequired
+    /// Server requires the broker to acknowledge the referral fee before
+    /// commission entry/adjust succeeds. The UI should present the payee's
+    /// name and a confirmation checkbox, then retry with
+    /// `referralAcknowledged: true`.
+    case referralAckRequired(payeeId: String?, payeeName: String?, previousAmount: Double?, adjustedAmount: Double?)
     var errorDescription: String? {
         switch self {
         case .server(let msg): return msg
         case .subscriptionRequired: return "Tu suscripción no está activa. Renueva tu plan para continuar."
+        case .referralAckRequired(_, let name, _, _):
+            return "Debes reconocer la comisión de referido hacia \(name ?? "el referidor") antes de registrar esta venta."
         }
     }
 }

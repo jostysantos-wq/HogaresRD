@@ -54,6 +54,17 @@ struct ProfileView: View {
                 .padding(.vertical, 6)
             }
 
+            // ── Editable profile info (phone, jobTitle, bio) ──
+            // Mirrors the web's /mi-cuenta#perfil page. Without this iOS
+            // users could only update these fields at registration.
+            Section("Mi información") {
+                NavigationLink {
+                    EditProfileView().environmentObject(api)
+                } label: {
+                    Label("Editar perfil", systemImage: "person.text.rectangle")
+                }
+            }
+
             // ── Subscription ──
             Section("Plan") {
                 Button {
@@ -1470,5 +1481,125 @@ struct MyListingCard: View {
         let context = CIContext()
         guard let cgImage = context.createCGImage(transformed, from: transformed.extent) else { return nil }
         return UIImage(cgImage: cgImage)
+    }
+}
+
+// MARK: - Edit Profile (mi-cuenta parity)
+//
+// Lets the user edit phone, jobTitle (broker/agency only), and bio —
+// mirroring the web's /mi-cuenta#perfil consolidated page. Calls
+// PATCH /api/user/profile via APIService.updateProfile, then refreshes
+// the in-memory user so other screens see the new values immediately.
+struct EditProfileView: View {
+    @EnvironmentObject var api: APIService
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var phone:    String = ""
+    @State private var jobTitle: String = ""
+    @State private var bio:      String = ""
+    @State private var saving:   Bool   = false
+    @State private var errorMsg: String?
+    @State private var savedAt:  Date?
+
+    private var showsJobTitle: Bool {
+        let role = (api.currentUser?.role ?? "").lowercased()
+        return role == "broker" || role == "agency"
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Nombre",  value: api.currentUser?.name  ?? "")
+                LabeledContent("Correo",  value: api.currentUser?.email ?? "")
+            } footer: {
+                Text("Para cambiar nombre o correo, contacta a soporte.")
+                    .font(.caption)
+            }
+
+            Section("Teléfono") {
+                TextField("809-555-0000", text: $phone)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+            }
+
+            if showsJobTitle {
+                Section("Título / Cargo") {
+                    TextField("Agente Senior", text: $jobTitle)
+                        .textContentType(.jobTitle)
+                }
+            }
+
+            Section {
+                TextField("Una breve descripción profesional…", text: $bio, axis: .vertical)
+                    .lineLimit(4...8)
+            } header: {
+                Text("Descripción")
+            } footer: {
+                Text("\(bio.count)/300")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let savedAt {
+                Section {
+                    Label("Guardado \(savedAt.formatted(date: .omitted, time: .shortened))",
+                          systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+
+            if let errorMsg {
+                Section {
+                    Label(errorMsg, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .font(.callout)
+                }
+            }
+        }
+        .navigationTitle("Editar perfil")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Guardar") { Task { await save() } }
+                    .disabled(saving || !hasChanges)
+            }
+        }
+        .onAppear { loadFromUser() }
+    }
+
+    private var hasChanges: Bool {
+        let u = api.currentUser
+        if phone != (u?.phone ?? "") { return true }
+        if showsJobTitle && jobTitle != (u?.jobTitle ?? "") { return true }
+        if bio != (u?.bio ?? "") { return true }
+        return false
+    }
+
+    private func loadFromUser() {
+        guard let u = api.currentUser else { return }
+        phone    = u.phone    ?? ""
+        jobTitle = u.jobTitle ?? ""
+        bio      = u.bio      ?? ""
+    }
+
+    private func save() async {
+        if bio.count > 300 {
+            errorMsg = "La descripción no puede pasar de 300 caracteres."
+            return
+        }
+        saving = true
+        errorMsg = nil
+        defer { saving = false }
+        do {
+            // Send only fields the user can edit to keep the PATCH minimal.
+            _ = try await api.updateProfile(
+                phone:    phone.trimmingCharacters(in: .whitespacesAndNewlines),
+                jobTitle: showsJobTitle ? jobTitle.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
+                bio:      bio.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            savedAt = Date()
+        } catch {
+            errorMsg = (error as? LocalizedError)?.errorDescription ?? "No se pudo guardar."
+        }
     }
 }

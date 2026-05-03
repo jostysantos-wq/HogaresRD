@@ -59,6 +59,33 @@ struct ConversationThreadView: View {
         return false
     }
 
+    /// Pro users (assigned broker, secretary on the team, or admin) can
+    /// drop their per-listing affiliate URL into the composer so the
+    /// client can apply directly to them. Mirrors the kebab "Enviar
+    /// enlace para aplicar" feature on the web. Requires:
+    ///   - the user has a refToken (every pro account does)
+    ///   - the conversation is on a listing (propertyId present)
+    ///   - the user is the assigned broker (no point sharing on a
+    ///     conversation owned by a colleague)
+    ///   - the conversation is open
+    private var canShareApply: Bool {
+        guard isPro else { return false }
+        guard let bId = conversation.brokerId, bId == myId else { return false }
+        guard !(conversation.propertyId.isEmpty) else { return false }
+        guard let tok = api.currentUser?.refToken, !tok.isEmpty else { return false }
+        return !isClosed
+    }
+
+    /// Pre-formatted apply-link draft: same shape as the web's kebab
+    /// action — listing URL with `?ref=<token>` carrying direct routing.
+    private func applyLinkDraft() -> String {
+        guard let tok = api.currentUser?.refToken else { return "" }
+        let id  = conversation.propertyId
+        let url = "\(apiBase)/listing.html?id=\(id)&ref=\(tok)"
+        let title = conversation.propertyTitle.isEmpty ? "esta propiedad" : conversation.propertyTitle
+        return "Cuando estés listo, puedes aplicar para \"\(title)\" aquí:\n\(url)"
+    }
+
     /// Determine if a message is "mine" based on senderId AND senderRole.
     /// If the same user sent messages as both "client" and "broker" (testing),
     /// use senderRole to distinguish sides: client role = left, broker role = right for agents.
@@ -188,8 +215,15 @@ struct ConversationThreadView: View {
 
             Spacer(minLength: 0)
 
-            if canToggleClose || canTransfer {
+            if canToggleClose || canTransfer || canShareApply {
                 Menu {
+                    if canShareApply {
+                        Button {
+                            insertApplyLink()
+                        } label: {
+                            Label("Enviar enlace para aplicar", systemImage: "arrow.up.right.square")
+                        }
+                    }
                     if canTransfer && !isClosed {
                         Button {
                             openTransferSheet()
@@ -835,6 +869,22 @@ struct ConversationThreadView: View {
         transferred      = false
         transferTargets  = []
         showTransferSheet = true
+    }
+
+    /// Drop the per-listing affiliate URL into the message composer
+    /// without sending. The agent can edit the wording before sending,
+    /// matching the web's "Enviar enlace para aplicar" UX. If the same
+    /// URL is already in the draft, focus the field instead of duplicating.
+    private func insertApplyLink() {
+        let draft = applyLinkDraft()
+        guard !draft.isEmpty else { return }
+        // Avoid duplicate insertions if the URL is already present
+        if input.contains(draft.split(separator: "\n").last ?? "") {
+            return
+        }
+        input = input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? draft
+            : (input + "\n\n" + draft)
     }
 
     private func loadTransferTargets() async {
