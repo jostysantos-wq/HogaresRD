@@ -3,6 +3,15 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 // MARK: - Tasks list
+//
+// Dashboard-style layout:
+//   • Top stat grid (2×2) — high-priority / overdue / upcoming / pending,
+//     each card tappable to filter the list below
+//   • Donut "progress" card — completed vs in-progress vs not-started
+//   • Filter chip row + grouped task list with swipe actions
+//
+// The stat tiles act as filter shortcuts: tapping one scrolls to the list
+// and applies the matching filter, so the dashboard doubles as navigation.
 
 struct TasksView: View {
     @EnvironmentObject var api: APIService
@@ -10,50 +19,66 @@ struct TasksView: View {
     @State private var tasks: [TaskItem] = []
     @State private var loading = true
     @State private var errorMsg: String?
-    @State private var filter = 1 // Start on Pendientes: 0=Todas, 1=Pendientes, 2=En Progreso, 3=Por Revisar, 4=Completadas
+    @State private var filter: TaskFilter = .pendientes
     @State private var showCreate = false
     @State private var selectedTask: TaskItem? = nil
+
+    enum TaskFilter: String, CaseIterable, Identifiable {
+        case todas        = "Todas"
+        case pendientes   = "Pendientes"
+        case enProgreso   = "En Progreso"
+        case porRevisar   = "Por Revisar"
+        case completadas  = "Completadas"
+        case vencidas     = "Vencidas"
+        var id: String { rawValue }
+    }
 
     private var currentUserId: String { api.currentUser?.id ?? "" }
 
     private static let finishedStatuses: Set<String> = ["completada", "no_aplica"]
 
-    private var filteredTasks: [TaskItem] {
-        switch filter {
-        case 1:  return tasks.filter { $0.status == "pendiente" }
-        case 2:  return tasks.filter { $0.status == "en_progreso" }
-        case 3:  return tasks.filter { $0.status == "pending_review" }
-        case 4:  return tasks.filter { $0.status == "completada" }
-        case 5:  return tasks.filter { $0.isOverdue }
-        case 6:  return tasks.filter { $0.status == "no_aplica" }
-        default: return tasks
+    /// Tasks with a due date in the next 7 days that aren't finished.
+    private var upcomingTasks: [TaskItem] {
+        let now = Date()
+        let weekOut = now.addingTimeInterval(7 * 86400)
+        return tasks.filter { task in
+            guard !Self.finishedStatuses.contains(task.status),
+                  let due = parseISO(task.dueDate) else { return false }
+            return due > now && due <= weekOut
         }
     }
 
-    private var activeTasks: [TaskItem] {
-        filteredTasks.filter { !Self.finishedStatuses.contains($0.status) }
-    }
-
-    private var completedTasks: [TaskItem] {
-        filteredTasks.filter { Self.finishedStatuses.contains($0.status) }
+    private var filteredTasks: [TaskItem] {
+        switch filter {
+        case .todas:        return tasks
+        case .pendientes:   return tasks.filter { $0.status == "pendiente" }
+        case .enProgreso:   return tasks.filter { $0.status == "en_progreso" }
+        case .porRevisar:   return tasks.filter { $0.status == "pending_review" }
+        case .completadas:  return tasks.filter { Self.finishedStatuses.contains($0.status) }
+        case .vencidas:     return tasks.filter { $0.isOverdue }
+        }
     }
 
     private var canCreate: Bool {
         api.currentUser?.isTeamLead == true
     }
 
-    // Stats
+    // Headline stats
     private var statTotal: Int { tasks.count }
-    private var statPending: Int { tasks.filter { $0.status == "pendiente" }.count }
+    private var statHighPriority: Int {
+        tasks.filter { $0.priority == "alta" && !Self.finishedStatuses.contains($0.status) }.count
+    }
+    private var statOverdue: Int  { tasks.filter { $0.isOverdue }.count }
+    private var statUpcoming: Int { upcomingTasks.count }
+    private var statPending: Int  { tasks.filter { $0.status == "pendiente" }.count }
     private var statProgress: Int { tasks.filter { $0.status == "en_progreso" }.count }
-    private var statReview: Int { tasks.filter { $0.status == "pending_review" && $0.approverId == currentUserId }.count }
-    private var statDone: Int { tasks.filter { $0.status == "completada" }.count }
-    private var statOverdue: Int { tasks.filter { $0.isOverdue }.count }
-    private var statNA: Int { tasks.filter { $0.status == "no_aplica" }.count }
+    private var statReview: Int   { tasks.filter { $0.status == "pending_review" }.count }
+    private var statDone: Int     { tasks.filter { $0.status == "completada" }.count }
+    private var statNotStarted: Int { statPending }
 
     var body: some View {
         Group {
-            if loading {
+            if loading && tasks.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = errorMsg, tasks.isEmpty {
                 VStack(spacing: 16) {
@@ -65,62 +90,67 @@ struct TasksView: View {
                 }
                 .padding()
             } else {
-                VStack(spacing: 0) {
-                    // Stats bar
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            statPill("Total", value: statTotal, color: .rdBlue)
-                            statPill("Pendientes", value: statPending, color: .orange)
-                            statPill("En Progreso", value: statProgress, color: .rdBlue)
-                            if statReview > 0 {
-                                statPill("Por Revisar", value: statReview, color: .purple)
+                List {
+                    Section {
+                        statsGrid
+                            .padding(.bottom, 4)
+                        progressCard
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+
+                    Section {
+                        filterChips
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowSeparator(.hidden)
+
+                    let active = filteredTasks.filter { !Self.finishedStatuses.contains($0.status) }
+                    let done   = filteredTasks.filter {  Self.finishedStatuses.contains($0.status) }
+
+                    if !active.isEmpty {
+                        Section {
+                            ForEach(active) { task in
+                                taskCardRow(task)
                             }
-                            statPill("Completadas", value: statDone, color: .rdGreen)
-                            statPill("Vencidas", value: statOverdue, color: .rdRed)
-                            if statNA > 0 {
-                                statPill("No Aplica", value: statNA, color: .gray)
-                            }
+                        } header: {
+                            taskSectionHeader(filter == .completadas ? "Tareas" : "Próximos vencimientos",
+                                              count: active.count)
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 10)
                     }
 
-                    // Swipeable filter tabs
-                    HStack(spacing: 0) {
-                        ForEach([
-                            (0, "Todas"), (1, "Pendientes"), (2, "En Progreso"),
-                            (3, "Por Revisar"), (4, "Completadas"),
-                        ], id: \.0) { tag, label in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) { filter = tag }
-                            } label: {
-                                VStack(spacing: 6) {
-                                    Text(label)
-                                        .font(.caption.bold())
-                                        .foregroundStyle(filter == tag ? Color.rdBlue : .secondary)
-                                    Rectangle()
-                                        .fill(filter == tag ? Color.rdBlue : .clear)
-                                        .frame(height: 2.5)
-                                        .clipShape(Capsule())
-                                }
+                    if !done.isEmpty {
+                        Section {
+                            ForEach(done) { task in
+                                taskCardRow(task)
                             }
-                            .buttonStyle(.plain)
+                        } header: {
+                            taskSectionHeader("Finalizadas", count: done.count)
+                        }
+                    }
+
+                    if active.isEmpty && done.isEmpty {
+                        Section {
+                            VStack(spacing: 12) {
+                                Image(systemName: "checklist")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                                Text("No hay tareas en esta vista")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 36)
                         }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
-                    .padding(.horizontal, 4)
-
-                    // Swipeable content
-                    TabView(selection: $filter) {
-                        taskListPage(tasks).tag(0)
-                        taskListPage(tasks.filter { $0.status == "pendiente" }).tag(1)
-                        taskListPage(tasks.filter { $0.status == "en_progreso" }).tag(2)
-                        taskListPage(tasks.filter { $0.status == "pending_review" }).tag(3)
-                        taskListPage(tasks.filter { Self.finishedStatuses.contains($0.status) }).tag(4)
-                    }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                    .animation(.easeInOut(duration: 0.2), value: filter)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemGroupedBackground))
+                .refreshable { await load() }
             }
         }
         .navigationTitle("Tareas")
@@ -128,8 +158,15 @@ struct TasksView: View {
             if canCreate {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showCreate = true } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3).foregroundStyle(Color.rdBlue)
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.caption.bold())
+                            Text("Nueva")
+                                .font(.subheadline.bold())
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Color.rdBlue, in: Capsule())
+                        .foregroundStyle(.white)
                     }
                 }
             }
@@ -145,87 +182,273 @@ struct TasksView: View {
         .task { await load() }
     }
 
-    // MARK: - Task List Page (for each swipeable tab)
+    // MARK: - Stats grid (2 × 2)
 
-    @ViewBuilder
-    private func taskListPage(_ items: [TaskItem]) -> some View {
-        if items.isEmpty {
-            VStack(spacing: 12) {
-                Spacer()
-                Image(systemName: "checklist")
-                    .font(.system(size: 48))
-                    .foregroundStyle(Color(.tertiaryLabel))
-                Text("No hay tareas")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                Spacer()
+    private var statsGrid: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                statTile(
+                    icon: "flag.fill",
+                    iconColor: Color.rdRed,
+                    title: "Prioridad",
+                    value: statHighPriority,
+                    total: statTotal,
+                    onTap: { filter = .todas }
+                )
+                statTile(
+                    icon: "exclamationmark.triangle.fill",
+                    iconColor: .orange,
+                    title: "Vencidas",
+                    value: statOverdue,
+                    total: statTotal,
+                    onTap: { filter = .vencidas }
+                )
             }
-        } else {
-            let active = items.filter { !Self.finishedStatuses.contains($0.status) }
-            let done = items.filter { Self.finishedStatuses.contains($0.status) }
-            List {
-                if !active.isEmpty {
-                    Section("Activas (\(active.count))") {
-                        ForEach(active) { task in
-                            Button { selectedTask = task } label: {
-                                TaskRow(task: task, currentUserId: currentUserId)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .leading) {
-                                if task.assignedTo == currentUserId
-                                    && (task.status == "pendiente" || task.status == "en_progreso") {
-                                    Button {
-                                        Task { await completeTask(task) }
-                                    } label: {
-                                        Label(task.requiresApproval ? "Enviar" : "Completar",
-                                              systemImage: "checkmark.circle.fill")
-                                    }
-                                    .tint(Color.rdGreen)
-                                }
-                            }
-                            .swipeActions(edge: .trailing) {
-                                if task.assignedTo == currentUserId
-                                    && task.status != "completada"
-                                    && task.status != "no_aplica" {
-                                    Button {
-                                        Task { await markTaskNA(task) }
-                                    } label: {
-                                        Label("No Aplica", systemImage: "minus.circle")
-                                    }
-                                    .tint(.gray)
-                                }
-                            }
-                        }
-                    }
-                }
-                if !done.isEmpty {
-                    Section("Finalizadas (\(done.count))") {
-                        ForEach(done) { task in
-                            Button { selectedTask = task } label: {
-                                TaskRow(task: task, currentUserId: currentUserId)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+            HStack(spacing: 10) {
+                statTile(
+                    icon: "calendar.badge.clock",
+                    iconColor: Color.rdBlue,
+                    title: "Próximas",
+                    value: statUpcoming,
+                    total: statTotal,
+                    onTap: { filter = .todas }
+                )
+                statTile(
+                    icon: "clock.fill",
+                    iconColor: .purple,
+                    title: "Pendientes",
+                    value: statPending,
+                    total: statTotal,
+                    onTap: { filter = .pendientes }
+                )
             }
         }
     }
 
-    // MARK: - Subviews
-
-    private func statPill(_ label: String, value: Int, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text("\(value)")
-                .font(.title3).bold()
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
+    private func statTile(icon: String,
+                          iconColor: Color,
+                          title: String,
+                          value: Int,
+                          total: Int,
+                          onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(iconColor.opacity(0.13))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: icon)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(iconColor)
+                    }
+                    Text(title)
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                }
+                HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    Text("\(value)")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(.primary)
+                    if total > 0 {
+                        Text("/\(total)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .frame(minWidth: 60)
-        .padding(.vertical, 8).padding(.horizontal, 6)
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Progress donut card
+
+    private var progressCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Progreso de tareas")
+                        .font(.subheadline.bold())
+                    Text("Distribución por estado")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Menu {
+                    Button("Ver completadas") { filter = .completadas }
+                    Button("Ver en progreso") { filter = .enProgreso }
+                    Button("Ver pendientes")  { filter = .pendientes }
+                    if statReview > 0 {
+                        Button("Ver por revisar") { filter = .porRevisar }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, height: 30)
+                        .background(Color(.tertiarySystemFill), in: Circle())
+                }
+            }
+
+            HStack(spacing: 18) {
+                ZStack {
+                    DonutChart(
+                        segments: [
+                            .init(value: statDone,        color: Color.rdGreen),
+                            .init(value: statProgress,    color: Color.rdBlue),
+                            .init(value: statNotStarted,  color: .orange),
+                        ],
+                        lineWidth: 18
+                    )
+                    .frame(width: 112, height: 112)
+
+                    VStack(spacing: 0) {
+                        Text("\(statTotal)")
+                            .font(.title3.bold())
+                        Text("Total")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    legendRow(color: Color.rdGreen, label: "Completadas", value: statDone)
+                    legendRow(color: Color.rdBlue,  label: "En progreso", value: statProgress)
+                    legendRow(color: .orange,       label: "Pendientes",  value: statNotStarted)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(14)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func legendRow(color: Color, label: String, value: Int) -> some View {
+        HStack(spacing: 8) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text("\(value)")
+                .font(.caption.bold())
+                .foregroundStyle(.primary)
+        }
+    }
+
+    // MARK: - Filter chips
+
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(TaskFilter.allCases) { f in
+                    let count = filterCount(for: f)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { filter = f }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(f.rawValue)
+                                .font(.caption.bold())
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(filter == f ? Color.white.opacity(0.25) : Color(.tertiarySystemFill))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(filter == f ? Color.rdBlue : Color(.secondarySystemGroupedBackground))
+                        .foregroundStyle(filter == f ? Color.white : Color.primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func filterCount(for f: TaskFilter) -> Int {
+        switch f {
+        case .todas:        return tasks.count
+        case .pendientes:   return statPending
+        case .enProgreso:   return statProgress
+        case .porRevisar:   return statReview
+        case .completadas:  return tasks.filter { Self.finishedStatuses.contains($0.status) }.count
+        case .vencidas:     return statOverdue
+        }
+    }
+
+    // MARK: - Task row card
+
+    private func taskSectionHeader(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.bold())
+                .foregroundStyle(.primary)
+            Text("(\(count))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .textCase(nil)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func taskCardRow(_ task: TaskItem) -> some View {
+        Button { selectedTask = task } label: {
+            TaskRow(task: task, currentUserId: currentUserId)
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .swipeActions(edge: .leading) {
+            if task.assignedTo == currentUserId
+                && (task.status == "pendiente" || task.status == "en_progreso") {
+                Button {
+                    Task { await completeTask(task) }
+                } label: {
+                    Label(task.requiresApproval ? "Enviar" : "Completar",
+                          systemImage: "checkmark.circle.fill")
+                }
+                .tint(Color.rdGreen)
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            if task.assignedTo == currentUserId
+                && task.status != "completada"
+                && task.status != "no_aplica" {
+                Button {
+                    Task { await markTaskNA(task) }
+                } label: {
+                    Label("No Aplica", systemImage: "minus.circle")
+                }
+                .tint(.gray)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func parseISO(_ iso: String?) -> Date? {
+        guard let iso else { return nil }
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: iso) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        return f.date(from: iso)
     }
 
     // MARK: - Actions
@@ -256,6 +479,67 @@ struct TasksView: View {
             await load()
         } catch {
             errorMsg = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Donut chart
+//
+// Lightweight ring chart drawn with Canvas so we don't pull in the
+// Charts framework just for one screen. Empty state (all-zero)
+// renders a faint outline instead of nothing, so the card never
+// looks broken on a fresh account.
+
+struct DonutChart: View {
+    struct Segment: Identifiable {
+        let id = UUID()
+        let value: Int
+        let color: Color
+    }
+
+    let segments: [Segment]
+    var lineWidth: CGFloat = 16
+
+    private var total: Double {
+        Double(segments.reduce(0) { $0 + $1.value })
+    }
+
+    var body: some View {
+        Canvas { ctx, size in
+            let radius = min(size.width, size.height) / 2 - lineWidth / 2
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+
+            // Empty state — faint background ring
+            if total <= 0 {
+                let path = Path { p in
+                    p.addArc(center: center,
+                             radius: radius,
+                             startAngle: .degrees(0),
+                             endAngle:   .degrees(360),
+                             clockwise: false)
+                }
+                ctx.stroke(path,
+                           with: .color(Color.gray.opacity(0.15)),
+                           style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                return
+            }
+
+            // Start at 12 o'clock and go clockwise.
+            var start = -CGFloat.pi / 2
+            for seg in segments where seg.value > 0 {
+                let sweep = CGFloat(Double(seg.value) / total) * 2 * .pi
+                let path = Path { p in
+                    p.addArc(center: center,
+                             radius: radius,
+                             startAngle: .radians(Double(start)),
+                             endAngle:   .radians(Double(start + sweep)),
+                             clockwise: false)
+                }
+                ctx.stroke(path,
+                           with: .color(seg.color),
+                           style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                start += sweep
+            }
         }
     }
 }
