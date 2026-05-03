@@ -748,6 +748,7 @@ struct TaskDetailSheet: View {
     @State private var errorMsg: String?
     @State private var showRejectSheet = false
     @State private var rejectNote = ""
+    @State private var approveNote = ""
     @State private var reviewing = false
     @State private var showReassignSheet = false
     @State private var showNASheet = false
@@ -1189,6 +1190,21 @@ struct TaskDetailSheet: View {
                                     .foregroundStyle(.purple)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
+
+                            // Optional approval note — server stores it in the
+                            // status_change audit entry so the assignee sees
+                            // any feedback even when the task is approved.
+                            // Mirrors the web's "Notas de aprobación" field.
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Nota (opcional)")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.secondary)
+                                TextField("Observaciones para el asignado…", text: $approveNote, axis: .vertical)
+                                    .lineLimit(2...4)
+                                    .padding(8)
+                                    .background(Color(.tertiarySystemGroupedBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
 
                             HStack(spacing: 10) {
                                 Button {
@@ -1709,7 +1725,8 @@ struct TaskDetailSheet: View {
         reviewing = true
         errorMsg = nil
         do {
-            _ = try await api.approveTask(id: task.id)
+            let trimmed = approveNote.trimmingCharacters(in: .whitespacesAndNewlines)
+            _ = try await api.approveTask(id: task.id, note: trimmed)
             onComplete()
             dismiss()
         } catch {

@@ -36,6 +36,7 @@ struct TaskItem: Decodable, Identifiable {
     let subtaskProgress: SubtaskProgress?
     let unfulfilledDependencies: [DependencyRef]?
     let recurrence: TaskRecurrence?
+    let auditLog: [AuditEntry]?
 
     struct SubtaskProgress: Decodable, Equatable {
         let total: Int
@@ -46,6 +47,66 @@ struct TaskItem: Decodable, Identifiable {
         let id: String
         let title: String
         let status: String
+    }
+
+    /// Bounded audit log returned by GET /:id. Server caps it at 200
+    /// entries; long-lived tasks rotate the oldest out.
+    struct AuditEntry: Decodable, Identifiable {
+        let id: String
+        let type: String
+        let actor_id: String?
+        let timestamp: String
+        let actor_name: String?
+        // Type-specific payload — varies by event. We only surface a
+        // few of the most useful fields in the UI; the rest are kept
+        // around for future detail expansion.
+        let from: String?
+        let to: String?
+        let reason: String?
+        let note: String?
+        let predecessor_id: String?
+        let comment_id: String?
+        let filename: String?
+        let original_name: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, type, actor_id, timestamp, actor_name, data
+        }
+        enum DataKeys: String, CodingKey {
+            case from, to, reason, note
+            case predecessor_id, comment_id, filename, original_name
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id        = try c.decode(String.self, forKey: .id)
+            type      = (try? c.decode(String.self, forKey: .type)) ?? ""
+            actor_id  = try? c.decode(String.self, forKey: .actor_id)
+            timestamp = (try? c.decode(String.self, forKey: .timestamp)) ?? ""
+            actor_name = try? c.decode(String.self, forKey: .actor_name)
+            // Server payload puts everything except the four top-level
+            // fields under `data: { ... }`, but the precise keys vary
+            // by event type. Decode opportunistically — a missing key
+            // is just nil for that event.
+            if let data = try? c.nestedContainer(keyedBy: DataKeys.self, forKey: .data) {
+                // Two coercions because some payloads put primitive
+                // values where others put strings (e.g. status_change
+                // stores "from"/"to" as strings; recurrence_set puts
+                // structured rule objects there which we ignore).
+                from           = try? data.decode(String.self, forKey: .from)
+                to             = try? data.decode(String.self, forKey: .to)
+                reason         = try? data.decode(String.self, forKey: .reason)
+                note           = try? data.decode(String.self, forKey: .note)
+                predecessor_id = try? data.decode(String.self, forKey: .predecessor_id)
+                comment_id     = try? data.decode(String.self, forKey: .comment_id)
+                filename       = try? data.decode(String.self, forKey: .filename)
+                original_name  = try? data.decode(String.self, forKey: .original_name)
+            } else {
+                from = nil; to = nil; reason = nil; note = nil
+                predecessor_id = nil; comment_id = nil
+                filename = nil; original_name = nil
+            }
+        }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -70,6 +131,7 @@ struct TaskItem: Decodable, Identifiable {
         case updatedAt                = "updated_at"
         case subtaskProgress          = "subtask_progress"
         case unfulfilledDependencies  = "unfulfilled_dependencies"
+        case auditLog                 = "audit_log"
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +163,7 @@ struct TaskItem: Decodable, Identifiable {
         subtaskProgress         = try? c.decode(SubtaskProgress.self, forKey: .subtaskProgress)
         unfulfilledDependencies = try? c.decode([DependencyRef].self, forKey: .unfulfilledDependencies)
         recurrence              = try? c.decode(TaskRecurrence.self, forKey: .recurrence)
+        auditLog                = try? c.decode([AuditEntry].self, forKey: .auditLog)
     }
 
     var isOverdue: Bool {
