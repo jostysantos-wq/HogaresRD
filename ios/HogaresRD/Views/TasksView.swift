@@ -2074,9 +2074,19 @@ struct CreateTaskSheet: View {
     @State private var hasDueDate = false
     @State private var dueDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var assignedTo = "" // "" = self
+    @State private var approverId = "" // "" = creator (default; server fills in)
     @State private var teamMembers: [TeamMember] = []
     @State private var saving = false
     @State private var errorMsg: String?
+
+    // Advanced options (collapsed by default to keep the create flow lean
+    // for the common case)
+    @State private var showAdvanced = false
+    @State private var parentTask: TaskItem? = nil
+    @State private var dependencies: [TaskItem] = []
+    @State private var showParentPicker = false
+    @State private var showDependencyPicker = false
+    @State private var allTasks: [TaskItem] = []
 
     var body: some View {
         NavigationStack {
@@ -2130,6 +2140,61 @@ struct CreateTaskSheet: View {
                     }
                 }
 
+                Section {
+                    DisclosureGroup("Opciones avanzadas", isExpanded: $showAdvanced) {
+                        // Approver — defaults to the creator. Server forces
+                        // the approver back to the creator if you try to set
+                        // it to the assignee (separation of duties).
+                        Picker("Aprobador", selection: $approverId) {
+                            Text("Yo (predeterminado)").tag("")
+                            ForEach(teamMembers.filter { $0.id != assignedTo }) { member in
+                                Text(member.name).tag(member.id)
+                            }
+                        }
+
+                        // Parent task — single-pick from the user's tasks.
+                        Button {
+                            showParentPicker = true
+                        } label: {
+                            HStack {
+                                Text("Tarea padre")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(parentTask?.title ?? "Ninguna")
+                                    .lineLimit(1)
+                                    .foregroundStyle(.secondary)
+                                if parentTask != nil {
+                                    Button {
+                                        parentTask = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        // Dependencies — multi-pick.
+                        Button {
+                            showDependencyPicker = true
+                        } label: {
+                            HStack {
+                                Text("Depende de")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(dependencies.isEmpty ? "Ninguna"
+                                                          : "\(dependencies.count) tarea\(dependencies.count == 1 ? "" : "s")")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } footer: {
+                    Text("La tarea no se podrá completar hasta que sus dependencias estén finalizadas.")
+                }
+
                 if let err = errorMsg {
                     Section {
                         Label(err, systemImage: "exclamationmark.triangle")
@@ -2151,8 +2216,46 @@ struct CreateTaskSheet: View {
                 }
             }
             .presentationDetents([.large])
-            .task { await loadTeam() }
+            .task {
+                await loadTeam()
+                await loadAllTasks()
+            }
+            .sheet(isPresented: $showParentPicker) {
+                NavigationStack {
+                    TaskPickerView(
+                        title: "Tarea padre",
+                        candidates: parentCandidates,
+                        onPick: { parentTask = $0 }
+                    )
+                }
+            }
+            .sheet(isPresented: $showDependencyPicker) {
+                NavigationStack {
+                    DependencyMultiPicker(
+                        candidates: dependencyCandidates,
+                        selected: dependencies
+                    ) { picked in
+                        dependencies = picked
+                    }
+                }
+            }
         }
+    }
+
+    /// Eligible parent candidates: any non-archived, non-completed task
+    /// the user can see. Excludes the assignee's currently-selected
+    /// dependencies to avoid creating an obvious cycle.
+    private var parentCandidates: [TaskItem] {
+        let depIds = Set(dependencies.map(\.id))
+        return allTasks.filter { t in
+            t.status != "completada" && t.status != "no_aplica" && !depIds.contains(t.id)
+        }
+    }
+
+    /// Dependency candidates: any task except the chosen parent.
+    private var dependencyCandidates: [TaskItem] {
+        let parentId = parentTask?.id
+        return allTasks.filter { $0.id != parentId }
     }
 
     private func loadTeam() async {
@@ -2162,6 +2265,15 @@ struct CreateTaskSheet: View {
         guard let (data, _) = try? await URLSession.shared.data(for: req) else { return }
         if let resp = try? JSONDecoder().decode(TeamBrokersResponse.self, from: data) {
             teamMembers = resp.brokers
+        }
+    }
+
+    private func loadAllTasks() async {
+        // Used to populate the parent + dependencies pickers. A failure
+        // here just means the advanced options can't be set on this
+        // create — the simple path still works.
+        if let list = try? await api.listTasks() {
+            allTasks = list
         }
     }
 
@@ -2176,7 +2288,10 @@ struct CreateTaskSheet: View {
                 description: desc.trimmingCharacters(in: .whitespaces),
                 priority: priority,
                 dueDate: dueDateStr,
-                assignedTo: assignee
+                assignedTo: assignee,
+                approverId: approverId.isEmpty ? nil : approverId,
+                parentTaskId: parentTask?.id,
+                dependsOn: dependencies.isEmpty ? nil : dependencies.map(\.id)
             )
             onCreated(task)
             dismiss()
@@ -2184,6 +2299,73 @@ struct CreateTaskSheet: View {
             errorMsg = error.localizedDescription
         }
         saving = false
+    }
+}
+
+// MARK: - Dependency multi-picker
+//
+// Uses a checkbox-style List so the user can add/remove several deps in
+// one trip. Used by CreateTaskSheet and (later) by EditTaskSheet's
+// "Manage dependencies" entry. Single-pick callers should use the
+// existing TaskPickerView in TaskRelationsView.
+
+struct DependencyMultiPicker: View {
+    let candidates: [TaskItem]
+    let selected: [TaskItem]
+    var onDone: ([TaskItem]) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var picked: Set<String>
+
+    init(candidates: [TaskItem], selected: [TaskItem], onDone: @escaping ([TaskItem]) -> Void) {
+        self.candidates = candidates
+        self.selected = selected
+        self.onDone = onDone
+        self._picked = State(initialValue: Set(selected.map(\.id)))
+    }
+
+    private var filtered: [TaskItem] {
+        let q = query.lowercased()
+        guard !q.isEmpty else { return candidates }
+        return candidates.filter { $0.title.lowercased().contains(q) }
+    }
+
+    var body: some View {
+        List(filtered) { t in
+            Button {
+                if picked.contains(t.id) { picked.remove(t.id) } else { picked.insert(t.id) }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: picked.contains(t.id) ? "checkmark.square.fill" : "square")
+                        .foregroundStyle(picked.contains(t.id) ? Color.rdBlue : .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t.title).font(.subheadline.bold())
+                        Text(t.statusLabel)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Buscar tarea")
+        .navigationTitle("Dependencias")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancelar") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Listo") {
+                    let chosen = candidates.filter { picked.contains($0.id) }
+                    onDone(chosen)
+                    dismiss()
+                }
+            }
+        }
     }
 }
 

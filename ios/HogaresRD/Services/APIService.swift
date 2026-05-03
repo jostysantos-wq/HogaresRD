@@ -2254,7 +2254,14 @@ class APIService: ObservableObject {
         return try decoder.decode(TaskItem.self, from: data)
     }
 
-    func createTask(title: String, description: String, priority: String, dueDate: String?, assignedTo: String?) async throws -> TaskItem {
+    func createTask(title: String,
+                    description: String,
+                    priority: String,
+                    dueDate: String?,
+                    assignedTo: String?,
+                    approverId: String? = nil,
+                    parentTaskId: String? = nil,
+                    dependsOn: [String]? = nil) async throws -> TaskItem {
         let url = apiURL("/api/tasks")
         var body: [String: Any] = [
             "title": title,
@@ -2262,7 +2269,10 @@ class APIService: ObservableObject {
             "priority": priority,
         ]
         if let d = dueDate { body["due_date"] = d }
-        if let a = assignedTo, !a.isEmpty { body["assigned_to"] = a }
+        if let a = assignedTo,    !a.isEmpty { body["assigned_to"]    = a }
+        if let ap = approverId,   !ap.isEmpty { body["approver_id"]   = ap }
+        if let p = parentTaskId,  !p.isEmpty { body["parent_task_id"] = p }
+        if let deps = dependsOn,  !deps.isEmpty { body["depends_on"]  = deps }
         let json = try JSONSerialization.data(withJSONObject: body)
         let req = try authedRequest(url, method: "POST", body: json)
         let (data, resp) = try await session.data(for: req)
