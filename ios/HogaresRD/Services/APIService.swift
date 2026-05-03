@@ -2999,7 +2999,11 @@ class APIService: ObservableObject {
         try throwIfErr(data, resp, fallback: "No se pudo actualizar el perfil")
         // Server returns { success, user: { id, phone, bio, jobTitle, avatarUrl, … } }
         // but the `user` shape is partial. Refresh the full user via /me.
-        return try await getMe()
+        await refreshUser()
+        guard let me = currentUser else {
+            throw APIError.server("No se pudo refrescar el perfil")
+        }
+        return me
     }
 
     // MARK: - Application withdraw + reassign

@@ -89,24 +89,25 @@ struct CommissionHistoryView: View {
         .padding(.vertical, 4)
     }
 
-    @ViewBuilder
     private func actionBadge(_ action: String) -> some View {
-        let label: String
-        let color: Color
-        switch action {
-        case "submitted":   (label, color) = ("Registrada", Color.rdBlue)
-        case "resubmitted": (label, color) = ("Re-enviada", .orange)
-        case "approve":     (label, color) = ("Aprobada", .green)
-        case "adjust":      (label, color) = ("Ajustada", .orange)
-        case "reject":      (label, color) = ("Rechazada", .red)
-        default:            (label, color) = (action.capitalized, .gray)
-        }
-        Text(label)
+        let pair = actionLabel(action)
+        return Text(pair.0)
             .font(.caption2.bold())
-            .foregroundStyle(color)
+            .foregroundStyle(pair.1)
             .padding(.horizontal, 8).padding(.vertical, 2)
-            .background(color.opacity(0.12))
+            .background(pair.1.opacity(0.12))
             .clipShape(Capsule())
+    }
+
+    private func actionLabel(_ action: String) -> (String, Color) {
+        switch action {
+        case "submitted":   return ("Registrada", Color.rdBlue)
+        case "resubmitted": return ("Re-enviada", .orange)
+        case "approve":     return ("Aprobada", .green)
+        case "adjust":      return ("Ajustada", .orange)
+        case "reject":      return ("Rechazada", .red)
+        default:            return (action.capitalized, .gray)
+        }
     }
 
     @ViewBuilder

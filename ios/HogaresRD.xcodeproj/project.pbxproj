@@ -80,6 +80,15 @@
 		SSEARCH000000000000000D2 /* SavedSearchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSEARCH000000000000000D1 /* SavedSearchesView.swift */; };
 		TASKMOD000000000000000B2 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKMOD000000000000000B1 /* Task.swift */; };
 		TASKVIEW00000000000000B2 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TASKVIEW00000000000000B1 /* TasksView.swift */; };
+		PARITYUIB010000000000000 /* TaskCollabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF010000000000000 /* TaskCollabView.swift */; };
+		PARITYUIB020000000000000 /* TaskRecurrenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF020000000000000 /* TaskRecurrenceSheet.swift */; };
+		PARITYUIB030000000000000 /* LeadQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF030000000000000 /* LeadQueueView.swift */; };
+		PARITYUIB040000000000000 /* EditInmobiliariaProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF040000000000000 /* EditInmobiliariaProfileView.swift */; };
+		PARITYUIB050000000000000 /* AgencyPostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF050000000000000 /* AgencyPostsView.swift */; };
+		PARITYUIB060000000000000 /* AgencyReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF060000000000000 /* AgencyReviewsView.swift */; };
+		PARITYUIB070000000000000 /* LeaveInmobiliariaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */; };
+		PARITYUIB080000000000000 /* CommissionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF080000000000000 /* CommissionHistoryView.swift */; };
+		PARITYUIB090000000000000 /* TaskRelationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PARITYUIF090000000000000 /* TaskRelationsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -158,6 +167,15 @@
 		SSEARCH000000000000000D1 /* SavedSearchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchesView.swift; sourceTree = "<group>"; };
 		TASKMOD000000000000000B1 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		TASKVIEW00000000000000B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
+		PARITYUIF010000000000000 /* TaskCollabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCollabView.swift; sourceTree = "<group>"; };
+		PARITYUIF020000000000000 /* TaskRecurrenceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRecurrenceSheet.swift; sourceTree = "<group>"; };
+		PARITYUIF030000000000000 /* LeadQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadQueueView.swift; sourceTree = "<group>"; };
+		PARITYUIF040000000000000 /* EditInmobiliariaProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditInmobiliariaProfileView.swift; sourceTree = "<group>"; };
+		PARITYUIF050000000000000 /* AgencyPostsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyPostsView.swift; sourceTree = "<group>"; };
+		PARITYUIF060000000000000 /* AgencyReviewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgencyReviewsView.swift; sourceTree = "<group>"; };
+		PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaveInmobiliariaView.swift; sourceTree = "<group>"; };
+		PARITYUIF080000000000000 /* CommissionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommissionHistoryView.swift; sourceTree = "<group>"; };
+		PARITYUIF090000000000000 /* TaskRelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRelationsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -288,6 +306,15 @@
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* ListingAnalyticsView.swift */,
 				D1E2F3A4B5C6D7E8F9A0B1C2 /* SecretaryDashboardView.swift */,
 				COMPARE0000000000000001 /* ComparisonView.swift */,
+				PARITYUIF010000000000000 /* TaskCollabView.swift */,
+				PARITYUIF020000000000000 /* TaskRecurrenceSheet.swift */,
+				PARITYUIF030000000000000 /* LeadQueueView.swift */,
+				PARITYUIF040000000000000 /* EditInmobiliariaProfileView.swift */,
+				PARITYUIF050000000000000 /* AgencyPostsView.swift */,
+				PARITYUIF060000000000000 /* AgencyReviewsView.swift */,
+				PARITYUIF070000000000000 /* LeaveInmobiliariaView.swift */,
+				PARITYUIF080000000000000 /* CommissionHistoryView.swift */,
+				PARITYUIF090000000000000 /* TaskRelationsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -434,6 +461,15 @@
 				F1E2D3C4B5A6F7E8D9C0B1A2 /* ListingAnalyticsView.swift in Sources */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* SecretaryDashboardView.swift in Sources */,
 				COMPARE0000000000000002 /* ComparisonView.swift in Sources */,
+				PARITYUIB010000000000000 /* TaskCollabView.swift in Sources */,
+				PARITYUIB020000000000000 /* TaskRecurrenceSheet.swift in Sources */,
+				PARITYUIB030000000000000 /* LeadQueueView.swift in Sources */,
+				PARITYUIB040000000000000 /* EditInmobiliariaProfileView.swift in Sources */,
+				PARITYUIB050000000000000 /* AgencyPostsView.swift in Sources */,
+				PARITYUIB060000000000000 /* AgencyReviewsView.swift in Sources */,
+				PARITYUIB070000000000000 /* LeaveInmobiliariaView.swift in Sources */,
+				PARITYUIB080000000000000 /* CommissionHistoryView.swift in Sources */,
+				PARITYUIB090000000000000 /* TaskRelationsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

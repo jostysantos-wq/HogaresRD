@@ -75,7 +75,7 @@ struct LeaveInmobiliariaView: View {
             _ = try await api.leaveInmobiliaria(transferToUserId: target.isEmpty ? nil : target)
             // Refresh user — server bumps tokenVersion; we need a fresh
             // /me to reflect the cleared inmobiliaria_id.
-            _ = try? await api.getMe()
+            await api.refreshUser()
             await MainActor.run {
                 done = true
             }
