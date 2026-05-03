@@ -173,6 +173,32 @@ struct BrokerDashboardView: View {
                     } label: {
                         Label("Rendimiento del equipo", systemImage: "chart.line.uptrend.xyaxis")
                     }
+                    NavigationLink {
+                        AgencyPostsView().environmentObject(api)
+                    } label: {
+                        Label("Publicaciones", systemImage: "doc.text.image.fill")
+                    }
+                    NavigationLink {
+                        AgencyReviewsView().environmentObject(api)
+                    } label: {
+                        Label("Reseñas", systemImage: "star.bubble.fill")
+                    }
+                }
+            }
+
+            // ── Sub-broker affiliation lifecycle ──
+            // Only sub-brokers (broker / agency role with an inmobiliaria_id)
+            // see this. Independent agents and org owners don't.
+            if let me = api.currentUser,
+               (me.role == "broker" || me.role == "agency"),
+               (me.role == "broker" || me.role == "agency") {
+                Section("Mi inmobiliaria") {
+                    NavigationLink {
+                        LeaveInmobiliariaView().environmentObject(api)
+                    } label: {
+                        Label("Abandonar equipo", systemImage: "person.crop.circle.badge.minus")
+                            .foregroundStyle(.red)
+                    }
                 }
             }
 
