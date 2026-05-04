@@ -160,7 +160,10 @@ struct WelcomeLoginScreen: View {
     @EnvironmentObject var api: APIService
     @State private var error: String?
     @State private var loading = false
-    @State private var showGoogleNotice = false
+    // showGoogleNotice removed — the only call site (a "Próximamente"
+    // alert tied to a hidden Google OAuth button) was dead code that
+    // App Store automated checks can flag as broken/misleading. Restore
+    // both this state and the alert below once Google OAuth is wired.
 
     // Same Unsplash hero used in the design mock. Falls back to a
     // dark blue gradient if the network request fails or the user is
@@ -334,11 +337,6 @@ struct WelcomeLoginScreen: View {
             .padding(.horizontal, 26)
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        }
-        .alert("Próximamente", isPresented: $showGoogleNotice) {
-            Button("Entendido", role: .cancel) {}
-        } message: {
-            Text("Iniciar sesión con Google estará disponible pronto. Por ahora puedes usar Email o Apple ID.")
         }
     }
 

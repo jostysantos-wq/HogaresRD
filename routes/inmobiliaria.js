@@ -2,7 +2,7 @@ const express      = require('express');
 const crypto       = require('crypto');
 // nodemailer replaced by central mailer.js (Resend HTTP API)
 const store        = require('./store');
-const { userAuth } = require('./auth');
+const { userAuth, optionalAuth } = require('./auth');
 
 const router   = express.Router();
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -841,8 +841,21 @@ const rateLimit = require('express-rate-limit');
 const reviewLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, message: { error: 'Demasiadas reseñas. Intenta más tarde.' } });
 
 // Public: get approved reviews for an inmobiliaria
-router.get('/:inmId/reviews', (req, res) => {
-  const reviews = store.getApprovedInmobReviews(req.params.inmId);
+// Uses optionalAuth so we can apply per-caller block filtering when the
+// caller is authenticated. Anonymous browsers see the full review set.
+router.get('/:inmId/reviews', optionalAuth, (req, res) => {
+  let reviews = store.getApprovedInmobReviews(req.params.inmId);
+
+  // App Store Review 1.2 — hide reviews authored by users the caller has
+  // blocked (or who blocked the caller). The average is computed AFTER
+  // filtering so the displayed score matches the visible reviews.
+  if (req.user?.sub) {
+    const blocked = new Set(store.getBlockedUserIds(req.user.sub));
+    if (blocked.size > 0) {
+      reviews = reviews.filter(r => !r.reviewer_id || !blocked.has(r.reviewer_id));
+    }
+  }
+
   const avg = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
   res.json({ reviews, average: avg ? parseFloat(avg) : null, count: reviews.length });
 });

@@ -110,10 +110,21 @@ struct PlansView: View {
                         .padding(.top, 4)
                     }
 
-                    // Legal text
+                    // Legal text + required links — App Store Review 3.1.2
+                    // wants the auto-renewal disclosure plus reachable
+                    // Privacy Policy + Terms in any subscription flow.
                     VStack(spacing: 6) {
                         Text("La suscripción se renueva automáticamente cada mes. Puedes cancelar en cualquier momento desde Ajustes > Apple ID > Suscripciones.")
                         Text("El pago se carga a tu cuenta de Apple ID al confirmar la compra.")
+
+                        HStack(spacing: 12) {
+                            Link("Términos de Servicio",
+                                 destination: URL(string: "https://hogaresrd.com/terminos")!)
+                            Text("·")
+                            Link("Política de Privacidad",
+                                 destination: URL(string: "https://hogaresrd.com/privacidad")!)
+                        }
+                        .padding(.top, 4)
                     }
                     .font(.caption2)
                     .foregroundStyle(.tertiary)

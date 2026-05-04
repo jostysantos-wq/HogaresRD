@@ -155,6 +155,22 @@ router.get('/', optionalAuth, (req, res) => {
     );
   }
 
+  // App Store Review 1.2 — when the caller is logged in, hide listings
+  // whose creator (or any agency-card user_id) is in the caller's block
+  // list. Anonymous browsers see the full feed; this only applies once
+  // the user has identified themselves and chosen to block someone.
+  if (req.user?.sub) {
+    const blocked = new Set(store.getBlockedUserIds(req.user.sub));
+    if (blocked.size > 0) {
+      listings = listings.filter(l => {
+        if (l.creator_user_id && blocked.has(l.creator_user_id)) return false;
+        if (l.inmobiliaria_id && blocked.has(l.inmobiliaria_id)) return false;
+        const agencies = Array.isArray(l.agencies) ? l.agencies : [];
+        return !agencies.some(a => a?.user_id && blocked.has(a.user_id));
+      });
+    }
+  }
+
   // Sort: newest approved first
   listings.sort((a, b) => new Date(b.approvedAt || b.submittedAt) - new Date(a.approvedAt || a.submittedAt));
 
